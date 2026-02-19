@@ -1,0 +1,99 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search } from "lucide-react";
+import ClientCard from "@/components/clients/ClientCard";
+import NewClientDialog from "@/components/clients/NewClientDialog";
+
+export default function Clients() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showNew, setShowNew] = useState(false);
+
+  const { data: clients = [], refetch } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => base44.entities.Client.list("-created_date")
+  });
+
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeEntries"],
+    queryFn: () => base44.entities.TimeEntry.list()
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["applications"],
+    queryFn: () => base44.entities.JobApplication.list()
+  });
+
+  const getClientHours = (clientId) => {
+    const mins = timeEntries.filter(t => t.client_id === clientId).reduce((s, t) => s + (t.duration_minutes || 0), 0);
+    return Math.round(mins / 60 * 10) / 10;
+  };
+
+  const getClientApps = (clientId) => applications.filter(a => a.client_id === clientId).length;
+
+  const filtered = clients.filter(c => {
+    const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
+          <p className="text-sm text-slate-500 mt-1">{clients.length} total clients</p>
+        </div>
+        <Button onClick={() => setShowNew(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
+          <Plus className="w-4 h-4 mr-2" /> New Client
+        </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search clients..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-10 border-slate-200"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40 border-slate-200">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filtered.map(client => (
+          <ClientCard
+            key={client.id}
+            client={client}
+            totalHours={getClientHours(client.id)}
+            applicationCount={getClientApps(client.id)}
+          />
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-16">
+          <p className="text-slate-400 text-sm">No clients found</p>
+        </div>
+      )}
+
+      <NewClientDialog open={showNew} onOpenChange={setShowNew} onCreated={refetch} />
+    </div>
+  );
+}
