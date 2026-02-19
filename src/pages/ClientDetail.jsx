@@ -1,0 +1,101 @@
+import React from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ClientHeader from "@/components/client-detail/ClientHeader";
+import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
+import TasksSection from "@/components/client-detail/TasksSection";
+import ResumeSection from "@/components/client-detail/ResumeSection";
+import TimeLogSection from "@/components/client-detail/TimeLogSection";
+
+export default function ClientDetail() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const clientId = urlParams.get("id");
+  const queryClient = useQueryClient();
+
+  const { data: client, isLoading } = useQuery({
+    queryKey: ["client", clientId],
+    queryFn: () => base44.entities.Client.list().then(list => list.find(c => c.id === clientId)),
+    enabled: !!clientId
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["applications", clientId],
+    queryFn: () => base44.entities.JobApplication.filter({ client_id: clientId }),
+    enabled: !!clientId
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks", clientId],
+    queryFn: () => base44.entities.Task.filter({ client_id: clientId }),
+    enabled: !!clientId
+  });
+
+  const { data: resumes = [] } = useQuery({
+    queryKey: ["resumes", clientId],
+    queryFn: () => base44.entities.Resume.filter({ client_id: clientId }),
+    enabled: !!clientId
+  });
+
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", clientId],
+    queryFn: () => base44.entities.TimeEntry.filter({ client_id: clientId }),
+    enabled: !!clientId
+  });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+    queryClient.invalidateQueries({ queryKey: ["applications", clientId] });
+    queryClient.invalidateQueries({ queryKey: ["tasks", clientId] });
+    queryClient.invalidateQueries({ queryKey: ["resumes", clientId] });
+    queryClient.invalidateQueries({ queryKey: ["timeEntries", clientId] });
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
+  }
+
+  if (!client) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-slate-400">Client not found</p>
+        <Link to={createPageUrl("Clients")}><Button variant="outline">Back to Clients</Button></Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Link to={createPageUrl("Clients")} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back to Clients
+      </Link>
+
+      <ClientHeader client={client} onUpdate={refresh} />
+
+      <Tabs defaultValue="applications" className="space-y-4">
+        <TabsList className="bg-slate-100 p-1">
+          <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+          <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
+          <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="applications">
+          <JobApplicationsSection clientId={clientId} applications={applications} onRefresh={refresh} />
+        </TabsContent>
+        <TabsContent value="tasks">
+          <TasksSection clientId={clientId} tasks={tasks} onRefresh={refresh} />
+        </TabsContent>
+        <TabsContent value="resumes">
+          <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} />
+        </TabsContent>
+        <TabsContent value="time">
+          <TimeLogSection timeEntries={timeEntries} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

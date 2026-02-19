@@ -49,14 +49,20 @@
  */
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
+import ClientDetail from './pages/ClientDetail';
+import TimeTracking from './pages/TimeTracking';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Dashboard": Dashboard,
     "Clients": Clients,
+    "ClientDetail": ClientDetail,
+    "TimeTracking": TimeTracking,
 }
 
 export const pagesConfig = {
     mainPage: "Dashboard",
     Pages: PAGES,
+    Layout: __Layout,
 };
