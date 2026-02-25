@@ -20,7 +20,9 @@ export default function ClientHeader({ client, onUpdate }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
   const fileInputRef = useRef(null);
+  const coverLetterInputRef = useRef(null);
 
   const startEdit = () => {
     setForm({ ...client });
@@ -60,6 +62,33 @@ export default function ClientHeader({ client, onUpdate }) {
       toast.error("Upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleCoverLetterUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a PDF or Word document");
+      return;
+    }
+
+    setUploadingCoverLetter(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.entities.Client.update(client.id, {
+        cover_letter_file_url: file_url,
+        cover_letter_file_name: file.name
+      });
+      toast.success("Cover letter uploaded");
+      onUpdate();
+    } catch (error) {
+      toast.error("Upload failed");
+    } finally {
+      setUploadingCoverLetter(false);
     }
   };
 
@@ -129,7 +158,7 @@ export default function ClientHeader({ client, onUpdate }) {
         {client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
         
         {/* Resume Upload Section */}
-        <div className="mt-4 pt-4 border-t border-slate-100">
+        <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-400" />
@@ -193,6 +222,75 @@ export default function ClientHeader({ client, onUpdate }) {
                 type="file"
                 accept=".pdf,.doc,.docx"
                 onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {/* Cover Letter Upload */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              <span className="text-sm font-medium text-slate-700">Cover Letter</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {client.cover_letter_file_url ? (
+                <>
+                  <a
+                    href={client.cover_letter_file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    {client.cover_letter_file_name || "Download"}
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => coverLetterInputRef.current?.click()}
+                    disabled={uploadingCoverLetter}
+                    className="text-xs h-7"
+                  >
+                    {uploadingCoverLetter ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3 h-3 mr-1" />
+                        Replace
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => coverLetterInputRef.current?.click()}
+                  disabled={uploadingCoverLetter}
+                  className="text-xs h-7"
+                >
+                  {uploadingCoverLetter ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3 h-3 mr-1" />
+                      Upload Cover Letter
+                    </>
+                  )}
+                </Button>
+              )}
+              <input
+                ref={coverLetterInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleCoverLetterUpload}
                 className="hidden"
               />
             </div>
