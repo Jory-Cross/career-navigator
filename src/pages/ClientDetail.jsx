@@ -86,7 +86,7 @@ export default function ClientDetail() {
           <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="applications">
-          <JobApplicationsSection clientId={clientId} applications={applications} onRefresh={refresh} />
+          <JobApplicationsSection clientId={clientId} applications={applications} client={client} onRefresh={refresh} />
         </TabsContent>
         <TabsContent value="tasks">
           <TasksSection clientId={clientId} tasks={tasks} onRefresh={refresh} />
