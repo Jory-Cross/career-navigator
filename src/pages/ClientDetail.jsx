@@ -102,13 +102,13 @@ export default function ClientDetail() {
 
       <Tabs defaultValue="applications" className="space-y-4">
         <TabsList className="bg-slate-100 p-1">
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          {user?.role !== 'client' && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
-          <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>
+          {user?.role !== 'client' && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
         </TabsList>
         <TabsContent value="onboarding">
           <OnboardingSection client={client} onRefresh={refresh} />

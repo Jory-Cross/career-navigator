@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ClientPortal() {
   const [user, setUser] = useState(null);
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showNewApp, setShowNewApp] = useState(false);
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [showPractice, setShowPractice] = useState(false);
+  const [appForm, setAppForm] = useState({});
+  const [taskForm, setTaskForm] = useState({});
+  const [practiceForm, setPracticeForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [practicing, setPracticing] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     loadClientData();
@@ -74,6 +90,103 @@ export default function ClientPortal() {
     );
   }
 
+  const saveApplication = async () => {
+    if (!appForm.company || !appForm.position) {
+      toast.error("Company and position required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await base44.entities.JobApplication.create({ ...appForm, client_id: client.id });
+      toast.success("Application added");
+      queryClient.invalidateQueries({ queryKey: ['client-applications'] });
+      setShowNewApp(false);
+      setAppForm({});
+    } catch (error) {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveTask = async () => {
+    if (!taskForm.title) {
+      toast.error("Task title required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await base44.entities.Task.create({ ...taskForm, client_ids: [client.id] });
+      toast.success("Task created");
+      queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
+      setShowNewTask(false);
+      setTaskForm({});
+    } catch (error) {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const completeTask = async (taskId) => {
+    try {
+      await base44.entities.Task.update(taskId, { status: 'completed' });
+      toast.success("Task completed");
+      queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
+    } catch (error) {
+      toast.error("Failed to update");
+    }
+  };
+
+  const startPractice = async () => {
+    if (!practiceForm.target_role) {
+      toast.error("Target role required");
+      return;
+    }
+    setPracticing(true);
+    try {
+      const prompt = `Generate 5 common interview questions for the role: ${practiceForm.target_role}${practiceForm.industry ? ` in ${practiceForm.industry}` : ''}.
+      
+Return as JSON array of objects with: question, category (behavioral/technical/situational)`;
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            questions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  question: { type: "string" },
+                  category: { type: "string" }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      await base44.entities.InterviewSession.create({
+        client_id: client.id,
+        target_role: practiceForm.target_role,
+        industry: practiceForm.industry || client.industry,
+        questions: result.questions,
+        session_date: new Date().toISOString().split('T')[0]
+      });
+
+      toast.success("Practice session created");
+      queryClient.invalidateQueries({ queryKey: ['client-interviews'] });
+      setShowPractice(false);
+      setPracticeForm({});
+    } catch (error) {
+      toast.error("Failed to generate");
+    } finally {
+      setPracticing(false);
+    }
+  };
+
   const statusColors = {
     saved: "bg-slate-100 text-slate-700",
     applied: "bg-blue-100 text-blue-700",
@@ -129,7 +242,12 @@ export default function ClientPortal() {
         <TabsContent value="applications">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">My Applications</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">My Applications</CardTitle>
+                <Button size="sm" onClick={() => setShowNewApp(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Application
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {applications.length === 0 ? (
@@ -168,7 +286,12 @@ export default function ClientPortal() {
         <TabsContent value="interview">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Interview Practice Sessions</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Interview Practice Sessions</CardTitle>
+                <Button size="sm" onClick={() => setShowPractice(true)}>
+                  <Sparkles className="w-3.5 h-3.5 mr-1" /> Start Practice
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {interviewSessions.length === 0 ? (
@@ -198,7 +321,12 @@ export default function ClientPortal() {
         <TabsContent value="tasks">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">My Tasks</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">My Tasks</CardTitle>
+                <Button size="sm" onClick={() => setShowNewTask(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> New Task
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {tasks.length === 0 ? (
@@ -219,6 +347,11 @@ export default function ClientPortal() {
                             <p className="text-xs text-slate-500 mt-2">Due: {format(new Date(task.due_date), "MMM d, yyyy")}</p>
                           )}
                         </div>
+                        {task.status !== 'completed' && (
+                          <Button size="sm" variant="outline" onClick={() => completeTask(task.id)}>
+                            Complete
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -258,6 +391,95 @@ export default function ClientPortal() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Application Dialog */}
+      <Dialog open={showNewApp} onOpenChange={setShowNewApp}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Job Application</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <div>
+              <Label className="text-xs">Company *</Label>
+              <Input value={appForm.company || ""} onChange={e => setAppForm(p => ({ ...p, company: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Position *</Label>
+              <Input value={appForm.position || ""} onChange={e => setAppForm(p => ({ ...p, position: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Job URL</Label>
+              <Input value={appForm.job_url || ""} onChange={e => setAppForm(p => ({ ...p, job_url: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Applied Date</Label>
+              <Input type="date" value={appForm.applied_date || ""} onChange={e => setAppForm(p => ({ ...p, applied_date: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={appForm.notes || ""} onChange={e => setAppForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewApp(false)}>Cancel</Button>
+            <Button onClick={saveApplication} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Task Dialog */}
+      <Dialog open={showNewTask} onOpenChange={setShowNewTask}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <div>
+              <Label className="text-xs">Task Title *</Label>
+              <Input value={taskForm.title || ""} onChange={e => setTaskForm(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea value={taskForm.description || ""} onChange={e => setTaskForm(p => ({ ...p, description: e.target.value }))} rows={2} />
+            </div>
+            <div>
+              <Label className="text-xs">Due Date</Label>
+              <Input type="date" value={taskForm.due_date || ""} onChange={e => setTaskForm(p => ({ ...p, due_date: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewTask(false)}>Cancel</Button>
+            <Button onClick={saveTask} disabled={saving}>{saving ? "Saving..." : "Create"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Practice Dialog */}
+      <Dialog open={showPractice} onOpenChange={setShowPractice}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start Interview Practice</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <div>
+              <Label className="text-xs">Target Role *</Label>
+              <Input value={practiceForm.target_role || ""} onChange={e => setPracticeForm(p => ({ ...p, target_role: e.target.value }))} placeholder="e.g. Software Engineer" />
+            </div>
+            <div>
+              <Label className="text-xs">Industry</Label>
+              <Input value={practiceForm.industry || ""} onChange={e => setPracticeForm(p => ({ ...p, industry: e.target.value }))} placeholder="e.g. Technology" />
+            </div>
+            <p className="text-xs text-slate-500">AI will generate practice interview questions for you</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPractice(false)}>Cancel</Button>
+            <Button onClick={startPractice} disabled={practicing}>
+              {practicing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
