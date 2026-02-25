@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { base44 } from "@/api/base44Client";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
@@ -14,6 +15,11 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(user => setUserRole(user?.role)).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -48,8 +54,17 @@ export default function Layout({ children, currentPageName }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <nav className="p-3 space-y-0.5">
-            {navItems.map(item => (
+            {userRole === 'client' ? (
               <Link
+                to={createPageUrl('ClientPortal')}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white"
+              >
+                <Users className="w-4 h-4" />
+                My Portal
+              </Link>
+            ) : (
+              navItems.map(item => (
+                <Link
                 key={item.page}
                 to={createPageUrl(item.page)}
                 onClick={() => setSidebarOpen(false)}
@@ -63,7 +78,8 @@ export default function Layout({ children, currentPageName }) {
                 <item.icon className="w-4 h-4" />
                 {item.name}
               </Link>
-            ))}
+              ))
+            )}
           </nav>
         </aside>
 

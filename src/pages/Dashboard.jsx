@@ -10,25 +10,66 @@ import RecentActivity from "@/components/dashboard/RecentActivity";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients"],
-    queryFn: () => base44.entities.Client.list("-created_date")
+    queryFn: async () => {
+      const allClients = await base44.entities.Client.list("-created_date");
+      if (!user) return allClients;
+      if (user.role === 'management') return allClients;
+      if (user.role === 'employee') {
+        return allClients.filter(c => c.created_by === user.email);
+      }
+      return [];
+    },
+    enabled: !!user
   });
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications"],
-    queryFn: () => base44.entities.JobApplication.list("-created_date")
+    queryKey: ["applications", user?.role],
+    queryFn: async () => {
+      const apps = await base44.entities.JobApplication.list("-created_date");
+      if (!user || user.role === 'management') return apps;
+      if (user.role === 'employee') {
+        const clientIds = clients.map(c => c.id);
+        return apps.filter(a => clientIds.includes(a.client_id));
+      }
+      return [];
+    },
+    enabled: !!user && clients.length > 0
   });
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => base44.entities.Task.list("-created_date")
+    queryKey: ["tasks", user?.role],
+    queryFn: async () => {
+      const allTasks = await base44.entities.Task.list("-created_date");
+      if (!user || user.role === 'management') return allTasks;
+      if (user.role === 'employee') {
+        const clientIds = clients.map(c => c.id);
+        return allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id)));
+      }
+      return [];
+    },
+    enabled: !!user && clients.length > 0
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => base44.entities.TimeEntry.list("-created_date")
+    queryKey: ["timeEntries", user?.role],
+    queryFn: async () => {
+      const entries = await base44.entities.TimeEntry.list("-created_date");
+      if (!user || user.role === 'management') return entries;
+      if (user.role === 'employee') {
+        const clientIds = clients.map(c => c.id);
+        return entries.filter(e => clientIds.includes(e.client_id));
+      }
+      return [];
+    },
+    enabled: !!user && clients.length > 0
   });
 
   const totalHours = Math.round(timeEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60);
