@@ -291,6 +291,36 @@ Provide:
             <div className="space-y-1"><Label className="text-xs text-slate-500">Next Step</Label><Input value={form.next_step || ""} onChange={e => u("next_step", e.target.value)} /></div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Next Step Date</Label><Input type="date" value={form.next_step_date || ""} onChange={e => u("next_step_date", e.target.value)} /></div>
             <div className="col-span-2 space-y-1"><Label className="text-xs text-slate-500">Notes</Label><Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} rows={2} /></div>
+            
+            <div className="col-span-2 border-t border-slate-200 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell className="w-4 h-4 text-blue-600" />
+                <Label className="text-sm font-semibold">Automated Follow-up Reminders</Label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-500">Follow-up after (days)</Label>
+                  <Input 
+                    type="number" 
+                    value={form.follow_up_cadence_days || 7} 
+                    onChange={e => u("follow_up_cadence_days", parseInt(e.target.value))}
+                    min="1"
+                  />
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={form.follow_up_enabled !== false}
+                      onChange={e => u("follow_up_enabled", e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300"
+                    />
+                    <span className="text-xs text-slate-600">Enable reminders</span>
+                  </label>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">Automatic tasks will be created to remind you to follow up</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
