@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, Clock, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Clients", icon: Users, page: "Clients" },
+  { name: "Calendar", icon: Calendar, page: "Calendar" },
+  { name: "Reports", icon: BarChart3, page: "Reports" },
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
 ];
 

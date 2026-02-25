@@ -13,11 +13,14 @@ import ResumeSection from "@/components/client-detail/ResumeSection";
 import TimeLogSection from "@/components/client-detail/TimeLogSection";
 import OnboardingSection from "@/components/client-detail/OnboardingSection";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
+import DocumentsSection from "@/components/client-detail/DocumentsSection";
+import EmailComposer from "@/components/EmailComposer";
 
 export default function ClientDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const clientId = urlParams.get("id");
   const queryClient = useQueryClient();
+  const [showEmailComposer, setShowEmailComposer] = React.useState(false);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -74,9 +77,14 @@ export default function ClientDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to={createPageUrl("Clients")} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Clients
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to={createPageUrl("Clients")} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Clients
+        </Link>
+        <Button variant="outline" onClick={() => setShowEmailComposer(true)}>
+          Send Email
+        </Button>
+      </div>
 
       <ClientHeader client={client} onUpdate={refresh} />
 
@@ -85,6 +93,7 @@ export default function ClientDetail() {
           <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
           <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>
@@ -98,6 +107,9 @@ export default function ClientDetail() {
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
         </TabsContent>
+        <TabsContent value="documents">
+          <DocumentsSection clientId={clientId} onRefresh={refresh} />
+        </TabsContent>
         <TabsContent value="tasks">
           <TasksSection clientId={clientId} tasks={tasks} onRefresh={refresh} />
         </TabsContent>
@@ -108,6 +120,14 @@ export default function ClientDetail() {
           <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
         </TabsContent>
       </Tabs>
+
+      <EmailComposer
+        open={showEmailComposer}
+        onClose={() => setShowEmailComposer(false)}
+        clientId={clientId}
+        clientEmail={client.email}
+        clientName={`${client.first_name} ${client.last_name}`}
+      />
     </div>
   );
 }
