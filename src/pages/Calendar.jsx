@@ -1,0 +1,293 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X } from "lucide-react";
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+export default function Calendar() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState('month');
+  const [showNew, setShowNew] = useState(false);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: meetings = [] } = useQuery({
+    queryKey: ['meetings'],
+    queryFn: () => base44.entities.Meeting.list()
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
+  const openNew = (date) => {
+    setForm({
+      client_id: "",
+      title: "",
+      description: "",
+      meeting_type: "consultation",
+      start_datetime: date ? format(date, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      end_datetime: date ? format(addDays(date, 0), "yyyy-MM-dd'T'HH:mm") : format(addDays(new Date(), 0), "yyyy-MM-dd'T'HH:mm"),
+      location: "",
+      status: "scheduled"
+    });
+    setShowNew(true);
+  };
+
+  const save = async () => {
+    if (!form.client_id || !form.title || !form.start_datetime) {
+      toast.error("Please fill required fields");
+      return;
+    }
+    setSaving(true);
+    try {
+      await base44.entities.Meeting.create(form);
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      setShowNew(false);
+      toast.success("Meeting scheduled");
+    } catch (error) {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getDaysInMonth = () => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    const startWeek = startOfWeek(start);
+    const endWeek = endOfWeek(end);
+    
+    const days = [];
+    let day = startWeek;
+    while (day <= endWeek) {
+      days.push(day);
+      day = addDays(day, 1);
+    }
+    return days;
+  };
+
+  const getMeetingsForDay = (day) => {
+    return meetings.filter(m => {
+      const meetingDate = parseISO(m.start_datetime);
+      return isSameDay(meetingDate, day);
+    });
+  };
+
+  const days = getDaysInMonth();
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const statusColors = {
+    scheduled: "bg-blue-100 text-blue-700",
+    confirmed: "bg-green-100 text-green-700",
+    completed: "bg-slate-100 text-slate-600",
+    cancelled: "bg-red-100 text-red-700",
+    no_show: "bg-amber-100 text-amber-700"
+  };
+
+  return (
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Calendar</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage client meetings and appointments</p>
+          </div>
+          <Button onClick={() => openNew()}>
+            <Plus className="w-4 h-4 mr-2" /> New Meeting
+          </Button>
+        </div>
+
+        <Card className="border-0 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
+                ←
+              </Button>
+              <h2 className="text-lg font-semibold text-slate-900 min-w-[200px] text-center">
+                {format(currentDate, 'MMMM yyyy')}
+              </h2>
+              <Button variant="outline" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
+                →
+              </Button>
+            </div>
+            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+              Today
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {weekDays.map(day => (
+              <div key={day} className="text-center text-xs font-semibold text-slate-600 py-2">
+                {day}
+              </div>
+            ))}
+            {days.map(day => {
+              const dayMeetings = getMeetingsForDay(day);
+              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+              const isToday = isSameDay(day, new Date());
+              
+              return (
+                <div
+                  key={day.toString()}
+                  className={cn(
+                    "min-h-[100px] p-2 border border-slate-100 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
+                    !isCurrentMonth && "bg-slate-50/50",
+                    isToday && "ring-2 ring-blue-500"
+                  )}
+                  onClick={() => openNew(day)}
+                >
+                  <div className={cn(
+                    "text-sm font-medium mb-1",
+                    isToday ? "text-blue-600" : isCurrentMonth ? "text-slate-900" : "text-slate-400"
+                  )}>
+                    {format(day, 'd')}
+                  </div>
+                  <div className="space-y-1">
+                    {dayMeetings.slice(0, 2).map(meeting => {
+                      const client = clients.find(c => c.id === meeting.client_id);
+                      return (
+                        <div
+                          key={meeting.id}
+                          className="text-xs p-1 rounded bg-blue-100 text-blue-700 truncate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {format(parseISO(meeting.start_datetime), 'HH:mm')} {client?.first_name}
+                        </div>
+                      );
+                    })}
+                    {dayMeetings.length > 2 && (
+                      <div className="text-xs text-slate-500">+{dayMeetings.length - 2} more</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Upcoming Meetings */}
+        <Card className="border-0 shadow-sm p-5">
+          <h3 className="text-base font-semibold text-slate-800 mb-4">Upcoming Meetings</h3>
+          <div className="space-y-3">
+            {meetings
+              .filter(m => new Date(m.start_datetime) >= new Date() && m.status !== 'cancelled')
+              .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
+              .slice(0, 5)
+              .map(meeting => {
+                const client = clients.find(c => c.id === meeting.client_id);
+                return (
+                  <div key={meeting.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
+                        <Badge className={cn("text-xs", statusColors[meeting.status])}>
+                          {meeting.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-600">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="w-3 h-3" />
+                          {format(parseISO(meeting.start_datetime), 'MMM d, yyyy')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(parseISO(meeting.start_datetime), 'HH:mm')}
+                        </span>
+                        {meeting.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {meeting.location}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </Card>
+      </div>
+
+      <Dialog open={showNew} onOpenChange={setShowNew}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Schedule Meeting</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div>
+              <Label className="text-xs">Client *</Label>
+              <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Title *</Label>
+              <Input value={form.title || ""} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Meeting Type</Label>
+              <Select value={form.meeting_type} onValueChange={v => setForm(p => ({ ...p, meeting_type: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="consultation">Consultation</SelectItem>
+                  <SelectItem value="interview_prep">Interview Prep</SelectItem>
+                  <SelectItem value="resume_review">Resume Review</SelectItem>
+                  <SelectItem value="follow_up">Follow-up</SelectItem>
+                  <SelectItem value="strategy">Strategy</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Start Date & Time *</Label>
+                <Input type="datetime-local" value={form.start_datetime || ""} onChange={e => setForm(p => ({ ...p, start_datetime: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">End Date & Time</Label>
+                <Input type="datetime-local" value={form.end_datetime || ""} onChange={e => setForm(p => ({ ...p, end_datetime: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Location / Video Link</Label>
+              <Input value={form.location || ""} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} placeholder="Office, Zoom link, etc." />
+            </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea value={form.description || ""} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Schedule"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

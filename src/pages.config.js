@@ -51,6 +51,8 @@ import ClientDetail from './pages/ClientDetail';
 import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
 import TimeTracking from './pages/TimeTracking';
+import Reports from './pages/Reports';
+import Calendar from './pages/Calendar';
 import __Layout from './Layout.jsx';
 
 
@@ -59,6 +61,8 @@ export const PAGES = {
     "Clients": Clients,
     "Dashboard": Dashboard,
     "TimeTracking": TimeTracking,
+    "Reports": Reports,
+    "Calendar": Calendar,
 }
 
 export const pagesConfig = {
