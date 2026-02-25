@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, CheckCircle2, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -33,8 +35,13 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState(null);
 
+  const { data: allClients = [] } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => base44.entities.Client.list()
+  });
+
   const openNew = () => {
-    setForm({ title: "", description: "", status: "pending", priority: "medium", due_date: "", category: "follow_up" });
+    setForm({ title: "", description: "", status: "pending", priority: "medium", due_date: "", category: "follow_up", client_ids: clientId ? [clientId] : [] });
     setEditId(null);
     setShowNew(true);
   };
@@ -46,12 +53,16 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
   };
 
   const handleSave = async () => {
+    if (!form.client_ids || form.client_ids.length === 0) {
+      toast.error("Please select at least one client");
+      return;
+    }
     setSaving(true);
     if (editId) {
       await base44.entities.Task.update(editId, form);
       toast.success("Task updated");
     } else {
-      await base44.entities.Task.create({ ...form, client_id: clientId });
+      await base44.entities.Task.create(form);
       toast.success("Task created");
     }
     setSaving(false);
@@ -67,6 +78,15 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
   };
 
   const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+  const toggleClient = (cId) => {
+    const current = form.client_ids || [];
+    if (current.includes(cId)) {
+      u("client_ids", current.filter(id => id !== cId));
+    } else {
+      u("client_ids", [...current, cId]);
+    }
+  };
 
   const pending = tasks.filter(t => t.status !== "completed" && t.status !== "cancelled");
   const completed = tasks.filter(t => t.status === "completed");
@@ -119,6 +139,30 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
           <div className="space-y-3 py-3">
             <div className="space-y-1"><Label className="text-xs text-slate-500">Title *</Label><Input value={form.title || ""} onChange={e => u("title", e.target.value)} /></div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Description</Label><Textarea value={form.description || ""} onChange={e => u("description", e.target.value)} rows={2} /></div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                Assign to Clients *
+              </Label>
+              <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                {allClients.filter(c => c.status === "active").map(client => (
+                  <div key={client.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`client-${client.id}`}
+                      checked={(form.client_ids || []).includes(client.id)}
+                      onCheckedChange={() => toggleClient(client.id)}
+                    />
+                    <label htmlFor={`client-${client.id}`} className="text-sm text-slate-700 cursor-pointer">
+                      {client.first_name} {client.last_name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {(form.client_ids || []).length > 0 && (
+                <p className="text-xs text-slate-500">{form.client_ids.length} client(s) selected</p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Priority</Label>

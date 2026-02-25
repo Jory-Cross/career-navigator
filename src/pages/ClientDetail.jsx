@@ -29,11 +29,13 @@ export default function ClientDetail() {
     enabled: !!clientId
   });
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ["tasks", clientId],
-    queryFn: () => base44.entities.Task.filter({ client_id: clientId }),
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => base44.entities.Task.list(),
     enabled: !!clientId
   });
+
+  const tasks = allTasks.filter(t => t.client_ids?.includes(clientId));
 
   const { data: resumes = [] } = useQuery({
     queryKey: ["resumes", clientId],

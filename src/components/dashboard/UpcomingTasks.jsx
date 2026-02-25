@@ -22,9 +22,13 @@ export default function UpcomingTasks({ tasks, clients, onComplete }) {
     })
     .slice(0, 8);
 
-  const getClientName = (id) => {
-    const c = clients.find(c => c.id === id);
-    return c ? `${c.first_name} ${c.last_name}` : "—";
+  const getClientNames = (ids) => {
+    if (!ids || ids.length === 0) return "—";
+    const names = ids.map(id => {
+      const c = clients.find(c => c.id === id);
+      return c ? `${c.first_name} ${c.last_name}` : null;
+    }).filter(Boolean);
+    return names.length > 0 ? names.join(", ") : "—";
   };
 
   return (
@@ -48,7 +52,7 @@ export default function UpcomingTasks({ tasks, clients, onComplete }) {
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{task.title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{getClientName(task.client_id)}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{getClientNames(task.client_ids)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Badge className={cn("text-[10px] border-0", priorityConfig[task.priority]?.color)}>
