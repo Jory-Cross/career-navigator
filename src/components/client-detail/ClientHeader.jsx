@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Mail, Phone, MapPin, Briefcase, Globe, Pencil, Save, X } from "lucide-react";
+import { User, Mail, Phone, MapPin, Briefcase, Globe, Pencil, Save, X, Upload, FileText, Download, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { base44 } from "@/api/base44Client";
@@ -19,6 +19,8 @@ const statusColors = {
 export default function ClientHeader({ client, onUpdate }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const startEdit = () => {
     setForm({ ...client });
@@ -33,6 +35,33 @@ export default function ClientHeader({ client, onUpdate }) {
   };
 
   const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a PDF or Word document");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.entities.Client.update(client.id, {
+        resume_file_url: file_url,
+        resume_file_name: file.name
+      });
+      toast.success("Resume uploaded");
+      onUpdate();
+    } catch (error) {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (editing) {
     return (
@@ -98,6 +127,77 @@ export default function ClientHeader({ client, onUpdate }) {
           )}
         </div>
         {client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
+        
+        {/* Resume Upload Section */}
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              <span className="text-sm font-medium text-slate-700">Resume File</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {client.resume_file_url ? (
+                <>
+                  <a
+                    href={client.resume_file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    {client.resume_file_name || "Download"}
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="text-xs h-7"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3 h-3 mr-1" />
+                        Replace
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="text-xs h-7"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3 h-3 mr-1" />
+                      Upload Resume
+                    </>
+                  )}
+                </Button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </Card>
   );
