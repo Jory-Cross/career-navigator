@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,24 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showNew, setShowNew] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => base44.entities.Client.list("-created_date")
+    queryKey: ["clients", user?.role],
+    queryFn: async () => {
+      const allClients = await base44.entities.Client.list("-created_date");
+      if (!user) return allClients;
+      if (user.role === 'management') return allClients;
+      if (user.role === 'employee') {
+        return allClients.filter(c => c.created_by === user.email);
+      }
+      return [];
+    },
+    enabled: !!user
   });
 
   const { data: timeEntries = [] } = useQuery({
