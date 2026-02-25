@@ -21,11 +21,23 @@ export default function ClientDetail() {
   const clientId = urlParams.get("id");
   const queryClient = useQueryClient();
   const [showEmailComposer, setShowEmailComposer] = React.useState(false);
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: client, isLoading } = useQuery({
-    queryKey: ["client", clientId],
-    queryFn: () => base44.entities.Client.list().then(list => list.find(c => c.id === clientId)),
-    enabled: !!clientId
+    queryKey: ["client", clientId, user?.role],
+    queryFn: async () => {
+      const allClients = await base44.entities.Client.list();
+      const clientData = allClients.find(c => c.id === clientId);
+      if (!clientData || !user) return null;
+      if (user.role === 'management') return clientData;
+      if (user.role === 'employee' && clientData.created_by === user.email) return clientData;
+      return null;
+    },
+    enabled: !!clientId && !!user
   });
 
   const { data: applications = [] } = useQuery({
