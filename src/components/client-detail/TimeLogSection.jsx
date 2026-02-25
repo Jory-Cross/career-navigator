@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Clock, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 const catColors = {
   consultation: "bg-emerald-50 text-emerald-700",
@@ -15,21 +23,78 @@ const catColors = {
   other: "bg-gray-50 text-gray-600"
 };
 
-export default function TimeLogSection({ timeEntries }) {
+export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({
+    date: format(new Date(), "yyyy-MM-dd"),
+    duration_minutes: "",
+    description: "",
+    category: "consultation",
+    start_time: "",
+    end_time: ""
+  });
+  const [saving, setSaving] = useState(false);
+
   const totalMinutes = timeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
 
   const sorted = [...timeEntries].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
+  const handleAdd = () => {
+    setForm({
+      date: format(new Date(), "yyyy-MM-dd"),
+      duration_minutes: "",
+      description: "",
+      category: "consultation",
+      start_time: "",
+      end_time: ""
+    });
+    setShowAdd(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.duration_minutes || form.duration_minutes <= 0) {
+      toast.error("Please enter duration");
+      return;
+    }
+    setSaving(true);
+    try {
+      await base44.entities.TimeEntry.create({
+        client_id: clientId,
+        date: form.date,
+        duration_minutes: parseInt(form.duration_minutes),
+        description: form.description,
+        category: form.category,
+        start_time: form.start_time || undefined,
+        end_time: form.end_time || undefined
+      });
+      toast.success("Time entry added");
+      setShowAdd(false);
+      onRefresh();
+    } catch (error) {
+      toast.error("Failed to add entry");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
   return (
-    <Card className="border-0 shadow-sm">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">Time Log</h3>
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
-          <Clock className="w-4 h-4" />
-          {totalHours}h total
+    <>
+      <Card className="border-0 shadow-sm">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-800">Time Log</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+              <Clock className="w-4 h-4" />
+              {totalHours}h total
+            </div>
+            <Button size="sm" variant="outline" onClick={handleAdd}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add
+            </Button>
+          </div>
         </div>
-      </div>
       <div className="divide-y divide-slate-50">
         {sorted.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">No time logged yet</div>
@@ -51,5 +116,66 @@ export default function TimeLogSection({ timeEntries }) {
         ))}
       </div>
     </Card>
+
+    <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Time Entry</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Date</Label>
+              <Input type="date" value={form.date} onChange={e => u("date", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Duration (minutes)</Label>
+              <Input type="number" value={form.duration_minutes} onChange={e => u("duration_minutes", e.target.value)} placeholder="60" />
+            </div>
+          </div>
+          
+          <div>
+            <Label className="text-xs">Category</Label>
+            <Select value={form.category} onValueChange={v => u("category", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="consultation">Consultation</SelectItem>
+                <SelectItem value="resume_work">Resume Work</SelectItem>
+                <SelectItem value="job_search">Job Search</SelectItem>
+                <SelectItem value="interview_prep">Interview Prep</SelectItem>
+                <SelectItem value="follow_up">Follow Up</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs">Description</Label>
+            <Textarea value={form.description} onChange={e => u("description", e.target.value)} placeholder="What did you work on?" rows={3} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Start Time (optional)</Label>
+              <Input type="time" value={form.start_time} onChange={e => u("start_time", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">End Time (optional)</Label>
+              <Input type="time" value={form.end_time} onChange={e => u("end_time", e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Add Entry"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

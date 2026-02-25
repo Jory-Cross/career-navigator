@@ -95,7 +95,7 @@ export default function ClientDetail() {
           <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} />
         </TabsContent>
         <TabsContent value="time">
-          <TimeLogSection timeEntries={timeEntries} />
+          <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
         </TabsContent>
       </Tabs>
     </div>
