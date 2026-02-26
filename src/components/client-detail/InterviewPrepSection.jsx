@@ -268,9 +268,14 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
             <MessageSquare className="w-5 h-5 text-violet-600" />
             <h3 className="text-sm font-semibold text-slate-800">Interview Preparation</h3>
           </div>
-          <Button size="sm" onClick={startNewSession}>
-            <Sparkles className="w-3.5 h-3.5 mr-1" /> Start Practice
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => startNewSession(true)}>
+              <Sparkles className="w-3.5 h-3.5 mr-1" /> WSA Interview
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => startNewSession(false)}>
+              <Sparkles className="w-3.5 h-3.5 mr-1" /> AI Practice
+            </Button>
+          </div>
         </div>
 
         <div className="p-5">
