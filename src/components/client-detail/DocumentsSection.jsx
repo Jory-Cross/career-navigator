@@ -288,6 +288,11 @@ export default function DocumentsSection({ clientId, onRefresh }) {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    {(doc.category === 'resume' || doc.category === 'cover_letter') && (
+                      <Button size="sm" variant="ghost" onClick={() => loadVersions(doc.id)} className="h-7 px-2 text-xs">
+                        v{doc.version || 1}
+                      </Button>
+                    )}
                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                       <Button size="sm" variant="ghost" className="h-7 px-2">
                         <Download className="w-3.5 h-3.5" />
