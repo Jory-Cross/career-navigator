@@ -72,7 +72,7 @@ export default function Dashboard() {
   });
 
   const totalHours = Math.round(timeEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60);
-  const activeClients = clients.filter(c => c.status === "active").length;
+  const activeClients = clients.filter(c => !c.is_archived).length;
   const pendingTasks = tasks.filter(t => t.status === "pending" || t.status === "in_progress").length;
 
   const handleRefresh = () => {
