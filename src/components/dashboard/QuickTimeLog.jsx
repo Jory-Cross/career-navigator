@@ -93,21 +93,28 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
           onChange={e => setDate(e.target.value)}
           className="border-slate-200 text-sm"
         />
-        <div className="flex gap-2">
-          <Input
-            type="time"
-            placeholder="Start time"
-            value={startTime}
-            onChange={e => setStartTime(e.target.value)}
-            className="border-slate-200 text-sm flex-1"
-          />
-          <Input
-            type="time"
-            placeholder="End time"
-            value={endTime}
-            onChange={e => setEndTime(e.target.value)}
-            className="border-slate-200 text-sm flex-1"
-          />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              type="time"
+              placeholder="Start time"
+              value={startTime}
+              onChange={e => setStartTime(e.target.value)}
+              className="border-slate-200 text-sm flex-1"
+            />
+            <Input
+              type="time"
+              placeholder="End time"
+              value={endTime}
+              onChange={e => setEndTime(e.target.value)}
+              className="border-slate-200 text-sm flex-1"
+            />
+          </div>
+          {startTime && endTime && (
+            <p className="text-xs text-slate-500">
+              Duration: {calculateDuration()} minutes
+            </p>
+          )}
         </div>
         <Input
           placeholder="Description..."
