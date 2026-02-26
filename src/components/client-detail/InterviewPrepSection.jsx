@@ -57,7 +57,7 @@ export default function InterviewPrepSection({ client }) {
     setShowSession(true);
   };
 
-  const startNewSession = async () => {
+  const startNewSession = async (useWSA = false) => {
     if (!client.target_role) {
       toast.error("Please set a target role for the client first");
       return;
@@ -66,9 +66,21 @@ export default function InterviewPrepSection({ client }) {
     setGenerating(true);
     setShowSession(true);
     setReviewMode(false);
+    setIsWSA(useWSA);
 
     try {
-      const prompt = `Generate 5 common interview questions for someone applying for a ${client.target_role} position in the ${client.industry || "general"} industry.
+      let questions;
+      
+      if (useWSA) {
+        questions = WSA_QUESTIONS.map(q => ({
+          question: q.question,
+          category: q.category,
+          answer: "",
+          feedback: "",
+          score: null
+        }));
+      } else {
+        const prompt = `Generate 5 common interview questions for someone applying for a ${client.target_role} position in the ${client.industry || "general"} industry.
 
 Include a mix of:
 1. Behavioral questions (STAR method)
@@ -78,46 +90,48 @@ Include a mix of:
 
 For each question, categorize it (e.g., "Behavioral", "Technical", "Situational").`;
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            questions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  question: { type: "string" },
-                  category: { type: "string" }
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    question: { type: "string" },
+                    category: { type: "string" }
+                  }
                 }
               }
             }
           }
-        }
-      });
+        });
 
-      const questions = result.questions.map(q => ({
-        question: q.question,
-        category: q.category,
-        answer: "",
-        feedback: "",
-        score: null
-      }));
+        questions = result.questions.map(q => ({
+          question: q.question,
+          category: q.category,
+          answer: "",
+          feedback: "",
+          score: null
+        }));
+      }
 
       const session = await base44.entities.InterviewSession.create({
         client_id: client.id,
         target_role: client.target_role,
         industry: client.industry || "",
         questions,
-        session_date: new Date().toISOString().split('T')[0]
+        session_date: new Date().toISOString().split('T')[0],
+        session_type: useWSA ? "WSA" : "practice"
       });
 
       setCurrentSession(session);
       setCurrentQuestionIdx(0);
       setAnswer("");
     } catch (error) {
-      toast.error("Failed to generate questions");
+      toast.error("Failed to start session");
       setShowSession(false);
     } finally {
       setGenerating(false);
