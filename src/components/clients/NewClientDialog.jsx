@@ -25,21 +25,26 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       const client = await base44.entities.Client.create({ ...form, status: "active", access_token: token });
       
       // Send welcome email to client
-      const portalUrl = `${window.location.origin}/ClientPortal`;
-      await base44.integrations.Core.SendEmail({
-        to: form.email,
-        subject: "Welcome to ClientFlow - Access Your Portal",
-        body: `Hi ${form.first_name},\n\nWelcome to ClientFlow! We're excited to work with you.\n\nYou now have access to your personal client portal where you can:\n• Track your job applications\n• Practice for interviews with AI\n• Manage your tasks\n• View your documents\n\nTo get started, please sign up for your account at:\n${portalUrl}\n\nUse this email address (${form.email}) to sign up.\n\nIf you have any questions, feel free to reach out!\n\nBest regards,\nThe ClientFlow Team`
-      });
+      try {
+        const portalUrl = `${window.location.origin}/ClientPortal`;
+        await base44.integrations.Core.SendEmail({
+          to: form.email,
+          subject: "Welcome to ClientFlow - Access Your Portal",
+          body: `Hi ${form.first_name},\n\nWelcome to ClientFlow! We're excited to work with you.\n\nYou now have access to your personal client portal where you can:\n• Track your job applications\n• Practice for interviews with AI\n• Manage your tasks\n• View your documents\n\nTo get started, please sign up for your account at:\n${portalUrl}\n\nUse this email address (${form.email}) to sign up.\n\nIf you have any questions, feel free to reach out!\n\nBest regards,\nThe ClientFlow Team`
+        });
+        toast.success("Client created and welcome email sent");
+      } catch (emailError) {
+        console.error("Failed to send email:", emailError);
+        toast.success("Client created (email notification failed)");
+      }
       
       setSaving(false);
       setForm({ first_name: "", last_name: "", email: "", phone: "", target_role: "", industry: "", location: "", notes: "" });
       onOpenChange(false);
-      toast.success("Client created and welcome email sent");
       if (onCreated) onCreated();
     } catch (error) {
       setSaving(false);
-      toast.error("Failed to create client");
+      toast.error("Failed to create client: " + error.message);
     }
   };
 
