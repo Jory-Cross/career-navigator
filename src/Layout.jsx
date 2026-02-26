@@ -59,7 +59,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Sidebar */}
         {user?.role !== 'client' && (
           <aside className={cn(
-            "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-white/95 backdrop-blur-md border-r border-slate-200/60 shadow-xl transition-transform duration-300 lg:translate-x-0",
+            "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
             <nav className="p-3 space-y-0.5">
@@ -69,10 +69,10 @@ export default function Layout({ children, currentPageName }) {
                 to={createPageUrl(item.page)}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   currentPageName === item.page
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50/50"
+                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                 )}
               >
                 <item.icon className="w-4 h-4" />
