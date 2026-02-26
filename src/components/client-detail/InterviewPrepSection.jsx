@@ -19,6 +19,20 @@ export default function InterviewPrepSection({ client }) {
   const [answer, setAnswer] = useState("");
   const [analyzingAnswer, setAnalyzingAnswer] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
+  const [isWSA, setIsWSA] = useState(false);
+
+  const WSA_QUESTIONS = [
+    { question: "Tell me about yourself", category: "Background" },
+    { question: "What are your greatest strengths?", category: "Strengths" },
+    { question: "What is your greatest weakness?", category: "Weakness" },
+    { question: "Why are you interested in this role/our company?", category: "Motivation" },
+    { question: "Describe a challenging situation you've faced and how you dealt with it.", category: "Problem Solving" },
+    { question: "Where do you see yourself in 5 years?", category: "Career Goals" },
+    { question: "How do you handle conflict in the workplace?", category: "Conflict Resolution" },
+    { question: "How do you prioritize your work?", category: "Time Management" },
+    { question: "Give an example of a goal you set and how you achieved it.", category: "Achievement" },
+    { question: "Do you have any questions for us?", category: "Engagement" }
+  ];
 
   useEffect(() => {
     loadSessions();
