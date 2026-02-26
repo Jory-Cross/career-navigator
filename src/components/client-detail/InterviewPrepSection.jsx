@@ -263,9 +263,13 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                 const sessionAvg = session.questions 
                   ? Math.round(session.questions.reduce((sum, q) => sum + (q.score || 0), 0) / session.questions.length)
                   : 0;
-                  
+
                 return (
-                  <div key={session.id} className="border border-slate-200 rounded-lg p-3">
+                  <div 
+                    key={session.id} 
+                    onClick={() => reviewSession(session)}
+                    className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="text-sm font-medium text-slate-800">{session.target_role}</p>
