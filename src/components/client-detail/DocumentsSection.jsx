@@ -390,6 +390,32 @@ export default function DocumentsSection({ clientId, onRefresh }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  );
-}
+
+      <Dialog open={!!showVersions} onOpenChange={() => setShowVersions(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Version History</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            {versions.map(v => (
+              <div key={v.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium">Version {v.version}</p>
+                    <p className="text-xs text-slate-500">{format(new Date(v.created_date), 'MMM d, yyyy HH:mm')}</p>
+                  </div>
+                  <a href={v.file_url} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="ghost" className="h-7 px-2">
+                      <Download className="w-3.5 h-3.5" />
+                    </Button>
+                  </a>
+                </div>
+                {v.notes && <p className="text-xs text-slate-600">{v.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+      </>
+      );
+      }
