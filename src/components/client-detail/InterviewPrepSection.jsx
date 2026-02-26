@@ -239,6 +239,21 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
         improvement_tips: result.improvement_tips
       });
 
+      // Create activity log entry
+      const avgScore = Math.round(questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length);
+      await base44.entities.Activity.create({
+        client_id: client.id,
+        activity_type: "interview_prep",
+        title: `${isWSA ? "WSA" : "Practice"} Interview Completed`,
+        description: `Completed interview session with ${questions.length} questions. Average score: ${avgScore}%`,
+        metadata: {
+          session_id: currentSession.id,
+          session_type: isWSA ? "WSA" : "practice",
+          average_score: avgScore,
+          questions_count: questions.length
+        }
+      });
+
       setCurrentSession(prev => ({
         ...prev,
         overall_feedback: result.overall_feedback,
