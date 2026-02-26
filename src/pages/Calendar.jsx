@@ -20,16 +20,41 @@ export default function Calendar() {
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: meetings = [] } = useQuery({
-    queryKey: ['meetings'],
-    queryFn: () => base44.entities.Meeting.list()
-  });
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: clients = [] } = useQuery({
-    queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list()
+    queryKey: ['clients', user?.role],
+    queryFn: async () => {
+      const allClients = await base44.entities.Client.list();
+      if (!user) return allClients;
+      if (user.role === 'management') return allClients;
+      if (user.role === 'employee') {
+        return allClients.filter(c => c.created_by === user.email);
+      }
+      return [];
+    },
+    enabled: !!user
+  });
+
+  const clientIds = clients.map(c => c.id);
+
+  const { data: meetings = [] } = useQuery({
+    queryKey: ['meetings', user?.role],
+    queryFn: async () => {
+      const allMeetings = await base44.entities.Meeting.list();
+      if (!user) return allMeetings;
+      if (user.role === 'management') return allMeetings;
+      if (user.role === 'employee') {
+        return allMeetings.filter(m => clientIds.includes(m.client_id));
+      }
+      return [];
+    },
+    enabled: !!user && clients.length >= 0
   });
 
   const openNew = (date) => {
