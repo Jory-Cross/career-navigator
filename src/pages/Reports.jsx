@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function Reports() {
+  const [user, setUser] = useState(null);
   const [clients, setClients] = useState([]);
   const [applications, setApplications] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -16,24 +17,56 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
   const loadData = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      const [c, a, t, te, m] = await Promise.all([
+      const [allClients, allApps, allTasks, allEntries, allMeetings] = await Promise.all([
         base44.entities.Client.list(),
         base44.entities.JobApplication.list(),
         base44.entities.Task.list(),
         base44.entities.TimeEntry.list(),
         base44.entities.Meeting.list()
       ]);
-      setClients(c);
-      setApplications(a);
-      setTasks(t);
-      setTimeEntries(te);
-      setMeetings(m);
+
+      // Filter data based on user role
+      const filteredClients = user.role === 'management' 
+        ? allClients 
+        : allClients.filter(c => c.created_by === user.email);
+      
+      const clientIds = filteredClients.map(c => c.id);
+
+      const filteredApps = user.role === 'management'
+        ? allApps
+        : allApps.filter(a => clientIds.includes(a.client_id));
+
+      const filteredTasks = user.role === 'management'
+        ? allTasks
+        : allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id)));
+
+      const filteredEntries = user.role === 'management'
+        ? allEntries
+        : allEntries.filter(e => clientIds.includes(e.client_id));
+
+      const filteredMeetings = user.role === 'management'
+        ? allMeetings
+        : allMeetings.filter(m => clientIds.includes(m.client_id));
+
+      setClients(filteredClients);
+      setApplications(filteredApps);
+      setTasks(filteredTasks);
+      setTimeEntries(filteredEntries);
+      setMeetings(filteredMeetings);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
