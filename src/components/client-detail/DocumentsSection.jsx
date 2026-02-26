@@ -51,7 +51,7 @@ export default function DocumentsSection({ clientId, onRefresh }) {
 
   useEffect(() => {
     filterDocuments();
-  }, [documents, searchTerm, filterCategory]);
+  }, [documents, searchTerm, filterCategory, filterTag]);
 
   const loadDocuments = async () => {
     setLoading(true);
