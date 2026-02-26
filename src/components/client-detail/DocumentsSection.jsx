@@ -72,15 +72,55 @@ export default function DocumentsSection({ clientId, onRefresh }) {
       filtered = filtered.filter(doc => 
         doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        doc.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        doc.notes?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
     if (filterCategory !== "all") {
       filtered = filtered.filter(doc => doc.category === filterCategory);
     }
+
+    if (filterTag) {
+      filtered = filtered.filter(doc => doc.tags?.includes(filterTag));
+    }
     
     setFilteredDocs(filtered);
+  };
+
+  const loadVersions = async (docId) => {
+    try {
+      const docVersions = await base44.entities.Document.filter({ parent_document_id: docId });
+      const mainDoc = await base44.entities.Document.filter({ id: docId });
+      setVersions([...(mainDoc.length ? mainDoc : []), ...docVersions].sort((a, b) => b.version - a.version));
+      setShowVersions(docId);
+    } catch (error) {
+      toast.error("Failed to load versions");
+    }
+  };
+
+  const autoTagDocument = async () => {
+    if (!selectedFile || !form.category) return;
+    
+    setAiTagging(true);
+    try {
+      const { data } = await base44.functions.invoke('analyzeDocumentContent', {
+        file_name: selectedFile.name,
+        current_category: form.category
+      });
+
+      setForm(p => ({
+        ...p,
+        category: data.suggested_category,
+        tags: data.tags.join(', ')
+      }));
+      
+      toast.success(`AI suggested: ${data.suggested_category.replace(/_/g, ' ')}`);
+    } catch (error) {
+      toast.error("AI analysis failed");
+    } finally {
+      setAiTagging(false);
+    }
   };
 
   const handleUpload = async () => {
