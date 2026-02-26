@@ -32,8 +32,8 @@ export default function UpcomingTasks({ tasks, clients, onComplete }) {
   };
 
   return (
-    <Card className="border-0 shadow-sm">
-      <div className="p-5 border-b border-slate-100">
+    <Card className="border-0 shadow-sm hover:shadow-xl transition-shadow duration-300">
+      <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-purple-50/30">
         <h3 className="text-sm font-semibold text-slate-800">Upcoming Tasks</h3>
       </div>
       <div className="divide-y divide-slate-50">
@@ -43,7 +43,7 @@ export default function UpcomingTasks({ tasks, clients, onComplete }) {
           pendingTasks.map(task => {
             const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
             return (
-              <div key={task.id} className="p-4 flex items-start gap-3 hover:bg-slate-25 transition-colors group">
+              <div key={task.id} className="p-4 flex items-start gap-3 hover:bg-gradient-to-r hover:from-slate-50 hover:to-purple-50/30 transition-all duration-200 group">
                 <button
                   onClick={() => onComplete(task)}
                   className="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-200 flex items-center justify-center hover:border-emerald-400 hover:bg-emerald-50 transition-colors shrink-0"

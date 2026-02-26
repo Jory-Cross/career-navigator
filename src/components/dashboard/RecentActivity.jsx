@@ -34,8 +34,8 @@ export default function RecentActivity({ timeEntries, applications, tasks, clien
   ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
 
   return (
-    <Card className="border-0 shadow-sm">
-      <div className="p-5 border-b border-slate-100">
+    <Card className="border-0 shadow-sm hover:shadow-xl transition-shadow duration-300">
+      <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/30">
         <h3 className="text-sm font-semibold text-slate-800">Recent Activity</h3>
       </div>
       <div className="divide-y divide-slate-50">
@@ -43,12 +43,12 @@ export default function RecentActivity({ timeEntries, applications, tasks, clien
           <div className="p-8 text-center text-sm text-slate-400">No recent activity</div>
         ) : (
           activities.map((a, i) => (
-            <div key={i} className="p-4 flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${a.color}`}>
+            <div key={i} className="p-4 flex items-center gap-3 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50/30 transition-all duration-200 group cursor-pointer">
+              <div className={`p-2 rounded-lg ${a.color} group-hover:scale-110 transition-transform duration-200`}>
                 <a.icon className="w-3.5 h-3.5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-700 truncate">{a.text}</p>
+                <p className="text-sm text-slate-700 truncate group-hover:text-slate-900">{a.text}</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   {a.date ? format(new Date(a.date), "MMM d, h:mm a") : ""}
                 </p>
