@@ -44,6 +44,16 @@ export default function WBLEFormSection({ clientId, client }) {
         pdf_url: pdfData.pdf_url
       });
 
+      // Save to documents
+      await base44.entities.Document.create({
+        client_id: clientId,
+        title: 'WBLE Agreement Form',
+        file_url: pdfData.pdf_url,
+        file_name: 'WBLE_Agreement.pdf',
+        file_type: 'application/pdf',
+        category: 'contract'
+      });
+
       // Log activity
       await base44.entities.Activity.create({
         client_id: clientId,
