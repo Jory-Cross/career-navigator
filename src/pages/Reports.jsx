@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -15,6 +17,8 @@ export default function Reports() {
   const [timeEntries, setTimeEntries] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [allUsers, setAllUsers] = useState([]);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -31,13 +35,16 @@ export default function Reports() {
     
     setLoading(true);
     try {
-      const [allClients, allApps, allTasks, allEntries, allMeetings] = await Promise.all([
+      const [allClients, allApps, allTasks, allEntries, allMeetings, users] = await Promise.all([
         base44.entities.Client.list(),
         base44.entities.JobApplication.list(),
         base44.entities.Task.list(),
         base44.entities.TimeEntry.list(),
-        base44.entities.Meeting.list()
+        base44.entities.Meeting.list(),
+        user.role === 'management' ? base44.entities.User.list() : Promise.resolve([])
       ]);
+
+      setAllUsers(users);
 
       // Filter data based on user role
       const filteredClients = user.role === 'management' 
@@ -150,12 +157,41 @@ export default function Reports() {
   const applicationStats = getApplicationStats();
   const timePerClient = getTimePerClient();
 
+  // Filter time entries by selected employee
+  const filteredTimeEntries = selectedEmployee === 'all' 
+    ? timeEntries 
+    : timeEntries.filter(e => e.created_by === selectedEmployee);
+
+  // Hours by employee
+  const getHoursByEmployee = () => {
+    const employeeHours = {};
+    timeEntries.forEach(entry => {
+      const email = entry.created_by;
+      if (!employeeHours[email]) {
+        employeeHours[email] = 0;
+      }
+      employeeHours[email] += entry.duration_minutes || 0;
+    });
+
+    return Object.entries(employeeHours)
+      .map(([email, minutes]) => {
+        const employee = allUsers.find(u => u.email === email);
+        return {
+          name: employee ? employee.full_name : email,
+          email,
+          hours: Math.round(minutes / 60 * 10) / 10
+        };
+      })
+      .sort((a, b) => b.hours - a.hours);
+  };
+
   const totalClients = clients.length;
   const activeClients = clients.filter(c => c.status === 'active').length;
   const totalApplications = applications.length;
-  const totalHours = Math.round(timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60);
+  const totalHours = Math.round(filteredTimeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60);
   const successfulApps = applications.filter(a => ['offer', 'accepted'].includes(a.status)).length;
   const successRate = totalApplications > 0 ? Math.round((successfulApps / totalApplications) * 100) : 0;
+  const hoursByEmployee = getHoursByEmployee();
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading analytics...</div>;
@@ -163,9 +199,29 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
-        <p className="text-sm text-slate-500 mt-1">Key metrics and performance insights</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
+          <p className="text-sm text-slate-500 mt-1">Key metrics and performance insights</p>
+        </div>
+        {user?.role === 'management' && (
+          <div className="w-64">
+            <Label className="text-xs text-slate-600 mb-1.5 block">Filter by Employee</Label>
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger className="border-slate-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {allUsers.filter(u => u.role !== 'client').map(u => (
+                  <SelectItem key={u.id} value={u.email}>
+                    {u.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Key Metrics */}
@@ -206,7 +262,9 @@ export default function Reports() {
               <div>
                 <p className="text-xs text-slate-500 mb-1">Total Hours Logged</p>
                 <p className="text-2xl font-bold text-slate-900">{totalHours}h</p>
-                <Badge className="mt-2 bg-violet-100 text-violet-700 text-xs">{timeEntries.length} entries</Badge>
+                <Badge className="mt-2 bg-violet-100 text-violet-700 text-xs">
+                  {selectedEmployee === 'all' ? 'All employees' : 'Filtered'}
+                </Badge>
               </div>
               <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center">
                 <Clock className="w-6 h-6 text-violet-600" />
@@ -324,6 +382,25 @@ export default function Reports() {
             </div>
           </CardContent>
         </Card>
+
+        {user?.role === 'management' && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Hours by Employee</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={hoursByEmployee}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={80} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="hours" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
