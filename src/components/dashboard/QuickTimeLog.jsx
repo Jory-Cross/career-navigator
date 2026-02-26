@@ -9,23 +9,43 @@ import { toast } from "sonner";
 
 export default function QuickTimeLog({ clients, onTimeSaved }) {
   const [clientId, setClientId] = useState("");
-  const [minutes, setMinutes] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("consultation");
   const [saving, setSaving] = useState(false);
 
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return 0;
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    return endMinutes - startMinutes;
+  };
+
   const handleSave = async () => {
-    if (!clientId || !minutes) return;
+    if (!clientId || !startTime || !endTime) return;
+    const duration = calculateDuration();
+    if (duration <= 0) {
+      toast.error("End time must be after start time");
+      return;
+    }
     setSaving(true);
     await base44.entities.TimeEntry.create({
       client_id: clientId,
-      date: new Date().toISOString().split("T")[0],
-      duration_minutes: parseInt(minutes),
+      date,
+      start_time: startTime,
+      end_time: endTime,
+      duration_minutes: duration,
       description: description || "Manual entry",
       category,
     });
     setClientId("");
-    setMinutes("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setStartTime("");
+    setEndTime("");
     setDescription("");
     setSaving(false);
     toast.success("Time logged");
@@ -52,21 +72,34 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
             ))}
           </SelectContent>
         </Select>
+        <Input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="border-slate-200 text-sm"
+        />
         <div className="flex gap-2">
           <Input
-            type="number"
-            placeholder="Minutes"
-            value={minutes}
-            onChange={e => setMinutes(e.target.value)}
-            className="border-slate-200 text-sm w-24"
+            type="time"
+            placeholder="Start time"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+            className="border-slate-200 text-sm flex-1"
           />
           <Input
-            placeholder="Description..."
-            value={description}
-            onChange={e => setDescription(e.target.value)}
+            type="time"
+            placeholder="End time"
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
             className="border-slate-200 text-sm flex-1"
           />
         </div>
+        <Input
+          placeholder="Description..."
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          className="border-slate-200 text-sm"
+        />
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger className="border-slate-200 text-sm">
             <SelectValue />
@@ -84,7 +117,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
         <Button
           className="w-full bg-violet-600 hover:bg-violet-700 text-white"
           onClick={handleSave}
-          disabled={!clientId || !minutes || saving}
+          disabled={!clientId || !startTime || !endTime || saving}
         >
           <Clock className="w-4 h-4 mr-2" /> Log Time
         </Button>
