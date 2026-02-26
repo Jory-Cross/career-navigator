@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
+import JobSuggestionsSection from "@/components/client-portal/JobSuggestionsSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -291,6 +292,11 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </TabsList>
 
         <TabsContent value="applications">
+          <JobSuggestionsSection 
+            client={client} 
+            onAddApplication={() => queryClient.invalidateQueries({ queryKey: ['client-applications'] })}
+          />
+          
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
