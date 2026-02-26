@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
