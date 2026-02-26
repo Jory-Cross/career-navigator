@@ -26,7 +26,10 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       
       // Invite client with 'client' role - they'll automatically get the role when they register
       try {
-        await base44.users.inviteUser(form.email, "client");
+        await base44.functions.invoke('inviteClient', { 
+          email: form.email, 
+          firstName: form.first_name 
+        });
         toast.success("Client created and invitation sent");
       } catch (emailError) {
         console.error("Failed to send invitation:", emailError);
