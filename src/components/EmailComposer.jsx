@@ -40,15 +40,19 @@ export default function EmailComposer({ open, onClose, clientId, clientEmail, cl
     }
     setSending(true);
     try {
-      await base44.integrations.Core.SendEmail({
+      await base44.functions.invoke('sendClientEmail', {
         to: clientEmail,
         subject,
-        body
+        body,
+        clientId
       });
-      toast.success("Email sent");
+      toast.success("Email sent successfully");
+      setSubject("");
+      setBody("");
       onClose();
     } catch (error) {
-      toast.error("Failed to send email");
+      console.error("Email error:", error);
+      toast.error("Failed to send email: " + (error.message || "Unknown error"));
     } finally {
       setSending(false);
     }
