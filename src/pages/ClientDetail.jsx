@@ -14,6 +14,7 @@ import TimeLogSection from "@/components/client-detail/TimeLogSection";
 import OnboardingSection from "@/components/client-detail/OnboardingSection";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
 import DocumentsSection from "@/components/client-detail/DocumentsSection";
+import ActivitySection from "@/components/client-detail/ActivitySection";
 import EmailComposer from "@/components/EmailComposer";
 
 export default function ClientDetail() {
@@ -67,6 +68,12 @@ export default function ClientDetail() {
     enabled: !!clientId
   });
 
+  const { data: activities = [] } = useQuery({
+    queryKey: ["activities", clientId],
+    queryFn: () => base44.entities.Activity.filter({ client_id: clientId }),
+    enabled: !!clientId
+  });
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["client", clientId] });
     queryClient.invalidateQueries({ queryKey: ["applications", clientId] });
@@ -110,6 +117,7 @@ export default function ClientDetail() {
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
           {user?.role !== 'client' && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
+          <TabsTrigger value="activity">Activity ({activities.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="onboarding">
           <OnboardingSection client={client} onRefresh={refresh} />
@@ -131,6 +139,9 @@ export default function ClientDetail() {
         </TabsContent>
         <TabsContent value="time">
           <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
+        </TabsContent>
+        <TabsContent value="activity">
+          <ActivitySection clientId={clientId} />
         </TabsContent>
       </Tabs>
 
