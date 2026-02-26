@@ -30,7 +30,7 @@ export default function Layout({ children, currentPageName }) {
   }, [currentPageName, navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       <style>{`
         :root {
           --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -39,17 +39,17 @@ export default function Layout({ children, currentPageName }) {
       `}</style>
 
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-100">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
         <div className="flex items-center justify-between h-14 px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <button className="lg:hidden p-1.5" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <Users className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-slate-900 text-sm tracking-tight">ClientFlow</span>
+              <span className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-sm tracking-tight">ClientFlow</span>
             </div>
           </div>
         </div>
@@ -58,14 +58,14 @@ export default function Layout({ children, currentPageName }) {
       <div className="flex">
         {/* Sidebar */}
         <aside className={cn(
-          "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-white border-r border-slate-100 transition-transform duration-300 lg:translate-x-0",
+          "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-white/95 backdrop-blur-md border-r border-slate-200/60 shadow-xl transition-transform duration-300 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <nav className="p-3 space-y-0.5">
             {userRole === 'client' ? (
               <Link
                 to={createPageUrl('ClientPortal')}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
               >
                 <Users className="w-4 h-4" />
                 My Portal
@@ -79,8 +79,8 @@ export default function Layout({ children, currentPageName }) {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   currentPageName === item.page
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50/50"
                 )}
               >
                 <item.icon className="w-4 h-4" />
