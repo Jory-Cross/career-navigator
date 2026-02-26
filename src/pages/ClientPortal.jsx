@@ -514,45 +514,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           </Card>
         </TabsContent>
 
-        <TabsContent value="resumes">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">My Resumes</CardTitle>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => { setUploadCategory('resume'); setShowUploadDoc(true); }}>
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Resume
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setUploadCategory('cover_letter'); setShowUploadDoc(true); }}>
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Cover Letter
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {resumes.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">No resumes yet</div>
-              ) : (
-                <div className="space-y-3">
-                  {resumes.map(resume => (
-                    <div key={resume.id} className="p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-slate-800">{resume.title}</p>
-                        {resume.is_primary && <Badge className="text-xs bg-blue-100 text-blue-700">Primary</Badge>}
-                      </div>
-                      {resume.summary && <p className="text-xs text-slate-600 mt-1">{resume.summary}</p>}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                        {resume.experience && <span>{resume.experience.length} experiences</span>}
-                        {resume.education && <span>{resume.education.length} education</span>}
-                        {resume.skills && <span>{resume.skills.length} skills</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
 
       {/* Add Application Dialog */}
