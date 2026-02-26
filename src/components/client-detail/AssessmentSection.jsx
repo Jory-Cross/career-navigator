@@ -87,6 +87,16 @@ export default function AssessmentSection({ clientId }) {
         pdf_url: pdfData.pdf_url
       });
 
+      // Save to documents
+      await base44.entities.Document.create({
+        client_id: clientId,
+        title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
+        file_url: pdfData.pdf_url,
+        file_name: `Assessment_${assessmentType}.pdf`,
+        file_type: 'application/pdf',
+        category: 'other'
+      });
+
       // Log activity
       await base44.entities.Activity.create({
         client_id: clientId,
