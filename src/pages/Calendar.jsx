@@ -18,6 +18,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month');
   const [showNew, setShowNew] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
@@ -61,6 +62,7 @@ export default function Calendar() {
   });
 
   const openNew = (date) => {
+    setEditingMeeting(null);
     setForm({
       client_id: "",
       title: "",
@@ -74,6 +76,21 @@ export default function Calendar() {
     setShowNew(true);
   };
 
+  const openEdit = (meeting) => {
+    setEditingMeeting(meeting);
+    setForm({
+      client_id: meeting.client_id,
+      title: meeting.title,
+      description: meeting.description || "",
+      meeting_type: meeting.meeting_type,
+      start_datetime: format(parseISO(meeting.start_datetime), "yyyy-MM-dd'T'HH:mm"),
+      end_datetime: meeting.end_datetime ? format(parseISO(meeting.end_datetime), "yyyy-MM-dd'T'HH:mm") : "",
+      location: meeting.location || "",
+      status: meeting.status
+    });
+    setShowNew(true);
+  };
+
   const save = async () => {
     if (!form.client_id || !form.title || !form.start_datetime) {
       toast.error("Please fill required fields");
@@ -81,10 +98,16 @@ export default function Calendar() {
     }
     setSaving(true);
     try {
-      await base44.entities.Meeting.create(form);
+      if (editingMeeting) {
+        await base44.entities.Meeting.update(editingMeeting.id, form);
+        toast.success("Meeting updated");
+      } else {
+        await base44.entities.Meeting.create(form);
+        toast.success("Meeting scheduled");
+      }
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
       setShowNew(false);
-      toast.success("Meeting scheduled");
+      setEditingMeeting(null);
     } catch (error) {
       toast.error("Failed to save");
     } finally {
@@ -263,8 +286,11 @@ export default function Calendar() {
                       return (
                         <div
                           key={meeting.id}
-                          className={cn("text-xs p-1 rounded bg-blue-100 text-blue-700", view === 'day' ? "" : "truncate")}
-                          onClick={(e) => e.stopPropagation()}
+                          className={cn("text-xs p-1 rounded bg-blue-100 text-blue-700 cursor-pointer hover:bg-blue-200", view === 'day' ? "" : "truncate")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(meeting);
+                          }}
                         >
                           {format(parseISO(meeting.start_datetime), 'HH:mm')} {client?.first_name} - {meeting.title}
                         </div>
@@ -291,7 +317,7 @@ export default function Calendar() {
               .map(meeting => {
                 const client = clients.find(c => c.id === meeting.client_id);
                 return (
-                  <div key={meeting.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div key={meeting.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer" onClick={() => openEdit(meeting)}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
@@ -322,7 +348,8 @@ export default function Calendar() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedMeeting(meeting);
                         setConvertNotes(meeting.description || "");
                         setShowConvert(true);
@@ -342,7 +369,7 @@ export default function Calendar() {
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Schedule Meeting</DialogTitle>
+            <DialogTitle>{editingMeeting ? "Edit Meeting" : "Schedule Meeting"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div>
@@ -362,21 +389,40 @@ export default function Calendar() {
               <Label className="text-xs">Title *</Label>
               <Input value={form.title || ""} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
             </div>
-            <div>
-              <Label className="text-xs">Meeting Type</Label>
-              <Select value={form.meeting_type} onValueChange={v => setForm(p => ({ ...p, meeting_type: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="consultation">Consultation</SelectItem>
-                  <SelectItem value="interview_prep">Interview Prep</SelectItem>
-                  <SelectItem value="resume_review">Resume Review</SelectItem>
-                  <SelectItem value="follow_up">Follow-up</SelectItem>
-                  <SelectItem value="strategy">Strategy</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Meeting Type</Label>
+                <Select value={form.meeting_type} onValueChange={v => setForm(p => ({ ...p, meeting_type: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="consultation">Consultation</SelectItem>
+                    <SelectItem value="interview_prep">Interview Prep</SelectItem>
+                    <SelectItem value="resume_review">Resume Review</SelectItem>
+                    <SelectItem value="follow_up">Follow-up</SelectItem>
+                    <SelectItem value="strategy">Strategy</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingMeeting && (
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="no_show">No Show</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -399,7 +445,9 @@ export default function Calendar() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Schedule"}</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
