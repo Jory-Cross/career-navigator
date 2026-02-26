@@ -24,13 +24,14 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       const token = Math.random().toString(36).substring(2, 15);
       const client = await base44.entities.Client.create({ ...form, status: "active", access_token: token });
       
-      // Invite client with 'client' role - they'll automatically get the role when they register
+      // Invite client - they'll register as 'user' role initially
       try {
         await base44.functions.invoke('inviteClient', { 
           email: form.email, 
-          firstName: form.first_name 
+          firstName: form.first_name,
+          clientId: client.id
         });
-        toast.success("Client created and invitation sent");
+        toast.success("Client created and invitation sent. After they register, update their role to 'client' in the user management.");
       } catch (emailError) {
         console.error("Failed to send invitation:", emailError);
         toast.success("Client created (invitation failed)");
