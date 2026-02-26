@@ -334,38 +334,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </TabsContent>
 
         <TabsContent value="interview">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Interview Practice Sessions</CardTitle>
-                <Button size="sm" onClick={() => setShowPractice(true)}>
-                  <Sparkles className="w-3.5 h-3.5 mr-1" /> Start Practice
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {interviewSessions.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">No practice sessions yet</div>
-              ) : (
-                <div className="space-y-3">
-                  {interviewSessions.map(session => (
-                    <div key={session.id} className="p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-slate-800">{session.target_role}</p>
-                        <span className="text-xs text-slate-500">{format(new Date(session.session_date), "MMM d, yyyy")}</span>
-                      </div>
-                      {session.questions && (
-                        <p className="text-xs text-slate-600">{session.questions.length} questions practiced</p>
-                      )}
-                      {session.overall_feedback && (
-                        <p className="text-xs text-slate-600 mt-2 p-2 bg-white rounded">{session.overall_feedback}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <InterviewPrepSection client={client} />
         </TabsContent>
 
         <TabsContent value="tasks">
@@ -593,32 +562,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </DialogContent>
       </Dialog>
 
-      {/* Start Practice Dialog */}
-      <Dialog open={showPractice} onOpenChange={setShowPractice}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Start Interview Practice</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-3">
-            <div>
-              <Label className="text-xs">Target Role *</Label>
-              <Input value={practiceForm.target_role || ""} onChange={e => setPracticeForm(p => ({ ...p, target_role: e.target.value }))} placeholder="e.g. Software Engineer" />
-            </div>
-            <div>
-              <Label className="text-xs">Industry</Label>
-              <Input value={practiceForm.industry || ""} onChange={e => setPracticeForm(p => ({ ...p, industry: e.target.value }))} placeholder="e.g. Technology" />
-            </div>
-            <p className="text-xs text-slate-500">AI will generate practice interview questions for you</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPractice(false)}>Cancel</Button>
-            <Button onClick={startPractice} disabled={practicing}>
-              {practicing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              Generate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
