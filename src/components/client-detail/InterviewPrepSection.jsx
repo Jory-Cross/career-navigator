@@ -18,6 +18,7 @@ export default function InterviewPrepSection({ client }) {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [answer, setAnswer] = useState("");
   const [analyzingAnswer, setAnalyzingAnswer] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
 
   useEffect(() => {
     loadSessions();
