@@ -290,7 +290,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
       </Card>
 
       <Dialog open={showSession} onOpenChange={setShowSession}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-violet-600" />
