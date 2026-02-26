@@ -34,7 +34,7 @@ export default function ClientDetail() {
       const clientData = allClients.find(c => c.id === clientId);
       if (!clientData) return null;
       if (!user) return clientData;
-      if (user.role === 'admin') return clientData;
+      if (user.role === 'management') return clientData;
       if (user.role === 'employee' && clientData.created_by === user.email) return clientData;
       return null;
     },
