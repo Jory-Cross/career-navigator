@@ -340,7 +340,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-violet-600" />
-              Interview Practice Session
+              {isWSA ? "WSA Interview" : "Interview Practice Session"}
             </DialogTitle>
           </DialogHeader>
 
