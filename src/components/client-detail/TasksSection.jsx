@@ -146,7 +146,7 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                 Assign to Clients *
               </Label>
               <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                {allClients.filter(c => c.status === "active").map(client => (
+                {allClients.filter(c => c.status === "active" && !c.is_archived).map(client => (
                   <div key={client.id} className="flex items-center gap-2">
                     <Checkbox
                       id={`client-${client.id}`}

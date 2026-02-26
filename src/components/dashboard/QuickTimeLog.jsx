@@ -45,7 +45,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
             <SelectValue placeholder="Select client..." />
           </SelectTrigger>
           <SelectContent>
-            {clients.filter(c => c.status === "active").map(c => (
+            {clients.filter(c => c.status === "active" && !c.is_archived).map(c => (
               <SelectItem key={c.id} value={c.id}>
                 {c.first_name} {c.last_name}
               </SelectItem>
