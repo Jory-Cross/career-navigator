@@ -459,7 +459,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                 </ul>
               </div>
 
-              <Button onClick={() => { setShowSession(false); setCurrentSession(null); }} className="w-full">
+              <Button onClick={() => { setShowSession(false); setCurrentSession(null); setReviewMode(false); }} className="w-full">
                 Close
               </Button>
             </div>
