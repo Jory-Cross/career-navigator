@@ -104,6 +104,19 @@ export default function Calendar() {
     return days;
   };
 
+  const getDaysInWeek = () => {
+    const start = startOfWeek(currentDate);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(addDays(start, i));
+    }
+    return days;
+  };
+
+  const getDaysInDay = () => {
+    return [currentDate];
+  };
+
   const getMeetingsForDay = (day) => {
     return meetings.filter(m => {
       const meetingDate = parseISO(m.start_datetime);
@@ -111,7 +124,7 @@ export default function Calendar() {
     });
   };
 
-  const days = getDaysInMonth();
+  const days = view === 'month' ? getDaysInMonth() : view === 'week' ? getDaysInWeek() : getDaysInDay();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const statusColors = {
@@ -138,23 +151,48 @@ export default function Calendar() {
         <Card className="border-0 shadow-sm p-5">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
+              <Button variant="outline" onClick={() => {
+                const newDate = new Date(currentDate);
+                if (view === 'month') newDate.setMonth(newDate.getMonth() - 1);
+                else if (view === 'week') newDate.setDate(newDate.getDate() - 7);
+                else newDate.setDate(newDate.getDate() - 1);
+                setCurrentDate(newDate);
+              }}>
                 ←
               </Button>
               <h2 className="text-lg font-semibold text-slate-900 min-w-[200px] text-center">
-                {format(currentDate, 'MMMM yyyy')}
+                {view === 'month' ? format(currentDate, 'MMMM yyyy') : view === 'week' ? `Week of ${format(startOfWeek(currentDate), 'MMM d')}` : format(currentDate, 'MMMM d, yyyy')}
               </h2>
-              <Button variant="outline" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
+              <Button variant="outline" onClick={() => {
+                const newDate = new Date(currentDate);
+                if (view === 'month') newDate.setMonth(newDate.getMonth() + 1);
+                else if (view === 'week') newDate.setDate(newDate.getDate() + 7);
+                else newDate.setDate(newDate.getDate() + 1);
+                setCurrentDate(newDate);
+              }}>
                 →
               </Button>
             </div>
-            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-              Today
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex border border-slate-200 rounded-md overflow-hidden">
+                <Button variant="ghost" size="sm" className={cn("rounded-none px-3 h-8", view === 'month' && "bg-slate-100")} onClick={() => setView('month')}>
+                  Month
+                </Button>
+                <Button variant="ghost" size="sm" className={cn("rounded-none px-3 h-8 border-l", view === 'week' && "bg-slate-100")} onClick={() => setView('week')}>
+                  Week
+                </Button>
+                <Button variant="ghost" size="sm" className={cn("rounded-none px-3 h-8 border-l", view === 'day' && "bg-slate-100")} onClick={() => setView('day')}>
+                  Day
+                </Button>
+              </div>
+              <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+                Today
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {weekDays.map(day => (
+          <div className={cn("grid gap-2", view === 'day' ? "grid-cols-1" : "grid-cols-7")}>
+            {view !== 'day' && weekDays.map(day => (
               <div key={day} className="text-center text-xs font-semibold text-slate-600 py-2">
                 {day}
               </div>
@@ -168,32 +206,33 @@ export default function Calendar() {
                 <div
                   key={day.toString()}
                   className={cn(
-                    "min-h-[100px] p-2 border border-slate-100 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
-                    !isCurrentMonth && "bg-slate-50/50",
+                    "p-2 border border-slate-100 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
+                    view === 'day' ? "min-h-[400px]" : "min-h-[100px]",
+                    !isCurrentMonth && view === 'month' && "bg-slate-50/50",
                     isToday && "ring-2 ring-blue-500"
                   )}
                   onClick={() => openNew(day)}
                 >
                   <div className={cn(
                     "text-sm font-medium mb-1",
-                    isToday ? "text-blue-600" : isCurrentMonth ? "text-slate-900" : "text-slate-400"
+                    isToday ? "text-blue-600" : isCurrentMonth || view !== 'month' ? "text-slate-900" : "text-slate-400"
                   )}>
-                    {format(day, 'd')}
+                    {view === 'day' ? format(day, 'EEEE, MMMM d, yyyy') : format(day, 'd')}
                   </div>
                   <div className="space-y-1">
-                    {dayMeetings.slice(0, 2).map(meeting => {
+                    {dayMeetings.slice(0, view === 'day' ? 999 : 2).map(meeting => {
                       const client = clients.find(c => c.id === meeting.client_id);
                       return (
                         <div
                           key={meeting.id}
-                          className="text-xs p-1 rounded bg-blue-100 text-blue-700 truncate"
+                          className={cn("text-xs p-1 rounded bg-blue-100 text-blue-700", view === 'day' ? "" : "truncate")}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {format(parseISO(meeting.start_datetime), 'HH:mm')} {client?.first_name}
+                          {format(parseISO(meeting.start_datetime), 'HH:mm')} {client?.first_name} - {meeting.title}
                         </div>
                       );
                     })}
-                    {dayMeetings.length > 2 && (
+                    {dayMeetings.length > 2 && view !== 'day' && (
                       <div className="text-xs text-slate-500">+{dayMeetings.length - 2} more</div>
                     )}
                   </div>

@@ -52,9 +52,9 @@ import ClientDetail from './pages/ClientDetail';
 import ClientPortal from './pages/ClientPortal';
 import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
+import EmailTemplates from './pages/EmailTemplates';
 import Reports from './pages/Reports';
 import TimeTracking from './pages/TimeTracking';
-import EmailTemplates from './pages/EmailTemplates';
 import __Layout from './Layout.jsx';
 
 
@@ -64,9 +64,9 @@ export const PAGES = {
     "ClientPortal": ClientPortal,
     "Clients": Clients,
     "Dashboard": Dashboard,
+    "EmailTemplates": EmailTemplates,
     "Reports": Reports,
     "TimeTracking": TimeTracking,
-    "EmailTemplates": EmailTemplates,
 }
 
 export const pagesConfig = {
