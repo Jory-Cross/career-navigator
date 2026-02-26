@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles } from "lucide-react";
+import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,11 +22,14 @@ export default function ClientPortal() {
   const [showNewApp, setShowNewApp] = useState(false);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showPractice, setShowPractice] = useState(false);
+  const [showUploadDoc, setShowUploadDoc] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState('resume');
   const [appForm, setAppForm] = useState({});
   const [taskForm, setTaskForm] = useState({});
   const [practiceForm, setPracticeForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [practicing, setPracticing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -80,6 +83,12 @@ export default function ClientPortal() {
   const { data: interviewSessions = [] } = useQuery({
     queryKey: ['client-interviews', client?.id],
     queryFn: () => base44.entities.InterviewSession.filter({ client_id: client.id }),
+    enabled: !!client
+  });
+
+  const { data: documents = [] } = useQuery({
+    queryKey: ['client-documents', client?.id],
+    queryFn: () => base44.entities.Document.filter({ client_id: client.id }),
     enabled: !!client
   });
 
@@ -192,6 +201,41 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
+      await base44.entities.Document.create({
+        client_id: client.id,
+        title: file.name,
+        file_url,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        category: uploadCategory
+      });
+
+      await base44.entities.Activity.create({
+        client_id: client.id,
+        activity_type: 'document_uploaded',
+        title: `${uploadCategory === 'resume' ? 'Resume' : 'Cover letter'} uploaded`,
+        description: `Uploaded ${file.name}`
+      });
+
+      toast.success("File uploaded successfully");
+      queryClient.invalidateQueries({ queryKey: ['client-documents'] });
+      setShowUploadDoc(false);
+    } catch (error) {
+      toast.error("Upload failed: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const statusColors = {
     saved: "bg-slate-100 text-slate-700",
     applied: "bg-blue-100 text-blue-700",
@@ -241,6 +285,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+          <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
         </TabsList>
 
@@ -366,6 +411,60 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           </Card>
         </TabsContent>
 
+        <TabsContent value="documents">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">My Documents</CardTitle>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => { setUploadCategory('resume'); setShowUploadDoc(true); }}>
+                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Resume
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setUploadCategory('cover_letter'); setShowUploadDoc(true); }}>
+                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Cover Letter
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {documents.length === 0 ? (
+                <div className="text-center py-8 text-sm text-slate-400">No documents yet</div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map(doc => (
+                    <div key={doc.id} className="p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <FileText className="w-4 h-4 text-slate-500 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-medium text-slate-800">{doc.title}</p>
+                              <Badge className={cn("text-xs", 
+                                doc.category === 'resume' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                              )}>
+                                {doc.category === 'cover_letter' ? 'Cover Letter' : doc.category}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : ''} • 
+                              {format(new Date(doc.created_date), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost">
+                            <Download className="w-3.5 h-3.5" />
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="resumes">
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -455,6 +554,41 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewTask(false)}>Cancel</Button>
             <Button onClick={saveTask} disabled={saving}>{saving ? "Saving..." : "Create"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={showUploadDoc} onOpenChange={setShowUploadDoc}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload {uploadCategory === 'resume' ? 'Resume' : 'Cover Letter'}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <Label htmlFor="file-upload" className="cursor-pointer">
+              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors">
+                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                <p className="text-sm text-slate-600 mb-1">Click to upload or drag and drop</p>
+                <p className="text-xs text-slate-400">PDF, DOC, DOCX (max 10MB)</p>
+              </div>
+              <Input
+                id="file-upload"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+            </Label>
+            {uploading && (
+              <div className="flex items-center justify-center gap-2 mt-4 text-sm text-slate-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Uploading...
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadDoc(false)} disabled={uploading}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
