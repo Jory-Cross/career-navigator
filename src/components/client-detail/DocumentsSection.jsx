@@ -135,7 +135,14 @@ export default function DocumentsSection({ clientId, onRefresh }) {
       
       const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t) : [];
       
-      await base44.entities.Document.create({
+      // Check if this is a new version of an existing document
+      const existingDocs = await base44.entities.Document.filter({
+        client_id: clientId,
+        title: form.title,
+        category: ['resume', 'cover_letter']
+      });
+
+      let newDoc = {
         client_id: clientId,
         title: form.title,
         file_url,
@@ -144,9 +151,18 @@ export default function DocumentsSection({ clientId, onRefresh }) {
         file_type: selectedFile.type,
         category: form.category,
         tags,
-        notes: form.notes,
-        version: 1
-      });
+        notes: form.notes
+      };
+
+      if (existingDocs.length > 0 && ['resume', 'cover_letter'].includes(form.category)) {
+        const latestVersion = Math.max(...existingDocs.map(d => d.version || 1));
+        newDoc.version = latestVersion + 1;
+        newDoc.parent_document_id = existingDocs[0].id;
+      } else {
+        newDoc.version = 1;
+      }
+      
+      await base44.entities.Document.create(newDoc);
 
       toast.success("Document uploaded");
       setShowUpload(false);
