@@ -16,10 +16,17 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
-    base44.auth.me().then(user => setUserRole(user?.role)).catch(() => {});
-  }, []);
+    base44.auth.me().then(user => {
+      setUserRole(user?.role);
+      // Redirect clients to their portal
+      if (user?.role === 'client' && currentPageName !== 'ClientPortal') {
+        navigate(createPageUrl('ClientPortal'));
+      }
+    }).catch(() => {});
+  }, [currentPageName, navigate]);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
