@@ -350,7 +350,21 @@ export default function DocumentsSection({ clientId, onRefresh }) {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Tags (comma separated)</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs">Tags (comma separated)</Label>
+                {selectedFile && form.category && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={autoTagDocument}
+                    disabled={aiTagging}
+                    className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    {aiTagging ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Tag className="w-3 h-3 mr-1" />}
+                    AI Tag
+                  </Button>
+                )}
+              </div>
               <Input
                 value={form.tags}
                 onChange={e => setForm(p => ({ ...p, tags: e.target.value }))}
