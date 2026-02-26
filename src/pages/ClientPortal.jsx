@@ -464,17 +464,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         <TabsContent value="documents">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">My Documents</CardTitle>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => { setUploadCategory('resume'); setShowUploadDoc(true); }}>
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Resume
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setUploadCategory('cover_letter'); setShowUploadDoc(true); }}>
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Cover Letter
-                  </Button>
-                </div>
-              </div>
+              <CardTitle className="text-base">My Documents</CardTitle>
             </CardHeader>
             <CardContent>
               {documents.length === 0 ? (
