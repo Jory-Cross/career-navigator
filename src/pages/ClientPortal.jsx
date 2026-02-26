@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download } from "lucide-react";
+import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -91,6 +91,18 @@ export default function ClientPortal() {
   const { data: documents = [] } = useQuery({
     queryKey: ['client-documents', client?.id],
     queryFn: () => base44.entities.Document.filter({ client_id: client.id }),
+    enabled: !!client
+  });
+
+  const { data: meetings = [] } = useQuery({
+    queryKey: ['client-meetings', client?.id],
+    queryFn: () => base44.entities.Meeting.filter({ client_id: client.id }),
+    enabled: !!client
+  });
+
+  const { data: activities = [] } = useQuery({
+    queryKey: ['client-activities', client?.id],
+    queryFn: () => base44.entities.Activity.filter({ client_id: client.id }),
     enabled: !!client
   });
 
@@ -287,6 +299,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+          <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
         </TabsList>
@@ -342,6 +355,67 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">My Activity & Appointments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {meetings.length === 0 && activities.length === 0 ? (
+                <div className="text-center py-8 text-sm text-slate-400">No activity yet</div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Appointments */}
+                  {meetings.map(meeting => (
+                    <div key={`meeting-${meeting.id}`} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
+                          <p className="text-xs text-slate-600 mt-1">{meeting.meeting_type?.replace(/_/g, ' ')}</p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+                            <span>{format(new Date(meeting.start_datetime), "MMM d, yyyy")}</span>
+                            <span>•</span>
+                            <span>{format(new Date(meeting.start_datetime), "h:mm a")}</span>
+                          </div>
+                          {meeting.location && <p className="text-xs text-slate-500 mt-1">📍 {meeting.location}</p>}
+                          {meeting.description && <p className="text-xs text-slate-600 mt-2">{meeting.description}</p>}
+                          <Badge className={cn("mt-2 text-xs", 
+                            meeting.status === 'scheduled' ? "bg-blue-100 text-blue-700" :
+                            meeting.status === 'confirmed' ? "bg-green-100 text-green-700" :
+                            meeting.status === 'completed' ? "bg-slate-100 text-slate-600" :
+                            meeting.status === 'cancelled' ? "bg-red-100 text-red-700" :
+                            "bg-amber-100 text-amber-700"
+                          )}>
+                            {meeting.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Activities */}
+                  {activities.map(activity => (
+                    <div key={`activity-${activity.id}`} className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-slate-300 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">{activity.title}</p>
+                          {activity.description && <p className="text-xs text-slate-600 mt-1">{activity.description}</p>}
+                          <p className="text-xs text-slate-400 mt-2">{format(new Date(activity.created_date), "MMM d, yyyy h:mm a")}</p>
+                          <Badge className="mt-2 text-xs bg-slate-200 text-slate-700">
+                            {activity.activity_type?.replace(/_/g, ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="tasks">
