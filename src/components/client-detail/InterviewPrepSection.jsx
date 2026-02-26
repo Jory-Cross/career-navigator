@@ -347,7 +347,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
           {generating ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
-              <p className="text-sm text-slate-500">Generating interview questions...</p>
+              <p className="text-sm text-slate-500">{isWSA ? "Loading WSA Interview..." : "Generating interview questions..."}</p>
             </div>
           ) : reviewMode ? (
             <div className="py-4">
