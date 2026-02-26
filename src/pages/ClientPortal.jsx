@@ -38,12 +38,17 @@ export default function ClientPortal() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      if (currentUser.role !== 'client' || !currentUser.assigned_client_id) {
+      if (currentUser.role !== 'client') {
         return;
       }
 
-      const clientData = await base44.entities.Client.get(currentUser.assigned_client_id);
-      setClient(clientData);
+      // Find client by matching email
+      const allClients = await base44.entities.Client.list();
+      const clientData = allClients.find(c => c.email === currentUser.email);
+      
+      if (clientData) {
+        setClient(clientData);
+      }
     } catch (error) {
       console.error("Failed to load client data", error);
     } finally {
