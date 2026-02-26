@@ -36,6 +36,13 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
+  const reviewSession = (session) => {
+    setCurrentSession(session);
+    setCurrentQuestionIdx(0);
+    setReviewMode(true);
+    setShowSession(true);
+  };
+
   const startNewSession = async () => {
     if (!client.target_role) {
       toast.error("Please set a target role for the client first");
@@ -44,6 +51,7 @@ export default function InterviewPrepSection({ client }) {
 
     setGenerating(true);
     setShowSession(true);
+    setReviewMode(false);
 
     try {
       const prompt = `Generate 5 common interview questions for someone applying for a ${client.target_role} position in the ${client.industry || "general"} industry.
