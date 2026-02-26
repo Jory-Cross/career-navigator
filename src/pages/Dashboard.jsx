@@ -17,7 +17,7 @@ export default function Dashboard() {
   }, []);
 
   const { data: clients = [] } = useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", user?.role],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
@@ -30,46 +30,45 @@ export default function Dashboard() {
     enabled: !!user
   });
 
+  const clientIds = clients.map(c => c.id);
+
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications", user?.role],
+    queryKey: ["applications", user?.role, clientIds.join(',')],
     queryFn: async () => {
       const apps = await base44.entities.JobApplication.list("-created_date");
       if (!user || user.role === 'management') return apps;
       if (user.role === 'employee') {
-        const clientIds = clients.map(c => c.id);
         return apps.filter(a => clientIds.includes(a.client_id));
       }
       return [];
     },
-    enabled: !!user && clients.length > 0
+    enabled: !!user
   });
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["tasks", user?.role],
+    queryKey: ["tasks", user?.role, clientIds.join(',')],
     queryFn: async () => {
       const allTasks = await base44.entities.Task.list("-created_date");
       if (!user || user.role === 'management') return allTasks;
       if (user.role === 'employee') {
-        const clientIds = clients.map(c => c.id);
         return allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id)));
       }
       return [];
     },
-    enabled: !!user && clients.length > 0
+    enabled: !!user
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", user?.role],
+    queryKey: ["timeEntries", user?.role, clientIds.join(',')],
     queryFn: async () => {
       const entries = await base44.entities.TimeEntry.list("-created_date");
       if (!user || user.role === 'management') return entries;
       if (user.role === 'employee') {
-        const clientIds = clients.map(c => c.id);
         return entries.filter(e => clientIds.includes(e.client_id));
       }
       return [];
     },
-    enabled: !!user && clients.length > 0
+    enabled: !!user
   });
 
   const totalHours = Math.round(timeEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60);
