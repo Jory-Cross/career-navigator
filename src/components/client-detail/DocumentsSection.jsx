@@ -39,6 +39,11 @@ export default function DocumentsSection({ clientId, onRefresh }) {
     notes: ""
   });
   const [selectedFile, setSelectedFile] = useState(null);
+  const [aiTagging, setAiTagging] = useState(false);
+  const [showVersions, setShowVersions] = useState(null);
+  const [versions, setVersions] = useState([]);
+  const [filterTag, setFilterTag] = useState("");
+  const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
 
   useEffect(() => {
     loadDocuments();
