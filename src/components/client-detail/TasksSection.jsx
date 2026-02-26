@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CheckCircle2, Users } from "lucide-react";
+import { Plus, CheckCircle2, Users, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
   });
 
   const openNew = () => {
-    setForm({ title: "", description: "", status: "pending", priority: "medium", due_date: "", category: "follow_up", client_ids: clientId ? [clientId] : [] });
+    setForm({ title: "", description: "", status: "pending", priority: "medium", due_date: "", category: "follow_up", client_ids: clientId ? [clientId] : [], checklist: [] });
     setEditId(null);
     setShowNew(true);
   };
@@ -88,6 +88,23 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
     }
   };
 
+  const addChecklistItem = () => {
+    const current = form.checklist || [];
+    u("checklist", [...current, { text: "", completed: false }]);
+  };
+
+  const updateChecklistItem = (index, text) => {
+    const current = [...(form.checklist || [])];
+    current[index].text = text;
+    u("checklist", current);
+  };
+
+  const removeChecklistItem = (index) => {
+    const current = [...(form.checklist || [])];
+    current.splice(index, 1);
+    u("checklist", current);
+  };
+
   const pending = tasks.filter(t => t.status !== "completed" && t.status !== "cancelled");
   const completed = tasks.filter(t => t.status === "completed");
 
@@ -113,6 +130,11 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                       <Badge className={cn("text-[10px] border-0", priorityColors[task.priority])}>{task.priority}</Badge>
                       <Badge className={cn("text-[10px] border-0", statusColors[task.status])}>{task.status?.replace(/_/g, " ")}</Badge>
                       {task.due_date && <span className="text-[10px] text-slate-400">{format(new Date(task.due_date), "MMM d")}</span>}
+                      {task.checklist?.length > 0 && (
+                        <span className="text-[10px] text-slate-400">
+                          {task.checklist.filter(c => c.completed).length}/{task.checklist.length} ✓
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -204,6 +226,38 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                 </Select>
               </div>
               <div className="space-y-1"><Label className="text-xs text-slate-500">Due Date</Label><Input type="date" value={form.due_date || ""} onChange={e => u("due_date", e.target.value)} /></div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-slate-500">Todo Checklist</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={addChecklistItem} className="h-7 text-xs">
+                  <Plus className="w-3 h-3 mr-1" /> Add Item
+                </Button>
+              </div>
+              {(form.checklist || []).length > 0 && (
+                <div className="space-y-2 border border-slate-200 rounded-lg p-3">
+                  {form.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        placeholder="Checklist item..."
+                        value={item.text}
+                        onChange={(e) => updateChecklistItem(idx, e.target.value)}
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeChecklistItem(idx)}
+                        className="h-8 w-8 shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
