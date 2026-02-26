@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, MapPin, Briefcase, Clock, Archive, ArchiveRestore } from "lucide-react";
+import { User, MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,21 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
       if (onArchiveToggle) onArchiveToggle();
     } catch (error) {
       toast.error("Failed to update client");
+    }
+  };
+
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await base44.functions.invoke('inviteClient', {
+        email: client.email,
+        firstName: client.first_name,
+        clientId: client.id
+      });
+      toast.success("Invitation sent to " + client.email);
+    } catch (error) {
+      toast.error("Failed to send invitation");
     }
   };
 
@@ -74,18 +89,29 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
         </div>
       </Card>
     </Link>
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleArchiveToggle}
-      className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm hover:bg-white"
-    >
-      {client.is_archived ? (
-        <ArchiveRestore className="w-4 h-4 text-emerald-600" />
-      ) : (
-        <Archive className="w-4 h-4 text-slate-500" />
-      )}
-    </Button>
+    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleInvite}
+        className="bg-white/80 backdrop-blur-sm hover:bg-white"
+        title="Send invitation email"
+      >
+        <Mail className="w-4 h-4 text-blue-600" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleArchiveToggle}
+        className="bg-white/80 backdrop-blur-sm hover:bg-white"
+      >
+        {client.is_archived ? (
+          <ArchiveRestore className="w-4 h-4 text-emerald-600" />
+        ) : (
+          <Archive className="w-4 h-4 text-slate-500" />
+        )}
+      </Button>
+    </div>
   </div>
   );
 }
