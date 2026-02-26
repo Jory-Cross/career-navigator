@@ -16,14 +16,14 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    base44.auth.me().then(user => {
-      setUserRole(user?.role);
+    base44.auth.me().then(currentUser => {
+      setUser(currentUser);
       // Redirect clients to their portal
-      if (user?.role === 'client' && currentPageName !== 'ClientPortal') {
+      if (currentUser?.role === 'client' && currentPageName !== 'ClientPortal') {
         navigate(createPageUrl('ClientPortal'));
       }
     }).catch(() => {});
