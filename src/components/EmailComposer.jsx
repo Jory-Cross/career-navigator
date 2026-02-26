@@ -1,20 +1,37 @@
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Send, Loader2 } from "lucide-react";
+import { Sparkles, Send, Loader2, FileText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
 export default function EmailComposer({ open, onClose, clientId, clientEmail, clientName }) {
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [emailType, setEmailType] = useState("follow_up");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
+
+  const { data: templates = [] } = useQuery({
+    queryKey: ["email-templates"],
+    queryFn: () => base44.entities.EmailTemplate.list("-created_date"),
+    enabled: open
+  });
+
+  const handleTemplateSelect = (templateId) => {
+    setSelectedTemplate(templateId);
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setSubject(template.subject.replace(/\{\{client_name\}\}/g, clientName));
+      setBody(template.body.replace(/\{\{client_name\}\}/g, clientName));
+    }
+  };
 
   const generateEmail = async () => {
     setGenerating(true);
@@ -66,6 +83,34 @@ export default function EmailComposer({ open, onClose, clientId, clientEmail, cl
         </DialogHeader>
         
         <div className="space-y-4 py-3">
+          <div>
+            <Label className="text-xs mb-2 block flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5" />
+              Use Template
+            </Label>
+            <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a template..." />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.filter(t => t.is_active).map(template => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or generate with AI</span>
+            </div>
+          </div>
+
           <div>
             <Label className="text-xs mb-2 block">AI Email Template</Label>
             <div className="flex gap-2">
