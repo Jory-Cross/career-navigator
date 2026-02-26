@@ -6,6 +6,7 @@ import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "luci
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -19,6 +20,8 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [allUsers, setAllUsers] = useState([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -157,15 +160,22 @@ export default function Reports() {
   const applicationStats = getApplicationStats();
   const timePerClient = getTimePerClient();
 
-  // Filter time entries by selected employee
-  const filteredTimeEntries = selectedEmployee === 'all' 
-    ? timeEntries 
-    : timeEntries.filter(e => e.created_by === selectedEmployee);
+  // Filter time entries by date range and employee
+  const filteredTimeEntries = timeEntries.filter(e => {
+    const employeeMatch = selectedEmployee === 'all' || e.created_by === selectedEmployee;
+    
+    if (!startDate && !endDate) return employeeMatch;
+    
+    const entryDate = e.date;
+    const dateMatch = (!startDate || entryDate >= startDate) && (!endDate || entryDate <= endDate);
+    
+    return employeeMatch && dateMatch;
+  });
 
   // Hours by employee
   const getHoursByEmployee = () => {
     const employeeHours = {};
-    timeEntries.forEach(entry => {
+    filteredTimeEntries.forEach(entry => {
       const email = entry.created_by;
       if (!employeeHours[email]) {
         employeeHours[email] = 0;
@@ -205,21 +215,41 @@ export default function Reports() {
           <p className="text-sm text-slate-500 mt-1">Key metrics and performance insights</p>
         </div>
         {user?.role === 'management' && (
-          <div className="w-64">
-            <Label className="text-xs text-slate-600 mb-1.5 block">Filter by Employee</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger className="border-slate-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Employees</SelectItem>
-                {allUsers.filter(u => u.role !== 'client').map(u => (
-                  <SelectItem key={u.id} value={u.email}>
-                    {u.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-3">
+            <div className="w-48">
+              <Label className="text-xs text-slate-600 mb-1.5 block">Start Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="border-slate-200 text-sm"
+              />
+            </div>
+            <div className="w-48">
+              <Label className="text-xs text-slate-600 mb-1.5 block">End Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="border-slate-200 text-sm"
+              />
+            </div>
+            <div className="w-64">
+              <Label className="text-xs text-slate-600 mb-1.5 block">Filter by Employee</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="border-slate-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {allUsers.filter(u => u.role !== 'client').map(u => (
+                    <SelectItem key={u.id} value={u.email}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
       </div>
