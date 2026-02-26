@@ -19,15 +19,14 @@ export default function Clients() {
   }, []);
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.role],
+    queryKey: ["clients", user?.email],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
-      if (user.role === 'management') return allClients;
-      if (user.role === 'employee') {
-        return allClients.filter(c => c.created_by === user.email);
-      }
-      return [];
+      // Management/admin sees all clients
+      if (user.role === 'admin' || user.role === 'management') return allClients;
+      // Employees see only their own clients
+      return allClients.filter(c => c.created_by === user.email);
     },
     enabled: !!user
   });
