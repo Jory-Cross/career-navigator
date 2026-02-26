@@ -49,6 +49,8 @@ export default function Clients() {
 
   const getClientApps = (clientId) => applications.filter(a => a.client_id === clientId).length;
 
+  const activeClientsCount = clients.filter(c => !c.is_archived).length;
+
   const filtered = clients.filter(c => {
     const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -61,7 +63,7 @@ export default function Clients() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-          <p className="text-sm text-slate-500 mt-1">{clients.length} total clients</p>
+          <p className="text-sm text-slate-500 mt-1">{activeClientsCount} active clients</p>
         </div>
         <Button onClick={() => setShowNew(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
           <Plus className="w-4 h-4 mr-2" /> New Client
