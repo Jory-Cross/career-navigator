@@ -15,6 +15,7 @@ import OnboardingSection from "@/components/client-detail/OnboardingSection";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
 import DocumentsSection from "@/components/client-detail/DocumentsSection";
 import ActivitySection from "@/components/client-detail/ActivitySection";
+import AssessmentSection from "@/components/client-detail/AssessmentSection";
 import EmailComposer from "@/components/EmailComposer";
 
 export default function ClientDetail() {
@@ -113,6 +114,7 @@ export default function ClientDetail() {
           {user?.role !== 'client' && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep</TabsTrigger>
+          {user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
           {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
@@ -127,6 +129,9 @@ export default function ClientDetail() {
         </TabsContent>
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
+        </TabsContent>
+        <TabsContent value="assessments">
+          <AssessmentSection clientId={clientId} />
         </TabsContent>
         <TabsContent value="documents">
           <DocumentsSection clientId={clientId} onRefresh={refresh} />
