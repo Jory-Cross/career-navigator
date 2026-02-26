@@ -4,13 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Archive } from "lucide-react";
 import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
 
 export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showArchived, setShowArchived] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -51,7 +52,8 @@ export default function Clients() {
   const filtered = clients.filter(c => {
     const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchArchived = showArchived ? c.is_archived : !c.is_archived;
+    return matchSearch && matchStatus && matchArchived;
   });
 
   return (
@@ -87,6 +89,14 @@ export default function Clients() {
             <SelectItem value="completed">Completed</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant={showArchived ? "default" : "outline"}
+          onClick={() => setShowArchived(!showArchived)}
+          className="gap-2"
+        >
+          <Archive className="w-4 h-4" />
+          {showArchived ? "Active" : "Archived"}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -96,6 +106,7 @@ export default function Clients() {
             client={client}
             totalHours={getClientHours(client.id)}
             applicationCount={getClientApps(client.id)}
+            onArchiveToggle={refetch}
           />
         ))}
       </div>

@@ -1,10 +1,13 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, MapPin, Briefcase, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User, MapPin, Briefcase, Clock, Archive, ArchiveRestore } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -12,10 +15,23 @@ const statusColors = {
   completed: "bg-blue-100 text-blue-700"
 };
 
-export default function ClientCard({ client, totalHours, applicationCount }) {
+export default function ClientCard({ client, totalHours, applicationCount, onArchiveToggle }) {
+  const handleArchiveToggle = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await base44.entities.Client.update(client.id, { is_archived: !client.is_archived });
+      toast.success(client.is_archived ? "Client restored" : "Client archived");
+      if (onArchiveToggle) onArchiveToggle();
+    } catch (error) {
+      toast.error("Failed to update client");
+    }
+  };
+
   return (
-    <Link to={createPageUrl("ClientDetail") + `?id=${client.id}`}>
-      <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group overflow-hidden">
+    <div className="relative group/card">
+      <Link to={createPageUrl("ClientDetail") + `?id=${client.id}`}>
+        <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group overflow-hidden">
         <div className="p-5">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm shrink-0">
@@ -58,5 +74,18 @@ export default function ClientCard({ client, totalHours, applicationCount }) {
         </div>
       </Card>
     </Link>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleArchiveToggle}
+      className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm hover:bg-white"
+    >
+      {client.is_archived ? (
+        <ArchiveRestore className="w-4 h-4 text-emerald-600" />
+      ) : (
+        <Archive className="w-4 h-4 text-slate-500" />
+      )}
+    </Button>
+  </div>
   );
 }
