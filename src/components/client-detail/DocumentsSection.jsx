@@ -204,11 +204,11 @@ export default function DocumentsSection({ clientId, onRefresh }) {
             </Button>
           </div>
 
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          <div className="flex gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <Input
-                placeholder="Search documents..."
+                placeholder="Search documents, tags, notes..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-9 h-9"
@@ -230,6 +230,19 @@ export default function DocumentsSection({ clientId, onRefresh }) {
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
+            {allTags.length > 0 && (
+              <Select value={filterTag} onValueChange={setFilterTag}>
+                <SelectTrigger className="w-[130px] h-9">
+                  <SelectValue placeholder="Filter by tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>All Tags</SelectItem>
+                  {allTags.map(tag => (
+                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
