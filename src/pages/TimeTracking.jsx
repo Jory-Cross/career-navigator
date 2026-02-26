@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -24,16 +24,41 @@ const catColors = {
 export default function TimeTracking() {
   const [periodFilter, setPeriodFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
+  const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
   const { data: clients = [] } = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => base44.entities.Client.list()
+    queryKey: ["clients", user?.role],
+    queryFn: async () => {
+      const allClients = await base44.entities.Client.list();
+      if (!user) return allClients;
+      if (user.role === 'management') return allClients;
+      if (user.role === 'employee') {
+        return allClients.filter(c => c.created_by === user.email);
+      }
+      return [];
+    },
+    enabled: !!user
   });
 
+  const clientIds = clients.map(c => c.id);
+
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => base44.entities.TimeEntry.list("-created_date")
+    queryKey: ["timeEntries", user?.role],
+    queryFn: async () => {
+      const allEntries = await base44.entities.TimeEntry.list("-created_date");
+      if (!user) return allEntries;
+      if (user.role === 'management') return allEntries;
+      if (user.role === 'employee') {
+        return allEntries.filter(e => clientIds.includes(e.client_id));
+      }
+      return [];
+    },
+    enabled: !!user && clients.length >= 0
   });
 
   const handleRefresh = () => {
