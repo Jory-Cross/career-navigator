@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Lightbulb, Sparkles, Loader2, MessageSquare, Target, CheckCircle2 } from "lucide-react";
+import { Lightbulb, Sparkles, Loader2, MessageSquare, Target, CheckCircle2, Tag, FileText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import RealTimeCoach from "@/components/interview/RealTimeCoach";
+import SkillTracker from "@/components/interview/SkillTracker";
+import JobApplicationQuestions from "@/components/interview/JobApplicationQuestions";
 
 export default function InterviewPrepSection({ client }) {
   const [sessions, setSessions] = useState([]);
@@ -20,6 +23,9 @@ export default function InterviewPrepSection({ client }) {
   const [analyzingAnswer, setAnalyzingAnswer] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [isWSA, setIsWSA] = useState(false);
+  const [sessionNotes, setSessionNotes] = useState("");
+  const [showSessionNotes, setShowSessionNotes] = useState(false);
+  const [applications, setApplications] = useState([]);
 
   const WSA_QUESTIONS = [
     { question: "Tell me about yourself", category: "Background" },
@@ -36,7 +42,17 @@ export default function InterviewPrepSection({ client }) {
 
   useEffect(() => {
     loadSessions();
+    loadApplications();
   }, [client.id]);
+
+  const loadApplications = async () => {
+    try {
+      const apps = await base44.entities.JobApplication.filter({ client_id: client.id });
+      setApplications(apps.filter(a => a.status !== 'rejected' && a.status !== 'withdrawn'));
+    } catch (error) {
+      // Silent fail
+    }
+  };
 
   const loadSessions = async () => {
     setLoading(true);
@@ -57,7 +73,7 @@ export default function InterviewPrepSection({ client }) {
     setShowSession(true);
   };
 
-  const startNewSession = async (useWSA = false) => {
+  const startNewSession = async (useWSA = false, jobApplicationId = null) => {
     if (!client.target_role) {
       toast.error("Please set a target role for the client first");
       return;
@@ -70,9 +86,56 @@ export default function InterviewPrepSection({ client }) {
 
     try {
       let questions;
+      let jobApp = null;
+
+      // If job application is provided, fetch it for context
+      if (jobApplicationId) {
+        jobApp = applications.find(a => a.id === jobApplicationId);
+      }
       
       if (useWSA) {
         questions = WSA_QUESTIONS.map(q => ({
+          question: q.question,
+          category: q.category,
+          answer: "",
+          feedback: "",
+          score: null
+        }));
+      } else if (jobApp) {
+        const prompt = `Generate 5 tailored interview questions for someone applying for a ${jobApp.position} position at ${jobApp.company}.
+
+Company role: ${client.target_role}
+${jobApp.ai_fit_analysis ? `Context: ${jobApp.ai_fit_analysis}` : ""}
+
+Focus on:
+1. Role-specific challenges at this company
+2. Why they want to work there
+3. Relevant experience and skills
+4. Problem-solving for company's context
+5. Cultural fit
+
+For each question, categorize it appropriately.`;
+
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    question: { type: "string" },
+                    category: { type: "string" }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        questions = result.questions.map(q => ({
           question: q.question,
           category: q.category,
           answer: "",
@@ -120,8 +183,10 @@ For each question, categorize it (e.g., "Behavioral", "Technical", "Situational"
 
       const session = await base44.entities.InterviewSession.create({
         client_id: client.id,
-        target_role: client.target_role,
-        industry: client.industry || "",
+        job_application_id: jobApplicationId || undefined,
+        target_role: jobApp?.position || client.target_role,
+        industry: jobApp?.location || client.industry || "",
+        company: jobApp?.company,
         questions,
         session_date: new Date().toISOString().split('T')[0],
         session_type: useWSA ? "WSA" : "practice"
@@ -236,7 +301,8 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
 
       await base44.entities.InterviewSession.update(currentSession.id, {
         overall_feedback: result.overall_feedback,
-        improvement_tips: result.improvement_tips
+        improvement_tips: result.improvement_tips,
+        notes: sessionNotes
       });
 
       // Create activity log entry
@@ -284,6 +350,24 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
             <h3 className="text-sm font-semibold text-slate-800">Interview Preparation</h3>
           </div>
           <div className="flex gap-2">
+            {applications.length > 0 && (
+              <div className="relative group">
+                <Button size="sm" variant="outline">
+                  <FileText className="w-3.5 h-3.5 mr-1" /> Job-Specific
+                </Button>
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 z-10 hidden group-hover:block min-w-max">
+                  {applications.map(app => (
+                    <button
+                      key={app.id}
+                      onClick={() => startNewSession(false, app.id)}
+                      className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-b-0"
+                    >
+                      {app.company} - {app.position}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <Button size="sm" onClick={() => startNewSession(true)}>
               <Sparkles className="w-3.5 h-3.5 mr-1" /> WSA Interview
             </Button>
@@ -293,7 +377,10 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
           </div>
         </div>
 
-        <div className="p-5">
+        <div className="p-5 space-y-4">
+          {/* Skill Tracker */}
+          {sessions.length > 0 && <SkillTracker clientId={client.id} />}
+
           {sessions.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="w-12 h-12 mx-auto text-slate-300 mb-3" />
@@ -321,7 +408,17 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="text-sm font-medium text-slate-800">{session.target_role}</p>
-                        <p className="text-xs text-slate-500">{session.questions?.length || 0} questions</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-slate-500">{session.questions?.length || 0} questions</p>
+                          {session.company && <Badge variant="outline" className="text-xs">{session.company}</Badge>}
+                          {session.tags && session.tags.length > 0 && (
+                            <div className="flex gap-1">
+                              {session.tags.map((tag, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">{tag}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Badge className={cn(
                         "text-xs",
@@ -453,7 +550,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div>
+                   <div>
                     <label className="text-sm font-medium text-slate-700 mb-2 block">Your Answer:</label>
                     <Textarea
                       value={answer}
@@ -461,6 +558,12 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                       placeholder="Type your answer here..."
                       rows={6}
                       className="resize-none"
+                    />
+                    {/* Real-time Coach Feedback */}
+                    <RealTimeCoach 
+                      answer={answer}
+                      question={currentQuestion?.question}
+                      isAnalyzing={analyzingAnswer}
                     />
                   </div>
                   <Button 
@@ -507,7 +610,34 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                 </ul>
               </div>
 
-              <Button onClick={() => { setShowSession(false); setCurrentSession(null); setReviewMode(false); }} className="w-full">
+              {!showSessionNotes ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowSessionNotes(true)}
+                  className="w-full"
+                >
+                  <FileText className="w-4 h-4 mr-2" /> Add Session Notes
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Textarea
+                    value={sessionNotes}
+                    onChange={(e) => setSessionNotes(e.target.value)}
+                    placeholder="Add notes about this session, areas to focus on, etc..."
+                    rows={3}
+                    className="resize-none text-xs"
+                  />
+                  <Button 
+                    onClick={() => setShowSessionNotes(false)}
+                    size="sm"
+                    className="w-full"
+                  >
+                    Done
+                  </Button>
+                </div>
+              )}
+
+              <Button onClick={() => { setShowSession(false); setCurrentSession(null); setReviewMode(false); setSessionNotes(""); }} className="w-full">
                 Close
               </Button>
             </div>
