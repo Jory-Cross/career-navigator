@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X, Timer } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -21,6 +21,9 @@ export default function Calendar() {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
+  const [showConvert, setShowConvert] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [convertNotes, setConvertNotes] = useState("");
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -84,6 +87,41 @@ export default function Calendar() {
       toast.success("Meeting scheduled");
     } catch (error) {
       toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const convertToTimeEntry = async () => {
+    if (!selectedMeeting) return;
+    setSaving(true);
+    try {
+      const startTime = format(parseISO(selectedMeeting.start_datetime), 'HH:mm');
+      const endTime = selectedMeeting.end_datetime 
+        ? format(parseISO(selectedMeeting.end_datetime), 'HH:mm')
+        : format(parseISO(selectedMeeting.start_datetime), 'HH:mm');
+      const date = format(parseISO(selectedMeeting.start_datetime), 'yyyy-MM-dd');
+      
+      const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+      const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+      const duration = Math.max(1, endMinutes - startMinutes);
+
+      await base44.entities.TimeEntry.create({
+        client_id: selectedMeeting.client_id,
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        duration_minutes: duration,
+        description: convertNotes || selectedMeeting.title,
+        category: selectedMeeting.meeting_type || 'consultation'
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      setShowConvert(false);
+      setConvertNotes("");
+      toast.success("Converted to time entry");
+    } catch (error) {
+      toast.error("Failed to convert");
     } finally {
       setSaving(false);
     }
@@ -281,6 +319,19 @@ export default function Calendar() {
                         Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
                       </p>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedMeeting(meeting);
+                        setConvertNotes(meeting.description || "");
+                        setShowConvert(true);
+                      }}
+                      className="text-xs"
+                    >
+                      <Timer className="w-3 h-3 mr-1" />
+                      Log Time
+                    </Button>
                   </div>
                 );
               })}
@@ -349,6 +400,42 @@ export default function Calendar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Schedule"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showConvert} onOpenChange={setShowConvert}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Convert to Time Entry</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            {selectedMeeting && (
+              <>
+                <div className="p-3 bg-slate-50 rounded-lg space-y-1">
+                  <p className="text-sm font-medium text-slate-900">{selectedMeeting.title}</p>
+                  <p className="text-xs text-slate-600">
+                    {format(parseISO(selectedMeeting.start_datetime), 'MMM d, yyyy • HH:mm')}
+                    {selectedMeeting.end_datetime && ` - ${format(parseISO(selectedMeeting.end_datetime), 'HH:mm')}`}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs">Notes / Description</Label>
+                  <Textarea
+                    value={convertNotes}
+                    onChange={e => setConvertNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Add notes about what was worked on..."
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConvert(false)}>Cancel</Button>
+            <Button onClick={convertToTimeEntry} disabled={saving}>
+              {saving ? "Converting..." : "Convert to Time Entry"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
