@@ -57,21 +57,13 @@ export default function Layout({ children, currentPageName }) {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={cn(
-          "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-white/95 backdrop-blur-md border-r border-slate-200/60 shadow-xl transition-transform duration-300 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <nav className="p-3 space-y-0.5">
-            {userRole === 'client' ? (
-              <Link
-                to={createPageUrl('ClientPortal')}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
-              >
-                <Users className="w-4 h-4" />
-                My Portal
-              </Link>
-            ) : (
-              navItems.map(item => (
+        {user?.role !== 'client' && (
+          <aside className={cn(
+            "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-white/95 backdrop-blur-md border-r border-slate-200/60 shadow-xl transition-transform duration-300 lg:translate-x-0",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
+            <nav className="p-3 space-y-0.5">
+              {navItems.map(item => (
                 <Link
                 key={item.page}
                 to={createPageUrl(item.page)}
@@ -88,8 +80,9 @@ export default function Layout({ children, currentPageName }) {
               </Link>
               ))
             )}
-          </nav>
-        </aside>
+            </nav>
+          </aside>
+        )}
 
         {/* Overlay */}
         {sidebarOpen && (
