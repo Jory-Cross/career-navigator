@@ -24,18 +24,13 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       const token = Math.random().toString(36).substring(2, 15);
       const client = await base44.entities.Client.create({ ...form, status: "active", access_token: token });
       
-      // Send welcome email to client
+      // Invite client with 'client' role - they'll automatically get the role when they register
       try {
-        const portalUrl = `${window.location.origin}/ClientPortal`;
-        await base44.integrations.Core.SendEmail({
-          to: form.email,
-          subject: "Welcome to ClientFlow - Access Your Portal",
-          body: `Hi ${form.first_name},\n\nWelcome to ClientFlow! We're excited to work with you.\n\nYou now have access to your personal client portal where you can:\n• Track your job applications\n• Practice for interviews with AI\n• Manage your tasks\n• View your documents\n\nTo get started, please sign up for your account at:\n${portalUrl}\n\nUse this email address (${form.email}) to sign up.\n\nIf you have any questions, feel free to reach out!\n\nBest regards,\nThe ClientFlow Team`
-        });
-        toast.success("Client created and welcome email sent");
+        await base44.users.inviteUser(form.email, "client");
+        toast.success("Client created and invitation sent");
       } catch (emailError) {
-        console.error("Failed to send email:", emailError);
-        toast.success("Client created (email notification failed)");
+        console.error("Failed to send invitation:", emailError);
+        toast.success("Client created (invitation failed)");
       }
       
       setSaving(false);
