@@ -33,6 +33,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
       return;
     }
     setSaving(true);
+    
     await base44.entities.TimeEntry.create({
       client_id: clientId,
       date,
@@ -42,6 +43,20 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
       description: description || "Manual entry",
       category,
     });
+
+    // Create calendar appointment
+    const startDateTime = `${date}T${startTime}`;
+    const endDateTime = `${date}T${endTime}`;
+    
+    await base44.entities.Meeting.create({
+      client_id: clientId,
+      title: description || "Manual entry",
+      meeting_type: category,
+      start_datetime: startDateTime,
+      end_datetime: endDateTime,
+      status: "completed"
+    });
+
     setClientId("");
     setDate(new Date().toISOString().split("T")[0]);
     setStartTime("");

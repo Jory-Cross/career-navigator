@@ -35,23 +35,37 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
   const handleStart = () => {
     if (!selectedClient) return;
     setIsRunning(true);
-    startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
   const handleStop = async () => {
     setIsRunning(false);
     clearInterval(intervalRef.current);
     const durationMinutes = Math.max(1, Math.round(seconds / 60));
-    const endTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const endTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+    const date = new Date().toISOString().split("T")[0];
 
     await base44.entities.TimeEntry.create({
       client_id: selectedClient,
-      date: new Date().toISOString().split("T")[0],
+      date,
       duration_minutes: durationMinutes,
       description: description || "Session",
       category,
       start_time: startTimeRef.current,
       end_time: endTime
+    });
+
+    // Create calendar appointment
+    const startDateTime = `${date}T${startTimeRef.current}`;
+    const endDateTime = `${date}T${endTime}`;
+    
+    await base44.entities.Meeting.create({
+      client_id: selectedClient,
+      title: description || "Session",
+      meeting_type: category,
+      start_datetime: startDateTime,
+      end_datetime: endDateTime,
+      status: "completed"
     });
 
     setSeconds(0);
