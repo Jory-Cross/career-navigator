@@ -55,6 +55,7 @@ import Dashboard from './pages/Dashboard';
 import EmailTemplates from './pages/EmailTemplates';
 import Reports from './pages/Reports';
 import TimeTracking from './pages/TimeTracking';
+import PreEtsPortal from './pages/PreEtsPortal';
 import __Layout from './Layout.jsx';
 
 
@@ -67,6 +68,7 @@ export const PAGES = {
     "EmailTemplates": EmailTemplates,
     "Reports": Reports,
     "TimeTracking": TimeTracking,
+    "PreEtsPortal": PreEtsPortal,
 }
 
 export const pagesConfig = {

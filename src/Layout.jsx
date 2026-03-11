@@ -23,8 +23,18 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.me().then(currentUser => {
       setUser(currentUser);
       // Redirect clients to their portal
+      if ((currentUser?.role === 'client' || currentUser?.role === 'pre_ets') && 
+          currentPageName !== 'ClientPortal' && currentPageName !== 'PreEtsPortal') {
+        if (currentUser.role === 'pre_ets') {
+          navigate(createPageUrl('PreEtsPortal'));
+          return;
+        }
+      }
       if (currentUser?.role === 'client' && currentPageName !== 'ClientPortal') {
         navigate(createPageUrl('ClientPortal'));
+      }
+      if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
+        navigate(createPageUrl('PreEtsPortal'));
       }
     }).catch(() => {});
   }, [currentPageName, navigate]);
