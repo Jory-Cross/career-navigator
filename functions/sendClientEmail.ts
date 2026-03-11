@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
   try {
@@ -15,12 +15,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Send the email using Core integration
-    await base44.integrations.Core.SendEmail({
-      to,
-      subject,
-      body
+    // Get Outlook OAuth access token
+    const { accessToken } = await base44.asServiceRole.connectors.getConnection('outlook');
+
+    // Send email via Microsoft Graph API
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: {
+          subject,
+          body: {
+            contentType: 'HTML',
+            content: body
+          },
+          toRecipients: [
+            { emailAddress: { address: to } }
+          ]
+        },
+        saveToSentItems: true
+      })
     });
+
+    if (!graphResponse.ok) {
+      const errText = await graphResponse.text();
+      throw new Error(`Graph API error: ${graphResponse.status} - ${errText}`);
+    }
 
     // Log activity if clientId is provided
     if (clientId) {
@@ -38,7 +61,7 @@ Deno.serve(async (req) => {
 
     return Response.json({ 
       success: true,
-      message: 'Email sent successfully' 
+      message: 'Email sent successfully via Outlook'
     });
 
   } catch (error) {
