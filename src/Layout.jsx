@@ -22,18 +22,9 @@ export default function Layout({ children, currentPageName }) {
   React.useEffect(() => {
     base44.auth.me().then(currentUser => {
       setUser(currentUser);
-      // Redirect clients to their portal
-      if ((currentUser?.role === 'client' || currentUser?.role === 'pre_ets') && 
-          currentPageName !== 'ClientPortal' && currentPageName !== 'PreEtsPortal') {
-        if (currentUser.role === 'pre_ets') {
-          navigate(createPageUrl('PreEtsPortal'));
-          return;
-        }
-      }
       if (currentUser?.role === 'client' && currentPageName !== 'ClientPortal') {
         navigate(createPageUrl('ClientPortal'));
-      }
-      if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
+      } else if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
         navigate(createPageUrl('PreEtsPortal'));
       }
     }).catch(() => {});
@@ -67,7 +58,7 @@ export default function Layout({ children, currentPageName }) {
 
       <div className="flex">
         {/* Sidebar */}
-        {user?.role !== 'client' && (
+        {user?.role !== 'client' && user?.role !== 'pre_ets' && (
           <aside className={cn(
             "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
