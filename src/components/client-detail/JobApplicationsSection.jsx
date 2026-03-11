@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell } from "lucide-react";
+import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell, Mail } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,6 +34,31 @@ export default function JobApplicationsSection({ clientId, applications, onRefre
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [calculatingFit, setCalculatingFit] = useState(null);
+  const [sendingFollowUp, setSendingFollowUp] = useState(null);
+
+  const INTERVIEW_STATUSES = ['phone_screen', 'interview', 'final_round'];
+
+  const sendFollowUpEmail = async (e, app) => {
+    e.stopPropagation();
+    setSendingFollowUp(app.id);
+    try {
+      const res = await base44.functions.invoke('sendInterviewFollowUp', {
+        applicationId: app.id,
+        clientId: clientId,
+        manual: true
+      });
+      if (res.data.sent) {
+        toast.success(`Follow-up email sent to ${res.data.to}`);
+      } else {
+        toast.success("No contact email found — draft saved as a task");
+      }
+      onRefresh();
+    } catch (error) {
+      toast.error("Failed to send follow-up");
+    } finally {
+      setSendingFollowUp(null);
+    }
+  };
 
   const openNew = () => {
     setForm({ company: "", position: "", status: "saved", applied_date: "", job_url: "", salary_range: "", location: "", work_type: "", contact_name: "", contact_email: "", notes: "", next_step: "", next_step_date: "" });
@@ -240,6 +265,7 @@ Provide:
                     onClick={(e) => { e.stopPropagation(); calculateFitScore(app); }}
                     disabled={calculatingFit === app.id}
                     className="h-7 px-2"
+                    title="Calculate fit score"
                   >
                     {calculatingFit === app.id ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -247,6 +273,22 @@ Provide:
                       <Target className="w-3 h-3" />
                     )}
                   </Button>
+                  {INTERVIEW_STATUSES.includes(app.status) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => sendFollowUpEmail(e, app)}
+                      disabled={sendingFollowUp === app.id}
+                      className="h-7 px-2 text-blue-600 hover:text-blue-700"
+                      title="Send follow-up email"
+                    >
+                      {sendingFollowUp === app.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Mail className="w-3 h-3" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
