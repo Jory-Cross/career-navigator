@@ -109,6 +109,7 @@ export default function Clients() {
             totalHours={getClientHours(client.id)}
             applicationCount={getClientApps(client.id)}
             onArchiveToggle={refetch}
+            canAssign={user?.role === 'admin' || user?.role === 'management'}
           />
         ))}
       </div>
