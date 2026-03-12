@@ -75,6 +75,18 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
           <DialogTitle className="text-lg font-semibold">New Client</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="col-span-2 space-y-1.5">
+            <Label className="text-xs text-slate-500">Client Type *</Label>
+            <Select value={form.client_type} onValueChange={v => update("client_type", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client">Client (Job Seeker)</SelectItem>
+                <SelectItem value="pre_ets">Pre-ETS Student</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">First Name *</Label>
             <Input value={form.first_name} onChange={e => update("first_name", e.target.value)} />
