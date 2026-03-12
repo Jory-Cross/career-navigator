@@ -26,8 +26,8 @@ export default function Clients() {
       if (!user) return allClients;
       // Management/admin sees all clients
       if (user.role === 'admin' || user.role === 'management') return allClients;
-      // Employees see only their own clients
-      return allClients.filter(c => c.created_by === user.email);
+      // Employees see only clients assigned to them
+      return allClients.filter(c => c.assigned_employee_id === user.id);
     },
     enabled: !!user
   });
