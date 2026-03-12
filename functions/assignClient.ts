@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
         const user = await base44.auth.me();
 
         // Only admin or manager can assign clients
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+        if (!user || (user.role !== 'admin' && user.role !== 'management' && user.role !== 'manager')) {
             return Response.json({ error: 'Forbidden: Admin or manager access required' }, { status: 403 });
         }
 
