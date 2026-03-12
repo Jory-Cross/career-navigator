@@ -40,7 +40,7 @@ export default function Dashboard() {
       if (!user) return allClients;
       if (user.role === 'management') return allClients;
       if (user.role === 'employee') {
-        return allClients.filter(c => c.created_by === user.email);
+        return allClients.filter(c => c.assigned_employee_id === user.id);
       }
       return [];
     },
