@@ -2,6 +2,7 @@ import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Briefcase, Clock, ListChecks } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import StatCard from "@/components/dashboard/StatCard";
 import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
