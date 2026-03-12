@@ -39,7 +39,8 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
         await base44.functions.invoke('inviteClient', { 
           email: form.email, 
           firstName: form.first_name,
-          clientId: client.id
+          clientId: client.id,
+          clientType: form.client_type
         });
         
         await base44.entities.Activity.create({
