@@ -57,7 +57,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       }
       
       setSaving(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", target_role: "", industry: "", location: "", notes: "" });
+      setForm({ first_name: "", last_name: "", email: "", phone: "", target_role: "", industry: "", location: "", notes: "", client_type: "client" });
       onOpenChange(false);
       if (onCreated) onCreated();
     } catch (error) {
