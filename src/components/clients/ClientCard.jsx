@@ -101,6 +101,17 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
       >
         <Mail className="w-4 h-4 text-blue-600" />
       </Button>
+      {canAssign && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAssign(true); }}
+          className="bg-white/80 backdrop-blur-sm hover:bg-white"
+          title="Assign to employee"
+        >
+          <UserCheck className="w-4 h-4 text-purple-600" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -114,6 +125,14 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
         )}
       </Button>
     </div>
+    {showAssign && (
+      <AssignClientDialog
+        open={showAssign}
+        onOpenChange={setShowAssign}
+        client={client}
+        onAssigned={onArchiveToggle}
+      />
+    )}
   </div>
   );
 }
