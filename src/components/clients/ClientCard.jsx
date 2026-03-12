@@ -1,13 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail } from "lucide-react";
+import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import AssignClientDialog from "@/components/clients/AssignClientDialog";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -15,7 +16,8 @@ const statusColors = {
   completed: "bg-blue-100 text-blue-700"
 };
 
-export default function ClientCard({ client, totalHours, applicationCount, onArchiveToggle }) {
+export default function ClientCard({ client, totalHours, applicationCount, onArchiveToggle, canAssign, employees = [] }) {
+  const [showAssign, setShowAssign] = useState(false);
   const handleArchiveToggle = async (e) => {
     e.preventDefault();
     e.stopPropagation();
