@@ -73,6 +73,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">New Client</DialogTitle>
+        
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
           <div className="space-y-1.5">
