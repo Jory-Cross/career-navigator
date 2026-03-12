@@ -11,6 +11,7 @@ import RecentActivity from "@/components/dashboard/RecentActivity";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [user, setUser] = React.useState(null);
   const [widgets, setWidgets] = React.useState({
     stats: true,
