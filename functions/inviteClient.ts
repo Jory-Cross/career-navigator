@@ -10,10 +10,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { email, firstName, clientId } = await req.json();
+    const { email, firstName, clientId, clientType } = await req.json();
 
-    // Invite as 'user' role
-    await base44.users.inviteUser(email, 'user');
+    // Invite with role based on client type
+    const role = clientType === 'pre_ets' ? 'pre_ets' : 'client';
+    await base44.users.inviteUser(email, role);
 
     // Store the pending client invitation so we can update role after registration
     if (clientId) {
