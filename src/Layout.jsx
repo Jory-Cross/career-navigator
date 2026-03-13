@@ -14,9 +14,18 @@ const navItems = [
   { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
 ];
 
+const ROLE_LABELS = {
+  admin: "Admin",
+  management: "Management",
+  employee: "Employee",
+  client: "Client",
+  pre_ets: "Pre-ETS"
+};
+
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -29,6 +38,14 @@ export default function Layout({ children, currentPageName }) {
       }
     }).catch(() => {});
   }, [currentPageName, navigate]);
+
+  const switchRole = async (newRole) => {
+    await base44.auth.updateMe({ role: newRole });
+    setRoleMenuOpen(false);
+    window.location.reload();
+  };
+
+  const availableRoles = user?.roles?.length > 1 ? user.roles : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
