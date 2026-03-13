@@ -38,7 +38,7 @@ export default function ClientDetail() {
       if (!clientData) return null;
       if (!user) return clientData;
       if (user.role === 'management') return clientData;
-      if (user.role === 'employee' && clientData.created_by === user.email) return clientData;
+      if (user.role === 'employee' && clientData.assigned_employee_id === user.id) return clientData;
       return null;
     },
     enabled: !!clientId && !!user
