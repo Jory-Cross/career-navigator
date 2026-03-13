@@ -119,6 +119,14 @@ export default function ClientHeader({ client, onUpdate }) {
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={form.client_type || "client"} onValueChange={v => u("client_type", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="pre_ets">Pre-ETS</SelectItem>
+              <SelectItem value="dspd">DSPD</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
       </Card>
