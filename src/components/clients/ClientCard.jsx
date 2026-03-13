@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck } from "lucide-react";
+import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,18 @@ const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
   inactive: "bg-slate-100 text-slate-500",
   completed: "bg-blue-100 text-blue-700"
+};
+
+const clientTypeLabels = {
+  client: "Client",
+  pre_ets: "Pre-ETS",
+  dspd: "DSPD"
+};
+
+const clientTypeColors = {
+  client: "bg-violet-100 text-violet-700",
+  pre_ets: "bg-amber-100 text-amber-700",
+  dspd: "bg-teal-100 text-teal-700"
 };
 
 export default function ClientCard({ client, totalHours, applicationCount, onArchiveToggle, canAssign, employees = [] }) {
@@ -55,13 +67,18 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
               {client.first_name?.[0]}{client.last_name?.[0]}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-slate-900 truncate group-hover:text-slate-700 transition-colors">
                   {client.first_name} {client.last_name}
                 </h3>
                 <Badge className={cn("text-[10px] border-0 shrink-0", statusColors[client.status])}>
                   {client.status}
                 </Badge>
+                {client.client_type && client.client_type !== 'client' && (
+                  <Badge className={cn("text-[10px] border-0 shrink-0", clientTypeColors[client.client_type])}>
+                    {clientTypeLabels[client.client_type]}
+                  </Badge>
+                )}
               </div>
               {client.target_role && (
                 <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">

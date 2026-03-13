@@ -11,6 +11,7 @@ import NewClientDialog from "@/components/clients/NewClientDialog";
 export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [user, setUser] = useState(null);
@@ -65,8 +66,9 @@ export default function Clients() {
   const filtered = clients.filter(c => {
     const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchType = typeFilter === "all" || (c.client_type || "client") === typeFilter;
     const matchArchived = showArchived ? c.is_archived : !c.is_archived;
-    return matchSearch && matchStatus && matchArchived;
+    return matchSearch && matchStatus && matchType && matchArchived;
   });
 
   return (
@@ -100,6 +102,17 @@ export default function Clients() {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40 border-slate-200">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="client">Client</SelectItem>
+            <SelectItem value="pre_ets">Pre-ETS</SelectItem>
+            <SelectItem value="dspd">DSPD</SelectItem>
           </SelectContent>
         </Select>
         <Button
