@@ -116,16 +116,20 @@ export default function ClientDetail() {
 
       <ClientHeader client={client} onUpdate={refresh} />
 
-      <Tabs defaultValue="applications" className="space-y-4">
+      {(() => {
+        const isDspd = client.client_type === 'dspd';
+        const defaultTab = isDspd ? 'onboarding' : 'applications';
+        return (
+      <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList className="bg-slate-100 p-1">
           {user?.role !== 'client' && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
-          <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
-          <TabsTrigger value="interview">Interview Prep</TabsTrigger>
-          {user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
-          {user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
+          {!isDspd && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
+          {!isDspd && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
+          {!isDspd && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
+          {!isDspd && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
           {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>
+          {!isDspd && <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>}
           {user?.role !== 'client' && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
           <TabsTrigger value="activity">Activity ({activities.length})</TabsTrigger>
         </TabsList>
@@ -160,6 +164,8 @@ export default function ClientDetail() {
           <ActivitySection clientId={clientId} />
         </TabsContent>
       </Tabs>
+        );
+      })()}
 
       <EmailComposer
         open={showEmailComposer}
