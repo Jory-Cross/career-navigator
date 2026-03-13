@@ -33,18 +33,28 @@ export default function Dashboard() {
     localStorage.setItem('dashboardWidgets', JSON.stringify(updated));
   };
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+    enabled: !!user
+  });
+
   const { data: clients = [] } = useQuery({
-    queryKey: ["clients", user?.role],
+    queryKey: ["clients", user?.id, user?.role],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list("-created_date");
-      if (!user) return allClients;
-      if (user.role === 'management') return allClients;
+      if (!user) return [];
+      if (user.role === 'admin') return allClients;
+      if (user.role === 'management') {
+        const myEmployeeIds = allUsers.filter(u => u.manager_id === user.id).map(u => u.id);
+        return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
+      }
       if (user.role === 'employee') {
         return allClients.filter(c => c.assigned_employee_id === user.id);
       }
       return [];
     },
-    enabled: !!user
+    enabled: !!user && allUsers.length >= 0
   });
 
   const clientIds = clients.map(c => c.id);
