@@ -19,17 +19,28 @@ export default function Clients() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+    enabled: !!user
+  });
+
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.email],
+    queryKey: ["clients", user?.id, user?.role],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
-      // Management/admin sees all clients
-      if (user.role === 'admin' || user.role === 'management') return allClients;
+      // Admin sees all clients
+      if (user.role === 'admin') return allClients;
+      // Management sees clients assigned to employees under them
+      if (user.role === 'management') {
+        const myEmployeeIds = allUsers.filter(u => u.manager_id === user.id).map(u => u.id);
+        return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
+      }
       // Employees see only clients assigned to them
       return allClients.filter(c => c.assigned_employee_id === user.id);
     },
-    enabled: !!user
+    enabled: !!user && allUsers.length >= 0
   });
 
   const { data: timeEntries = [] } = useQuery({
