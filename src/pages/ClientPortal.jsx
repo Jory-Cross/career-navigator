@@ -43,16 +43,26 @@ export default function ClientPortal() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      if (currentUser.role !== 'client') {
-        return;
-      }
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientIdParam = urlParams.get("id");
 
-      // Find client by matching email
       const allClients = await base44.entities.Client.list();
-      const clientData = allClients.find(c => c.email === currentUser.email);
-      
-      if (clientData) {
-        setClient(clientData);
+
+      if (currentUser.role === 'client') {
+        // Client users see their own portal by email match
+        const clientData = allClients.find(c => c.email === currentUser.email);
+        if (clientData) setClient(clientData);
+      } else if (['admin', 'management', 'employee'].includes(currentUser.role) && clientIdParam) {
+        // Staff viewing a specific client's portal via ?id=
+        const clientData = allClients.find(c => c.id === clientIdParam);
+        if (clientData) {
+          // Employees can only view their assigned clients
+          if (currentUser.role === 'employee' && clientData.assigned_employee_id !== currentUser.id) {
+            // No access
+          } else {
+            setClient(clientData);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to load client data", error);
@@ -110,13 +120,18 @@ export default function ClientPortal() {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
   }
 
-  if (!user || user.role !== 'client' || !client) {
+  const staffRoles = ['admin', 'management', 'employee'];
+  const isStaff = user && staffRoles.includes(user.role);
+
+  if (!user || (!client && !loading)) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-slate-600 mb-4">Access denied. Client portal access only.</p>
+        <p className="text-slate-600 mb-4">Access denied or client not found.</p>
       </div>
     );
   }
+
+  if (!client) return null;
 
   const saveApplication = async () => {
     if (!appForm.company || !appForm.position) {
