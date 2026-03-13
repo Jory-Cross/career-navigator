@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield } from "lucide-react";
+import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Clients", icon: Users, page: "Clients" },
+  { name: "Employees", icon: UserCog, page: "EmployeePortal", roles: ["admin", "management"] },
   { name: "Calendar", icon: Calendar, page: "Calendar" },
   { name: "Reports", icon: BarChart3, page: "Reports" },
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
@@ -122,7 +123,7 @@ export default function Layout({ children, currentPageName }) {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
             <nav className="p-3 space-y-0.5">
-              {navItems.map(item => (
+              {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => (
                 <Link
                 key={item.page}
                 to={createPageUrl(item.page)}
