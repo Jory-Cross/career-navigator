@@ -20,7 +20,8 @@ const ROLE_LABELS = {
   management: "Management",
   employee: "Employee",
   client: "Client",
-  pre_ets: "Pre-ETS"
+  pre_ets: "Pre-ETS",
+  dspd: "DSPD"
 };
 
 export default function Layout({ children, currentPageName }) {
@@ -36,6 +37,8 @@ export default function Layout({ children, currentPageName }) {
         navigate(createPageUrl('ClientPortal'));
       } else if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
         navigate(createPageUrl('PreEtsPortal'));
+      } else if (currentUser?.role === 'dspd' && currentPageName !== 'DspdPortal') {
+        navigate(createPageUrl('DspdPortal'));
       }
     }).catch(() => {});
   }, [currentPageName, navigate]);
@@ -117,7 +120,7 @@ export default function Layout({ children, currentPageName }) {
 
       <div className="flex">
         {/* Sidebar */}
-        {user?.role !== 'client' && user?.role !== 'pre_ets' && (
+        {user?.role !== 'client' && user?.role !== 'pre_ets' && user?.role !== 'dspd' && (
           <aside className={cn(
             "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
