@@ -2,7 +2,7 @@ import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -37,6 +37,7 @@ export default function ClientDetail() {
       const clientData = allClients.find(c => c.id === clientId);
       if (!clientData) return null;
       if (!user) return clientData;
+      if (user.role === 'admin') return clientData;
       if (user.role === 'management') return clientData;
       if (user.role === 'employee' && clientData.assigned_employee_id === user.id) return clientData;
       return null;
@@ -103,9 +104,14 @@ export default function ClientDetail() {
         <Link to={createPageUrl("Clients")} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Clients
         </Link>
-        <Button variant="outline" onClick={() => setShowEmailComposer(true)}>
-          Send Email
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.open(`/ClientPortal?id=${clientId}`, '_blank')}>
+            <ExternalLink className="w-4 h-4 mr-1.5" /> Client Portal
+          </Button>
+          <Button variant="outline" onClick={() => setShowEmailComposer(true)}>
+            Send Email
+          </Button>
+        </div>
       </div>
 
       <ClientHeader client={client} onUpdate={refresh} />

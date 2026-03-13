@@ -34,7 +34,7 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.me().then(currentUser => {
       setUser(currentUser);
       if (currentUser?.role === 'client' && currentPageName !== 'ClientPortal') {
-        navigate(createPageUrl('ClientPortal'));
+        navigate('/ClientPortal');
       } else if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
         navigate(createPageUrl('PreEtsPortal'));
       } else if (currentUser?.role === 'dspd' && currentPageName !== 'DspdPortal') {
