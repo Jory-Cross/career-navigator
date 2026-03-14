@@ -348,9 +348,15 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">My Applications</CardTitle>
-                <Button size="sm" onClick={() => setShowNewApp(true)}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Application
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setShowIndeedImport(true)}>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fc/Indeed_logo.svg" alt="Indeed" className="h-3.5 mr-1" />
+                    Import from Indeed
+                  </Button>
+                  <Button size="sm" onClick={() => setShowNewApp(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Application
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
