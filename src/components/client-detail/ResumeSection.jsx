@@ -10,6 +10,7 @@ import { Plus, FileText, Star, Trash2, GraduationCap, Briefcase } from "lucide-r
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ImportFromLinkedInDialog from "@/components/client-detail/ImportFromLinkedInDialog";
 
 export default function ResumeSection({ clientId, resumes, onRefresh }) {
   const [showEditor, setShowEditor] = useState(false);
