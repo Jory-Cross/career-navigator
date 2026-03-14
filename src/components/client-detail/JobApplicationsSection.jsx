@@ -324,6 +324,17 @@ Provide:
                       )}
                     </Button>
                   )}
+                  {LINKEDIN_SHARE_STATUSES.includes(app.status) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => openLinkedInShare(e, app)}
+                      className="h-7 px-2 text-[#0077b5] hover:text-[#005885]"
+                      title="Share on LinkedIn"
+                    >
+                      <Share2 className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
