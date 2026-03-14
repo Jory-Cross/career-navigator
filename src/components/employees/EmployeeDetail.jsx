@@ -41,6 +41,148 @@ const activityIcons = {
   onboarding_step: "🚀",
 };
 
+function TimeEntriesDrillDown({ timeEntries, clients, timePeriod, setTimePeriod, timeClientFilter, setTimeClientFilter, expandedClient, setExpandedClient, getClientName }) {
+  const now = new Date();
+
+  const filtered = timeEntries.filter(e => {
+    if (timeClientFilter !== "all" && e.client_id !== timeClientFilter) return false;
+    if (timePeriod === "week" && e.date) {
+      return isWithinInterval(new Date(e.date), { start: startOfWeek(now), end: endOfWeek(now) });
+    }
+    if (timePeriod === "month" && e.date) {
+      return isWithinInterval(new Date(e.date), { start: startOfMonth(now), end: endOfMonth(now) });
+    }
+    return true;
+  });
+
+  const totalMinutes = filtered.reduce((s, t) => s + (t.duration_minutes || 0), 0);
+  const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+
+  // Group by client
+  const byClient = {};
+  filtered.forEach(e => {
+    if (!byClient[e.client_id]) byClient[e.client_id] = { minutes: 0, entries: [] };
+    byClient[e.client_id].minutes += (e.duration_minutes || 0);
+    byClient[e.client_id].entries.push(e);
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="border-0 shadow-sm p-4 text-center">
+          <p className="text-xs text-slate-400 uppercase tracking-wider">Total Hours</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{totalHours}h</p>
+        </Card>
+        <Card className="border-0 shadow-sm p-4 text-center">
+          <p className="text-xs text-slate-400 uppercase tracking-wider">Sessions</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{filtered.length}</p>
+        </Card>
+        <Card className="border-0 shadow-sm p-4 text-center">
+          <p className="text-xs text-slate-400 uppercase tracking-wider">Clients</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{Object.keys(byClient).length}</p>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3 items-center">
+        <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+        <Select value={timePeriod} onValueChange={setTimePeriod}>
+          <SelectTrigger className="w-36 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="week">This Week</SelectItem>
+            <SelectItem value="month">This Month</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={timeClientFilter} onValueChange={setTimeClientFilter}>
+          <SelectTrigger className="w-44 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <Card className="border-0 shadow-sm p-8 text-center text-sm text-slate-400">No time entries found</Card>
+      ) : (
+        <Card className="border-0 shadow-sm divide-y divide-slate-100">
+          {Object.entries(byClient)
+            .sort(([, a], [, b]) => b.minutes - a.minutes)
+            .map(([clientId, data]) => {
+              const pct = totalMinutes > 0 ? (data.minutes / totalMinutes) * 100 : 0;
+              const isExpanded = expandedClient === clientId;
+              const clientHours = Math.round(data.minutes / 60 * 10) / 10;
+
+              return (
+                <div key={clientId}>
+                  {/* Client row — clickable to drill down */}
+                  <button
+                    className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors"
+                    onClick={() => setExpandedClient(isExpanded ? null : clientId)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                        {(() => { const c = clients.find(c => c.id === clientId); return c ? `${c.first_name?.[0]}${c.last_name?.[0]}` : '?'; })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-semibold text-slate-800">{getClientName(clientId)}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-slate-700">{clientHours}h</span>
+                            <span className="text-xs text-slate-400">{data.entries.length} sessions</span>
+                            {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Drill-down: individual entries */}
+                  {isExpanded && (
+                    <div className="bg-slate-50 border-t border-slate-100">
+                      {data.entries
+                        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                        .map(entry => (
+                          <div key={entry.id} className="px-5 py-3 border-b border-slate-100 last:border-0 flex items-start gap-4">
+                            <div className="text-right shrink-0 w-14">
+                              <p className="text-sm font-bold text-slate-800">{entry.duration_minutes}m</p>
+                              <p className="text-[10px] text-slate-400">{Math.round((entry.duration_minutes || 0) / 60 * 10) / 10}h</p>
+                            </div>
+                            <div className="w-px h-10 bg-slate-200 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-slate-700 font-medium">{entry.description || "Session"}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <Badge className={cn("text-[10px] border-0", catColors[entry.category] || "bg-slate-100 text-slate-600")}>
+                                  {entry.category?.replace(/_/g, " ")}
+                                </Badge>
+                                {entry.start_time && (
+                                  <span className="text-[10px] text-slate-400">{entry.start_time}{entry.end_time ? ` – ${entry.end_time}` : ""}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-400 shrink-0 text-right">
+                              {entry.date ? format(new Date(entry.date), "MMM d, yyyy") : ""}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function EmployeeDetail({ employee, currentUser }) {
   const [timePeriod, setTimePeriod] = useState("all");
   const [timeClientFilter, setTimeClientFilter] = useState("all");
