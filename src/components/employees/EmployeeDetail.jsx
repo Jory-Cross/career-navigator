@@ -186,24 +186,17 @@ export default function EmployeeDetail({ employee, currentUser }) {
 
         {/* Time Tab */}
         <TabsContent value="time" className="mt-4">
-          <Card className="border-0 shadow-sm p-4">
-            <div className="space-y-3">
-              {timeEntries.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No time entries yet</p>}
-              {timeEntries.slice(0, 50).map(entry => (
-                <div key={entry.id} className="flex items-start justify-between py-2 border-b border-slate-50 last:border-0 gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{entry.description || "Time logged"}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {getClientName(entry.client_id)} · {entry.category} · {entry.date ? format(new Date(entry.date), "MMM d, yyyy") : ""}
-                    </p>
-                  </div>
-                  <Badge className="bg-emerald-50 text-emerald-700 border-0 shrink-0">
-                    {Math.round((entry.duration_minutes || 0) / 60 * 10) / 10}h
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <TimeEntriesDrillDown
+            timeEntries={timeEntries}
+            clients={clients}
+            timePeriod={timePeriod}
+            setTimePeriod={setTimePeriod}
+            timeClientFilter={timeClientFilter}
+            setTimeClientFilter={setTimeClientFilter}
+            expandedClient={expandedClient}
+            setExpandedClient={setExpandedClient}
+            getClientName={getClientName}
+          />
         </TabsContent>
 
         {/* Tasks Tab */}
