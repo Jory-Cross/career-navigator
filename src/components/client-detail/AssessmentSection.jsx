@@ -181,13 +181,18 @@ export default function AssessmentSection({ clientId }) {
                       )}
                     </div>
                   </div>
-                  {assessment.pdf_url && (
-                    <a href={assessment.pdf_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="ghost">
-                        <Download className="w-3.5 h-3.5" />
-                      </Button>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(assessment)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    {assessment.pdf_url && (
+                      <a href={assessment.pdf_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="ghost">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
