@@ -27,7 +27,7 @@ export default function InterviewPrepSection({ client }) {
   const [showSessionNotes, setShowSessionNotes] = useState(false);
   const [applications, setApplications] = useState([]);
   const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
-  const jobDropdownRef = React.useRef(null);
+  const jobDropdownRef = useRef(null);
 
   React.useEffect(() => {
     const handleClickOutside = (e) => {
