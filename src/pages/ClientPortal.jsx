@@ -555,6 +555,95 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 
       </Tabs>
 
+      {/* Application Detail Dialog */}
+      <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              {selectedApp?.position}
+            </DialogTitle>
+            <p className="text-sm text-slate-500">{selectedApp?.company}</p>
+          </DialogHeader>
+          {selectedApp && (
+            <div className="space-y-4 py-2">
+              {/* Status */}
+              <div>
+                <Label className="text-xs text-slate-500 mb-1 block">Status</Label>
+                <Select value={selectedApp.status} onValueChange={val => updateApplication('status', val)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['saved','applied','phone_screen','interview','final_round','offer','accepted','rejected','withdrawn'].map(s => (
+                      <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Next Step */}
+              {selectedApp.next_step && (
+                <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                  <p className="text-xs font-semibold text-violet-700 mb-1">Next Step</p>
+                  <p className="text-sm text-violet-800">{selectedApp.next_step}</p>
+                  {selectedApp.next_step_date && (
+                    <p className="text-xs text-violet-600 mt-1">Due: {format(new Date(selectedApp.next_step_date), "MMM d, yyyy")}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Details */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {selectedApp.location && (
+                  <div>
+                    <p className="text-xs text-slate-400">Location</p>
+                    <p className="text-slate-700">{selectedApp.location}</p>
+                  </div>
+                )}
+                {selectedApp.applied_date && (
+                  <div>
+                    <p className="text-xs text-slate-400">Applied</p>
+                    <p className="text-slate-700">{format(new Date(selectedApp.applied_date), "MMM d, yyyy")}</p>
+                  </div>
+                )}
+                {selectedApp.salary_range && (
+                  <div>
+                    <p className="text-xs text-slate-400">Salary Range</p>
+                    <p className="text-slate-700">{selectedApp.salary_range}</p>
+                  </div>
+                )}
+                {selectedApp.work_type && (
+                  <div>
+                    <p className="text-xs text-slate-400">Work Type</p>
+                    <p className="text-slate-700 capitalize">{selectedApp.work_type}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              {selectedApp.notes && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Notes</p>
+                  <p className="text-sm text-slate-700 bg-slate-50 rounded p-2">{selectedApp.notes}</p>
+                </div>
+              )}
+
+              {selectedApp.job_url && (
+                <a href={selectedApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  View Job Posting →
+                </a>
+              )}
+
+              {updatingApp && <p className="text-xs text-slate-400 text-center">Saving...</p>}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedApp(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Application Dialog */}
       <Dialog open={showNewApp} onOpenChange={setShowNewApp}>
         <DialogContent className="sm:max-w-md">
