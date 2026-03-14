@@ -642,11 +642,23 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                 </div>
               )}
 
-              {selectedApp.job_url && (
-                <a href={selectedApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                  View Job Posting →
-                </a>
-              )}
+              {/* Job URL */}
+              <div>
+                <Label className="text-xs text-slate-500 mb-1 block">Job Posting URL</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    className="h-8 text-sm"
+                    placeholder="https://..."
+                    defaultValue={selectedApp.job_url || ""}
+                    onBlur={e => { if (e.target.value !== selectedApp.job_url) updateApplication('job_url', e.target.value); }}
+                  />
+                  {selectedApp.job_url && (
+                    <a href={selectedApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline whitespace-nowrap">
+                      Open ↗
+                    </a>
+                  )}
+                </div>
+              </div>
 
               {updatingApp && <p className="text-xs text-slate-400 text-center">Saving...</p>}
             </div>
