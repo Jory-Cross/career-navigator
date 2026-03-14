@@ -52,11 +52,28 @@ const assessmentQuestions = {
 
 export default function AssessmentSection({ clientId }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState(null);
   const [assessmentType, setAssessmentType] = useState("career_goals");
   const [responses, setResponses] = useState({});
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
+
+  const openNew = () => {
+    setEditingAssessment(null);
+    setAssessmentType("career_goals");
+    setResponses({});
+    setNotes("");
+    setShowForm(true);
+  };
+
+  const openEdit = (assessment) => {
+    setEditingAssessment(assessment);
+    setAssessmentType(assessment.assessment_type);
+    setResponses(assessment.responses || {});
+    setNotes(assessment.notes || "");
+    setShowForm(true);
+  };
 
   const { data: assessments = [], isLoading } = useQuery({
     queryKey: ['client-assessments', clientId],
