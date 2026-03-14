@@ -124,6 +124,14 @@ export default function ResumeSection({ clientId, resumes, onRefresh, client }) 
         </div>
       </Card>
 
+      <AIResumeBuilder
+        open={showAIBuilder}
+        onClose={() => setShowAIBuilder(false)}
+        client={client}
+        clientId={clientId}
+        onSaved={onRefresh}
+      />
+
       <ImportFromLinkedInDialog
         open={showLinkedInImport}
         onClose={() => setShowLinkedInImport(false)}
