@@ -84,47 +84,56 @@ export default function AssessmentSection({ clientId }) {
     setSubmitting(true);
     try {
       const user = await base44.auth.me();
-      
-      // Save assessment
-      const assessment = await base44.entities.Assessment.create({
-        client_id: clientId,
-        assessment_type: assessmentType,
-        responses,
-        completed_by: user.email,
-        notes
-      });
 
-      // Generate PDF
-      const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
-        assessment_id: assessment.id
-      });
+      let assessmentId;
+      if (editingAssessment) {
+        // Update existing assessment
+        await base44.entities.Assessment.update(editingAssessment.id, {
+          assessment_type: assessmentType,
+          responses,
+          notes
+        });
+        assessmentId = editingAssessment.id;
+        toast.success("Assessment updated");
+      } else {
+        // Create new assessment
+        const assessment = await base44.entities.Assessment.create({
+          client_id: clientId,
+          assessment_type: assessmentType,
+          responses,
+          completed_by: user.email,
+          notes
+        });
+        assessmentId = assessment.id;
 
-      // Update with PDF URL
-      await base44.entities.Assessment.update(assessment.id, {
-        pdf_url: pdfData.pdf_url
-      });
+        // Generate PDF only for new assessments
+        const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
+          assessment_id: assessmentId
+        });
+        await base44.entities.Assessment.update(assessmentId, { pdf_url: pdfData.pdf_url });
 
-      // Save to documents
-      await base44.entities.Document.create({
-        client_id: clientId,
-        title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
-        file_url: pdfData.pdf_url,
-        file_name: `Assessment_${assessmentType}.pdf`,
-        file_type: 'application/pdf',
-        category: 'other'
-      });
+        await base44.entities.Document.create({
+          client_id: clientId,
+          title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
+          file_url: pdfData.pdf_url,
+          file_name: `Assessment_${assessmentType}.pdf`,
+          file_type: 'application/pdf',
+          category: 'other'
+        });
 
-      // Log activity
-      await base44.entities.Activity.create({
-        client_id: clientId,
-        activity_type: 'note_added',
-        title: 'Assessment completed',
-        description: `${assessmentType.replace('_', ' ')} assessment completed by ${user.full_name || user.email}`
-      });
+        await base44.entities.Activity.create({
+          client_id: clientId,
+          activity_type: 'note_added',
+          title: 'Assessment completed',
+          description: `${assessmentType.replace('_', ' ')} assessment completed by ${user.full_name || user.email}`
+        });
 
-      toast.success("Assessment saved and PDF generated");
+        toast.success("Assessment saved and PDF generated");
+      }
+
       queryClient.invalidateQueries({ queryKey: ['client-assessments'] });
       setShowForm(false);
+      setEditingAssessment(null);
       setResponses({});
       setNotes("");
     } catch (error) {
