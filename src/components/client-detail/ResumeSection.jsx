@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import ImportFromLinkedInDialog from "@/components/client-detail/ImportFromLinkedInDialog";
 
 export default function ResumeSection({ clientId, resumes, onRefresh }) {
+  const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [form, setForm] = useState({});
   const [editId, setEditId] = useState(null);
