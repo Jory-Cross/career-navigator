@@ -1,14 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Clock, Activity, Briefcase, CheckSquare, Link as LinkIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Clock, Activity, Briefcase, CheckSquare, Link as LinkIcon, Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
