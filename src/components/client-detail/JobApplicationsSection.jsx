@@ -189,6 +189,38 @@ Provide:
     }
   };
 
+  const LINKEDIN_SHARE_STATUSES = ['offer', 'accepted', 'interview', 'final_round'];
+
+  const openLinkedInShare = (e, app) => {
+    e.stopPropagation();
+    const statusLabel = statusConfig[app.status]?.label || app.status;
+    let defaultText = '';
+    if (app.status === 'accepted') {
+      defaultText = `Excited to share that I've accepted an offer as ${app.position} at ${app.company}! Looking forward to this new chapter. #NewJob #Grateful`;
+    } else if (app.status === 'offer') {
+      defaultText = `Thrilled to have received an offer for ${app.position} at ${app.company}! Big things ahead. #CareerGrowth`;
+    } else if (app.status === 'final_round') {
+      defaultText = `Made it to the final round for ${app.position} at ${app.company}! Excited for what's next. #JobSearch`;
+    } else if (app.status === 'interview') {
+      defaultText = `Interviewing for ${app.position} at ${app.company} — grateful for the opportunity! #CareerJourney`;
+    }
+    setLinkedInPostText(defaultText);
+    setLinkedInPreview(app);
+  };
+
+  const submitLinkedInPost = async () => {
+    setSharingLinkedIn(linkedInPreview.id);
+    try {
+      await base44.functions.invoke('postToLinkedIn', { postText: linkedInPostText });
+      toast.success("Posted to LinkedIn!");
+      setLinkedInPreview(null);
+    } catch (error) {
+      toast.error("Failed to post to LinkedIn");
+    } finally {
+      setSharingLinkedIn(null);
+    }
+  };
+
   const addSuggestionAsApplication = (suggestion) => {
     setForm({
       company: suggestion.company,
