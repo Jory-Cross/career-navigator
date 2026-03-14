@@ -35,6 +35,9 @@ export default function JobApplicationsSection({ clientId, applications, onRefre
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [calculatingFit, setCalculatingFit] = useState(null);
   const [sendingFollowUp, setSendingFollowUp] = useState(null);
+  const [sharingLinkedIn, setSharingLinkedIn] = useState(null);
+  const [linkedInPreview, setLinkedInPreview] = useState(null);
+  const [linkedInPostText, setLinkedInPostText] = useState("");
 
   const INTERVIEW_STATUSES = ['phone_screen', 'interview', 'final_round'];
 
