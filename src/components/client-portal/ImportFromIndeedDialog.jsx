@@ -1,24 +1,24 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { Loader2, Building2, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Building2, MapPin, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ImportFromIndeedDialog({ open, onClose, clientId, onImported }) {
-  const [url, setUrl] = useState("");
+  const [pastedText, setPastedText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [parsed, setParsed] = useState(null); // { applications, profile_name }
-  const [selected, setSelected] = useState([]); // selected indices
+  const [parsed, setParsed] = useState(null);
+  const [selected, setSelected] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const handleFetch = async () => {
-    if (!url.trim()) {
-      toast.error("Please enter your Indeed profile URL");
+  const handleParse = async () => {
+    if (!pastedText.trim()) {
+      toast.error("Please paste your Indeed jobs text first");
       return;
     }
     setLoading(true);
@@ -26,7 +26,7 @@ export default function ImportFromIndeedDialog({ open, onClose, clientId, onImpo
     setSelected([]);
     try {
       const res = await base44.functions.invoke('importFromIndeed', {
-        profileUrl: url.trim(),
+        pastedText: pastedText.trim(),
         clientId
       });
       const data = res.data;
@@ -35,13 +35,13 @@ export default function ImportFromIndeedDialog({ open, onClose, clientId, onImpo
         return;
       }
       if (!data.applications || data.applications.length === 0) {
-        toast.warning("No job applications found on that profile. Make sure it's a public Indeed profile.");
+        toast.warning("No job applications found. Try selecting more text from the Indeed page.");
         return;
       }
       setParsed(data);
-      setSelected(data.applications.map((_, i) => i)); // select all by default
+      setSelected(data.applications.map((_, i) => i));
     } catch (err) {
-      toast.error("Failed to import: " + err.message);
+      toast.error("Failed to parse: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function ImportFromIndeedDialog({ open, onClose, clientId, onImpo
           work_type: app.work_type || undefined,
           salary_range: app.salary_range || "",
           status: "applied",
-          notes: "Imported from Indeed profile"
+          notes: "Imported from Indeed"
         })
       ));
       toast.success(`Imported ${selected.length} application${selected.length > 1 ? 's' : ''}`);
@@ -85,7 +85,7 @@ export default function ImportFromIndeedDialog({ open, onClose, clientId, onImpo
   };
 
   const handleClose = () => {
-    setUrl("");
+    setPastedText("");
     setParsed(null);
     setSelected([]);
     setLoading(false);
@@ -104,57 +104,64 @@ export default function ImportFromIndeedDialog({ open, onClose, clientId, onImpo
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-            <strong>How to get your Indeed profile URL:</strong><br />
-            1. Go to <a href="https://my.indeed.com/profile" target="_blank" rel="noopener noreferrer" className="underline">indeed.com</a> and sign in<br />
-            2. Click your name → "View public profile"<br />
-            3. Copy the URL from your browser and paste it below
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 space-y-1">
+            <strong>How to import your Indeed applications:</strong>
+            <ol className="list-decimal list-inside space-y-0.5 mt-1">
+              <li>Go to <a href="https://my.indeed.com/jobs?applied=1" target="_blank" rel="noopener noreferrer" className="underline font-medium">indeed.com → My Jobs → Applied</a></li>
+              <li>Select all text on the page (<strong>Ctrl+A</strong> or <strong>Cmd+A</strong>)</li>
+              <li>Copy it (<strong>Ctrl+C</strong> or <strong>Cmd+C</strong>)</li>
+              <li>Paste it in the box below and click <strong>Parse</strong></li>
+            </ol>
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-500">Indeed Profile URL</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="https://www.indeed.com/r/..."
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !loading && handleFetch()}
+          {!parsed && (
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Paste Indeed page text here</Label>
+              <Textarea
+                placeholder="Paste the copied text from your Indeed 'Applied Jobs' page here..."
+                value={pastedText}
+                onChange={e => setPastedText(e.target.value)}
+                className="min-h-[120px] text-xs"
                 disabled={loading}
               />
-              <Button onClick={handleFetch} disabled={loading || !url.trim()} className="shrink-0">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Fetch"}
+              <Button onClick={handleParse} disabled={loading || !pastedText.trim()} className="w-full mt-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                {loading ? "Parsing..." : "Parse Applications"}
               </Button>
             </div>
-          </div>
+          )}
 
           {loading && (
-            <div className="flex flex-col items-center py-8 gap-2 text-sm text-slate-500">
+            <div className="flex flex-col items-center py-4 gap-2 text-sm text-slate-500">
               <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-              Scanning your Indeed profile...
+              Reading your Indeed applications...
             </div>
           )}
 
           {parsed && (
             <div className="space-y-3">
-              {parsed.profile_name && (
-                <p className="text-sm font-medium text-slate-700">
-                  Found profile: <span className="text-blue-600">{parsed.profile_name}</span>
-                </p>
-              )}
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-800">
                   {parsed.applications.length} application{parsed.applications.length !== 1 ? 's' : ''} found
                 </p>
-                <button
-                  className="text-xs text-blue-600 hover:underline"
-                  onClick={() =>
-                    selected.length === parsed.applications.length
-                      ? setSelected([])
-                      : setSelected(parsed.applications.map((_, i) => i))
-                  }
-                >
-                  {selected.length === parsed.applications.length ? "Deselect all" : "Select all"}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={() =>
+                      selected.length === parsed.applications.length
+                        ? setSelected([])
+                        : setSelected(parsed.applications.map((_, i) => i))
+                    }
+                  >
+                    {selected.length === parsed.applications.length ? "Deselect all" : "Select all"}
+                  </button>
+                  <button
+                    className="text-xs text-slate-400 hover:underline"
+                    onClick={() => { setParsed(null); setPastedText(""); setSelected([]); }}
+                  >
+                    Start over
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
