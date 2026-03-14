@@ -357,7 +357,11 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
               ) : (
                 <div className="space-y-3">
                   {applications.map(app => (
-                    <div key={app.id} className="p-4 bg-slate-50 rounded-lg">
+                    <div
+                      key={app.id}
+                      className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"
+                      onClick={() => setSelectedApp(app)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -374,8 +378,9 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                             {app.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{app.location}</span>}
                             {app.applied_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(app.applied_date), "MMM d, yyyy")}</span>}
                           </div>
-                          {app.next_step && <p className="text-xs text-violet-600 mt-2">Next: {app.next_step}</p>}
+                          {app.next_step && <p className="text-xs text-violet-600 mt-2 font-medium">→ Next: {app.next_step}</p>}
                         </div>
+                        <span className="text-xs text-slate-400">View →</span>
                       </div>
                     </div>
                   ))}
