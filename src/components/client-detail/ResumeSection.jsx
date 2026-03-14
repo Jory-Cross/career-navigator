@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, FileText, Star, Trash2, GraduationCap, Briefcase } from "lucide-react";
+import { Plus, FileText, Star, Trash2, GraduationCap, Briefcase, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ImportFromLinkedInDialog from "@/components/client-detail/ImportFromLinkedInDialog";
+import AIResumeBuilder from "@/components/client-detail/AIResumeBuilder";
 
 export default function ResumeSection({ clientId, resumes, onRefresh }) {
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
