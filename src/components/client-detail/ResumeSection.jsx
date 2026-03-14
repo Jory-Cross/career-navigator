@@ -13,8 +13,9 @@ import { cn } from "@/lib/utils";
 import ImportFromLinkedInDialog from "@/components/client-detail/ImportFromLinkedInDialog";
 import AIResumeBuilder from "@/components/client-detail/AIResumeBuilder";
 
-export default function ResumeSection({ clientId, resumes, onRefresh }) {
+export default function ResumeSection({ clientId, resumes, onRefresh, client }) {
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
+  const [showAIBuilder, setShowAIBuilder] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [form, setForm] = useState({});
   const [editId, setEditId] = useState(null);
