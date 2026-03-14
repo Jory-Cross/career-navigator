@@ -775,6 +775,12 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
       </Dialog>
 
 
+      <ImportFromIndeedDialog
+        open={showIndeedImport}
+        onClose={() => setShowIndeedImport(false)}
+        clientId={client?.id}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ['client-applications'] })}
+      />
     </div>
   );
 }
