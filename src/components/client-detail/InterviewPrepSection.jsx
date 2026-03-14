@@ -363,21 +363,23 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
           </div>
           <div className="flex gap-2">
             {applications.length > 0 && (
-              <div className="relative group">
-                <Button size="sm" variant="outline">
+              <div className="relative" ref={jobDropdownRef}>
+                <Button size="sm" variant="outline" onClick={() => setJobDropdownOpen(o => !o)}>
                   <FileText className="w-3.5 h-3.5 mr-1" /> Job-Specific
                 </Button>
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 z-10 hidden group-hover:block min-w-max">
-                  {applications.map(app => (
-                    <button
-                      key={app.id}
-                      onClick={() => startNewSession(false, app.id)}
-                      className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-b-0"
-                    >
-                      {app.company} - {app.position}
-                    </button>
-                  ))}
-                </div>
+                {jobDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 z-20 min-w-max">
+                    {applications.map(app => (
+                      <button
+                        key={app.id}
+                        onClick={() => { startNewSession(false, app.id); setJobDropdownOpen(false); }}
+                        className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-b-0"
+                      >
+                        {app.company} - {app.position}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <Button size="sm" onClick={() => startNewSession(true)}>
