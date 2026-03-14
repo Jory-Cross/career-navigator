@@ -26,6 +26,18 @@ export default function InterviewPrepSection({ client }) {
   const [sessionNotes, setSessionNotes] = useState("");
   const [showSessionNotes, setShowSessionNotes] = useState(false);
   const [applications, setApplications] = useState([]);
+  const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
+  const jobDropdownRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (jobDropdownRef.current && !jobDropdownRef.current.contains(e.target)) {
+        setJobDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const WSA_QUESTIONS = [
     { question: "Tell me about yourself", category: "Background" },
