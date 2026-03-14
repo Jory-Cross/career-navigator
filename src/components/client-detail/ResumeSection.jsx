@@ -119,6 +119,13 @@ export default function ResumeSection({ clientId, resumes, onRefresh }) {
         </div>
       </Card>
 
+      <ImportFromLinkedInDialog
+        open={showLinkedInImport}
+        onClose={() => setShowLinkedInImport(false)}
+        clientId={clientId}
+        onImported={onRefresh}
+      />
+
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editId ? "Edit Resume" : "New Resume"}</DialogTitle></DialogHeader>
