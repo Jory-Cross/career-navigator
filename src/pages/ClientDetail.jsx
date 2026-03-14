@@ -155,7 +155,7 @@ export default function ClientDetail() {
           <TasksSection clientId={clientId} tasks={tasks} onRefresh={refresh} />
         </TabsContent>
         <TabsContent value="resumes">
-          <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} />
+          <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} client={client} />
         </TabsContent>
         <TabsContent value="time">
           <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
