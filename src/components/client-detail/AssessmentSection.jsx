@@ -209,7 +209,7 @@ export default function AssessmentSection({ clientId }) {
           <div className="space-y-4 py-4">
             <div>
               <Label>Assessment Type</Label>
-              <Select value={assessmentType} onValueChange={(val) => { setAssessmentType(val); setResponses({}); }}>
+              <Select value={assessmentType} onValueChange={(val) => { setAssessmentType(val); if (!editingAssessment) setResponses({}); }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
