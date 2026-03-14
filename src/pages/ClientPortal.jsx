@@ -331,9 +331,10 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
       </Card>
 
       <Tabs defaultValue="applications" className="space-y-4">
-        <TabsList className="bg-slate-100 p-1">
+        <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
+          <TabsTrigger value="advisor">AI Career Advisor</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
