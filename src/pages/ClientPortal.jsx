@@ -22,6 +22,8 @@ export default function ClientPortal() {
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showNewApp, setShowNewApp] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [updatingApp, setUpdatingApp] = useState(false);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showPractice, setShowPractice] = useState(false);
   const [showUploadDoc, setShowUploadDoc] = useState(false);
