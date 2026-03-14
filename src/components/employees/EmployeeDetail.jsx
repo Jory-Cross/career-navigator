@@ -42,6 +42,9 @@ const activityIcons = {
 };
 
 export default function EmployeeDetail({ employee, currentUser }) {
+  const [timePeriod, setTimePeriod] = useState("all");
+  const [timeClientFilter, setTimeClientFilter] = useState("all");
+  const [expandedClient, setExpandedClient] = useState(null);
   const initials = `${employee.full_name?.split(' ')[0]?.[0] || ''}${employee.full_name?.split(' ')[1]?.[0] || ''}`;
 
   const { data: clients = [] } = useQuery({
