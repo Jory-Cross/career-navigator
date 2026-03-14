@@ -150,7 +150,7 @@ export default function AssessmentSection({ clientId }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Client Assessments</CardTitle>
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={openNew}>
             <Plus className="w-3.5 h-3.5 mr-1" /> New Assessment
           </Button>
         </div>
