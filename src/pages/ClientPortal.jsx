@@ -380,7 +380,20 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                           </div>
                           {app.next_step && <p className="text-xs text-violet-600 mt-2 font-medium">→ Next: {app.next_step}</p>}
                         </div>
-                        <span className="text-xs text-slate-400">View →</span>
+                        <div className="flex items-center gap-2">
+                          {app.job_url && (
+                            <a
+                              href={app.job_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                            >
+                              Job Post ↗
+                            </a>
+                          )}
+                          <span className="text-xs text-slate-400">View →</span>
+                        </div>
                       </div>
                     </div>
                   ))}
