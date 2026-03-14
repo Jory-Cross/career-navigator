@@ -11,6 +11,16 @@ import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 
+const catColors = {
+  consultation: "bg-emerald-50 text-emerald-700",
+  resume_work: "bg-blue-50 text-blue-700",
+  job_search: "bg-violet-50 text-violet-700",
+  interview_prep: "bg-amber-50 text-amber-700",
+  follow_up: "bg-cyan-50 text-cyan-700",
+  admin: "bg-slate-50 text-slate-600",
+  other: "bg-gray-50 text-gray-600"
+};
+
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
   inactive: "bg-slate-100 text-slate-500",
