@@ -126,7 +126,7 @@ export default function ClientDetail() {
           {!isDspd && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
           {!isDspd && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
           {!isDspd && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
-          {!isDspd && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
+          {client.client_type === 'pre_ets' && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
           {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           {!isDspd && <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>}
