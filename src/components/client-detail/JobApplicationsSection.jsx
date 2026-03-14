@@ -360,7 +360,17 @@ Provide:
               </Select>
             </div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Applied Date</Label><Input type="date" value={form.applied_date || ""} onChange={e => u("applied_date", e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Job URL</Label><Input value={form.job_url || ""} onChange={e => u("job_url", e.target.value)} /></div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Job URL</Label>
+              <div className="flex items-center gap-2">
+                <Input value={form.job_url || ""} onChange={e => u("job_url", e.target.value)} />
+                {form.job_url && (
+                  <a href={form.job_url} target="_blank" rel="noopener noreferrer" title="Open job posting">
+                    <ExternalLink className="w-4 h-4 text-blue-500 hover:text-blue-700 shrink-0" />
+                  </a>
+                )}
+              </div>
+            </div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Salary Range</Label><Input value={form.salary_range || ""} onChange={e => u("salary_range", e.target.value)} /></div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Location</Label><Input value={form.location || ""} onChange={e => u("location", e.target.value)} /></div>
             <div className="space-y-1">
