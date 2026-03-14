@@ -417,6 +417,39 @@ Provide:
         </DialogContent>
       </Dialog>
 
+      {/* LinkedIn Share Dialog */}
+      <Dialog open={!!linkedInPreview} onOpenChange={() => setLinkedInPreview(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-[#0077b5]" />
+              Share on LinkedIn
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 space-y-3">
+            <p className="text-xs text-slate-500">Customize the post before sharing to your LinkedIn profile.</p>
+            <Textarea
+              value={linkedInPostText}
+              onChange={e => setLinkedInPostText(e.target.value)}
+              rows={5}
+              className="text-sm"
+            />
+            <p className="text-xs text-slate-400">{linkedInPostText.length} characters</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkedInPreview(null)}>Cancel</Button>
+            <Button
+              onClick={submitLinkedInPost}
+              disabled={sharingLinkedIn === linkedInPreview?.id || !linkedInPostText.trim()}
+              className="bg-[#0077b5] hover:bg-[#005885] text-white"
+            >
+              {sharingLinkedIn === linkedInPreview?.id ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Share2 className="w-4 h-4 mr-1" />}
+              Post to LinkedIn
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* AI Suggestions Dialog */}
       <Dialog open={showSuggestions} onOpenChange={setShowSuggestions}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
