@@ -267,6 +267,22 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
     }
   };
 
+  const updateApplication = async (field, value) => {
+    if (!selectedApp) return;
+    setUpdatingApp(true);
+    try {
+      const updated = { ...selectedApp, [field]: value };
+      await base44.entities.JobApplication.update(selectedApp.id, { [field]: value });
+      setSelectedApp(updated);
+      queryClient.invalidateQueries({ queryKey: ['client-applications'] });
+      toast.success("Updated");
+    } catch (error) {
+      toast.error("Failed to update");
+    } finally {
+      setUpdatingApp(false);
+    }
+  };
+
   const statusColors = {
     saved: "bg-slate-100 text-slate-700",
     applied: "bg-blue-100 text-blue-700",
