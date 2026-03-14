@@ -203,7 +203,7 @@ export default function AssessmentSection({ clientId }) {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Complete Assessment</DialogTitle>
+            <DialogTitle>{editingAssessment ? "Edit Assessment" : "Complete Assessment"}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
