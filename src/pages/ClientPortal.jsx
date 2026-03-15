@@ -30,6 +30,7 @@ export default function ClientPortal() {
   const [showPractice, setShowPractice] = useState(false);
   const [showUploadDoc, setShowUploadDoc] = useState(false);
   const [showIndeedImport, setShowIndeedImport] = useState(false);
+  const [activeTab, setActiveTab] = useState("applications");
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskNotes, setTaskNotes] = useState("");
   const [taskStatus, setTaskStatus] = useState("");
