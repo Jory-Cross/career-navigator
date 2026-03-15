@@ -190,6 +190,27 @@ export default function ClientPortal() {
     }
   };
 
+  const openTaskDetail = (task) => {
+    setSelectedTask(task);
+    setTaskNotes(task.notes || "");
+    setTaskStatus(task.status);
+  };
+
+  const saveTaskDetail = async () => {
+    if (!selectedTask) return;
+    setSavingTask(true);
+    try {
+      await base44.entities.Task.update(selectedTask.id, { notes: taskNotes, status: taskStatus });
+      toast.success("Task updated");
+      queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
+      setSelectedTask(null);
+    } catch (error) {
+      toast.error("Failed to save");
+    } finally {
+      setSavingTask(false);
+    }
+  };
+
   const startPractice = async () => {
     if (!practiceForm.target_role) {
       toast.error("Target role required");
