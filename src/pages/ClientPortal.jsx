@@ -498,7 +498,11 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
               ) : (
                 <div className="space-y-3">
                   {tasks.map(task => (
-                    <div key={task.id} className="p-4 bg-slate-50 rounded-lg">
+                    <div
+                      key={task.id}
+                      className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => setSelectedTask(task)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -510,12 +514,9 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                           {task.due_date && (
                             <p className="text-xs text-slate-500 mt-2">Due: {format(new Date(task.due_date), "MMM d, yyyy")}</p>
                           )}
+                          {task.notes && <p className="text-xs text-violet-600 mt-1 italic truncate">Note: {task.notes}</p>}
                         </div>
-                        {task.status !== 'completed' && (
-                          <Button size="sm" variant="outline" onClick={() => completeTask(task.id)}>
-                            Complete
-                          </Button>
-                        )}
+                        <span className="text-xs text-slate-400 shrink-0">Edit →</span>
                       </div>
                     </div>
                   ))}
