@@ -356,7 +356,28 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="applications" className="space-y-4">
+      {/* Quick Nav Cards */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        {[
+          { tab: "applications", label: "Applications", count: applications.length, color: "text-blue-600", bg: "bg-blue-50 hover:bg-blue-100" },
+          { tab: "interview", label: "Interview Prep", count: interviewSessions.length, color: "text-violet-600", bg: "bg-violet-50 hover:bg-violet-100" },
+          { tab: "advisor", label: "AI Advisor", count: null, color: "text-emerald-600", bg: "bg-emerald-50 hover:bg-emerald-100" },
+          { tab: "tasks", label: "Tasks", count: tasks.length, color: "text-orange-600", bg: "bg-orange-50 hover:bg-orange-100" },
+          { tab: "activity", label: "Activity", count: meetings.length + activities.length, color: "text-cyan-600", bg: "bg-cyan-50 hover:bg-cyan-100" },
+          { tab: "documents", label: "Documents", count: documents.length, color: "text-slate-600", bg: "bg-slate-50 hover:bg-slate-100" },
+        ].map(({ tab, label, count, color, bg }) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn("rounded-xl p-3 text-center transition-colors border cursor-pointer", bg, activeTab === tab ? "border-slate-300 shadow-sm" : "border-transparent")}
+          >
+            {count !== null && <p className={cn("text-xl font-bold", color)}>{count}</p>}
+            <p className={cn("text-xs font-medium mt-0.5", count === null ? cn("text-base mt-0", color) : "text-slate-600")}>{label}</p>
+          </button>
+        ))}
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
