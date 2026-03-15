@@ -807,6 +807,55 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
       </Dialog>
 
 
+      {/* Task Detail Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-slate-500" />
+              {selectedTask?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4 py-2">
+              {selectedTask.description && (
+                <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{selectedTask.description}</p>
+              )}
+              {selectedTask.due_date && (
+                <p className="text-xs text-slate-500">Due: {format(new Date(selectedTask.due_date), "MMM d, yyyy")}</p>
+              )}
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">Status</Label>
+                <Select value={taskStatus} onValueChange={setTaskStatus}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">My Notes</Label>
+                <Textarea
+                  value={taskNotes}
+                  onChange={e => setTaskNotes(e.target.value)}
+                  placeholder="Add your notes, updates, or questions here..."
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedTask(null)}>Cancel</Button>
+            <Button onClick={saveTaskDetail} disabled={savingTask}>{savingTask ? "Saving..." : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ImportFromIndeedDialog
         open={showIndeedImport}
         onClose={() => setShowIndeedImport(false)}
