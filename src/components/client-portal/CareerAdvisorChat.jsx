@@ -113,11 +113,9 @@ Be conversational, specific, and encouraging. Use markdown formatting for readab
   };
 
   const clearChat = () => {
-    setMessages([{
-      role: "assistant",
-      content: `Hi ${client?.first_name || "there"}! 👋 I'm your AI Career Advisor. Ask me anything about your career journey — I'll search the internet for the latest insights!`,
-      links: []
-    }]);
+    const fresh = defaultMessages(client?.first_name);
+    setMessages(fresh);
+    if (client?.id) localStorage.removeItem(STORAGE_KEY(client.id));
   };
 
   return (
