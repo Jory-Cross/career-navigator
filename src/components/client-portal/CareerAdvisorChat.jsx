@@ -16,17 +16,34 @@ const SUGGESTED_QUESTIONS = [
   "What are employers looking for in interviews?",
 ];
 
+const STORAGE_KEY = (clientId) => `career_advisor_chat_${clientId}`;
+
+const defaultMessages = (firstName) => ([{
+  role: "assistant",
+  content: `Hi ${firstName || "there"}! 👋 I'm your AI Career Advisor. I can search the internet to answer your career questions, find job market insights, salary data, industry trends, and more. What would you like to know?`,
+  links: []
+}]);
+
 export default function CareerAdvisorChat({ client }) {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: `Hi ${client?.first_name || "there"}! 👋 I'm your AI Career Advisor. I can search the internet to answer your career questions, find job market insights, salary data, industry trends, and more. What would you like to know?`,
-      links: []
+  const [messages, setMessages] = useState(() => {
+    if (!client?.id) return defaultMessages(client?.first_name);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY(client.id));
+      return saved ? JSON.parse(saved) : defaultMessages(client?.first_name);
+    } catch {
+      return defaultMessages(client?.first_name);
     }
-  ]);
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
+
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    if (client?.id) {
+      localStorage.setItem(STORAGE_KEY(client.id), JSON.stringify(messages));
+    }
+  }, [messages, client?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
