@@ -30,6 +30,10 @@ export default function ClientPortal() {
   const [showPractice, setShowPractice] = useState(false);
   const [showUploadDoc, setShowUploadDoc] = useState(false);
   const [showIndeedImport, setShowIndeedImport] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [taskNotes, setTaskNotes] = useState("");
+  const [taskStatus, setTaskStatus] = useState("");
+  const [savingTask, setSavingTask] = useState(false);
   const [uploadCategory, setUploadCategory] = useState('resume');
   const [appForm, setAppForm] = useState({});
   const [taskForm, setTaskForm] = useState({});
