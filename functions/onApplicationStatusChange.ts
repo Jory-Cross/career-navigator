@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       manual: false
     });
 
-    return Response.json({ success: true, result });
+    return Response.json({ success: true, result: result?.data ?? null });
 
   } catch (error) {
     console.error('onApplicationStatusChange error:', error);
