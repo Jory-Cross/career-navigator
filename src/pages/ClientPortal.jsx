@@ -526,7 +526,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                     <div
                       key={task.id}
                       className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
-                      onClick={() => setSelectedTask(task)}
+                      onClick={() => openTaskDetail(task)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
