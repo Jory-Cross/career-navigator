@@ -308,6 +308,11 @@ export default function PreEtsPortal() {
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
         </TabsList>
 
+        {/* Clock In/Out */}
+        <TabsContent value="clock">
+          <ClockInOut clientId={activeClient?.id} clientName={`${activeClient?.first_name} ${activeClient?.last_name}`} />
+        </TabsContent>
+
         {/* Tasks */}
         <TabsContent value="tasks">
           <Card className="border-0 shadow-sm">
