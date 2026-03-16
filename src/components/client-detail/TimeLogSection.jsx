@@ -88,7 +88,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
       await base44.entities.TimeEntry.create({
         client_id: clientId,
         date: form.date,
-        duration_minutes: parseInt(form.duration_minutes),
+        duration_minutes: duration,
         description: form.description,
         category: form.category,
         start_time: form.start_time || undefined,
