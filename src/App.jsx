@@ -69,6 +69,9 @@ const AuthenticatedApp = () => {
       <Route path="/DspdPortal" element={<LayoutWrapper currentPageName="DspdPortal"><DspdPortal /></LayoutWrapper>} />
       <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
+      <Route path="/Pricing" element={<Pricing />} />
+      <Route path="/OrgSignup" element={<OrgSignup />} />
+      <Route path="/OrgDashboard" element={<LayoutWrapper currentPageName="OrgDashboard"><OrgDashboard /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
