@@ -95,10 +95,13 @@ export default function AgentChatEmbed({ agentKey, title, description }) {
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center">
             <Bot className="w-5 h-5 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-base">{title}</CardTitle>
             {description && <p className="text-xs text-slate-400">{description}</p>}
           </div>
+          <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation" className="text-slate-400 hover:text-red-500">
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
