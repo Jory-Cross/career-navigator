@@ -7,7 +7,8 @@ import { base44 } from "@/api/base44Client";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
-  { name: "Job Seekers", icon: Users, page: "Clients" },
+  { name: "Clients", icon: Users, page: "Clients" },
+  { name: "Job Seeker", icon: Users, page: "Clients", indent: true, roles: ["admin", "management", "employee"] },
   { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", indent: true, roles: ["admin", "management", "employee"] },
   { name: "DSPD", icon: Users, page: "DspdPortal", indent: true, roles: ["admin", "management", "employee"] },
   { name: "Employees", icon: UserCog, page: "EmployeePortal", roles: ["admin", "management"] },
