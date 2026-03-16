@@ -416,6 +416,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                             <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{app.company}</span>
                             {app.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{app.location}</span>}
                             {app.applied_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(app.applied_date), "MMM d, yyyy")}</span>}
+                            {app.follow_up_date && <span className="flex items-center gap-1 text-amber-600"><Bell className="w-3 h-3" />Follow-up {format(new Date(app.follow_up_date), "MMM d")}</span>}
                           </div>
                           {app.next_step && <p className="text-xs text-violet-600 mt-2 font-medium">→ Next: {app.next_step}</p>}
                         </div>
