@@ -18,12 +18,13 @@ export default function Clients() {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
-    // Set type filter from URL parameter
+  }, []);
+
+  useEffect(() => {
+    // Set type filter from URL parameter on mount only
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get("type");
-    if (typeParam) {
-      setTypeFilter(typeParam);
-    }
+    setTypeFilter(typeParam || "all");
   }, []);
 
   const { data: allUsers = [] } = useQuery({
