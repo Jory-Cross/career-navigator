@@ -58,11 +58,18 @@ export default function PreEtsPortal() {
   };
 
   // For staff roles: fetch all pre_ets clients
-  const { data: preEtsClients = [] } = useQuery({
+  const { data: preEtsClients = [], refetch: refetchPreEts } = useQuery({
     queryKey: ['pre-ets-clients'],
     queryFn: () => base44.entities.Client.filter({ client_type: 'pre_ets' }),
     enabled: !!user && STAFF_ROLES.includes(user.role)
   });
+
+  const deleteClient = async (e, clientId) => {
+    e.stopPropagation();
+    if (!confirm("Delete this client? This cannot be undone.")) return;
+    await base44.entities.Client.delete(clientId);
+    refetchPreEts();
+  };
 
   // For staff: use selected client; for pre_ets user: use their own client
   const activeClient = STAFF_ROLES.includes(user?.role)
