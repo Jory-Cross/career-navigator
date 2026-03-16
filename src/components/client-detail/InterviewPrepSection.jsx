@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Lightbulb, Sparkles, Loader2, MessageSquare, Target, CheckCircle2, Tag, FileText } from "lucide-react";
+import { Lightbulb, Sparkles, Loader2, MessageSquare, Target, CheckCircle2, Tag, FileText, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
