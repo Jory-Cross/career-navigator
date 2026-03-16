@@ -15,6 +15,7 @@ const navItems = [
   { name: "Tasks", icon: ListChecks, page: "Tasks" },
   { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
   { name: "AI Agents", icon: Bot, page: "Agents" },
+  { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", roles: ["admin", "management", "employee"] },
   { name: "My Organization", icon: Building2, page: "OrgDashboard", roles: ["admin"] },
 ];
 
