@@ -294,7 +294,9 @@ Provide:
                   <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                     <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{app.company}</span>
                     {app.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{app.location}</span>}
-                    {app.applied_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(app.applied_date), "MMM d")}</span>}
+                    {app.applied_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Applied {format(new Date(app.applied_date), "MMM d")}</span>}
+                    {app.follow_up_date && <span className="flex items-center gap-1 text-amber-600"><Bell className="w-3 h-3" />Follow-up {format(new Date(app.follow_up_date), "MMM d")}</span>}
+                    {app.contact_name && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{app.contact_name}{app.contact_title ? ` · ${app.contact_title}` : ""}</span>}
                   </div>
                   {app.ai_fit_analysis && (
                     <p className="text-xs text-slate-600 mt-1.5 bg-slate-50 rounded p-2">{app.ai_fit_analysis}</p>
