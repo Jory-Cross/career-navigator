@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true });
     }
 
-    // Check if this user already exists
+    // Check if user already exists
     const users = await base44.asServiceRole.entities.User.filter({ email: client.email });
     if (users.length > 0) {
       const existing = users[0];
@@ -22,8 +22,6 @@ Deno.serve(async (req) => {
         console.log(`User ${client.email} already has client role`);
       }
     } else {
-      // Invite as new client user
-      await base44.asServiceRole.integrations.Core.InvokeLLM; // no-op to keep import
       await base44.users.inviteUser(client.email, 'client');
       console.log(`Invited ${client.email} as client`);
     }
