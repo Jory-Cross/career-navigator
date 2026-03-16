@@ -10,6 +10,7 @@ import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
 
 export default function Clients() {
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -22,11 +23,11 @@ export default function Clients() {
   }, []);
 
   useEffect(() => {
-    // Sync type filter with URL parameter whenever it changes
-    const urlParams = new URLSearchParams(window.location.search);
+    // Sync type filter with URL parameter whenever location changes
+    const urlParams = new URLSearchParams(location.search);
     const typeParam = urlParams.get("type");
     setTypeFilter(typeParam || "all");
-  }, [window.location.search]);
+  }, [location.search]);
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
