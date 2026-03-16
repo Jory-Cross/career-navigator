@@ -360,7 +360,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
       <Tabs defaultValue="applications" className="space-y-4">
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
-          <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
+          <TabsTrigger value="interview">Interview ({interviewSessions.length})</TabsTrigger>
           <TabsTrigger value="coach">Career Coach</TabsTrigger>
           <TabsTrigger value="interview_agent">Interview Coach</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
