@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download, Clock } from "lucide-react";
+import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download, Clock, Bell, Phone, StickyNote, Trash2 } from "lucide-react";
 import ImportFromIndeedDialog from "@/components/client-portal/ImportFromIndeedDialog";
 import CareerAdvisorChat from "@/components/client-portal/CareerAdvisorChat";
 import AgentChatEmbed from "@/components/client-portal/AgentChatEmbed.jsx";
@@ -37,6 +37,7 @@ export default function ClientPortal() {
   const [savingTask, setSavingTask] = useState(false);
   const [uploadCategory, setUploadCategory] = useState('resume');
   const [appForm, setAppForm] = useState({});
+  const [newAppNote, setNewAppNote] = useState("");
   const [taskForm, setTaskForm] = useState({});
   const [practiceForm, setPracticeForm] = useState({});
   const [saving, setSaving] = useState(false);
