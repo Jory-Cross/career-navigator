@@ -31,11 +31,23 @@ export default function EmployeePortal() {
     enabled: !!user
   });
 
-  const employees = allUsers.filter(u => {
-    if (user?.role === 'admin') return u.role === 'employee' || u.role === 'management';
-    if (user?.role === 'management') return u.manager_id === user.id;
-    return false;
-  });
+  // Build hierarchy based on role
+  const visibleUsers = (() => {
+    if (user?.role === 'admin') {
+      // Managers assigned to this admin
+      const managers = allUsers.filter(u => u.role === 'management' && u.admin_id === user.id);
+      const managerIds = managers.map(m => m.id);
+      // Employees assigned to those managers
+      const employees = allUsers.filter(u => u.role === 'employee' && managerIds.includes(u.manager_id));
+      return [...managers, ...employees];
+    }
+    if (user?.role === 'management') {
+      return allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
+    }
+    return [];
+  })();
+
+  const employees = visibleUsers;
 
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
