@@ -123,7 +123,7 @@ export default function PreEtsPortal() {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       await base44.entities.Document.create({
-        client_id: client.id,
+        client_id: activeClient.id,
         title: file.name,
         file_url,
         file_name: file.name,
@@ -142,10 +142,54 @@ export default function PreEtsPortal() {
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
 
-  if (!user || user.role !== 'pre_ets' || !client) {
+  const isStaff = STAFF_ROLES.includes(user?.role);
+
+  if (!user || (!isStaff && user.role !== 'pre_ets')) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-slate-600">Access denied. Pre-ETS portal access only.</p>
+        <p className="text-slate-600">Access denied.</p>
+      </div>
+    );
+  }
+
+  // Staff view: show client selector if no client selected
+  if (isStaff && !activeClient) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Pre-ETS Portal</h1>
+          <p className="text-sm text-slate-500 mt-1">Select a Pre-ETS client to manage</p>
+        </div>
+        {preEtsClients.length === 0 ? (
+          <Card className="p-12 text-center border-0 shadow-sm">
+            <GraduationCap className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium">No Pre-ETS clients found</p>
+            <p className="text-slate-400 text-sm mt-1">Add clients with client type "pre_ets" to see them here.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {preEtsClients.map(c => (
+              <Card
+                key={c.id}
+                className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedClientId(c.id)}
+              >
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                    {c.first_name[0]}{c.last_name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900">{c.first_name} {c.last_name}</p>
+                    <p className="text-xs text-slate-500 truncate">{c.email}</p>
+                    <Badge className={cn("mt-1 text-xs", c.status === 'active' ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600")}>
+                      {c.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
