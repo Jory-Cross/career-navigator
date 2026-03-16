@@ -122,6 +122,12 @@ export default function ClientPortal() {
     enabled: !!client
   });
 
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ['client-time-entries', client?.id],
+    queryFn: () => base44.entities.TimeEntry.filter({ client_id: client.id }),
+    enabled: !!client
+  });
+
   const { data: activities = [] } = useQuery({
     queryKey: ['client-activities', client?.id],
     queryFn: () => base44.entities.Activity.filter({ client_id: client.id }),
