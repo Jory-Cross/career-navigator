@@ -397,11 +397,48 @@ Provide:
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Name</Label><Input value={form.contact_name || ""} onChange={e => u("contact_name", e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Email</Label><Input value={form.contact_email || ""} onChange={e => u("contact_email", e.target.value)} /></div>
+            <div className="space-y-1"><Label className="text-xs text-slate-500">Applied Date</Label><Input type="date" value={form.applied_date || ""} onChange={e => u("applied_date", e.target.value)} /></div>
+            <div className="space-y-1"><Label className="text-xs text-slate-500">Follow-up Date</Label><Input type="date" value={form.follow_up_date || ""} onChange={e => u("follow_up_date", e.target.value)} /></div>
+
+            {/* Employer Contact Info */}
+            <div className="col-span-2 border-t border-slate-200 pt-3 mt-1">
+              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Employer Contact</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Name</Label><Input value={form.contact_name || ""} onChange={e => u("contact_name", e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Title</Label><Input value={form.contact_title || ""} onChange={e => u("contact_title", e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Email</Label><Input type="email" value={form.contact_email || ""} onChange={e => u("contact_email", e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-slate-500">Contact Phone</Label><Input type="tel" value={form.contact_phone || ""} onChange={e => u("contact_phone", e.target.value)} /></div>
+              </div>
+            </div>
+
             <div className="space-y-1"><Label className="text-xs text-slate-500">Next Step</Label><Input value={form.next_step || ""} onChange={e => u("next_step", e.target.value)} /></div>
             <div className="space-y-1"><Label className="text-xs text-slate-500">Next Step Date</Label><Input type="date" value={form.next_step_date || ""} onChange={e => u("next_step_date", e.target.value)} /></div>
-            <div className="col-span-2 space-y-1"><Label className="text-xs text-slate-500">Notes</Label><Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} rows={2} /></div>
+
+            {/* Multi-entry Notes */}
+            <div className="col-span-2 border-t border-slate-200 pt-3 mt-1">
+              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1"><StickyNote className="w-3.5 h-3.5" /> Notes</p>
+              <div className="space-y-2 mb-2 max-h-40 overflow-y-auto">
+                {(form.note_entries || []).length === 0 && (
+                  <p className="text-xs text-slate-400 italic">No notes yet</p>
+                )}
+                {(form.note_entries || []).map((entry, idx) => (
+                  <div key={idx} className="flex items-start gap-2 bg-slate-50 rounded-lg p-2 text-xs">
+                    <div className="flex-1">
+                      <p className="text-slate-700">{entry.text}</p>
+                      <p className="text-slate-400 mt-0.5">{entry.created_at ? format(new Date(entry.created_at), "MMM d, yyyy h:mm a") : ""}</p>
+                    </div>
+                    <button onClick={() => removeNote(idx)} className="text-slate-300 hover:text-red-400 shrink-0 mt-0.5">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Textarea value={newNote} onChange={e => setNewNote(e.target.value)} rows={2} placeholder="Add a note..." className="text-sm flex-1" onKeyDown={e => { if (e.key === "Enter" && e.ctrlKey) addNote(); }} />
+                <Button type="button" size="sm" variant="outline" onClick={addNote} className="self-end">Add</Button>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Ctrl+Enter to add</p>
+            </div>
             
             <div className="col-span-2 border-t border-slate-200 pt-4 mt-2">
               <div className="flex items-center gap-2 mb-3">
