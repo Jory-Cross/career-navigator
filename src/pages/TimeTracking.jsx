@@ -5,9 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Clock, User, Calendar, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Clock, User, Calendar, Filter, AlertTriangle, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 
