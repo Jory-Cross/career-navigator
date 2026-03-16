@@ -72,6 +72,8 @@ export default function Clients() {
     return matchSearch && matchStatus && matchType && matchArchived;
   });
 
+  const countByType = (type) => clients.filter(c => !c.is_archived && (type === "all" ? true : (c.client_type || "client") === type)).length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
