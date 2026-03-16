@@ -41,8 +41,14 @@ export default function EmployeeCard({ employee, onClick }) {
       className="border-0 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-5"
     >
       <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-          {initials || '?'}
+        <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0">
+          {employee.avatar_url ? (
+            <img src={employee.avatar_url} alt={employee.full_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+              {initials || '?'}
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
