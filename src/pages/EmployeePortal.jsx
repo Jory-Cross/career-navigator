@@ -73,8 +73,11 @@ export default function EmployeePortal() {
         <Card className="p-12 text-center border-0 shadow-sm">
           <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-medium">No employees assigned</p>
-          <p className="text-slate-400 text-sm mt-1">Assign employees to your team by setting their manager in User settings.</p>
+          <p className="text-slate-400 text-sm mt-1">Assign employees to your team by setting their manager and admin in User settings.</p>
         </Card>
+      ) : user?.role === 'admin' ? (
+        // Admin view: grouped by manager
+        <AdminHierarchyView allUsers={allUsers} currentUser={user} onSelectEmployee={setSelectedEmployeeId} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {employees.map(emp => (
