@@ -86,6 +86,26 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
         start_time: form.start_time || undefined,
         end_time: form.end_time || undefined
       });
+
+      // Create calendar entry
+      if (form.start_time) {
+        const startDateTime = new Date(`${form.date}T${form.start_time}`);
+        const endDateTime = form.end_time 
+          ? new Date(`${form.date}T${form.end_time}`)
+          : new Date(startDateTime.getTime() + parseInt(form.duration_minutes) * 60000);
+
+        await base44.entities.Meeting.create({
+          client_id: clientId,
+          title: form.description || form.category.replace(/_/g, ' '),
+          description: form.description,
+          meeting_type: form.category,
+          start_datetime: startDateTime.toISOString(),
+          end_datetime: endDateTime.toISOString(),
+          status: 'completed',
+          location: 'Time Entry'
+        });
+      }
+
       toast.success("Time entry added");
       setShowAdd(false);
       onRefresh();
