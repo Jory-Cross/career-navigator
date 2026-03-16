@@ -385,9 +385,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
             <Button size="sm" onClick={() => startNewSession(true)}>
               <Sparkles className="w-3.5 h-3.5 mr-1" /> WSA Interview
             </Button>
-            <Button size="sm" variant="outline" onClick={() => startNewSession(false)}>
-              <Sparkles className="w-3.5 h-3.5 mr-1" /> AI Practice
-            </Button>
+
           </div>
         </div>
 
