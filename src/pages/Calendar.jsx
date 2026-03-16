@@ -311,6 +311,76 @@ export default function Calendar() {
           </div>
         </Card>
 
+        {/* Meetings Needing Time Logged */}
+        {(() => {
+          const unloggedMeetings = meetings
+            .filter(m => {
+              if (m.status === 'cancelled' || m.status === 'no_show') return false;
+              const meetingDate = new Date(m.start_datetime);
+              if (meetingDate >= new Date()) return false; // only past meetings
+              const meetingDay = format(parseISO(m.start_datetime), 'yyyy-MM-dd');
+              // check if any time entry exists for the same client on the same day
+              const hasTimeEntry = timeEntries.some(te => 
+                te.client_id === m.client_id && te.date === meetingDay
+              );
+              return !hasTimeEntry;
+            })
+            .sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime));
+
+          if (unloggedMeetings.length === 0) return null;
+
+          return (
+            <Card className="border-0 shadow-sm p-5 border-l-4 border-amber-400">
+              <div className="flex items-center gap-2 mb-4">
+                <Timer className="w-4 h-4 text-amber-500" />
+                <h3 className="text-base font-semibold text-slate-800">Meetings Needing Time Logged ({unloggedMeetings.length})</h3>
+              </div>
+              <div className="space-y-3">
+                {unloggedMeetings.map(meeting => {
+                  const client = clients.find(c => c.id === meeting.client_id);
+                  return (
+                    <div key={meeting.id} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 cursor-pointer" onClick={() => openEdit(meeting)}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
+                          <Badge className={cn("text-xs", statusColors[meeting.status])}>{meeting.status}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {format(parseISO(meeting.start_datetime), 'MMM d, yyyy')}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(parseISO(meeting.start_datetime), 'HH:mm')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMeeting(meeting);
+                          setConvertNotes(meeting.description || "");
+                          setShowConvert(true);
+                        }}
+                      >
+                        <Timer className="w-3 h-3 mr-1" />
+                        Log Time
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          );
+        })()}
+
         {/* Upcoming Meetings */}
         <Card className="border-0 shadow-sm p-5">
           <h3 className="text-base font-semibold text-slate-800 mb-4">Upcoming Meetings</h3>
