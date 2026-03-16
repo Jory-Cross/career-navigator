@@ -53,6 +53,11 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
   };
 
   const handleSave = async () => {
+    if (!form.date) {
+      toast.error("Date is required");
+      return;
+    }
+
     // Auto-calculate duration from start/end times if needed
     let duration = parseInt(form.duration_minutes) || 0;
     if (form.start_time && form.end_time && !form.duration_minutes) {
