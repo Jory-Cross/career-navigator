@@ -578,6 +578,43 @@ export default function Calendar() {
               <Label className="text-xs">Description</Label>
               <Textarea value={form.description || ""} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} />
             </div>
+            {!editingMeeting && (
+              <div className="border-t border-slate-100 pt-3 space-y-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Recurrence</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Repeat</Label>
+                    <Select value={form.recurrence || "none"} onValueChange={v => setForm(p => ({ ...p, recurrence: v }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Does not repeat</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {form.recurrence && form.recurrence !== "none" && (
+                    <div>
+                      <Label className="text-xs">Number of occurrences</Label>
+                      <Input
+                        type="number" min="2" max="52"
+                        value={form.recurrence_count || 4}
+                        onChange={e => setForm(p => ({ ...p, recurrence_count: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </div>
+                {form.recurrence && form.recurrence !== "none" && (
+                  <p className="text-xs text-slate-500 bg-blue-50 px-3 py-2 rounded-md">
+                    This will create <strong>{form.recurrence_count || 4}</strong> meetings repeating {form.recurrence === "biweekly" ? "every 2 weeks" : form.recurrence}.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
