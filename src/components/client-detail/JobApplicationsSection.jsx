@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell, Mail, Share2 } from "lucide-react";
+import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell, Mail, Share2, Phone, Trash2, StickyNote } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -63,8 +63,21 @@ export default function JobApplicationsSection({ clientId, applications, onRefre
     }
   };
 
+  const [newNote, setNewNote] = useState("");
+
+  const addNote = () => {
+    if (!newNote.trim()) return;
+    const entry = { text: newNote.trim(), created_at: new Date().toISOString(), created_by: "" };
+    setForm(p => ({ ...p, note_entries: [...(p.note_entries || []), entry] }));
+    setNewNote("");
+  };
+
+  const removeNote = (idx) => {
+    setForm(p => ({ ...p, note_entries: p.note_entries.filter((_, i) => i !== idx) }));
+  };
+
   const openNew = () => {
-    setForm({ company: "", position: "", status: "saved", applied_date: "", job_url: "", salary_range: "", location: "", work_type: "", contact_name: "", contact_email: "", notes: "", next_step: "", next_step_date: "" });
+    setForm({ company: "", position: "", status: "saved", applied_date: "", follow_up_date: "", job_url: "", salary_range: "", location: "", work_type: "", contact_name: "", contact_title: "", contact_email: "", contact_phone: "", notes: "", note_entries: [], next_step: "", next_step_date: "" });
     setEditId(null);
     setShowNew(true);
   };
