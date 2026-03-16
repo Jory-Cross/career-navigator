@@ -284,6 +284,8 @@ export default function PreEtsPortal() {
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto gap-1">
           <TabsTrigger value="tasks">My Tasks ({pendingTasks.length})</TabsTrigger>
           <TabsTrigger value="checklist">Program Checklist</TabsTrigger>
+          <TabsTrigger value="iep">IEP & Transition Plan</TabsTrigger>
+          <TabsTrigger value="skills">Skills Exploration</TabsTrigger>
           <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>
           <TabsTrigger value="wble">WBLE Forms ({wbleForms.length})</TabsTrigger>
           <TabsTrigger value="meetings">Meetings ({upcomingMeetings.length})</TabsTrigger>
