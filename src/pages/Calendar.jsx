@@ -106,11 +106,44 @@ export default function Calendar() {
     setSaving(true);
     try {
       if (editingMeeting) {
-        await base44.entities.Meeting.update(editingMeeting.id, form);
+        const { recurrence, recurrence_count, ...meetingData } = form;
+        await base44.entities.Meeting.update(editingMeeting.id, meetingData);
         toast.success("Meeting updated");
       } else {
-        await base44.entities.Meeting.create(form);
-        toast.success("Meeting scheduled");
+        const { recurrence, recurrence_count, ...baseData } = form;
+        const count = recurrence === "none" ? 1 : (parseInt(recurrence_count) || 4);
+        const startDt = parseISO(form.start_datetime);
+        const endDt = form.end_datetime ? parseISO(form.end_datetime) : null;
+        const durationMs = endDt ? endDt - startDt : 0;
+
+        const promises = [];
+        for (let i = 0; i < count; i++) {
+          let newStart, newEnd;
+          if (recurrence === "daily") {
+            newStart = addDays(startDt, i);
+            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+          } else if (recurrence === "weekly") {
+            newStart = addWeeks(startDt, i);
+            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+          } else if (recurrence === "biweekly") {
+            newStart = addWeeks(startDt, i * 2);
+            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+          } else if (recurrence === "monthly") {
+            newStart = addMonths(startDt, i);
+            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+          } else {
+            newStart = startDt;
+            newEnd = endDt;
+          }
+          promises.push(base44.entities.Meeting.create({
+            ...baseData,
+            start_datetime: newStart.toISOString(),
+            end_datetime: newEnd ? newEnd.toISOString() : undefined,
+          }));
+          if (recurrence === "none") break;
+        }
+        await Promise.all(promises);
+        toast.success(count > 1 ? `${count} recurring meetings scheduled` : "Meeting scheduled");
       }
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
       setShowNew(false);
