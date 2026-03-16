@@ -134,8 +134,8 @@ export default function Layout({ children, currentPageName }) {
             <nav className="p-3 space-y-0.5">
               {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => (
                 <Link
-                key={item.page}
-                to={createPageUrl(item.page)}
+                key={item.page + (item.param || '')}
+                to={createPageUrl(item.page) + (item.param || '')}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
