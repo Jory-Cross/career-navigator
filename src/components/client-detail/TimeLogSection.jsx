@@ -101,7 +101,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
           const startDateTime = new Date(`${form.date}T${form.start_time}`);
           const endDateTime = form.end_time 
             ? new Date(`${form.date}T${form.end_time}`)
-            : new Date(startDateTime.getTime() + parseInt(form.duration_minutes) * 60000);
+            : new Date(startDateTime.getTime() + duration * 60000);
 
           await base44.entities.Meeting.create({
             client_id: clientId,
