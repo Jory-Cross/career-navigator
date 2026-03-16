@@ -46,10 +46,19 @@ export default function PreEtsPortal() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientIdParam = urlParams.get("id");
+
+      const allClients = await base44.entities.Client.list();
+
       if (currentUser.role === 'pre_ets') {
-        const allClients = await base44.entities.Client.list();
         const clientData = allClients.find(c => c.email === currentUser.email);
         if (clientData) setClient(clientData);
+      } else if (STAFF_ROLES.includes(currentUser.role) && clientIdParam) {
+        const clientData = allClients.find(c => c.id === clientIdParam);
+        if (clientData && clientData.client_type === 'pre_ets') {
+          setSelectedClientId(clientIdParam);
+        }
       }
     } catch (error) {
       console.error("Failed to load data", error);
