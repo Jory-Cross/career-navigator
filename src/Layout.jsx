@@ -16,6 +16,7 @@ const navItems = [
   { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
   { name: "AI Agents", icon: Bot, page: "Agents" },
   { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", roles: ["admin", "management", "employee"] },
+  { name: "DSPD", icon: Users, page: "DspdPortal", roles: ["admin", "management", "employee"] },
   { name: "My Organization", icon: Building2, page: "OrgDashboard", roles: ["admin"] },
 ];
 
