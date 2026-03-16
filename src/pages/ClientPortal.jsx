@@ -686,11 +686,42 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                 )}
               </div>
 
-              {/* Notes */}
-              {selectedApp.notes && (
+              {/* Follow-up date */}
+              {selectedApp.follow_up_date && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700">Follow-up Date</p>
+                    <p className="text-sm text-amber-800">{format(new Date(selectedApp.follow_up_date), "MMM d, yyyy")}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Employer Contact */}
+              {(selectedApp.contact_name || selectedApp.contact_email || selectedApp.contact_phone) && (
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <p className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1"><Phone className="w-3 h-3" /> Employer Contact</p>
+                  {selectedApp.contact_name && <p className="text-sm text-slate-700">{selectedApp.contact_name}{selectedApp.contact_title ? ` · ${selectedApp.contact_title}` : ""}</p>}
+                  {selectedApp.contact_email && <p className="text-xs text-blue-600">{selectedApp.contact_email}</p>}
+                  {selectedApp.contact_phone && <p className="text-xs text-slate-600">{selectedApp.contact_phone}</p>}
+                </div>
+              )}
+
+              {/* Notes log */}
+              {(selectedApp.note_entries?.length > 0 || selectedApp.notes) && (
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Notes</p>
-                  <p className="text-sm text-slate-700 bg-slate-50 rounded p-2">{selectedApp.notes}</p>
+                  <p className="text-xs text-slate-400 mb-2 flex items-center gap-1"><StickyNote className="w-3 h-3" /> Notes</p>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {selectedApp.note_entries?.map((entry, idx) => (
+                      <div key={idx} className="bg-slate-50 rounded-lg p-2 text-xs">
+                        <p className="text-slate-700">{entry.text}</p>
+                        <p className="text-slate-400 mt-0.5">{entry.created_at ? format(new Date(entry.created_at), "MMM d, h:mm a") : ""}</p>
+                      </div>
+                    ))}
+                    {selectedApp.notes && !selectedApp.note_entries?.length && (
+                      <p className="text-sm text-slate-700 bg-slate-50 rounded p-2">{selectedApp.notes}</p>
+                    )}
+                  </div>
                 </div>
               )}
 
