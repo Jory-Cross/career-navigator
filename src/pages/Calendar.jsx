@@ -448,15 +448,41 @@ export default function Calendar() {
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div>
-              <Label className="text-xs">Client *</Label>
+              <Label className="text-xs">Client / Participant *</Label>
               <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select client..." />
+                  <SelectValue placeholder="Select participant..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                  ))}
+                  {user && (
+                    <SelectItem value={`self:${user.email}`}>
+                      👤 Myself ({user.full_name || user.email})
+                    </SelectItem>
+                  )}
+                  {clients.filter(c => c.client_type === 'client' || !c.client_type).length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Job Seekers</div>
+                      {clients.filter(c => c.client_type === 'client' || !c.client_type).map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {clients.filter(c => c.client_type === 'pre_ets').length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Pre-ETS Students</div>
+                      {clients.filter(c => c.client_type === 'pre_ets').map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {clients.filter(c => c.client_type === 'dspd').length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">DSPD Clients</div>
+                      {clients.filter(c => c.client_type === 'dspd').map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
