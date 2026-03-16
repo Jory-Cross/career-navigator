@@ -439,14 +439,22 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                           )}
                         </div>
                       </div>
-                      <Badge className={cn(
-                        "text-xs",
-                        sessionAvg >= 80 ? "bg-green-100 text-green-700" :
-                        sessionAvg >= 60 ? "bg-blue-100 text-blue-700" :
-                        "bg-amber-100 text-amber-700"
-                      )}>
-                        {sessionAvg}%
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={cn(
+                          "text-xs",
+                          sessionAvg >= 80 ? "bg-green-100 text-green-700" :
+                          sessionAvg >= 60 ? "bg-blue-100 text-blue-700" :
+                          "bg-amber-100 text-amber-700"
+                        )}>
+                          {sessionAvg}%
+                        </Badge>
+                        <button
+                          onClick={(e) => deleteSession(e, session.id)}
+                          className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     {session.improvement_tips && session.improvement_tips.length > 0 && (
                       <div className="mt-2 space-y-1">
