@@ -227,14 +227,14 @@ export default function PreEtsPortal() {
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0">
-                {client.first_name[0]}{client.last_name[0]}
+                {activeClient.first_name[0]}{activeClient.last_name[0]}
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-slate-900">{client.first_name} {client.last_name}</h2>
-                <p className="text-sm text-slate-500">{client.email}</p>
+                <h2 className="text-lg font-semibold text-slate-900">{activeClient.first_name} {activeClient.last_name}</h2>
+                <p className="text-sm text-slate-500">{activeClient.email}</p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {client.target_role && <Badge variant="outline" className="text-xs">{client.target_role}</Badge>}
-                  {client.industry && <Badge variant="outline" className="text-xs">{client.industry}</Badge>}
+                  {activeClient.target_role && <Badge variant="outline" className="text-xs">{activeClient.target_role}</Badge>}
+                  {activeClient.industry && <Badge variant="outline" className="text-xs">{activeClient.industry}</Badge>}
                 </div>
               </div>
             </div>
