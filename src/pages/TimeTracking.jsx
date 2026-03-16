@@ -28,6 +28,7 @@ export default function TimeTracking() {
   const [periodFilter, setPeriodFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
   const [user, setUser] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
