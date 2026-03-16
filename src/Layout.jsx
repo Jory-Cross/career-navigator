@@ -7,7 +7,9 @@ import { base44 } from "@/api/base44Client";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
-  { name: "Clients", icon: Users, page: "Clients" },
+  { name: "Job Seekers", icon: Users, page: "Clients" },
+  { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", indent: true, roles: ["admin", "management", "employee"] },
+  { name: "DSPD", icon: Users, page: "DspdPortal", indent: true, roles: ["admin", "management", "employee"] },
   { name: "Employees", icon: UserCog, page: "EmployeePortal", roles: ["admin", "management"] },
   { name: "Calendar", icon: Calendar, page: "Calendar" },
   { name: "Reports", icon: BarChart3, page: "Reports" },
@@ -15,8 +17,6 @@ const navItems = [
   { name: "Tasks", icon: ListChecks, page: "Tasks" },
   { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
   { name: "AI Agents", icon: Bot, page: "Agents" },
-  { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", roles: ["admin", "management", "employee"] },
-  { name: "DSPD", icon: Users, page: "DspdPortal", roles: ["admin", "management", "employee"] },
   { name: "My Organization", icon: Building2, page: "OrgDashboard", roles: ["admin"] },
 ];
 
