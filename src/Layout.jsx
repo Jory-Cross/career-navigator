@@ -133,8 +133,10 @@ export default function Layout({ children, currentPageName }) {
           )}>
             <nav className="p-3 space-y-0.5">
               {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => {
-                const isActive = currentPageName === item.page && 
-                  (!item.param || window.location.search === item.param);
+                const currentSearch = window.location.search;
+                const isActive = currentPageName === item.page && (
+                  item.param ? currentSearch === item.param : !currentSearch
+                );
                 return (
                 <Link
                 key={item.page + (item.param || '')}
