@@ -425,7 +425,7 @@ ${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedb
                     className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-medium text-slate-800">{session.target_role}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="text-xs text-slate-500">{session.questions?.length || 0} questions</p>
