@@ -24,12 +24,14 @@ const CHECKLIST_ITEMS = [
   { key: "goals_set", label: "Set Employment Goals", category: "planning" },
 ];
 
+const STAFF_ROLES = ['admin', 'management', 'employee'];
+
 export default function PreEtsPortal() {
   const [user, setUser] = useState(null);
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [completedItems, setCompletedItems] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -41,17 +43,29 @@ export default function PreEtsPortal() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      if (currentUser.role !== 'pre_ets') return;
-
-      const allClients = await base44.entities.Client.list();
-      const clientData = allClients.find(c => c.email === currentUser.email);
-      if (clientData) setClient(clientData);
+      if (currentUser.role === 'pre_ets') {
+        const allClients = await base44.entities.Client.list();
+        const clientData = allClients.find(c => c.email === currentUser.email);
+        if (clientData) setClient(clientData);
+      }
     } catch (error) {
       console.error("Failed to load data", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // For staff roles: fetch all pre_ets clients
+  const { data: preEtsClients = [] } = useQuery({
+    queryKey: ['pre-ets-clients'],
+    queryFn: () => base44.entities.Client.filter({ client_type: 'pre_ets' }),
+    enabled: !!user && STAFF_ROLES.includes(user.role)
+  });
+
+  // For staff: use selected client; for pre_ets user: use their own client
+  const activeClient = STAFF_ROLES.includes(user?.role)
+    ? preEtsClients.find(c => c.id === selectedClientId)
+    : client;
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['pre-ets-tasks', client?.id],
