@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
 import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
+import ClockInOut from "@/components/pre-ets/ClockInOut";
 
 const CHECKLIST_ITEMS = [
   { key: "career_exploration", label: "Complete Career Exploration Assessment", category: "assessments" },
