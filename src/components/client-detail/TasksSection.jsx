@@ -77,7 +77,20 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
     onRefresh();
   };
 
+  const [organizingNotes, setOrganizingNotes] = useState(false);
   const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+  const organizeNotes = async () => {
+    const raw = form.description?.trim();
+    if (!raw) { toast.error("Add some notes first"); return; }
+    setOrganizingNotes(true);
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are a professional career coach assistant. Take the following raw notes and organize them into clear, actionable bullet points. Keep all the key information but make it concise and well-structured. Return only the organized notes, no extra commentary.\n\nRaw notes:\n${raw}`,
+    });
+    u("description", result);
+    setOrganizingNotes(false);
+    toast.success("Notes organized!");
+  };
 
   const toggleClient = (cId) => {
     const current = form.client_ids || [];
