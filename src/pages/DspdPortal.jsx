@@ -611,11 +611,18 @@ export default function DspdPortal() {
 
   const isStaff = STAFF_ROLES.includes(user?.role);
 
-  const { data: dspdClients = [] } = useQuery({
+  const { data: dspdClients = [], refetch: refetchDspd } = useQuery({
     queryKey: ["dspd-clients"],
     queryFn: () => base44.entities.Client.filter({ client_type: "dspd" }),
     enabled: !!user && isStaff,
   });
+
+  const deleteClient = async (e, clientId) => {
+    e.stopPropagation();
+    if (!confirm("Delete this client? This cannot be undone.")) return;
+    await base44.entities.Client.delete(clientId);
+    refetchDspd();
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
 

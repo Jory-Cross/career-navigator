@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   GraduationCap, ClipboardList, Briefcase, CheckCircle2, Clock,
-  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users, Sparkles, Brain
+  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users, Sparkles, Brain, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
