@@ -144,6 +144,25 @@ export default function ClientPortal() {
 
   if (!client) return null;
 
+  // Redirect Pre-ETS and DSPD clients to their respective portals
+  if (client.client_type === 'pre_ets' && user.role === 'pre_ets') {
+    window.location.href = '/PreEtsPortal';
+    return null;
+  }
+  if (client.client_type === 'dspd' && user.role === 'dspd') {
+    window.location.href = '/DspdPortal';
+    return null;
+  }
+  // For staff viewing Pre-ETS clients, redirect to PreEtsPortal with client ID
+  if (isStaff && client.client_type === 'pre_ets') {
+    window.location.href = `/PreEtsPortal?id=${client.id}`;
+    return null;
+  }
+  if (isStaff && client.client_type === 'dspd') {
+    window.location.href = `/DspdPortal?id=${client.id}`;
+    return null;
+  }
+
   const saveApplication = async () => {
     if (!appForm.company || !appForm.position) {
       toast.error("Company and position required");
