@@ -86,6 +86,19 @@ export default function TimeTracking() {
     return true;
   });
 
+  // Find duplicates: same client_id + date + start_time (or date if no start_time)
+  const duplicateIds = new Set();
+  const seen = {};
+  timeEntries.forEach(e => {
+    const key = `${e.client_id}__${e.date}__${e.start_time || "notime"}`;
+    if (seen[key]) {
+      duplicateIds.add(e.id);
+      duplicateIds.add(seen[key]);
+    } else {
+      seen[key] = e.id;
+    }
+  });
+
   const totalMinutes = filtered.reduce((s, t) => s + (t.duration_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
 
