@@ -86,6 +86,15 @@ export default function Clients() {
         </Button>
       </div>
 
+      <Tabs value={typeFilter} onValueChange={setTypeFilter}>
+        <TabsList className="bg-slate-100">
+          <TabsTrigger value="all">All <span className="ml-1.5 text-xs opacity-60">{countByType("all")}</span></TabsTrigger>
+          <TabsTrigger value="client">Clients <span className="ml-1.5 text-xs opacity-60">{countByType("client")}</span></TabsTrigger>
+          <TabsTrigger value="pre_ets">Pre-ETS <span className="ml-1.5 text-xs opacity-60">{countByType("pre_ets")}</span></TabsTrigger>
+          <TabsTrigger value="dspd">DSPD <span className="ml-1.5 text-xs opacity-60">{countByType("dspd")}</span></TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -105,17 +114,6 @@ export default function Clients() {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40 border-slate-200">
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="client">Client</SelectItem>
-            <SelectItem value="pre_ets">Pre-ETS</SelectItem>
-            <SelectItem value="dspd">DSPD</SelectItem>
           </SelectContent>
         </Select>
         <Button
