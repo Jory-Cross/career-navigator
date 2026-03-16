@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
+import TimeLogSection from "@/components/client-detail/TimeLogSection";
 import JobSuggestionsSection from "@/components/client-portal/JobSuggestionsSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
