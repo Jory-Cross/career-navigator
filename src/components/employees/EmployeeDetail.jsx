@@ -187,7 +187,22 @@ export default function EmployeeDetail({ employee, currentUser }) {
   const [timePeriod, setTimePeriod] = useState("all");
   const [timeClientFilter, setTimeClientFilter] = useState("all");
   const [expandedClient, setExpandedClient] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(employee.avatar_url || null);
+  const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
   const initials = `${employee.full_name?.split(' ')[0]?.[0] || ''}${employee.full_name?.split(' ')[1]?.[0] || ''}`;
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    await base44.entities.User.update(employee.id, { avatar_url: file_url });
+    setAvatarUrl(file_url);
+    queryClient.invalidateQueries(["users"]);
+    setUploadingPhoto(false);
+  };
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients-for-employee", employee.id],
