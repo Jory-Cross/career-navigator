@@ -132,7 +132,10 @@ export default function Layout({ children, currentPageName }) {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
             <nav className="p-3 space-y-0.5">
-              {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => (
+              {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => {
+                const isActive = currentPageName === item.page && 
+                  (!item.param || window.location.search === item.param);
+                return (
                 <Link
                 key={item.page + (item.param || '')}
                 to={createPageUrl(item.page) + (item.param || '')}
@@ -140,7 +143,7 @@ export default function Layout({ children, currentPageName }) {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   item.indent && "ml-4 text-xs",
-                  currentPageName === item.page
+                  isActive
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
                     : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                 )}
