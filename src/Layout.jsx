@@ -138,6 +138,7 @@ export default function Layout({ children, currentPageName }) {
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  item.indent && "ml-4 text-xs",
                   currentPageName === item.page
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
                     : "text-slate-400 hover:text-white hover:bg-slate-700/50"
