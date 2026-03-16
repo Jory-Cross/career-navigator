@@ -233,6 +233,79 @@ export default function TimeTracking() {
           <QuickTimeLog clients={clients} onTimeSaved={handleRefresh} />
         </div>
       </div>
+      {/* Entry Detail Dialog */}
+      <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Time Entry Details
+              {selectedEntry && duplicateIds.has(selectedEntry.id) && (
+                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Duplicate
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedEntry && (
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Client</p>
+                  <p className="font-medium text-slate-800">{getClientName(selectedEntry.client_id)}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Date</p>
+                  <p className="font-medium text-slate-800">{selectedEntry.date ? format(new Date(selectedEntry.date), "MMM d, yyyy") : "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Duration</p>
+                  <p className="font-medium text-slate-800">{selectedEntry.duration_minutes} minutes</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Time</p>
+                  <p className="font-medium text-slate-800">{selectedEntry.start_time || "—"}{selectedEntry.end_time ? ` - ${selectedEntry.end_time}` : ""}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Category</p>
+                  <Badge className={cn("text-xs border-0", catColors[selectedEntry.category])}>{selectedEntry.category?.replace(/_/g, " ")}</Badge>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Logged</p>
+                  <p className="font-medium text-slate-800">{selectedEntry.created_date ? format(new Date(selectedEntry.created_date), "MMM d, h:mm a") : "—"}</p>
+                </div>
+              </div>
+              {selectedEntry.description && (
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Description</p>
+                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{selectedEntry.description}</p>
+                </div>
+              )}
+              {duplicateIds.has(selectedEntry.id) && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                  <span>This entry appears to be a duplicate. Another entry exists for the same client, date, and time. Please review and delete one.</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={async () => {
+                    await base44.entities.TimeEntry.delete(selectedEntry.id);
+                    toast.success("Entry deleted");
+                    setSelectedEntry(null);
+                    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
