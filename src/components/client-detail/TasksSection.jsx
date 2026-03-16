@@ -173,7 +173,23 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
           <DialogHeader><DialogTitle>{editId ? "Edit Task" : "New Task"}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-3">
             <div className="space-y-1"><Label className="text-xs text-slate-500">Title *</Label><Input value={form.title || ""} onChange={e => u("title", e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Description</Label><Textarea value={form.description || ""} onChange={e => u("description", e.target.value)} rows={2} /></div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-slate-500">Description / Notes</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={organizeNotes}
+                  disabled={organizingNotes}
+                  className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2"
+                >
+                  {organizingNotes ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                  AI Organize
+                </Button>
+              </div>
+              <Textarea value={form.description || ""} onChange={e => u("description", e.target.value)} rows={3} placeholder="Jot down raw thoughts — AI can organize them for you..." />
+            </div>
             
             <div className="space-y-2">
               <Label className="text-xs text-slate-500 flex items-center gap-1">
