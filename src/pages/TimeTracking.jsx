@@ -169,6 +169,8 @@ export default function TimeTracking() {
               <SelectTrigger className="w-36 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="payroll1">This Month 1–15</SelectItem>
+                <SelectItem value="payroll2">This Month 16–End</SelectItem>
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
