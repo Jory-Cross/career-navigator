@@ -372,7 +372,6 @@ Provide:
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Applied Date</Label><Input type="date" value={form.applied_date || ""} onChange={e => u("applied_date", e.target.value)} /></div>
             <div className="space-y-1">
               <Label className="text-xs text-slate-500">Job URL</Label>
               <div className="flex items-center gap-2">
