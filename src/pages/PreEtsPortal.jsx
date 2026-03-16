@@ -543,6 +543,16 @@ export default function PreEtsPortal() {
           </Card>
         </TabsContent>
 
+        {/* IEP Plan */}
+        <TabsContent value="iep">
+          <IEPPlanSection clientId={activeClient?.id} isStaff={isStaff} />
+        </TabsContent>
+
+        {/* Skills Exploration */}
+        <TabsContent value="skills">
+          <SkillsExplorationTab clientId={activeClient?.id} isStaff={isStaff} client={activeClient} />
+        </TabsContent>
+
         {/* Documents */}
         <TabsContent value="documents">
           <Card className="border-0 shadow-sm">
