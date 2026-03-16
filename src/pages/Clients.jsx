@@ -21,11 +21,11 @@ export default function Clients() {
   }, []);
 
   useEffect(() => {
-    // Set type filter from URL parameter on mount only
+    // Sync type filter with URL parameter whenever it changes
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get("type");
     setTypeFilter(typeParam || "all");
-  }, []);
+  }, [window.location.search]);
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
