@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Building2, MapPin, Calendar, Target, Briefcase, CheckCircle2, Plus, Loader2, Sparkles, Upload, FileText, Download, Clock } from "lucide-react";
 import ImportFromIndeedDialog from "@/components/client-portal/ImportFromIndeedDialog";
 import CareerAdvisorChat from "@/components/client-portal/CareerAdvisorChat";
+import AgentChatEmbed from "@/components/client-portal/AgentChatEmbed";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
