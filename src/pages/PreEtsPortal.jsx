@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   GraduationCap, ClipboardList, Briefcase, CheckCircle2, Clock,
-  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users
+  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users, Sparkles, Brain
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
 
 const CHECKLIST_ITEMS = [
   { key: "career_exploration", label: "Complete Career Exploration Assessment", category: "assessments" },
