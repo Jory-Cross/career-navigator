@@ -723,30 +723,82 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 
       {/* Add Application Dialog */}
       <Dialog open={showNewApp} onOpenChange={setShowNewApp}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Job Application</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-3">
-            <div>
-              <Label className="text-xs">Company *</Label>
-              <Input value={appForm.company || ""} onChange={e => setAppForm(p => ({ ...p, company: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Company *</Label>
+                <Input value={appForm.company || ""} onChange={e => setAppForm(p => ({ ...p, company: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Position *</Label>
+                <Input value={appForm.position || ""} onChange={e => setAppForm(p => ({ ...p, position: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Applied Date</Label>
+                <Input type="date" value={appForm.applied_date || ""} onChange={e => setAppForm(p => ({ ...p, applied_date: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1"><Bell className="w-3 h-3 text-amber-500" /> Follow-up Date</Label>
+                <Input type="date" value={appForm.follow_up_date || ""} onChange={e => setAppForm(p => ({ ...p, follow_up_date: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Job URL</Label>
+                <Input value={appForm.job_url || ""} onChange={e => setAppForm(p => ({ ...p, job_url: e.target.value }))} />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Position *</Label>
-              <Input value={appForm.position || ""} onChange={e => setAppForm(p => ({ ...p, position: e.target.value }))} />
+
+            {/* Employer Contact */}
+            <div className="border-t border-slate-200 pt-3">
+              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Employer Contact</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Contact Name</Label>
+                  <Input value={appForm.contact_name || ""} onChange={e => setAppForm(p => ({ ...p, contact_name: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Contact Title</Label>
+                  <Input value={appForm.contact_title || ""} onChange={e => setAppForm(p => ({ ...p, contact_title: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Contact Email</Label>
+                  <Input type="email" value={appForm.contact_email || ""} onChange={e => setAppForm(p => ({ ...p, contact_email: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Contact Phone</Label>
+                  <Input type="tel" value={appForm.contact_phone || ""} onChange={e => setAppForm(p => ({ ...p, contact_phone: e.target.value }))} />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Job URL</Label>
-              <Input value={appForm.job_url || ""} onChange={e => setAppForm(p => ({ ...p, job_url: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Applied Date</Label>
-              <Input type="date" value={appForm.applied_date || ""} onChange={e => setAppForm(p => ({ ...p, applied_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Notes</Label>
-              <Textarea value={appForm.notes || ""} onChange={e => setAppForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+
+            {/* Notes */}
+            <div className="border-t border-slate-200 pt-3">
+              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1"><StickyNote className="w-3.5 h-3.5" /> Notes</p>
+              <div className="space-y-2 mb-2 max-h-36 overflow-y-auto">
+                {(appForm.note_entries || []).length === 0 && <p className="text-xs text-slate-400 italic">No notes yet</p>}
+                {(appForm.note_entries || []).map((entry, idx) => (
+                  <div key={idx} className="flex items-start gap-2 bg-slate-50 rounded-lg p-2 text-xs">
+                    <div className="flex-1">
+                      <p className="text-slate-700">{entry.text}</p>
+                      <p className="text-slate-400 mt-0.5">{entry.created_at ? format(new Date(entry.created_at), "MMM d, h:mm a") : ""}</p>
+                    </div>
+                    <button onClick={() => setAppForm(p => ({ ...p, note_entries: p.note_entries.filter((_, i) => i !== idx) }))} className="text-slate-300 hover:text-red-400">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Textarea value={newAppNote} onChange={e => setNewAppNote(e.target.value)} rows={2} placeholder="Add a note..." className="text-sm flex-1" />
+                <Button type="button" size="sm" variant="outline" className="self-end" onClick={() => {
+                  if (!newAppNote.trim()) return;
+                  setAppForm(p => ({ ...p, note_entries: [...(p.note_entries || []), { text: newAppNote.trim(), created_at: new Date().toISOString() }] }));
+                  setNewAppNote("");
+                }}>Add</Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
