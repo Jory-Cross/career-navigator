@@ -72,7 +72,7 @@ export default function Clients() {
   const filtered = clients.filter(c => {
     const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    const matchType = typeFilter === "all" || (c.client_type || "client") === typeFilter;
+    const matchType = typeFilter === "all" || (c.client_type || "job_seeker") === typeFilter;
     const matchArchived = showArchived ? c.is_archived : !c.is_archived;
     return matchSearch && matchStatus && matchType && matchArchived;
   });
