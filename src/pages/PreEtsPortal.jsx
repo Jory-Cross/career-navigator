@@ -195,7 +195,6 @@ export default function PreEtsPortal() {
   }
 
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
   const completedSteps = onboardingSteps.filter(s => s.status === 'completed').length;
   const totalSteps = onboardingSteps.length || CHECKLIST_ITEMS.length;
   const progressPct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
@@ -206,7 +205,17 @@ export default function PreEtsPortal() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome, {client.first_name}!</h1>
+          {isStaff && (
+            <button
+              onClick={() => setSelectedClientId(null)}
+              className="text-xs text-slate-500 hover:text-slate-700 mb-1 flex items-center gap-1"
+            >
+              ← Back to client list
+            </button>
+          )}
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isStaff ? `${activeClient.first_name} ${activeClient.last_name}` : `Welcome, ${activeClient.first_name}!`}
+          </h1>
           <p className="text-sm text-slate-500 mt-1">Pre-Employment Transition Services Portal</p>
         </div>
         <Badge className="bg-indigo-100 text-indigo-800 text-sm px-3 py-1">Pre-ETS Student</Badge>
