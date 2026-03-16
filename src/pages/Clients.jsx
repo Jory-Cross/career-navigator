@@ -116,7 +116,7 @@ export default function Clients() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="client">Client</SelectItem>
+            <SelectItem value="job_seeker">Job Seeker</SelectItem>
             <SelectItem value="pre_ets">Pre-ETS</SelectItem>
             <SelectItem value="dspd">DSPD</SelectItem>
           </SelectContent>
