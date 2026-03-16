@@ -76,7 +76,9 @@ export default function Calendar() {
       start_datetime: date ? format(date, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
       end_datetime: date ? format(addDays(date, 0), "yyyy-MM-dd'T'HH:mm") : format(addDays(new Date(), 0), "yyyy-MM-dd'T'HH:mm"),
       location: "",
-      status: "scheduled"
+      status: "scheduled",
+      recurrence: "none",
+      recurrence_count: 4,
     });
     setShowNew(true);
   };
