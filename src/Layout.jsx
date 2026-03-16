@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 
@@ -13,6 +13,7 @@ const navItems = [
   { name: "Reports", icon: BarChart3, page: "Reports" },
   { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
   { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
+  { name: "AI Agents", icon: Bot, page: "Agents" },
 ];
 
 const ROLE_LABELS = {
