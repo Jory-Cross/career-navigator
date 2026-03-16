@@ -388,7 +388,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview ({interviewSessions.length})</TabsTrigger>
           <TabsTrigger value="coach">Career Coach</TabsTrigger>
-
+          <TabsTrigger value="time">Time Log ({timeEntries.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
