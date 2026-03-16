@@ -150,7 +150,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="cursor-pointer" onClick={() => navigate("/Clients")}><StatCard label="Active Clients" value={activeClients} max={clients.length} icon={Users} color="text-blue-600" bgColor="bg-blue-50" /></div>
           <div className="cursor-pointer" onClick={() => navigate("/Clients")}><StatCard label="Applications" value={applications.length} max={applications.length} icon={Briefcase} color="text-violet-600" bgColor="bg-violet-50" /></div>
-          <div className="cursor-pointer" onClick={() => navigate("/TimeTracking")}><StatCard label="Hours Logged" value={`${totalHours}h`} max={totalHours} icon={Clock} color="text-emerald-600" bgColor="bg-emerald-50" /></div>
+          <div className="cursor-pointer" onClick={() => navigate("/TimeTracking")}><StatCard label={`Hours (${payrollLabel})`} value={`${totalHours}h`} max={totalHours} icon={Clock} color="text-emerald-600" bgColor="bg-emerald-50" /></div>
           <div className="cursor-pointer" onClick={() => navigate("/Clients")}><StatCard label="Pending Tasks" value={pendingTasks} max={tasks.length} icon={ListChecks} color="text-orange-600" bgColor="bg-orange-50" /></div>
         </div>
       )}
