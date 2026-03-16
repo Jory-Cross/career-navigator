@@ -479,6 +479,14 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" />
         </TabsContent>
 
+        <TabsContent value="time">
+          <TimeLogSection 
+            timeEntries={timeEntries} 
+            clientId={client.id} 
+            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['client-time-entries'] })}
+          />
+        </TabsContent>
+
         <TabsContent value="activity">
           <Card className="border-0 shadow-sm">
             <CardHeader>
