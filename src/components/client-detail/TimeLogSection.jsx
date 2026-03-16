@@ -57,6 +57,24 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
       toast.error("Please enter duration");
       return;
     }
+
+    // Duplicate check: same client, same date, and same start_time (if provided)
+    const duplicate = timeEntries.find(te => {
+      if (te.date !== form.date) return false;
+      if (form.start_time && te.start_time) return te.start_time === form.start_time;
+      // If no start_time, check if an entry already exists on the same date
+      if (!form.start_time && !te.start_time) return true;
+      return false;
+    });
+
+    if (duplicate) {
+      toast.error(
+        `A time entry for this client on ${form.date}${form.start_time ? ` at ${form.start_time}` : ""} already exists. Only one entry is allowed per time slot.`,
+        { duration: 5000 }
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await base44.entities.TimeEntry.create({
