@@ -444,14 +444,13 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
+          <div className="mt-6">
+            <AgentChatEmbed agentKey="interview_prep_coach" title="Interview Coach" description="Practice interviews and get real-time coaching feedback" />
+          </div>
         </TabsContent>
 
         <TabsContent value="coach">
           <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" />
-        </TabsContent>
-
-        <TabsContent value="interview_agent">
-          <AgentChatEmbed agentKey="interview_prep_coach" title="Interview Prep Coach" description="Practice interviews and get real-time coaching feedback" />
         </TabsContent>
 
         <TabsContent value="activity">
