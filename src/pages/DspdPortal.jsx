@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   Users, Clock, FileText, Briefcase, Plus, AlertTriangle,
   Target, CheckCircle2, Calendar, ChevronRight, ArrowLeft,
-  ClipboardList, TrendingUp
+  ClipboardList, TrendingUp, Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -699,29 +699,35 @@ export default function DspdPortal() {
             >
               <CardContent className="p-5">
                 <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                    {client.first_name?.[0]}{client.last_name?.[0]}
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                  {client.first_name?.[0]}{client.last_name?.[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <h3 className="font-semibold text-slate-900 text-sm truncate">{client.first_name} {client.last_name}</h3>
+                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <h3 className="font-semibold text-slate-900 text-sm truncate">{client.first_name} {client.last_name}</h3>
-                      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                    </div>
-                    <p className="text-xs text-slate-400 truncate">{client.email}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge className={cn("text-xs border-0",
-                        client.status === "active" ? "bg-emerald-100 text-emerald-700" :
-                        client.status === "completed" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
-                      )}>
-                        {client.status}
-                      </Badge>
-                      {client.target_role && (
-                        <span className="text-xs text-slate-500 flex items-center gap-1 truncate">
-                          <Briefcase className="w-3 h-3 shrink-0" />{client.target_role}
-                        </span>
-                      )}
-                    </div>
+                  <p className="text-xs text-slate-400 truncate">{client.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={cn("text-xs border-0",
+                      client.status === "active" ? "bg-emerald-100 text-emerald-700" :
+                      client.status === "completed" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+                    )}>
+                      {client.status}
+                    </Badge>
+                    {client.target_role && (
+                      <span className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                        <Briefcase className="w-3 h-3 shrink-0" />{client.target_role}
+                      </span>
+                    )}
                   </div>
+                </div>
+                <button
+                  onClick={(e) => deleteClient(e, client.id)}
+                  className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
                 </div>
               </CardContent>
             </Card>
