@@ -78,6 +78,14 @@ export default function AgentChatEmbed({ agentKey, title, description }) {
     }
   };
 
+  const clearConversation = async () => {
+    const storageKey = `agent_conv_${agentKey}`;
+    localStorage.removeItem(storageKey);
+    setMessages([]);
+    setConversation(null);
+    await initConversation();
+  };
+
   const visibleMessages = messages.filter(m => m.role !== "system");
 
   return (
