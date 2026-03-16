@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Archive } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
 
@@ -72,8 +71,6 @@ export default function Clients() {
     return matchSearch && matchStatus && matchType && matchArchived;
   });
 
-  const countByType = (type) => clients.filter(c => !c.is_archived && (type === "all" ? true : (c.client_type || "client") === type)).length;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -85,15 +82,6 @@ export default function Clients() {
           <Plus className="w-4 h-4 mr-2" /> New Client
         </Button>
       </div>
-
-      <Tabs value={typeFilter} onValueChange={setTypeFilter}>
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="all">All <span className="ml-1.5 text-xs opacity-60">{countByType("all")}</span></TabsTrigger>
-          <TabsTrigger value="client">Clients <span className="ml-1.5 text-xs opacity-60">{countByType("client")}</span></TabsTrigger>
-          <TabsTrigger value="pre_ets">Pre-ETS <span className="ml-1.5 text-xs opacity-60">{countByType("pre_ets")}</span></TabsTrigger>
-          <TabsTrigger value="dspd">DSPD <span className="ml-1.5 text-xs opacity-60">{countByType("dspd")}</span></TabsTrigger>
-        </TabsList>
-      </Tabs>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -114,6 +102,17 @@ export default function Clients() {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40 border-slate-200">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="client">Client</SelectItem>
+            <SelectItem value="pre_ets">Pre-ETS</SelectItem>
+            <SelectItem value="dspd">DSPD</SelectItem>
           </SelectContent>
         </Select>
         <Button
