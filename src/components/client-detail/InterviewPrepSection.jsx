@@ -78,6 +78,13 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
+  const deleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    await base44.entities.InterviewSession.delete(sessionId);
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    toast.success("Session deleted");
+  };
+
   const reviewSession = (session) => {
     setCurrentSession(session);
     setCurrentQuestionIdx(0);
