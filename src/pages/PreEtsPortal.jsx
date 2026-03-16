@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
+import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
 
 const CHECKLIST_ITEMS = [
   { key: "career_exploration", label: "Complete Career Exploration Assessment", category: "assessments" },
