@@ -31,6 +31,11 @@ export default function Calendar() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ['timeEntries'],
+    queryFn: () => base44.entities.TimeEntry.list(),
+  });
+
   const { data: clients = [] } = useQuery({
     queryKey: ['clients', user?.role],
     queryFn: async () => {
