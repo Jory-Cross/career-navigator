@@ -446,10 +446,6 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <InterviewPrepSection client={client} />
         </TabsContent>
 
-        <TabsContent value="advisor">
-          <CareerAdvisorChat client={client} />
-        </TabsContent>
-
         <TabsContent value="coach">
           <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" />
         </TabsContent>
