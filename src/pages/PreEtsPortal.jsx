@@ -298,6 +298,7 @@ export default function PreEtsPortal() {
       <Tabs defaultValue="tasks" className="space-y-4">
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto gap-1">
           <TabsTrigger value="tasks">My Tasks ({pendingTasks.length})</TabsTrigger>
+          <TabsTrigger value="clock">Clock In/Out</TabsTrigger>
           <TabsTrigger value="checklist">Program Checklist</TabsTrigger>
           <TabsTrigger value="iep">IEP & Transition Plan</TabsTrigger>
           <TabsTrigger value="skills">Skills Exploration</TabsTrigger>
