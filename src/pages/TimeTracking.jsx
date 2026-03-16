@@ -75,14 +75,21 @@ export default function TimeTracking() {
   };
 
   const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth();
+  const payroll1Start = new Date(nowYear, nowMonth, 1);
+  const payroll1End = new Date(nowYear, nowMonth, 15, 23, 59, 59);
+  const payroll2Start = new Date(nowYear, nowMonth, 16);
+  const payroll2End = new Date(nowYear, nowMonth + 1, 0, 23, 59, 59);
+
   const filtered = timeEntries.filter(e => {
     if (clientFilter !== "all" && e.client_id !== clientFilter) return false;
-    if (periodFilter === "week" && e.date) {
-      return isWithinInterval(new Date(e.date), { start: startOfWeek(now), end: endOfWeek(now) });
-    }
-    if (periodFilter === "month" && e.date) {
-      return isWithinInterval(new Date(e.date), { start: startOfMonth(now), end: endOfMonth(now) });
-    }
+    if (!e.date) return periodFilter === "all";
+    const d = new Date(e.date);
+    if (periodFilter === "payroll1") return d >= payroll1Start && d <= payroll1End;
+    if (periodFilter === "payroll2") return d >= payroll2Start && d <= payroll2End;
+    if (periodFilter === "week") return isWithinInterval(d, { start: startOfWeek(now), end: endOfWeek(now) });
+    if (periodFilter === "month") return isWithinInterval(d, { start: startOfMonth(now), end: endOfMonth(now) });
     return true;
   });
 
