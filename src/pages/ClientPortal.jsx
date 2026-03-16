@@ -361,6 +361,8 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
           <TabsTrigger value="interview">Interview Prep ({interviewSessions.length})</TabsTrigger>
           <TabsTrigger value="advisor">AI Career Advisor</TabsTrigger>
+          <TabsTrigger value="coach">Career Coach</TabsTrigger>
+          <TabsTrigger value="interview_agent">Interview Coach</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
@@ -445,6 +447,14 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 
         <TabsContent value="advisor">
           <CareerAdvisorChat client={client} />
+        </TabsContent>
+
+        <TabsContent value="coach">
+          <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" />
+        </TabsContent>
+
+        <TabsContent value="interview_agent">
+          <AgentChatEmbed agentKey="interview_prep_coach" title="Interview Prep Coach" description="Practice interviews and get real-time coaching feedback" />
         </TabsContent>
 
         <TabsContent value="activity">
