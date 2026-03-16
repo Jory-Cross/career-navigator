@@ -98,7 +98,20 @@ export default function Dashboard() {
     enabled: !!user
   });
 
-  const totalHours = Math.round(timeEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60);
+  const now = new Date();
+  const day = now.getDate();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const payrollPeriodStart = day <= 15 ? new Date(year, month, 1) : new Date(year, month, 16);
+  const payrollPeriodEnd = day <= 15 ? new Date(year, month, 15, 23, 59, 59) : new Date(year, month + 1, 0, 23, 59, 59);
+  const payrollLabel = day <= 15 ? `${now.toLocaleString('default', { month: 'short' })} 1–15` : `${now.toLocaleString('default', { month: 'short' })} 16–End`;
+
+  const payrollEntries = timeEntries.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d >= payrollPeriodStart && d <= payrollPeriodEnd;
+  });
+  const totalHours = Math.round(payrollEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60);
   const activeClients = clients.filter(c => !c.is_archived).length;
   const pendingTasks = tasks.filter(t => t.status === "pending" || t.status === "in_progress").length;
 
