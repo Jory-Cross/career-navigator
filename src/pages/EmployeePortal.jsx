@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import EmployeeCard from "@/components/employees/EmployeeCard";
 import EmployeeDetail from "@/components/employees/EmployeeDetail";
+import AdminHierarchyView from "@/components/employees/AdminHierarchyView";
 
 export default function EmployeePortal() {
   const [user, setUser] = useState(null);
