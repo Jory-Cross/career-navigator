@@ -31,6 +31,13 @@ export default function Calendar() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = base44.entities.Meeting.subscribe((event) => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
   const { data: timeEntries = [] } = useQuery({
     queryKey: ['timeEntries'],
     queryFn: () => base44.entities.TimeEntry.list(),
