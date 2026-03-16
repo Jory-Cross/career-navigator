@@ -53,8 +53,16 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
   };
 
   const handleSave = async () => {
-    if (!form.duration_minutes || form.duration_minutes <= 0) {
-      toast.error("Please enter duration");
+    // Auto-calculate duration from start/end times if needed
+    let duration = parseInt(form.duration_minutes) || 0;
+    if (form.start_time && form.end_time && !form.duration_minutes) {
+      const [startHour, startMin] = form.start_time.split(':').map(Number);
+      const [endHour, endMin] = form.end_time.split(':').map(Number);
+      duration = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    }
+
+    if (!duration || duration <= 0) {
+      toast.error("Please enter duration or set start/end times");
       return;
     }
 
