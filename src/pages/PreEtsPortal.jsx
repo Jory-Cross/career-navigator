@@ -194,6 +194,12 @@ export default function PreEtsPortal() {
                       {c.status}
                     </Badge>
                   </div>
+                  <button
+                    onClick={(e) => deleteClient(e, c.id)}
+                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </CardContent>
               </Card>
             ))}
