@@ -205,6 +205,7 @@ export default function ClientPortal() {
     setSaving(true);
     try {
       await base44.entities.Task.create({ ...taskForm, client_ids: [client.id] });
+      await logActivity('task_created', `Task created: ${taskForm.title}`);
       toast.success("Task created");
       queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
       setShowNewTask(false);
@@ -213,16 +214,6 @@ export default function ClientPortal() {
       toast.error("Failed to save");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const completeTask = async (taskId) => {
-    try {
-      await base44.entities.Task.update(taskId, { status: 'completed' });
-      toast.success("Task completed");
-      queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
-    } catch (error) {
-      toast.error("Failed to update");
     }
   };
 
@@ -236,7 +227,14 @@ export default function ClientPortal() {
     if (!selectedTask) return;
     setSavingTask(true);
     try {
-      await base44.entities.Task.update(selectedTask.id, { notes: taskNotes, status: taskStatus });
+      await base44.entities.Task.update(selectedTask.id, { 
+        notes: taskNotes, 
+        status: taskStatus,
+        title: selectedTask.title,
+        description: selectedTask.description,
+        due_date: selectedTask.due_date
+      });
+      await logActivity('task_updated', `Task updated: ${selectedTask.title}`, `Status: ${taskStatus}`);
       toast.success("Task updated");
       queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
       setSelectedTask(null);
@@ -244,6 +242,18 @@ export default function ClientPortal() {
       toast.error("Failed to save");
     } finally {
       setSavingTask(false);
+    }
+  };
+
+  const deleteTask = async (taskId, taskTitle) => {
+    try {
+      await base44.entities.Task.delete(taskId);
+      await logActivity('task_updated', `Task deleted: ${taskTitle}`);
+      toast.success("Task deleted");
+      queryClient.invalidateQueries({ queryKey: ['client-tasks'] });
+      setSelectedTask(null);
+    } catch (error) {
+      toast.error("Failed to delete");
     }
   };
 
