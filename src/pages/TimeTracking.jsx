@@ -45,11 +45,13 @@ export default function TimeTracking() {
     enabled: !!user && (user.role === 'admin' || user.role === 'management'),
   });
 
-  // Employees = users with role employee (or management for admin view)
+  // Employees = users with role employee (or management for admin view), exclude archived
   const filterableEmployees = allUsers.filter(u =>
-    user?.role === 'admin'
-      ? (u.role === 'employee' || u.role === 'management')
-      : u.role === 'employee'
+    !u.is_archived && (
+      user?.role === 'admin'
+        ? (u.role === 'employee' || u.role === 'management')
+        : u.role === 'employee'
+    )
   );
 
   const { data: allClients = [] } = useQuery({
@@ -224,7 +226,7 @@ export default function TimeTracking() {
               <SelectTrigger className="w-44 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
+                {clients.filter(c => !c.is_archived).map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

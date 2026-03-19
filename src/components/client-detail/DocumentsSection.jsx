@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, Download, Search, Archive, Upload, Loader2, Tag } from "lucide-react";
+import { FileText, Plus, Download, Search, Archive, Upload, Loader2, Tag, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -183,6 +183,17 @@ export default function DocumentsSection({ clientId, onRefresh }) {
       loadDocuments();
     } catch (error) {
       toast.error("Failed to archive");
+    }
+  };
+
+  const deleteDocument = async (docId) => {
+    if (!confirm("Permanently delete this document? This cannot be undone.")) return;
+    try {
+      await base44.entities.Document.delete(docId);
+      toast.success("Document deleted");
+      loadDocuments();
+    } catch (error) {
+      toast.error("Failed to delete");
     }
   };
 
