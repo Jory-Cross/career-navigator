@@ -27,6 +27,7 @@ const catColors = {
 export default function TimeTracking() {
   const [periodFilter, setPeriodFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const queryClient = useQueryClient();
