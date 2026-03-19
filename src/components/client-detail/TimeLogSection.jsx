@@ -28,6 +28,7 @@ const catColors = {
 
 export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
   const [form, setForm] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     duration_minutes: "",
@@ -44,6 +45,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
   const sorted = [...timeEntries].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
   const handleAdd = () => {
+    setEditingEntry(null);
     setForm({
       date: format(new Date(), "yyyy-MM-dd"),
       duration_minutes: "",
@@ -53,6 +55,30 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
       end_time: ""
     });
     setShowAdd(true);
+  };
+
+  const handleEdit = (entry) => {
+    setEditingEntry(entry);
+    setForm({
+      date: entry.date || format(new Date(), "yyyy-MM-dd"),
+      duration_minutes: entry.duration_minutes?.toString() || "",
+      description: entry.description || "",
+      category: entry.category || "consultation",
+      start_time: entry.start_time || "",
+      end_time: entry.end_time || ""
+    });
+    setShowAdd(true);
+  };
+
+  const handleDelete = async (entryId) => {
+    if (!confirm("Delete this time entry?")) return;
+    try {
+      await base44.entities.TimeEntry.delete(entryId);
+      toast.success("Entry deleted");
+      onRefresh();
+    } catch {
+      toast.error("Failed to delete entry");
+    }
   };
 
   const handleSave = async () => {
@@ -93,40 +119,52 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
 
     setSaving(true);
     try {
-      await base44.entities.TimeEntry.create({
-        client_id: clientId,
-        date: form.date,
-        duration_minutes: duration,
-        description: form.description,
-        category: form.category,
-        start_time: form.start_time || undefined,
-        end_time: form.end_time || undefined
-      });
-
-      // Always create a calendar entry
-      try {
-        const startTime = form.start_time || "09:00";
-        const startDateTime = new Date(`${form.date}T${startTime}`);
-        const endDateTime = form.end_time
-          ? new Date(`${form.date}T${form.end_time}`)
-          : new Date(startDateTime.getTime() + duration * 60000);
-
-        await base44.entities.Meeting.create({
-          client_id: clientId,
-          title: form.description || form.category.replace(/_/g, ' '),
+      if (editingEntry) {
+        await base44.entities.TimeEntry.update(editingEntry.id, {
+          date: form.date,
+          duration_minutes: duration,
           description: form.description,
-          meeting_type: form.category,
-          start_datetime: startDateTime.toISOString(),
-          end_datetime: endDateTime.toISOString(),
-          status: 'completed',
-          location: 'Time Entry'
+          category: form.category,
+          start_time: form.start_time || undefined,
+          end_time: form.end_time || undefined
         });
-      } catch (meetingError) {
-        console.error("Failed to create calendar entry:", meetingError);
-      }
+        toast.success("Time entry updated");
+      } else {
+        await base44.entities.TimeEntry.create({
+          client_id: clientId,
+          date: form.date,
+          duration_minutes: duration,
+          description: form.description,
+          category: form.category,
+          start_time: form.start_time || undefined,
+          end_time: form.end_time || undefined
+        });
 
-      toast.success("Time entry added");
+        // Create a calendar entry for new entries only
+        try {
+          const startTime = form.start_time || "09:00";
+          const startDateTime = new Date(`${form.date}T${startTime}`);
+          const endDateTime = form.end_time
+            ? new Date(`${form.date}T${form.end_time}`)
+            : new Date(startDateTime.getTime() + duration * 60000);
+
+          await base44.entities.Meeting.create({
+            client_id: clientId,
+            title: form.description || form.category.replace(/_/g, ' '),
+            description: form.description,
+            meeting_type: form.category,
+            start_datetime: startDateTime.toISOString(),
+            end_datetime: endDateTime.toISOString(),
+            status: 'completed',
+            location: 'Time Entry'
+          });
+        } catch (meetingError) {
+          console.error("Failed to create calendar entry:", meetingError);
+        }
+        toast.success("Time entry added");
+      }
       setShowAdd(false);
+      setEditingEntry(null);
       onRefresh();
     } catch (error) {
       console.error("Failed to save time entry:", error);
