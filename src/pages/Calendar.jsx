@@ -25,6 +25,9 @@ export default function Calendar() {
   const [showConvert, setShowConvert] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [convertNotes, setConvertNotes] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState(null);
+  const [linkedTimeEntry, setLinkedTimeEntry] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
