@@ -36,6 +36,19 @@ export default function TimeTracking() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+    enabled: !!user && (user.role === 'admin' || user.role === 'management'),
+  });
+
+  // Employees = users with role employee (or management for admin view)
+  const filterableEmployees = allUsers.filter(u =>
+    user?.role === 'admin'
+      ? (u.role === 'employee' || u.role === 'management')
+      : u.role === 'employee'
+  );
+
   const { data: clients = [] } = useQuery({
     queryKey: ["clients", user?.role],
     queryFn: async () => {
