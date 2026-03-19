@@ -162,6 +162,9 @@ export default function ClientDetail() {
         <TabsContent value="time">
           <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
         </TabsContent>
+        <TabsContent value="job_supports">
+          <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
+        </TabsContent>
         <TabsContent value="activity">
           <ActivitySection clientId={clientId} />
         </TabsContent>
