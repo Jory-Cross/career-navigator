@@ -170,6 +170,13 @@ export default function ClientPortal() {
     return null;
   }
 
+  const logActivity = async (activity_type, title, description = "") => {
+    try {
+      await base44.entities.Activity.create({ client_id: client.id, activity_type, title, description });
+      queryClient.invalidateQueries({ queryKey: ['client-activities'] });
+    } catch (e) { /* silent */ }
+  };
+
   const saveApplication = async () => {
     if (!appForm.company || !appForm.position) {
       toast.error("Company and position required");
@@ -178,6 +185,7 @@ export default function ClientPortal() {
     setSaving(true);
     try {
       await base44.entities.JobApplication.create({ ...appForm, client_id: client.id });
+      await logActivity('application_created', `Application added: ${appForm.position} at ${appForm.company}`);
       toast.success("Application added");
       queryClient.invalidateQueries({ queryKey: ['client-applications'] });
       setShowNewApp(false);
