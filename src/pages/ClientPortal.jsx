@@ -349,6 +349,9 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
       await base44.entities.JobApplication.update(selectedApp.id, { [field]: value });
       setSelectedApp(updated);
       queryClient.invalidateQueries({ queryKey: ['client-applications'] });
+      if (field === 'status') {
+        await logActivity('application_updated', `Application status updated: ${selectedApp.position} at ${selectedApp.company}`, `New status: ${value}`);
+      }
       toast.success("Updated");
     } catch (error) {
       toast.error("Failed to update");
