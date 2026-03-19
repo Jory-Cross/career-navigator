@@ -476,6 +476,8 @@ export default function Calendar() {
               .slice(0, 5)
               .map(meeting => {
                 const client = clients.find(c => c.id === meeting.client_id);
+                const meetingDay = format(parseISO(meeting.start_datetime), 'yyyy-MM-dd');
+                const hasTimeEntry = timeEntries.some(te => te.client_id === meeting.client_id && te.date === meetingDay);
                 return (
                   <div key={meeting.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer" onClick={() => openEdit(meeting)}>
                     <div className="flex-1">
@@ -505,20 +507,25 @@ export default function Calendar() {
                         Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedMeeting(meeting);
-                        setConvertNotes(meeting.description || "");
-                        setShowConvert(true);
-                      }}
-                      className="text-xs"
-                    >
-                      <Timer className="w-3 h-3 mr-1" />
-                      Log Time
-                    </Button>
+                    {!hasTimeEntry && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMeeting(meeting);
+                          setConvertNotes(meeting.description || "");
+                          setShowConvert(true);
+                        }}
+                        className="text-xs"
+                      >
+                        <Timer className="w-3 h-3 mr-1" />
+                        Log Time
+                      </Button>
+                    )}
+                    {hasTimeEntry && (
+                      <Badge className="text-xs bg-emerald-100 text-emerald-700 border-0 shrink-0">Logged</Badge>
+                    )}
                   </div>
                 );
               })}
