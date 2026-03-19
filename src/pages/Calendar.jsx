@@ -666,11 +666,20 @@ export default function Calendar() {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
-            </Button>
+          <DialogFooter className="flex justify-between gap-2">
+            <div>
+              {editingMeeting && (
+                <Button variant="destructive" size="sm" onClick={() => { setShowNew(false); initiateDelete(editingMeeting); }} disabled={saving}>
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+              <Button onClick={save} disabled={saving}>
+                {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
