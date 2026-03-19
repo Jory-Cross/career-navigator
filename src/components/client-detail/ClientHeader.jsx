@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ContactsSection from "./ContactsSection";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
