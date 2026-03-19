@@ -12,7 +12,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     target_role: "", industry: "", location: "", notes: "",
-    client_type: "client"
+    client_type: "job_seeker"
   });
   const [saving, setSaving] = useState(false);
 
