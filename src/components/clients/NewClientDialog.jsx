@@ -15,6 +15,11 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
     client_type: "job_seeker"
   });
   const [saving, setSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     if (!form.first_name || !form.last_name || !form.email) {
