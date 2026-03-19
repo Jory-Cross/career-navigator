@@ -684,6 +684,38 @@ export default function Calendar() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+            <AlertDialogDescription>
+              {linkedTimeEntry
+                ? `This meeting has a corresponding time entry (${linkedTimeEntry.duration_minutes} min on ${linkedTimeEntry.date}). Would you also like to delete the time entry?`
+                : "Are you sure you want to delete this meeting? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={linkedTimeEntry ? "flex-col sm:flex-row gap-2" : ""}>
+            <AlertDialogCancel onClick={() => { setShowDeleteConfirm(false); setMeetingToDelete(null); setLinkedTimeEntry(null); }}>
+              Cancel
+            </AlertDialogCancel>
+            {linkedTimeEntry ? (
+              <>
+                <Button variant="outline" onClick={() => deleteMeeting(false)} disabled={saving}>
+                  Delete Meeting Only
+                </Button>
+                <Button variant="destructive" onClick={() => deleteMeeting(true)} disabled={saving}>
+                  Delete Both
+                </Button>
+              </>
+            ) : (
+              <AlertDialogAction onClick={() => deleteMeeting(false)} className="bg-red-600 hover:bg-red-700 text-white">
+                Delete
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={showConvert} onOpenChange={setShowConvert}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
