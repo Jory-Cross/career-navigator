@@ -118,19 +118,21 @@ export default function ClientDetail() {
 
       {(() => {
         const isDspd = client.client_type === 'dspd';
-        const defaultTab = isDspd ? 'onboarding' : 'applications';
+        const isEmployed = client.client_type === 'employed';
+        const defaultTab = isDspd ? 'onboarding' : isEmployed ? 'documents' : 'applications';
         return (
       <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList className="bg-slate-100 p-1">
-          {user?.role !== 'client' && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
-          {!isDspd && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
-          {!isDspd && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
-          {!isDspd && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
+          {user?.role !== 'client' && !isEmployed && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
+          {!isDspd && !isEmployed && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
+          {!isDspd && !isEmployed && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
+          {!isDspd && !isEmployed && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
           {client.client_type === 'pre_ets' && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
           {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          {!isDspd && <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>}
-          {user?.role !== 'client' && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
+          {!isEmployed && <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>}
+          {!isDspd && !isEmployed && <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>}
+          {user?.role !== 'client' && isEmployed && <TabsTrigger value="job_supports">Job Supports ({timeEntries.length})</TabsTrigger>}
+          {user?.role !== 'client' && !isEmployed && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
           <TabsTrigger value="activity">Activity ({activities.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="onboarding">
