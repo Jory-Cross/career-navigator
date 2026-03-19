@@ -33,6 +33,9 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -283,19 +286,19 @@ export default function TimeTracking() {
         </div>
       </div>
       {/* Entry Detail Dialog */}
-      <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
+      <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setEditMode(false); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Time Entry Details
-              {selectedEntry && duplicateIds.has(selectedEntry.id) && (
+              {editMode ? "Edit Time Entry" : "Time Entry Details"}
+              {selectedEntry && duplicateIds.has(selectedEntry.id) && !editMode && (
                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Duplicate
                 </Badge>
               )}
             </DialogTitle>
           </DialogHeader>
-          {selectedEntry && (
+          {selectedEntry && !editMode && (
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="space-y-0.5">
@@ -349,7 +352,89 @@ export default function TimeTracking() {
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setEditForm({
+                      date: selectedEntry.date || "",
+                      duration_minutes: selectedEntry.duration_minutes?.toString() || "",
+                      description: selectedEntry.description || "",
+                      category: selectedEntry.category || "consultation",
+                      start_time: selectedEntry.start_time || "",
+                      end_time: selectedEntry.end_time || "",
+                    });
+                    setEditMode(true);
+                  }}>
+                    <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
+                </div>
+              </div>
+            </div>
+          )}
+          {selectedEntry && editMode && (
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500">Date</label>
+                  <Input type="date" value={editForm.date} onChange={e => setEditForm(p => ({ ...p, date: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500">Duration (min)</label>
+                  <Input type="number" value={editForm.duration_minutes} onChange={e => setEditForm(p => ({ ...p, duration_minutes: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Category</label>
+                <Select value={editForm.category} onValueChange={v => setEditForm(p => ({ ...p, category: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="consultation">Consultation</SelectItem>
+                    <SelectItem value="resume_work">Resume Work</SelectItem>
+                    <SelectItem value="job_search">Job Search</SelectItem>
+                    <SelectItem value="interview_prep">Interview Prep</SelectItem>
+                    <SelectItem value="follow_up">Follow Up</SelectItem>
+                    <SelectItem value="job_coaching">Job Coaching</SelectItem>
+                    <SelectItem value="life_skills">Life Skills</SelectItem>
+                    <SelectItem value="cbh">CBH</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Description</label>
+                <Input value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} placeholder="What was worked on?" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500">Start Time</label>
+                  <Input type="time" value={editForm.start_time} onChange={e => setEditForm(p => ({ ...p, start_time: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500">End Time</label>
+                  <Input type="time" value={editForm.end_time} onChange={e => setEditForm(p => ({ ...p, end_time: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex justify-between pt-2">
+                <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
+                <Button size="sm" disabled={editSaving} onClick={async () => {
+                  setEditSaving(true);
+                  await base44.entities.TimeEntry.update(selectedEntry.id, {
+                    date: editForm.date,
+                    duration_minutes: parseInt(editForm.duration_minutes),
+                    description: editForm.description,
+                    category: editForm.category,
+                    start_time: editForm.start_time || undefined,
+                    end_time: editForm.end_time || undefined,
+                  });
+                  toast.success("Entry updated");
+                  setEditMode(false);
+                  setSelectedEntry(null);
+                  queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                  setEditSaving(false);
+                }}>
+                  <Save className="w-3.5 h-3.5 mr-1" /> {editSaving ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             </div>
           )}
