@@ -56,11 +56,11 @@ export default function TimeTracking() {
     queryFn: async () => {
       const allEntries = await base44.entities.TimeEntry.list("-created_date");
       if (!user) return allEntries;
-      if (user.role === 'management') return allEntries;
+      if (user.role === 'admin' || user.role === 'management') return allEntries;
       if (user.role === 'employee') {
         return allEntries.filter(e => clientIds.includes(e.client_id));
       }
-      return [];
+      return allEntries;
     },
     enabled: !!user && clients.length >= 0
   });
