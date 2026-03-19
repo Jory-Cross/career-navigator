@@ -544,26 +544,26 @@ export default function Calendar() {
                       👤 Myself ({user.full_name || user.email})
                     </SelectItem>
                   )}
-                  {clients.filter(c => c.client_type === 'client' || !c.client_type).length > 0 && (
+                  {clients.filter(c => !c.is_archived && (c.client_type === 'client' || !c.client_type)).length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Job Seekers</div>
-                      {clients.filter(c => c.client_type === 'client' || !c.client_type).map(c => (
+                      {clients.filter(c => !c.is_archived && (c.client_type === 'client' || !c.client_type)).map(c => (
                         <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
                       ))}
                     </>
                   )}
-                  {clients.filter(c => c.client_type === 'pre_ets').length > 0 && (
+                  {clients.filter(c => !c.is_archived && c.client_type === 'pre_ets').length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Pre-ETS Students</div>
-                      {clients.filter(c => c.client_type === 'pre_ets').map(c => (
+                      {clients.filter(c => !c.is_archived && c.client_type === 'pre_ets').map(c => (
                         <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
                       ))}
                     </>
                   )}
-                  {clients.filter(c => c.client_type === 'dspd').length > 0 && (
+                  {clients.filter(c => !c.is_archived && c.client_type === 'dspd').length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">DSPD Clients</div>
-                      {clients.filter(c => c.client_type === 'dspd').map(c => (
+                      {clients.filter(c => !c.is_archived && c.client_type === 'dspd').map(c => (
                         <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
                       ))}
                     </>

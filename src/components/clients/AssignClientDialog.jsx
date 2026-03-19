@@ -14,7 +14,7 @@ export default function AssignClientDialog({ open, onOpenChange, client, onAssig
   useEffect(() => {
     if (open) {
       base44.entities.User.list().then(users => {
-        setEmployees(users.filter(u => u.role === 'employee' || u.role === 'admin' || u.role === 'management'));
+        setEmployees(users.filter(u => (u.role === 'employee' || u.role === 'admin' || u.role === 'management') && !u.is_archived));
       });
       setSelectedEmployee(client?.assigned_employee_id || "");
     }
