@@ -196,7 +196,7 @@ export default function TimeTracking() {
           )}
 
           {/* Filters */}
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-wrap gap-3 items-center">
             <Filter className="w-4 h-4 text-slate-400" />
             <Select value={periodFilter} onValueChange={setPeriodFilter}>
               <SelectTrigger className="w-36 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
@@ -208,6 +208,15 @@ export default function TimeTracking() {
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
+            {(user?.role === 'admin' || user?.role === 'management') && filterableEmployees.length > 0 && (
+              <Select value={employeeFilter} onValueChange={v => { setEmployeeFilter(v); setClientFilter("all"); }}>
+                <SelectTrigger className="w-44 border-slate-200 text-sm"><SelectValue placeholder="All Employees" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {filterableEmployees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={clientFilter} onValueChange={setClientFilter}>
               <SelectTrigger className="w-44 border-slate-200 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
