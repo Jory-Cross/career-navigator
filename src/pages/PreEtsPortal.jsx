@@ -244,7 +244,16 @@ export default function PreEtsPortal() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Pre-Employment Transition Services Portal</p>
         </div>
-        <Badge className="bg-indigo-100 text-indigo-800 text-sm px-3 py-1">Pre-ETS Student</Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-indigo-100 text-indigo-800 text-sm px-3 py-1">Pre-ETS Student</Badge>
+          {isStaff && (
+            <Link to={`/ClientDetail?id=${activeClient.id}`}>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <ExternalLink className="w-3.5 h-3.5" /> Edit Profile
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Profile + Progress Card */}
