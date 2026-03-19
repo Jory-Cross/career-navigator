@@ -122,6 +122,7 @@ export default function Clients() {
             <SelectItem value="job_seeker">Job Seeker</SelectItem>
             <SelectItem value="pre_ets">Pre-ETS</SelectItem>
             <SelectItem value="dspd">DSPD</SelectItem>
+            <SelectItem value="employed">Employed</SelectItem>
           </SelectContent>
         </Select>
         <Button
