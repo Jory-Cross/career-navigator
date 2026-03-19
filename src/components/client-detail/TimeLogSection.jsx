@@ -195,7 +195,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
         {sorted.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">No time logged yet</div>
         ) : sorted.map(entry => (
-          <div key={entry.id} className="p-4 flex items-center gap-3">
+          <div key={entry.id} className="p-4 flex items-center gap-3 group">
             <div className="text-right shrink-0 w-14">
               <p className="text-sm font-semibold text-slate-800">{entry.duration_minutes}m</p>
               {entry.start_time && <p className="text-[10px] text-slate-400">{entry.start_time}</p>}
@@ -207,6 +207,14 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
                 <Badge className={cn("text-[10px] border-0", catColors[entry.category])}>{entry.category?.replace(/_/g, " ")}</Badge>
                 {entry.date && <span className="text-[10px] text-slate-400">{format(new Date(entry.date), "MMM d")}</span>}
               </div>
+            </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(entry)}>
+                <Pencil className="w-3 h-3 text-slate-500" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(entry.id)}>
+                <Trash2 className="w-3 h-3 text-red-400" />
+              </Button>
             </div>
           </div>
         ))}
