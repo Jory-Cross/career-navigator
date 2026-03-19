@@ -11,6 +11,7 @@ const navItems = [
   { name: "Job Seeker", icon: Users, page: "Clients", indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
   { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", indent: true, roles: ["admin", "management", "employee"] },
   { name: "DSPD", icon: Users, page: "DspdPortal", indent: true, roles: ["admin", "management", "employee"] },
+  { name: "Employed", icon: Users, page: "Clients", indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
   { name: "Employees", icon: UserCog, page: "EmployeePortal", roles: ["admin", "management"] },
   { name: "Calendar", icon: Calendar, page: "Calendar" },
   { name: "Reports", icon: BarChart3, page: "Reports" },
