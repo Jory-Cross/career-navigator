@@ -17,7 +17,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
