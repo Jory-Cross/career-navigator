@@ -82,9 +82,10 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="client">Client (Job Seeker)</SelectItem>
+                <SelectItem value="job_seeker">Job Seeker</SelectItem>
                 <SelectItem value="pre_ets">Pre-ETS Student</SelectItem>
                 <SelectItem value="dspd">DSPD</SelectItem>
+                <SelectItem value="employed">Employed</SelectItem>
               </SelectContent>
             </Select>
           </div>
