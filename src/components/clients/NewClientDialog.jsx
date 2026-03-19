@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,12 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
     setSaving(true);
     try {
       const token = Math.random().toString(36).substring(2, 15);
-      const client = await base44.entities.Client.create({ ...form, status: "active", access_token: token });
+      const client = await base44.entities.Client.create({ 
+        ...form, 
+        status: "active", 
+        access_token: token,
+        assigned_employee_id: currentUser?.id || null
+      });
       
       // Log activity
       await base44.entities.Activity.create({
