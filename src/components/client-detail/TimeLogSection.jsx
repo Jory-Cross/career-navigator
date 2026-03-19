@@ -19,6 +19,9 @@ const catColors = {
   job_search: "bg-violet-50 text-violet-700",
   interview_prep: "bg-amber-50 text-amber-700",
   follow_up: "bg-cyan-50 text-cyan-700",
+  job_coaching: "bg-orange-50 text-orange-700",
+  life_skills: "bg-pink-50 text-pink-700",
+  cbh: "bg-purple-50 text-purple-700",
   admin: "bg-slate-50 text-slate-600",
   other: "bg-gray-50 text-gray-600"
 };
@@ -201,6 +204,9 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
                 <SelectItem value="job_search">Job Search</SelectItem>
                 <SelectItem value="interview_prep">Interview Prep</SelectItem>
                 <SelectItem value="follow_up">Follow Up</SelectItem>
+                <SelectItem value="job_coaching">Job Coaching</SelectItem>
+                <SelectItem value="life_skills">Life Skills</SelectItem>
+                <SelectItem value="cbh">CBH</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>

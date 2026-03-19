@@ -588,6 +588,9 @@ export default function Calendar() {
                     <SelectItem value="resume_review">Resume Review</SelectItem>
                     <SelectItem value="follow_up">Follow-up</SelectItem>
                     <SelectItem value="strategy">Strategy</SelectItem>
+                    <SelectItem value="job_coaching">Job Coaching</SelectItem>
+                    <SelectItem value="life_skills">Life Skills</SelectItem>
+                    <SelectItem value="cbh">CBH</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
