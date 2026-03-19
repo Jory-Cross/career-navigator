@@ -49,21 +49,29 @@ export default function TimeTracking() {
       : u.role === 'employee'
   );
 
-  const { data: clients = [] } = useQuery({
+  const { data: allClients = [] } = useQuery({
     queryKey: ["clients", user?.role],
     queryFn: async () => {
-      const allClients = await base44.entities.Client.list();
-      if (!user) return allClients;
-      if (user.role === 'admin' || user.role === 'management') return allClients;
+      const all = await base44.entities.Client.list();
+      if (!user) return all;
+      if (user.role === 'admin' || user.role === 'management') return all;
       if (user.role === 'employee') {
-        return allClients.filter(c => c.assigned_employee_id === user.id || c.created_by === user.email);
+        return all.filter(c => c.assigned_employee_id === user.id || c.created_by === user.email);
       }
-      return allClients;
+      return all;
     },
     enabled: !!user
   });
 
-  const clientIds = clients.map(c => c.id);
+  // Clients visible after employee filter (for admin/management)
+  const clients = (user?.role === 'admin' || user?.role === 'management') && employeeFilter !== 'all'
+    ? allClients.filter(c => {
+        const emp = filterableEmployees.find(e => e.id === employeeFilter);
+        return emp && (c.assigned_employee_id === emp.id || c.created_by === emp.email);
+      })
+    : allClients;
+
+  const clientIds = allClients.map(c => c.id);
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", user?.role],
@@ -76,7 +84,7 @@ export default function TimeTracking() {
       }
       return allEntries;
     },
-    enabled: !!user && clients.length >= 0
+    enabled: !!user && allClients.length >= 0
   });
 
   const handleRefresh = () => {
