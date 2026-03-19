@@ -122,10 +122,11 @@ export default function ClientHeader({ client, onUpdate }) {
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={form.client_type || "client"} onValueChange={v => u("client_type", v)}>
+          <Select value={form.client_type || "job_seeker"} onValueChange={v => u("client_type", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="job_seeker">Job Seeker</SelectItem>
+              <SelectItem value="employed">Employed</SelectItem>
               <SelectItem value="pre_ets">Pre-ETS</SelectItem>
               <SelectItem value="dspd">DSPD</SelectItem>
             </SelectContent>
