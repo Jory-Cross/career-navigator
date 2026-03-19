@@ -60,15 +60,15 @@ export default function Calendar() {
   const clientIds = clients.map(c => c.id);
 
   const { data: meetings = [] } = useQuery({
-    queryKey: ['meetings', user?.role],
+    queryKey: ['meetings', user?.role, clientIds.join(',')],
     queryFn: async () => {
       const allMeetings = await base44.entities.Meeting.list();
       if (!user) return allMeetings;
-      if (user.role === 'management') return allMeetings;
+      if (user.role === 'admin' || user.role === 'management') return allMeetings;
       if (user.role === 'employee') {
         return allMeetings.filter(m => clientIds.includes(m.client_id));
       }
-      return [];
+      return allMeetings;
     },
     enabled: !!user && clients.length >= 0
   });
