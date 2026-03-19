@@ -165,6 +165,45 @@ export default function Calendar() {
     }
   };
 
+  const initiateDelete = (meeting) => {
+    const meetingDate = format(parseISO(meeting.start_datetime), 'yyyy-MM-dd');
+    const meetingTime = format(parseISO(meeting.start_datetime), 'HH:mm');
+    // Look for a time entry on same client, same date, same start time (linked via Time Entry flow)
+    const linked = timeEntries.find(te =>
+      te.client_id === meeting.client_id &&
+      te.date === meetingDate &&
+      (!te.start_time || te.start_time === meetingTime)
+    );
+    setMeetingToDelete(meeting);
+    setLinkedTimeEntry(linked || null);
+    setShowDeleteConfirm(true);
+  };
+
+  const deleteMeeting = async (alsoDeleteTimeEntry) => {
+    if (!meetingToDelete) return;
+    setSaving(true);
+    try {
+      await base44.entities.Meeting.delete(meetingToDelete.id);
+      if (alsoDeleteTimeEntry && linkedTimeEntry) {
+        await base44.entities.TimeEntry.delete(linkedTimeEntry.id);
+        queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+        toast.success("Meeting and time entry deleted");
+      } else {
+        toast.success("Meeting deleted");
+      }
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      setShowDeleteConfirm(false);
+      setMeetingToDelete(null);
+      setLinkedTimeEntry(null);
+      setShowNew(false);
+      setEditingMeeting(null);
+    } catch (error) {
+      toast.error("Failed to delete");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const convertToTimeEntry = async () => {
     if (!selectedMeeting) return;
     setSaving(true);
