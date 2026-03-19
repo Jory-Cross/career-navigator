@@ -30,7 +30,11 @@ export default function ClientHeader({ client, onUpdate }) {
   };
 
   const save = async () => {
-    await base44.entities.Client.update(client.id, form);
+    const updates = { ...form };
+    // Sync is_archived with status immediately (don't wait for automation)
+    if (form.status === 'active') updates.is_archived = false;
+    else if (form.status === 'inactive' || form.status === 'completed') updates.is_archived = true;
+    await base44.entities.Client.update(client.id, updates);
     toast.success("Client updated");
     setEditing(false);
     onUpdate();
