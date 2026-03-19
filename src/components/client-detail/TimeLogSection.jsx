@@ -224,7 +224,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
     <Dialog open={showAdd} onOpenChange={setShowAdd}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Time Entry</DialogTitle>
+          <DialogTitle>{editingEntry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-3">
           <div className="grid grid-cols-2 gap-3">
@@ -278,7 +278,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
         <DialogFooter>
           <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Add Entry"}
+            {saving ? "Saving..." : editingEntry ? "Save Changes" : "Add Entry"}
           </Button>
         </DialogFooter>
       </DialogContent>
