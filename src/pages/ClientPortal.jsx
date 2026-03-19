@@ -958,16 +958,46 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-slate-500" />
-              {selectedTask?.title}
+              {isStaff ? "Edit Task" : selectedTask?.title}
             </DialogTitle>
           </DialogHeader>
           {selectedTask && (
             <div className="space-y-4 py-2">
-              {selectedTask.description && (
-                <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{selectedTask.description}</p>
-              )}
-              {selectedTask.due_date && (
-                <p className="text-xs text-slate-500">Due: {format(new Date(selectedTask.due_date), "MMM d, yyyy")}</p>
+              {isStaff ? (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Title</Label>
+                    <Input
+                      value={selectedTask.title}
+                      onChange={e => setSelectedTask(t => ({ ...t, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Description</Label>
+                    <Textarea
+                      value={selectedTask.description || ""}
+                      onChange={e => setSelectedTask(t => ({ ...t, description: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Due Date</Label>
+                    <Input
+                      type="date"
+                      value={selectedTask.due_date || ""}
+                      onChange={e => setSelectedTask(t => ({ ...t, due_date: e.target.value }))}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {selectedTask.description && (
+                    <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{selectedTask.description}</p>
+                  )}
+                  {selectedTask.due_date && (
+                    <p className="text-xs text-slate-500">Due: {format(new Date(selectedTask.due_date), "MMM d, yyyy")}</p>
+                  )}
+                </>
               )}
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Status</Label>
@@ -984,17 +1014,27 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">My Notes</Label>
+                <Label className="text-xs text-slate-500">{isStaff ? "Staff Notes" : "My Notes"}</Label>
                 <Textarea
                   value={taskNotes}
                   onChange={e => setTaskNotes(e.target.value)}
-                  placeholder="Add your notes, updates, or questions here..."
-                  rows={4}
+                  placeholder="Add notes, updates, or questions here..."
+                  rows={3}
                 />
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {isStaff && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="sm:mr-auto"
+                onClick={() => deleteTask(selectedTask.id, selectedTask.title)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Task
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setSelectedTask(null)}>Cancel</Button>
             <Button onClick={saveTaskDetail} disabled={savingTask}>{savingTask ? "Saving..." : "Save"}</Button>
           </DialogFooter>
