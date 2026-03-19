@@ -132,6 +132,9 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
             <SelectItem value="job_search">Job Search</SelectItem>
             <SelectItem value="interview_prep">Interview Prep</SelectItem>
             <SelectItem value="follow_up">Follow Up</SelectItem>
+            <SelectItem value="job_coaching">Job Coaching</SelectItem>
+            <SelectItem value="life_skills">Life Skills</SelectItem>
+            <SelectItem value="cbh">CBH</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
