@@ -105,9 +105,11 @@ export default function ClientDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Clients
         </Link>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.open(`/ClientPortal?id=${clientId}`, '_blank')}>
-            <ExternalLink className="w-4 h-4 mr-1.5" /> Client Portal
-          </Button>
+          {client.client_type !== 'employed' && (
+            <Button variant="outline" onClick={() => window.open(`/ClientPortal?id=${clientId}`, '_blank')}>
+              <ExternalLink className="w-4 h-4 mr-1.5" /> Client Portal
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowEmailComposer(true)}>
             Send Email
           </Button>
