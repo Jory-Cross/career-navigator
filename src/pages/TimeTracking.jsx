@@ -104,7 +104,11 @@ export default function TimeTracking() {
   const payroll2Start = new Date(nowYear, nowMonth, 16);
   const payroll2End = new Date(nowYear, nowMonth + 1, 0, 23, 59, 59);
 
+  // IDs of clients belonging to the selected employee
+  const filteredClientIds = clients.map(c => c.id);
+
   const filtered = timeEntries.filter(e => {
+    if ((user?.role === 'admin' || user?.role === 'management') && employeeFilter !== 'all' && !filteredClientIds.includes(e.client_id)) return false;
     if (clientFilter !== "all" && e.client_id !== clientFilter) return false;
     if (!e.date) return periodFilter === "all";
     const d = new Date(e.date);
