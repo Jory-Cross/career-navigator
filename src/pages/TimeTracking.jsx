@@ -273,8 +273,8 @@ export default function TimeTracking() {
         </div>
 
         <div className="space-y-6">
-          <ActiveTimer clients={clients} onTimeSaved={handleRefresh} />
-          <QuickTimeLog clients={clients} onTimeSaved={handleRefresh} />
+          <ActiveTimer clients={allClients} onTimeSaved={handleRefresh} />
+          <QuickTimeLog clients={allClients} onTimeSaved={handleRefresh} />
         </div>
       </div>
       {/* Entry Detail Dialog */}
