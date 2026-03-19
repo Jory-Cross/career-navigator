@@ -100,27 +100,26 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
         end_time: form.end_time || undefined
       });
 
-      // Create calendar entry
-      if (form.start_time) {
-        try {
-          const startDateTime = new Date(`${form.date}T${form.start_time}`);
-          const endDateTime = form.end_time 
-            ? new Date(`${form.date}T${form.end_time}`)
-            : new Date(startDateTime.getTime() + duration * 60000);
+      // Always create a calendar entry
+      try {
+        const startTime = form.start_time || "09:00";
+        const startDateTime = new Date(`${form.date}T${startTime}`);
+        const endDateTime = form.end_time
+          ? new Date(`${form.date}T${form.end_time}`)
+          : new Date(startDateTime.getTime() + duration * 60000);
 
-          await base44.entities.Meeting.create({
-            client_id: clientId,
-            title: form.description || form.category.replace(/_/g, ' '),
-            description: form.description,
-            meeting_type: form.category,
-            start_datetime: startDateTime.toISOString(),
-            end_datetime: endDateTime.toISOString(),
-            status: 'completed',
-            location: 'Time Entry'
-          });
-        } catch (meetingError) {
-          console.error("Failed to create calendar entry:", meetingError);
-        }
+        await base44.entities.Meeting.create({
+          client_id: clientId,
+          title: form.description || form.category.replace(/_/g, ' '),
+          description: form.description,
+          meeting_type: form.category,
+          start_datetime: startDateTime.toISOString(),
+          end_datetime: endDateTime.toISOString(),
+          status: 'completed',
+          location: 'Time Entry'
+        });
+      } catch (meetingError) {
+        console.error("Failed to create calendar entry:", meetingError);
       }
 
       toast.success("Time entry added");
