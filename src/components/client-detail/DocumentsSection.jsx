@@ -43,6 +43,7 @@ export default function DocumentsSection({ clientId, onRefresh }) {
   const [showVersions, setShowVersions] = useState(null);
   const [versions, setVersions] = useState([]);
   const [filterTag, setFilterTag] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function DocumentsSection({ clientId, onRefresh }) {
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      const docs = await base44.entities.Document.filter({ client_id: clientId, is_archived: false });
+      const docs = await base44.entities.Document.filter({ client_id: clientId, is_archived: showArchived });
       setDocuments(docs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
     } catch (error) {
       toast.error("Failed to load documents");
