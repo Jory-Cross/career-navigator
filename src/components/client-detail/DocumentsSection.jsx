@@ -48,7 +48,7 @@ export default function DocumentsSection({ clientId, onRefresh }) {
 
   useEffect(() => {
     loadDocuments();
-  }, [clientId]);
+  }, [clientId, showArchived]);
 
   useEffect(() => {
     filterDocuments();
@@ -211,9 +211,16 @@ export default function DocumentsSection({ clientId, onRefresh }) {
               <h3 className="text-sm font-semibold text-slate-800">Documents</h3>
               <Badge variant="outline" className="text-xs">{documents.length} files • {totalSizeMB} MB</Badge>
             </div>
-            <Button size="sm" onClick={() => setShowUpload(true)}>
-              <Upload className="w-3.5 h-3.5 mr-1" /> Upload
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant={showArchived ? "default" : "outline"} onClick={() => setShowArchived(!showArchived)}>
+                <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Active" : "Archived"}
+              </Button>
+              {!showArchived && (
+                <Button size="sm" onClick={() => setShowUpload(true)}>
+                  <Upload className="w-3.5 h-3.5 mr-1" /> Upload
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 flex-wrap">
@@ -310,9 +317,15 @@ export default function DocumentsSection({ clientId, onRefresh }) {
                         <Download className="w-3.5 h-3.5" />
                       </Button>
                     </a>
-                    <Button size="sm" variant="ghost" onClick={() => archiveDocument(doc.id)} className="h-7 px-2">
-                      <Archive className="w-3.5 h-3.5" />
-                    </Button>
+                    {showArchived ? (
+                      <Button size="sm" variant="ghost" onClick={() => deleteDocument(doc.id)} className="h-7 px-2 text-red-500 hover:text-red-700">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => archiveDocument(doc.id)} className="h-7 px-2">
+                        <Archive className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
