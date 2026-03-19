@@ -309,6 +309,7 @@ export default function ClientHeader({ client, onUpdate }) {
             </div>
           </div>
         </div>
+        <ContactsSection client={client} onUpdate={onUpdate} />
       </div>
     </Card>
   );
