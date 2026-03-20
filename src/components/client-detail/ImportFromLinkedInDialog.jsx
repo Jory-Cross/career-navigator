@@ -293,61 +293,44 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
             </div>
           )}
 
-          {parsed && (
+          {parsed && applications.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-green-800">{parsed.full_name || "Profile found"}</p>
-                  {parsed.headline && <p className="text-xs text-green-700">{parsed.headline}</p>}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-800">
+                  {applications.length} application{applications.length !== 1 ? 's' : ''} found
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={() =>
+                      selected.length === applications.length
+                        ? setSelected([])
+                        : setSelected(applications.map((_, i) => i))
+                    }
+                  >
+                    {selected.length === applications.length ? "Deselect all" : "Select all"}
+                  </button>
+                  <button
+                    className="text-xs text-slate-400 hover:underline"
+                    onClick={() => { setParsed(null); setUrl(""); setApplications([]); setSelected([]); }}
+                  >
+                    Start over
+                  </button>
                 </div>
               </div>
+              <p className="text-xs text-slate-500">Click the <strong>↓</strong> arrow on any application to edit its details before importing.</p>
 
-              {parsed.summary && (
-                <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-xs font-semibold text-slate-600 mb-1">Summary</p>
-                  <p className="text-xs text-slate-700 line-clamp-3">{parsed.summary}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-2 bg-slate-50 rounded-lg">
-                  <Briefcase className="w-4 h-4 text-slate-500 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-slate-800">{parsed.experience?.length || 0}</p>
-                  <p className="text-xs text-slate-500">Positions</p>
-                </div>
-                <div className="p-2 bg-slate-50 rounded-lg">
-                  <GraduationCap className="w-4 h-4 text-slate-500 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-slate-800">{parsed.education?.length || 0}</p>
-                  <p className="text-xs text-slate-500">Education</p>
-                </div>
-                <div className="p-2 bg-slate-50 rounded-lg">
-                  <Zap className="w-4 h-4 text-slate-500 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-slate-800">{parsed.skills?.length || 0}</p>
-                  <p className="text-xs text-slate-500">Skills</p>
-                </div>
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {applications.map((app, idx) => (
+                  <AppEditRow
+                    key={idx}
+                    app={app}
+                    selected={selected.includes(idx)}
+                    onToggle={() => toggleSelect(idx)}
+                    onChange={(updated) => updateApp(idx, updated)}
+                  />
+                ))}
               </div>
-
-              {parsed.skills?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-600 mb-1.5">Skills Preview</p>
-                  <div className="flex flex-wrap gap-1">
-                    {parsed.skills.slice(0, 12).map((s, i) => (
-                      <Badge key={i} className="text-[10px] bg-slate-100 text-slate-600 border-0">{s}</Badge>
-                    ))}
-                    {parsed.skills.length > 12 && (
-                      <Badge className="text-[10px] bg-slate-100 text-slate-500 border-0">+{parsed.skills.length - 12} more</Badge>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <button
-                className="text-xs text-slate-400 hover:underline"
-                onClick={() => { setParsed(null); setUrl(""); }}
-              >
-                Try a different URL
-              </button>
             </div>
           )}
         </div>
