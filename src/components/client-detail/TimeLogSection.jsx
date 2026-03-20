@@ -101,7 +101,9 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
     }
 
     // Duplicate check: same client, same date, and same start_time (if provided)
+    // Exclude the entry currently being edited
     const duplicate = timeEntries.find(te => {
+      if (editingEntry && te.id === editingEntry.id) return false;
       if (te.date !== form.date) return false;
       if (form.start_time && te.start_time) return te.start_time === form.start_time;
       // If no start_time, check if an entry already exists on the same date
