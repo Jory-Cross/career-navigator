@@ -27,7 +27,7 @@ export default function EmployeePortal() {
   }, [navigate]);
 
   const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
+    queryKey: ["all-users"],
     queryFn: () => base44.entities.User.list(),
     enabled: !!user
   });
