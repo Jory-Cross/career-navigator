@@ -67,13 +67,26 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
   const initConversation = async () => {
     setInitializing(true);
     try {
-      // Always create a fresh conversation — no caching to prevent stale context
-      const conv = await base44.agents.createConversation({
-        agent_name: agentKey,
-        metadata: { name: `${agentName} session`, user_id: userId }
-      });
+      const storageKey = `staff_agent_conv_v2_${agentKey}_${userId}`;
+      const savedConvId = localStorage.getItem(storageKey);
+      let conv = null;
+      if (savedConvId) {
+        try {
+          conv = await base44.agents.getConversation(savedConvId);
+          if (!conv || conv.metadata?.user_id !== userId) conv = null;
+        } catch {
+          conv = null;
+        }
+      }
+      if (!conv) {
+        conv = await base44.agents.createConversation({
+          agent_name: agentKey,
+          metadata: { name: `${agentName} session`, user_id: userId }
+        });
+        localStorage.setItem(storageKey, conv.id);
+      }
       setConversation(conv);
-      setMessages([]);
+      setMessages(conv.messages || []);
       base44.agents.subscribeToConversation(conv.id, (data) => {
         setMessages(data.messages || []);
       });
