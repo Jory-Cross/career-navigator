@@ -30,6 +30,7 @@ const catColors = {
 };
 
 export default function TimeTracking() {
+  const { viewAsUser } = useViewAs();
   const [periodFilter, setPeriodFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
