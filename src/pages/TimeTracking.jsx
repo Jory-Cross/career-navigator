@@ -99,10 +99,11 @@ export default function TimeTracking() {
   });
 
   // Filter time entries to only those for visible clients (when not admin)
+  // Include entries with no client_id (myself/admin entries)
   const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === 'admin' && !viewAsUser) return timeEntries;
-    return timeEntries.filter(e => clientIds.includes(e.client_id));
+    return timeEntries.filter(e => !e.client_id || clientIds.includes(e.client_id));
   }, [timeEntries, clientIds, effectiveUser?.id, viewAsUser?.id]);
 
   const handleRefresh = () => {
