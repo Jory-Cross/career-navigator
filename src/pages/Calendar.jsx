@@ -126,8 +126,19 @@ export default function Calendar() {
 
       if (editingMeeting) {
         const { recurrence, recurrence_count, ...meetingData } = normalizedForm;
-        await base44.entities.Meeting.update(editingMeeting.id, meetingData);
-        toast.success("Meeting updated");
+
+        // If this is a recurring meeting and user chose to edit series
+        if (editingMeeting.series_id && editSeriesMode === "series") {
+          const seriesMeetings = meetings.filter(m => m.series_id === editingMeeting.series_id);
+          await Promise.all(seriesMeetings.map(m => base44.entities.Meeting.update(m.id, meetingData)));
+          toast.success(`Updated ${seriesMeetings.length} meetings in series`);
+        } else {
+          // Edit only current meeting
+          await base44.entities.Meeting.update(editingMeeting.id, meetingData);
+          toast.success("Meeting updated");
+        }
+        setEditSeriesMode("current");
+        setShowSeriesEdit(false);
       } else {
         const { recurrence, recurrence_count, ...baseData } = normalizedForm;
         const count = recurrence === "none" ? 1 : (parseInt(recurrence_count) || 4);
