@@ -28,33 +28,13 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
   const initConversation = async () => {
     setInitializing(true);
     try {
-      // Remove old unscoped key to prevent cross-client contamination
-      localStorage.removeItem(`agent_conv_${agentKey}`);
-      // Scope the storage key by clientId so each client has their own conversation
-      const storageKey = `agent_conv_${agentKey}_${clientId || 'anonymous'}`;
-      const savedConvId = localStorage.getItem(storageKey);
-      let conv;
-      if (savedConvId) {
-        try {
-          conv = await base44.agents.getConversation(savedConvId);
-          // Verify the conversation belongs to this client
-          // Discard any conversation that doesn't belong to this exact client
-          if (conv && clientId && conv.metadata?.client_id !== clientId) {
-            conv = null;
-          }
-        } catch {
-          conv = null;
-        }
-      }
-      if (!conv) {
-        conv = await base44.agents.createConversation({
-          agent_name: agentKey,
-          metadata: { name: `${title} session`, client_id: clientId }
-        });
-        localStorage.setItem(storageKey, conv.id);
-      }
+      // Always create a fresh conversation — no caching to prevent stale context
+      const conv = await base44.agents.createConversation({
+        agent_name: agentKey,
+        metadata: { name: `${title} session`, client_id: clientId }
+      });
       setConversation(conv);
-      setMessages(conv.messages || []);
+      setMessages([]);
       base44.agents.subscribeToConversation(conv.id, (data) => {
         setMessages(data.messages || []);
       });
