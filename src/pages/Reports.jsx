@@ -199,6 +199,18 @@ export default function Reports() {
   const successRate = totalApplications > 0 ? Math.round((successfulApps / totalApplications) * 100) : 0;
   const hoursByEmployee = getHoursByEmployee();
 
+  // Compute which employees/management are visible based on hierarchy
+  const visibleUsers = (() => {
+    if (!effectiveUser) return [];
+    if (effectiveUser.role === 'admin') {
+      return allUsers.filter(u => u.role === 'employee' || u.role === 'management');
+    }
+    if (effectiveUser.role === 'management') {
+      return allUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
+    }
+    return [];
+  })();
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading analytics...</div>;
   }
