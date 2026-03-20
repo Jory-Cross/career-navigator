@@ -215,6 +215,61 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </main>
       </div>
+
+      {/* Profile Edit Dialog */}
+      <Dialog open={showProfile} onOpenChange={setShowProfile}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Avatar */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
+                  {profileForm.avatar_url
+                    ? <img src={profileForm.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                    : (user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('') : '')
+                  }
+                </div>
+                <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center cursor-pointer transition-colors">
+                  {uploadingAvatar ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+                </label>
+              </div>
+              <p className="text-xs text-slate-500">Click the camera icon to upload a photo</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Name</Label>
+              <Input value={user?.full_name || ""} disabled className="bg-slate-50 text-slate-500" />
+              <p className="text-xs text-slate-400">Name is managed by your account settings</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Job Title</Label>
+              <Input
+                value={profileForm.title || ""}
+                onChange={e => setProfileForm(p => ({ ...p, title: e.target.value }))}
+                placeholder="e.g. Employment Specialist"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Phone</Label>
+              <Input
+                value={profileForm.phone || ""}
+                onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                placeholder="e.g. 801-555-1234"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProfile(false)}>Cancel</Button>
+            <Button onClick={saveProfile} disabled={savingProfile || uploadingAvatar}>
+              {savingProfile ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
