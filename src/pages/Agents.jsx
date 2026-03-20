@@ -64,21 +64,26 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const initConversation = async () => {
+  const initConversation = async (forceNew = false) => {
     setInitializing(true);
     try {
-      // Use localStorage scoped by userId+agentKey to avoid cross-user contamination
       const storageKey = `staff_agent_conv_${agentKey}_${userId}`;
-      const savedConvId = localStorage.getItem(storageKey);
+
+      // Clear any old unscoped or client-scoped keys to prevent contamination
+      localStorage.removeItem(`agent_conv_${agentKey}`);
+
       let conv = null;
 
-      if (savedConvId) {
-        try {
-          conv = await base44.agents.getConversation(savedConvId);
-          // Discard if it belongs to a different user
-          if (conv?.metadata?.user_id !== userId) conv = null;
-        } catch {
-          conv = null;
+      if (!forceNew) {
+        const savedConvId = localStorage.getItem(storageKey);
+        if (savedConvId) {
+          try {
+            conv = await base44.agents.getConversation(savedConvId);
+            // Discard if it belongs to a different user or has no user_id (client conv)
+            if (!conv || conv.metadata?.user_id !== userId) conv = null;
+          } catch {
+            conv = null;
+          }
         }
       }
 
