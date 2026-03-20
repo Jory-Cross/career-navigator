@@ -108,7 +108,14 @@ export default function Calendar() {
       location: meeting.location || "",
       status: meeting.status
     });
-    setShowNew(true);
+
+    // Check if this meeting is part of a series
+    if (meeting.series_id && meetings.filter(m => m.series_id === meeting.series_id).length > 1) {
+      setShowSeriesEdit(true);
+      setEditSeriesMode("current");
+    } else {
+      setShowNew(true);
+    }
   };
 
   const save = async () => {
