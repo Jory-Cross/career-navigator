@@ -6,7 +6,7 @@ import { useViewAs } from "@/lib/ViewAsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Archive, Eye } from "lucide-react";
+import { Plus, Search, Archive } from "lucide-react";
 import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
 
@@ -138,7 +138,7 @@ export default function Clients() {
             <SelectItem value="employed">Employed</SelectItem>
           </SelectContent>
         </Select>
-        {(user?.role === 'admin' || user?.role === 'management') && viewAsUser === 'admin' && (() => {
+        {(user?.role === 'admin' || user?.role === 'management') && !viewAsUser && (() => {
           const visibleEmployees = user.role === 'admin'
             ? allUsers.filter(u => u.role === 'employee')
             : allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
