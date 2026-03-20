@@ -433,6 +433,15 @@ export default function Reports() {
           </Card>
         )}
       </div>
+
+      {/* Payroll Report - Admin/Management only */}
+      {(user?.role === 'admin' || user?.role === 'management') && (
+        <PayrollReport
+          timeEntries={timeEntries}
+          allUsers={allUsers}
+          clients={clients}
+        />
+      )}
     </div>
   );
 }
