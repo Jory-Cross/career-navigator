@@ -772,6 +772,52 @@ export default function Calendar() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={showSeriesEdit} onOpenChange={setShowSeriesEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Recurring Meeting</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <p className="text-sm text-slate-600">This meeting is part of a recurring series. Would you like to edit this meeting only or the entire series?</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => setEditSeriesMode("current")}
+                className={cn(
+                  "w-full p-3 text-left border rounded-lg transition-all",
+                  editSeriesMode === "current"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                )}
+              >
+                <p className="font-medium text-slate-900">This meeting only</p>
+                <p className="text-xs text-slate-500 mt-1">Changes apply only to this individual meeting</p>
+              </button>
+              <button
+                onClick={() => setEditSeriesMode("series")}
+                className={cn(
+                  "w-full p-3 text-left border rounded-lg transition-all",
+                  editSeriesMode === "series"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                )}
+              >
+                <p className="font-medium text-slate-900">Entire series</p>
+                <p className="text-xs text-slate-500 mt-1">Changes apply to all meetings in this recurring series</p>
+              </button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSeriesEdit(false)}>Cancel</Button>
+            <Button onClick={() => {
+              setShowSeriesEdit(false);
+              setShowNew(true);
+            }}>
+              Continue Editing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showConvert} onOpenChange={setShowConvert}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
