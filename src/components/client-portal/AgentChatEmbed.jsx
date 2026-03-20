@@ -85,6 +85,8 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
   };
 
   const clearConversation = async () => {
+    const storageKey = `agent_conv_v2_${agentKey}_${clientId || 'anonymous'}`;
+    localStorage.removeItem(storageKey);
     setMessages([]);
     setConversation(null);
     await initConversation();
