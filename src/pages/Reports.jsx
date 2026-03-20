@@ -445,7 +445,7 @@ export default function Reports() {
       {(user?.role === 'admin' || user?.role === 'management') && (
         <PayrollReport
           timeEntries={timeEntries}
-          allUsers={allUsers}
+          allUsers={visibleUsers}
           clients={clients}
         />
       )}
