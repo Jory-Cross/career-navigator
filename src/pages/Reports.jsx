@@ -215,7 +215,7 @@ export default function Reports() {
           <h1 className="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
           <p className="text-sm text-slate-500 mt-1">Key metrics and performance insights</p>
         </div>
-        {user?.role === 'management' && (
+        {(user?.role === 'management' || user?.role === 'admin') && (
           <div className="flex gap-3">
             <div className="w-48">
               <Label className="text-xs text-slate-600 mb-1.5 block">Start Date</Label>
