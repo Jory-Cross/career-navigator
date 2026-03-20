@@ -91,6 +91,7 @@ function App() {
         </Router>
         <Toaster />
       </QueryClientProvider>
+      </ViewAsProvider>
     </AuthProvider>
   )
 }
