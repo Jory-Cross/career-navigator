@@ -192,7 +192,7 @@ export default function TimeTracking() {
                     return (
                       <div key={cId} className="space-y-1.5">
                         <div className="flex justify-between text-sm">
-                          <span className="font-medium text-slate-700">{getClientName(cId)}</span>
+                         <button className="font-medium text-slate-700 hover:text-blue-600 hover:underline text-left" onClick={() => navigate(`/ClientDetail?clientId=${cId}`)}>{getClientName(cId)}</button>
                           <span className="text-slate-500">{Math.round(data.minutes / 60 * 10) / 10}h · {data.entries} sessions</span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
