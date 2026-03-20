@@ -250,9 +250,9 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Employees</SelectItem>
-                  {allUsers.filter(u => u.role !== 'client').map(u => (
+                  {visibleUsers.map(u => (
                     <SelectItem key={u.id} value={u.email}>
-                      {u.full_name}
+                      {u.full_name || u.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
