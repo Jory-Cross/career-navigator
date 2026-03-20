@@ -116,8 +116,14 @@ export default function Calendar() {
     }
     setSaving(true);
     try {
+      // Normalize client_id: "self:email" means no client, just a personal meeting
+      const normalizedForm = {
+        ...form,
+        client_id: form.client_id?.startsWith('self:') ? null : form.client_id
+      };
+
       if (editingMeeting) {
-        const { recurrence, recurrence_count, ...meetingData } = form;
+        const { recurrence, recurrence_count, ...meetingData } = normalizedForm;
         await base44.entities.Meeting.update(editingMeeting.id, meetingData);
         toast.success("Meeting updated");
       } else {
