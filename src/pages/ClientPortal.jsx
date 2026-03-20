@@ -497,7 +497,21 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </TabsContent>
 
         <TabsContent value="coach">
-          <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" clientId={client?.id} />
+          <AgentChatEmbed
+            agentKey="career_coach"
+            title="Career Coach"
+            description="Your AI-powered career coaching assistant"
+            clientId={client?.id}
+            systemContext={`You are speaking with ${client?.first_name} ${client?.last_name}. Here is their profile:
+- Name: ${client?.first_name} ${client?.last_name}
+- Email: ${client?.email}
+- Location: ${client?.location || "not specified"}
+- Target Role: ${client?.target_role || "not specified"}
+- Target Industry: ${client?.industry || "not specified"}
+- Client Type: ${client?.client_type || "not specified"}
+- Status: ${client?.status || "active"}
+Always address them by their first name (${client?.first_name}) and tailor all advice to their specific profile, location, and career goals.`}
+          />
         </TabsContent>
 
         <TabsContent value="time">
