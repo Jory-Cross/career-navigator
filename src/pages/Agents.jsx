@@ -221,10 +221,8 @@ export default function AgentsPage() {
 
   const getSystemContext = (agentKey) => {
     if (!user) return null;
-    if (agentKey === "career_coach" || agentKey === "interview_prep_coach") {
-      return `You are speaking with ${user.full_name}, a staff member (role: ${user.role}) at a vocational rehabilitation / employment services organization. They are using you as a tool to assist their clients or test capabilities. Address them professionally as a colleague, not as a job seeker.`;
-    }
-    return null;
+    // Always inject staff identity for all agents when accessed from the staff Agents page
+    return `You are speaking with ${user.full_name}, a staff member (role: ${user.role}) at a vocational rehabilitation / employment services organization. They are NOT a client or job seeker. Address them as a professional colleague. Do not assume they are any client such as Anthony or any other client you may have context about.`;
   };
 
   const selectedAgentConfig = AGENTS.find(a => a.key === selectedAgent);
