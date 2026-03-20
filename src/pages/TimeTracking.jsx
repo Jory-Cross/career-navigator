@@ -225,7 +225,7 @@ export default function TimeTracking() {
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
-            {(user?.role === 'admin' || user?.role === 'management') && filterableEmployees.length > 0 && (
+            {(effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && filterableEmployees.length > 0 && (
               <Select value={employeeFilter} onValueChange={v => { setEmployeeFilter(v); setClientFilter("all"); }}>
                 <SelectTrigger className="w-44 border-slate-200 text-sm"><SelectValue placeholder="All Employees" /></SelectTrigger>
                 <SelectContent>
