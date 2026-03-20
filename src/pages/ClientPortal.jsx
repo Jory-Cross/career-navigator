@@ -497,7 +497,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         </TabsContent>
 
         <TabsContent value="coach">
-          <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" />
+          <AgentChatEmbed agentKey="career_coach" title="Career Coach" description="Your AI-powered career coaching assistant" clientId={client?.id} />
         </TabsContent>
 
         <TabsContent value="time">
