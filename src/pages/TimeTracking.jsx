@@ -278,9 +278,13 @@ export default function TimeTracking() {
                         {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <button className="text-xs text-slate-500 flex items-center gap-1 hover:text-blue-600 hover:underline" onClick={e => { e.stopPropagation(); navigate(`/ClientDetail?clientId=${entry.client_id}`); }}><User className="w-3 h-3" />{getClientName(entry.client_id)}</button>
-                        <Badge className={cn("text-[10px] border-0", catColors[entry.category])}>{entry.category?.replace(/_/g, " ")}</Badge>
-                      </div>
+                          {entry.client_id ? (
+                            <button className="text-xs text-slate-500 flex items-center gap-1 hover:text-blue-600 hover:underline" onClick={e => { e.stopPropagation(); navigate(`/ClientDetail?clientId=${entry.client_id}`); }}><User className="w-3 h-3" />{getClientName(entry.client_id)}</button>
+                          ) : (
+                            <span className="text-xs text-slate-500 flex items-center gap-1"><User className="w-3 h-3" />Myself</span>
+                          )}
+                          <Badge className={cn("text-[10px] border-0", catColors[entry.category])}>{entry.category?.replace(/_/g, " ")}</Badge>
+                        </div>
                     </div>
                     <div className="text-xs text-slate-400 shrink-0">
                       {entry.date && format(new Date(entry.date), "MMM d")}
