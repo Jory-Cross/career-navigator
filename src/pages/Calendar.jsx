@@ -110,7 +110,7 @@ export default function Calendar() {
   };
 
   const save = async () => {
-    if (!form.client_id || form.client_id === "" || !form.title || !form.start_datetime) {
+    if (!form.client_id || !form.title || !form.start_datetime) {
       toast.error("Please fill required fields");
       return;
     }
