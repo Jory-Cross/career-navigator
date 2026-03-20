@@ -126,7 +126,14 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
     );
   }
 
-  const visibleMessages = messages.filter(m => m.role !== "system");
+  const visibleMessages = messages
+    .filter(m => m.role !== "system")
+    .map(m => {
+      if (m.role === "user" && m.content?.includes("[SYSTEM CONTEXT")) {
+        return { ...m, content: m.content.replace(/\[SYSTEM CONTEXT[^\]]*\][^\n]*\n\n/, "") };
+      }
+      return m;
+    });
 
   return (
     <div className="flex flex-col h-[500px]">
