@@ -154,6 +154,8 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
     }
     setLoading(true);
     setParsed(null);
+    setApplications([]);
+    setSelected([]);
     try {
       const res = await base44.functions.invoke('importFromLinkedIn', { profileUrl: url.trim() });
       const data = res.data;
@@ -161,11 +163,27 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
         toast.error(data.error);
         return;
       }
-      if (!data.full_name && !data.experience?.length && !data.education?.length) {
+      if (!data.full_name && !data.experience?.length && !data.job_applications?.length) {
         toast.warning("Couldn't extract profile data. Make sure the profile is public.");
         return;
       }
       setParsed(data);
+      
+      // Enrich job applications with defaults
+      const enriched = (data.job_applications || []).map(app => ({
+        ...app,
+        status: "saved",
+        follow_up_cadence_days: 7,
+        follow_up_enabled: true,
+        notes: "Imported from LinkedIn",
+        job_url: "",
+        contact_name: "",
+        contact_email: "",
+        next_step: "",
+        next_step_date: "",
+      }));
+      setApplications(enriched);
+      setSelected(enriched.map((_, i) => i));
     } catch (err) {
       toast.error("Failed to import: " + err.message);
     } finally {
@@ -173,29 +191,47 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
     }
   };
 
+  const toggleSelect = (idx) => {
+    setSelected(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
+  };
+
+  const updateApp = (idx, updatedApp) => {
+    setApplications(prev => prev.map((a, i) => i === idx ? updatedApp : a));
+  };
+
   const handleImport = async () => {
+    if (selected.length === 0) {
+      toast.error("Select at least one application to import");
+      return;
+    }
     setSaving(true);
     try {
-      const title = parsed.full_name
-        ? `${parsed.full_name} — LinkedIn Import`
-        : "LinkedIn Import";
-
-      await base44.entities.Resume.create({
-        client_id: clientId,
-        title,
-        summary: parsed.summary || parsed.headline || "",
-        experience: parsed.experience || [],
-        education: parsed.education || [],
-        skills: parsed.skills || [],
-        certifications: parsed.certifications || [],
-        is_primary: false,
-      });
-
-      toast.success("Resume imported from LinkedIn!");
+      const toImport = selected.map(i => applications[i]);
+      await Promise.all(toImport.map(app =>
+        base44.entities.JobApplication.create({
+          client_id: clientId,
+          company: app.company || "Unknown Company",
+          position: app.position || "Unknown Position",
+          location: app.location || "",
+          applied_date: app.applied_date || "",
+          work_type: app.work_type || undefined,
+          salary_range: app.salary_range || "",
+          status: app.status || "saved",
+          job_url: app.job_url || "",
+          contact_name: app.contact_name || "",
+          contact_email: app.contact_email || "",
+          notes: app.notes || "Imported from LinkedIn",
+          next_step: app.next_step || "",
+          next_step_date: app.next_step_date || "",
+          follow_up_cadence_days: app.follow_up_cadence_days || 7,
+          follow_up_enabled: app.follow_up_enabled !== false,
+        })
+      ));
+      toast.success(`Imported ${selected.length} application${selected.length > 1 ? 's' : ''}`);
       onImported();
       handleClose();
     } catch (err) {
-      toast.error("Failed to save resume");
+      toast.error("Failed to save applications");
     } finally {
       setSaving(false);
     }
@@ -206,6 +242,8 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
     setParsed(null);
     setLoading(false);
     setSaving(false);
+    setApplications([]);
+    setSelected([]);
     onClose();
   };
 
