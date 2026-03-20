@@ -77,9 +77,9 @@ export default function EmployeePortal() {
         </p>
       </div>
 
-      {user?.role === 'admin' ? (
+      {effectiveUser?.role === 'admin' ? (
         // Admin view: all managers + employees with hierarchy assignment
-        <AdminHierarchyView allUsers={allUsers} currentUser={user} onSelectEmployee={setSelectedEmployeeId} />
+        <AdminHierarchyView allUsers={allUsers} currentUser={effectiveUser} onSelectEmployee={setSelectedEmployeeId} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {employees.map(emp => (
