@@ -45,7 +45,7 @@ export default function Reports() {
         base44.entities.Task.list(),
         base44.entities.TimeEntry.list(),
         base44.entities.Meeting.list(),
-        user.role === 'management' ? base44.entities.User.list() : Promise.resolve([])
+        (user.role === 'management' || user.role === 'admin') ? base44.entities.User.list() : Promise.resolve([])
       ]);
 
       setAllUsers(users);
