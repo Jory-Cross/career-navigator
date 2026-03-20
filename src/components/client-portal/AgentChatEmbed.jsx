@@ -8,7 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function AgentChatEmbed({ agentKey, title, description, clientId }) {
+export default function AgentChatEmbed({ agentKey, title, description, clientId, systemContext }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
