@@ -64,40 +64,16 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const initConversation = async (forceNew = false) => {
+  const initConversation = async () => {
     setInitializing(true);
     try {
-      const storageKey = `staff_agent_conv_${agentKey}_${userId}`;
-
-      // Clear any old unscoped or client-scoped keys to prevent contamination
-      localStorage.removeItem(`agent_conv_${agentKey}`);
-
-      let conv = null;
-
-      if (!forceNew) {
-        const savedConvId = localStorage.getItem(storageKey);
-        if (savedConvId) {
-          try {
-            conv = await base44.agents.getConversation(savedConvId);
-            // Discard if it belongs to a different user or has no user_id (client conv)
-            if (!conv || conv.metadata?.user_id !== userId) conv = null;
-          } catch {
-            conv = null;
-          }
-        }
-      }
-
-      if (!conv) {
-        conv = await base44.agents.createConversation({
-          agent_name: agentKey,
-          metadata: { name: `${agentName} session`, user_id: userId }
-        });
-        localStorage.setItem(storageKey, conv.id);
-      }
-
+      // Always create a fresh conversation — no caching to prevent stale context
+      const conv = await base44.agents.createConversation({
+        agent_name: agentKey,
+        metadata: { name: `${agentName} session`, user_id: userId }
+      });
       setConversation(conv);
-      setMessages(conv.messages || []);
-
+      setMessages([]);
       base44.agents.subscribeToConversation(conv.id, (data) => {
         setMessages(data.messages || []);
       });
