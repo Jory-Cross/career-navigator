@@ -36,7 +36,8 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
         try {
           conv = await base44.agents.getConversation(savedConvId);
           // Verify the conversation belongs to this client
-          if (conv && conv.metadata?.client_id && conv.metadata.client_id !== clientId) {
+          // Discard any conversation that doesn't belong to this exact client
+          if (conv && clientId && conv.metadata?.client_id !== clientId) {
             conv = null;
           }
         } catch {
