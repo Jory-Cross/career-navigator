@@ -29,6 +29,8 @@ export default function Calendar() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState(null);
   const [linkedTimeEntry, setLinkedTimeEntry] = useState(null);
+  const [showSeriesEdit, setShowSeriesEdit] = useState(false);
+  const [editSeriesMode, setEditSeriesMode] = useState("current"); // "current" or "series"
   const queryClient = useQueryClient();
 
   useEffect(() => {
