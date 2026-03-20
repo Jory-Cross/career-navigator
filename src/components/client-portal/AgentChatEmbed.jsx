@@ -28,6 +28,8 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
   const initConversation = async () => {
     setInitializing(true);
     try {
+      // Remove old unscoped key to prevent cross-client contamination
+      localStorage.removeItem(`agent_conv_${agentKey}`);
       // Scope the storage key by clientId so each client has their own conversation
       const storageKey = `agent_conv_${agentKey}_${clientId || 'anonymous'}`;
       const savedConvId = localStorage.getItem(storageKey);
