@@ -38,6 +38,51 @@ const ROLE_LABELS = {
   dspd: "DSPD"
 };
 
+function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
+  const [allUsers, setAllUsers] = React.useState([]);
+
+  React.useEffect(() => {
+    base44.entities.User.list().then(users => {
+      setAllUsers(users.filter(u => u.role === 'management' || u.role === 'employee'));
+    }).catch(() => {});
+  }, []);
+
+  if (allUsers.length === 0) return null;
+
+  const managers = allUsers.filter(u => u.role === 'management');
+  const employees = allUsers.filter(u => u.role === 'employee');
+
+  return (
+    <div className="flex items-center gap-2">
+      {viewAsUser && (
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-100 border border-amber-300 rounded-lg text-amber-800 text-xs font-medium">
+          <Eye className="w-3.5 h-3.5" />
+          Viewing as {viewAsUser.full_name || viewAsUser.email}
+        </div>
+      )}
+      <Select
+        value={viewAsUser?.id || "admin"}
+        onValueChange={val => {
+          if (val === "admin") setViewAsUser(null);
+          else setViewAsUser(allUsers.find(u => u.id === val) || null);
+        }}
+      >
+        <SelectTrigger className={cn("w-44 text-xs border h-8", viewAsUser ? "bg-amber-50 border-amber-300 text-amber-800" : "border-slate-200")}>
+          <Eye className="w-3.5 h-3.5 mr-1 shrink-0" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="admin">My View (Admin)</SelectItem>
+          {managers.length > 0 && <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Managers</div>}
+          {managers.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
+          {employees.length > 0 && <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Employees</div>}
+          {employees.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export default function Layout({ children, currentPageName }) {
   const { viewAsUser, setViewAsUser } = useViewAs();
   const [sidebarOpen, setSidebarOpen] = useState(false);
