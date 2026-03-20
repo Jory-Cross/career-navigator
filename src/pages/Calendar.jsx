@@ -699,6 +699,16 @@ export default function Calendar() {
               )}
             </div>
             <div className="flex gap-2">
+              {editingMeeting && editingMeeting.status === 'completed' && (
+                <Button size="sm" variant="outline" onClick={() => {
+                  setSelectedMeeting(editingMeeting);
+                  setConvertNotes(editingMeeting.description || "");
+                  setShowConvert(true);
+                  setShowNew(false);
+                }}>
+                  <Timer className="w-3.5 h-3.5 mr-1" /> Create Time Entry
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
               <Button onClick={save} disabled={saving}>
                 {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
