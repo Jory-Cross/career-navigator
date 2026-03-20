@@ -138,10 +138,10 @@ export default function Clients() {
             <SelectItem value="employed">Employed</SelectItem>
           </SelectContent>
         </Select>
-        {(user?.role === 'admin' || user?.role === 'management') && !viewAsUser && (() => {
-          const visibleEmployees = user.role === 'admin'
+        {(effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && (() => {
+          const visibleEmployees = effectiveUser.role === 'admin'
             ? allUsers.filter(u => u.role === 'employee')
-            : allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
+            : allUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
           return visibleEmployees.length > 0 ? (
             <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
               <SelectTrigger className="w-44 border-slate-200">
