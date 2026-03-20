@@ -34,18 +34,19 @@ export default function EmployeePortal() {
     enabled: !!user
   });
 
-  // Build hierarchy based on role
+  // Effective user perspective
+  const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
+
+  // Build hierarchy based on effective role
   const visibleUsers = (() => {
-    if (user?.role === 'admin') {
-      // Managers assigned to this admin
-      const managers = allUsers.filter(u => u.role === 'management' && u.admin_id === user.id);
+    if (effectiveUser?.role === 'admin') {
+      const managers = allUsers.filter(u => u.role === 'management');
       const managerIds = managers.map(m => m.id);
-      // Employees assigned to those managers
       const employees = allUsers.filter(u => u.role === 'employee' && managerIds.includes(u.manager_id));
       return [...managers, ...employees];
     }
-    if (user?.role === 'management') {
-      return allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
+    if (effectiveUser?.role === 'management') {
+      return allUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
     }
     return [];
   })();
