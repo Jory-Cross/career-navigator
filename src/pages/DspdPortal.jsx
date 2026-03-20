@@ -190,11 +190,17 @@ function SupportNotesTab({ clientId, isStaff }) {
               <Label className="text-xs">Note Content *</Label>
               <Textarea rows={5} value={form.content || ""} onChange={e => setForm(p => ({ ...p, content: e.target.value }))} />
             </div>
-            <div>
-              <Label className="text-xs">Time Spent (minutes)</Label>
-              <Input type="number" min="0" step="5" value={form.duration_minutes || 0} onChange={e => setForm(p => ({ ...p, duration_minutes: parseInt(e.target.value) || 0 }))} placeholder="30" />
-              <p className="text-xs text-slate-400 mt-1">Time will be logged as an admin time entry</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Start Time</Label>
+                <Input type="time" value={form.start_time || ""} onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">End Time</Label>
+                <Input type="time" value={form.end_time || ""} onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))} />
+              </div>
             </div>
+            <p className="text-xs text-slate-400">Time entry will be logged automatically if both times are set</p>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
