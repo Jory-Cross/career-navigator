@@ -83,6 +83,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <ViewAsProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />

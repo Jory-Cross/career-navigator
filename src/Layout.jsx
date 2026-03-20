@@ -39,6 +39,7 @@ const ROLE_LABELS = {
 };
 
 export default function Layout({ children, currentPageName }) {
+  const { viewAsUser, setViewAsUser } = useViewAs();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
