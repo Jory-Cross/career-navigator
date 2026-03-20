@@ -103,7 +103,7 @@ export default function TimeTracking() {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === 'admin' && !viewAsUser) return timeEntries;
     return timeEntries.filter(e => clientIds.includes(e.client_id));
-  }, [timeEntries, clientIds, effectiveUser, viewAsUser]);
+  }, [timeEntries, clientIds, effectiveUser?.id, viewAsUser?.id]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
