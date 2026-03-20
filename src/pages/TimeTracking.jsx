@@ -46,37 +46,44 @@ export default function TimeTracking() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  // Effective user: admin viewing as someone else uses that person's perspective
+  const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
     enabled: !!user && (user.role === 'admin' || user.role === 'management'),
   });
 
-  // Employees = users with role employee (or management for admin view), exclude archived
-  const filterableEmployees = allUsers.filter(u =>
-    !u.is_archived && (
-      user?.role === 'admin'
-        ? (u.role === 'employee' || u.role === 'management')
-        : u.role === 'employee'
-    )
-  );
+  // Employees filterable depend on effective perspective
+  const filterableEmployees = allUsers.filter(u => {
+    if (!u.is_archived) {
+      if (effectiveUser?.role === 'management') return u.role === 'employee' && u.manager_id === effectiveUser.id;
+      if (user?.role === 'admin' && !viewAsUser) return u.role === 'employee' || u.role === 'management';
+    }
+    return false;
+  });
 
   const { data: allClients = [] } = useQuery({
-    queryKey: ["clients", user?.role],
+    queryKey: ["clients", effectiveUser?.id, effectiveUser?.role],
     queryFn: async () => {
       const all = await base44.entities.Client.list();
-      if (!user) return all;
-      if (user.role === 'admin' || user.role === 'management') return all;
-      if (user.role === 'employee') {
-        return all.filter(c => c.assigned_employee_id === user.id || c.created_by === user.email);
+      if (!effectiveUser) return all;
+      if (effectiveUser.role === 'admin') return all;
+      if (effectiveUser.role === 'management') {
+        const empIds = allUsers.filter(u => u.manager_id === effectiveUser.id).map(u => u.id);
+        return all.filter(c => empIds.includes(c.assigned_employee_id));
+      }
+      if (effectiveUser.role === 'employee') {
+        return all.filter(c => c.assigned_employee_id === effectiveUser.id || c.created_by === effectiveUser.email);
       }
       return all;
     },
-    enabled: !!user
+    enabled: !!effectiveUser
   });
 
-  // Clients visible after employee filter (for admin/management)
-  const clients = (user?.role === 'admin' || user?.role === 'management') && employeeFilter !== 'all'
+  // Clients visible after employee filter
+  const clients = (effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && employeeFilter !== 'all'
     ? allClients.filter(c => {
         const emp = filterableEmployees.find(e => e.id === employeeFilter);
         return emp && (c.assigned_employee_id === emp.id || c.created_by === emp.email);
@@ -86,17 +93,15 @@ export default function TimeTracking() {
   const clientIds = allClients.map(c => c.id);
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", user?.role],
+    queryKey: ["timeEntries", effectiveUser?.id, effectiveUser?.role],
     queryFn: async () => {
       const allEntries = await base44.entities.TimeEntry.list("-created_date");
-      if (!user) return allEntries;
-      if (user.role === 'admin' || user.role === 'management') return allEntries;
-      if (user.role === 'employee') {
-        return allEntries.filter(e => clientIds.includes(e.client_id));
-      }
-      return allEntries;
+      if (!effectiveUser) return allEntries;
+      if (effectiveUser.role === 'admin') return allEntries;
+      // management or employee: filter to their client scope
+      return allEntries.filter(e => clientIds.includes(e.client_id));
     },
-    enabled: !!user && allClients.length >= 0
+    enabled: !!effectiveUser && allClients.length >= 0
   });
 
   const handleRefresh = () => {
