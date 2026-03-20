@@ -67,18 +67,29 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
   const initConversation = async () => {
     setInitializing(true);
     try {
-      // List all conversations for this agent and filter to only this user's
-      const existing = await base44.agents.listConversations({ agent_name: agentKey });
-      const myConvs = (existing || []).filter(c => c.metadata?.user_id === userId);
-      let conv;
-      if (myConvs.length > 0) {
-        conv = await base44.agents.getConversation(myConvs[0].id);
-      } else {
+      // Use localStorage scoped by userId+agentKey to avoid cross-user contamination
+      const storageKey = `staff_agent_conv_${agentKey}_${userId}`;
+      const savedConvId = localStorage.getItem(storageKey);
+      let conv = null;
+
+      if (savedConvId) {
+        try {
+          conv = await base44.agents.getConversation(savedConvId);
+          // Discard if it belongs to a different user
+          if (conv?.metadata?.user_id !== userId) conv = null;
+        } catch {
+          conv = null;
+        }
+      }
+
+      if (!conv) {
         conv = await base44.agents.createConversation({
           agent_name: agentKey,
           metadata: { name: `${agentName} session`, user_id: userId }
         });
+        localStorage.setItem(storageKey, conv.id);
       }
+
       setConversation(conv);
       setMessages(conv.messages || []);
 
