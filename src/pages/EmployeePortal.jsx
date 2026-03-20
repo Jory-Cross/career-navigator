@@ -71,9 +71,9 @@ export default function EmployeePortal() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Employee Portal</h1>
         <p className="text-sm text-slate-500 mt-1">
-          {user?.role === 'admin'
+          {effectiveUser?.role === 'admin'
             ? `${allUsers.filter(u => u.role === 'management').length} managers · ${allUsers.filter(u => u.role === 'employee').length} employees`
-            : `${employees.length} employee${employees.length !== 1 ? 's' : ''} under your management`}
+            : `${employees.length} employee${employees.length !== 1 ? 's' : ''} under ${viewAsUser ? (viewAsUser.full_name || 'their') + "'s" : 'your'} management`}
         </p>
       </div>
 
