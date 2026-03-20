@@ -37,19 +37,33 @@ export default function Clients() {
     enabled: !!user
   });
 
+  // Resolve the effective user perspective (for admin "View As" feature)
+  const effectiveUser = user?.role === 'admin' && viewAsUser !== 'admin'
+    ? allUsers.find(u => u.id === viewAsUser) || user
+    : user;
+
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.id, user?.role],
+    queryKey: ["clients", user?.id, user?.role, viewAsUser],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
-      // Admin sees all clients
-      if (user.role === 'admin') return allClients;
-      // Management sees clients assigned to employees under them
+      // Admin (not viewing as someone else) sees all clients
+      if (user.role === 'admin' && viewAsUser === 'admin') return allClients;
+      // Determine the effective role/id to filter by
+      const effId = effectiveUser?.id;
+      const effRole = effectiveUser?.role;
+      if (effRole === 'management') {
+        const myEmployeeIds = allUsers.filter(u => u.manager_id === effId).map(u => u.id);
+        return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
+      }
+      if (effRole === 'employee') {
+        return allClients.filter(c => c.assigned_employee_id === effId);
+      }
+      // Management (real role, not impersonating) sees their team's clients
       if (user.role === 'management') {
         const myEmployeeIds = allUsers.filter(u => u.manager_id === user.id).map(u => u.id);
         return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
       }
-      // Employees see only clients assigned to them
       return allClients.filter(c => c.assigned_employee_id === user.id);
     },
     enabled: !!user && allUsers.length >= 0
