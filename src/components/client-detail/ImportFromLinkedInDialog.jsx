@@ -11,11 +11,141 @@ import { toast } from "sonner";
 import { Loader2, Briefcase, GraduationCap, Zap, CheckCircle2, ChevronDown, ChevronUp, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const statusOptions = [
+  { value: "saved", label: "Saved" },
+  { value: "applied", label: "Applied" },
+  { value: "phone_screen", label: "Phone Screen" },
+  { value: "interview", label: "Interview" },
+  { value: "final_round", label: "Final Round" },
+  { value: "offer", label: "Offer" },
+  { value: "rejected", label: "Rejected" },
+  { value: "accepted", label: "Accepted" },
+  { value: "withdrawn", label: "Withdrawn" },
+];
+
+function AppEditRow({ app, selected, onToggle, onChange }) {
+  const [expanded, setExpanded] = useState(false);
+  const u = (field, value) => onChange({ ...app, [field]: value });
+
+  return (
+    <div className={cn("border rounded-lg transition-all", selected ? "border-blue-400 bg-blue-50/50" : "border-slate-200 bg-white")}>
+      <div className="flex items-start gap-2 p-3 cursor-pointer" onClick={onToggle}>
+        <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center mt-0.5 shrink-0", selected ? "bg-blue-500 border-blue-500" : "border-slate-300")}>
+          {selected && <CheckCircle2 className="w-3 h-3 text-white" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-800">{app.position || "Unknown Position"}</p>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
+            <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{app.company || "Unknown"}</span>
+            {app.location && <span>{app.location}</span>}
+            {app.applied_date && <span>{app.applied_date}</span>}
+          </div>
+        </div>
+        <button onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} className="text-slate-400 hover:text-slate-600 ml-1 shrink-0">
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-100 pt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Company *</Label>
+              <Input value={app.company || ""} onChange={e => u("company", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Position *</Label>
+              <Input value={app.position || ""} onChange={e => u("position", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Status</Label>
+              <Select value={app.status || "saved"} onValueChange={v => u("status", v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Applied Date</Label>
+              <Input type="date" value={app.applied_date || ""} onChange={e => u("applied_date", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Location</Label>
+              <Input value={app.location || ""} onChange={e => u("location", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Work Type</Label>
+              <Select value={app.work_type || ""} onValueChange={v => u("work_type", v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="remote">Remote</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                  <SelectItem value="onsite">On-site</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Job URL</Label>
+              <Input value={app.job_url || ""} onChange={e => u("job_url", e.target.value)} className="h-8 text-xs" placeholder="https://..." />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Salary Range</Label>
+              <Input value={app.salary_range || ""} onChange={e => u("salary_range", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Contact Name</Label>
+              <Input value={app.contact_name || ""} onChange={e => u("contact_name", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Contact Email</Label>
+              <Input value={app.contact_email || ""} onChange={e => u("contact_email", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Next Step</Label>
+              <Input value={app.next_step || ""} onChange={e => u("next_step", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Next Step Date</Label>
+              <Input type="date" value={app.next_step_date || ""} onChange={e => u("next_step_date", e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs text-slate-500">Notes</Label>
+              <Textarea value={app.notes || ""} onChange={e => u("notes", e.target.value)} rows={2} className="text-xs" />
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Bell className="w-3.5 h-3.5 text-blue-600" />
+              <Label className="text-xs font-semibold">Follow-up Reminders</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">Follow-up after (days)</Label>
+                <Input type="number" value={app.follow_up_cadence_days || 7} onChange={e => u("follow_up_cadence_days", parseInt(e.target.value))} min="1" className="h-8 text-xs" />
+              </div>
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={app.follow_up_enabled !== false} onChange={e => u("follow_up_enabled", e.target.checked)} className="w-4 h-4 rounded border-slate-300" />
+                  <span className="text-xs text-slate-600">Enable reminders</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ImportFromLinkedInDialog({ open, onClose, clientId, onImported }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [parsed, setParsed] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [applications, setApplications] = useState([]);
+  const [selected, setSelected] = useState([]);
 
   const handleFetch = async () => {
     if (!url.trim()) {
