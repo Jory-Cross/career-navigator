@@ -34,8 +34,10 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
     }
     setSaving(true);
     
+    const actualClientId = clientId?.startsWith('self:') ? null : clientId;
+    
     await base44.entities.TimeEntry.create({
-      client_id: clientId,
+      client_id: actualClientId,
       date,
       start_time: startTime,
       end_time: endTime,
@@ -49,7 +51,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
     const endDateTime = `${date}T${endTime}`;
     
     await base44.entities.Meeting.create({
-      client_id: clientId,
+      client_id: actualClientId,
       title: description || "Manual entry",
       meeting_type: category,
       start_datetime: startDateTime,
