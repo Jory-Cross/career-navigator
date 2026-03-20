@@ -5,7 +5,7 @@ import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Archive } from "lucide-react";
+import { Plus, Search, Archive, Eye } from "lucide-react";
 import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
 
