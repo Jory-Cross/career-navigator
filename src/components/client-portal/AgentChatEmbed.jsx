@@ -28,13 +28,26 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
   const initConversation = async () => {
     setInitializing(true);
     try {
-      // Always create a fresh conversation — no caching to prevent stale context
-      const conv = await base44.agents.createConversation({
-        agent_name: agentKey,
-        metadata: { name: `${title} session`, client_id: clientId }
-      });
+      const storageKey = `agent_conv_v2_${agentKey}_${clientId || 'anonymous'}`;
+      const savedConvId = localStorage.getItem(storageKey);
+      let conv = null;
+      if (savedConvId) {
+        try {
+          conv = await base44.agents.getConversation(savedConvId);
+          if (conv && clientId && conv.metadata?.client_id !== clientId) conv = null;
+        } catch {
+          conv = null;
+        }
+      }
+      if (!conv) {
+        conv = await base44.agents.createConversation({
+          agent_name: agentKey,
+          metadata: { name: `${title} session`, client_id: clientId }
+        });
+        localStorage.setItem(storageKey, conv.id);
+      }
       setConversation(conv);
-      setMessages([]);
+      setMessages(conv.messages || []);
       base44.agents.subscribeToConversation(conv.id, (data) => {
         setMessages(data.messages || []);
       });
