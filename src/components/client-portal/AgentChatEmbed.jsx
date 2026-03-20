@@ -70,8 +70,11 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     const text = input.trim();
     setInput("");
     setLoading(true);
+    // On first user message, prepend system context so agent knows who it's talking to
+    const hasUserMessage = messages.some(m => m.role === "user");
+    const content = (!hasUserMessage && systemContext) ? `[Context: ${systemContext}]\n\nUser message: ${text}` : text;
     try {
-      await base44.agents.addMessage(conversation, { role: "user", content: text });
+      await base44.agents.addMessage(conversation, { role: "user", content });
     } catch (error) {
       toast.error("Failed to send message");
     } finally {
