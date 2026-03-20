@@ -127,6 +127,24 @@ export default function Clients() {
             <SelectItem value="employed">Employed</SelectItem>
           </SelectContent>
         </Select>
+        {(user?.role === 'admin' || user?.role === 'management') && (() => {
+          const visibleEmployees = user.role === 'admin'
+            ? allUsers.filter(u => u.role === 'employee')
+            : allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
+          return visibleEmployees.length > 0 ? (
+            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+              <SelectTrigger className="w-44 border-slate-200">
+                <SelectValue placeholder="All Employees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {visibleEmployees.map(e => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null;
+        })()}
         <Button
           variant={showArchived ? "default" : "outline"}
           onClick={() => setShowArchived(!showArchived)}
