@@ -48,7 +48,7 @@ const AGENTS = [
   }
 ];
 
-function AgentChat({ agentKey, agentName }) {
+function AgentChat({ agentKey, agentName, userId }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -57,8 +57,8 @@ function AgentChat({ agentKey, agentName }) {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    initConversation();
-  }, [agentKey]);
+    if (userId) initConversation();
+  }, [agentKey, userId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,17 +67,16 @@ function AgentChat({ agentKey, agentName }) {
   const initConversation = async () => {
     setInitializing(true);
     try {
-      // Try to find an existing conversation for this user+agent
+      // List all conversations for this agent and filter to only this user's
       const existing = await base44.agents.listConversations({ agent_name: agentKey });
+      const myConvs = (existing || []).filter(c => c.metadata?.user_id === userId);
       let conv;
-      if (existing && existing.length > 0) {
-        // Load the most recent conversation
-        conv = await base44.agents.getConversation(existing[0].id);
+      if (myConvs.length > 0) {
+        conv = await base44.agents.getConversation(myConvs[0].id);
       } else {
-        // Create a new conversation only if none exists
         conv = await base44.agents.createConversation({
           agent_name: agentKey,
-          metadata: { name: `${agentName} session` }
+          metadata: { name: `${agentName} session`, user_id: userId }
         });
       }
       setConversation(conv);
