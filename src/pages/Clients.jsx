@@ -78,7 +78,8 @@ export default function Clients() {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     const matchType = typeFilter === "all" || (c.client_type || "job_seeker") === typeFilter;
     const matchArchived = showArchived ? c.is_archived : !c.is_archived;
-    return matchSearch && matchStatus && matchType && matchArchived;
+    const matchEmployee = employeeFilter === "all" || c.assigned_employee_id === employeeFilter;
+    return matchSearch && matchStatus && matchType && matchArchived && matchEmployee;
   });
 
   return (
