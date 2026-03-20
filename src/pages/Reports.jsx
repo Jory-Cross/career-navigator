@@ -30,11 +30,13 @@ export default function Reports() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
+
   useEffect(() => {
     if (user) {
       loadData();
     }
-  }, [user]);
+  }, [user, viewAsUser]);
 
   const loadData = async () => {
     if (!user) return;
