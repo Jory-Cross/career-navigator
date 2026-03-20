@@ -8,7 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function AgentChatEmbed({ agentKey, title, description }) {
+export default function AgentChatEmbed({ agentKey, title, description, clientId }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -19,7 +19,7 @@ export default function AgentChatEmbed({ agentKey, title, description }) {
   useEffect(() => {
     initConversation();
     return () => {};
-  }, [agentKey]);
+  }, [agentKey, clientId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,12 +28,17 @@ export default function AgentChatEmbed({ agentKey, title, description }) {
   const initConversation = async () => {
     setInitializing(true);
     try {
-      const storageKey = `agent_conv_${agentKey}`;
+      // Scope the storage key by clientId so each client has their own conversation
+      const storageKey = `agent_conv_${agentKey}_${clientId || 'anonymous'}`;
       const savedConvId = localStorage.getItem(storageKey);
       let conv;
       if (savedConvId) {
         try {
           conv = await base44.agents.getConversation(savedConvId);
+          // Verify the conversation belongs to this client
+          if (conv && conv.metadata?.client_id && conv.metadata.client_id !== clientId) {
+            conv = null;
+          }
         } catch {
           conv = null;
         }
@@ -41,7 +46,7 @@ export default function AgentChatEmbed({ agentKey, title, description }) {
       if (!conv) {
         conv = await base44.agents.createConversation({
           agent_name: agentKey,
-          metadata: { name: `${title} session` }
+          metadata: { name: `${title} session`, client_id: clientId }
         });
         localStorage.setItem(storageKey, conv.id);
       }
