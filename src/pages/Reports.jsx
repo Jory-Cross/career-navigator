@@ -414,7 +414,7 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {user?.role === 'management' && (
+        {(user?.role === 'management' || user?.role === 'admin') && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Hours by Employee</CardTitle>
