@@ -140,6 +140,11 @@ export default function Layout({ children, currentPageName }) {
             </button>
           </div>
 
+          {/* View As Switcher - Admin only */}
+          {user?.role === 'admin' && (
+            <ViewAsSwitcher user={user} viewAsUser={viewAsUser} setViewAsUser={setViewAsUser} />
+          )}
+
           {/* Role Switcher */}
           {availableRoles && (
             <div className="relative">
