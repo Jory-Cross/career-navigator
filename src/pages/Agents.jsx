@@ -48,7 +48,7 @@ const AGENTS = [
   }
 ];
 
-function AgentChat({ agentKey, agentName, userId }) {
+function AgentChat({ agentKey, agentName, userId, systemContext }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
