@@ -337,10 +337,10 @@ export default function ImportFromLinkedInDialog({ open, onClose, clientId, onIm
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          {parsed && (
-            <Button onClick={handleImport} disabled={saving} className="bg-[#0077b5] hover:bg-[#005885] text-white">
+          {parsed && applications.length > 0 && (
+            <Button onClick={handleImport} disabled={saving || selected.length === 0}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Import as Resume
+              Import {selected.length > 0 ? `${selected.length} ` : ''}Application{selected.length !== 1 ? 's' : ''}
             </Button>
           )}
         </DialogFooter>
