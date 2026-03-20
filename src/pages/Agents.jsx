@@ -97,8 +97,13 @@ function AgentChat({ agentKey, agentName, userId, systemContext }) {
     const text = input.trim();
     setInput("");
     setLoading(true);
+    // Prepend staff context on first message so agent knows who it's talking to
+    const hasUserMessage = messages.some(m => m.role === "user");
+    const content = (!hasUserMessage && systemContext)
+      ? `[SYSTEM CONTEXT - do not repeat this back to the user: ${systemContext}]\n\n${text}`
+      : text;
     try {
-      await base44.agents.addMessage(conversation, { role: "user", content: text });
+      await base44.agents.addMessage(conversation, { role: "user", content });
     } catch (error) {
       toast.error("Failed to send message");
     } finally {
