@@ -180,6 +180,11 @@ function SupportNotesTab({ clientId, isStaff }) {
               <Label className="text-xs">Note Content *</Label>
               <Textarea rows={5} value={form.content || ""} onChange={e => setForm(p => ({ ...p, content: e.target.value }))} />
             </div>
+            <div>
+              <Label className="text-xs">Time Spent (minutes)</Label>
+              <Input type="number" min="0" step="5" value={form.duration_minutes || 0} onChange={e => setForm(p => ({ ...p, duration_minutes: parseInt(e.target.value) || 0 }))} placeholder="30" />
+              <p className="text-xs text-slate-400 mt-1">Time will be logged as an admin time entry</p>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
