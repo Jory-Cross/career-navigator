@@ -67,6 +67,39 @@ export default function Layout({ children, currentPageName }) {
 
   const availableRoles = user?.roles?.length > 1 ? user.roles : null;
 
+  const openProfile = () => {
+    setProfileForm({ phone: user?.phone || "", title: user?.title || "", avatar_url: user?.avatar_url || "" });
+    setShowProfile(true);
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setProfileForm(p => ({ ...p, avatar_url: file_url }));
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await base44.auth.updateMe(profileForm);
+      setUser(u => ({ ...u, ...profileForm }));
+      toast.success("Profile updated");
+      setShowProfile(false);
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       <style>{`
