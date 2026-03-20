@@ -49,39 +49,30 @@ export default function Reports() {
         base44.entities.Task.list(),
         base44.entities.TimeEntry.list(),
         base44.entities.Meeting.list(),
-        (user.role === 'management' || user.role === 'admin') ? base44.entities.User.list() : Promise.resolve([])
+        base44.entities.User.list()
       ]);
 
       setAllUsers(users);
 
-      // Filter data based on user role
-      const filteredClients = user.role === 'management' 
-        ? allClients 
-        : allClients.filter(c => c.created_by === user.email);
+      // Use effectiveUser to scope data
+      const eff = (user.role === 'admin' && viewAsUser) ? viewAsUser : user;
+      let filteredClients;
+      if (eff.role === 'admin') {
+        filteredClients = allClients;
+      } else if (eff.role === 'management') {
+        const empIds = users.filter(u => u.manager_id === eff.id).map(u => u.id);
+        filteredClients = allClients.filter(c => empIds.includes(c.assigned_employee_id));
+      } else {
+        filteredClients = allClients.filter(c => c.assigned_employee_id === eff.id || c.created_by === eff.email);
+      }
       
       const clientIds = filteredClients.map(c => c.id);
 
-      const filteredApps = user.role === 'management'
-        ? allApps
-        : allApps.filter(a => clientIds.includes(a.client_id));
-
-      const filteredTasks = user.role === 'management'
-        ? allTasks
-        : allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id)));
-
-      const filteredEntries = user.role === 'management'
-        ? allEntries
-        : allEntries.filter(e => clientIds.includes(e.client_id));
-
-      const filteredMeetings = user.role === 'management'
-        ? allMeetings
-        : allMeetings.filter(m => clientIds.includes(m.client_id));
-
       setClients(filteredClients);
-      setApplications(filteredApps);
-      setTasks(filteredTasks);
-      setTimeEntries(filteredEntries);
-      setMeetings(filteredMeetings);
+      setApplications(allApps.filter(a => clientIds.includes(a.client_id)));
+      setTasks(allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id))));
+      setTimeEntries(eff.role === 'admin' ? allEntries : allEntries.filter(e => clientIds.includes(e.client_id)));
+      setMeetings(allMeetings.filter(m => clientIds.includes(m.client_id)));
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
