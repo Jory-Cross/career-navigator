@@ -203,6 +203,14 @@ export default function AgentsPage() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  const getSystemContext = (agentKey) => {
+    if (!user) return null;
+    if (agentKey === "career_coach" || agentKey === "interview_prep_coach") {
+      return `You are speaking with ${user.full_name}, a staff member (role: ${user.role}) at a vocational rehabilitation / employment services organization. They are using you as a tool to assist their clients or test capabilities. Address them professionally as a colleague, not as a job seeker.`;
+    }
+    return null;
+  };
+
   const selectedAgentConfig = AGENTS.find(a => a.key === selectedAgent);
 
   return (
