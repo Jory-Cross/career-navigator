@@ -127,7 +127,7 @@ export default function Calendar() {
         await base44.entities.Meeting.update(editingMeeting.id, meetingData);
         toast.success("Meeting updated");
       } else {
-        const { recurrence, recurrence_count, ...baseData } = form;
+        const { recurrence, recurrence_count, ...baseData } = normalizedForm;
         const count = recurrence === "none" ? 1 : (parseInt(recurrence_count) || 4);
         const startDt = parseISO(form.start_datetime);
         const endDt = form.end_datetime ? parseISO(form.end_datetime) : null;
