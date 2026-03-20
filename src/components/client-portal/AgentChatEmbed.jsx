@@ -49,6 +49,11 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
           metadata: { name: `${title} session`, client_id: clientId }
         });
         localStorage.setItem(storageKey, conv.id);
+        // Inject system context so the agent knows who it's talking to
+        if (systemContext) {
+          await base44.agents.addMessage(conv, { role: "system", content: systemContext });
+          conv = await base44.agents.getConversation(conv.id);
+        }
       }
       setConversation(conv);
       setMessages(conv.messages || []);
