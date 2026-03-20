@@ -343,6 +343,24 @@ export default function Layout({ children, currentPageName }) {
                 </Select>
               </div>
             )}
+            {(user?.role === 'admin' || user?.role === 'management') && (
+              <div className="space-y-1">
+                <Label className="text-xs">Timezone</Label>
+                <Select
+                  value={profileForm.timezone || ""}
+                  onValueChange={val => setProfileForm(p => ({ ...p, timezone: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMON_TIMEZONES.map(tz => (
+                      <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowProfile(false)}>Cancel</Button>
