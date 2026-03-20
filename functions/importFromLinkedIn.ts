@@ -38,26 +38,47 @@ Deno.serve(async (req) => {
       .slice(0, 10000);
 
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: `You are a resume data extraction assistant. Extract professional profile information from this LinkedIn profile page content.
+      prompt: `You are a professional data extraction assistant. Extract job application information from this LinkedIn profile page content.
 
 Page content:
 ${textContent}
 
-Extract the following from the profile:
+Extract job application data for companies where the person has worked. For each position, extract:
+- Company name
+- Job position/title
+- Location (if available)
+- When they worked there (as YYYY-MM-DD if possible, otherwise leave empty)
+- Industry/type (if remote/hybrid/onsite can be inferred, include it)
+- Any salary info mentioned
+
+Also extract general profile info:
 - Full name
 - Professional headline/summary
-- Work experience (company, role/title, start date, end date or "Present", description)
-- Education (institution, degree, field of study, graduation year)
 - Skills list
-- Certifications (name, issuer, year if available)
+- Work experience details
+- Education
 
-Convert date formats to readable strings like "Jan 2020" or "2020". If a field is not found, use empty string or empty array.`,
+If a field is not found, use empty string or empty array.`,
       response_json_schema: {
         type: "object",
         properties: {
           full_name: { type: "string" },
           headline: { type: "string" },
           summary: { type: "string" },
+          job_applications: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                company: { type: "string" },
+                position: { type: "string" },
+                location: { type: "string" },
+                applied_date: { type: "string" },
+                work_type: { type: "string" },
+                salary_range: { type: "string" }
+              }
+            }
+          },
           experience: {
             type: "array",
             items: {
