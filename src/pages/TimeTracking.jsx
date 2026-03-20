@@ -111,6 +111,7 @@ export default function TimeTracking() {
   };
 
   const getClientName = (id) => {
+    if (!id) return "Myself";
     const c = allClients.find(c => c.id === id);
     return c ? `${c.first_name} ${c.last_name}` : "Unknown";
   };
