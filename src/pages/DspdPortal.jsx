@@ -38,7 +38,7 @@ const GOAL_STATUS_CONFIG = {
 // ─── Support Notes Tab ───────────────────────────────────────────────────────
 function SupportNotesTab({ clientId, isStaff }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0] });
+  const [form, setForm] = useState({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], duration_minutes: 30 });
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -54,11 +54,25 @@ function SupportNotesTab({ clientId, isStaff }) {
     if (!form.content || !form.date) { toast.error("Date and content are required"); return; }
     setSaving(true);
     try {
+      // Create support note
       await base44.entities.SupportNote.create({ ...form, client_id: clientId });
+      
+      // Create time entry if duration is set
+      if (form.duration_minutes && form.duration_minutes > 0) {
+        await base44.entities.TimeEntry.create({
+          client_id: clientId,
+          date: form.date,
+          duration_minutes: form.duration_minutes,
+          description: form.title || form.content?.substring(0, 50),
+          category: "admin",
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["support-notes", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["work-schedule", clientId] });
       setShowAdd(false);
-      setForm({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0] });
-      toast.success("Note saved");
+      setForm({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], duration_minutes: 30 });
+      toast.success("Note saved and time logged");
     } catch { toast.error("Failed to save"); }
     finally { setSaving(false); }
   };
