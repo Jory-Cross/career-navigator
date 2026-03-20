@@ -167,7 +167,7 @@ export default function Clients() {
             <SelectItem value="employed">Employed</SelectItem>
           </SelectContent>
         </Select>
-        {(user?.role === 'admin' || user?.role === 'management') && (() => {
+        {(user?.role === 'admin' || user?.role === 'management') && viewAsUser === 'admin' && (() => {
           const visibleEmployees = user.role === 'admin'
             ? allUsers.filter(u => u.role === 'employee')
             : allUsers.filter(u => u.role === 'employee' && u.manager_id === user.id);
