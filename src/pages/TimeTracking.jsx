@@ -93,16 +93,17 @@ export default function TimeTracking() {
   const clientIds = allClients.map(c => c.id);
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", effectiveUser?.id, effectiveUser?.role],
-    queryFn: async () => {
-      const allEntries = await base44.entities.TimeEntry.list("-created_date");
-      if (!effectiveUser) return allEntries;
-      if (effectiveUser.role === 'admin') return allEntries;
-      // management or employee: filter to their client scope
-      return allEntries.filter(e => clientIds.includes(e.client_id));
-    },
-    enabled: !!effectiveUser && allClients.length >= 0
+    queryKey: ["timeEntries"],
+    queryFn: () => base44.entities.TimeEntry.list("-created_date"),
+    enabled: !!effectiveUser,
   });
+
+  // Filter time entries to only those for visible clients (when not admin)
+  const scopedTimeEntries = React.useMemo(() => {
+    if (!effectiveUser) return timeEntries;
+    if (effectiveUser.role === 'admin' && !viewAsUser) return timeEntries;
+    return timeEntries.filter(e => clientIds.includes(e.client_id));
+  }, [timeEntries, clientIds, effectiveUser, viewAsUser]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
