@@ -492,7 +492,13 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
           <div className="mt-6">
-            <AgentChatEmbed agentKey="interview_prep_coach" title="Interview Coach" description="Practice interviews and get real-time coaching feedback" clientId={client?.id} />
+            <AgentChatEmbed
+              agentKey="interview_prep_coach"
+              title="Interview Coach"
+              description="Practice interviews and get real-time coaching feedback"
+              clientId={client?.id}
+              systemContext={`You are speaking with ${client?.first_name} ${client?.last_name}. Their target role is: ${client?.target_role || "not specified"}. Their target industry is: ${client?.industry || "not specified"}. Always address them by their first name (${client?.first_name}).`}
+            />
           </div>
         </TabsContent>
 
