@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,17 @@ export default function ClientHeader({ client, onUpdate }) {
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
   const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
+  const [employers, setEmployers] = useState([]);
   const fileInputRef = useRef(null);
   const coverLetterInputRef = useRef(null);
+
+  useEffect(() => {
+    if (client.client_type === 'pre_ets') {
+      base44.entities.User.list().then(users => {
+        setEmployers(users.filter(u => u.role === 'pre_ets_employer'));
+      }).catch(() => {});
+    }
+  }, [client.client_type]);
 
   const startEdit = () => {
     setForm({ ...client });
