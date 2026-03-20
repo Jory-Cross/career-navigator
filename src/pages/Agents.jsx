@@ -253,7 +253,7 @@ export default function AgentsPage() {
               <Button variant="ghost" size="sm" onClick={() => setSelectedAgent(null)}>← Back</Button>
             </div>
           </CardHeader>
-          <AgentChat agentKey={selectedAgent} agentName={selectedAgentConfig?.name} />
+          <AgentChat agentKey={selectedAgent} agentName={selectedAgentConfig?.name} userId={user?.id} />
         </Card>
       )}
     </div>
