@@ -14,6 +14,7 @@ import EmployeeDetail from "@/components/employees/EmployeeDetail";
 import AdminHierarchyView from "@/components/employees/AdminHierarchyView";
 
 export default function EmployeePortal() {
+  const { viewAsUser } = useViewAs();
   const [user, setUser] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const navigate = useNavigate();
