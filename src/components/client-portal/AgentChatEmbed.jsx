@@ -99,7 +99,14 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     await initConversation();
   };
 
-  const visibleMessages = messages.filter(m => m.role !== "system");
+  const visibleMessages = messages
+    .filter(m => m.role !== "system")
+    .map(m => {
+      if (m.role === "user" && m.content?.includes("[SYSTEM CONTEXT")) {
+        return { ...m, content: m.content.replace(/\[SYSTEM CONTEXT[^\]]*\][^\n]*\n\n/, "") };
+      }
+      return m;
+    });
 
   return (
     <Card className="border-0 shadow-sm">
