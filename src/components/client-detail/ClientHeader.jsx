@@ -142,7 +142,20 @@ export default function ClientHeader({ client, onUpdate }) {
             </SelectContent>
           </Select>
         </div>
-        <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
+        {form.client_type === 'pre_ets' && employers.length > 0 && (
+          <div className="col-span-2">
+            <Select value={form.assigned_employer_id || "none"} onValueChange={v => u("assigned_employer_id", v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Assign Pre-ETS Employer..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No Employer Assigned —</SelectItem>
+                {employers.map(e => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} className="col-span-2" />
       </Card>
     );
   }
