@@ -69,9 +69,13 @@ export default function Layout({ children, currentPageName }) {
 
   const availableRoles = user?.roles?.length > 1 ? user.roles : null;
 
-  const openProfile = () => {
-    setProfileForm({ phone: user?.phone || "", title: user?.title || "", avatar_url: user?.avatar_url || "" });
+  const openProfile = async () => {
+    setProfileForm({ phone: user?.phone || "", title: user?.title || "", avatar_url: user?.avatar_url || "", manager_id: user?.manager_id || "" });
     setShowProfile(true);
+    try {
+      const allUsers = await base44.entities.User.list();
+      setManagers(allUsers.filter(u => u.role === 'admin' || u.role === 'management'));
+    } catch {}
   };
 
   const handleAvatarUpload = async (e) => {
