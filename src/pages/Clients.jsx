@@ -17,6 +17,7 @@ export default function Clients() {
   const [showArchived, setShowArchived] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [viewAsUser, setViewAsUser] = useState("admin");
   const [user, setUser] = useState(null);
 
   useEffect(() => {
