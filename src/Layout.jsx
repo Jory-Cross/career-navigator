@@ -104,6 +104,8 @@ export default function Layout({ children, currentPageName }) {
         navigate(createPageUrl('PreEtsPortal'));
       } else if (currentUser?.role === 'dspd' && currentPageName !== 'DspdPortal') {
         navigate(createPageUrl('DspdPortal'));
+      } else if (currentUser?.role === 'pre_ets_employer' && currentPageName !== 'PreEtsEmployerPortal') {
+        navigate('/PreEtsEmployerPortal');
       }
     }).catch(() => {});
   }, [currentPageName, navigate]);

@@ -11,6 +11,7 @@ import Pricing from './pages/Pricing';
 import OrgSignup from './pages/OrgSignup';
 import OrgDashboard from './pages/OrgDashboard';
 import DspdPortal from './pages/DspdPortal';
+import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
 import Agents from './pages/Agents';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="/EmployeePortal" element={<LayoutWrapper currentPageName="EmployeePortal"><EmployeePortal /></LayoutWrapper>} />
       <Route path="/DspdPortal" element={<LayoutWrapper currentPageName="DspdPortal"><DspdPortal /></LayoutWrapper>} />
+      <Route path="/PreEtsEmployerPortal" element={<PreEtsEmployerPortal />} />
       <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
