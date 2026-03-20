@@ -135,34 +135,36 @@ export default function Calendar() {
         const endDt = form.end_datetime ? parseISO(form.end_datetime) : null;
         const durationMs = endDt ? endDt - startDt : 0;
 
-        const promises = [];
-        for (let i = 0; i < count; i++) {
-          let newStart, newEnd;
-          if (recurrence === "daily") {
-            newStart = addDays(startDt, i);
-            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
-          } else if (recurrence === "weekly") {
-            newStart = addWeeks(startDt, i);
-            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
-          } else if (recurrence === "biweekly") {
-            newStart = addWeeks(startDt, i * 2);
-            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
-          } else if (recurrence === "monthly") {
-            newStart = addMonths(startDt, i);
-            newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
-          } else {
-            newStart = startDt;
-            newEnd = endDt;
-          }
-          promises.push(base44.entities.Meeting.create({
-            ...baseData,
-            start_datetime: newStart.toISOString(),
-            end_datetime: newEnd ? newEnd.toISOString() : undefined,
-          }));
-          if (recurrence === "none") break;
-        }
-        await Promise.all(promises);
-        toast.success(count > 1 ? `${count} recurring meetings scheduled` : "Meeting scheduled");
+        const seriesId = `series_${Date.now()}`;
+         const promises = [];
+         for (let i = 0; i < count; i++) {
+           let newStart, newEnd;
+           if (recurrence === "daily") {
+             newStart = addDays(startDt, i);
+             newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+           } else if (recurrence === "weekly") {
+             newStart = addWeeks(startDt, i);
+             newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+           } else if (recurrence === "biweekly") {
+             newStart = addWeeks(startDt, i * 2);
+             newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+           } else if (recurrence === "monthly") {
+             newStart = addMonths(startDt, i);
+             newEnd = endDt ? new Date(newStart.getTime() + durationMs) : null;
+           } else {
+             newStart = startDt;
+             newEnd = endDt;
+           }
+           promises.push(base44.entities.Meeting.create({
+             ...baseData,
+             series_id: recurrence === "none" ? undefined : seriesId,
+             start_datetime: newStart.toISOString(),
+             end_datetime: newEnd ? newEnd.toISOString() : undefined,
+           }));
+           if (recurrence === "none") break;
+         }
+         await Promise.all(promises);
+         toast.success(count > 1 ? `${count} recurring meetings scheduled` : "Meeting scheduled");
       }
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
       setShowNew(false);
