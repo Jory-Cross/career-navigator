@@ -99,7 +99,7 @@ export default function TimeTracking() {
   });
 
   // Filter time entries to only those for visible clients (when not admin)
-  const scopedTimeEntries = React.useMemo(() => {
+  const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === 'admin' && !viewAsUser) return timeEntries;
     return timeEntries.filter(e => clientIds.includes(e.client_id));
