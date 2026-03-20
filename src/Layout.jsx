@@ -5,6 +5,7 @@ import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, Chev
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useViewAs } from "@/lib/ViewAsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

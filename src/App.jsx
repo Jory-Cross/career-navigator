@@ -13,6 +13,7 @@ import OrgDashboard from './pages/OrgDashboard';
 import DspdPortal from './pages/DspdPortal';
 import Agents from './pages/Agents';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { ViewAsProvider } from '@/lib/ViewAsContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 const { Pages, Layout, mainPage } = pagesConfig;
