@@ -38,7 +38,7 @@ const GOAL_STATUS_CONFIG = {
 // ─── Support Notes Tab ───────────────────────────────────────────────────────
 function SupportNotesTab({ clientId, isStaff }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], duration_minutes: 30 });
+  const [form, setForm] = useState({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], start_time: "", end_time: "" });
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
 
