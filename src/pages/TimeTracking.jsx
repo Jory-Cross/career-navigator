@@ -125,7 +125,7 @@ export default function TimeTracking() {
   // IDs of clients belonging to the selected employee
   const filteredClientIds = clients.map(c => c.id);
 
-  const filtered = timeEntries.filter(e => {
+  const filtered = scopedTimeEntries.filter(e => {
     if ((effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && employeeFilter !== 'all' && !filteredClientIds.includes(e.client_id)) return false;
     if (clientFilter !== "all" && e.client_id !== clientFilter) return false;
     if (!e.date) return periodFilter === "all";
