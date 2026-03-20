@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useViewAs } from "@/lib/ViewAsContext";
 import { base44 } from "@/api/base44Client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";

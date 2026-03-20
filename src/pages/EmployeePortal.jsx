@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useViewAs } from "@/lib/ViewAsContext";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
