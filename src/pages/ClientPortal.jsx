@@ -520,13 +520,15 @@ Always address them by their first name (${client?.first_name}) and tailor all a
           />
         </TabsContent>
 
-        <TabsContent value="time">
-          <TimeLogSection 
-            timeEntries={timeEntries} 
-            clientId={client.id} 
-            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['client-time-entries'] })}
-          />
-        </TabsContent>
+        {isStaff && (
+          <TabsContent value="time">
+            <TimeLogSection 
+              timeEntries={timeEntries} 
+              clientId={client.id} 
+              onRefresh={() => queryClient.invalidateQueries({ queryKey: ['client-time-entries'] })}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="activity">
           <Card className="border-0 shadow-sm">
