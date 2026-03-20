@@ -57,12 +57,22 @@ function SupportNotesTab({ clientId, isStaff }) {
       // Create support note
       await base44.entities.SupportNote.create({ ...form, client_id: clientId });
       
-      // Create time entry if duration is set
-      if (form.duration_minutes && form.duration_minutes > 0) {
+      // Create time entry if both times are set
+      if (form.start_time && form.end_time) {
+        const [startH, startM] = form.start_time.split(":");
+        const [endH, endM] = form.end_time.split(":");
+        const startDate = new Date(`${form.date}T${form.start_time}`);
+        const endDate = new Date(`${form.date}T${form.end_time}`);
+        let durationMs = endDate - startDate;
+        if (durationMs < 0) durationMs += 24 * 60 * 60 * 1000; // Handle overnight
+        const durationMinutes = Math.round(durationMs / 60000);
+        
         await base44.entities.TimeEntry.create({
           client_id: clientId,
           date: form.date,
-          duration_minutes: form.duration_minutes,
+          start_time: form.start_time,
+          end_time: form.end_time,
+          duration_minutes: durationMinutes,
           description: form.title || form.content?.substring(0, 50),
           category: "admin",
         });
@@ -71,7 +81,7 @@ function SupportNotesTab({ clientId, isStaff }) {
       queryClient.invalidateQueries({ queryKey: ["support-notes", clientId] });
       queryClient.invalidateQueries({ queryKey: ["work-schedule", clientId] });
       setShowAdd(false);
-      setForm({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], duration_minutes: 30 });
+      setForm({ note_type: "support", severity: "low", date: new Date().toISOString().split("T")[0], start_time: "", end_time: "" });
       toast.success("Note saved and time logged");
     } catch { toast.error("Failed to save"); }
     finally { setSaving(false); }
