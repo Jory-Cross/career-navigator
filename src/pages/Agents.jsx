@@ -67,10 +67,19 @@ function AgentChat({ agentKey, agentName }) {
   const initConversation = async () => {
     setInitializing(true);
     try {
-      const conv = await base44.agents.createConversation({
-        agent_name: agentKey,
-        metadata: { name: `${agentName} session` }
-      });
+      // Try to find an existing conversation for this user+agent
+      const existing = await base44.agents.listConversations({ agent_name: agentKey });
+      let conv;
+      if (existing && existing.length > 0) {
+        // Load the most recent conversation
+        conv = await base44.agents.getConversation(existing[0].id);
+      } else {
+        // Create a new conversation only if none exists
+        conv = await base44.agents.createConversation({
+          agent_name: agentKey,
+          metadata: { name: `${agentName} session` }
+        });
+      }
       setConversation(conv);
       setMessages(conv.messages || []);
 
