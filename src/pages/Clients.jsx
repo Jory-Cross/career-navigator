@@ -100,34 +100,9 @@ export default function Clients() {
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
           <p className="text-sm text-slate-500 mt-1">{activeClientsCount} active clients</p>
         </div>
-        <div className="flex items-center gap-2">
-          {user?.role === 'admin' && allUsers.filter(u => u.role === 'management' || u.role === 'employee').length > 0 && (
-            <Select value={viewAsUser} onValueChange={(val) => { setViewAsUser(val); setEmployeeFilter("all"); }}>
-              <SelectTrigger className="w-48 border-slate-200 bg-amber-50 border-amber-200">
-                <Eye className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">My View (Admin)</SelectItem>
-                {allUsers.filter(u => u.role === 'management').length > 0 && (
-                  <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Managers</div>
-                )}
-                {allUsers.filter(u => u.role === 'management').map(u => (
-                  <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>
-                ))}
-                {allUsers.filter(u => u.role === 'employee').length > 0 && (
-                  <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Employees</div>
-                )}
-                {allUsers.filter(u => u.role === 'employee').map(u => (
-                  <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button onClick={() => setShowNew(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
-            <Plus className="w-4 h-4 mr-2" /> New Client
-          </Button>
-        </div>
+        <Button onClick={() => setShowNew(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
+          <Plus className="w-4 h-4 mr-2" /> New Client
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
