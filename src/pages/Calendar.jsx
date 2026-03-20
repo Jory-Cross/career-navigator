@@ -377,7 +377,7 @@ export default function Calendar() {
                     {view === 'day' ? format(day, 'EEEE, MMMM d, yyyy') : format(day, 'd')}
                   </div>
                   <div className="space-y-1">
-                    {dayMeetings.slice(0, view === 'day' ? 999 : 2).map(meeting => {
+                     {dayMeetings.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)).slice(0, view === 'day' ? 999 : 2).map(meeting => {
                       const client = clients.find(c => c.id === meeting.client_id);
                       return (
                         <div
