@@ -128,7 +128,7 @@ export default function TimeTracking() {
   const filteredClientIds = clients.map(c => c.id);
 
   const filtered = scopedTimeEntries.filter(e => {
-    if ((effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && employeeFilter !== 'all' && !filteredClientIds.includes(e.client_id)) return false;
+    if ((effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && employeeFilter !== 'all' && e.client_id && !filteredClientIds.includes(e.client_id)) return false;
     if (clientFilter !== "all" && e.client_id !== clientFilter) return false;
     if (!e.date) return periodFilter === "all";
     const d = new Date(e.date);
