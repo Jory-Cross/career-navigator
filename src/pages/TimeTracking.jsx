@@ -140,7 +140,7 @@ export default function TimeTracking() {
   // Find duplicates: same client_id + date + start_time (or date if no start_time)
   const duplicateIds = new Set();
   const seen = {};
-  timeEntries.forEach(e => {
+  scopedTimeEntries.forEach(e => {
     const key = `${e.client_id}__${e.date}__${e.start_time || "notime"}`;
     if (seen[key]) {
       duplicateIds.add(e.id);
