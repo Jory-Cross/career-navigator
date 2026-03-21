@@ -314,6 +314,115 @@ export default function Calendar() {
     no_show: "bg-amber-100 text-amber-700"
   };
 
+  const meetingBlockColors = {
+    scheduled: "bg-blue-500 text-white border-blue-600",
+    confirmed: "bg-emerald-500 text-white border-emerald-600",
+    completed: "bg-slate-400 text-white border-slate-500",
+    cancelled: "bg-red-400 text-white border-red-500 opacity-60",
+    no_show: "bg-amber-400 text-white border-amber-500"
+  };
+
+  // Time grid constants: 7am–7pm, each hour = 60px
+  const HOUR_HEIGHT = 64;
+  const START_HOUR = 7;
+  const END_HOUR = 19;
+  const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+
+  const getTimePosition = (datetimeStr) => {
+    const dt = parseISO(datetimeStr);
+    const hours = dt.getHours() + dt.getMinutes() / 60;
+    return Math.max(0, (hours - START_HOUR) * HOUR_HEIGHT);
+  };
+
+  const getMeetingHeight = (start, end) => {
+    if (!end) return HOUR_HEIGHT; // default 1 hour
+    const startDt = parseISO(start);
+    const endDt = parseISO(end);
+    const diffHours = (endDt - startDt) / (1000 * 60 * 60);
+    return Math.max(24, diffHours * HOUR_HEIGHT);
+  };
+
+  const renderTimeGrid = (gridDays) => (
+    <div className="flex overflow-x-auto">
+      {/* Time labels */}
+      <div className="flex-shrink-0 w-14 pt-10 border-r border-slate-100">
+        {HOURS.map(h => (
+          <div key={h} style={{ height: HOUR_HEIGHT }} className="relative">
+            <span className="absolute -top-2.5 right-2 text-xs text-slate-400">
+              {h === 12 ? '12pm' : h > 12 ? `${h - 12}pm` : `${h}am`}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* Day columns */}
+      <div className="flex flex-1 min-w-0">
+        {gridDays.map(day => {
+          const dayMeetings = getMeetingsForDay(day).filter(m => m.status !== 'cancelled');
+          const isToday = isSameDay(day, new Date());
+          return (
+            <div key={day.toString()} className="flex-1 min-w-[120px] border-r border-slate-100 last:border-r-0">
+              {/* Day header */}
+              <div
+                className={cn(
+                  "h-10 flex flex-col items-center justify-center border-b border-slate-100 cursor-pointer hover:bg-slate-50 sticky top-0 bg-white z-10",
+                  isToday && "bg-blue-50"
+                )}
+                onClick={() => openNew(day)}
+              >
+                <span className="text-xs text-slate-500">{format(day, 'EEE')}</span>
+                <span className={cn("text-sm font-semibold", isToday ? "text-blue-600" : "text-slate-800")}>
+                  {format(day, 'd')}
+                </span>
+              </div>
+              {/* Time slots */}
+              <div
+                className="relative cursor-pointer"
+                style={{ height: HOURS.length * HOUR_HEIGHT }}
+                onClick={() => openNew(day)}
+              >
+                {/* Hour lines */}
+                {HOURS.map(h => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t border-slate-100"
+                    style={{ top: (h - START_HOUR) * HOUR_HEIGHT }}
+                  />
+                ))}
+                {/* Half-hour lines */}
+                {HOURS.map(h => (
+                  <div
+                    key={`half-${h}`}
+                    className="absolute left-0 right-0 border-t border-slate-50"
+                    style={{ top: (h - START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
+                  />
+                ))}
+                {/* Meeting blocks */}
+                {dayMeetings.map(meeting => {
+                  const client = clients.find(c => c.id === meeting.client_id);
+                  const top = getTimePosition(meeting.start_datetime);
+                  const height = getMeetingHeight(meeting.start_datetime, meeting.end_datetime);
+                  const color = meetingBlockColors[meeting.status] || meetingBlockColors.scheduled;
+                  return (
+                    <div
+                      key={meeting.id}
+                      className={cn("absolute left-1 right-1 rounded px-1.5 py-1 border text-xs overflow-hidden cursor-pointer hover:brightness-95 z-10 shadow-sm", color)}
+                      style={{ top, height: Math.max(height, 24) }}
+                      onClick={e => { e.stopPropagation(); openEdit(meeting); }}
+                    >
+                      <p className="font-semibold truncate leading-tight">{format(parseISO(meeting.start_datetime), 'h:mma')}</p>
+                      {height > 30 && <p className="truncate opacity-90 text-[10px]">{client ? `${client.first_name} ${client.last_name}` : meeting.title}</p>}
+                      {height > 45 && <p className="truncate opacity-80 text-[10px]">{meeting.title}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="space-y-6">
