@@ -147,6 +147,10 @@ export default function Dashboard() {
         </details>
       </div>
 
+      {(user?.role === 'admin' || user?.role === 'management' || user?.role === 'employee') && (
+        <AccessRequestsPanel />
+      )}
+
       {widgets.stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="cursor-pointer" onClick={() => navigate("/Clients")}><StatCard label="Active Clients" value={activeClients} max={clients.length} icon={Users} color="text-blue-600" bgColor="bg-blue-50" /></div>
