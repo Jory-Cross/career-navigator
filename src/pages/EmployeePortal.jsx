@@ -5,9 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Users, Clock, ListChecks, Briefcase, ChevronRight, ArrowLeft } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Users, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import EmployeeCard from "@/components/employees/EmployeeCard";
@@ -36,10 +34,8 @@ export default function EmployeePortal() {
     enabled: !!user
   });
 
-  // Effective user perspective
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
 
-  // Build hierarchy based on effective role
   const visibleUsers = (() => {
     if (effectiveUser?.role === 'admin') {
       const managers = allUsers.filter(u => u.role === 'management');
@@ -54,7 +50,6 @@ export default function EmployeePortal() {
   })();
 
   const employees = visibleUsers;
-
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
   if (selectedEmployee) {
@@ -72,12 +67,12 @@ export default function EmployeePortal() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-        <h1 className="text-2xl font-bold text-slate-900">Employee Portal</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          {effectiveUser?.role === 'admin'
-            ? `${allUsers.filter(u => u.role === 'management').length} managers · ${allUsers.filter(u => u.role === 'employee').length} employees`
-            : `${employees.length} employee${employees.length !== 1 ? 's' : ''} under ${viewAsUser ? (viewAsUser.full_name || 'their') + "'s" : 'your'} management`}
-        </p>
+          <h1 className="text-2xl font-bold text-slate-900">Employee Portal</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {effectiveUser?.role === 'admin'
+              ? `${allUsers.filter(u => u.role === 'management').length} managers · ${allUsers.filter(u => u.role === 'employee').length} employees`
+              : `${employees.length} employee${employees.length !== 1 ? 's' : ''} under ${viewAsUser ? (viewAsUser.full_name || 'their') + "'s" : 'your'} management`}
+          </p>
         </div>
         <Button onClick={() => setShowInvite(true)}>
           <Users className="w-4 h-4 mr-2" /> Invite Employee
@@ -87,7 +82,6 @@ export default function EmployeePortal() {
       <InviteEmployeeDialog open={showInvite} onOpenChange={setShowInvite} currentUserRole={user?.role} />
 
       {effectiveUser?.role === 'admin' ? (
-        // Admin view: all managers + employees with hierarchy assignment
         <AdminHierarchyView allUsers={allUsers} currentUser={effectiveUser} onSelectEmployee={setSelectedEmployeeId} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
