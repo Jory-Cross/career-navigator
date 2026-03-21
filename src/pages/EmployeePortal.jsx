@@ -78,6 +78,10 @@ export default function EmployeePortal() {
             ? `${allUsers.filter(u => u.role === 'management').length} managers · ${allUsers.filter(u => u.role === 'employee').length} employees`
             : `${employees.length} employee${employees.length !== 1 ? 's' : ''} under ${viewAsUser ? (viewAsUser.full_name || 'their') + "'s" : 'your'} management`}
         </p>
+        </div>
+        <Button onClick={() => setShowInvite(true)}>
+          <Users className="w-4 h-4 mr-2" /> Invite Employee
+        </Button>
       </div>
 
       {effectiveUser?.role === 'admin' ? (
