@@ -479,58 +479,54 @@ export default function Calendar() {
             </div>
           </div>
 
-          <div className={cn("grid gap-2", view === 'day' ? "grid-cols-1" : "grid-cols-7")}>
-            {view !== 'day' && weekDays.map(day => (
-              <div key={day} className="text-center text-xs font-semibold text-slate-600 py-2">
-                {day}
-              </div>
-            ))}
-            {days.map(day => {
-              const dayMeetings = getMeetingsForDay(day);
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              const isToday = isSameDay(day, new Date());
-              
-              return (
-                <div
-                  key={day.toString()}
-                  className={cn(
-                    "p-2 border border-slate-100 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
-                    view === 'day' ? "min-h-[400px]" : "min-h-[100px]",
-                    !isCurrentMonth && view === 'month' && "bg-slate-50/50",
-                    isToday && "ring-2 ring-blue-500"
-                  )}
-                  onClick={() => openNew(day)}
-                >
-                  <div className={cn(
-                    "text-sm font-medium mb-1",
-                    isToday ? "text-blue-600" : isCurrentMonth || view !== 'month' ? "text-slate-900" : "text-slate-400"
-                  )}>
-                    {view === 'day' ? format(day, 'EEEE, MMMM d, yyyy') : format(day, 'd')}
-                  </div>
-                  <div className="space-y-1">
-                     {dayMeetings.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)).slice(0, view === 'day' ? 999 : 2).map(meeting => {
-                      const client = clients.find(c => c.id === meeting.client_id);
-                      return (
-                        <div
-                          key={meeting.id}
-                          className={cn("text-xs p-1 rounded bg-blue-100 text-blue-700 cursor-pointer hover:bg-blue-200", view === 'day' ? "" : "truncate")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(meeting);
-                          }}
-                        >
-                          {format(parseISO(meeting.start_datetime), 'HH:mm')} {client?.first_name} - {meeting.title}
-                        </div>
-                      );
-                    })}
-                    {dayMeetings.length > 2 && view !== 'day' && (
-                      <div className="text-xs text-slate-500">+{dayMeetings.length - 2} more</div>
+          {view === 'month' && (
+            <div className="grid grid-cols-7 gap-1">
+              {weekDays.map(day => (
+                <div key={day} className="text-center text-xs font-semibold text-slate-500 py-2">{day}</div>
+              ))}
+              {days.map(day => {
+                const dayMeetings = getMeetingsForDay(day);
+                const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                const isToday = isSameDay(day, new Date());
+                return (
+                  <div
+                    key={day.toString()}
+                    className={cn(
+                      "p-1.5 border border-slate-100 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors min-h-[90px]",
+                      !isCurrentMonth && "bg-slate-50/50",
+                      isToday && "ring-2 ring-blue-500"
                     )}
+                    onClick={() => openNew(day)}
+                  >
+                    <div className={cn("text-xs font-semibold mb-1", isToday ? "text-blue-600" : isCurrentMonth ? "text-slate-900" : "text-slate-400")}>
+                      {format(day, 'd')}
+                    </div>
+                    <div className="space-y-0.5">
+                      {dayMeetings.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)).slice(0, 2).map(meeting => {
+                        const client = clients.find(c => c.id === meeting.client_id);
+                        const color = meetingBlockColors[meeting.status] || meetingBlockColors.scheduled;
+                        return (
+                          <div
+                            key={meeting.id}
+                            className={cn("text-[10px] px-1 py-0.5 rounded truncate cursor-pointer border", color)}
+                            onClick={e => { e.stopPropagation(); openEdit(meeting); }}
+                          >
+                            {format(parseISO(meeting.start_datetime), 'h:mma')} {client?.first_name}
+                          </div>
+                        );
+                      })}
+                      {dayMeetings.length > 2 && (
+                        <div className="text-[10px] text-slate-400 pl-1">+{dayMeetings.length - 2} more</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
+          {view === 'week' && renderTimeGrid(getDaysInWeek())}
+          {view === 'day' && renderTimeGrid(getDaysInDay())}
         </Card>
 
         {/* Meetings Needing Time Logged */}
