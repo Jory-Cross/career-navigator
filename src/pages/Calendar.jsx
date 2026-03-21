@@ -72,7 +72,7 @@ export default function Calendar() {
       if (!user) return allMeetings;
       if (user.role === 'admin' || user.role === 'management') return allMeetings;
       if (user.role === 'employee') {
-        return allMeetings.filter(m => clientIds.includes(m.client_id));
+        return allMeetings.filter(m => !m.client_id || clientIds.includes(m.client_id));
       }
       return allMeetings;
     },
