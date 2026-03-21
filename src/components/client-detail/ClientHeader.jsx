@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ContactsSection from "./ContactsSection";
+import { ClientContactSectionsView, ClientContactSectionsEdit } from "./ClientContactSections";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
