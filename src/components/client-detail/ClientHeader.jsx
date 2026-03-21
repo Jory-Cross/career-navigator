@@ -121,6 +121,7 @@ export default function ClientHeader({ client, onUpdate }) {
           <Input value={form.last_name || ""} onChange={e => u("last_name", e.target.value)} placeholder="Last Name" />
           <Input value={form.email || ""} onChange={e => u("email", e.target.value)} placeholder="Email" />
           <Input value={form.phone || ""} onChange={e => u("phone", e.target.value)} placeholder="Phone" />
+          <Input value={form.address || ""} onChange={e => u("address", e.target.value)} placeholder="Home Address" className="col-span-2" />
           <Input value={form.target_role || ""} onChange={e => u("target_role", e.target.value)} placeholder="Target Role" />
           <Input value={form.industry || ""} onChange={e => u("industry", e.target.value)} placeholder="Industry" />
           <Input value={form.location || ""} onChange={e => u("location", e.target.value)} placeholder="Location" />
