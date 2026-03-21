@@ -136,6 +136,12 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
             <Label className="text-xs text-slate-500">Notes</Label>
             <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} rows={3} />
           </div>
+          <div className="col-span-2 flex items-center gap-2 pt-1">
+            <Checkbox id="send-invite" checked={sendInvite} onCheckedChange={setSendInvite} />
+            <label htmlFor="send-invite" className="text-sm text-slate-600 cursor-pointer">
+              Send invitation email asking client to join the portal
+            </label>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
