@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
         console.log(`User ${client.email} already has client role`);
       }
     } else {
-      await base44.users.inviteUser(client.email, 'client');
+      await base44.users.inviteUser(client.email, 'user');
+      await base44.asServiceRole.entities.PendingRoleAssignment.create({ email: client.email, role: 'client' });
       console.log(`Invited ${client.email} as client`);
     }
 
