@@ -18,10 +18,25 @@ const UserNotRegisteredError = () => {
     setSubmitting(true);
     setError('');
     try {
-      await base44.functions.invoke('submitAccessRequest', form);
+      // Use fetch directly to bypass SDK auth restrictions for unregistered users
+      const res = await fetch('/api/functions/submitAccessRequest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to submit');
+      }
       setStep('submitted');
     } catch (err) {
-      setError(err.message || 'Failed to submit request');
+      // Fallback: try SDK invoke
+      try {
+        await base44.functions.invoke('submitAccessRequest', form);
+        setStep('submitted');
+      } catch (err2) {
+        setError('Unable to submit request. Please contact your employment specialist directly.');
+      }
     } finally {
       setSubmitting(false);
     }
