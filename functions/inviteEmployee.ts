@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const inviteRole = role || 'employee';
-    await base44.asServiceRole.users.inviteUser(email, inviteRole);
+    await base44.users.inviteUser(email, inviteRole);
 
     return Response.json({ success: true, message: 'Invitation sent successfully' });
   } catch (error) {
