@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     // Approve: invite as client
     const nameParts = (full_name || '').trim().split(' ');
     const firstName = nameParts[0] || '';
-    const role = client_type === 'pre_ets' ? 'pre_ets' : client_type === 'dspd' ? 'dspd' : 'client';
+    const appRole = client_type === 'pre_ets' ? 'pre_ets' : client_type === 'dspd' ? 'dspd' : 'client';
 
     // Create client record
     const token = Math.random().toString(36).substring(2, 15);
@@ -34,8 +34,11 @@ Deno.serve(async (req) => {
       onboarding_status: 'in_progress'
     });
 
-    // Invite the user (sends them an email to register/access the app)
-    await base44.users.inviteUser(email, role);
+    // Invite the user - Base44 only accepts 'user' or 'admin', store intended role for auto-assignment
+    await base44.users.inviteUser(email, 'user');
+
+    // Store pending role so it gets applied when they register
+    await base44.asServiceRole.entities.PendingRoleAssignment.create({ email, role: appRole });
 
     // Mark request as approved
     await base44.asServiceRole.entities.AccessRequest.update(requestId, { status: 'approved' });
