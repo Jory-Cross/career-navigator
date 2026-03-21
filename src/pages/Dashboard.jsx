@@ -8,6 +8,7 @@ import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentActivity from "@/components/dashboard/RecentActivity";
+import AccessRequestsPanel from "@/components/dashboard/AccessRequestsPanel";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
