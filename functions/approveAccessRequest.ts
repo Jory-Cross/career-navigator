@@ -54,6 +54,20 @@ Deno.serve(async (req) => {
     // Store pending role assignment (so it gets applied when they register)
     await base44.asServiceRole.entities.PendingRoleAssignment.create({ email, role: appRole });
 
+    // Also immediately apply the role if the user is already registered
+    try {
+      const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
+      if (existingUsers && existingUsers.length > 0) {
+        const existingUser = existingUsers[0];
+        if (existingUser.role !== appRole) {
+          await base44.asServiceRole.entities.User.update(existingUser.id, { role: appRole });
+          console.log(`Immediately applied role '${appRole}' to existing user ${email}`);
+        }
+      }
+    } catch (roleErr) {
+      console.warn(`Could not immediately apply role to ${email}: ${roleErr.message}`);
+    }
+
     // Try to invite the user — may fail if non-admin caller or already registered; don't block on it
     try {
       await base44.users.inviteUser(email, 'user');
