@@ -18,6 +18,7 @@ export default function EmployeePortal() {
   const { viewAsUser } = useViewAs();
   const [user, setUser] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [showInvite, setShowInvite] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
