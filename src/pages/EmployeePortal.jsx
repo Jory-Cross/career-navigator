@@ -84,6 +84,8 @@ export default function EmployeePortal() {
         </Button>
       </div>
 
+      <InviteEmployeeDialog open={showInvite} onOpenChange={setShowInvite} currentUserRole={user?.role} />
+
       {effectiveUser?.role === 'admin' ? (
         // Admin view: all managers + employees with hierarchy assignment
         <AdminHierarchyView allUsers={allUsers} currentUser={effectiveUser} onSelectEmployee={setSelectedEmployeeId} />
