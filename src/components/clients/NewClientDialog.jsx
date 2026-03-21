@@ -16,6 +16,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
     client_type: "job_seeker"
   });
   const [saving, setSaving] = useState(false);
+  const [sendInvite, setSendInvite] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
