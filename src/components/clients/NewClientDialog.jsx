@@ -46,26 +46,29 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
         description: `New client ${form.first_name} ${form.last_name} added to the system`
       });
       
-      // Invite client - they'll register as 'user' role initially
-      try {
-        await base44.functions.invoke('inviteClient', { 
-          email: form.email, 
-          firstName: form.first_name,
-          clientId: client.id,
-          clientType: form.client_type
-        });
-        
-        await base44.entities.Activity.create({
-          client_id: client.id,
-          activity_type: 'email_sent',
-          title: 'Invitation email sent',
-          description: `Registration invitation sent to ${form.email}`
-        });
-        
-        toast.success("Client created and invitation sent to " + form.email);
-      } catch (emailError) {
-        console.error("Failed to send invitation:", emailError);
-        toast.warning("Client created, but invitation email failed: " + emailError.message);
+      if (sendInvite) {
+        try {
+          await base44.functions.invoke('inviteClient', { 
+            email: form.email, 
+            firstName: form.first_name,
+            clientId: client.id,
+            clientType: form.client_type
+          });
+          
+          await base44.entities.Activity.create({
+            client_id: client.id,
+            activity_type: 'email_sent',
+            title: 'Invitation email sent',
+            description: `Registration invitation sent to ${form.email}`
+          });
+          
+          toast.success("Client created and invitation sent to " + form.email);
+        } catch (emailError) {
+          console.error("Failed to send invitation:", emailError);
+          toast.warning("Client created, but invitation email failed: " + emailError.message);
+        }
+      } else {
+        toast.success("Client created successfully");
       }
       
       setSaving(false);
