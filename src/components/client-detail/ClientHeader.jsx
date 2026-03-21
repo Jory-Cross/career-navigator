@@ -158,6 +158,7 @@ export default function ClientHeader({ client, onUpdate }) {
           </div>
         )}
         <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} className="col-span-2" />
+        <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
       </Card>
     );
   }
