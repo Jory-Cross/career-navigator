@@ -207,7 +207,7 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
               <p className="text-sm text-slate-700 truncate">{entry.description || "Session"}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <Badge className={cn("text-[10px] border-0", catColors[entry.category])}>{entry.category?.replace(/_/g, " ")}</Badge>
-                {entry.date && <span className="text-[10px] text-slate-400">{format(new Date(entry.date), "MMM d")}</span>}
+                {entry.date && <span className="text-[10px] text-slate-400">{format(new Date(entry.date + 'T00:00:00'), "MMM d")}</span>}
               </div>
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
