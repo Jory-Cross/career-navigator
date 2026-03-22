@@ -115,20 +115,22 @@ export default function AssessmentSection({ clientId }) {
         });
         assessmentId = assessment.id;
 
-        // Generate PDF only for new assessments
-        const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
-          assessment_id: assessmentId
-        });
-        await base44.entities.Assessment.update(assessmentId, { pdf_url: pdfData.pdf_url });
+        // Generate PDF only for non-riasec new assessments
+        if (assessmentType !== 'riasec') {
+          const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
+            assessment_id: assessmentId
+          });
+          await base44.entities.Assessment.update(assessmentId, { pdf_url: pdfData.pdf_url });
 
-        await base44.entities.Document.create({
-          client_id: clientId,
-          title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
-          file_url: pdfData.pdf_url,
-          file_name: `Assessment_${assessmentType}.pdf`,
-          file_type: 'application/pdf',
-          category: 'other'
-        });
+          await base44.entities.Document.create({
+            client_id: clientId,
+            title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
+            file_url: pdfData.pdf_url,
+            file_name: `Assessment_${assessmentType}.pdf`,
+            file_type: 'application/pdf',
+            category: 'other'
+          });
+        }
 
         await base44.entities.Activity.create({
           client_id: clientId,
