@@ -119,6 +119,33 @@ export default function Calendar() {
     }
   };
 
+  const generateMeetLink = async () => {
+    if (!form.title || !form.start_datetime) {
+      toast.error("Please enter a title and start time first");
+      return;
+    }
+    setGeneratingMeet(true);
+    try {
+      const res = await base44.functions.invoke('generateGoogleMeetLink', {
+        title: form.title,
+        start_datetime: form.start_datetime,
+        end_datetime: form.end_datetime || null,
+        description: form.description || ''
+      });
+      const meetLink = res.data?.meet_link;
+      if (meetLink) {
+        setForm(p => ({ ...p, location: meetLink }));
+        toast.success("Google Meet link generated!");
+      } else {
+        toast.error("Could not generate Meet link");
+      }
+    } catch (err) {
+      toast.error("Failed to generate Meet link: " + err.message);
+    } finally {
+      setGeneratingMeet(false);
+    }
+  };
+
   const save = async () => {
     if (!form.client_id || !form.title || !form.start_datetime) {
       toast.error("Please fill required fields");
