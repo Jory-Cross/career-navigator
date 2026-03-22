@@ -62,7 +62,6 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     setSelected(t);
     setSubject(interpolate(t.subject, vars));
     setBody(interpolate(t.body, vars));
-    // Default to employer contact email if available, otherwise blank so user must enter one
     setRecipientEmail(application?.contact_email || "");
   };
 
@@ -73,11 +72,7 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     }
     setSending(true);
     try {
-      await base44.integrations.Core.SendEmail({
-        to: recipientEmail,
-        subject,
-        body
-      });
+      await base44.integrations.Core.SendEmail({ to: recipientEmail, subject, body });
       toast.success(`Email sent to ${recipientEmail}`);
       handleClose();
     } catch (err) {
@@ -147,9 +142,7 @@ export default function UseTemplateDialog({ open, onClose, client, application }
             )}
 
             <div className="space-y-1">
-              <Label className="text-xs text-slate-500">
-                Send To (Employer Contact Email)
-              </Label>
+              <Label className="text-xs text-slate-500">Send To (Employer Contact Email)</Label>
               <Input
                 value={recipientEmail}
                 onChange={e => setRecipientEmail(e.target.value)}
