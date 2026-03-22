@@ -63,11 +63,18 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     setBody(interpolate(t.body, vars));
   };
 
-  const recipientEmail = application?.contact_email || client?.email;
+  const [recipientEmail, setRecipientEmail] = useState("");
+
+  const selectTemplate = (t) => {
+    setSelected(t);
+    setSubject(interpolate(t.subject, vars));
+    setBody(interpolate(t.body, vars));
+    setRecipientEmail(application?.contact_email || "");
+  };
 
   const handleSend = async () => {
     if (!recipientEmail) {
-      toast.error("No recipient email found. Add a contact email to the application.");
+      toast.error("No recipient email found. Enter the employer's contact email above.");
       return;
     }
     setSending(true);
