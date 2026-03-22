@@ -274,6 +274,7 @@ export default function AssessmentSection({ clientId }) {
                       value={responses[q.id] || ""}
                       onChange={(e) => setResponses({...responses, [q.id]: e.target.value})}
                       className="mt-1"
+                      placeholder={q.placeholder || ""}
                     />
                   )}
                 </div>
