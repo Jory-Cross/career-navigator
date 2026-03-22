@@ -259,6 +259,7 @@ Field mapping:
       const user = await base44.auth.me();
 
       if (editingAssessment) {
+        // Update assessment with new data
         await base44.entities.Assessment.update(editingAssessment.id, {
           assessment_type: assessmentType,
           responses,
@@ -272,14 +273,13 @@ Field mapping:
             const { data: pdfData } = await base44.functions.invoke('generateWSAPDF', {
               assessment_id: editingAssessment.id
             });
-            await base44.entities.Assessment.update(editingAssessment.id, { pdf_url: pdfData.pdf_url });
             toast.success("WSA PDF updated!", { id: "wsa-pdf-regen" });
           } catch (err) {
             toast.error("Failed to regenerate PDF: " + err.message, { id: "wsa-pdf-regen" });
           }
+        } else {
+          toast.success("Assessment updated");
         }
-        
-        toast.success("Assessment updated");
       } else {
         const assessment = await base44.entities.Assessment.create({
           client_id: clientId,
