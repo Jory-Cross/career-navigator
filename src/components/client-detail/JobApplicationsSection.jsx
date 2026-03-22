@@ -309,7 +309,10 @@ Provide:
             <LiveJobSearch client={client} onAddApplication={onRefresh} />
           </div>
         )}
-        {activeTab === "applications" && (
+        {activeTab === "applications" && viewMode === "kanban" && (
+          <KanbanView applications={sorted} onEdit={openEdit} onRefresh={onRefresh} />
+        )}
+        {activeTab === "applications" && viewMode === "list" && (
         <div className="divide-y divide-slate-50">
           {sorted.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">No applications yet</div>
