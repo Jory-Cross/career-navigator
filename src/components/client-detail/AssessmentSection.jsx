@@ -264,6 +264,21 @@ Field mapping:
           responses,
           notes
         });
+        
+        // Regenerate PDF for WSA if it was edited
+        if (assessmentType === 'work_strategy_assessment') {
+          toast.loading("Regenerating WSA PDF...", { id: "wsa-pdf-regen" });
+          try {
+            const { data: pdfData } = await base44.functions.invoke('generateWSAPDF', {
+              assessment_id: editingAssessment.id
+            });
+            await base44.entities.Assessment.update(editingAssessment.id, { pdf_url: pdfData.pdf_url });
+            toast.success("WSA PDF updated!", { id: "wsa-pdf-regen" });
+          } catch (err) {
+            toast.error("Failed to regenerate PDF: " + err.message, { id: "wsa-pdf-regen" });
+          }
+        }
+        
         toast.success("Assessment updated");
       } else {
         const assessment = await base44.entities.Assessment.create({
