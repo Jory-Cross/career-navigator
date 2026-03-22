@@ -188,6 +188,12 @@ export default function AssessmentSection({ clientId }) {
                       {assessment.notes && (
                         <p className="text-xs text-slate-600 mt-2">{assessment.notes}</p>
                       )}
+                      {assessment.assessment_type === 'riasec' && (
+                        <RiasecRecommendations
+                          assessment={assessment}
+                          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['client-assessments'] })}
+                        />
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
