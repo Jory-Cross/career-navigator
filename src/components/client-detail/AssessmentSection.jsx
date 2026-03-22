@@ -139,7 +139,7 @@ export default function AssessmentSection({ clientId }) {
           description: `${assessmentType.replace('_', ' ')} assessment completed by ${user.full_name || user.email}`
         });
 
-        toast.success("Assessment saved and PDF generated");
+        toast.success(assessmentType === 'riasec' ? "RIASEC assessment saved!" : "Assessment saved and PDF generated");
       }
 
       queryClient.invalidateQueries({ queryKey: ['client-assessments'] });
