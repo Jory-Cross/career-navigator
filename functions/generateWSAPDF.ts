@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
-const BLANK_WSA_URL = 'https://media.base44.com/files/public/69975ef9c220200194235cef/1c2016436_usor94.pdf';
+const FILLABLE_WSA_URL = 'https://media.base44.com/files/public/69975ef9c220200194235cef/7d58a8997_usor94.pdf';
 
 // Draw wrapped text inside a box area, returns final y position
 function drawWrappedText(page, text, x, y, maxWidth, lineHeight, font, fontSize) {
