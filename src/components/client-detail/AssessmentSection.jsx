@@ -15,39 +15,39 @@ import { toast } from "react-hot-toast";
 
 const assessmentQuestions = {
   career_goals: [
-    { id: "current_role", label: "Current/Most Recent Role", type: "text" },
-    { id: "career_goals", label: "Career Goals (next 1-2 years)", type: "textarea" },
-    { id: "target_industries", label: "Target Industries", type: "text" },
-    { id: "target_companies", label: "Target Companies", type: "text" },
-    { id: "salary_expectations", label: "Salary Expectations", type: "text" },
-    { id: "location_preferences", label: "Location Preferences", type: "text" },
+    { id: "current_role", label: "Current/Most Recent Role", type: "text", placeholder: "e.g. Customer Service Representative, Warehouse Associate" },
+    { id: "career_goals", label: "Career Goals (next 1-2 years)", type: "textarea", placeholder: "e.g. Transition into an IT support role, obtain a full-time position with benefits, move into management..." },
+    { id: "target_industries", label: "Target Industries", type: "text", placeholder: "e.g. Healthcare, Retail, Technology, Logistics" },
+    { id: "target_companies", label: "Target Companies", type: "text", placeholder: "e.g. Amazon, IHC, Utah Transit Authority" },
+    { id: "salary_expectations", label: "Salary Expectations", type: "text", placeholder: "e.g. $18–$22/hr, $45,000/yr" },
+    { id: "location_preferences", label: "Location Preferences", type: "text", placeholder: "e.g. Ogden area, willing to commute up to 30 min, no relocation" },
     { id: "work_arrangement", label: "Preferred Work Arrangement", type: "select", options: ["Remote", "Hybrid", "On-site", "Flexible"] },
-    { id: "challenges", label: "Current Challenges", type: "textarea" },
-    { id: "strengths", label: "Key Strengths", type: "textarea" },
-    { id: "development_areas", label: "Areas for Development", type: "textarea" }
+    { id: "challenges", label: "Current Challenges", type: "textarea", placeholder: "e.g. Gaps in employment history, limited transportation, anxiety in interviews, difficulty with resume writing..." },
+    { id: "strengths", label: "Key Strengths", type: "textarea", placeholder: "e.g. Strong work ethic, punctual, good with customers, detail-oriented, experienced with computers..." },
+    { id: "development_areas", label: "Areas for Development", type: "textarea", placeholder: "e.g. Interview skills, professional communication, time management, building references..." }
   ],
   skills_audit: [
-    { id: "technical_skills", label: "Technical Skills", type: "textarea" },
-    { id: "soft_skills", label: "Soft Skills", type: "textarea" },
-    { id: "certifications", label: "Certifications", type: "textarea" },
-    { id: "tools_software", label: "Tools & Software Proficiency", type: "textarea" },
-    { id: "languages", label: "Languages", type: "text" },
-    { id: "skill_gaps", label: "Identified Skill Gaps", type: "textarea" }
+    { id: "technical_skills", label: "Technical Skills", type: "textarea", placeholder: "e.g. Data entry, forklift operation, cash handling, Microsoft Office, coding in Python..." },
+    { id: "soft_skills", label: "Soft Skills", type: "textarea", placeholder: "e.g. Teamwork, problem-solving, active listening, adaptability, conflict resolution..." },
+    { id: "certifications", label: "Certifications", type: "textarea", placeholder: "e.g. CPR/First Aid, OSHA 10, Google IT Support Certificate, ServSafe, CNA license..." },
+    { id: "tools_software", label: "Tools & Software Proficiency", type: "textarea", placeholder: "e.g. Microsoft Excel (intermediate), Google Workspace, QuickBooks, Salesforce, POS systems..." },
+    { id: "languages", label: "Languages", type: "text", placeholder: "e.g. English (fluent), Spanish (conversational), ASL (basic)" },
+    { id: "skill_gaps", label: "Identified Skill Gaps", type: "textarea", placeholder: "e.g. Needs help with resume formatting, no experience with scheduling software, limited customer-facing experience..." }
   ],
   job_search_readiness: [
     { id: "resume_status", label: "Resume Status", type: "select", options: ["Not Started", "In Progress", "Complete", "Needs Review"] },
     { id: "linkedin_status", label: "LinkedIn Profile Status", type: "select", options: ["Not Set Up", "Basic", "Optimized", "Needs Update"] },
     { id: "portfolio_status", label: "Portfolio/Work Samples", type: "select", options: ["Not Available", "In Progress", "Complete"] },
-    { id: "networking_activity", label: "Current Networking Activity", type: "textarea" },
-    { id: "applications_sent", label: "Applications Sent (last 30 days)", type: "text" },
-    { id: "interview_experience", label: "Recent Interview Experience", type: "textarea" }
+    { id: "networking_activity", label: "Current Networking Activity", type: "textarea", placeholder: "e.g. Attending job fairs, connected with 3 employers on LinkedIn, referred by a friend at XYZ company..." },
+    { id: "applications_sent", label: "Applications Sent (last 30 days)", type: "text", placeholder: "e.g. 5, 12, 0 (just starting)" },
+    { id: "interview_experience", label: "Recent Interview Experience", type: "textarea", placeholder: "e.g. Had a phone screen at Target last week, no interviews yet, last interview was 6 months ago at UPS..." }
   ],
   interview_readiness: [
-    { id: "interview_confidence", label: "Interview Confidence Level (1-10)", type: "text" },
-    { id: "behavioral_prep", label: "Behavioral Questions Preparation", type: "textarea" },
-    { id: "technical_prep", label: "Technical Questions Preparation", type: "textarea" },
-    { id: "common_weaknesses", label: "Common Interview Weaknesses", type: "textarea" },
-    { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea" }
+    { id: "interview_confidence", label: "Interview Confidence Level (1-10)", type: "text", placeholder: "e.g. 4 — nervous about behavioral questions, 7 — comfortable but wants more practice" },
+    { id: "behavioral_prep", label: "Behavioral Questions Preparation", type: "textarea", placeholder: "e.g. Practiced STAR method, has 2-3 examples ready, struggles with 'Tell me about yourself'..." },
+    { id: "technical_prep", label: "Technical Questions Preparation", type: "textarea", placeholder: "e.g. Reviewed common IT questions, no technical component expected, practicing Excel skills for assessment..." },
+    { id: "common_weaknesses", label: "Common Interview Weaknesses", type: "textarea", placeholder: "e.g. Tends to give very short answers, gets nervous and loses train of thought, doesn't ask questions at the end..." },
+    { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea", placeholder: "e.g. 'What does a typical day look like?', 'What are growth opportunities?', 'How is performance evaluated?'" }
   ],
   riasec: [
     { id: "realistic", label: "Realistic (R) — hands-on, mechanical, outdoors", type: "text", placeholder: "Score 0–40" },
