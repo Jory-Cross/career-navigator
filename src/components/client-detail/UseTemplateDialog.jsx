@@ -28,7 +28,10 @@ function interpolate(text, vars) {
     .replace(/\{\{first_name\}\}/g, vars.first_name || "")
     .replace(/\{\{company\}\}/g, vars.company || "")
     .replace(/\{\{position\}\}/g, vars.position || "")
-    .replace(/\{\{contact_name\}\}/g, vars.contact_name || "");
+    .replace(/\{\{contact_name\}\}/g, vars.contact_name || "")
+    .replace(/\{\{client_phone\}\}/g, vars.client_phone || "")
+    .replace(/\{\{client_email\}\}/g, vars.client_email || "")
+    .replace(/\{\{client_linkedin\}\}/g, vars.client_linkedin || "");
 }
 
 export default function UseTemplateDialog({ open, onClose, client, application }) {
