@@ -3,36 +3,11 @@ import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://media.base44.com/files/public/69975ef9c220200194235cef/7d58a8997_usor94.pdf';
 
-// Draw wrapped text inside a box area, returns final y position
-function drawWrappedText(page, text, x, y, maxWidth, lineHeight, font, fontSize) {
-  if (!text || !text.trim()) return y;
-  const paragraphs = text.split('\n');
-  let currentY = y;
-  for (const para of paragraphs) {
-    const words = para.split(' ');
-    let line = '';
-    for (const word of words) {
-      const testLine = line ? `${line} ${word}` : word;
-      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-      if (testWidth > maxWidth && line) {
-        page.drawText(line, { x, y: currentY, size: fontSize, font, color: rgb(0, 0, 0) });
-        line = word;
-        currentY -= lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    if (line) {
-      page.drawText(line, { x, y: currentY, size: fontSize, font, color: rgb(0, 0, 0) });
-      currentY -= lineHeight;
-    }
+// Helper to set checkbox field values
+function setCheckboxValue(fields, fieldName, value) {
+  if (fields[fieldName]) {
+    fields[fieldName].setValue(value === true || value === 'Yes' ? 'Yes' : '');
   }
-  return currentY;
-}
-
-function drawLine(page, text, x, y, font, fontSize) {
-  if (!text || !text.trim()) return;
-  page.drawText(text, { x, y, size: fontSize, font, color: rgb(0, 0, 0) });
 }
 
 Deno.serve(async (req) => {
