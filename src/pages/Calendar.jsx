@@ -31,6 +31,7 @@ export default function Calendar() {
   const [linkedTimeEntry, setLinkedTimeEntry] = useState(null);
   const [showSeriesEdit, setShowSeriesEdit] = useState(false);
   const [editSeriesMode, setEditSeriesMode] = useState("current"); // "current" or "series"
+  const [generatingMeet, setGeneratingMeet] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
