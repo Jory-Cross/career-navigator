@@ -306,6 +306,8 @@ export default function AssessmentSection({ clientId }) {
                 </>
               ) : editingAssessment ? (
                 "Save Changes"
+              ) : assessmentType === 'riasec' ? (
+                "Save RIASEC Scores"
               ) : (
                 "Submit & Generate PDF"
               )}
