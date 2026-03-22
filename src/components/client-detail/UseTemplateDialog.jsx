@@ -57,19 +57,21 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     setBody(interpolate(t.body, vars));
   };
 
+  const recipientEmail = application?.contact_email || client?.email;
+
   const handleSend = async () => {
-    if (!client?.email) {
-      toast.error("Client has no email address");
+    if (!recipientEmail) {
+      toast.error("No recipient email found. Add a contact email to the application.");
       return;
     }
     setSending(true);
     try {
       await base44.integrations.Core.SendEmail({
-        to: client.email,
+        to: recipientEmail,
         subject,
         body
       });
-      toast.success(`Email sent to ${client.email}`);
+      toast.success(`Email sent to ${recipientEmail}`);
       handleClose();
     } catch (err) {
       toast.error("Failed to send email");
