@@ -27,6 +27,7 @@ const statusConfig = {
 };
 
 export default function JobApplicationsSection({ clientId, applications, onRefresh, client }) {
+  const [activeTab, setActiveTab] = useState("applications"); // "applications" | "search"
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
