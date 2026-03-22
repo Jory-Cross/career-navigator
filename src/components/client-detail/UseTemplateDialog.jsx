@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Mail, ChevronLeft, Send, Loader2 } from "lucide-react";
+import { Mail, ChevronLeft, Send, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,7 @@ export default function UseTemplateDialog({ open, onClose, client, application }
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
 
   const { data: templates = [] } = useQuery({
     queryKey: ["email-templates"],
@@ -61,20 +62,13 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     setSelected(t);
     setSubject(interpolate(t.subject, vars));
     setBody(interpolate(t.body, vars));
-  };
-
-  const [recipientEmail, setRecipientEmail] = useState("");
-
-  const selectTemplate = (t) => {
-    setSelected(t);
-    setSubject(interpolate(t.subject, vars));
-    setBody(interpolate(t.body, vars));
+    // Default to employer contact email if available, otherwise blank so user must enter one
     setRecipientEmail(application?.contact_email || "");
   };
 
   const handleSend = async () => {
     if (!recipientEmail) {
-      toast.error("No recipient email found. Enter the employer's contact email above.");
+      toast.error("Please enter the employer's email address before sending.");
       return;
     }
     setSending(true);
@@ -97,8 +91,11 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     setSelected(null);
     setSubject("");
     setBody("");
+    setRecipientEmail("");
     onClose();
   };
+
+  const missingContactEmail = selected && !application?.contact_email;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -142,11 +139,31 @@ export default function UseTemplateDialog({ open, onClose, client, application }
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Back to templates
             </button>
-            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
-              Sending to: <strong>{recipientEmail || "No email on file"}</strong>
-              {application?.contact_email && application?.contact_name && <span className="ml-1">({application.contact_name})</span>}
-              {application && <span className="ml-2">• Re: {application.position} at {application.company}</span>}
+
+            {application && (
+              <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
+                Re: <strong>{application.position}</strong> at <strong>{application.company}</strong>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">
+                Send To (Employer Contact Email)
+              </Label>
+              <Input
+                value={recipientEmail}
+                onChange={e => setRecipientEmail(e.target.value)}
+                placeholder="Enter employer's email address..."
+                className={cn(!recipientEmail && "border-amber-300 focus-visible:ring-amber-400")}
+              />
+              {missingContactEmail && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  No contact email saved on this application. Enter it above to send.
+                </p>
+              )}
             </div>
+
             <div className="space-y-1">
               <Label className="text-xs text-slate-500">Subject</Label>
               <Input value={subject} onChange={e => setSubject(e.target.value)} />
@@ -161,7 +178,7 @@ export default function UseTemplateDialog({ open, onClose, client, application }
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
           {selected && (
-            <Button onClick={handleSend} disabled={sending || !subject || !body}>
+            <Button onClick={handleSend} disabled={sending || !subject || !body || !recipientEmail}>
               {sending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}
               Send Email
             </Button>
