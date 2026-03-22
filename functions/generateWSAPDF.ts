@@ -118,9 +118,9 @@ Deno.serve(async (req) => {
       drawLine(p, r.assigned_employment_specialist, 262, 50, font, fs);
       // ACRE Certified checkboxes
       if (r.acre_certified === 'Yes') {
-        drawLine(p, '✓', 174, 35, font, 10);
+        drawLine(p, 'X', 174, 35, font, 10);
       } else if (r.acre_certified === 'No') {
-        drawLine(p, '✓', 206, 35, font, 10);
+        drawLine(p, 'X', 206, 35, font, 10);
       }
     }
 
