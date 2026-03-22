@@ -43,6 +43,7 @@ export default function JobApplicationsSection({ clientId, applications, onRefre
   const [sharingLinkedIn, setSharingLinkedIn] = useState(null);
   const [linkedInPreview, setLinkedInPreview] = useState(null);
   const [linkedInPostText, setLinkedInPostText] = useState("");
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
 
   const INTERVIEW_STATUSES = ['phone_screen', 'interview', 'final_round'];
 
