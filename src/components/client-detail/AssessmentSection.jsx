@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, Download, Loader2, Pencil } from "lucide-react";
+import { FileText, Plus, Download, Loader2, Pencil, Upload } from "lucide-react";
 import RiasecRecommendations from "./RiasecRecommendations";
 import AssessmentRecommendations from "./AssessmentRecommendations";
 import { format } from "date-fns";
@@ -59,7 +59,6 @@ const assessmentQuestions = {
     { id: "conventional", label: "Conventional (C) — organized, detail-oriented, data", type: "text", placeholder: "Score 0–40" }
   ],
   work_strategy_assessment: [
-    // --- Counselor Referral Page ---
     { id: "_section_referral", label: "── COUNSELOR REFERRAL PAGE ──", type: "section" },
     { id: "crp_referring_to", label: "CRP Referring To", type: "text", placeholder: "e.g. Community Options" },
     { id: "guardianship", label: "Guardianship", type: "select", options: ["No", "Yes"] },
@@ -72,7 +71,6 @@ const assessmentQuestions = {
     { id: "benefits_planning_date", label: "Benefits Planning Pending Date (if applicable)", type: "text", placeholder: "e.g. 04/15/2024" },
     { id: "benefits_summary_info", label: "Benefits Summary Info", type: "textarea" },
     { id: "other_services_benefits", label: "Other Services/Benefits", type: "textarea" },
-    // --- Describe the Client ---
     { id: "_section_client_description", label: "── DESCRIBE THE FOLLOWING AS IT APPLIES TO CLIENT ──", type: "section" },
     { id: "current_work_skills", label: "Current Work Skills (knowledge, skills, and abilities)", type: "textarea", placeholder: "e.g. Has worked 11 jobs in fast food, retail, and custodial positions..." },
     { id: "work_skill_development_needs", label: "Work Skill Development Needs", type: "textarea", placeholder: "e.g. Prefers to work alone and does not do well in fast-paced environments..." },
@@ -85,7 +83,6 @@ const assessmentQuestions = {
     { id: "family_issues_supports", label: "Family Issues/Supports", type: "textarea", placeholder: "e.g. Has a good support system consisting of father, stepmother, biological mother..." },
     { id: "criminal_background", label: "Criminal Background (expungement, etc.)", type: "textarea", placeholder: "e.g. No criminal background at this time" },
     { id: "school_academic", label: "School/Academic (can include behavioral information)", type: "textarea", placeholder: "e.g. Graduated from high school in 2017" },
-    // --- CRP Observation and Report ---
     { id: "_section_crp", label: "── CRP OBSERVATION AND REPORT ──", type: "section" },
     { id: "worksite_simulation_location", label: "Worksite Simulation Location", type: "text", placeholder: "e.g. ABC Janitorial Services, Ogden UT" },
     { id: "work_assessment_observations", label: "Work Assessment Observations (soft skills, job experience, transferable skills, interpersonal skills, self-direction, physical abilities, reaction to criticism)", type: "textarea" },
@@ -98,7 +95,6 @@ const assessmentQuestions = {
     { id: "computer_skill_observations", label: "Computer Skill Assessment Observations (online application ability, social media, other skills)", type: "textarea" },
     { id: "interview_skill_observations", label: "Interview Skill Assessment Observations (mock interview, communication, body language, dress, listening, answering questions)", type: "textarea" },
     { id: "other_observations", label: "Other Observations", type: "textarea" },
-    // --- Recommendations ---
     { id: "_section_recommendations", label: "── RECOMMENDATIONS ──", type: "section" },
     { id: "planned_job_search_hours_week", label: "Planned Job Search Hours/Week", type: "text", placeholder: "e.g. 20" },
     { id: "life_skills_needed", label: "Life Skills Needed", type: "textarea", placeholder: "e.g. Budgeting, personal hygiene, grocery shopping" },
@@ -107,7 +103,6 @@ const assessmentQuestions = {
     { id: "recommended_supports_on_job", label: "Recommended Supports on the Job", type: "textarea", placeholder: "e.g. Job coach, modified task list, visual schedule" },
     { id: "job_development_supports", label: "Joint VR/CRP Recommendations for Job Development Supports", type: "textarea" },
     { id: "ongoing_supports", label: "Joint VR/CRP Recommendations for Ongoing Supports", type: "textarea" },
-    // --- Team Section ---
     { id: "_section_team", label: "── TEAM SECTION ──", type: "section" },
     { id: "job_goal", label: "Job Goal (must align with IPE goal)", type: "text", placeholder: "e.g. Obtain full-time custodial employment" },
     { id: "industry_targeted_pay_range", label: "Industry Targeted Pay Range", type: "text", placeholder: "e.g. $15–$18/hr" },
@@ -119,7 +114,23 @@ const assessmentQuestions = {
   ]
 };
 
-const SECTION_LABELS = { _section_referral: true, _section_client_description: true, _section_crp: true, _section_recommendations: true, _section_team: true };
+// All WSA field IDs for AI extraction schema
+const WSA_FIELD_IDS = [
+  "crp_referring_to","guardianship","guardian_name_phone","referral_question",
+  "extended_services_provider","health_insurance","social_security_benefits",
+  "benefits_planning","benefits_planning_date","benefits_summary_info","other_services_benefits",
+  "current_work_skills","work_skill_development_needs","jobs_of_interest",
+  "interpersonal_social_skills","assistive_technology_needs","communication_needs",
+  "behavioral_self_regulation","activities_of_daily_living","family_issues_supports",
+  "criminal_background","school_academic","worksite_simulation_location",
+  "work_assessment_observations","natural_support_observations","life_skills_observations",
+  "transportation_public","transportation_private","transportation_observations",
+  "computer_skills_other","computer_skill_observations","interview_skill_observations",
+  "other_observations","planned_job_search_hours_week","life_skills_needed",
+  "life_skills_hours_requested","recommended_target_occupations","recommended_supports_on_job",
+  "job_development_supports","ongoing_supports","job_goal","industry_targeted_pay_range",
+  "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
+];
 
 export default function AssessmentSection({ clientId }) {
   const [showForm, setShowForm] = useState(false);
@@ -128,6 +139,8 @@ export default function AssessmentSection({ clientId }) {
   const [responses, setResponses] = useState({});
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
   const openNew = () => {
@@ -151,19 +164,105 @@ export default function AssessmentSection({ clientId }) {
     queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
   });
 
+  const handleWSAUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtracting(true);
+    toast.loading("Extracting data from PDF...", { id: "wsa-extract" });
+    try {
+      // Upload the PDF
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      // Build a schema for all WSA fields
+      const schemaProperties = {};
+      WSA_FIELD_IDS.forEach(id => { schemaProperties[id] = { type: "string" }; });
+
+      // Use AI to extract all fields from the PDF
+      const extracted = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are extracting data from a Utah DWS Work Strategy Assessment (WSA) PDF form (DWS-USOR 94). 
+Read the document carefully and extract every filled-in field value. 
+For each key below, extract the corresponding value from the PDF. Only return values that are actually filled in — leave others as empty string "".
+Field mapping:
+- crp_referring_to: "CRP Referring to" field
+- guardianship: "Guardianship" checkbox (Yes or No)
+- guardian_name_phone: Parent/Guardian name and phone number
+- referral_question: The referral question text
+- extended_services_provider: Which extended services/resources are checked (list them)
+- health_insurance: Which health insurance options are checked (list them)
+- social_security_benefits: Which social security benefits are checked (SSI, SSDI)
+- benefits_planning: Benefits Planning status (Completed, Pending, Not Applicable)
+- benefits_planning_date: Pending date if applicable
+- benefits_summary_info: Benefits Summary Info text
+- other_services_benefits: Other Services/Benefits text
+- current_work_skills: Current Work Skills text
+- work_skill_development_needs: Work Skill Development Needs text
+- jobs_of_interest: Jobs of Interest text
+- interpersonal_social_skills: Interpersonal/Social Skills text
+- assistive_technology_needs: Identified Assistive Technology Needs text
+- communication_needs: Communication Needs text
+- behavioral_self_regulation: Behavioral/Self-regulation text
+- activities_of_daily_living: Activities of Daily Living text
+- family_issues_supports: Family Issues/Supports text
+- criminal_background: Criminal Background text
+- school_academic: School/Academic text
+- worksite_simulation_location: Worksite Simulation Location
+- work_assessment_observations: Work Assessment Observations
+- natural_support_observations: Natural Support Assessment Observations
+- life_skills_observations: Life Skills Observations
+- transportation_public: Public transportation options
+- transportation_private: Private transportation options
+- transportation_observations: Transportation Assessment Observations
+- computer_skills_other: Computer Skills other fields (typing test, 10 key, etc.)
+- computer_skill_observations: Computer Skill Assessment Observations
+- interview_skill_observations: Interview Skill Assessment Observations
+- other_observations: Other Observations
+- planned_job_search_hours_week: Planned Job Search hours/week
+- life_skills_needed: Life Skills needed
+- life_skills_hours_requested: Life Skills hours requested
+- recommended_target_occupations: Recommended target occupations
+- recommended_supports_on_job: Recommended supports on the job
+- job_development_supports: Joint VR/CRP Recommendations for Job Development Supports
+- ongoing_supports: Joint VR/CRP Recommendations for Ongoing Supports
+- job_goal: Job Goal
+- industry_targeted_pay_range: Industry Targeted Pay Range
+- benefits_other: Benefits/Other
+- hours_available_to_work: Hours available to work (list checked options)
+- crp_name: Community Rehabilitation Program Name
+- assigned_employment_specialist: Assigned Employment Specialist/Job Coach
+- acre_certified: ACRE Certified (Yes or No)`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: schemaProperties
+        }
+      });
+
+      // Merge extracted values (only non-empty) into current responses
+      const merged = { ...responses };
+      Object.entries(extracted).forEach(([key, val]) => {
+        if (val && val.trim() !== "") merged[key] = val;
+      });
+      setResponses(merged);
+      toast.success("WSA data extracted and pre-filled!", { id: "wsa-extract" });
+    } catch (err) {
+      toast.error("Failed to extract PDF: " + err.message, { id: "wsa-extract" });
+    } finally {
+      setExtracting(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const user = await base44.auth.me();
 
-      let assessmentId;
       if (editingAssessment) {
         await base44.entities.Assessment.update(editingAssessment.id, {
           assessment_type: assessmentType,
           responses,
           notes
         });
-        assessmentId = editingAssessment.id;
         toast.success("Assessment updated");
       } else {
         const assessment = await base44.entities.Assessment.create({
@@ -173,13 +272,12 @@ export default function AssessmentSection({ clientId }) {
           completed_by: user.email,
           notes
         });
-        assessmentId = assessment.id;
 
         if (assessmentType !== 'riasec' && assessmentType !== 'work_strategy_assessment') {
           const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
-            assessment_id: assessmentId
+            assessment_id: assessment.id
           });
-          await base44.entities.Assessment.update(assessmentId, { pdf_url: pdfData.pdf_url });
+          await base44.entities.Assessment.update(assessment.id, { pdf_url: pdfData.pdf_url });
           await base44.entities.Document.create({
             client_id: clientId,
             title: `${assessmentType.replace(/_/g, ' ')} Assessment`,
@@ -304,17 +402,44 @@ export default function AssessmentSection({ clientId }) {
               </Select>
             </div>
 
+            {assessmentType === 'work_strategy_assessment' && (
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-md p-3">
+                <div>
+                  <p className="text-xs font-medium text-blue-800">Have an existing WSA PDF?</p>
+                  <p className="text-xs text-blue-600 mt-0.5">Upload it and AI will auto-fill all the fields for you.</p>
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleWSAUpload}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={extracting}
+                  >
+                    {extracting ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Extracting...</>
+                    ) : (
+                      <><Upload className="w-3.5 h-3.5 mr-1.5" /> Upload WSA PDF</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {assessmentType === 'riasec' && (
+              <p className="text-xs text-slate-500 bg-blue-50 border border-blue-100 rounded-md p-3">
+                Enter each RIASEC score from the client's career interest inventory (typically 0–40 per category).
+              </p>
+            )}
+
             <div className="border-t pt-4 space-y-4">
-              {assessmentType === 'riasec' && (
-                <p className="text-xs text-slate-500 bg-blue-50 border border-blue-100 rounded-md p-3">
-                  Enter each RIASEC score from the client's career interest inventory (typically 0–40 per category).
-                </p>
-              )}
-              {assessmentType === 'work_strategy_assessment' && (
-                <p className="text-xs text-slate-500 bg-blue-50 border border-blue-100 rounded-md p-3">
-                  DWS-USOR 94 — Work Strategy Assessment. Complete all sections collaboratively with the VR Counselor, CRP Provider, and client.
-                </p>
-              )}
               {currentQuestions.map(q => {
                 if (q.type === 'section') {
                   return (
@@ -374,15 +499,12 @@ export default function AssessmentSection({ clientId }) {
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowForm(false)} disabled={submitting}>
+            <Button variant="outline" onClick={() => setShowForm(false)} disabled={submitting || extracting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting || extracting}>
               {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
               ) : editingAssessment ? (
                 "Save Changes"
               ) : assessmentType === 'riasec' ? (
