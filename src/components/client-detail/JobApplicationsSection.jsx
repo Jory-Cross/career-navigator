@@ -377,8 +377,7 @@ Provide:
               </div>
             </div>
           ))}
-        </div>
-        )}
+        </div>}
       </Card>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
