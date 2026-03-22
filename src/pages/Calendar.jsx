@@ -801,7 +801,25 @@ export default function Calendar() {
             </div>
             <div>
               <Label className="text-xs">Location / Video Link</Label>
-              <Input value={form.location || ""} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} placeholder="Office, Zoom link, etc." />
+              <div className="flex gap-2">
+                <Input value={form.location || ""} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} placeholder="Office address, video link, etc." />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 whitespace-nowrap"
+                  onClick={generateMeetLink}
+                  disabled={generatingMeet}
+                >
+                  {generatingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5 mr-1" />}
+                  {generatingMeet ? "Generating..." : "Meet Link"}
+                </Button>
+              </div>
+              {form.location?.includes('meet.google.com') && (
+                <a href={form.location} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1">
+                  <Video className="w-3 h-3" /> Open Google Meet
+                </a>
+              )}
             </div>
             <div>
               <Label className="text-xs">Description</Label>
