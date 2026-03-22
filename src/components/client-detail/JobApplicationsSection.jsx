@@ -310,7 +310,9 @@ Provide:
           </div>
         )}
         {activeTab === "applications" && viewMode === "kanban" && (
-          <KanbanView applications={sorted} onEdit={openEdit} onRefresh={onRefresh} />
+          <div className="overflow-x-auto">
+            <KanbanView applications={sorted} onEdit={openEdit} onRefresh={onRefresh} />
+          </div>
         )}
         {activeTab === "applications" && viewMode === "list" && (
         <div className="divide-y divide-slate-50">
