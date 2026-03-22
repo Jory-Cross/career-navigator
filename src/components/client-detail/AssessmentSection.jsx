@@ -241,6 +241,11 @@ export default function AssessmentSection({ clientId }) {
             </div>
 
             <div className="border-t pt-4 space-y-4">
+              {assessmentType === 'riasec' && (
+                <p className="text-xs text-slate-500 bg-blue-50 border border-blue-100 rounded-md p-3">
+                  Enter each RIASEC score from the client's career interest inventory (typically 0–40 per category).
+                </p>
+              )}
               {currentQuestions.map(q => (
                 <div key={q.id}>
                   <Label htmlFor={q.id}>{q.label}</Label>
