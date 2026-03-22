@@ -48,6 +48,14 @@ const assessmentQuestions = {
     { id: "technical_prep", label: "Technical Questions Preparation", type: "textarea" },
     { id: "common_weaknesses", label: "Common Interview Weaknesses", type: "textarea" },
     { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea" }
+  ],
+  riasec: [
+    { id: "realistic", label: "Realistic (hands-on, mechanical, outdoors)", type: "text" },
+    { id: "investigative", label: "Investigative (analytical, scientific, intellectual)", type: "text" },
+    { id: "artistic", label: "Artistic (creative, expressive, original)", type: "text" },
+    { id: "social", label: "Social (helping, teaching, counseling)", type: "text" },
+    { id: "enterprising", label: "Enterprising (leadership, persuasion, business)", type: "text" },
+    { id: "conventional", label: "Conventional (organized, detail-oriented, data)", type: "text" }
   ]
 };
 
