@@ -52,7 +52,11 @@ const UserNotRegisteredError = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-3">Request Submitted!</h1>
-          <p className="text-slate-600">Your access request has been sent. Your employment specialist will review it and send you an invitation email shortly.</p>
+          <p className="text-slate-600 mb-4">Your access request has been sent. Your employment specialist will review it shortly.</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+            <p className="text-blue-800 text-sm font-semibold mb-1">⚠️ Important: Check your email</p>
+            <p className="text-blue-700 text-sm">Once approved, you will receive an <strong>invitation email</strong>. You <strong>must use the link in that email</strong> to log in — do not try to log in directly to the app or your access will be delayed.</p>
+          </div>
         </div>
       </div>
     );
