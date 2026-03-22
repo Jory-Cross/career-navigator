@@ -292,7 +292,7 @@ Provide:
           </div>
         )}
         {activeTab === "applications" && (
-        {activeTab === "applications" && <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-50">
           {sorted.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">No applications yet</div>
           ) : sorted.map(app => (
