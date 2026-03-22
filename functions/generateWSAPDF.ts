@@ -67,6 +67,47 @@ Deno.serve(async (req) => {
     const lh = 11;   // line height
     const bw = 505;  // box width
 
+    // ── PAGE 1-3 (index 0-2) ─── Counselor Referral & Client Description ─────
+    // Fill counselor referral page fields (page 1)
+    if (pages.length > 0) {
+      const p = pages[0];
+      drawLine(p, r.crp_referring_to, 160, 605, font, fs);
+      drawLine(p, r.guardianship === 'Yes' ? 'X' : '', 53, 586, font, 10);
+      drawLine(p, r.guardianship === 'No' ? 'X' : '', 85, 586, font, 10);
+      drawLine(p, r.guardian_name_phone, 48, 558, font, fs);
+      drawWrappedText(p, r.referral_question, 48, 520, bw, lh, font, fs);
+      drawWrappedText(p, r.extended_services_provider, 48, 388, bw, lh, font, fs);
+      drawWrappedText(p, r.health_insurance, 48, 300, bw, lh, font, fs);
+      drawWrappedText(p, r.social_security_benefits, 180, 280, bw, lh, font, fs);
+      // Benefits planning checkboxes
+      if (r.benefits_planning === 'Completed') drawLine(p, 'X', 108, 268, font, 10);
+      else if (r.benefits_planning === 'Pending – Date Scheduled') drawLine(p, 'X', 174, 268, font, 10);
+      else if (r.benefits_planning === 'Not Applicable') drawLine(p, 'X', 318, 268, font, 10);
+      drawLine(p, r.benefits_planning_date, 380, 268, font, fs);
+      drawWrappedText(p, r.benefits_summary_info, 48, 245, bw, lh, font, fs);
+      drawWrappedText(p, r.other_services_benefits, 48, 160, bw, lh, font, fs);
+    }
+
+    // Fill client description page fields (pages 2-3)
+    if (pages.length > 1) {
+      const p = pages[1];
+      drawWrappedText(p, r.current_work_skills, 48, 672, bw, lh, font, fs);
+      drawWrappedText(p, r.work_skill_development_needs, 48, 540, bw, lh, font, fs);
+      drawLine(p, r.jobs_of_interest, 160, 427, font, fs);
+      drawWrappedText(p, r.interpersonal_social_skills, 48, 397, bw, lh, font, fs);
+      drawWrappedText(p, r.assistive_technology_needs, 48, 290, bw, lh, font, fs);
+      drawWrappedText(p, r.communication_needs, 48, 180, bw, lh, font, fs);
+    }
+
+    if (pages.length > 2) {
+      const p = pages[2];
+      drawWrappedText(p, r.behavioral_self_regulation, 48, 672, bw, lh, font, fs);
+      drawWrappedText(p, r.activities_of_daily_living, 48, 570, bw, lh, font, fs);
+      drawWrappedText(p, r.family_issues_supports, 48, 428, bw, lh, font, fs);
+      drawWrappedText(p, r.criminal_background, 48, 310, bw, lh, font, fs);
+      drawWrappedText(p, r.school_academic, 48, 190, bw, lh, font, fs);
+    }
+
     // ── PAGE 4 (index 3) ─── CRP Observation and Report ──────────────────────
     if (pages.length > 3) {
       const p = pages[3];
