@@ -72,6 +72,7 @@ Best regards!`;
     }
 
     await base44.integrations.Core.SendEmail({
+      from_name: "Ability4Hire",
       to: client.email,
       subject,
       body

@@ -32,6 +32,11 @@ Deno.serve(async (req) => {
             contentType: 'HTML',
             content: body
           },
+          from: {
+            emailAddress: {
+              name: "Ability4Hire"
+            }
+          },
           toRecipients: [
             { emailAddress: { address: to } }
           ]
