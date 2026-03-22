@@ -130,7 +130,8 @@ export default function UseTemplateDialog({ open, onClose, client, application }
               <ChevronLeft className="w-3.5 h-3.5" /> Back to templates
             </button>
             <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
-              Sending to: <strong>{client?.email || "No email on file"}</strong>
+              Sending to: <strong>{recipientEmail || "No email on file"}</strong>
+              {application?.contact_email && application?.contact_name && <span className="ml-1">({application.contact_name})</span>}
               {application && <span className="ml-2">• Re: {application.position} at {application.company}</span>}
             </div>
             <div className="space-y-1">
