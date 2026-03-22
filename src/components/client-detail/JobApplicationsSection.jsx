@@ -563,6 +563,13 @@ Provide:
         </DialogContent>
       </Dialog>
 
+      <UseTemplateDialog
+        open={showTemplateDialog}
+        onClose={() => setShowTemplateDialog(false)}
+        client={client}
+        application={form}
+      />
+
       {/* AI Suggestions Dialog */}
       <Dialog open={showSuggestions} onOpenChange={setShowSuggestions}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
