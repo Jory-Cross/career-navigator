@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Building2, MapPin, Target, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
