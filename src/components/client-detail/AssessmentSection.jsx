@@ -227,6 +227,7 @@ export default function AssessmentSection({ clientId }) {
                   <SelectItem value="skills_audit">Skills Audit</SelectItem>
                   <SelectItem value="job_search_readiness">Job Search Readiness</SelectItem>
                   <SelectItem value="interview_readiness">Interview Readiness</SelectItem>
+                  <SelectItem value="riasec">RIASEC Career Interest</SelectItem>
                 </SelectContent>
               </Select>
             </div>
