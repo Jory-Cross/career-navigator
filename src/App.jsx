@@ -13,6 +13,7 @@ import OrgDashboard from './pages/OrgDashboard';
 import DspdPortal from './pages/DspdPortal';
 import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
 import Agents from './pages/Agents';
+import AppAnalytics from './pages/AppAnalytics';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -71,6 +72,7 @@ const AuthenticatedApp = () => {
       <Route path="/DspdPortal" element={<LayoutWrapper currentPageName="DspdPortal"><DspdPortal /></LayoutWrapper>} />
       <Route path="/PreEtsEmployerPortal" element={<PreEtsEmployerPortal />} />
       <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
+      <Route path="/AppAnalytics" element={<LayoutWrapper currentPageName="AppAnalytics"><AppAnalytics /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
       <Route path="/OrgSignup" element={<OrgSignup />} />
