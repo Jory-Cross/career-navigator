@@ -274,7 +274,21 @@ Field mapping:
           notes
         });
 
-        if (assessmentType !== 'riasec' && assessmentType !== 'work_strategy_assessment') {
+        if (assessmentType === 'work_strategy_assessment') {
+          toast.loading("Generating completed WSA PDF...", { id: "wsa-pdf" });
+          const { data: pdfData } = await base44.functions.invoke('generateWSAPDF', {
+            assessment_id: assessment.id
+          });
+          await base44.entities.Document.create({
+            client_id: clientId,
+            title: `Work Strategy Assessment`,
+            file_url: pdfData.pdf_url,
+            file_name: `WSA_${assessment.id}.pdf`,
+            file_type: 'application/pdf',
+            category: 'other'
+          });
+          toast.success("WSA PDF ready!", { id: "wsa-pdf" });
+        } else if (assessmentType !== 'riasec') {
           const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
             assessment_id: assessment.id
           });
