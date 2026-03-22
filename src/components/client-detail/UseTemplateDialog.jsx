@@ -51,7 +51,10 @@ export default function UseTemplateDialog({ open, onClose, client, application }
     first_name: client?.first_name || "",
     company: application?.company || "",
     position: application?.position || "",
-    contact_name: application?.contact_name || ""
+    contact_name: application?.contact_name || "",
+    client_phone: client?.phone || "",
+    client_email: client?.email || "",
+    client_linkedin: client?.linkedin_url || ""
   };
 
   const selectTemplate = (t) => {
