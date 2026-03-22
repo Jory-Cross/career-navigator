@@ -33,93 +33,39 @@ Deno.serve(async (req) => {
     const fields = form.getFields();
 
     // Log available fields for debugging
-    console.log('Available form fields:', fields.map(f => f.getName()));
+    const fieldNames = fields.map(f => f.getName());
+    console.log('Available form fields:', fieldNames);
 
-    // Populate all form fields with assessment responses
-    const fieldMap = {
-      // Counselor Referral Page
-      'Client Name': r.client_name || '',
-      'Address': r.address || '',
-      'City': r.city || '',
-      'State': r.state || '',
-      'ZIP': r.zip || '',
-      'CRP Referring to': r.crp_referring_to || '',
-      'Client Phone': r.client_phone || '',
-      'Client Cell': r.client_cell || '',
-      'Guardianship': r.guardianship || '',
-      'If yes, Parent/Guardian name and phone': r.guardian_name_phone || '',
-      'Referral question': r.referral_question || '',
-      'Benefits Summary Info': r.benefits_summary_info || '',
-      'Other Services/Benefits': r.other_services_benefits || '',
-      // Client Description
-      'Current Work Skills': r.current_work_skills || '',
-      'Work Skill Development Needs': r.work_skill_development_needs || '',
-      'Jobs of Interest': r.jobs_of_interest || '',
-      'Interpersonal/Social Skills': r.interpersonal_social_skills || '',
-      'Identified Assistive Technology Needs': r.assistive_technology_needs || '',
-      'Communication Needs': r.communication_needs || '',
-      'Behavioral/Self-regulation': r.behavioral_self_regulation || '',
-      'Activities of Daily Living': r.activities_of_daily_living || '',
-      'Family Issues/Supports': r.family_issues_supports || '',
-      'Criminal Background': r.criminal_background || '',
-      'School/Academic': r.school_academic || '',
-      // CRP Observation and Report
-      'Worksite Simulation Location': r.worksite_simulation_location || '',
-      'Work Assessment Observations': r.work_assessment_observations || '',
-      'Natural Support Assessment Observations': r.natural_support_observations || '',
-      'Life Skills Observations': r.life_skills_observations || '',
-      'Public': r.transportation_public || '',
-      'Private transportation': r.transportation_private || '',
-      'Transportation Assessment Observations': r.transportation_observations || '',
-      'Computer Skill Assessment Other': r.computer_skills_other || '',
-      'Computer Skill Assessment Observations': r.computer_skill_observations || '',
-      'Interview Skill Assessment Observations': r.interview_skill_observations || '',
-      'Other Observations': r.other_observations || '',
-      // Recommendations
-      'Planned Job Search hours/week': r.planned_job_search_hours_week || '',
-      'Life Skills needed': r.life_skills_needed || '',
-      'Life Skills hours requested': r.life_skills_hours_requested || '',
-      'Recommended target occupations': r.recommended_target_occupations || '',
-      'Recommended supports on the job': r.recommended_supports_on_job || '',
-      // Team Section
-      'Community Rehabilitation Program Name': r.crp_name || '',
-      'Assigned Employment Specialist/Job Coach': r.assigned_employment_specialist || '',
-      'Joint VR/CRP Job Development Supports': r.job_development_supports || '',
-      'Joint VR/CRP Ongoing Supports': r.ongoing_supports || '',
-      'Job Goal': r.job_goal || '',
-      'Industry Targeted Pay Range': r.industry_targeted_pay_range || '',
-      'Benefits/Other': r.benefits_other || '',
-      'Hours available to work': r.hours_available_to_work || ''
-    };
-
-    // Set text fields
-    for (const [fieldLabel, value] of Object.entries(fieldMap)) {
+    // Dynamic field mapping - try to match response keys to PDF field names
+    for (const [key, value] of Object.entries(r)) {
+      if (!value || key.startsWith('_')) continue; // Skip empty/internal fields
+      
       try {
-        const field = form.getFieldMaybe(fieldLabel);
-        if (field && value) {
-          field.setText(value);
+        // Try exact match first
+        let field = form.getFieldMaybe(key);
+        if (!field) {
+          // Try finding field that contains key text
+          const matchingField = fieldNames.find(fname => 
+            fname.toLowerCase().includes(key.toLowerCase()) || 
+            key.toLowerCase().includes(fname.toLowerCase())
+          );
+          if (matchingField) {
+            field = form.getFieldMaybe(matchingField);
+          }
+        }
+        
+        if (field) {
+          const fieldType = field.constructor.name;
+          if (fieldType.includes('Text')) {
+            field.setText(String(value));
+            console.log(`Set ${key} to field`);
+          } else if (fieldType.includes('Checkbox') && (value === 'Yes' || value === true)) {
+            field.check();
+            console.log(`Checked ${key}`);
+          }
         }
       } catch (e) {
-        // Field might not exist, continue
-      }
-    }
-
-    // Handle checkbox fields
-    const checkboxMap = {
-      'Guardianship Yes': r.guardianship === 'Yes',
-      'Guardianship No': r.guardianship === 'No',
-      'ACRE Certified Yes': r.acre_certified === 'Yes',
-      'ACRE Certified No': r.acre_certified === 'No'
-    };
-
-    for (const [fieldLabel, checked] of Object.entries(checkboxMap)) {
-      try {
-        const field = form.getFieldMaybe(fieldLabel);
-        if (field && checked) {
-          field.check();
-        }
-      } catch (e) {
-        // Field might not exist, continue
+        console.log(`Could not set field for ${key}:`, e.message);
       }
     }
 
