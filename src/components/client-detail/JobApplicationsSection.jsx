@@ -520,7 +520,10 @@ Provide:
               <p className="text-xs text-slate-500 mt-2">Automatic tasks will be created to remind you to follow up</p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowTemplateDialog(true)} className="sm:mr-auto">
+              <FileText className="w-3.5 h-3.5 mr-1" /> Send Email Template
+            </Button>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-white">{saving ? "Saving..." : "Save"}</Button>
           </DialogFooter>
