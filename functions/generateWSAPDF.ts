@@ -145,8 +145,9 @@ Deno.serve(async (req) => {
 
     const modifiedPdfBytes = await pdfDoc.save();
 
-    // Upload completed PDF - pass Uint8Array directly
-    const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: modifiedPdfBytes });
+    // Upload completed PDF as a File object
+    const pdfFile = new File([modifiedPdfBytes], `wsa-${assessment_id}.pdf`, { type: 'application/pdf' });
+    const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfFile });
 
     // Save pdf_url back to assessment
     await base44.asServiceRole.entities.Assessment.update(assessment_id, { pdf_url: file_url });
