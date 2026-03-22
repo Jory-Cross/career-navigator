@@ -280,7 +280,23 @@ Provide:
             </button>
           </div>
           {activeTab === "applications" && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <div className="flex gap-0.5 border border-slate-200 rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={cn("p-1.5 rounded-md transition-colors", viewMode === "list" ? "bg-white shadow-sm text-slate-900" : "text-slate-400 hover:text-slate-600")}
+                  title="List view"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={cn("p-1.5 rounded-md transition-colors", viewMode === "kanban" ? "bg-white shadow-sm text-slate-900" : "text-slate-400 hover:text-slate-600")}
+                  title="Kanban view"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <Button size="sm" variant="outline" onClick={getAISuggestions}>
                 <Sparkles className="w-3.5 h-3.5 mr-1" /> AI Suggestions
               </Button>
