@@ -659,8 +659,13 @@ export default function Calendar() {
                         </span>
                         {meeting.location && (
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {meeting.location}
+                            {meeting.location.includes('meet.google.com') ? (
+                              <a href={meeting.location} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+                                <Video className="w-3 h-3" /> Join Meet
+                              </a>
+                            ) : (
+                              <><MapPin className="w-3 h-3" />{meeting.location}</>
+                            )}
                           </span>
                         )}
                       </div>
