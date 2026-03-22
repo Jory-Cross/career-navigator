@@ -50,12 +50,12 @@ const assessmentQuestions = {
     { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea" }
   ],
   riasec: [
-    { id: "realistic", label: "Realistic (hands-on, mechanical, outdoors)", type: "text" },
-    { id: "investigative", label: "Investigative (analytical, scientific, intellectual)", type: "text" },
-    { id: "artistic", label: "Artistic (creative, expressive, original)", type: "text" },
-    { id: "social", label: "Social (helping, teaching, counseling)", type: "text" },
-    { id: "enterprising", label: "Enterprising (leadership, persuasion, business)", type: "text" },
-    { id: "conventional", label: "Conventional (organized, detail-oriented, data)", type: "text" }
+    { id: "realistic", label: "Realistic (R) — hands-on, mechanical, outdoors", type: "text", placeholder: "Score 0–40" },
+    { id: "investigative", label: "Investigative (I) — analytical, scientific, intellectual", type: "text", placeholder: "Score 0–40" },
+    { id: "artistic", label: "Artistic (A) — creative, expressive, original", type: "text", placeholder: "Score 0–40" },
+    { id: "social", label: "Social (S) — helping, teaching, counseling", type: "text", placeholder: "Score 0–40" },
+    { id: "enterprising", label: "Enterprising (E) — leadership, persuasion, business", type: "text", placeholder: "Score 0–40" },
+    { id: "conventional", label: "Conventional (C) — organized, detail-oriented, data", type: "text", placeholder: "Score 0–40" }
   ]
 };
 
