@@ -21,149 +21,111 @@ Deno.serve(async (req) => {
     if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const r = assessment.responses || {};
-    console.log('Assessment responses keys:', Object.keys(r));
+    console.log('Loading fillable WSA template and populating fields...');
 
-    // Use uploaded PDF as base (preserves pages 1-3 with extracted data), or blank template for complete filling
-    const sourceUrl = r._uploaded_pdf_url || BLANK_WSA_URL;
-    console.log('Loading PDF from:', sourceUrl);
-    console.log('Using uploaded PDF:', !!r._uploaded_pdf_url);
-
-    const pdfResponse = await fetch(sourceUrl);
+    // Load fillable PDF template
+    const pdfResponse = await fetch(FILLABLE_WSA_URL);
     if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
     const pdfBytes = await pdfResponse.arrayBuffer();
 
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const pages = pdfDoc.getPages();
+    const form = pdfDoc.getForm();
+    const fields = form.getFields();
 
-    console.log(`PDF has ${pages.length} pages`);
+    // Log available fields for debugging
+    console.log('Available form fields:', fields.map(f => f.getName()));
 
-    const fs = 9;    // font size
-    const lh = 11;   // line height
-    const bw = 505;  // box width
+    // Populate all form fields with assessment responses
+    const fieldMap = {
+      // Counselor Referral Page
+      'Client Name': r.client_name || '',
+      'Address': r.address || '',
+      'City': r.city || '',
+      'State': r.state || '',
+      'ZIP': r.zip || '',
+      'CRP Referring to': r.crp_referring_to || '',
+      'Client Phone': r.client_phone || '',
+      'Client Cell': r.client_cell || '',
+      'Guardianship': r.guardianship || '',
+      'If yes, Parent/Guardian name and phone': r.guardian_name_phone || '',
+      'Referral question': r.referral_question || '',
+      'Benefits Summary Info': r.benefits_summary_info || '',
+      'Other Services/Benefits': r.other_services_benefits || '',
+      // Client Description
+      'Current Work Skills': r.current_work_skills || '',
+      'Work Skill Development Needs': r.work_skill_development_needs || '',
+      'Jobs of Interest': r.jobs_of_interest || '',
+      'Interpersonal/Social Skills': r.interpersonal_social_skills || '',
+      'Identified Assistive Technology Needs': r.assistive_technology_needs || '',
+      'Communication Needs': r.communication_needs || '',
+      'Behavioral/Self-regulation': r.behavioral_self_regulation || '',
+      'Activities of Daily Living': r.activities_of_daily_living || '',
+      'Family Issues/Supports': r.family_issues_supports || '',
+      'Criminal Background': r.criminal_background || '',
+      'School/Academic': r.school_academic || '',
+      // CRP Observation and Report
+      'Worksite Simulation Location': r.worksite_simulation_location || '',
+      'Work Assessment Observations': r.work_assessment_observations || '',
+      'Natural Support Assessment Observations': r.natural_support_observations || '',
+      'Life Skills Observations': r.life_skills_observations || '',
+      'Public': r.transportation_public || '',
+      'Private transportation': r.transportation_private || '',
+      'Transportation Assessment Observations': r.transportation_observations || '',
+      'Computer Skill Assessment Other': r.computer_skills_other || '',
+      'Computer Skill Assessment Observations': r.computer_skill_observations || '',
+      'Interview Skill Assessment Observations': r.interview_skill_observations || '',
+      'Other Observations': r.other_observations || '',
+      // Recommendations
+      'Planned Job Search hours/week': r.planned_job_search_hours_week || '',
+      'Life Skills needed': r.life_skills_needed || '',
+      'Life Skills hours requested': r.life_skills_hours_requested || '',
+      'Recommended target occupations': r.recommended_target_occupations || '',
+      'Recommended supports on the job': r.recommended_supports_on_job || '',
+      // Team Section
+      'Community Rehabilitation Program Name': r.crp_name || '',
+      'Assigned Employment Specialist/Job Coach': r.assigned_employment_specialist || '',
+      'Joint VR/CRP Job Development Supports': r.job_development_supports || '',
+      'Joint VR/CRP Ongoing Supports': r.ongoing_supports || '',
+      'Job Goal': r.job_goal || '',
+      'Industry Targeted Pay Range': r.industry_targeted_pay_range || '',
+      'Benefits/Other': r.benefits_other || '',
+      'Hours available to work': r.hours_available_to_work || ''
+    };
 
-    // ── PAGE 1-3 (index 0-2) ─── Counselor Referral & Client Description ─────
-    // Fill counselor referral page fields (page 1)
-    if (pages.length > 0) {
-      const p = pages[0];
-      drawLine(p, r.crp_referring_to, 160, 605, font, fs);
-      drawLine(p, r.guardianship === 'Yes' ? 'X' : '', 53, 586, font, 10);
-      drawLine(p, r.guardianship === 'No' ? 'X' : '', 85, 586, font, 10);
-      drawLine(p, r.guardian_name_phone, 48, 558, font, fs);
-      drawWrappedText(p, r.referral_question, 48, 520, bw, lh, font, fs);
-      drawWrappedText(p, r.extended_services_provider, 48, 388, bw, lh, font, fs);
-      drawWrappedText(p, r.health_insurance, 48, 300, bw, lh, font, fs);
-      drawWrappedText(p, r.social_security_benefits, 180, 280, bw, lh, font, fs);
-      // Benefits planning checkboxes
-      if (r.benefits_planning === 'Completed') drawLine(p, 'X', 108, 268, font, 10);
-      else if (r.benefits_planning === 'Pending – Date Scheduled') drawLine(p, 'X', 174, 268, font, 10);
-      else if (r.benefits_planning === 'Not Applicable') drawLine(p, 'X', 318, 268, font, 10);
-      drawLine(p, r.benefits_planning_date, 380, 268, font, fs);
-      drawWrappedText(p, r.benefits_summary_info, 48, 245, bw, lh, font, fs);
-      drawWrappedText(p, r.other_services_benefits, 48, 160, bw, lh, font, fs);
-    }
-
-    // Fill client description page fields (pages 2-3)
-    if (pages.length > 1) {
-      const p = pages[1];
-      drawWrappedText(p, r.current_work_skills, 48, 672, bw, lh, font, fs);
-      drawWrappedText(p, r.work_skill_development_needs, 48, 540, bw, lh, font, fs);
-      drawLine(p, r.jobs_of_interest, 160, 427, font, fs);
-      drawWrappedText(p, r.interpersonal_social_skills, 48, 397, bw, lh, font, fs);
-      drawWrappedText(p, r.assistive_technology_needs, 48, 290, bw, lh, font, fs);
-      drawWrappedText(p, r.communication_needs, 48, 180, bw, lh, font, fs);
-    }
-
-    if (pages.length > 2) {
-      const p = pages[2];
-      drawWrappedText(p, r.behavioral_self_regulation, 48, 672, bw, lh, font, fs);
-      drawWrappedText(p, r.activities_of_daily_living, 48, 570, bw, lh, font, fs);
-      drawWrappedText(p, r.family_issues_supports, 48, 428, bw, lh, font, fs);
-      drawWrappedText(p, r.criminal_background, 48, 310, bw, lh, font, fs);
-      drawWrappedText(p, r.school_academic, 48, 190, bw, lh, font, fs);
-    }
-
-    // ── PAGE 4 (index 3) ─── CRP Observation and Report ──────────────────────
-    if (pages.length > 3) {
-      const p = pages[3];
-      // Worksite Simulation Location inline
-      drawLine(p, r.worksite_simulation_location, 222, 554, font, fs);
-      // Work Assessment Observations box (top of box ~535, label above)
-      drawWrappedText(p, r.work_assessment_observations, 48, 523, bw, lh, font, fs);
-      // Natural Support Assessment Observations
-      drawWrappedText(p, r.natural_support_observations, 48, 345, bw, lh, font, fs);
-      // Life Skills Observations
-      drawWrappedText(p, r.life_skills_observations, 48, 162, bw, lh, font, fs);
-    }
-
-    // ── PAGE 5 (index 4) ─── Transportation, Computer, Interview ─────────────
-    if (pages.length > 4) {
-      const p = pages[4];
-      // Transportation Public inline
-      drawLine(p, r.transportation_public, 122, 672, font, fs);
-      // Transportation Private inline
-      drawLine(p, r.transportation_private, 185, 653, font, fs);
-      // Transportation Observations box
-      drawWrappedText(p, r.transportation_observations, 48, 598, bw, lh, font, fs);
-      // Computer Skills Other (inline field)
-      drawLine(p, r.computer_skills_other, 48, 408, font, fs);
-      // Computer Skill Observations box
-      drawWrappedText(p, r.computer_skill_observations, 48, 363, bw, lh, font, fs);
-      // Interview Skill Observations box
-      drawWrappedText(p, r.interview_skill_observations, 48, 165, bw, lh, font, fs);
-    }
-
-    // ── PAGE 6 (index 5) ─── Other Observations, Recommendations, Team ───────
-    if (pages.length > 5) {
-      const p = pages[5];
-      // Other Observations box (top of page)
-      drawWrappedText(p, r.other_observations, 48, 672, bw, lh, font, fs);
-      // Planned Job Search hours/week inline
-      drawLine(p, r.planned_job_search_hours_week, 242, 486, font, fs);
-      // Life Skills needed box
-      drawWrappedText(p, r.life_skills_needed, 48, 460, bw, lh, font, fs);
-      // Life Skills hours requested inline
-      drawLine(p, r.life_skills_hours_requested, 190, 296, font, fs);
-      // Recommended target occupations (3 slots on one line)
-      if (r.recommended_target_occupations) {
-        drawLine(p, r.recommended_target_occupations, 48, 267, font, fs);
-      }
-      // Recommended supports on the job box
-      drawWrappedText(p, r.recommended_supports_on_job, 48, 222, bw, lh, font, fs);
-      // CRP Name inline
-      drawLine(p, r.crp_name, 242, 66, font, fs);
-      // Assigned Employment Specialist inline
-      drawLine(p, r.assigned_employment_specialist, 262, 50, font, fs);
-      // ACRE Certified checkboxes
-      if (r.acre_certified === 'Yes') {
-        drawLine(p, 'X', 174, 35, font, 10);
-      } else if (r.acre_certified === 'No') {
-        drawLine(p, 'X', 206, 35, font, 10);
+    // Set text fields
+    for (const [fieldLabel, value] of Object.entries(fieldMap)) {
+      try {
+        const field = form.getFieldMaybe(fieldLabel);
+        if (field && value) {
+          field.setText(value);
+        }
+      } catch (e) {
+        // Field might not exist, continue
       }
     }
 
-    // ── PAGE 7 (index 6) ─── Joint Recommendations, Job Goal, Hours ──────────
-    if (pages.length > 6) {
-      const p = pages[6];
-      // Joint VR/CRP Job Development Supports box
-      drawWrappedText(p, r.job_development_supports, 48, 672, bw, lh, font, fs);
-      // Joint VR/CRP Ongoing Supports box
-      drawWrappedText(p, r.ongoing_supports, 48, 462, bw, lh, font, fs);
-      // Job Goal inline
-      drawLine(p, r.job_goal, 218, 263, font, fs);
-      // Industry Targeted Pay Range inline
-      drawLine(p, r.industry_targeted_pay_range, 218, 245, font, fs);
-      // Benefits/Other inline
-      drawLine(p, r.benefits_other, 148, 228, font, fs);
-      // Hours available to work - just render as text
-      if (r.hours_available_to_work) {
-        drawLine(p, r.hours_available_to_work, 48, 200, font, fs);
+    // Handle checkbox fields
+    const checkboxMap = {
+      'Guardianship Yes': r.guardianship === 'Yes',
+      'Guardianship No': r.guardianship === 'No',
+      'ACRE Certified Yes': r.acre_certified === 'Yes',
+      'ACRE Certified No': r.acre_certified === 'No'
+    };
+
+    for (const [fieldLabel, checked] of Object.entries(checkboxMap)) {
+      try {
+        const field = form.getFieldMaybe(fieldLabel);
+        if (field && checked) {
+          field.check();
+        }
+      } catch (e) {
+        // Field might not exist, continue
       }
     }
 
     const modifiedPdfBytes = await pdfDoc.save();
 
-    // Upload completed PDF as a File object
+    // Upload completed PDF
     const pdfFile = new File([modifiedPdfBytes], `wsa-${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
 
