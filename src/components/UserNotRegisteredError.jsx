@@ -114,10 +114,13 @@ const UserNotRegisteredError = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-3">Access Restricted</h1>
-          <p className="text-slate-600 mb-6">
-            You're not yet registered in this system. If your employment specialist has already invited you, check your email for an invitation link.
+          <p className="text-slate-600 mb-4">
+            You're not yet registered in this system. If your employment specialist has already invited you, <strong>check your email for an invitation link</strong> and use that to log in.
           </p>
-          <p className="text-slate-600 mb-6">Otherwise, you can submit an access request below and your specialist will approve it.</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-left">
+            <p className="text-amber-800 text-sm"><strong>Note:</strong> Always use the invitation link from your email to access this app — logging in directly without an invite link will not work.</p>
+          </div>
+          <p className="text-slate-600 mb-6">If you haven't received an invite, submit an access request below and your specialist will send you one.</p>
           <Button onClick={() => setStep('form')} className="w-full">Request Access</Button>
           <button
             onClick={() => base44.auth.logout()}
