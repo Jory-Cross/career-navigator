@@ -42,20 +42,16 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { assessment_id } = await req.json();
-    const assessment = await base44.asServiceRole.entities.Assessment.get(assessment_id);
+    const assessment = await base44.entities.Assessment.get(assessment_id);
     if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const r = assessment.responses || {};
     console.log('Assessment responses keys:', Object.keys(r));
-    console.log('Sample response values:', {
-      worksite_simulation_location: r.worksite_simulation_location,
-      work_assessment_observations: r.work_assessment_observations,
-      crp_name: r.crp_name
-    });
 
-    // Use uploaded PDF as base (has pages 1-3 filled), or blank template
+    // Use uploaded PDF as base (preserves pages 1-3 with extracted data), or blank template for complete filling
     const sourceUrl = r._uploaded_pdf_url || BLANK_WSA_URL;
     console.log('Loading PDF from:', sourceUrl);
+    console.log('Using uploaded PDF:', !!r._uploaded_pdf_url);
 
     const pdfResponse = await fetch(sourceUrl);
     if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
