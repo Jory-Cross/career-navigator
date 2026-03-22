@@ -17,6 +17,7 @@ const categoryColors = {
   follow_up: "bg-blue-100 text-blue-700",
   interview_scheduling: "bg-purple-100 text-purple-700",
   application_update: "bg-emerald-100 text-emerald-700",
+  networking: "bg-orange-100 text-orange-700",
   welcome: "bg-amber-100 text-amber-700",
   check_in: "bg-pink-100 text-pink-700",
   general: "bg-slate-100 text-slate-700"
@@ -162,6 +163,7 @@ export default function EmailTemplates() {
                     <SelectItem value="follow_up">Follow Up</SelectItem>
                     <SelectItem value="interview_scheduling">Interview Scheduling</SelectItem>
                     <SelectItem value="application_update">Application Update</SelectItem>
+                    <SelectItem value="networking">Networking</SelectItem>
                     <SelectItem value="welcome">Welcome</SelectItem>
                     <SelectItem value="check_in">Check In</SelectItem>
                     <SelectItem value="general">General</SelectItem>

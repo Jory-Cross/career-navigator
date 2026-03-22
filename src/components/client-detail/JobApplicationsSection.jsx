@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell, Mail, Share2, Phone, Trash2, StickyNote, Search, List, LayoutGrid } from "lucide-react";
+import { Plus, ExternalLink, Building2, Calendar, MapPin, Sparkles, Target, Loader2, Bell, Mail, Share2, Phone, Trash2, StickyNote, Search, List, LayoutGrid, FileText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import LiveJobSearch from "@/components/shared/LiveJobSearch";
 import KanbanView from "@/components/client-detail/KanbanView";
+import UseTemplateDialog from "@/components/client-detail/UseTemplateDialog";
 
 const statusConfig = {
   saved: { color: "bg-slate-100 text-slate-600", label: "Saved" },
