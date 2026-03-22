@@ -170,8 +170,9 @@ export default function AssessmentSection({ clientId }) {
     setExtracting(true);
     toast.loading("Extracting data from PDF...", { id: "wsa-extract" });
     try {
-      // Upload the PDF
+      // Upload the PDF and save the URL for later overlay
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setResponses(prev => ({ ...prev, _uploaded_pdf_url: file_url }));
 
       // Build a schema for all WSA fields
       const schemaProperties = {};
