@@ -256,6 +256,7 @@ export default function AssessmentSection({ clientId }) {
                       onChange={(e) => setResponses({...responses, [q.id]: e.target.value})}
                       rows={3}
                       className="mt-1"
+                      placeholder={q.placeholder || ""}
                     />
                   ) : q.type === 'select' ? (
                     <Select value={responses[q.id] || ""} onValueChange={(val) => setResponses({...responses, [q.id]: val})}>
