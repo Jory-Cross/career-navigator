@@ -292,8 +292,8 @@ Provide:
           </div>
         )}
         {activeTab === "applications" && (
-        <div className="divide-y divide-slate-50">
-          {sorted.length === 0 && activeTab === "applications" ? (
+        {activeTab === "applications" && <div className="divide-y divide-slate-50">
+          {sorted.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">No applications yet</div>
           ) : sorted.map(app => (
             <div key={app.id} className="p-4 hover:bg-slate-25 transition-colors cursor-pointer" onClick={() => openEdit(app)}>
