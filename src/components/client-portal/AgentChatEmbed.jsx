@@ -65,7 +65,7 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     setLoading(true);
     // Always inject system context so the agent has current data (assessments, profile, etc.)
     const content = systemContext
-      ? `[SYSTEM CONTEXT - do not repeat this back to the user, use this data directly without searching:\n${systemContext}\n]\n\n${text}`
+      ? `<<SYS>>${systemContext}<</SYS>>\n\n${text}`
       : text;
     try {
       await base44.agents.addMessage(conversation, { role: "user", content });
