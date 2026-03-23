@@ -41,6 +41,13 @@ export default function PreEtsEmployerPortal() {
     enabled: !!selectedClientId
   });
 
+  // Progress reports for selected client
+  const { data: progressReports = [] } = useQuery({
+    queryKey: ["training-progress-reports", selectedClientId],
+    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: selectedClientId }),
+    enabled: !!selectedClientId
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
   }
