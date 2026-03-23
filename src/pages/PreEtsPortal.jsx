@@ -501,7 +501,7 @@ export default function PreEtsPortal() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {wbleForms.length === 0 ? (
+                {wbleForms.length === 0 && progressReports.length === 0 ? (
                   <div className="text-center py-8">
                     <Briefcase className="w-10 h-10 mx-auto text-slate-300 mb-3" />
                     <p className="text-sm text-slate-400">No WBLE agreements yet</p>
