@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
 
     // Log available fields for debugging
     const fieldNames = fields.map(f => f.getName());
-    console.log('Available form fields:', fieldNames);
+    console.log('Available PDF form fields:', JSON.stringify(fieldNames));
+    console.log('Assessment response keys:', JSON.stringify(Object.keys(r)));
 
     // Dynamic field mapping - try to match response keys to PDF field names
     for (const [key, value] of Object.entries(r)) {
