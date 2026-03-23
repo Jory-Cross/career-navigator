@@ -171,14 +171,51 @@ export default function PreEtsEmployerPortal() {
         </CardContent>
       </Card>
 
-      {/* Placeholder for future forms */}
-      <Card className="border-0 shadow-sm border-dashed border-2 border-slate-200 bg-slate-50">
-        <CardContent className="p-6 text-center">
-          <FileText className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-          <p className="text-sm text-slate-400 font-medium">More forms coming soon</p>
-          <p className="text-xs text-slate-400 mt-1">Additional employer forms will be added here.</p>
+      {/* Training Progress Report Section */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-600" /> Training Progress Reports (DWS-USOR 72)
+            </CardTitle>
+            <Button size="sm" onClick={() => setShowProgressForm(true)}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> New Report
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {progressReports.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-400">No progress reports submitted yet</p>
+              <p className="text-xs text-slate-400 mt-1">Click "New Report" to submit a monthly progress report.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {progressReports.map(report => (
+                <div key={report.id} className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        Reporting Period: {report.reporting_period_from && format(new Date(report.reporting_period_from), "MMM d")} – {report.reporting_period_to && format(new Date(report.reporting_period_to), "MMM d, yyyy")}
+                      </p>
+                      {report.supervisor_name && <p className="text-xs text-slate-600 mt-0.5">Supervisor: {report.supervisor_name}</p>}
+                      <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700 text-xs shrink-0">Submitted</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <TrainingProgressReportForm
+        open={showProgressForm}
+        onClose={() => setShowProgressForm(false)}
+        client={activeClient}
+      />
     </div>
   );
 }
