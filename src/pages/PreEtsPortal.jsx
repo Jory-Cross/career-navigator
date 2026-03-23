@@ -329,7 +329,7 @@ export default function PreEtsPortal() {
           <TabsTrigger value="iep">IEP & Transition Plan</TabsTrigger>
           <TabsTrigger value="skills">Skills Exploration</TabsTrigger>
           <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>
-          <TabsTrigger value="wble">WBLE Forms ({wbleForms.length})</TabsTrigger>
+          <TabsTrigger value="wble">WBLE Forms ({wbleForms.length + progressReports.length})</TabsTrigger>
           <TabsTrigger value="meetings">Meetings ({upcomingMeetings.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
         </TabsList>
