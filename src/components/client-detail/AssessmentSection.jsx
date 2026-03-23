@@ -407,6 +407,9 @@ Field mapping:
                         </Button>
                       </a>
                     )}
+                    <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(assessment)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </div>
