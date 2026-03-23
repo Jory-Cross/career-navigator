@@ -160,13 +160,26 @@ export default function WBLEFormSection({ clientId, client, user }) {
                       )}
                     </div>
                   </div>
-                  {form.pdf_url && (
-                    <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="ghost">
-                        <Download className="w-3.5 h-3.5" />
-                      </Button>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {form.pdf_url && (
+                      <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="ghost">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                      </a>
+                    )}
+                    <Button
+                      size="sm" variant="ghost"
+                      className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteForm(form.id)}
+                      disabled={deletingForm === form.id}
+                    >
+                      {deletingForm === form.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Trash2 className="w-3.5 h-3.5" />
+                      }
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
