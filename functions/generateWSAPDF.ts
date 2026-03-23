@@ -37,36 +37,82 @@ Deno.serve(async (req) => {
     console.log('Available PDF form fields:', JSON.stringify(fieldNames));
     console.log('Assessment response keys:', JSON.stringify(Object.keys(r)));
 
-    // Dynamic field mapping - try to match response keys to PDF field names
+    // Explicit field name mapping from response keys → PDF field names
+    const FIELD_MAP = {
+      crp_referring_to: 'CRP Referring to',
+      referral_question: 'Referral question',
+      guardian_name_phone: 'If yes, Parent/Guardian name and phone',
+      benefits_summary_info: 'Benefits Summary Info',
+      other_services_benefits: 'Other Services/Benefits',
+      current_work_skills: 'Current Work Skills',
+      work_skill_development_needs: 'Work Skill Development Needs',
+      jobs_of_interest: 'Jobs of Interest',
+      interpersonal_social_skills: 'Interpersonal/Social Skills',
+      assistive_technology_needs: 'Identified Assistive Technology Needs',
+      communication_needs: 'Communication Needs',
+      behavioral_self_regulation: 'Behavioral/Self-regulation',
+      activities_of_daily_living: 'Activities of Daily Living',
+      family_issues_supports: 'Family Issues/Supports',
+      criminal_background: 'Criminal Background',
+      school_academic: 'School/Academic',
+      worksite_simulation_location: 'Worksite Simulation Location',
+      work_assessment_observations: 'Observations',       // Work Assessment
+      natural_support_observations: 'Observations_2',     // Natural Support
+      life_skills_observations: 'Observations_3',         // Life Skills
+      transportation_public: 'Public',
+      transportation_private: 'Private transportation',
+      transportation_observations: 'Observations_4',      // Transportation
+      computer_skills_other: 'Other skills',
+      computer_skill_observations: 'Observations_5',      // Computer Skill
+      interview_skill_observations: 'Observations_6',     // Interview Skill
+      other_observations: 'Other Observations',
+      planned_job_search_hours_week: 'Planned Job Search hoursweek',
+      life_skills_needed: 'Life Skills needed',
+      life_skills_hours_requested: 'Life Skills hours requested',
+      recommended_target_occupations: 'Recommended target occupations',
+      recommended_supports_on_job: 'Recommended supports on the job',
+      job_development_supports: 'Joint VRCRP Recommendations for Job Development Supports',
+      ongoing_supports: 'Joint VRCRP Recommendations for Ongoing Supports',
+      job_goal: 'Job Goal must align with IPE goal',
+      industry_targeted_pay_range: 'Industry Targeted Pay Range',
+      benefits_other: 'BenefitsOther',
+      hours_available_to_work: 'Other_2',
+      crp_name: 'Community Rehabilitation Program Name',
+      assigned_employment_specialist: 'Assigned Employment SpecialistJob Coach',
+    };
+
+    // Try explicit mapping first, then fall back to fuzzy match
     for (const [key, value] of Object.entries(r)) {
-      if (!value || key.startsWith('_')) continue; // Skip empty/internal fields
-      
-      try {
-        // Try exact match first
-        let field = form.getFieldMaybe(key);
-        if (!field) {
-          // Try finding field that contains key text
-          const matchingField = fieldNames.find(fname => 
-            fname.toLowerCase().includes(key.toLowerCase()) || 
-            key.toLowerCase().includes(fname.toLowerCase())
-          );
-          if (matchingField) {
-            field = form.getFieldMaybe(matchingField);
-          }
-        }
-        
-        if (field) {
+      if (!value || key.startsWith('_')) continue;
+
+      let fieldName = FIELD_MAP[key];
+      let field = fieldName ? form.getFieldMaybe(fieldName) : null;
+
+      // Fallback: fuzzy match with underscore→space normalization
+      if (!field) {
+        const normalizedKey = key.toLowerCase().replace(/_/g, ' ');
+        const matchingField = fieldNames.find(fname => {
+          const fn = fname.toLowerCase();
+          return fn.includes(normalizedKey) || normalizedKey.includes(fn);
+        });
+        if (matchingField) field = form.getFieldMaybe(matchingField);
+      }
+
+      if (field) {
+        try {
           const fieldType = field.constructor.name;
           if (fieldType.includes('Text')) {
             field.setText(String(value));
-            console.log(`Set ${key} to field`);
+            console.log(`✓ Set "${key}" → "${field.getName()}"`);
           } else if (fieldType.includes('Checkbox') && (value === 'Yes' || value === true)) {
             field.check();
-            console.log(`Checked ${key}`);
+            console.log(`✓ Checked "${key}" → "${field.getName()}"`);
           }
+        } catch (e) {
+          console.log(`✗ Error setting "${key}":`, e.message);
         }
-      } catch (e) {
-        console.log(`Could not set field for ${key}:`, e.message);
+      } else {
+        console.log(`✗ No field found for "${key}"`);
       }
     }
 
