@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Briefcase, FileText, ArrowLeft } from "lucide-react";
+import { GraduationCap, Briefcase, FileText, ArrowLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import TrainingProgressReportForm from "@/components/pre-ets/TrainingProgressReportForm";
 
 export default function PreEtsEmployerPortal() {
   const [user, setUser] = useState(null);
