@@ -202,7 +202,16 @@ export default function PreEtsEmployerPortal() {
                       {report.supervisor_name && <p className="text-xs text-slate-600 mt-0.5">Supervisor: {report.supervisor_name}</p>}
                       <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
                     </div>
-                    <Badge className="bg-green-100 text-green-700 text-xs shrink-0">Submitted</Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                      {report.pdf_url && (
+                        <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline">
+                            <FileText className="w-3.5 h-3.5 mr-1" /> Download PDF
+                          </Button>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
