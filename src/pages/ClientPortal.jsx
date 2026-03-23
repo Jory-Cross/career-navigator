@@ -523,7 +523,17 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
 - Target Industry: ${client?.industry || "not specified"}
 - Client Type: ${client?.client_type || "not specified"}
 - Status: ${client?.status || "active"}
-Always address them by their first name (${client?.first_name}) and tailor all advice to their specific profile, location, and career goals.`}
+
+ASSESSMENTS ON FILE:
+${assessments.length === 0 ? "No assessments completed yet." : assessments.map(a => {
+  const responses = Object.entries(a.responses || {})
+    .filter(([k, v]) => v && !k.startsWith('_'))
+    .map(([k, v]) => `  - ${k.replace(/_/g, ' ')}: ${v}`)
+    .join('\n');
+  return `[${a.assessment_type.replace(/_/g, ' ').toUpperCase()}] (${new Date(a.created_date).toLocaleDateString()})\n${responses}`;
+}).join('\n\n')}
+
+Always address them by their first name (${client?.first_name}) and tailor all advice to their specific profile, location, career goals, and assessment results above.`}
           />
         </TabsContent>
 
