@@ -23,6 +23,21 @@ export default function WBLEFormSection({ clientId, client, user }) {
   const [formData, setFormData] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(null);
+  const [deletingForm, setDeletingForm] = useState(null);
+
+  const handleDeleteForm = async (formId) => {
+    if (!confirm("Delete this WBLE form? This cannot be undone.")) return;
+    setDeletingForm(formId);
+    try {
+      await base44.entities.WBLEForm.delete(formId);
+      queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
+      toast.success("Form deleted.");
+    } catch (err) {
+      toast.error("Failed to delete: " + err.message);
+    } finally {
+      setDeletingForm(null);
+    }
+  };
   const queryClient = useQueryClient();
 
   const handleGenerateReportPDF = async (report) => {
