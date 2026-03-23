@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, Download, Loader2, ClipboardList, RefreshCw } from "lucide-react";
+import { FileText, Plus, Download, Loader2, ClipboardList, RefreshCw, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 
