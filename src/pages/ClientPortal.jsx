@@ -697,6 +697,59 @@ Always address them by their first name (${client?.first_name}) and tailor all a
         </TabsContent>
 
 
+        <TabsContent value="assessments">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">My Assessments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {assessments.length === 0 ? (
+                <div className="text-center py-8 text-sm text-slate-400">No assessments on file yet</div>
+              ) : (
+                <div className="space-y-4">
+                  {assessments.map(assessment => (
+                    <div key={assessment.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border-b border-slate-200">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 capitalize">
+                            {assessment.assessment_type.replace(/_/g, ' ')}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Completed {format(new Date(assessment.created_date), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                        {assessment.pdf_url && (
+                          <a href={assessment.pdf_url} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="outline">
+                              <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                      <div className="p-4 space-y-3">
+                        {assessment.notes && (
+                          <p className="text-sm text-slate-600 italic">{assessment.notes}</p>
+                        )}
+                        {assessment.responses && Object.entries(assessment.responses)
+                          .filter(([k, v]) => v && !k.startsWith('_'))
+                          .map(([key, value]) => (
+                            <div key={key} className="grid grid-cols-3 gap-2 text-sm">
+                              <p className="text-xs font-medium text-slate-500 capitalize col-span-1">
+                                {key.replace(/_/g, ' ')}
+                              </p>
+                              <p className="text-xs text-slate-700 col-span-2 whitespace-pre-wrap">{String(value)}</p>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
 
       {/* Application Detail Dialog */}
