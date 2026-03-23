@@ -24,6 +24,21 @@ export default function WBLEFormSection({ clientId, client, user }) {
   const [submitting, setSubmitting] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(null);
   const [deletingForm, setDeletingForm] = useState(null);
+  const [deletingReport, setDeletingReport] = useState(null);
+
+  const handleDeleteReport = async (reportId) => {
+    if (!confirm("Delete this progress report? This cannot be undone.")) return;
+    setDeletingReport(reportId);
+    try {
+      await base44.entities.TrainingProgressReport.delete(reportId);
+      queryClient.invalidateQueries({ queryKey: ['training-progress-reports'] });
+      toast.success("Report deleted.");
+    } catch (err) {
+      toast.error("Failed to delete: " + err.message);
+    } finally {
+      setDeletingReport(null);
+    }
+  };
 
   const handleDeleteForm = async (formId) => {
     if (!confirm("Delete this WBLE form? This cannot be undone.")) return;
