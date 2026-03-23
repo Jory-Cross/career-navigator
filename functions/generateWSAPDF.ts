@@ -176,10 +176,10 @@ Deno.serve(async (req) => {
       } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
-    const modifiedPdfBytes = await pdfDoc.save();
+    // Do NOT flatten — keep remaining fields editable for download
+    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
 
-    // Upload completed PDF
-    const pdfFile = new File([modifiedPdfBytes], `wsa-${assessment_id}.pdf`, { type: 'application/pdf' });
+    const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
 
     // Save pdf_url back to assessment
