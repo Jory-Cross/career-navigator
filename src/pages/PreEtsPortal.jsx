@@ -538,11 +538,32 @@ export default function PreEtsPortal() {
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                    {progressReports.map(report => (
+                      <div key={report.id} className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              Progress Report: {report.reporting_period_from && format(new Date(report.reporting_period_from), "MMM d")} – {report.reporting_period_to && format(new Date(report.reporting_period_to), "MMM d, yyyy")}
+                            </p>
+                            {report.supervisor_name && <p className="text-xs text-slate-500 mt-0.5">Supervisor: {report.supervisor_name}</p>}
+                            <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                            {report.pdf_url && (
+                              <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="ghost"><Download className="w-3.5 h-3.5" /></Button>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                    )}
+                    </CardContent>
+                    </Card>
+                    )}
         </TabsContent>
 
         {/* Meetings */}
