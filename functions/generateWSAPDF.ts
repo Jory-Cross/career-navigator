@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     try {
       const guardianshipField = form.getFieldMaybe('Guardianship');
       if (guardianshipField && r.guardianship) {
-        guardianshipField.select(r.guardianship); // 'Yes' or 'No'
+        guardianshipField.select(r.guardianship === 'Yes' ? 'Guardianship-Yes' : 'Guardianship-No');
       }
     } catch(e) { console.log('Guardianship radio error:', e.message); }
 
