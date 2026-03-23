@@ -485,54 +485,58 @@ export default function PreEtsPortal() {
 
         {/* WBLE Forms */}
         <TabsContent value="wble">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-green-600" /> Work-Based Learning Experience Forms
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {wbleForms.length === 0 ? (
-                <div className="text-center py-8">
-                  <Briefcase className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-                  <p className="text-sm text-slate-400">No WBLE agreements yet</p>
-                  <p className="text-xs text-slate-400 mt-1">Your counselor will create your WBLE agreement</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {wbleForms.map(form => (
-                    <div key={form.id} className="p-4 bg-green-50 border border-green-100 rounded-lg">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold text-slate-800">WBLE Agreement</p>
-                            <Badge className={cn("text-xs",
-                              form.status === 'completed' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                            )}>
-                              {form.status}
-                            </Badge>
+          {isStaff ? (
+            <WBLEFormSection clientId={activeClient?.id} client={activeClient} />
+          ) : (
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-green-600" /> Work-Based Learning Experience Forms
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {wbleForms.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Briefcase className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm text-slate-400">No WBLE agreements yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Your counselor will create your WBLE agreement</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {wbleForms.map(form => (
+                      <div key={form.id} className="p-4 bg-green-50 border border-green-100 rounded-lg">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-semibold text-slate-800">WBLE Agreement</p>
+                              <Badge className={cn("text-xs",
+                                form.status === 'completed' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                              )}>
+                                {form.status}
+                              </Badge>
+                            </div>
+                            {form.employer_name && <p className="text-xs text-slate-600">Employer: {form.employer_name}</p>}
+                            <div className="flex gap-4 mt-1 text-xs text-slate-500">
+                              {form.start_date && <span>Start: {format(new Date(form.start_date), "MMM d, yyyy")}</span>}
+                              {form.end_date && <span>End: {format(new Date(form.end_date), "MMM d, yyyy")}</span>}
+                            </div>
+                            {form.trainee_wages && <p className="text-xs text-slate-600 mt-1">Wages: {form.trainee_wages}</p>}
                           </div>
-                          {form.employer_name && <p className="text-xs text-slate-600">Employer: {form.employer_name}</p>}
-                          <div className="flex gap-4 mt-1 text-xs text-slate-500">
-                            {form.start_date && <span>Start: {format(new Date(form.start_date), "MMM d, yyyy")}</span>}
-                            {form.end_date && <span>End: {format(new Date(form.end_date), "MMM d, yyyy")}</span>}
-                          </div>
-                          {form.trainee_wages && <p className="text-xs text-slate-600 mt-1">Wages: {form.trainee_wages}</p>}
+                          {form.pdf_url && (
+                            <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline">
+                                <Download className="w-3.5 h-3.5 mr-1" /> PDF
+                              </Button>
+                            </a>
+                          )}
                         </div>
-                        {form.pdf_url && (
-                          <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" variant="outline">
-                              <Download className="w-3.5 h-3.5 mr-1" /> PDF
-                            </Button>
-                          </a>
-                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Meetings */}
