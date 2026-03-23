@@ -243,6 +243,17 @@ export default function WBLEFormSection({ clientId, client, user }) {
                         </Button>
                       )
                     )}
+                    <Button
+                      size="sm" variant="ghost"
+                      className="text-red-400 hover:text-red-600 hover:bg-red-50 h-7 w-7 p-0"
+                      onClick={() => handleDeleteReport(report.id)}
+                      disabled={deletingReport === report.id}
+                    >
+                      {deletingReport === report.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Trash2 className="w-3.5 h-3.5" />
+                      }
+                    </Button>
                   </div>
                 </div>
               </div>
