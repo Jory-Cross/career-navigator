@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,38 @@ const RATING_FIELDS = [
   { key: "attitude", label: "Attitude" },
 ];
 
+const EMPTY_FORM = {
+  return_completed_to: "",
+  supervisor_name: "",
+  supervisor_address: "",
+  reporting_period_from: "",
+  reporting_period_to: "",
+  was_late: false,
+  late_how_often: "",
+  had_absences: false,
+  absences_how_often: "",
+  quality_of_work: "",
+  rate_of_progress: "",
+  ability_get_along: "",
+  personal_appearance: "",
+  rate_of_task_completion: "",
+  attitude: "",
+  comments: "",
+  training_schedule_changes: false,
+  training_schedule_changes_explain: "",
+  additional_hours_needed: "",
+  supervisor_signature: "",
+  signature_date: "",
+  supervisor_title: "",
+};
+
 export default function TrainingProgressReportForm({ open, onClose, client }) {
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    return_completed_to: "",
+  const [form, setForm] = useState({ ...EMPTY_FORM });
 
-  // Auto-populate return_completed_to with manager's email on open
-  React.useEffect(() => {
+  // Auto-populate return_completed_to with manager's email when dialog opens
+  useEffect(() => {
     if (!open) return;
     base44.auth.me().then(async (user) => {
       if (user?.manager_id) {
@@ -38,31 +62,12 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
             setForm(f => ({ ...f, return_completed_to: manager.email }));
           }
         } catch {}
+      } else if (user?.email) {
+        // Fallback: use current user's own email
+        setForm(f => ({ ...f, return_completed_to: user.email }));
       }
     }).catch(() => {});
   }, [open]);
-    supervisor_name: "",
-    supervisor_address: "",
-    reporting_period_from: "",
-    reporting_period_to: "",
-    was_late: false,
-    late_how_often: "",
-    had_absences: false,
-    absences_how_often: "",
-    quality_of_work: "",
-    rate_of_progress: "",
-    ability_get_along: "",
-    personal_appearance: "",
-    rate_of_task_completion: "",
-    attitude: "",
-    comments: "",
-    training_schedule_changes: false,
-    training_schedule_changes_explain: "",
-    additional_hours_needed: "",
-    supervisor_signature: "",
-    signature_date: "",
-    supervisor_title: "",
-  });
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -85,7 +90,6 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
         const { data: pdfData } = await base44.functions.invoke('generateProgressReportPDF', { report_id: report.id });
         if (pdfData?.pdf_url) {
           await base44.entities.TrainingProgressReport.update(report.id, { pdf_url: pdfData.pdf_url });
-          // Save to client documents
           await base44.entities.Document.create({
             client_id: client.id,
             title: `Training Progress Report (${form.reporting_period_from} – ${form.reporting_period_to})`,
@@ -97,7 +101,6 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
         }
       } catch (pdfErr) {
         console.error('PDF generation failed:', pdfErr);
-        // Don't block success if PDF fails
       }
 
       toast.success("Progress report saved successfully!");
@@ -105,15 +108,7 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
       queryClient.invalidateQueries({ queryKey: ["wble-forms", client.id] });
       queryClient.invalidateQueries({ queryKey: ["employer-wble", client.id] });
       onClose();
-      setForm({
-        return_completed_to: "", supervisor_name: "", supervisor_address: "",
-        reporting_period_from: "", reporting_period_to: "",
-        was_late: false, late_how_often: "", had_absences: false, absences_how_often: "",
-        quality_of_work: "", rate_of_progress: "", ability_get_along: "",
-        personal_appearance: "", rate_of_task_completion: "", attitude: "",
-        comments: "", training_schedule_changes: false, training_schedule_changes_explain: "",
-        additional_hours_needed: "", supervisor_signature: "", signature_date: "", supervisor_title: "",
-      });
+      setForm({ ...EMPTY_FORM });
     } catch (err) {
       toast.error("Failed to save: " + err.message);
     } finally {
