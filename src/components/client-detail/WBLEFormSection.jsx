@@ -12,7 +12,13 @@ import { FileText, Plus, Download, Loader2, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 
-export default function WBLEFormSection({ clientId, client }) {
+export default function WBLEFormSection({ clientId, client, user }) {
+  // Can download if admin, management, or the assigned employee
+  const canDownloadReports = user && (
+    user.role === 'admin' ||
+    user.role === 'management' ||
+    (user.role === 'employee' && client?.assigned_employee_id === user.id)
+  );
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({});
   const [submitting, setSubmitting] = useState(false);
