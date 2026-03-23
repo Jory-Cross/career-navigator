@@ -22,7 +22,26 @@ export default function WBLEFormSection({ clientId, client, user }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(null);
   const queryClient = useQueryClient();
+
+  const handleGenerateReportPDF = async (report) => {
+    setGeneratingPdf(report.id);
+    try {
+      const { data: pdfData } = await base44.functions.invoke('generateProgressReportPDF', {
+        report_id: report.id
+      });
+      if (pdfData?.pdf_url) {
+        await base44.entities.TrainingProgressReport.update(report.id, { pdf_url: pdfData.pdf_url });
+        queryClient.invalidateQueries({ queryKey: ['training-progress-reports'] });
+        toast.success("PDF generated!");
+      }
+    } catch (err) {
+      toast.error("PDF generation failed: " + err.message);
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
 
   const { data: wbleForms = [], isLoading } = useQuery({
     queryKey: ['wble-forms', clientId],
