@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
     const assessment = await base44.entities.Assessment.get(assessment_id);
     if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
+    const client = await base44.asServiceRole.entities.Client.get(assessment.client_id);
     const r = assessment.responses || {};
     console.log('Loading fillable WSA template and populating fields...');
 
