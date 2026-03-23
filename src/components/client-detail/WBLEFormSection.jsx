@@ -22,6 +22,11 @@ export default function WBLEFormSection({ clientId, client }) {
     queryFn: () => base44.entities.WBLEForm.filter({ client_id: clientId })
   });
 
+  const { data: progressReports = [] } = useQuery({
+    queryKey: ['training-progress-reports', clientId],
+    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: clientId })
+  });
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {

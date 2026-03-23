@@ -13,6 +13,7 @@ export default function PreEtsEmployerPortal() {
   const [user, setUser] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showProgressForm, setShowProgressForm] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(u => {
