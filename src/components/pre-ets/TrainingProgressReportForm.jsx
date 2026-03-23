@@ -25,6 +25,22 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     return_completed_to: "",
+
+  // Auto-populate return_completed_to with manager's email on open
+  React.useEffect(() => {
+    if (!open) return;
+    base44.auth.me().then(async (user) => {
+      if (user?.manager_id) {
+        try {
+          const managers = await base44.entities.User.filter({ id: user.manager_id });
+          const manager = managers[0];
+          if (manager?.email) {
+            setForm(f => ({ ...f, return_completed_to: manager.email }));
+          }
+        } catch {}
+      }
+    }).catch(() => {});
+  }, [open]);
     supervisor_name: "",
     supervisor_address: "",
     reporting_period_from: "",
