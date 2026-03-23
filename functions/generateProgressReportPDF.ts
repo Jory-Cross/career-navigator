@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     // Comments / additional fields
     setText('Comments', report.comments);
-    setRadio('Changes to training scedule?', report.training_schedule_changes ? 'Yes' : 'No');
+    setRadio('Changes to training scedule?', report.training_schedule_changes ? 'Changes - Yes' : 'Changes - No');
     setText('Changes - Explanation', report.training_schedule_changes_explain);
     setText('Addtional hours needed', report.additional_hours_needed);
 
