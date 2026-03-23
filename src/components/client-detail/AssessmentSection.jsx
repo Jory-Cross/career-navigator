@@ -159,6 +159,13 @@ export default function AssessmentSection({ clientId }) {
     setShowForm(true);
   };
 
+  const handleDelete = async (assessment) => {
+    if (!window.confirm(`Delete this ${assessment.assessment_type.replace(/_/g, ' ')} assessment? This cannot be undone.`)) return;
+    await base44.entities.Assessment.delete(assessment.id);
+    queryClient.invalidateQueries({ queryKey: ['client-assessments'] });
+    toast.success("Assessment deleted");
+  };
+
   const { data: assessments = [], isLoading } = useQuery({
     queryKey: ['client-assessments', clientId],
     queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
