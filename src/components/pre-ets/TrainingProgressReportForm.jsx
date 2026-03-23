@@ -58,11 +58,32 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
     setSubmitting(true);
     try {
       const user = await base44.auth.me();
-      await base44.entities.TrainingProgressReport.create({
+      const report = await base44.entities.TrainingProgressReport.create({
         client_id: client.id,
         ...form,
         submitted_by: user.email,
       });
+
+      // Generate PDF
+      try {
+        const { data: pdfData } = await base44.functions.invoke('generateProgressReportPDF', { report_id: report.id });
+        if (pdfData?.pdf_url) {
+          await base44.entities.TrainingProgressReport.update(report.id, { pdf_url: pdfData.pdf_url });
+          // Save to client documents
+          await base44.entities.Document.create({
+            client_id: client.id,
+            title: `Training Progress Report (${form.reporting_period_from} – ${form.reporting_period_to})`,
+            file_url: pdfData.pdf_url,
+            file_name: 'Training_Progress_Report.pdf',
+            file_type: 'application/pdf',
+            category: 'contract'
+          });
+        }
+      } catch (pdfErr) {
+        console.error('PDF generation failed:', pdfErr);
+        // Don't block success if PDF fails
+      }
+
       toast.success("Progress report saved successfully!");
       queryClient.invalidateQueries({ queryKey: ["training-progress-reports", client.id] });
       queryClient.invalidateQueries({ queryKey: ["wble-forms", client.id] });
