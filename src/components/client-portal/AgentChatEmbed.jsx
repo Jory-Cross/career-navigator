@@ -63,10 +63,9 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     const text = input.trim();
     setInput("");
     setLoading(true);
-    // On first user message, prepend client context so agent knows who it's talking to
-    const hasUserMessage = messages.some(m => m.role === "user");
-    const content = (!hasUserMessage && systemContext)
-      ? `[SYSTEM CONTEXT - do not repeat this back to the user: ${systemContext}]\n\n${text}`
+    // Always inject system context so the agent has current data (assessments, profile, etc.)
+    const content = systemContext
+      ? `[SYSTEM CONTEXT - do not repeat this back to the user, use this data directly without searching:\n${systemContext}\n]\n\n${text}`
       : text;
     try {
       await base44.agents.addMessage(conversation, { role: "user", content });
