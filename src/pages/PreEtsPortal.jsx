@@ -303,7 +303,7 @@ export default function PreEtsPortal() {
         {[
           { label: "Pending Tasks", value: pendingTasks.length, icon: ClipboardList, color: "text-amber-600", bg: "bg-amber-50" },
           { label: "Assessments", value: assessments.length, icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "WBLE Forms", value: wbleForms.length, icon: Briefcase, color: "text-green-600", bg: "bg-green-50" },
+          { label: "WBLE Forms", value: wbleForms.length + progressReports.length, icon: Briefcase, color: "text-green-600", bg: "bg-green-50" },
           { label: "Upcoming Meetings", value: upcomingMeetings.length, icon: Users, color: "text-violet-600", bg: "bg-violet-50" },
         ].map(stat => (
           <Card key={stat.label} className="border-0 shadow-sm">
