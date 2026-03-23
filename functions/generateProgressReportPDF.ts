@@ -46,43 +46,35 @@ Deno.serve(async (req) => {
       try { form.getRadioGroup(name).select(value); } catch (e) { console.log(`Radio not found: ${name}`, e.message); }
     };
 
-    // Fill header fields (field names from the official PDF)
+    // Fill header fields
     setText('Return Completed Form To', report.return_completed_to);
-    setText('ClientEmployee', `${client.first_name} ${client.last_name}`);
-    setText('SupervisorEmployer', report.supervisor_name);
-    setText('Address', report.supervisor_address);
-    setText('Reporting Period From', fmt(report.reporting_period_from));
+    setText('ClientEmployee Name', `${client.first_name} ${client.last_name}`);
+    setText('SupervisorEmployer Name', report.supervisor_name);
+    setText('Supervisor Employer Address', report.supervisor_address);
+    setText('From', fmt(report.reporting_period_from));
     setText('To', fmt(report.reporting_period_to));
+    setText('Date', fmt(report.signature_date));
+    setText('EmployerSupervisor Title', report.supervisor_title);
 
     // Attendance
-    setRadio('Late', report.was_late ? 'Yes' : 'No');
-    setText('How Often', report.late_how_often);
-    setRadio('Absences', report.had_absences ? 'Yes' : 'No');
-    setText('How Often_2', report.absences_how_often);
+    setRadio('Late?', report.was_late ? 'Yes' : 'No');
+    setText('Late? If yes how often', report.late_how_often);
+    setRadio('Unexcused?', report.had_absences ? 'Yes' : 'No');
+    setText('Unexcused? If yes how often', report.absences_how_often);
 
-    // Performance ratings - try common field naming patterns
-    const ratingMap = {
-      quality_of_work: 'Quality of Work',
-      rate_of_progress: 'Rate of Progress',
-      ability_get_along: 'Ability to Get Along With Others',
-      personal_appearance: 'Personal Appearance  Hygiene',
-      rate_of_task_completion: 'Rate of Task Completion',
-      attitude: 'Attitude',
-    };
-    for (const [key, fieldName] of Object.entries(ratingMap)) {
-      setRadio(fieldName, report[key]);
-    }
+    // Performance ratings
+    setRadio('Quality of Work', report.quality_of_work);
+    setRadio('Rate of Progress', report.rate_of_progress);
+    setRadio('Get Along', report.ability_get_along);
+    setRadio('Appearance', report.personal_appearance);
+    setRadio('Task Completion', report.rate_of_task_completion);
+    setRadio('Attitude', report.attitude);
 
     // Comments / additional fields
-    setText('Comments things done well issues or concerns', report.comments);
-    setRadio('Training Schedule Changes', report.training_schedule_changes ? 'Yes' : 'No');
-    setText('If yes explain', report.training_schedule_changes_explain);
-    setText('How many additional hours of training do you believe are needed', report.additional_hours_needed);
-
-    // Signature block
-    setText('Signature', report.supervisor_signature);
-    setText('Date', fmt(report.signature_date));
-    setText('Title', report.supervisor_title);
+    setText('Comments', report.comments);
+    setRadio('Changes to training scedule?', report.training_schedule_changes ? 'Yes' : 'No');
+    setText('Changes - Explanation', report.training_schedule_changes_explain);
+    setText('Addtional hours needed', report.additional_hours_needed);
 
     // Flatten so it looks clean when downloaded
     form.flatten();
