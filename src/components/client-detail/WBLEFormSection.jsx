@@ -130,6 +130,32 @@ export default function WBLEFormSection({ clientId, client }) {
         )}
       </CardContent>
 
+      {/* Training Progress Reports Section */}
+      {progressReports.length > 0 && (
+        <div className="mt-4 border-t pt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardList className="w-4 h-4 text-blue-500" />
+            <p className="text-sm font-semibold text-slate-700">Training Progress Reports (DWS-USOR 72)</p>
+          </div>
+          <div className="space-y-2">
+            {progressReports.map(report => (
+              <div key={report.id} className="p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">
+                      Progress Report: {report.reporting_period_from && format(new Date(report.reporting_period_from), "MMM d")} – {report.reporting_period_to && format(new Date(report.reporting_period_to), "MMM d, yyyy")}
+                    </p>
+                    {report.supervisor_name && <p className="text-xs text-slate-500 mt-0.5">Supervisor: {report.supervisor_name}</p>}
+                    <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
+                  </div>
+                  <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
