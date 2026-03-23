@@ -94,8 +94,8 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
   const visibleMessages = messages
     .filter(m => m.role !== "system")
     .map(m => {
-      if (m.role === "user" && m.content?.includes("[SYSTEM CONTEXT")) {
-        return { ...m, content: m.content.replace(/\[SYSTEM CONTEXT[\s\S]*?\]\n\n/, "") };
+      if (m.role === "user" && m.content?.includes("<<SYS>>")) {
+        return { ...m, content: m.content.replace(/<<SYS>>[\s\S]*?<<\/SYS>>\n\n/, "") };
       }
       return m;
     });
