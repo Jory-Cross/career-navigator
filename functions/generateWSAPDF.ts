@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
-const FILLABLE_WSA_URL = 'https://media.base44.com/files/public/69975ef9c220200194235cef/7d58a8997_usor94.pdf';
+const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
 // Helper to set checkbox field values
 function setCheckboxValue(fields, fieldName, value) {
