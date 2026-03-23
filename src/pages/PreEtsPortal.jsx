@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
 import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
 import ClockInOut from "@/components/pre-ets/ClockInOut";
+import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 
 const CHECKLIST_ITEMS = [
   { key: "career_exploration", label: "Complete Career Exploration Assessment", category: "assessments" },
