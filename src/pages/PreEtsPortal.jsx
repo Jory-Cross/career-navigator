@@ -492,7 +492,7 @@ export default function PreEtsPortal() {
         {/* WBLE Forms */}
         <TabsContent value="wble">
           {isStaff ? (
-            <WBLEFormSection clientId={activeClient?.id} client={activeClient} />
+            <WBLEFormSection clientId={activeClient?.id} client={activeClient} user={user} />
           ) : (
             <Card className="border-0 shadow-sm">
               <CardHeader>
