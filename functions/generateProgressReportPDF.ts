@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
     setText('EmployerSupervisor Title', report.supervisor_title);
 
     // Attendance
-    setRadio('Late?', report.was_late ? 'Yes' : 'No');
+    setRadio('Late?', report.was_late ? 'Late - Yes' : 'Late - No');
     setText('Late? If yes how often', report.late_how_often);
-    setRadio('Unexcused?', report.had_absences ? 'Yes' : 'No');
+    setRadio('Unexcused?', report.had_absences ? 'Unexcused - Yes' : 'Unexcused - No');
     setText('Unexcused? If yes how often', report.absences_how_often);
 
     // Performance ratings
