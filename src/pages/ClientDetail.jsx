@@ -150,7 +150,7 @@ export default function ClientDetail() {
           <AssessmentSection clientId={clientId} />
         </TabsContent>
         <TabsContent value="wble">
-          <WBLEFormSection clientId={clientId} client={client} />
+          <WBLEFormSection clientId={clientId} client={client} user={user} />
         </TabsContent>
         <TabsContent value="documents">
           <DocumentsSection clientId={clientId} onRefresh={refresh} />
