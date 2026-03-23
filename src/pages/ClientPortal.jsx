@@ -134,6 +134,12 @@ export default function ClientPortal() {
     enabled: !!client
   });
 
+  const { data: assessments = [] } = useQuery({
+    queryKey: ['client-assessments', client?.id],
+    queryFn: () => base44.entities.Assessment.filter({ client_id: client.id }),
+    enabled: !!client
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
   }
