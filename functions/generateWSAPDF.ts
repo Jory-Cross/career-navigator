@@ -33,11 +33,6 @@ Deno.serve(async (req) => {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
 
-    // Log available fields for debugging
-    const fieldNames = fields.map(f => f.getName());
-    console.log('Available PDF form fields:', JSON.stringify(fieldNames));
-    console.log('Assessment response keys:', JSON.stringify(Object.keys(r)));
-
     // Exact field name mapping from response keys → PDF internal field names
     const TEXT_FIELD_MAP = {
       crp_referring_to: 'CRP Referring to',
