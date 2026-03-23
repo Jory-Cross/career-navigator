@@ -419,6 +419,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
+          <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="applications">
