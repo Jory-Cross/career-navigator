@@ -141,7 +141,7 @@ export default function WBLEFormSection({ clientId, client }) {
           <div className="space-y-2">
             {progressReports.map(report => (
               <div key={report.id} className="p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium text-slate-800">
                       Progress Report: {report.reporting_period_from && format(new Date(report.reporting_period_from), "MMM d")} – {report.reporting_period_to && format(new Date(report.reporting_period_to), "MMM d, yyyy")}
@@ -149,7 +149,16 @@ export default function WBLEFormSection({ clientId, client }) {
                     {report.supervisor_name && <p className="text-xs text-slate-500 mt-0.5">Supervisor: {report.supervisor_name}</p>}
                     <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
                   </div>
-                  <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                    {report.pdf_url && (
+                      <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="ghost" className="h-7 px-2">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
