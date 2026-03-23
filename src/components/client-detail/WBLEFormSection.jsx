@@ -179,15 +179,26 @@ export default function WBLEFormSection({ clientId, client, user }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
-                    {report.pdf_url && canDownloadReports && (
-                      <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="ghost" className="h-7 px-2">
-                          <Download className="w-3.5 h-3.5" />
+                    {canDownloadReports && (
+                      report.pdf_url ? (
+                        <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs">
+                            <Download className="w-3.5 h-3.5" /> PDF
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button
+                          size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs"
+                          onClick={() => handleGenerateReportPDF(report)}
+                          disabled={generatingPdf === report.id}
+                        >
+                          {generatingPdf === report.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <RefreshCw className="w-3.5 h-3.5" />
+                          }
+                          Generate PDF
                         </Button>
-                      </a>
-                    )}
-                    {!canDownloadReports && (
-                      <span className="text-xs text-slate-400 italic">Restricted</span>
+                      )
                     )}
                   </div>
                 </div>
