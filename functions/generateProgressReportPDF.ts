@@ -28,10 +28,6 @@ Deno.serve(async (req) => {
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
 
-    // Log available fields for debugging
-    const fields = form.getFields();
-    console.log('PDF fields:', fields.map(f => `${f.constructor.name}: ${f.getName()}`));
-
     // Helper to safely set a text field
     const setText = (name, value) => {
       try { form.getTextField(name).setText(value || ''); } catch (e) { console.log(`Field not found: ${name}`, e.message); }
