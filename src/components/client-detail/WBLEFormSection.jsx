@@ -33,45 +33,48 @@ export default function WBLEFormSection({ clientId, client }) {
     try {
       const user = await base44.auth.me();
       
-      // Save form
+      // Save form first
       const wbleForm = await base44.entities.WBLEForm.create({
         client_id: clientId,
         ...formData,
         status: 'completed'
       });
 
-      // Generate PDF
-      const { data: pdfData } = await base44.functions.invoke('generateWBLEPDF', {
-        form_id: wbleForm.id
-      });
-
-      // Update with PDF URL
-      await base44.entities.WBLEForm.update(wbleForm.id, {
-        pdf_url: pdfData.pdf_url
-      });
-
-      // Save to documents
-      await base44.entities.Document.create({
-        client_id: clientId,
-        title: 'WBLE Agreement Form',
-        file_url: pdfData.pdf_url,
-        file_name: 'WBLE_Agreement.pdf',
-        file_type: 'application/pdf',
-        category: 'contract'
-      });
-
-      // Log activity
-      await base44.entities.Activity.create({
-        client_id: clientId,
-        activity_type: 'document_uploaded',
-        title: 'WBLE form completed',
-        description: `Work Based Learning Experience form completed by ${user.full_name || user.email}`
-      });
-
-      toast.success("WBLE form saved and PDF generated");
+      // Refresh list immediately after save
       queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
       setShowForm(false);
       setFormData({});
+      toast.success("WBLE form saved! Generating PDF...");
+
+      // Generate PDF (best-effort — don't block on failure)
+      try {
+        const { data: pdfData } = await base44.functions.invoke('generateWBLEPDF', {
+          form_id: wbleForm.id
+        });
+
+        if (pdfData?.pdf_url) {
+          await base44.entities.WBLEForm.update(wbleForm.id, { pdf_url: pdfData.pdf_url });
+          await base44.entities.Document.create({
+            client_id: clientId,
+            title: 'WBLE Agreement Form',
+            file_url: pdfData.pdf_url,
+            file_name: 'WBLE_Agreement.pdf',
+            file_type: 'application/pdf',
+            category: 'contract'
+          });
+          await base44.entities.Activity.create({
+            client_id: clientId,
+            activity_type: 'document_uploaded',
+            title: 'WBLE form completed',
+            description: `Work Based Learning Experience form completed by ${user.full_name || user.email}`
+          });
+          queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
+          toast.success("PDF generated successfully!");
+        }
+      } catch (pdfError) {
+        console.error("PDF generation failed:", pdfError);
+        toast.error("Form saved but PDF generation failed.");
+      }
     } catch (error) {
       toast.error("Failed to save: " + error.message);
     } finally {
