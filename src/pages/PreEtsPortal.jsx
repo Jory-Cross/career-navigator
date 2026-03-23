@@ -109,6 +109,12 @@ export default function PreEtsPortal() {
     enabled: !!activeClient
   });
 
+  const { data: progressReports = [] } = useQuery({
+    queryKey: ['training-progress-reports', activeClient?.id],
+    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: activeClient.id }),
+    enabled: !!activeClient
+  });
+
   const { data: documents = [] } = useQuery({
     queryKey: ['pre-ets-documents', activeClient?.id],
     queryFn: () => base44.entities.Document.filter({ client_id: activeClient.id }),
