@@ -15,12 +15,8 @@ Deno.serve(async (req) => {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
 
-    const fieldInfo = fields.map(f => ({
-      name: f.getName(),
-      type: f.constructor.name,
-    }));
-
-    return Response.json({ fields: fieldInfo, count: fieldInfo.length });
+    const fieldInfo = fields.map(f => `[${f.constructor.name.replace('PDF','')}] ${f.getName()}`);
+    return Response.json({ count: fieldInfo.length, fields: fieldInfo });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
