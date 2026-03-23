@@ -37,83 +37,112 @@ Deno.serve(async (req) => {
     console.log('Available PDF form fields:', JSON.stringify(fieldNames));
     console.log('Assessment response keys:', JSON.stringify(Object.keys(r)));
 
-    // Explicit field name mapping from response keys → PDF field names
-    const FIELD_MAP = {
+    // Exact field name mapping from response keys → PDF internal field names
+    const TEXT_FIELD_MAP = {
       crp_referring_to: 'CRP Referring to',
+      guardian_name_phone: 'Parent/Guardian name and phone',
       referral_question: 'Referral question',
-      guardian_name_phone: 'If yes, Parent/Guardian name and phone',
       benefits_summary_info: 'Benefits Summary Info',
-      other_services_benefits: 'Other Services/Benefits',
-      current_work_skills: 'Current Work Skills',
+      other_services_benefits: 'Other ServicesBenefits',
+      current_work_skills: 'Current Work Skills knowledge skills and abilities',
       work_skill_development_needs: 'Work Skill Development Needs',
-      jobs_of_interest: 'Jobs of Interest',
-      interpersonal_social_skills: 'Interpersonal/Social Skills',
-      assistive_technology_needs: 'Identified Assistive Technology Needs',
-      communication_needs: 'Communication Needs',
-      behavioral_self_regulation: 'Behavioral/Self-regulation',
-      activities_of_daily_living: 'Activities of Daily Living',
-      family_issues_supports: 'Family Issues/Supports',
-      criminal_background: 'Criminal Background',
-      school_academic: 'School/Academic',
+      jobs_of_interest: 'Jobs of Interest_1',
+      interpersonal_social_skills: 'informalformal speech',
+      assistive_technology_needs: 'Identified Assistive Technology Needs glasses UCAT device etc',
+      communication_needs: 'Communication Needs interpreter etc',
+      behavioral_self_regulation: 'BehavioralSelfregulation',
+      activities_of_daily_living: 'Activities of Daily Living hygiene meal prep etc',
+      family_issues_supports: 'Family IssuesSupports',
+      criminal_background: 'Criminal Background expungement etc',
+      school_academic: 'SchoolAcademic can include behavioral information',
       worksite_simulation_location: 'Worksite Simulation Location',
-      work_assessment_observations: 'Observations',       // Work Assessment
-      natural_support_observations: 'Observations_2',     // Natural Support
-      life_skills_observations: 'Observations_3',         // Life Skills
-      transportation_public: 'Public',
-      transportation_private: 'Private transportation',
-      transportation_observations: 'Observations_4',      // Transportation
-      computer_skills_other: 'Other skills',
-      computer_skill_observations: 'Observations_5',      // Computer Skill
-      interview_skill_observations: 'Observations_6',     // Interview Skill
+      work_assessment_observations: 'Work Assessment Observations',
+      natural_support_observations: 'Natural Support Assessment Observations',
+      life_skills_observations: 'Life Skills Observations',
+      transportation_public: 'Public Transportation Options (text)',
+      transportation_private: 'Private Transportation Options (text)',
+      transportation_observations: 'Transportation Assessment Observations',
+      computer_skills_other: 'Other skills (text)',
+      computer_skill_observations: 'Computer Skill Assessment Observations',
+      interview_skill_observations: 'Interview Skill Assessment Observations',
       other_observations: 'Other Observations',
-      planned_job_search_hours_week: 'Planned Job Search hoursweek',
+      planned_job_search_hours_week: 'Planned Job Search hours/week',
       life_skills_needed: 'Life Skills needed',
       life_skills_hours_requested: 'Life Skills hours requested',
-      recommended_target_occupations: 'Recommended target occupations',
+      recommended_target_occupations: 'Recommended target occupations_1',
       recommended_supports_on_job: 'Recommended supports on the job',
-      job_development_supports: 'Joint VRCRP Recommendations for Job Development Supports',
-      ongoing_supports: 'Joint VRCRP Recommendations for Ongoing Supports',
-      job_goal: 'Job Goal must align with IPE goal',
+      job_development_supports: 'Joint VR/CRP Recommendations for Job Development Supports',
+      ongoing_supports: 'Joint VR/CRP Recommendations for Ongoing Supports',
+      job_goal: 'Job Goal (must align with IPE goal)',
       industry_targeted_pay_range: 'Industry Targeted Pay Range',
-      benefits_other: 'BenefitsOther',
-      hours_available_to_work: 'Other_2',
+      benefits_other: 'Benefits/Other',
+      hours_available_to_work: 'Other hours available to work',
       crp_name: 'Community Rehabilitation Program Name',
       assigned_employment_specialist: 'Assigned Employment SpecialistJob Coach',
+      benefits_planning_date: 'Date Scheduled',
+      extended_services_provider: 'Other Extended Services Provider (text)',
+      health_insurance: 'Other Health Insurance (text)',
     };
 
-    // Try explicit mapping first, then fall back to fuzzy match
-    for (const [key, value] of Object.entries(r)) {
-      if (!value || key.startsWith('_')) continue;
-
-      let fieldName = FIELD_MAP[key];
-      let field = fieldName ? form.getFieldMaybe(fieldName) : null;
-
-      // Fallback: fuzzy match with underscore→space normalization
-      if (!field) {
-        const normalizedKey = key.toLowerCase().replace(/_/g, ' ');
-        const matchingField = fieldNames.find(fname => {
-          const fn = fname.toLowerCase();
-          return fn.includes(normalizedKey) || normalizedKey.includes(fn);
-        });
-        if (matchingField) field = form.getFieldMaybe(matchingField);
-      }
-
-      if (field) {
-        try {
-          const fieldType = field.constructor.name;
-          if (fieldType.includes('Text')) {
-            field.setText(String(value));
-            console.log(`✓ Set "${key}" → "${field.getName()}"`);
-          } else if (fieldType.includes('Checkbox') && (value === 'Yes' || value === true)) {
-            field.check();
-            console.log(`✓ Checked "${key}" → "${field.getName()}"`);
-          }
-        } catch (e) {
-          console.log(`✗ Error setting "${key}":`, e.message);
+    // Set all text fields
+    for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
+      const value = r[key];
+      if (!value) continue;
+      try {
+        const field = form.getFieldMaybe(pdfFieldName);
+        if (field) {
+          field.setText(String(value));
+          console.log(`✓ Set "${key}"`);
+        } else {
+          console.log(`✗ Field not found: "${pdfFieldName}"`);
         }
-      } else {
-        console.log(`✗ No field found for "${key}"`);
+      } catch (e) {
+        console.log(`✗ Error setting "${key}":`, e.message);
       }
+    }
+
+    // Handle RadioGroups (Guardianship, ACRE Certified)
+    try {
+      const guardianshipField = form.getFieldMaybe('Guardianship');
+      if (guardianshipField && r.guardianship) {
+        guardianshipField.select(r.guardianship); // 'Yes' or 'No'
+      }
+    } catch(e) { console.log('Guardianship radio error:', e.message); }
+
+    try {
+      const acreField = form.getFieldMaybe('ACRE Certified?');
+      if (acreField && r.acre_certified) {
+        acreField.select(r.acre_certified); // 'Yes' or 'No'
+      }
+    } catch(e) { console.log('ACRE Certified radio error:', e.message); }
+
+    // Handle checkboxes based on text values in responses
+    const checkIfContains = (text, keyword) => text && text.toLowerCase().includes(keyword.toLowerCase());
+    const checkboxMap = {
+      'Division of Services for People with Disabilities DSPD': checkIfContains(r.extended_services_provider, 'DSPD'),
+      'Partnership Plus TTW': checkIfContains(r.extended_services_provider, 'TTW') || checkIfContains(r.extended_services_provider, 'Partnership'),
+      'Medicaid': checkIfContains(r.health_insurance, 'Medicaid'),
+      'Medicare': checkIfContains(r.health_insurance, 'Medicare'),
+      'Parents Insurance': checkIfContains(r.health_insurance, "Parent"),
+      'Spouses Insurance': checkIfContains(r.health_insurance, 'Spouse'),
+      'Supplemental Security Income SSI': checkIfContains(r.social_security_benefits, 'SSI'),
+      'Social Security Disability Insurance SSDI': checkIfContains(r.social_security_benefits, 'SSDI'),
+      'Completed': r.benefits_planning === 'Completed',
+      'Pending Date Scheduled': r.benefits_planning === 'Pending – Date Scheduled',
+      'Not Applicable': r.benefits_planning === 'Not Applicable',
+      'Full Time': checkIfContains(r.hours_available_to_work, 'Full Time'),
+      'Part Time': checkIfContains(r.hours_available_to_work, 'Part Time'),
+      '10 hourswk': checkIfContains(r.hours_available_to_work, '10 hours'),
+      'Days': checkIfContains(r.hours_available_to_work, 'Days'),
+      'Swing shift': checkIfContains(r.hours_available_to_work, 'Swing'),
+    };
+
+    for (const [fieldName, shouldCheck] of Object.entries(checkboxMap)) {
+      if (!shouldCheck) continue;
+      try {
+        const field = form.getFieldMaybe(fieldName);
+        if (field) { field.check(); console.log(`✓ Checked "${fieldName}"`); }
+      } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
     const modifiedPdfBytes = await pdfDoc.save();
