@@ -85,6 +85,36 @@ Deno.serve(async (req) => {
       health_insurance: 'Other Health Insurance (text)',
     };
 
+    // Populate client-level fields
+    if (client) {
+      const clientFields = {
+        'Client Name': `${client.first_name || ''} ${client.last_name || ''}`.trim(),
+        'Client Phone': client.phone || '',
+        'Address': client.address || '',
+      };
+      // Parse address into parts if it contains city/state/zip (e.g. "123 Main St, Ogden, UT 84401")
+      if (client.address) {
+        const parts = client.address.split(',').map(s => s.trim());
+        if (parts.length >= 3) {
+          clientFields['Address'] = parts[0];
+          clientFields['City'] = parts[1];
+          const stateZip = parts[2].trim().split(' ');
+          clientFields['State'] = stateZip[0] || '';
+          clientFields['ZIP'] = stateZip[1] || '';
+        } else if (parts.length === 2) {
+          clientFields['Address'] = parts[0];
+          clientFields['City'] = parts[1];
+        }
+      }
+      for (const [pdfFieldName, value] of Object.entries(clientFields)) {
+        if (!value) continue;
+        try {
+          const field = form.getFieldMaybe(pdfFieldName);
+          if (field) { field.setText(value); console.log(`✓ Client field "${pdfFieldName}"`); }
+        } catch(e) { console.log(`✗ Client field error "${pdfFieldName}":`, e.message); }
+      }
+    }
+
     // Set all text fields
     for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
       const value = r[key];
