@@ -1,39 +1,43 @@
-**Welcome to your Base44 project** 
+# Career Navigator
 
-**About**
+Welcome! This repo contains your Base44-powered app, now editable here and runnable locally.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Quickstart
 
-This project contains everything you need to run your app locally.
+1. Install dependencies:
+   npm install
 
-**Edit the code in your local development environment**
+2. Configure environment variables: create a .env.local file with:
+   VITE_BASE44_APP_ID=your_app_id
+   VITE_BASE44_APP_BASE_URL=your_backend_url
+   # example
+   # VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
+   # VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+3. Run the dev server:
+   npm run dev
 
-**Prerequisites:** 
+4. Build for production:
+   npm run build
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+5. Preview the build locally:
+   npm run preview
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+## Scripts
+- dev: Start Vite dev server
+- build: Production build
+- preview: Preview local build
+- lint / lint:fix: Lint code
+- typecheck: TypeScript type checking
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+## Editing Notes
+- This project was initialized from Base44. Any changes pushed here can be reflected in Base44’s builder.
+- Main entry: index.html and src/main.jsx
+- React 18 + Vite 6 + Tailwind
 
-Run the app: `npm run dev`
+## Repository
+This code lives at: https://github.com/Jory-Cross/career-navigator
 
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+## Base44 Docs & Support
+- Docs: https://docs.base44.com/Integrations/Using-GitHub
+- Support: https://app.base44.com/support
