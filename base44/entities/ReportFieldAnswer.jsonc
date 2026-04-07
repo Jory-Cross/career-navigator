@@ -1,7 +1,7 @@
 {
   "name": "ReportFieldAnswer",
   "type": "object",
-  "description": "Stores all dynamic field answers for a single TimeEntry. One record per time entry, with all answers as a JSON map keyed by field_key.",
+  "description": "Stores all dynamic field answers for a single TimeEntry, with schema snapshot for backward compatibility. One record per time entry, preserving the field definitions used at submission time.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -24,18 +24,66 @@
       "additionalProperties": true,
       "description": "JSON map of field_key -> value. e.g. { 'goal_addressed': 'Employment', 'employer_name': 'Acme Corp', 'units': 2 }"
     },
+    "field_schema_version": {
+      "type": "string",
+      "description": "Version of the field schema used at submission time (e.g. '2024-Q1', 'v3'). Matches PDFTemplate.version."
+    },
+    "field_schema_snapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Complete snapshot of ReportFieldTemplate records at time of submission. Preserves field definitions so old entries remain stable. Structure: { field_key: { label, field_type, is_required, options, ... }, ... }"
+    },
+    "required_fields_complete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether all required fields (per schema snapshot) have been filled at submission time"
+    },
+    "report_ready": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this entry is ready for report generation. True if required_fields_complete=true and answers are valid."
+    },
     "is_complete": {
       "type": "boolean",
       "default": false,
-      "description": "Whether all required fields have been filled"
+      "deprecated": true,
+      "description": "Legacy field. Use required_fields_complete instead."
     },
     "submitted_at": {
       "type": "string",
-      "description": "ISO datetime when the report was finalized"
+      "format": "date-time",
+      "description": "ISO datetime when the field answers were finalized and submitted"
+    },
+    "submitted_by": {
+      "type": "string",
+      "description": "Email of user who submitted the answers"
+    },
+    "validation_errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "description": "Any validation errors encountered at submission time (for audit/debugging)"
+    },
+    "revision_number": {
+      "type": "number",
+      "default": 1,
+      "description": "Increments if answers are re-submitted/edited. Allows tracking changes."
+    },
+    "previous_revision_id": {
+      "type": "string",
+      "description": "Reference to prior ReportFieldAnswer record if this is a revision (for audit trail)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about submission (e.g. 'Resubmitted due to missing fields')"
     }
   },
   "required": [
     "time_entry_id",
-    "entry_type_id"
+    "entry_type_id",
+    "entry_type_code",
+    "answers"
   ]
 }
