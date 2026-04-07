@@ -1,7 +1,7 @@
 {
   "name": "PDFFieldMap",
   "type": "object",
-  "description": "Maps stored data fields to PDF form fields, supporting both header/summary fields and repeating row mappings.",
+  "description": "Advanced field mapping for PDF generation. Supports header values, repeating row structures, and aggregated summaries. Enables Utah VR forms with job development, coaching, and billable hours sections.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -11,9 +11,23 @@
       "type": "string",
       "description": "Reference to the PDFTemplate this mapping belongs to"
     },
+    "template_version": {
+      "type": "string",
+      "description": "Template version this mapping applies to (e.g. '2024-Q1', 'v3'). Allows multiple mapping sets per template."
+    },
+    "mapping_scope": {
+      "type": "string",
+      "enum": [
+        "header",
+        "row",
+        "summary",
+        "static"
+      ],
+      "description": "Scope of this field. header=single client/auth info, row=repeating entry row, summary=rolled-up totals, static=literal value"
+    },
     "source_field": {
       "type": "string",
-      "description": "The field_key from ReportFieldTemplate or a built-in field name (e.g. 'date', 'duration_minutes', 'client.first_name', 'employer_name', 'goal_addressed')"
+      "description": "Field path from assembled report. Examples: 'client.first_name', 'date', 'employer_name', 'total_hours'. For aggregates: 'summary.by_entry_type.job_coaching.count'"
     },
     "source_type": {
       "type": "string",
@@ -26,29 +40,62 @@
         "client",
         "employee"
       ],
-      "description": "Where to look up the source_field value when generating the PDF. Use 'row' for repeating fields."
+      "deprecated": true,
+      "description": "Legacy field. Use mapping_scope instead."
     },
     "pdf_field_name": {
       "type": "string",
-      "description": "Exact field name in the PDF form (as it appears in the PDF's AcroForm field list). For repeating fields, use pattern like 'Day_1', 'Hours_1', etc."
+      "description": "Exact name in PDF form. For repeating fields, use patterns: 'JobDev_Date_1', 'Coaching_Employer_1', etc. Supports {{row}} or {row} substitution."
+    },
+    "row_group": {
+      "type": "string",
+      "description": "Logical group for repeating rows (e.g. 'job_development_entries', 'coaching_sessions', 'crp_billable_hours'). Required if mapping_scope='row'."
+    },
+    "row_field_key": {
+      "type": "string",
+      "description": "Identifies which report field this row mapping populates (e.g. 'date', 'employer_name', 'duration_hours'). Allows multiple fields per row."
+    },
+    "row_sort_order": {
+      "type": "number",
+      "description": "Display order within a row (0-indexed). Controls left-to-right field order."
     },
     "is_repeating_field": {
       "type": "boolean",
       "default": false,
-      "description": "Whether this mapping is for a repeating row field in the PDF"
-    },
-    "row_group": {
-      "type": "string",
-      "description": "Logical grouping for repeating rows (e.g. 'job_development_rows', 'coaching_sessions'). Required if is_repeating_field=true"
+      "deprecated": true,
+      "description": "Legacy. Use mapping_scope='row' instead."
     },
     "row_index": {
       "type": "number",
-      "description": "The row position (0-indexed) this field corresponds to in the PDF. Used with repeating fields."
+      "deprecated": true,
+      "description": "Legacy. PDF row indices are computed from assembled report rows."
     },
     "sort_order": {
       "type": "number",
       "default": 0,
-      "description": "Order to fill repeating fields within a row_group"
+      "description": "Legacy. Use row_sort_order for row mappings, or order within mapping_scope group."
+    },
+    "aggregation_mode": {
+      "type": "string",
+      "enum": [
+        "first",
+        "last",
+        "concat",
+        "sum",
+        "count",
+        "custom"
+      ],
+      "default": "first",
+      "description": "How to aggregate multi-value fields. first=take first entry, last=take last, concat=join with separator, sum=numeric sum, count=count occurrences, custom=use custom_aggregation_fn"
+    },
+    "aggregation_separator": {
+      "type": "string",
+      "default": "; ",
+      "description": "Separator for concat aggregation mode (e.g. '; ' for job titles)"
+    },
+    "custom_aggregation_fn": {
+      "type": "string",
+      "description": "JavaScript function name for custom aggregation (e.g. 'calculateWeightedAverage'). Called as: fn(values[], options). Must return string."
     },
     "transform": {
       "type": "string",
@@ -59,15 +106,17 @@
         "hours_from_minutes",
         "uppercase",
         "full_name",
-        "duration_hours"
+        "duration_hours",
+        "currency",
+        "phone_format"
       ],
       "default": "none",
-      "description": "Optional transformation to apply to the value before filling the PDF field"
+      "description": "Transformation to apply before filling PDF field"
     },
     "transform_options": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Extra params for the transform, e.g. { 'format': 'MM/DD/YYYY' } for date_format"
+      "description": "Extra params for transform. Examples: { 'format': 'MM/DD/YYYY' } for date_format, { 'currency': 'USD' } for currency"
     },
     "default_value": {
       "type": "string",
@@ -75,15 +124,49 @@
     },
     "max_rows": {
       "type": "number",
-      "description": "Maximum number of rows to fill in PDF (for repeating fields). Prevents overflow."
+      "description": "Maximum number of rows to fill in PDF (for mapping_scope='row'). Prevents overflow. Default: unlimited."
     },
     "page_break_after": {
       "type": "number",
-      "description": "Insert page break after this many rows (for multi-page PDF forms)"
+      "description": "Insert page break in PDF after this many rows (for multi-page forms). Applied to row group."
+    },
+    "conditional_display": {
+      "type": "object",
+      "description": "Only fill this field if condition is met. Example: { 'field': 'entry_type_code', 'operator': 'equals', 'value': 'job_coaching' }",
+      "additionalProperties": true
+    },
+    "is_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this field must have a value before PDF can be generated"
+    },
+    "validation_rule": {
+      "type": "string",
+      "enum": [
+        "none",
+        "date",
+        "time",
+        "numeric",
+        "phone",
+        "email",
+        "alphanumeric"
+      ],
+      "default": "none",
+      "description": "Validation to apply before filling (for error checking)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about this mapping (e.g. 'Corresponds to page 2, section A')"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this mapping is active. Inactive mappings are ignored during PDF fill."
     }
   },
   "required": [
     "pdf_template_id",
+    "mapping_scope",
     "source_field",
     "pdf_field_name"
   ]

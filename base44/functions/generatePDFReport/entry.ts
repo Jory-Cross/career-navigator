@@ -1,6 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
+// Note: pdfFieldMapper is available via integration call or inline logic
+// For Deno, we'll handle mapping inline since local imports not supported
+
 /**
  * Generate PDF Report - Step 3 Only
  * 
@@ -100,102 +103,168 @@ async function fillAndUploadPDF(base44, template, fieldMaps, report) {
 
 /**
  * Fill PDF fields from assembled report object
+ * Supports new mapping_scope structure (header, row, summary, static)
  */
 function fillPDFFromReport(form, fieldMaps, report) {
   const fields = form.getFields();
   const fieldNames = fields.map(f => f.getName());
 
-  fieldMaps.forEach(mapping => {
-    const { source_type, source_field, pdf_field_name, transform, default_value, is_repeating_field } = mapping;
+  // Build field instructions from new mapping structure
+  const instructions = buildFieldInstructions(fieldMaps, report);
 
-    if (is_repeating_field) {
-      // Handle repeating fields separately
-      fillRepeatingFields(form, fieldNames, report.rows || [], mapping);
+  // Fill PDF fields
+  Object.entries(instructions).forEach(([pdfFieldName, instruction]) => {
+    if (!fieldNames.includes(pdfFieldName)) {
       return;
     }
-
-    // Get value from report object
-    let value = null;
-
-    if (source_type === 'header') {
-      value = report.header?.[source_field];
-    } else if (source_type === 'summary') {
-      value = report.summary?.[source_field];
-    }
-
-    if (value === null || value === undefined) {
-      value = default_value || '';
-    }
-
-    // Apply transform
-    if (transform) {
-      value = applyTransform(value, transform);
-    }
-
-    // Set field
-    if (fieldNames.includes(pdf_field_name)) {
-      try {
-        const field = form.getField(pdf_field_name);
-        field.setText(String(value || ''));
-      } catch (e) {
-        console.warn(`Could not fill ${pdf_field_name}: ${e.message}`);
-      }
+    try {
+      form.getField(pdfFieldName).setText(String(instruction.value || ''));
+    } catch (e) {
+      console.warn(`Could not fill ${pdfFieldName}: ${e.message}`);
     }
   });
 }
 
 /**
- * Fill repeating row fields
+ * Build field instructions from new mapping structure
+ * Supports mapping_scope (header/row/summary/static) and row groups
  */
-function fillRepeatingFields(form, fieldNames, rows, mapping) {
-  rows.forEach((row, rowIndex) => {
-    const { source_field, pdf_field_name, transform, default_value } = mapping;
+function buildFieldInstructions(fieldMaps, report) {
+  const instructions = {};
 
-    let value = row[source_field] || default_value || '';
+  // Filter active mappings
+  const activeMappings = fieldMaps.filter(m => m.is_active !== false);
 
-    if (transform) {
-      value = applyTransform(value, transform);
-    }
+  // Group by mapping_scope (support both new and legacy structure)
+  const byScope = {
+    static: activeMappings.filter(m => m.mapping_scope === 'static'),
+    header: activeMappings.filter(m => m.mapping_scope === 'header' || (m.source_type === 'header' && !m.is_repeating_field)),
+    row: activeMappings.filter(m => m.mapping_scope === 'row' || m.is_repeating_field),
+    summary: activeMappings.filter(m => m.mapping_scope === 'summary' || m.source_type === 'summary')
+  };
 
-    // Substitute row index in field name
-    const actualFieldName = pdf_field_name
-      .replace(/\{\{row(Num)?\}\}/gi, rowIndex + 1)
-      .replace(/\{row(Num)?\}/gi, rowIndex + 1);
-
-    if (fieldNames.includes(actualFieldName)) {
-      try {
-        const field = form.getField(actualFieldName);
-        field.setText(String(value || ''));
-      } catch (e) {
-        console.warn(`Could not fill ${actualFieldName}: ${e.message}`);
-      }
-    }
+  // Fill static values
+  byScope.static.forEach(m => {
+    instructions[m.pdf_field_name] = { value: String(m.default_value || '') };
   });
+
+  // Fill header fields
+  byScope.header.forEach(m => {
+    const value = resolveValue(m.source_field, report.header || {});
+    const transformed = value !== null ? applyTransformAdvanced(value, m) : (m.default_value || '');
+    instructions[m.pdf_field_name] = { value: String(transformed || '') };
+  });
+
+  // Fill summary fields
+  byScope.summary.forEach(m => {
+    const value = resolveValue(m.source_field, report.summary || {});
+    const transformed = value !== null ? applyTransformAdvanced(value, m) : (m.default_value || '');
+    instructions[m.pdf_field_name] = { value: String(transformed || '') };
+  });
+
+  // Fill row fields (grouped by row_group)
+  const rowsByGroup = {};
+  byScope.row.forEach(m => {
+    const group = m.row_group || 'default';
+    if (!rowsByGroup[group]) rowsByGroup[group] = [];
+    rowsByGroup[group].push(m);
+  });
+
+  Object.entries(rowsByGroup).forEach(([rowGroup, groupMappings]) => {
+    const rows = report.rows || [];
+    const maxRows = groupMappings[0]?.max_rows || rows.length;
+
+    rows.slice(0, maxRows).forEach((row, rowIdx) => {
+      groupMappings.forEach(m => {
+        const value = row[m.source_field];
+        const transformed = value !== null && value !== undefined ? applyTransformAdvanced(value, m) : (m.default_value || '');
+        const pdfFieldName = substituteRowIndex(m.pdf_field_name, rowIdx);
+        instructions[pdfFieldName] = { value: String(transformed || '') };
+      });
+    });
+  });
+
+  return instructions;
 }
 
 /**
- * Apply transform to value
+ * Resolve dot-path value from object (e.g., 'client.first_name')
  */
-function applyTransform(value, transform) {
-  if (!transform || transform === 'none') return value;
+function resolveValue(path, obj) {
+  const parts = path.split('.');
+  let value = obj;
+  for (const part of parts) {
+    value = value?.[part];
+    if (value === null || value === undefined) return null;
+  }
+  return value;
+}
+
+/**
+ * Substitute {{row}} or {row} pattern in PDF field name
+ */
+function substituteRowIndex(template, rowIdx) {
+  const rowNum = rowIdx + 1;
+  return template
+    .replace(/\{\{row(Num)?\}\}/gi, String(rowNum))
+    .replace(/\{row(Num)?\}/gi, String(rowNum));
+}
+
+/**
+ * Apply transform to value (supports new transform_options structure)
+ */
+function applyTransformAdvanced(value, mapping) {
+  if (!mapping.transform || mapping.transform === 'none') return value;
+
+  const { transform, transform_options = {} } = mapping;
 
   switch (transform) {
-    case 'date_format':
+    case 'date_format': {
       try {
         const d = new Date(value);
-        return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
+        const format = transform_options.format || 'MM/DD/YYYY';
+        const m = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        const y = d.getFullYear();
+        if (format === 'MM/DD/YYYY') return `${m}/${day}/${y}`;
+        if (format === 'YYYY-MM-DD') return `${y}-${m}-${day}`;
+        if (format === 'MMM DD, YYYY') {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${months[d.getMonth()]} ${day}, ${y}`;
+        }
+        return value;
       } catch {
         return value;
       }
+    }
+    case 'time_format': {
+      const totalMin = parseInt(value);
+      if (isNaN(totalMin)) return value;
+      const hrs = Math.floor(totalMin / 60);
+      const mins = totalMin % 60;
+      return `${hrs}:${mins.toString().padStart(2, '0')}`;
+    }
     case 'hours_from_minutes':
     case 'duration_hours':
       return String((Number(value) / 60).toFixed(2));
     case 'uppercase':
       return String(value).toUpperCase();
+    case 'currency': {
+      const num = parseFloat(value);
+      return isNaN(num) ? value : `$${num.toFixed(2)}`;
+    }
+    case 'phone_format': {
+      const digits = String(value).replace(/\D/g, '');
+      return digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : value;
+    }
+    case 'full_name':
+      return value?.full_name || String(value);
     default:
       return value;
   }
 }
+
+
 
 /**
  * Quick assembly helper for backward compatibility
