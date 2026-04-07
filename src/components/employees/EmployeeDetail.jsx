@@ -208,7 +208,7 @@ export default function EmployeeDetail({ employee, currentUser }) {
     queryKey: ["clients-for-employee", employee.id],
     queryFn: async () => {
       const all = await base44.entities.Client.list();
-      return all.filter(c => c.assigned_employee_id === employee.id);
+      return all.filter(c => c.assigned_employee_id === employee.id && !c.is_archived);
     }
   });
 
