@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Download, RefreshCw, Settings, ChevronDown, ChevronUp,
-  Loader2, CheckCircle, Upload, ExternalLink, AlertCircle
+  Loader2, CheckCircle, Upload, AlertCircle, Pencil, Trash2, X, Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,10 @@ export default function PDFReportGenerator({ userRole }) {
   const [newTemplateName, setNewTemplateName] = useState("");
   const [showUploadPanel, setShowUploadPanel] = useState(false);
   const [entryTypes, setEntryTypes] = useState([]);
+  const [editingTemplateName, setEditingTemplateName] = useState("");
+  const [showRenameInput, setShowRenameInput] = useState(false);
+  const [savingRename, setSavingRename] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState(false);
 
   const isAdmin = userRole === "admin";
 
@@ -114,6 +118,40 @@ export default function PDFReportGenerator({ userRole }) {
       toast.error("Upload failed: " + err.message);
     } finally {
       setUploadingTemplate(false);
+    }
+  };
+
+  const handleRenameTemplate = async () => {
+    if (!editingTemplateName.trim()) return;
+    setSavingRename(true);
+    try {
+      await base44.entities.PDFTemplate.update(selectedTemplateId, { name: editingTemplateName.trim() });
+      const fresh = await base44.entities.PDFTemplate.filter({ is_active: true });
+      setTemplates(fresh);
+      setShowRenameInput(false);
+      toast.success("Template renamed");
+    } catch (err) {
+      toast.error("Failed to rename: " + err.message);
+    } finally {
+      setSavingRename(false);
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!window.confirm(`Delete template "${selectedTemplate?.name}"? This cannot be undone.`)) return;
+    setDeletingTemplate(true);
+    try {
+      await base44.entities.PDFTemplate.update(selectedTemplateId, { is_active: false });
+      const fresh = await base44.entities.PDFTemplate.filter({ is_active: true });
+      setTemplates(fresh);
+      setSelectedTemplateId("");
+      setShowMapEditor(false);
+      setShowRenameInput(false);
+      toast.success("Template removed");
+    } catch (err) {
+      toast.error("Failed to remove: " + err.message);
+    } finally {
+      setDeletingTemplate(false);
     }
   };
 
@@ -219,6 +257,42 @@ export default function PDFReportGenerator({ userRole }) {
             </Select>
           )}
         </div>
+
+        {/* Template actions — admin only */}
+        {isAdmin && selectedTemplateId && (
+          <div className="flex items-center gap-2">
+            {showRenameInput ? (
+              <>
+                <Input
+                  value={editingTemplateName}
+                  onChange={e => setEditingTemplateName(e.target.value)}
+                  className="text-sm h-8 flex-1"
+                  placeholder="New template name..."
+                  onKeyDown={e => e.key === 'Enter' && handleRenameTemplate()}
+                  autoFocus
+                />
+                <Button size="sm" variant="ghost" onClick={handleRenameTemplate} disabled={savingRename} className="h-8 px-2 text-emerald-600 hover:text-emerald-700">
+                  {savingRename ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setShowRenameInput(false)} className="h-8 px-2">
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-slate-500 hover:text-slate-700"
+                  onClick={() => { setEditingTemplateName(selectedTemplate?.name || ""); setShowRenameInput(true); }}>
+                  <Pencil className="w-3.5 h-3.5 mr-1" /> Rename
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleDeleteTemplate} disabled={deletingTemplate}>
+                  {deletingTemplate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+                  Remove
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Client picker */}
         <div>
