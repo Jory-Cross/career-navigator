@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { validateTimeEntrySubmission } from "@/lib/timeEntryValidation";
 
 export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
   const [step, setStep] = useState("select_type");
@@ -28,12 +29,44 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
 
     config.fields.forEach((field) => {
       if (field.required && !formData[field.key]) {
-        newErrors[field.key] = "Required";
+        newErrors[field.key] = "This field is required";
       }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateSubmission = () => {
+    const entryData = {
+      client_id: clientId,
+      date: formData[config.fields.find(f => f.key.endsWith("_date"))?.key],
+      duration_minutes: Math.round(
+        (formData[config.fields.find(f => f.key.endsWith("_hours"))?.key] || 0) * 60
+      ),
+      entry_type_id: selectedType,
+      category: selectedType
+    };
+
+    // Build field answers
+    const fieldAnswers = {};
+    config.fields.forEach((field) => {
+      if (formData[field.key] !== undefined && formData[field.key] !== "") {
+        fieldAnswers[field.key] = formData[field.key];
+      }
+    });
+
+    // Run full validation
+    const validation = validateTimeEntrySubmission(entryData, fieldAnswers);
+    
+    if (!validation.isValid) {
+      setErrors({});
+      validation.errors.forEach(err => {
+        toast.error(err);
+      });
+    }
+
+    return validation.isValid;
   };
 
   const handleFieldChange = (key, value) => {
@@ -42,7 +75,7 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep()) return;
+    if (!validateSubmission()) return;
 
     setSubmitting(true);
     try {
@@ -61,7 +94,7 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
       // Create ReportFieldAnswer with all structured field values
       const fieldValues = {};
       config.fields.forEach((field) => {
-        if (formData[field.key] !== undefined) {
+        if (formData[field.key] !== undefined && formData[field.key] !== "") {
           fieldValues[field.key] = formData[field.key];
         }
       });
