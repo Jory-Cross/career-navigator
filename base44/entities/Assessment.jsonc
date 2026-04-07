@@ -1,0 +1,43 @@
+{
+  "name": "Assessment",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "assessment_type": {
+      "type": "string",
+      "enum": [
+        "career_goals",
+        "skills_audit",
+        "job_search_readiness",
+        "interview_readiness",
+        "riasec",
+        "work_strategy_assessment"
+      ],
+      "default": "career_goals"
+    },
+    "responses": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "completed_by": {
+      "type": "string"
+    },
+    "pdf_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_id",
+    "assessment_type",
+    "responses"
+  ]
+}

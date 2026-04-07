@@ -1,0 +1,27 @@
+{
+  "name": "PendingRoleAssignment",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email of the invited user"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "employee",
+        "management",
+        "admin"
+      ],
+      "description": "Role to assign when they register"
+    },
+    "org_id": {
+      "type": "string",
+      "description": "Org ID to stamp on the user when they register"
+    }
+  },
+  "required": [
+    "email",
+    "role"
+  ]
+}

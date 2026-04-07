@@ -1,0 +1,57 @@
+{
+  "name": "Goal",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "employment",
+        "daily_living",
+        "social_skills",
+        "communication",
+        "job_retention",
+        "education",
+        "other"
+      ],
+      "default": "employment"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "achieved",
+        "discontinued"
+      ],
+      "default": "not_started"
+    },
+    "target_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "progress_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "progress_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_id",
+    "title"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "duration_minutes": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "consultation",
+        "resume_work",
+        "job_search",
+        "interview_prep",
+        "follow_up",
+        "job_coaching",
+        "life_skills",
+        "cbh",
+        "admin",
+        "other"
+      ],
+      "default": "consultation"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "duration_minutes"
+  ]
+}

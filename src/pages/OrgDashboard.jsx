@@ -41,13 +41,13 @@ export default function OrgDashboard() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ["org_users", org?.id],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => base44.entities.User.filter({ org_id: org.id }),
     enabled: !!org
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ["org_clients", org?.id],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => base44.entities.Client.filter({ org_id: org.id }),
     enabled: !!org
   });
 
@@ -55,7 +55,8 @@ export default function OrgDashboard() {
     if (!inviteEmail.trim()) { toast.error("Email required"); return; }
     setInviting(true);
     try {
-      await base44.users.inviteUser(inviteEmail, inviteRole);
+      // Use the inviteEmployee backend function so org_id gets stamped on the new user
+      await base44.functions.invoke("inviteEmployee", { email: inviteEmail, role: inviteRole });
       toast.success(`Invitation sent to ${inviteEmail}`);
       setInviteEmail("");
       setShowInviteEmployee(false);

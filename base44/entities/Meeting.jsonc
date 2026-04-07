@@ -1,0 +1,71 @@
+{
+  "name": "Meeting",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "meeting_type": {
+      "type": "string",
+      "enum": [
+        "consultation",
+        "interview_prep",
+        "resume_review",
+        "follow_up",
+        "strategy",
+        "job_coaching",
+        "life_skills",
+        "cbh",
+        "other"
+      ],
+      "default": "consultation"
+    },
+    "start_datetime": {
+      "type": "string"
+    },
+    "end_datetime": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "no_show"
+      ],
+      "default": "scheduled"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "series_id": {
+      "type": "string"
+    },
+    "outlook_event_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "start_datetime"
+  ]
+}

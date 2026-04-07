@@ -37,6 +37,12 @@ Deno.serve(async (req) => {
       ...TIER_LIMITS[tier]
     });
 
+    // Stamp org_id on the admin user so tenant scoping works immediately
+    const users = await base44.asServiceRole.entities.User.filter({ email: user.email });
+    if (users[0]) {
+      await base44.asServiceRole.entities.User.update(users[0].id, { org_id: org.id });
+    }
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

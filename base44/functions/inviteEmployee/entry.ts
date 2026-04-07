@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   try {
@@ -20,13 +20,24 @@ Deno.serve(async (req) => {
     }
 
     const inviteRole = role || 'employee';
-    // Base44 only accepts 'user' or 'admin' for inviteUser
     const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
     await base44.users.inviteUser(email, base44Role);
 
-    // Store the intended role so it's applied automatically when they register
-    await base44.asServiceRole.entities.PendingRoleAssignment.create({ email, role: inviteRole });
+    // Resolve the inviter's org_id so it gets stamped on the new user
+    let orgId = user.org_id || null;
+    if (!orgId) {
+      const orgs = await base44.asServiceRole.entities.Organization.filter({ owner_email: user.email });
+      orgId = orgs[0]?.id || null;
+    }
 
+    // Store pending role + org_id so it's applied when they register
+    await base44.asServiceRole.entities.PendingRoleAssignment.create({
+      email,
+      role: inviteRole,
+      org_id: orgId
+    });
+
+    console.log(`Invited ${email} as ${inviteRole} for org ${orgId}`);
     return Response.json({ success: true, message: 'Invitation sent successfully' });
   } catch (error) {
     console.error('Error inviting employee:', error);

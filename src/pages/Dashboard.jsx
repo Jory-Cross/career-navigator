@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Briefcase, Clock, ListChecks } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "@/components/dashboard/StatCard";
+import { useOrg } from "@/lib/useOrg";
+import OrgGate from "@/lib/OrgGate";
 import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
@@ -13,6 +15,7 @@ import AccessRequestsPanel from "@/components/dashboard/AccessRequestsPanel";
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { orgId } = useOrg();
   const [user, setUser] = React.useState(null);
   const [widgets, setWidgets] = React.useState({
     stats: true,
@@ -41,9 +44,11 @@ export default function Dashboard() {
   });
 
   const { data: clients = [] } = useQuery({
-    queryKey: ["clients", user?.id, user?.role],
+    queryKey: ["clients", user?.id, user?.role, orgId],
     queryFn: async () => {
-      const allClients = await base44.entities.Client.list("-created_date");
+      const allClients = orgId
+        ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.Client.list("-created_date");
       if (!user) return [];
       if (user.role === 'admin') return allClients;
       if (user.role === 'management') {
@@ -61,9 +66,11 @@ export default function Dashboard() {
   const clientIds = clients.map(c => c.id);
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications", user?.role, clientIds.join(',')],
+    queryKey: ["applications", user?.role, orgId],
     queryFn: async () => {
-      const apps = await base44.entities.JobApplication.list("-created_date");
+      const apps = orgId
+        ? await base44.entities.JobApplication.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.JobApplication.list("-created_date");
       if (!user || user.role === 'management') return apps;
       if (user.role === 'employee') {
         return apps.filter(a => clientIds.includes(a.client_id));
@@ -74,9 +81,11 @@ export default function Dashboard() {
   });
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["tasks", user?.role, clientIds.join(',')],
+    queryKey: ["tasks", user?.role, orgId],
     queryFn: async () => {
-      const allTasks = await base44.entities.Task.list("-created_date");
+      const allTasks = orgId
+        ? await base44.entities.Task.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.Task.list("-created_date");
       if (!user || user.role === 'management') return allTasks;
       if (user.role === 'employee') {
         return allTasks.filter(t => t.client_ids?.some(id => clientIds.includes(id)));
@@ -87,9 +96,11 @@ export default function Dashboard() {
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", user?.role, clientIds.join(',')],
+    queryKey: ["timeEntries", user?.role, orgId],
     queryFn: async () => {
-      const entries = await base44.entities.TimeEntry.list("-created_date");
+      const entries = orgId
+        ? await base44.entities.TimeEntry.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.TimeEntry.list("-created_date");
       if (!user || user.role === 'management') return entries;
       if (user.role === 'employee') {
         return entries.filter(e => clientIds.includes(e.client_id));
@@ -126,6 +137,7 @@ export default function Dashboard() {
   };
 
   return (
+    <OrgGate>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
@@ -171,5 +183,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </OrgGate>
   );
 }

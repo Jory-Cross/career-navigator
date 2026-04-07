@@ -8,8 +8,10 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useOrg } from "@/lib/useOrg";
 
 export default function NewClientDialog({ open, onOpenChange, onCreated }) {
+  const { orgId } = useOrg();
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     target_role: "", industry: "", location: "", notes: "",
@@ -35,7 +37,8 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
         ...form, 
         status: "active", 
         access_token: token,
-        assigned_employee_id: currentUser?.id || null
+        assigned_employee_id: currentUser?.id || null,
+        ...(orgId ? { org_id: orgId } : {})
       });
       
       // Log activity

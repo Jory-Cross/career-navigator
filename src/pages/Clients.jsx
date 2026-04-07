@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search, Archive } from "lucide-react";
 import ClientCard from "@/components/clients/ClientCard";
 import NewClientDialog from "@/components/clients/NewClientDialog";
+import { useOrg } from "@/lib/useOrg";
+import OrgGate from "@/lib/OrgGate";
 
 export default function Clients() {
   const location = useLocation();
@@ -19,6 +21,7 @@ export default function Clients() {
   const [showNew, setShowNew] = useState(false);
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const { viewAsUser } = useViewAs();
+  const { orgId } = useOrg();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -42,9 +45,11 @@ export default function Clients() {
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id],
+    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId],
     queryFn: async () => {
-      const allClients = await base44.entities.Client.list("-created_date");
+      const allClients = orgId
+        ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
       if (user.role === 'admin' && !viewAsUser) return allClients;
       const effId = effectiveUser?.id;
@@ -66,13 +71,17 @@ export default function Clients() {
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => base44.entities.TimeEntry.list()
+    queryKey: ["timeEntries", orgId],
+    queryFn: () => orgId
+      ? base44.entities.TimeEntry.filter({ org_id: orgId })
+      : base44.entities.TimeEntry.list()
   });
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications"],
-    queryFn: () => base44.entities.JobApplication.list()
+    queryKey: ["applications", orgId],
+    queryFn: () => orgId
+      ? base44.entities.JobApplication.filter({ org_id: orgId })
+      : base44.entities.JobApplication.list()
   });
 
   const getClientHours = (clientId) => {
@@ -94,6 +103,7 @@ export default function Clients() {
   });
 
   return (
+    <OrgGate>
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -187,5 +197,6 @@ export default function Clients() {
 
       <NewClientDialog open={showNew} onOpenChange={setShowNew} onCreated={refetch} />
     </div>
+    </OrgGate>
   );
 }

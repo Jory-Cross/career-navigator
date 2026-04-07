@@ -1,0 +1,38 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "management",
+        "employee",
+        "client",
+        "pre_ets",
+        "dspd",
+        "pre_ets_employer"
+      ],
+      "default": "employee"
+    },
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID this user belongs to"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "manager_id": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    }
+  }
+}
