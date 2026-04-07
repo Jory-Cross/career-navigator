@@ -20,12 +20,17 @@ Deno.serve(async (req) => {
     if (action === 'extract_from_documents') {
       const { documentIds } = body;
 
-      // Fetch client + all documents (or specific ones)
-      const [client, allDocs, assessments] = await Promise.all([
-        base44.asServiceRole.entities.Client.get(clientId),
+      // Fetch client + all documents + assessments
+      const [allClients, allDocs, assessments] = await Promise.all([
+        base44.asServiceRole.entities.Client.list(),
         base44.asServiceRole.entities.Document.filter({ client_id: clientId }),
         base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }),
       ]);
+
+      const client = allClients.find(c => c.id === clientId);
+      if (!client) {
+        return Response.json({ error: 'Client not found' }, { status: 404 });
+      }
 
       const targetDocs = documentIds?.length
         ? allDocs.filter(d => documentIds.includes(d.id))
@@ -180,7 +185,11 @@ Also identify:
 
     // ── ACTION: get_vocational_facts ──────────────────────────────────────────
     if (action === 'get_vocational_facts') {
-      const client = await base44.asServiceRole.entities.Client.get(clientId);
+      const allClients = await base44.asServiceRole.entities.Client.list();
+      const client = allClients.find(c => c.id === clientId);
+      if (!client) {
+        return Response.json({ error: 'Client not found' }, { status: 404 });
+      }
       return Response.json({
         success: true,
         profile: client.vocational_facts_profile || null,
