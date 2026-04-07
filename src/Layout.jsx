@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, EyeOff, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -239,7 +239,8 @@ export default function Layout({ children, currentPageName }) {
             "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
-            <nav className="p-3 space-y-0.5">
+            <nav className="p-3 space-y-0.5 flex flex-col h-full">
+              <div className="flex-1 space-y-0.5">
               {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => {
                 const currentSearch = window.location.search;
                 const isActive = currentPageName === item.page && (
@@ -263,6 +264,17 @@ export default function Layout({ children, currentPageName }) {
               </Link>
               );
               })}
+              </div>
+              {/* Logout at bottom of sidebar */}
+              <div className="pt-3 mt-3 border-t border-slate-700">
+                <button
+                  onClick={() => base44.auth.logout()}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-red-600/20 transition-all duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log Out
+                </button>
+              </div>
             </nav>
           </aside>
         )}
@@ -363,7 +375,10 @@ export default function Layout({ children, currentPageName }) {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => base44.auth.logout()} className="text-red-600 border-red-200 hover:bg-red-50 sm:mr-auto">
+              <LogOut className="w-4 h-4 mr-1" /> Log Out
+            </Button>
             <Button variant="outline" onClick={() => setShowProfile(false)}>Cancel</Button>
             <Button onClick={saveProfile} disabled={savingProfile || uploadingAvatar}>
               {savingProfile ? "Saving..." : "Save"}
