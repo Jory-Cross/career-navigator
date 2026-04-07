@@ -1,326 +1,223 @@
 /**
- * ServiceAuthorization Validation
- * Validates time entries against active authorizations
- * Prevents logging beyond authorized hours
- * Calculates hours remaining
+ * Service Authorization Validation
+ * Validates time entries against authorization rules
  */
 
 /**
- * Get active authorization for client and service type
+ * Get active authorization for a client/service type
  */
-export async function getActiveAuthorization(base44, clientId, serviceType, onDate) {
+export async function getActiveAuthorization(base44, clientId, serviceTypeCode) {
   try {
     const authorizations = await base44.entities.ServiceAuthorization.filter({
       client_id: clientId,
-      service_type: serviceType
+      service_type_code: serviceTypeCode,
+      status: 'active'
     });
 
-    // Find authorization active on the given date
-    const active = authorizations.find(auth => {
-      const startOk = new Date(auth.start_date) <= new Date(onDate);
-      const endOk = new Date(auth.end_date) >= new Date(onDate);
-      return startOk && endOk && auth.status === 'active';
-    });
-
-    return active || null;
+    if (authorizations.length === 0) return null;
+    return authorizations[0]; // Return first active
   } catch (error) {
-    console.error('Error fetching authorization:', error);
+    console.error('getActiveAuthorization error:', error);
     return null;
   }
 }
 
 /**
- * Get all active authorizations for a client
+ * Get all authorizations for a client
  */
 export async function getClientAuthorizations(base44, clientId) {
   try {
-    const authorizations = await base44.entities.ServiceAuthorization.filter({
+    return await base44.entities.ServiceAuthorization.filter({
       client_id: clientId
     });
-
-    const today = new Date().toISOString().split('T')[0];
-    return authorizations.filter(auth => {
-      return auth.status === 'active' && new Date(auth.end_date) >= new Date(today);
-    });
   } catch (error) {
-    console.error('Error fetching client authorizations:', error);
+    console.error('getClientAuthorizations error:', error);
     return [];
   }
 }
 
 /**
  * Validate time entry against authorization
- * Returns { isValid, message, warning, hoursRemaining }
+ * Returns: { isValid, message, warnings[], authorization, remainingHours }
  */
-export async function validateTimeEntryAgainstAuthorization(base44, timeEntry) {
-  const durationHours = timeEntry.duration_minutes / 60;
+export async function validateTimeEntryAuthorization(base44, timeEntry, authorization) {
+  const errors = [];
+  const warnings = [];
 
-  // If no authorization_id specified, try to find one by service type and date
-  let authorization = null;
-  if (timeEntry.service_authorization_id) {
-    authorization = await base44.entities.ServiceAuthorization.list()
-      .then(all => all.find(a => a.id === timeEntry.service_authorization_id));
-  } else if (timeEntry.client_id && timeEntry.entry_type_code) {
-    // Map entry_type_code to service_type
-    const serviceType = mapEntryTypeCodeToServiceType(timeEntry.entry_type_code);
-    authorization = await getActiveAuthorization(base44, timeEntry.client_id, serviceType, timeEntry.date);
-  }
-
+  // Check if authorization exists
   if (!authorization) {
     return {
       isValid: false,
-      message: 'No active authorization found for this service type and date',
-      warning: null,
-      hoursRemaining: null,
-      authorizationId: null
+      message: 'No active authorization found',
+      errors: ['Authorization required for billable entry'],
+      warnings: [],
+      authorization: null,
+      remainingHours: 0
     };
   }
 
-  const hoursRemaining = authorization.total_authorized_hours - (authorization.hours_used || 0);
-
-  // Check if adding this time entry would exceed authorized hours
-  if (durationHours > hoursRemaining) {
-    return {
-      isValid: false,
-      message: `Cannot log ${durationHours.toFixed(2)} hours. Only ${hoursRemaining.toFixed(2)} hours remaining in authorization ${authorization.authorization_number}`,
-      warning: null,
-      hoursRemaining,
-      authorizationId: authorization.id
-    };
+  // Check date range
+  if (timeEntry.date < authorization.authorization_start_date) {
+    errors.push(`Entry date (${timeEntry.date}) is before authorization start (${authorization.authorization_start_date})`);
   }
 
-  // Warning if nearly exhausted
-  let warning = null;
-  if (hoursRemaining - durationHours <= 1) {
-    warning = `Warning: This will leave only ${(hoursRemaining - durationHours).toFixed(2)} hours remaining`;
+  if (timeEntry.date > authorization.authorization_end_date) {
+    errors.push(`Entry date (${timeEntry.date}) is after authorization end (${authorization.authorization_end_date})`);
+  }
+
+  // Check hours
+  const entryHours = (timeEntry.duration_minutes || 0) / 60;
+  const remainingHours = authorization.remaining_hours || 0;
+
+  if (entryHours > remainingHours) {
+    errors.push(`Entry hours (${entryHours.toFixed(1)}) exceeds remaining (${remainingHours.toFixed(1)})`);
+  }
+
+  // Warn if low on hours
+  if (remainingHours - entryHours < 5) {
+    warnings.push(`Low on hours: only ${(remainingHours - entryHours).toFixed(1)} hours will remain after this entry`);
+  }
+
+  // Check status
+  if (authorization.status === 'expired') {
+    errors.push('Authorization has expired');
+  } else if (authorization.status === 'exhausted') {
+    errors.push('Authorization hours exhausted');
+  } else if (authorization.status === 'cancelled') {
+    errors.push('Authorization has been cancelled');
   }
 
   return {
-    isValid: true,
-    message: `Time entry valid. Authorization: ${authorization.authorization_number}`,
-    warning,
-    hoursRemaining: hoursRemaining - durationHours,
-    authorizationId: authorization.id
+    isValid: errors.length === 0,
+    message: errors.length > 0 ? errors[0] : 'Authorization valid',
+    errors,
+    warnings,
+    authorization,
+    remainingHours: Math.max(0, remainingHours - entryHours)
   };
 }
 
 /**
  * Update authorization hours after time entry creation/update
- * Recalculates hours_used and hours_remaining
+ * Recalculates used_hours and remaining_hours, updates status
  */
-export async function updateAuthorizationHours(base44, authorizationId, durationMinutes, operation = 'add') {
+export async function updateAuthorizationHours(base44, authorizationId) {
   try {
-    const authorization = await base44.entities.ServiceAuthorization.list()
-      .then(all => all.find(a => a.id === authorizationId));
-
-    if (!authorization) {
-      throw new Error('Authorization not found');
-    }
-
-    const durationHours = durationMinutes / 60;
-    const newHoursUsed = operation === 'add'
-      ? (authorization.hours_used || 0) + durationHours
-      : (authorization.hours_used || 0) - durationHours;
-
-    const newHoursRemaining = authorization.total_authorized_hours - newHoursUsed;
-
-    // Determine new status
-    let newStatus = authorization.status;
-    if (newHoursRemaining <= 0) {
-      newStatus = 'exhausted';
-    }
-
-    const updated = await base44.asServiceRole.entities.ServiceAuthorization.update(authorizationId, {
-      hours_used: Math.max(0, newHoursUsed),
-      hours_remaining: Math.max(0, newHoursRemaining),
-      status: newStatus
+    const auth = await base44.entities.ServiceAuthorization.filter({
+      id: authorizationId
     });
 
-    return {
-      success: true,
-      authorization: updated,
-      hoursUsed: newHoursUsed,
-      hoursRemaining: newHoursRemaining,
-      message: `Updated authorization. ${newHoursRemaining.toFixed(2)} hours remaining.`
-    };
-  } catch (error) {
-    console.error('Error updating authorization hours:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
+    if (!auth || auth.length === 0) {
+      throw new Error(`Authorization ${authorizationId} not found`);
+    }
 
-/**
- * Get hours used for authorization between date range
- */
-export async function getAuthorizationHoursUsedInPeriod(base44, authorizationId, startDate, endDate) {
-  try {
-    const authorization = await base44.entities.ServiceAuthorization.list()
-      .then(all => all.find(a => a.id === authorizationId));
+    const authorization = auth[0];
 
-    if (!authorization) return 0;
-
-    const timeEntries = await base44.entities.TimeEntry.filter({
+    // Sum all time entries for this authorization
+    const entries = await base44.entities.TimeEntry.filter({
       service_authorization_id: authorizationId
     });
 
-    const entriesInPeriod = timeEntries.filter(te => {
-      const entryDate = new Date(te.date);
-      return entryDate >= new Date(startDate) && entryDate <= new Date(endDate);
+    const usedMinutes = entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+    const usedHours = usedMinutes / 60;
+    const remainingHours = Math.max(0, authorization.total_authorized_hours - usedHours);
+
+    // Determine status
+    let status = authorization.status;
+    if (remainingHours === 0 && usedHours > 0) {
+      status = 'exhausted';
+    } else if (new Date(authorization.authorization_end_date) < new Date()) {
+      status = 'expired';
+    }
+
+    // Update authorization
+    await base44.asServiceRole.entities.ServiceAuthorization.update(authorizationId, {
+      used_hours: parseFloat(usedHours.toFixed(2)),
+      remaining_hours: parseFloat(remainingHours.toFixed(2)),
+      status
     });
 
-    return entriesInPeriod.reduce((sum, te) => sum + (te.duration_minutes / 60), 0);
+    return {
+      authorizationId,
+      usedHours: parseFloat(usedHours.toFixed(2)),
+      remainingHours: parseFloat(remainingHours.toFixed(2)),
+      status
+    };
   } catch (error) {
-    console.error('Error calculating authorization hours:', error);
-    return 0;
+    console.error('updateAuthorizationHours error:', error);
+    throw error;
   }
 }
 
 /**
- * Map EntryType code to ServiceAuthorization service_type
- */
-export function mapEntryTypeCodeToServiceType(entryTypeCode) {
-  const mapping = {
-    'job_development': 'job_development',
-    'job_coaching': 'job_coaching',
-    'life_skills': 'life_skills',
-    'cbh': 'cbh',
-    'pre_ets': 'pre_ets',
-    'admin': null,
-    'other': null
-  };
-
-  return mapping[entryTypeCode] || 'job_development';
-}
-
-/**
- * Get authorization summary for client
+ * Get authorization summary for a client
+ * Groups authorizations by status and service type
  */
 export async function getAuthorizationSummary(base44, clientId) {
   try {
-    const authorizations = await base44.entities.ServiceAuthorization.filter({
-      client_id: clientId
-    });
+    const authorizations = await getClientAuthorizations(base44, clientId);
 
-    const today = new Date().toISOString().split('T')[0];
-
-    return {
+    const summary = {
       total: authorizations.length,
-      active: authorizations.filter(a => 
-        a.status === 'active' && new Date(a.end_date) >= new Date(today)
-      ).length,
-      expired: authorizations.filter(a => 
-        new Date(a.end_date) < new Date(today)
-      ).length,
-      exhausted: authorizations.filter(a => a.status === 'exhausted').length,
-      pending: authorizations.filter(a => a.status === 'pending').length,
-      byServiceType: groupAuthorizationsByType(authorizations),
-      authorizations
-    };
-  } catch (error) {
-    console.error('Error getting authorization summary:', error);
-    return {
-      total: 0,
       active: 0,
+      pending: 0,
       expired: 0,
       exhausted: 0,
-      pending: 0,
+      cancelled: 0,
       byServiceType: {},
-      authorizations: []
+      authorizations
     };
-  }
-}
 
-/**
- * Group authorizations by service type with summary
- */
-function groupAuthorizationsByType(authorizations) {
-  const grouped = {};
+    authorizations.forEach(auth => {
+      summary[auth.status]++;
 
-  authorizations.forEach(auth => {
-    if (!grouped[auth.service_type]) {
-      grouped[auth.service_type] = {
-        count: 0,
-        totalAuthorized: 0,
-        totalUsed: 0,
-        totalRemaining: 0,
-        items: []
-      };
-    }
+      if (!summary.byServiceType[auth.service_type_code]) {
+        summary.byServiceType[auth.service_type_code] = {
+          count: 0,
+          totalHours: 0,
+          usedHours: 0,
+          remainingHours: 0
+        };
+      }
 
-    grouped[auth.service_type].count += 1;
-    grouped[auth.service_type].totalAuthorized += auth.total_authorized_hours;
-    grouped[auth.service_type].totalUsed += auth.hours_used || 0;
-    grouped[auth.service_type].totalRemaining += auth.hours_remaining || 0;
-    grouped[auth.service_type].items.push({
-      id: auth.id,
-      number: auth.authorization_number,
-      status: auth.status,
-      hoursUsed: auth.hours_used,
-      hoursRemaining: auth.hours_remaining,
-      endDate: auth.end_date
+      const type = summary.byServiceType[auth.service_type_code];
+      type.count++;
+      type.totalHours += auth.total_authorized_hours || 0;
+      type.usedHours += auth.used_hours || 0;
+      type.remainingHours += auth.remaining_hours || 0;
     });
-  });
 
-  return grouped;
+    return summary;
+  } catch (error) {
+    console.error('getAuthorizationSummary error:', error);
+    return { total: 0, authorizations: [], byServiceType: {} };
+  }
 }
 
 /**
- * Check authorization expiration status
+ * Check if authorization is still valid
  */
-export function getAuthorizationStatus(authorization) {
-  const today = new Date();
-  const endDate = new Date(authorization.end_date);
-  const daysUntilExpiry = Math.floor((endDate - today) / (1000 * 60 * 60 * 24));
+export function isAuthorizationValid(authorization) {
+  if (!authorization) return false;
+  if (authorization.status !== 'active') return false;
 
-  return {
-    status: authorization.status,
-    isExpired: endDate < today,
-    isExpiring: daysUntilExpiry <= 7 && daysUntilExpiry >= 0,
-    daysUntilExpiry,
-    percentUsed: (authorization.hours_used / authorization.total_authorized_hours) * 100,
-    isExhausted: authorization.hours_remaining <= 0
-  };
-}
-
-/**
- * Validate authorization and return detailed status
- */
-export function validateAuthorizationStatus(authorization) {
-  const errors = [];
-  const warnings = [];
-
-  // Check expiration
   const today = new Date().toISOString().split('T')[0];
-  if (authorization.end_date < today) {
-    errors.push('Authorization has expired');
-  }
+  if (today > authorization.authorization_end_date) return false;
+  if (today < authorization.authorization_start_date) return false;
 
-  // Check hours exhaustion
-  if ((authorization.hours_remaining || 0) <= 0) {
-    errors.push('Authorization hours exhausted');
-  }
+  return authorization.remaining_hours > 0;
+}
 
-  // Check near-exhaustion
-  const hoursRemaining = authorization.hours_remaining || 0;
-  if (hoursRemaining <= 5 && hoursRemaining > 0) {
-    warnings.push(`Only ${hoursRemaining.toFixed(2)} hours remaining`);
+/**
+ * Get all time entries for an authorization
+ */
+export async function getAuthorizationTimeEntries(base44, authorizationId) {
+  try {
+    return await base44.entities.TimeEntry.filter({
+      service_authorization_id: authorizationId
+    });
+  } catch (error) {
+    console.error('getAuthorizationTimeEntries error:', error);
+    return [];
   }
-
-  // Check if expiring soon
-  const daysUntilExpiry = Math.floor(
-    (new Date(authorization.end_date) - new Date(today)) / (1000 * 60 * 60 * 24)
-  );
-  if (daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
-    warnings.push(`Authorization expires in ${daysUntilExpiry} days`);
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-    canUse: errors.length === 0
-  };
 }

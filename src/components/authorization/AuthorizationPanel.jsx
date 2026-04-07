@@ -1,47 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { AlertCircle, Clock, CheckCircle, AlertTriangle, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Plus, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-/**
- * Authorization Panel
- * Displays client's active service authorizations with hours tracking
- */
+import { toast } from 'sonner';
 
 export default function AuthorizationPanel({ clientId, onAuthorizationSelect }) {
-  const [summary, setSummary] = useState(null);
+  const [authorizations, setAuthorizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadAuthorizationSummary();
+    loadAuthorizations();
   }, [clientId]);
 
-  const loadAuthorizationSummary = async () => {
+  const loadAuthorizations = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const result = await base44.functions.invoke('validateTimeEntryAuthorization', {
-        action: 'get_summary',
+      const auths = await base44.entities.ServiceAuthorization.filter({
         client_id: clientId
       });
-      setSummary(result.data.summary);
-      setError(null);
+      setAuthorizations(auths || []);
     } catch (err) {
-      setError(err.message);
+      console.error('Error loading authorizations:', err);
+      setError('Failed to load authorizations');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'bg-green-100 text-green-800 border-green-300',
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      expired: 'bg-red-100 text-red-800 border-red-300',
+      exhausted: 'bg-orange-100 text-orange-800 border-orange-300',
+      cancelled: 'bg-slate-100 text-slate-800 border-slate-300'
+    };
+    return colors[status] || 'bg-slate-100 text-slate-800 border-slate-300';
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      active: <CheckCircle2 className="w-4 h-4" />,
+      pending: <Clock className="w-4 h-4" />,
+      expired: <AlertCircle className="w-4 h-4" />,
+      exhausted: <AlertCircle className="w-4 h-4" />,
+      cancelled: <AlertCircle className="w-4 h-4" />
+    };
+    return icons[status] || <Clock className="w-4 h-4" />;
   };
 
   if (loading) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center text-slate-500">Loading authorizations...</div>
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading authorizations...
+          </div>
         </CardContent>
       </Card>
     );
@@ -51,202 +71,141 @@ export default function AuthorizationPanel({ clientId, onAuthorizationSelect }) 
     return (
       <Card className="border-red-200 bg-red-50">
         <CardContent className="pt-6">
-          <div className="flex gap-2 text-red-700">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <div>{error}</div>
-          </div>
+          <div className="text-sm text-red-700">{error}</div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!summary || summary.total === 0) {
+  if (authorizations.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Service Authorizations</CardTitle>
+          <CardDescription>No authorizations found</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <AlertTriangle className="w-8 h-8 text-amber-500" />
-            <p className="text-sm text-slate-600">No service authorizations</p>
-            <Button size="sm" variant="outline" onClick={() => window.location.href = '/ServiceAuthorization'}>
-              <Plus className="w-4 h-4 mr-1" />
-              Create Authorization
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add Authorization
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
+  const activeAuth = authorizations.find(a => a.status === 'active');
+
   return (
-    <div className="space-y-4">
-      {/* Active Authorizations */}
-      {summary.active.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-700">Active Authorizations</h3>
-          <div className="space-y-3">
-            {summary.active.map(auth => (
-              <AuthorizationCard
-                key={auth.id}
-                auth={auth}
-                onSelect={() => onAuthorizationSelect?.(auth.id)}
-                variant="active"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Exhausted Authorizations */}
-      {summary.exhausted.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-700">Exhausted</h3>
-          <div className="space-y-2">
-            {summary.exhausted.map(auth => (
-              <AuthorizationCard
-                key={auth.id}
-                auth={auth}
-                onSelect={() => onAuthorizationSelect?.(auth.id)}
-                variant="exhausted"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Expired Authorizations */}
-      {summary.expired.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-700">Expired</h3>
-          <div className="space-y-2">
-            {summary.expired.map(auth => (
-              <AuthorizationCard
-                key={auth.id}
-                auth={auth}
-                onSelect={() => onAuthorizationSelect?.(auth.id)}
-                variant="expired"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">Service Authorizations ({authorizations.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {authorizations.map(auth => (
+          <AuthorizationCard
+            key={auth.id}
+            authorization={auth}
+            isActive={auth.id === activeAuth?.id}
+            statusColor={getStatusColor(auth.status)}
+            statusIcon={getStatusIcon(auth.status)}
+            onSelect={() => onAuthorizationSelect?.(auth)}
+          />
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
-/**
- * Individual Authorization Card
- */
-function AuthorizationCard({ auth, onSelect, variant = 'active' }) {
-  const getVariantConfig = () => {
-    switch (variant) {
-      case 'exhausted':
-        return {
-          bgClass: 'bg-red-50 border-red-200',
-          badgeVariant: 'destructive',
-          icon: AlertCircle,
-          statusText: 'Exhausted'
-        };
-      case 'expired':
-        return {
-          bgClass: 'bg-slate-50 border-slate-200',
-          badgeVariant: 'secondary',
-          icon: Clock,
-          statusText: 'Expired'
-        };
-      case 'active':
-      default:
-        return {
-          bgClass: 'bg-blue-50 border-blue-200',
-          badgeVariant: 'default',
-          icon: CheckCircle,
-          statusText: 'Active'
-        };
-    }
-  };
-
-  const config = getVariantConfig();
-  const StatusIcon = config.icon;
+function AuthorizationCard({ authorization, isActive, statusColor, statusIcon, onSelect }) {
+  const hoursPercent = (authorization.used_hours / authorization.total_authorized_hours) * 100;
+  const isLowOnHours = authorization.remaining_hours < 5 && authorization.remaining_hours > 0;
+  const isExhausted = authorization.remaining_hours <= 0;
 
   return (
-    <Card className={cn('border', config.bgClass)}>
-      <CardContent className="pt-4">
-        <div className="space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2 flex-1">
-              <StatusIcon className={cn(
-                'w-4 h-4 mt-0.5 shrink-0',
-                variant === 'active' && 'text-green-600',
-                variant === 'exhausted' && 'text-red-600',
-                variant === 'expired' && 'text-slate-400'
-              )} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-900">{auth.number}</p>
-                <p className="text-xs text-slate-600 capitalize">{auth.serviceType.replace('_', ' ')}</p>
-              </div>
-            </div>
-            <Badge variant={config.badgeVariant} className="shrink-0">
-              {config.statusText}
+    <div
+      onClick={onSelect}
+      className={cn(
+        "p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md",
+        isActive ? "bg-blue-50 border-blue-300" : "bg-white border-slate-200",
+        isExhausted && "border-red-300 bg-red-50"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-sm text-slate-900">
+              {authorization.authorization_number}
+            </h4>
+            <Badge className={cn('text-xs font-medium border', statusColor)}>
+              {statusIcon}
+              <span className="ml-1">{authorization.status}</span>
             </Badge>
           </div>
-
-          {/* Hours Progress */}
-          {variant === 'active' && (
-            <>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600">Hours Used</span>
-                  <span className="font-semibold text-slate-900">
-                    {auth.hoursUsed.toFixed(1)} / {auth.totalHours.toFixed(1)} hrs
-                  </span>
-                </div>
-                <Progress
-                  value={parseFloat(auth.percentUsed)}
-                  className="h-2"
-                />
-                <div className="text-xs text-slate-500">
-                  {auth.hoursRemaining.toFixed(1)} hrs remaining
-                </div>
-              </div>
-
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-slate-500">Start:</span>
-                  <p className="font-medium text-slate-900">{auth.startDate}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">End:</span>
-                  <p className="font-medium text-slate-900">{auth.endDate}</p>
-                </div>
-              </div>
-
-              {/* Action */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onSelect}
-                className="w-full text-xs"
-              >
-                Use This Authorization
-              </Button>
-            </>
-          )}
-
-          {/* Exhausted/Expired Summary */}
-          {(variant === 'exhausted' || variant === 'expired') && (
-            <div className="text-xs text-slate-600">
-              {variant === 'exhausted'
-                ? `All ${auth.totalHours.toFixed(1)} hours used`
-                : `Expired on ${auth.endDate}`
-              }
-            </div>
+          {authorization.vr_counselor_name && (
+            <p className="text-xs text-slate-500 mt-1">VR Counselor: {authorization.vr_counselor_name}</p>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Service Details */}
+      <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+        {authorization.service_type_code && (
+          <div>
+            <span className="text-slate-500">Service Type</span>
+            <p className="font-medium text-slate-900 capitalize">{authorization.service_type_code.replace(/_/g, ' ')}</p>
+          </div>
+        )}
+        {authorization.job_goal && (
+          <div>
+            <span className="text-slate-500">Job Goal</span>
+            <p className="font-medium text-slate-900">{authorization.job_goal}</p>
+          </div>
+        )}
+        {authorization.employer_name && (
+          <div className="col-span-2">
+            <span className="text-slate-500">Employer</span>
+            <p className="font-medium text-slate-900">{authorization.employer_name}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Hours Progress */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-600">Hours Used</span>
+          <span className={cn(
+            "font-semibold",
+            isExhausted && "text-red-600",
+            isLowOnHours && "text-orange-600",
+            !isLowOnHours && !isExhausted && "text-slate-900"
+          )}>
+            {authorization.used_hours?.toFixed(1) || 0} / {authorization.total_authorized_hours} hours
+          </span>
+        </div>
+        <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full transition-all",
+              hoursPercent >= 100 ? "bg-red-500" :
+              hoursPercent >= 80 ? "bg-orange-500" :
+              "bg-green-500"
+            )}
+            style={{ width: `${Math.min(hoursPercent, 100)}%` }}
+          />
+        </div>
+        <div className="text-xs text-slate-500">
+          {authorization.remaining_hours?.toFixed(1) || 0} hours remaining
+          {isExhausted && <span className="text-red-600 font-medium"> (Exhausted)</span>}
+        </div>
+      </div>
+
+      {/* Date Range */}
+      <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <span>{authorization.authorization_start_date} to {authorization.authorization_end_date}</span>
+        {isActive && <Badge variant="outline" className="text-blue-600">Active</Badge>}
+      </div>
+    </div>
   );
 }

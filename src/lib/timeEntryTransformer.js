@@ -109,10 +109,11 @@ export class TimeEntryTransformer {
   }
 
   /**
-   * Build header fields (client info, period, etc.)
+   * Build header fields (client info, period, authorization details, etc.)
    */
   buildHeader() {
     const dateRange = this.getDateRange();
+    const authData = this.extractAuthorizationData();
 
     return {
       client_name: `${this.client.first_name || ''} ${this.client.last_name || ''}`.trim(),
@@ -125,7 +126,15 @@ export class TimeEntryTransformer {
       report_generated_date: new Date().toISOString().split('T')[0],
       total_entries: this.timeEntries.length,
       total_hours: this.getTotalHours().toFixed(2),
-      total_minutes: this.getTotalMinutes()
+      total_minutes: this.getTotalMinutes(),
+      // Authorization fields (from first entry's linked authorization)
+      authorization_number: authData.authorization_number || '',
+      vr_counselor_name: authData.vr_counselor_name || '',
+      job_goal: authData.job_goal || '',
+      employer_name: authData.employer_name || '',
+      total_authorized_hours: authData.total_authorized_hours || 0,
+      hours_used: authData.hours_used || 0,
+      hours_remaining: authData.hours_remaining || 0
     };
   }
 
@@ -305,6 +314,38 @@ export class TimeEntryTransformer {
    */
   getAnswers(entryId) {
     return this.answersMap[entryId] || {};
+  }
+
+  /**
+   * Extract authorization data from first entry
+   * Returns metadata from linked ServiceAuthorization
+   */
+  extractAuthorizationData() {
+    if (this.timeEntries.length === 0) {
+      return {
+        authorization_number: null,
+        vr_counselor_name: null,
+        job_goal: null,
+        employer_name: null,
+        total_authorized_hours: null,
+        hours_used: null,
+        hours_remaining: null
+      };
+    }
+
+    // Get first entry's authorization (should be same for all entries in a report)
+    const firstEntry = this.timeEntries[0];
+    const auth = this.options.authorization || {};
+
+    return {
+      authorization_number: auth.authorization_number || null,
+      vr_counselor_name: auth.vr_counselor_name || null,
+      job_goal: auth.job_goal || null,
+      employer_name: auth.employer_name || null,
+      total_authorized_hours: auth.total_authorized_hours || null,
+      hours_used: auth.used_hours || null,
+      hours_remaining: auth.remaining_hours || null
+    };
   }
 
   /**
