@@ -148,10 +148,12 @@ async function generateClientReport(base44, user, templateId, entryType, clientI
     form.flatten();
     const filledBytes = await pdfDoc.save();
 
+    // Convert to base64 for upload
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(filledBytes)));
+    const dataUrl = `data:application/pdf;base64,${base64}`;
+
     const { file_url } = await base44.integrations.Core.UploadFile({
-      file: new File([filledBytes], `${entryType}-report-${clientId}-${Date.now()}.pdf`, {
-        type: 'application/pdf'
-      })
+      file: dataUrl
     });
 
     // Save to client Documents
