@@ -1,7 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-
-// Fetch and fill a PDF using pdf-lib
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
+
+/**
+ * Generate PDF Report - Step 3 Only
+ * 
+ * Takes assembled report object and fills PDF template
+ * Never reads directly from TimeEntry or raw records
+ */
 
 Deno.serve(async (req) => {
   try {
@@ -9,153 +14,240 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { templateId, timeEntryId, clientId, dateRange } = await req.json();
-    if (!templateId) return Response.json({ error: 'templateId is required' }, { status: 400 });
+    const {
+      action,
+      templateId,
+      reportObject,        // Pre-assembled report from assembleClientReport()
+      clientId,
+      dateFrom,
+      dateTo
+    } = await req.json();
 
-    // Load template and its field mappings in parallel
-    const [fieldMaps, clients, allUsers] = await Promise.all([
-      base44.asServiceRole.entities.PDFFieldMap.filter({ pdf_template_id: templateId }),
-      base44.asServiceRole.entities.Client.list(),
-      base44.asServiceRole.entities.User.list(),
+    if (!templateId) {
+      return Response.json({ error: 'templateId is required' }, { status: 400 });
+    }
+
+    // Fetch template and field mappings
+    const [templates, fieldMaps] = await Promise.all([
+      base44.entities.PDFTemplate.filter({ id: templateId }),
+      base44.entities.PDFFieldMap.filter({ pdf_template_id: templateId })
     ]);
 
-    const template = await base44.asServiceRole.entities.PDFTemplate.get(templateId);
-    if (!template || !template.id) return Response.json({ error: 'Template not found' }, { status: 404 });
-
-    // Fetch time entry (if specific) or build a summary across a date range
-    let timeEntry = null;
-    let reportAnswers = null;
-
-    if (timeEntryId) {
-      timeEntry = await base44.asServiceRole.entities.TimeEntry.get(timeEntryId);
-      const answers = await base44.asServiceRole.entities.ReportFieldAnswer.filter({ time_entry_id: timeEntryId });
-      reportAnswers = answers[0] || null;
+    const template = templates[0];
+    if (!template) {
+      return Response.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    // Fetch the PDF template file
-    console.log(`Fetching PDF template from: ${template.pdf_file_url}`);
-    const pdfRes = await fetch(template.pdf_file_url);
-    if (!pdfRes.ok) {
-      return Response.json({ error: `Could not fetch PDF template: ${pdfRes.status}` }, { status: 500 });
-    }
-    const pdfBytes = await pdfRes.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-
-    const form = pdfDoc.getForm();
-    const fieldNames = form.getFields().map(f => f.getName());
-    console.log('PDF form fields found:', fieldNames);
-
-    // Resolve the client record
-    const client = clientId
-      ? clients.find(c => c.id === clientId)
-      : (timeEntry?.client_id ? clients.find(c => c.id === timeEntry.client_id) : null);
-
-    // Resolve the employee who logged the entry
-    const employee = timeEntry?.created_by
-      ? allUsers.find(u => u.email === timeEntry.created_by)
-      : null;
-
-    // Build a flat data map for source lookups
-    const dataMap = {
-      // TimeEntry core fields
-      time_entry: {
-        date: timeEntry?.date || '',
-        duration_minutes: timeEntry?.duration_minutes?.toString() || '',
-        hours: timeEntry ? String(Math.round(timeEntry.duration_minutes / 60 * 10) / 10) : '',
-        start_time: timeEntry?.start_time || '',
-        end_time: timeEntry?.end_time || '',
-        description: timeEntry?.description || '',
-        category: timeEntry?.category || '',
-      },
-      // Dynamic report answers
-      report_answer: reportAnswers?.answers || {},
-      // Client fields
-      client: {
-        first_name: client?.first_name || '',
-        last_name: client?.last_name || '',
-        full_name: client ? `${client.first_name} ${client.last_name}` : '',
-        email: client?.email || '',
-        phone: client?.phone || '',
-        address: client?.address || '',
-        client_type: client?.client_type || '',
-      },
-      // Employee fields
-      employee: {
-        full_name: employee?.full_name || '',
-        email: employee?.email || '',
-        title: employee?.title || '',
-        phone: employee?.phone || '',
-      },
-    };
-
-    console.log('Data map built:', JSON.stringify(dataMap, null, 2));
-
-    // Apply each field mapping
-    for (const map of fieldMaps) {
-      const { source_type, source_field, pdf_field_name, transform, default_value } = map;
-
-      let rawValue = dataMap[source_type]?.[source_field] ?? default_value ?? '';
-
-      // Apply transforms
-      if (transform === 'date_format' && rawValue) {
-        try {
-          const d = new Date(rawValue);
-          rawValue = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-        } catch { /* keep raw */ }
-      } else if (transform === 'hours_from_minutes' && rawValue) {
-        rawValue = String(Math.round(Number(rawValue) / 60 * 10) / 10);
-      } else if (transform === 'uppercase' && rawValue) {
-        rawValue = rawValue.toUpperCase();
-      } else if (transform === 'full_name' && source_type === 'client') {
-        rawValue = dataMap.client.full_name;
+    // If no pre-assembled report, assemble it now (Step 2)
+    let report = reportObject;
+    if (!report) {
+      if (!clientId || !dateFrom || !dateTo) {
+        return Response.json(
+          { error: 'Either reportObject or (clientId, dateFrom, dateTo) required' },
+          { status: 400 }
+        );
       }
-
-      const value = String(rawValue);
-
-      if (!fieldNames.includes(pdf_field_name)) {
-        console.warn(`PDF field not found: "${pdf_field_name}" — skipping`);
-        continue;
-      }
-
-      try {
-        const field = form.getField(pdf_field_name);
-        const fieldType = field.constructor.name;
-        console.log(`Filling "${pdf_field_name}" (${fieldType}) = "${value}"`);
-
-        if (fieldType === 'PDFTextField') {
-          form.getTextField(pdf_field_name).setText(value);
-        } else if (fieldType === 'PDFCheckBox') {
-          if (['true', '1', 'yes'].includes(value.toLowerCase())) {
-            form.getCheckBox(pdf_field_name).check();
-          } else {
-            form.getCheckBox(pdf_field_name).uncheck();
-          }
-        } else if (fieldType === 'PDFDropdown') {
-          const dropdown = form.getDropdown(pdf_field_name);
-          const opts = dropdown.getOptions();
-          if (opts.includes(value)) dropdown.select(value);
-        }
-      } catch (e) {
-        console.warn(`Could not fill field "${pdf_field_name}": ${e.message}`);
-      }
+      // Inline simple assembly for backward compatibility
+      report = await quickAssembleReport(base44, clientId, dateFrom, dateTo);
     }
 
-    // Flatten so it's not editable (optional — comment out to keep fillable)
-    form.flatten();
+    if (!report) {
+      return Response.json({ error: 'No data to report' }, { status: 400 });
+    }
 
-    const filledBytes = await pdfDoc.save();
+    // Step 3: Fill PDF from assembled report object
+    const pdfUrl = await fillAndUploadPDF(base44, template, fieldMaps, report);
 
-    // Upload the filled PDF and return the URL
-    const blob = new Blob([filledBytes], { type: 'application/pdf' });
-    const formData = new FormData();
-    formData.append('file', blob, `report_${Date.now()}.pdf`);
-
-    const uploadRes = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
-    console.log('PDF uploaded:', uploadRes.file_url);
-
-    return Response.json({ pdf_url: uploadRes.file_url, fields_found: fieldNames });
+    return Response.json({ 
+      success: true,
+      pdf_url: pdfUrl,
+      client_id: report.metadata?.client_id
+    });
   } catch (error) {
     console.error('generatePDFReport error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+
+/**
+ * Fill PDF template from assembled report object
+ * Step 3: PDF Generation only
+ */
+async function fillAndUploadPDF(base44, template, fieldMaps, report) {
+  // Fetch template PDF
+  const pdfRes = await fetch(template.pdf_file_url);
+  if (!pdfRes.ok) {
+    throw new Error(`Failed to fetch PDF template: ${pdfRes.status}`);
+  }
+
+  const pdfBytes = await pdfRes.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const form = pdfDoc.getForm();
+
+  // Fill all fields from report object
+  fillPDFFromReport(form, fieldMaps, report);
+
+  // Flatten and save
+  form.flatten();
+  const filledBytes = await pdfDoc.save();
+
+  // Upload
+  const blob = new Blob([filledBytes], { type: 'application/pdf' });
+  const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
+
+  return file_url;
+}
+
+/**
+ * Fill PDF fields from assembled report object
+ */
+function fillPDFFromReport(form, fieldMaps, report) {
+  const fields = form.getFields();
+  const fieldNames = fields.map(f => f.getName());
+
+  fieldMaps.forEach(mapping => {
+    const { source_type, source_field, pdf_field_name, transform, default_value, is_repeating_field } = mapping;
+
+    if (is_repeating_field) {
+      // Handle repeating fields separately
+      fillRepeatingFields(form, fieldNames, report.rows || [], mapping);
+      return;
+    }
+
+    // Get value from report object
+    let value = null;
+
+    if (source_type === 'header') {
+      value = report.header?.[source_field];
+    } else if (source_type === 'summary') {
+      value = report.summary?.[source_field];
+    }
+
+    if (value === null || value === undefined) {
+      value = default_value || '';
+    }
+
+    // Apply transform
+    if (transform) {
+      value = applyTransform(value, transform);
+    }
+
+    // Set field
+    if (fieldNames.includes(pdf_field_name)) {
+      try {
+        const field = form.getField(pdf_field_name);
+        field.setText(String(value || ''));
+      } catch (e) {
+        console.warn(`Could not fill ${pdf_field_name}: ${e.message}`);
+      }
+    }
+  });
+}
+
+/**
+ * Fill repeating row fields
+ */
+function fillRepeatingFields(form, fieldNames, rows, mapping) {
+  rows.forEach((row, rowIndex) => {
+    const { source_field, pdf_field_name, transform, default_value } = mapping;
+
+    let value = row[source_field] || default_value || '';
+
+    if (transform) {
+      value = applyTransform(value, transform);
+    }
+
+    // Substitute row index in field name
+    const actualFieldName = pdf_field_name
+      .replace(/\{\{row(Num)?\}\}/gi, rowIndex + 1)
+      .replace(/\{row(Num)?\}/gi, rowIndex + 1);
+
+    if (fieldNames.includes(actualFieldName)) {
+      try {
+        const field = form.getField(actualFieldName);
+        field.setText(String(value || ''));
+      } catch (e) {
+        console.warn(`Could not fill ${actualFieldName}: ${e.message}`);
+      }
+    }
+  });
+}
+
+/**
+ * Apply transform to value
+ */
+function applyTransform(value, transform) {
+  if (!transform || transform === 'none') return value;
+
+  switch (transform) {
+    case 'date_format':
+      try {
+        const d = new Date(value);
+        return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
+      } catch {
+        return value;
+      }
+    case 'hours_from_minutes':
+    case 'duration_hours':
+      return String((Number(value) / 60).toFixed(2));
+    case 'uppercase':
+      return String(value).toUpperCase();
+    default:
+      return value;
+  }
+}
+
+/**
+ * Quick assembly helper for backward compatibility
+ */
+async function quickAssembleReport(base44, clientId, dateFrom, dateTo) {
+  const [client, timeEntries, fieldAnswers] = await Promise.all([
+    base44.entities.Client.filter({ id: clientId }).then(r => r[0]),
+    base44.entities.TimeEntry.filter({ client_id: clientId, date: { $gte: dateFrom, $lte: dateTo } }),
+    base44.entities.ReportFieldAnswer.list()
+  ]);
+
+  if (!client || timeEntries.length === 0) return null;
+
+  const answersMap = {};
+  fieldAnswers.forEach(fa => {
+    answersMap[fa.time_entry_id] = fa;
+  });
+
+  const dateRange = getDateRange(timeEntries);
+  const totalMin = timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+
+  return {
+    metadata: { client_id: clientId, generated_at: new Date().toISOString() },
+    header: {
+      client_full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
+      client_email: client.email || '',
+      client_phone: client.phone || '',
+      reporting_period_start: dateFrom,
+      reporting_period_end: dateTo,
+      total_entries: timeEntries.length,
+      total_hours: (totalMin / 60).toFixed(2),
+      total_minutes: totalMin
+    },
+    rows: timeEntries.map((e, i) => ({
+      row_number: i + 1,
+      date: e.date,
+      duration_minutes: e.duration_minutes || 0,
+      duration_hours: ((e.duration_minutes || 0) / 60).toFixed(2),
+      entry_type_code: e.entry_type_code || '',
+      description: e.description || '',
+      ...(answersMap[e.id]?.answers || {})
+    })),
+    summary: {
+      total_entries: timeEntries.length,
+      total_hours: (totalMin / 60).toFixed(2),
+      total_minutes: totalMin
+    }
+  };
+}
+
+function getDateRange(timeEntries) {
+  if (!timeEntries.length) return { start: '', end: '' };
+  const sorted = [...timeEntries].sort((a, b) => a.date.localeCompare(b.date));
+  return { start: sorted[0].date, end: sorted[sorted.length - 1].date };
+}

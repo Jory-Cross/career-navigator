@@ -1,5 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+/**
+ * Report Aggregation Service
+ * Step 1: Fetches raw records only (no PDF generation)
+ * Returns analytics and statistics for dashboards
+ */
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,7 +18,7 @@ Deno.serve(async (req) => {
     const {
       action,
       client_id,
-      entry_type_id,
+      entry_type_code,      // Use code instead of id
       date_from,
       date_to,
       year,
@@ -24,27 +30,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing action' }, { status: 400 });
     }
 
-    // Fetch all time entries
-    const allEntries = await base44.entities.TimeEntry.list();
+    // Step 1: Fetch source records (never writes back)
+    const [allEntries, allAnswers, allAuthorizations] = await Promise.all([
+      base44.entities.TimeEntry.list(),
+      base44.entities.ReportFieldAnswer.list(),
+      base44.entities.ServiceAuthorization.list()
+    ]);
 
-    // Fetch all report field answers
-    const allAnswers = await base44.entities.ReportFieldAnswer.list();
     const answersMap = {};
     allAnswers.forEach(a => {
-      answersMap[a.time_entry_id] = a.answers || {};
+      answersMap[a.time_entry_id] = a;
     });
 
-    // Apply filters
+    const authMap = {};
+    allAuthorizations.forEach(a => {
+      authMap[a.id] = a;
+    });
+
+    // Filter entries
     const timeEntries = allEntries.filter(entry => {
       if (client_id && entry.client_id !== client_id) return false;
-      if (entry_type_id && entry.entry_type_id !== entry_type_id) return false;
+      if (entry_type_code && entry.entry_type_code !== entry_type_code) return false;
       if (date_from && entry.date < date_from) return false;
       if (date_to && entry.date > date_to) return false;
       return true;
     });
 
+    // Perform requested action
     if (action === 'aggregate') {
-      const result = performAggregation(timeEntries, answersMap, { field_keys });
+      const result = performAggregation(timeEntries, answersMap, authMap, { field_keys });
       return Response.json({ success: true, data: result });
     }
 
@@ -57,12 +71,12 @@ Deno.serve(async (req) => {
       const monthEntries = timeEntries.filter(e =>
         e.date >= `${monthStr}-01` && e.date <= `${monthStr}-${dateLastDay}`
       );
-      const result = performAggregation(monthEntries, answersMap, { field_keys });
+      const result = performAggregation(monthEntries, answersMap, authMap, { field_keys });
       return Response.json({ success: true, month: monthStr, data: result });
     }
 
     if (action === 'export_csv') {
-      const result = performAggregation(timeEntries, answersMap, { field_keys });
+      const result = performAggregation(timeEntries, answersMap, authMap, { field_keys });
       const csv = generateCSV(result);
       return new Response(csv, {
         headers: {
@@ -72,7 +86,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return Response.json({ error: 'Unknown action' }, { status: 400 });
+    return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
 
   } catch (error) {
     console.error('getReportAggregation error:', error);
@@ -80,17 +94,24 @@ Deno.serve(async (req) => {
   }
 });
 
-function performAggregation(timeEntries, answersMap, options = {}) {
+/**
+ * Perform aggregation on filtered entries
+ * Never writes back to records
+ */
+function performAggregation(timeEntries, answersMap, authMap = {}, options = {}) {
   const byClient = {};
   const byMonth = {};
   const byEntryType = {};
+  const byAuthorization = {};
   const fieldSummary = {};
-
   let totalMinutes = 0;
 
   timeEntries.forEach((entry) => {
-    const answers = answersMap[entry.id] || {};
+    const fieldAnswer = answersMap[entry.id];
+    const answers = fieldAnswer?.answers || {};
     const monthKey = entry.date.substring(0, 7);
+    const entryTypeCode = entry.entry_type_code || 'unknown';
+    const authId = entry.service_authorization_id;
 
     // By client
     if (!byClient[entry.client_id]) {
@@ -105,21 +126,38 @@ function performAggregation(timeEntries, answersMap, options = {}) {
     }
     byMonth[monthKey].count++;
     byMonth[monthKey].total_minutes += entry.duration_minutes || 0;
-
-    if (!byMonth[monthKey].by_entry_type[entry.entry_type_id]) {
-      byMonth[monthKey].by_entry_type[entry.entry_type_id] = { count: 0, total_minutes: 0 };
+    if (!byMonth[monthKey].by_entry_type[entryTypeCode]) {
+      byMonth[monthKey].by_entry_type[entryTypeCode] = { count: 0, total_minutes: 0 };
     }
-    byMonth[monthKey].by_entry_type[entry.entry_type_id].count++;
-    byMonth[monthKey].by_entry_type[entry.entry_type_id].total_minutes += entry.duration_minutes || 0;
+    byMonth[monthKey].by_entry_type[entryTypeCode].count++;
+    byMonth[monthKey].by_entry_type[entryTypeCode].total_minutes += entry.duration_minutes || 0;
 
     // By entry type
-    if (!byEntryType[entry.entry_type_id]) {
-      byEntryType[entry.entry_type_id] = { count: 0, total_minutes: 0 };
+    if (!byEntryType[entryTypeCode]) {
+      byEntryType[entryTypeCode] = { count: 0, total_minutes: 0, entries: [] };
     }
-    byEntryType[entry.entry_type_id].count++;
-    byEntryType[entry.entry_type_id].total_minutes += entry.duration_minutes || 0;
+    byEntryType[entryTypeCode].count++;
+    byEntryType[entryTypeCode].total_minutes += entry.duration_minutes || 0;
+    byEntryType[entryTypeCode].entries.push(entry.id);
 
-    // Field summary
+    // By authorization (if present)
+    if (authId) {
+      if (!byAuthorization[authId]) {
+        const auth = authMap[authId] || {};
+        byAuthorization[authId] = {
+          authorization_number: auth.authorization_number || 'unknown',
+          count: 0,
+          total_minutes: 0,
+          entries: [],
+          authorization_status: auth.status || 'unknown'
+        };
+      }
+      byAuthorization[authId].count++;
+      byAuthorization[authId].total_minutes += entry.duration_minutes || 0;
+      byAuthorization[authId].entries.push(entry.id);
+    }
+
+    // Field summary (for report answers)
     Object.entries(answers).forEach(([fieldKey, value]) => {
       if (options.field_keys && !options.field_keys.includes(fieldKey)) return;
 
@@ -140,13 +178,28 @@ function performAggregation(timeEntries, answersMap, options = {}) {
     delete fieldSummary[key].unique_values;
   });
 
+  // Format aggregates
+  const formatAgg = (agg) => {
+    return Object.entries(agg).reduce((acc, [k, data]) => {
+      acc[k] = {
+        count: data.count,
+        total_minutes: data.total_minutes,
+        total_hours: (data.total_minutes / 60).toFixed(2),
+        ...(data.entries && { entry_count: data.entries.length })
+      };
+      return acc;
+    }, {});
+  };
+
   return {
     total_entries: timeEntries.length,
     total_hours: (totalMinutes / 60).toFixed(2),
     total_minutes: totalMinutes,
-    by_client: byClient,
-    by_month: byMonth,
-    by_entry_type: byEntryType,
+    average_hours_per_entry: ((totalMinutes / 60) / Math.max(timeEntries.length, 1)).toFixed(2),
+    by_client: formatAgg(byClient),
+    by_month: byMonth,  // Keep month breakdown with nested entry types
+    by_entry_type: formatAgg(byEntryType),
+    by_authorization: byAuthorization,
     field_summary: fieldSummary
   };
 }
