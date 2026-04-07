@@ -9,6 +9,10 @@
     "client_id": {
       "type": "string"
     },
+    "service_authorization_id": {
+      "type": "string",
+      "description": "Reference to ServiceAuthorization this time entry applies to"
+    },
     "date": {
       "type": "string",
       "format": "date"
@@ -44,6 +48,10 @@
     "entry_type_id": {
       "type": "string",
       "description": "Reference to EntryType used when logging (links to dynamic report fields)"
+    },
+    "general_notes": {
+      "type": "string",
+      "description": "Internal notes not included in VR reports"
     }
   },
   "required": [

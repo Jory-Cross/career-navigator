@@ -1,0 +1,91 @@
+{
+  "name": "ServiceAuthorization",
+  "type": "object",
+  "description": "Tracks VR service authorizations for clients, including authorized hours, hours used, and remaining balance. Linked to TimeEntry records.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Reference to Client this authorization applies to"
+    },
+    "service_type": {
+      "type": "string",
+      "enum": [
+        "job_development",
+        "job_coaching",
+        "life_skills",
+        "cbh",
+        "pre_ets",
+        "other"
+      ],
+      "description": "Type of VR service being authorized"
+    },
+    "authorization_number": {
+      "type": "string",
+      "description": "Unique authorization ID from VR agency (e.g. 'AUTH-2024-001234')"
+    },
+    "total_authorized_hours": {
+      "type": "number",
+      "description": "Total hours authorized for this service"
+    },
+    "hours_used": {
+      "type": "number",
+      "default": 0,
+      "description": "Hours logged against this authorization"
+    },
+    "hours_remaining": {
+      "type": "number",
+      "description": "Calculated field: total_authorized_hours - hours_used"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date authorization becomes effective"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date authorization expires"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "pending",
+        "expired",
+        "cancelled",
+        "exhausted"
+      ],
+      "default": "active",
+      "description": "Authorization status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about this authorization"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email of user who created this authorization"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email of approver (if required by workflow)"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When authorization was approved"
+    }
+  },
+  "required": [
+    "client_id",
+    "service_type",
+    "authorization_number",
+    "total_authorized_hours",
+    "start_date",
+    "end_date"
+  ]
+}
