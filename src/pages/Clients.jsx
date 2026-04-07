@@ -45,29 +45,40 @@ export default function Clients() {
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId],
+    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId, allUsers.length],
     queryFn: async () => {
       const allClients = orgId
         ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
         : await base44.entities.Client.list("-created_date");
       if (!user) return allClients;
+
+      // Admin with no viewAs = see everything
       if (user.role === 'admin' && !viewAsUser) return allClients;
+
       const effId = effectiveUser?.id;
       const effRole = effectiveUser?.role;
+
+      // Management: see all clients assigned to any employee under them
       if (effRole === 'management') {
         const myEmployeeIds = allUsers.filter(u => u.manager_id === effId).map(u => u.id);
         return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
       }
+
+      // Employee: see only their own clients
       if (effRole === 'employee') {
         return allClients.filter(c => c.assigned_employee_id === effId);
       }
+
+      // Fallback for real (non-viewAs) management/employee
       if (user.role === 'management') {
         const myEmployeeIds = allUsers.filter(u => u.manager_id === user.id).map(u => u.id);
         return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
       }
+
+      // Real employee
       return allClients.filter(c => c.assigned_employee_id === user.id);
     },
-    enabled: !!user && allUsers.length >= 0
+    enabled: !!user && allUsers.length > 0
   });
 
   const { data: timeEntries = [] } = useQuery({
