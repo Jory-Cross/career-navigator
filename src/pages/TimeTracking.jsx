@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save } from "lucide-react";
+import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
+import TimeEntryForm from "@/components/time-entry/TimeEntryForm";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
@@ -39,6 +40,7 @@ export default function TimeTracking() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [editSaving, setEditSaving] = useState(false);
+  const [showNewEntry, setShowNewEntry] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -165,9 +167,14 @@ export default function TimeTracking() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Time Tracking</h1>
-        <p className="text-sm text-slate-500 mt-1">Log and review time spent with clients</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Time Tracking</h1>
+          <p className="text-sm text-slate-500 mt-1">Log and review time spent with clients</p>
+        </div>
+        <Button onClick={() => setShowNewEntry(true)}>
+          <Plus className="w-4 h-4 mr-1" /> New Entry
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -301,6 +308,20 @@ export default function TimeTracking() {
           <QuickTimeLog clients={allClients} onTimeSaved={handleRefresh} />
         </div>
       </div>
+      {/* New Entry Dialog */}
+      <Dialog open={showNewEntry} onOpenChange={setShowNewEntry}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Time Entry</DialogTitle>
+          </DialogHeader>
+          <TimeEntryForm
+            clients={allClients}
+            onSaved={() => { setShowNewEntry(false); handleRefresh(); }}
+            onCancel={() => setShowNewEntry(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Entry Detail Dialog */}
       <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setEditMode(false); }}>
         <DialogContent className="sm:max-w-md">

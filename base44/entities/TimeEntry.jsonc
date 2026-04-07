@@ -40,6 +40,10 @@
     },
     "end_time": {
       "type": "string"
+    },
+    "entry_type_id": {
+      "type": "string",
+      "description": "Reference to EntryType used when logging (links to dynamic report fields)"
     }
   },
   "required": [
