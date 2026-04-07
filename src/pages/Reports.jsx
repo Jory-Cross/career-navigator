@@ -6,6 +6,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "lucide-react";
 import PayrollReport from "@/components/reports/PayrollReport";
 import PDFReportGenerator from "@/components/reports/PDFReportGenerator";
+import BatchPDFReportGenerator from "@/components/reports/BatchPDFReportGenerator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -445,6 +446,11 @@ export default function Reports() {
       {/* PDF Report Generator */}
       {(user?.role === 'admin' || user?.role === 'management' || user?.role === 'employee') && (
         <PDFReportGenerator userRole={user?.role} />
+      )}
+
+      {/* Batch PDF Report Generator */}
+      {(user?.role === 'admin' || user?.role === 'management') && (
+        <BatchPDFReportGenerator userRole={user?.role} />
       )}
 
       {/* Payroll Report - Admin/Management only */}
