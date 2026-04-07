@@ -290,28 +290,111 @@ async function generateClientReport(base44, user, templateId, entryType, clientI
 
 function fillPDFFields(form, mappings, transformed) {
   const fields = form.getFields();
+  const instructions = compilePDFFieldInstructions(transformed, mappings);
 
-  // Context from transformed data
-  const context = {
-    header: transformed.header,
-    rows: transformed.rows,
-    summary: transformed.summary,
-    currentDate: new Date().toISOString().split('T')[0]
-  };
-
-  // Fill each mapped field using transformed data
-  mappings.forEach((mapping) => {
-    const field = fields.find(f => f.getName() === mapping.pdf_field_name);
-    if (!field) return;
-
-    const value = resolveValue(mapping, context);
+  // Fill all computed PDF fields
+  Object.entries(instructions).forEach(([pdfFieldName, value]) => {
+    const field = fields.find(f => f.getName() === pdfFieldName);
+    if (!field) {
+      console.log(`PDF field not found: ${pdfFieldName}`);
+      return;
+    }
 
     try {
-      field.setText(String(value || mapping.default_value || ""));
+      field.setText(String(value || ""));
     } catch (e) {
-      console.log(`Could not set field ${mapping.pdf_field_name}:`, e.message);
+      console.log(`Could not set field ${pdfFieldName}:`, e.message);
     }
   });
+}
+
+function compilePDFFieldInstructions(transformed, mappings) {
+  const instructions = {};
+
+  // Separate header/summary from repeating fields
+  const headerSummary = mappings.filter(m => !m.is_repeating_field);
+  const repeating = mappings.filter(m => m.is_repeating_field);
+
+  // Fill header and summary fields
+  headerSummary.forEach((mapping) => {
+    const value = resolveValue(mapping, transformed);
+    instructions[mapping.pdf_field_name] = value || mapping.default_value || "";
+  });
+
+  // Fill repeating row fields
+  const rowInstructions = buildRepeatingRowInstructions(transformed.rows || [], repeating);
+  Object.assign(instructions, rowInstructions);
+
+  return instructions;
+}
+
+function buildRepeatingRowInstructions(rows, mappings) {
+  const instructions = {};
+
+  // Group mappings by row_group
+  const grouped = {};
+  mappings.forEach(m => {
+    const group = m.row_group || 'default';
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(m);
+  });
+
+  // Fill each row group
+  Object.entries(grouped).forEach(([rowGroup, groupMappings]) => {
+    // Sort by sort_order
+    groupMappings.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    // Fill rows
+    rows.forEach((row, rowIndex) => {
+      groupMappings.forEach(mapping => {
+        const value = row[mapping.source_field] || mapping.default_value || "";
+        const transformed = applyTransformForRepeatField(value, mapping);
+        const pdfFieldName = substitutePDFFieldName(mapping.pdf_field_name, rowIndex);
+        instructions[pdfFieldName] = transformed;
+      });
+    });
+  });
+
+  return instructions;
+}
+
+function applyTransformForRepeatField(value, mapping) {
+  if (!mapping.transform || mapping.transform === 'none') return value;
+
+  switch (mapping.transform) {
+    case 'date_format':
+      return formatDateForPDF(value, mapping.transform_options?.format);
+    case 'duration_hours':
+    case 'hours_from_minutes':
+      return typeof value === 'number' ? (value / 60).toFixed(2) : value;
+    case 'uppercase':
+      return String(value).toUpperCase();
+    default:
+      return value;
+  }
+}
+
+function substitutePDFFieldName(template, rowIndex) {
+  const rowNum = rowIndex + 1;
+  let result = template.replace(/\{\{row(Num)?\}\}/gi, rowNum.toString());
+  result = result.replace(/\{row(Num)?\}/gi, rowNum.toString());
+  return result;
+}
+
+function formatDateForPDF(dateStr, format) {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    if (format === 'MM/DD/YYYY' || !format) return `${m}/${d}/${y}`;
+    if (format === 'YYYY-MM-DD') return `${y}-${m}-${d}`;
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
 }
 
 function resolveValue(mapping, context) {

@@ -1,7 +1,7 @@
 {
   "name": "PDFFieldMap",
   "type": "object",
-  "description": "Maps a stored data field (field_key from ReportFieldTemplate, or a built-in TimeEntry field) to a named field in a specific PDF template. Update this when a new PDF version uses different field names.",
+  "description": "Maps stored data fields to PDF form fields, supporting both header/summary fields and repeating row mappings.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -13,21 +13,42 @@
     },
     "source_field": {
       "type": "string",
-      "description": "The field_key from ReportFieldTemplate or a built-in field name (e.g. 'date', 'duration_minutes', 'client.first_name', 'goal_addressed')"
+      "description": "The field_key from ReportFieldTemplate or a built-in field name (e.g. 'date', 'duration_minutes', 'client.first_name', 'employer_name', 'goal_addressed')"
     },
     "source_type": {
       "type": "string",
       "enum": [
+        "header",
+        "summary",
+        "row",
         "time_entry",
         "report_answer",
         "client",
         "employee"
       ],
-      "description": "Where to look up the source_field value when generating the PDF"
+      "description": "Where to look up the source_field value when generating the PDF. Use 'row' for repeating fields."
     },
     "pdf_field_name": {
       "type": "string",
-      "description": "Exact field name in the PDF form (as it appears in the PDF's AcroForm field list)"
+      "description": "Exact field name in the PDF form (as it appears in the PDF's AcroForm field list). For repeating fields, use pattern like 'Day_1', 'Hours_1', etc."
+    },
+    "is_repeating_field": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this mapping is for a repeating row field in the PDF"
+    },
+    "row_group": {
+      "type": "string",
+      "description": "Logical grouping for repeating rows (e.g. 'job_development_rows', 'coaching_sessions'). Required if is_repeating_field=true"
+    },
+    "row_index": {
+      "type": "number",
+      "description": "The row position (0-indexed) this field corresponds to in the PDF. Used with repeating fields."
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Order to fill repeating fields within a row_group"
     },
     "transform": {
       "type": "string",
@@ -37,7 +58,8 @@
         "time_format",
         "hours_from_minutes",
         "uppercase",
-        "full_name"
+        "full_name",
+        "duration_hours"
       ],
       "default": "none",
       "description": "Optional transformation to apply to the value before filling the PDF field"
@@ -50,6 +72,14 @@
     "default_value": {
       "type": "string",
       "description": "Value to use if source_field is empty or null"
+    },
+    "max_rows": {
+      "type": "number",
+      "description": "Maximum number of rows to fill in PDF (for repeating fields). Prevents overflow."
+    },
+    "page_break_after": {
+      "type": "number",
+      "description": "Insert page break after this many rows (for multi-page PDF forms)"
     }
   },
   "required": [
