@@ -12,6 +12,17 @@ import NewClientDialog from "@/components/clients/NewClientDialog";
 import { useOrg } from "@/lib/useOrg";
 import OrgGate from "@/lib/OrgGate";
 
+// Recursively get all user IDs under a given user in the hierarchy
+function getAllDescendantIds(userId, allUsers) {
+  const directReports = allUsers.filter(u => u.manager_id === userId);
+  if (directReports.length === 0) return [];
+  const ids = directReports.map(u => u.id);
+  for (const report of directReports) {
+    ids.push(...getAllDescendantIds(report.id, allUsers));
+  }
+  return ids;
+}
+
 export default function Clients() {
   const location = useLocation();
   const [search, setSearch] = useState("");
@@ -45,40 +56,48 @@ export default function Clients() {
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId, allUsers.length],
+    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId],
     queryFn: async () => {
-      const allClients = orgId
-        ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
-        : await base44.entities.Client.list("-created_date");
-      if (!user) return allClients;
+      if (!user) return [];
 
-      // Admin with no viewAs = see everything
-      if (user.role === 'admin' && !viewAsUser) return allClients;
-
-      const effId = effectiveUser?.id;
-      const effRole = effectiveUser?.role;
-
-      // Management: see all clients assigned to any employee under them
-      if (effRole === 'management') {
-        const myEmployeeIds = allUsers.filter(u => u.manager_id === effId).map(u => u.id);
-        return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
+      // Admin viewing as someone else — use backend hierarchy enforcement for that user
+      // Admin with no viewAs — fetch all directly for speed
+      if (user.role === 'admin' && !viewAsUser) {
+        return orgId
+          ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
+          : await base44.entities.Client.list("-created_date");
       }
 
-      // Employee: see only their own clients
-      if (effRole === 'employee') {
-        return allClients.filter(c => c.assigned_employee_id === effId);
+      // For all other cases (management, employee, admin-viewing-as),
+      // delegate to the backend which enforces hierarchy server-side.
+      // For viewAs we pass the effective user's role/id via query context
+      // but since backend uses the token user (admin), we handle viewAs client-side
+      // only for the admin's UI perspective — actual data access is still admin-level.
+      if (user.role === 'admin' && viewAsUser) {
+        const allClients = orgId
+          ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
+          : await base44.entities.Client.list("-created_date");
+        // Simulate viewAs user's perspective using recursive hierarchy
+        const effRole = viewAsUser.role;
+        const effId = viewAsUser.id;
+        if (effRole === 'management') {
+          const descendantIds = getAllDescendantIds(effId, allUsers);
+          const visibleIds = new Set([effId, ...descendantIds]);
+          return allClients.filter(c => visibleIds.has(c.assigned_employee_id));
+        }
+        if (effRole === 'employee') {
+          return allClients.filter(c => c.assigned_employee_id === effId);
+        }
+        return allClients;
       }
 
-      // Fallback for real (non-viewAs) management/employee
-      if (user.role === 'management') {
-        const myEmployeeIds = allUsers.filter(u => u.manager_id === user.id).map(u => u.id);
-        return allClients.filter(c => myEmployeeIds.includes(c.assigned_employee_id));
-      }
-
-      // Real employee
-      return allClients.filter(c => c.assigned_employee_id === user.id);
+      // management / employee — backend enforces hierarchy
+      const res = await base44.functions.invoke('getClientsForUser', { org_id: orgId || null });
+      return (res.data?.clients || []).sort((a, b) =>
+        new Date(b.created_date) - new Date(a.created_date)
+      );
     },
-    enabled: !!user && allUsers.length > 0
+    enabled: !!user && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
   });
 
   const { data: timeEntries = [] } = useQuery({
