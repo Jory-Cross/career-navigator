@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X, Timer, Trash2, Loader2 } from "lucide-react";
+import CalendarViewSelector, { USER_BLOCK_COLORS } from "@/components/calendar/CalendarViewSelector";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,10 @@ export default function Calendar() {
   const [showSeriesEdit, setShowSeriesEdit] = useState(false);
   const [editSeriesMode, setEditSeriesMode] = useState("current"); // "current" or "series"
   const [generatingMeet, setGeneratingMeet] = useState(false);
+  const [calendarMode, setCalendarMode] = useState("mine"); // "mine" | "team" | "custom"
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [teamUsers, setTeamUsers] = useState([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -44,6 +49,37 @@ export default function Calendar() {
     });
     return unsubscribe;
   }, [queryClient]);
+
+  // Load team users only when needed (team or custom mode)
+  useEffect(() => {
+    if (calendarMode === "mine" || !user) return;
+    if (teamUsers.length > 0) return; // already loaded
+    setLoadingTeam(true);
+    base44.entities.User.list().then(allUsers => {
+      let subordinates = [];
+      if (user.role === "admin") {
+        subordinates = allUsers.filter(u => u.id !== user.id && (u.role === "employee" || u.role === "management"));
+      } else if (user.role === "management") {
+        // Direct reports + their reports recursively
+        const getAllDescendants = (managerId, users) => {
+          const direct = users.filter(u => u.manager_id === managerId);
+          return direct.reduce((acc, u) => [...acc, u, ...getAllDescendants(u.id, users)], []);
+        };
+        subordinates = getAllDescendants(user.id, allUsers);
+      }
+      setTeamUsers(subordinates);
+    }).catch(() => {}).finally(() => setLoadingTeam(false));
+  }, [calendarMode, user]);
+
+  // When switching to team mode, auto-select all team users
+  useEffect(() => {
+    if (calendarMode === "team" && teamUsers.length > 0) {
+      setSelectedUserIds(new Set(teamUsers.map(u => u.id)));
+    }
+    if (calendarMode === "mine") {
+      setSelectedUserIds(new Set());
+    }
+  }, [calendarMode, teamUsers]);
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ['timeEntries'],
@@ -79,6 +115,44 @@ export default function Calendar() {
     },
     enabled: !!user && clients.length >= 0
   });
+
+  // Build a map of userId -> color index for team coloring
+  const allVisibleUsers = [user, ...teamUsers].filter(Boolean);
+  const userColorMap = Object.fromEntries(
+    allVisibleUsers.map((u, idx) => [u.id, idx % USER_BLOCK_COLORS.length])
+  );
+  // Also map by email for created_by lookups
+  const emailColorMap = Object.fromEntries(
+    allVisibleUsers.map((u, idx) => [u.email, idx % USER_BLOCK_COLORS.length])
+  );
+
+  // Determine which emails are "visible" based on calendar mode
+  const visibleEmails = (() => {
+    if (calendarMode === "mine") return new Set([user?.email]);
+    if (calendarMode === "team") {
+      return new Set([user?.email, ...teamUsers.map(u => u.email)]);
+    }
+    // custom: show current user + selected team members
+    const selectedTeamEmails = teamUsers
+      .filter(u => selectedUserIds.has(u.id))
+      .map(u => u.email);
+    return new Set([user?.email, ...selectedTeamEmails]);
+  })();
+
+  // Filter meetings by visible emails
+  const filteredMeetings = meetings.filter(m => {
+    if (!m.created_by) return calendarMode === "mine"; // fallback: show in mine view
+    return visibleEmails.has(m.created_by);
+  });
+
+  // Helper: get block color for a meeting (by creator email in team/custom mode)
+  const getMeetingBlockColor = (meeting) => {
+    if (calendarMode === "mine") {
+      return meetingBlockColors[meeting.status] || meetingBlockColors.scheduled;
+    }
+    const colorIdx = emailColorMap[meeting.created_by] ?? 0;
+    return USER_BLOCK_COLORS[colorIdx].bg;
+  };
 
   const openNew = (date) => {
     setEditingMeeting(null);
@@ -384,7 +458,7 @@ export default function Calendar() {
   };
 
   const getMeetingsForDay = (day) => {
-    return meetings.filter(m => {
+    return filteredMeetings.filter(m => {
       const meetingDate = parseISO(m.start_datetime);
       return isSameDay(meetingDate, day);
     });
@@ -492,8 +566,8 @@ export default function Calendar() {
                   const client = clients.find(c => c.id === meeting.client_id);
                   const top = getTimePosition(meeting.start_datetime);
                   const height = getMeetingHeight(meeting.start_datetime, meeting.end_datetime);
-                  const color = meetingBlockColors[meeting.status] || meetingBlockColors.scheduled;
-                  return (
+                  const color = getMeetingBlockColor(meeting);
+                   return (
                     <div
                       key={meeting.id}
                       className={cn("absolute left-1 right-1 rounded px-1.5 py-1 border text-xs overflow-hidden cursor-pointer hover:brightness-95 z-10 shadow-sm", color)}
@@ -555,7 +629,16 @@ export default function Calendar() {
                 →
               </Button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <CalendarViewSelector
+                user={user}
+                calendarMode={calendarMode}
+                setCalendarMode={setCalendarMode}
+                selectedUserIds={selectedUserIds}
+                setSelectedUserIds={setSelectedUserIds}
+                teamUsers={teamUsers}
+                loadingTeam={loadingTeam}
+              />
               <div className="flex border border-slate-200 rounded-md overflow-hidden">
                 <Button variant="ghost" size="sm" className={cn("rounded-none px-3 h-8", view === 'month' && "bg-slate-100")} onClick={() => setView('month')}>
                   Month
@@ -572,6 +655,21 @@ export default function Calendar() {
               </Button>
             </div>
           </div>
+
+          {/* Team color legend */}
+          {calendarMode !== "mine" && visibleEmails.size > 1 && (
+            <div className="flex flex-wrap gap-3 mb-4 px-1">
+              {allVisibleUsers.filter(u => visibleEmails.has(u.email)).map((u, idx) => {
+                const colorIdx = idx % USER_BLOCK_COLORS.length;
+                return (
+                  <div key={u.id} className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <div className={cn("w-2.5 h-2.5 rounded-full", USER_BLOCK_COLORS[colorIdx].dot)} />
+                    <span>{u.id === user?.id ? "Me" : (u.full_name || u.email)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {view === 'month' && (
             <div className="grid grid-cols-7 gap-1">
@@ -598,7 +696,7 @@ export default function Calendar() {
                     <div className="space-y-0.5">
                       {dayMeetings.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)).slice(0, 2).map(meeting => {
                         const client = clients.find(c => c.id === meeting.client_id);
-                        const color = meetingBlockColors[meeting.status] || meetingBlockColors.scheduled;
+                        const color = getMeetingBlockColor(meeting);
                         return (
                           <div
                             key={meeting.id}
@@ -625,7 +723,7 @@ export default function Calendar() {
 
         {/* Meetings Needing Time Logged */}
         {(() => {
-          const unloggedMeetings = meetings
+          const unloggedMeetings = filteredMeetings
             .filter(m => {
               if (m.status === 'cancelled' || m.status === 'no_show' || m.status === 'not_selected') return false;
               if (m.is_converted_to_time_entry) return false;
@@ -693,7 +791,7 @@ export default function Calendar() {
         <Card className="border-0 shadow-sm p-5">
           <h3 className="text-base font-semibold text-slate-800 mb-4">Upcoming Meetings</h3>
           <div className="space-y-3">
-            {meetings
+            {filteredMeetings
               .filter(m => new Date(m.start_datetime) >= new Date() && m.status !== 'cancelled')
               .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
               .slice(0, 5)
