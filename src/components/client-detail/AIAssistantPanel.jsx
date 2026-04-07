@@ -208,9 +208,71 @@ function InsightsResult({ data }) {
   );
 }
 
+function CoachingResult({ data, clientId, onRefresh, onSave }) {
+  return (
+    <div className="space-y-4">
+      {data.coaching_priorities?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">🎯 Coaching Priorities</p>
+          <ul className="space-y-1">
+            {data.coaching_priorities.map((p, i) => <li key={i} className="text-sm text-slate-700 flex gap-2"><span className="text-blue-500 shrink-0">•</span>{p}</li>)}
+          </ul>
+        </div>
+      )}
+      {data.job_search_strategy && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">🔍 Job Search Strategy</p>
+          <p className="text-sm text-slate-700">{data.job_search_strategy}</p>
+        </div>
+      )}
+      {data.skill_gaps?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">📈 Skill Gaps</p>
+          <ul className="space-y-1">
+            {data.skill_gaps.map((g, i) => <li key={i} className="text-sm text-slate-700 flex gap-2"><span className="text-amber-500 shrink-0">•</span>{g}</li>)}
+          </ul>
+        </div>
+      )}
+      {data.recommended_accommodations?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">♿ Accommodations</p>
+          <ul className="space-y-1">
+            {data.recommended_accommodations.map((a, i) => <li key={i} className="text-sm text-slate-700 flex gap-2"><span className="text-green-500 shrink-0">•</span>{a}</li>)}
+          </ul>
+        </div>
+      )}
+      {data.job_recommendations?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">💼 Job Recommendations</p>
+          <div className="space-y-2">
+            {data.job_recommendations.map((j, i) => (
+              <div key={i} className="p-2 bg-slate-50 rounded text-sm">
+                <p className="font-medium text-slate-900">{j.job_title}</p>
+                <p className="text-xs text-slate-600 mt-0.5">{j.why_fit}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.next_coaching_session_focus && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">📌 Next Session Focus</p>
+          <p className="text-sm text-slate-700">{data.next_coaching_session_focus}</p>
+        </div>
+      )}
+      <div className="flex gap-2 pt-2">
+        <Button size="sm" variant="outline" onClick={() => onSave?.(data)} className="text-xs flex-1">
+          <CheckCheck className="w-3.5 h-3.5 mr-1" /> Save Plan
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
   const [activeTab, setActiveTab] = useState("summarize");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [results, setResults] = useState({});
   const [emailPurpose, setEmailPurpose] = useState("");
   const [emailContext, setEmailContext] = useState("");
@@ -232,11 +294,32 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
     }
   };
 
+  const saveCoachingPlan = async (data) => {
+    setSaving(true);
+    try {
+      await base44.functions.invoke("clientAIAssistant", {
+        action: 'save_coaching_plan',
+        clientId,
+        coaching_priorities: data.coaching_priorities,
+        job_search_strategy: data.job_search_strategy,
+        recommended_accommodations: data.recommended_accommodations,
+        next_session_focus: data.next_coaching_session_focus
+      });
+      toast.success("Coaching plan saved to Documents!");
+      if (onRefresh) onRefresh();
+    } catch (e) {
+      toast.error("Failed to save: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const tabConfig = [
     { key: "summarize", label: "Summary", icon: FileText },
     { key: "suggest_tasks", label: "Tasks", icon: ListChecks },
     { key: "draft_email", label: "Email", icon: Mail },
     { key: "engagement_insights", label: "Insights", icon: TrendingUp },
+    { key: "coaching_recommendations", label: "Coaching", icon: Sparkles },
   ];
 
   return (
@@ -337,9 +420,26 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
                 {results.engagement_insights ? "Refresh Insights" : "Analyze Engagement"}
               </Button>
             </TabsContent>
-          </Tabs>
-        </div>
-      )}
-    </Card>
-  );
-}
+
+            {/* Coaching Tab */}
+            <TabsContent value="coaching_recommendations" className="space-y-3 mt-0">
+              <p className="text-xs text-slate-500">AI-generated job coaching strategy based on vocational profile and client data.</p>
+              {results.coaching_recommendations ? (
+                <CoachingResult 
+                  data={results.coaching_recommendations}
+                  clientId={clientId}
+                  onRefresh={onRefresh}
+                  onSave={saveCoachingPlan}
+                />
+              ) : null}
+              <Button size="sm" onClick={() => run("coaching_recommendations")} disabled={loading} className="w-full text-xs">
+                {loading && activeTab === "coaching_recommendations" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                {results.coaching_recommendations ? "Regenerate Coaching Plan" : "Generate Coaching Plan"}
+              </Button>
+            </TabsContent>
+            </Tabs>
+            </div>
+            )}
+            </Card>
+            );
+            }
