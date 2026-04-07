@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import JobCard from "./JobCard";
 import VocationalFactsPanel from "./VocationalFactsPanel";
+import JobSearchFilters from "./JobSearchFilters";
 
 const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-600 border-slate-200",
@@ -179,6 +180,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     dataQualityScore: null,
     conflictsCount: 0,
   });
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
     loadSavedRecs();
@@ -249,6 +251,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
         clientId,
         profile: profileData,
         customInstructions,
+        filters,
       });
       const jobData = jobRes?.data?.data;
       setJobs(jobData?.jobs || []);
@@ -409,6 +412,9 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
               Vocational facts profile found — recommendations will be grounded in extracted client data with source citations.
             </div>
           )}
+
+          {/* Search filters */}
+          <JobSearchFilters filters={filters} onFiltersChange={setFilters} />
 
           <Card className="border-0 shadow-sm p-4 space-y-3">
             <Label className="text-xs text-slate-500 block">Additional instructions for the AI (optional)</Label>

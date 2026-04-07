@@ -198,7 +198,16 @@ ${appsText}
 
     // ── ACTION: find_jobs ─────────────────────────────────────────────────────
     if (action === 'find_jobs') {
-      const { profile, customInstructions } = body;
+      const { profile, customInstructions, filters } = body;
+      
+      // Extract filter preferences (all optional)
+      const locationRadius = filters?.locationRadius || '50 miles';
+      const workType = filters?.workType || 'any'; // 'remote', 'hybrid', 'onsite', 'any'
+      const employmentType = filters?.employmentType || 'any'; // 'full-time', 'part-time', 'contract', 'any'
+      const industry = filters?.industry || null;
+      const payMin = filters?.payMin || null;
+      const payMax = filters?.payMax || null;
+      const schedule = filters?.schedule || null;
 
       // Build a precise, grounded constraints brief
       const scheduleConstraints = profile?.schedule_constraints?.map(s => `• ${s.item} [${s.source}]`).join('\n') || 'None documented';
@@ -218,6 +227,46 @@ ${appsText}
         ...(vfp.physical_restrictions || []).map(f => `PHYSICAL: ${f.fact} [${f.source}]`),
         ...(vfp.sensory_environmental_needs || []).map(f => `SENSORY: ${f.fact} [${f.source}]`),
       ].join('\n') : 'Vocational facts not yet extracted — rely on profile above';
+
+      // Build location preference string
+      let locationPref = '';
+      if (client.location) {
+        if (workType === 'remote') {
+          locationPref = `Remote positions (anywhere)`;
+        } else if (workType === 'hybrid') {
+          locationPref = `Hybrid positions at or near ${client.location}, ${locationRadius} radius`;
+        } else {
+          locationPref = `In-person positions at or near ${client.location}, ${locationRadius} radius. Remote only if explicitly allowed.`;
+        }
+      } else {
+        locationPref = workType === 'remote' ? 'Remote positions only' : 'Any location with location data available';
+      }
+
+      // Build employment type preference
+      let empTypePref = '';
+      if (employmentType !== 'any') {
+        empTypePref = `Prioritize ${employmentType} positions.`;
+      } else {
+        empTypePref = 'Any employment type (full-time, part-time, contract).';
+      }
+
+      // Build schedule preference if provided
+      let schedulePref = '';
+      if (schedule) {
+        schedulePref = `\nSchedule preference: ${schedule}`;
+      }
+
+      // Build pay range filter
+      let payPref = '';
+      if (payMin || payMax) {
+        payPref = `Pay range: $${payMin || '0'}/hour - $${payMax || 'any'}/hour.`;
+      }
+
+      // Build industry filter
+      let industryPref = '';
+      if (industry) {
+        industryPref = `\nIndustry focus: ${industry}`;
+      }
 
       const prompt = `You are a specialized job placement assistant for adults with disabilities. Every recommendation you make MUST be grounded in the documented client facts below. You are NOT permitted to recommend jobs that violate any documented constraint.
 
@@ -252,27 +301,39 @@ Transportation notes: ${profile?.transportation_notes || 'Not specified'}
 Benefits considerations: ${profile?.benefits_considerations || 'Unknown'}
 ${conflictsNote}
 
+=== STAFF-APPLIED SEARCH FILTERS ===
+Location Preference: ${locationPref}
+Employment Type: ${empTypePref}
+${payPref}
+${schedulePref}
+${industryPref}
+
 === ADDITIONAL STAFF INSTRUCTIONS ===
 ${customInstructions || 'None'}
 
 === YOUR TASK ===
 Search the internet RIGHT NOW for REAL, CURRENTLY AVAILABLE job postings matching this client's profile at their location.
 
-For EACH job recommendation you provide, you MUST:
-1. Give the exact job title, employer, location, pay, schedule, direct application URL
-2. In "fit_reason": cite SPECIFIC client factors (name the source document/assessment) that make this a good fit. E.g. "Client's Career Goals assessment shows interest in customer service; Skills Audit documents strong verbal communication"
-3. In "cited_factors": list each specific factor from the profile that matches — include the source
-4. In "concerns": list specific concerns based on the documented barriers/needs
-5. In "support_strategy": recommend specific accommodations tied to documented support needs
-6. In "constraint_violations": list any documented constraints this job may conflict with (if none, empty array)
-7. If any UNRESOLVED CONFLICTS affect this job, note them in concerns and recommend staff review — do NOT pick one answer
-
-HARD RULES:
+FILTERING RULES (apply these strictly):
+${employmentType !== 'any' ? `- Only return ${employmentType} positions` : ''}
+${workType === 'remote' ? `- Only return remote positions` : workType === 'onsite' ? `- Only return in-person positions` : `- Prefer nearby positions within ${locationRadius}; remote only if explicitly mentioned in job posting`}
+${payMin ? `- Only return jobs paying at least $${payMin}/hour` : ''}
+${payMax ? `- Only return jobs paying at most $${payMax}/hour` : ''}
+${industry ? `- Only return jobs in: ${industry}` : ''}
 - Do NOT recommend jobs that definitively violate documented physical restrictions, transportation limits, or schedule constraints
-- If you're unsure whether a constraint applies, flag it rather than ignore it
-- Aim for 5-8 diverse, realistic recommendations
-- Prefer employers with known accommodation track records
-- Return jobs that genuinely exist or existed recently`;
+- If a job requires commute beyond documented transportation limits, exclude it
+- If you're unsure whether a constraint applies, flag it for staff review rather than ignoring it
+
+For EACH job recommendation you provide, you MUST:
+1. Give the exact job title, employer, location, pay, schedule, and direct application URL
+2. In "fit_reason": cite SPECIFIC client factors (name the source document/assessment) that make this a good fit
+3. In "cited_factors": list each specific factor from the profile that matches — include the source
+4. In "concerns": list specific concerns based on documented barriers/needs
+5. In "support_strategy": recommend specific accommodations tied to documented support needs
+6. In "constraint_violations": list any documented constraints this job conflicts with (if none, empty array)
+7. If any UNRESOLVED CONFLICTS affect this job, note them in concerns and recommend staff review
+
+TARGET: 5-8 diverse, realistic recommendations that genuinely exist or existed recently`;
 
       const result = await base44.integrations.Core.InvokeLLM({
         prompt,
