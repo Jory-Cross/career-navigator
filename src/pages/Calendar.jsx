@@ -261,34 +261,93 @@ export default function Calendar() {
     }
   };
 
-  const convertToTimeEntry = async () => {
-    if (!selectedMeeting) return;
+  // Returns meetings that overlap with the given meeting's time block (excluding itself)
+  const getOverlappingMeetings = (meeting) => {
+    const start = new Date(meeting.start_datetime).getTime();
+    const end = meeting.end_datetime ? new Date(meeting.end_datetime).getTime() : start + 60 * 60 * 1000;
+    return meetings.filter(m => {
+      if (m.id === meeting.id) return false;
+      const mStart = new Date(m.start_datetime).getTime();
+      const mEnd = m.end_datetime ? new Date(m.end_datetime).getTime() : mStart + 60 * 60 * 1000;
+      return mStart < end && mEnd > start;
+    });
+  };
+
+  // Check if any time entry already exists for the same employee/time block
+  const getConflictingTimeEntry = (meeting) => {
+    const start = new Date(meeting.start_datetime).getTime();
+    const end = meeting.end_datetime ? new Date(meeting.end_datetime).getTime() : start + 60 * 60 * 1000;
+    const date = format(parseISO(meeting.start_datetime), 'yyyy-MM-dd');
+    return timeEntries.find(te => {
+      if (te.date !== date) return false;
+      if (!te.start_time) return false;
+      const [sh, sm] = te.start_time.split(':').map(Number);
+      const teStart = new Date(meeting.start_datetime);
+      teStart.setHours(sh, sm, 0, 0);
+      const teEnd = te.end_time ? (() => {
+        const [eh, em] = te.end_time.split(':').map(Number);
+        const d = new Date(meeting.start_datetime);
+        d.setHours(eh, em, 0, 0);
+        return d.getTime();
+      })() : teStart.getTime() + 60 * 60 * 1000;
+      return teStart.getTime() < end && teEnd > start;
+    });
+  };
+
+  const convertToTimeEntry = async (meetingToConvert) => {
+    const target = meetingToConvert || selectedMeeting;
+    if (!target) return;
+
+    // Block if a time entry already covers this time block
+    const conflict = getConflictingTimeEntry(target);
+    if (conflict) {
+      toast.error("A time entry already exists for this time period. Only one calendar event can be converted into a time entry.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const startTime = format(parseISO(selectedMeeting.start_datetime), 'HH:mm');
-      const endTime = selectedMeeting.end_datetime 
-        ? format(parseISO(selectedMeeting.end_datetime), 'HH:mm')
-        : format(parseISO(selectedMeeting.start_datetime), 'HH:mm');
-      const date = format(parseISO(selectedMeeting.start_datetime), 'yyyy-MM-dd');
-      
+      const startTime = format(parseISO(target.start_datetime), 'HH:mm');
+      const endTime = target.end_datetime
+        ? format(parseISO(target.end_datetime), 'HH:mm')
+        : format(parseISO(target.start_datetime), 'HH:mm');
+      const date = format(parseISO(target.start_datetime), 'yyyy-MM-dd');
+
       const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
       const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
       const duration = Math.max(1, endMinutes - startMinutes);
 
-      await base44.entities.TimeEntry.create({
-        client_id: selectedMeeting.client_id,
+      const timeEntry = await base44.entities.TimeEntry.create({
+        client_id: target.client_id,
         date,
         start_time: startTime,
         end_time: endTime,
         duration_minutes: duration,
-        description: convertNotes || selectedMeeting.title,
-        category: selectedMeeting.meeting_type || 'consultation'
+        description: convertNotes || target.title,
+        category: target.meeting_type || 'consultation'
       });
 
+      // Link the converted meeting to its time entry
+      await base44.entities.Meeting.update(target.id, {
+        is_converted_to_time_entry: true,
+        linked_time_entry_id: timeEntry?.id || null,
+        status: 'completed'
+      });
+
+      // Mark all overlapping meetings as "not_selected"
+      const overlapping = getOverlappingMeetings(target);
+      await Promise.all(
+        overlapping
+          .filter(m => !m.is_converted_to_time_entry)
+          .map(m => base44.entities.Meeting.update(m.id, { status: 'not_selected' }))
+      );
+
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
       queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
       setShowConvert(false);
       setConvertNotes("");
-      toast.success("Converted to time entry");
+      setSelectedMeeting(null);
+      toast.success("Converted to time entry" + (overlapping.length > 0 ? ` — ${overlapping.length} overlapping event(s) marked as not selected` : ""));
     } catch (error) {
       toast.error("Failed to convert");
     } finally {
@@ -336,18 +395,22 @@ export default function Calendar() {
 
   const statusColors = {
     scheduled: "bg-blue-100 text-blue-700",
+    tentative: "bg-purple-100 text-purple-700",
     confirmed: "bg-green-100 text-green-700",
     completed: "bg-slate-100 text-slate-600",
     cancelled: "bg-red-100 text-red-700",
-    no_show: "bg-amber-100 text-amber-700"
+    no_show: "bg-amber-100 text-amber-700",
+    not_selected: "bg-slate-100 text-slate-400"
   };
 
   const meetingBlockColors = {
     scheduled: "bg-blue-500 text-white border-blue-600",
+    tentative: "bg-purple-400 text-white border-purple-500",
     confirmed: "bg-emerald-500 text-white border-emerald-600",
     completed: "bg-slate-400 text-white border-slate-500",
     cancelled: "bg-red-400 text-white border-red-500 opacity-60",
-    no_show: "bg-amber-400 text-white border-amber-500"
+    no_show: "bg-amber-400 text-white border-amber-500",
+    not_selected: "bg-slate-300 text-slate-600 border-slate-400 opacity-60"
   };
 
   // Time grid constants: 7am–7pm, each hour = 60px
@@ -437,7 +500,10 @@ export default function Calendar() {
                       style={{ top, height: Math.max(height, 24) }}
                       onClick={e => { e.stopPropagation(); openEdit(meeting); }}
                     >
-                      <p className="font-semibold truncate leading-tight">{format(parseISO(meeting.start_datetime), 'h:mma')}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="font-semibold truncate leading-tight">{format(parseISO(meeting.start_datetime), 'h:mma')}</p>
+                        {meeting.is_converted_to_time_entry && <CheckCircle2 className="w-3 h-3 shrink-0 opacity-90" />}
+                      </div>
                       {height > 30 && <p className="truncate opacity-90 text-[10px]">{client ? `${client.first_name} ${client.last_name}` : meeting.title}</p>}
                       {height > 45 && <p className="truncate opacity-80 text-[10px]">{meeting.title}</p>}
                     </div>
@@ -561,15 +627,11 @@ export default function Calendar() {
         {(() => {
           const unloggedMeetings = meetings
             .filter(m => {
-              if (m.status === 'cancelled' || m.status === 'no_show') return false;
+              if (m.status === 'cancelled' || m.status === 'no_show' || m.status === 'not_selected') return false;
+              if (m.is_converted_to_time_entry) return false;
               const meetingDate = new Date(m.start_datetime);
               if (meetingDate >= new Date()) return false; // only past meetings
-              const meetingDay = format(parseISO(m.start_datetime), 'yyyy-MM-dd');
-              // check if any time entry exists for the same client on the same day
-              const hasTimeEntry = timeEntries.some(te => 
-                te.client_id === m.client_id && te.date === meetingDay
-              );
-              return !hasTimeEntry;
+              return true;
             })
             .sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime));
 
@@ -637,8 +699,7 @@ export default function Calendar() {
               .slice(0, 5)
               .map(meeting => {
                 const client = clients.find(c => c.id === meeting.client_id);
-                const meetingDay = format(parseISO(meeting.start_datetime), 'yyyy-MM-dd');
-                const hasTimeEntry = timeEntries.some(te => te.client_id === meeting.client_id && te.date === meetingDay);
+                const hasTimeEntry = meeting.is_converted_to_time_entry;
                 return (
                   <div key={meeting.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer" onClick={() => openEdit(meeting)}>
                     <div className="flex-1">
@@ -785,10 +846,12 @@ export default function Calendar() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="tentative">Tentative</SelectItem>
                       <SelectItem value="confirmed">Confirmed</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                       <SelectItem value="no_show">No Show</SelectItem>
+                      <SelectItem value="not_selected">Not Selected</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -877,14 +940,19 @@ export default function Calendar() {
               )}
             </div>
             <div className="flex gap-2">
-              {editingMeeting && editingMeeting.status === 'completed' && (
+              {editingMeeting && editingMeeting.is_converted_to_time_entry && (
+                <Badge className="text-xs bg-emerald-100 text-emerald-700 border-0 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Time Entry Logged
+                </Badge>
+              )}
+              {editingMeeting && !editingMeeting.is_converted_to_time_entry && editingMeeting.status !== 'cancelled' && editingMeeting.status !== 'not_selected' && (
                 <Button size="sm" variant="outline" onClick={() => {
                   setSelectedMeeting(editingMeeting);
                   setConvertNotes(editingMeeting.description || "");
                   setShowConvert(true);
                   setShowNew(false);
                 }}>
-                  <Timer className="w-3.5 h-3.5 mr-1" /> Create Time Entry
+                  <Timer className="w-3.5 h-3.5 mr-1" /> Log Time Entry
                 </Button>
               )}
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
@@ -977,35 +1045,84 @@ export default function Calendar() {
       <Dialog open={showConvert} onOpenChange={setShowConvert}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Convert to Time Entry</DialogTitle>
+            <DialogTitle>Log Time Entry</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-3">
-            {selectedMeeting && (
-              <>
-                <div className="p-3 bg-slate-50 rounded-lg space-y-1">
-                  <p className="text-sm font-medium text-slate-900">{selectedMeeting.title}</p>
-                  <p className="text-xs text-slate-600">
-                    {format(parseISO(selectedMeeting.start_datetime), 'MMM d, yyyy • HH:mm')}
-                    {selectedMeeting.end_datetime && ` - ${format(parseISO(selectedMeeting.end_datetime), 'HH:mm')}`}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs">Notes / Description</Label>
-                  <Textarea
-                    value={convertNotes}
-                    onChange={e => setConvertNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Add notes about what was worked on..."
-                  />
-                </div>
-              </>
-            )}
-          </div>
+          {selectedMeeting && (() => {
+            const conflict = getConflictingTimeEntry(selectedMeeting);
+            const overlapping = getOverlappingMeetings(selectedMeeting);
+            return (
+              <div className="space-y-4 py-3">
+                {/* Blocked: time entry already exists */}
+                {conflict ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+                    <div className="flex items-center gap-2 text-red-700 font-medium text-sm">
+                      <X className="w-4 h-4" /> Conversion Blocked
+                    </div>
+                    <p className="text-xs text-red-600">
+                      A time entry already exists for this time period (<strong>{conflict.start_time}–{conflict.end_time || '?'}</strong> on <strong>{conflict.date}</strong>). Only one calendar event can be converted into a time entry per time block.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Overlapping events warning */}
+                    {overlapping.length > 0 && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" /> {overlapping.length} overlapping event{overlapping.length > 1 ? 's' : ''} in this time block
+                        </p>
+                        <p className="text-xs text-amber-600">
+                          Converting this event will mark the other event{overlapping.length > 1 ? 's' : ''} as <strong>not selected</strong>. Only one event per time block can become a Time Entry.
+                        </p>
+                        <div className="space-y-1 mt-1">
+                          {overlapping.map(m => {
+                            const c = clients.find(cl => cl.id === m.client_id);
+                            return (
+                              <div key={m.id} className="text-xs text-amber-700 bg-amber-100 rounded px-2 py-1 flex items-center justify-between">
+                                <span className="truncate">{m.title} {c ? `— ${c.first_name} ${c.last_name}` : ''}</span>
+                                <Badge className={cn("text-[10px] ml-2 shrink-0", m.is_converted_to_time_entry ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                                  {m.is_converted_to_time_entry ? "converted" : m.status}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected meeting summary */}
+                    <div className="p-3 bg-slate-50 rounded-lg space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <p className="text-sm font-medium text-slate-900">{selectedMeeting.title}</p>
+                      </div>
+                      <p className="text-xs text-slate-600 ml-6">
+                        {format(parseISO(selectedMeeting.start_datetime), 'MMM d, yyyy • h:mma')}
+                        {selectedMeeting.end_datetime && ` – ${format(parseISO(selectedMeeting.end_datetime), 'h:mma')}`}
+                      </p>
+                      {(() => { const c = clients.find(cl => cl.id === selectedMeeting.client_id); return c ? <p className="text-xs text-slate-500 ml-6">Client: {c.first_name} {c.last_name}</p> : null; })()}
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Notes / Description</Label>
+                      <Textarea
+                        value={convertNotes}
+                        onChange={e => setConvertNotes(e.target.value)}
+                        rows={3}
+                        placeholder="Add notes about what was worked on..."
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConvert(false)}>Cancel</Button>
-            <Button onClick={convertToTimeEntry} disabled={saving}>
-              {saving ? "Converting..." : "Convert to Time Entry"}
-            </Button>
+            <Button variant="outline" onClick={() => { setShowConvert(false); setConvertNotes(""); }}>Cancel</Button>
+            {selectedMeeting && !getConflictingTimeEntry(selectedMeeting) && (
+              <Button onClick={() => convertToTimeEntry(selectedMeeting)} disabled={saving}>
+                {saving ? "Converting..." : "Convert to Time Entry"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
