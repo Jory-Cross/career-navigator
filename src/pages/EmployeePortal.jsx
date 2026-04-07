@@ -30,7 +30,10 @@ export default function EmployeePortal() {
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["all-users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('getOrgUsers', {});
+      return res.data?.users || [];
+    },
     enabled: !!user
   });
 
