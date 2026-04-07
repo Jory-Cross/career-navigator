@@ -1,0 +1,89 @@
+{
+  "name": "JobRecommendation",
+  "type": "object",
+  "description": "AI-generated job recommendation for a specific client, saved to their record",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Reference to the Client"
+    },
+    "batch_id": {
+      "type": "string",
+      "description": "Groups all recommendations from one generation run"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "employer": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "pay": {
+      "type": "string"
+    },
+    "schedule": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Direct application / job posting link"
+    },
+    "fit_reason": {
+      "type": "string",
+      "description": "Why this job matches the client"
+    },
+    "concerns": {
+      "type": "string",
+      "description": "Potential barriers or concerns"
+    },
+    "support_strategy": {
+      "type": "string",
+      "description": "Recommended accommodations / support"
+    },
+    "fit_score": {
+      "type": "number",
+      "description": "0-100 confidence/fit score"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "suggested",
+        "saved",
+        "applied",
+        "rejected"
+      ],
+      "default": "suggested"
+    },
+    "generated_by": {
+      "type": "string",
+      "description": "Email of user who generated"
+    },
+    "assessments_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of assessments used to generate this recommendation"
+    },
+    "client_fields_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of client fields that informed this recommendation"
+    },
+    "search_terms_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "client_id",
+    "job_title",
+    "employer"
+  ]
+}

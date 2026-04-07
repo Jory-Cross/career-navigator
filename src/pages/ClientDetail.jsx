@@ -19,6 +19,7 @@ import AssessmentSection from "@/components/client-detail/AssessmentSection";
 import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 import EmailComposer from "@/components/EmailComposer";
 import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
+import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
 
 export default function ClientDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -130,6 +131,7 @@ export default function ClientDetail() {
         <TabsList className="bg-slate-100 p-1">
           {user?.role !== 'client' && !isEmployed && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
           {!isDspd && !isEmployed && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
+          {!isDspd && !isEmployed && user?.role !== 'client' && <TabsTrigger value="ai_jobs">🤖 AI Job Search</TabsTrigger>}
           {!isDspd && !isEmployed && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
           {!isDspd && !isEmployed && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
           {client.client_type === 'pre_ets' && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
@@ -145,6 +147,9 @@ export default function ClientDetail() {
         </TabsContent>
         <TabsContent value="applications">
           <JobApplicationsSection clientId={clientId} applications={applications} client={client} onRefresh={refresh} />
+        </TabsContent>
+        <TabsContent value="ai_jobs">
+          <AIJobSearchPanel clientId={clientId} client={client} />
         </TabsContent>
         <TabsContent value="interview">
           <InterviewPrepSection client={client} />
