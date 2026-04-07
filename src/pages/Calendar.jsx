@@ -50,21 +50,34 @@ export default function Calendar() {
     return unsubscribe;
   }, [queryClient]);
 
+  // Reset teamUsers when user changes so hierarchy reloads fresh
+  useEffect(() => {
+    setTeamUsers([]);
+  }, [user?.id]);
+
   // Load team users only when needed (team or custom mode)
   useEffect(() => {
     if (calendarMode === "mine" || !user) return;
     if (teamUsers.length > 0) return; // already loaded
     setLoadingTeam(true);
     base44.entities.User.list().then(allUsers => {
+      // Recursive function to get all descendants in the reporting chain
+      const getAllDescendants = (managerId, users) => {
+        const direct = users.filter(u => u.manager_id === managerId);
+        return direct.reduce((acc, u) => [...acc, u, ...getAllDescendants(u.id, users)], []);
+      };
+
       let subordinates = [];
       if (user.role === "admin") {
-        subordinates = allUsers.filter(u => u.id !== user.id && (u.role === "employee" || u.role === "management"));
+        // Admin sees everyone via hierarchy; fall back to all non-admin staff if no manager_id links exist
+        const hierarchyBased = getAllDescendants(user.id, allUsers);
+        if (hierarchyBased.length > 0) {
+          subordinates = hierarchyBased;
+        } else {
+          // Fallback: show all employees and managers that belong to the org
+          subordinates = allUsers.filter(u => u.id !== user.id && (u.role === "employee" || u.role === "management"));
+        }
       } else if (user.role === "management") {
-        // Direct reports + their reports recursively
-        const getAllDescendants = (managerId, users) => {
-          const direct = users.filter(u => u.manager_id === managerId);
-          return direct.reduce((acc, u) => [...acc, u, ...getAllDescendants(u.id, users)], []);
-        };
         subordinates = getAllDescendants(user.id, allUsers);
       }
       setTeamUsers(subordinates);
