@@ -1,0 +1,127 @@
+{
+  "name": "ReportVersion",
+  "type": "object",
+  "description": "Tracks report versions with included time entries, PDF, and timestamp. Supports regeneration without overwriting previous versions. Optionally locks reporting period.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Client this report belongs to"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "job_development",
+        "job_coaching",
+        "life_skills",
+        "cbh",
+        "monthly_summary",
+        "quarterly_summary",
+        "other"
+      ],
+      "description": "Type of report"
+    },
+    "pdf_template_id": {
+      "type": "string",
+      "description": "Reference to PDFTemplate used"
+    },
+    "entry_type_id": {
+      "type": "string",
+      "description": "Entry type this report covers"
+    },
+    "reporting_period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "First day of reporting period"
+    },
+    "reporting_period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Last day of reporting period"
+    },
+    "version_number": {
+      "type": "number",
+      "description": "Auto-incrementing version (1, 2, 3...)"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "URL to generated PDF file"
+    },
+    "pdf_file_name": {
+      "type": "string",
+      "description": "Original PDF file name"
+    },
+    "time_entry_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of TimeEntry records included in this report"
+    },
+    "time_entry_count": {
+      "type": "number",
+      "description": "Number of time entries included"
+    },
+    "total_hours": {
+      "type": "number",
+      "description": "Sum of duration_minutes converted to hours for included entries"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO datetime when this version was generated"
+    },
+    "generated_by": {
+      "type": "string",
+      "description": "Email of user who generated this report"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the reporting period is locked (prevents TimeEntry changes)"
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO datetime when period was locked"
+    },
+    "locked_by": {
+      "type": "string",
+      "description": "Email of user who locked the period"
+    },
+    "lock_reason": {
+      "type": "string",
+      "description": "Optional reason for locking period"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about this version"
+    },
+    "is_final": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the final/submitted version"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When report was submitted/finalized"
+    },
+    "submitted_by": {
+      "type": "string",
+      "description": "Email of user who submitted"
+    }
+  },
+  "required": [
+    "client_id",
+    "report_type",
+    "reporting_period_start",
+    "reporting_period_end",
+    "pdf_template_id",
+    "time_entry_ids",
+    "pdf_url"
+  ]
+}
