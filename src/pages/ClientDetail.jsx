@@ -18,6 +18,7 @@ import ActivitySection from "@/components/client-detail/ActivitySection";
 import AssessmentSection from "@/components/client-detail/AssessmentSection";
 import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 import EmailComposer from "@/components/EmailComposer";
+import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 
 export default function ClientDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -118,6 +119,8 @@ export default function ClientDetail() {
 
       <ClientHeader client={client} onUpdate={refresh} />
 
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
+      <div>
       {(() => {
         const isDspd = client.client_type === 'dspd';
         const isEmployed = client.client_type === 'employed';
@@ -173,6 +176,19 @@ export default function ClientDetail() {
       </Tabs>
         );
       })()}
+      </div>
+
+      {/* AI Assistant Sidebar */}
+      <div className="xl:sticky xl:top-20">
+        <AIAssistantPanel
+          clientId={clientId}
+          onRefresh={refresh}
+          onUseEmail={(subject, body) => {
+            setShowEmailComposer(true);
+          }}
+        />
+      </div>
+      </div>
 
       <EmailComposer
         open={showEmailComposer}
