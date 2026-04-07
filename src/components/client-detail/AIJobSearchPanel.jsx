@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Sparkles, Briefcase, ExternalLink, Loader2, CheckCircle, BookmarkPlus,
-  X, ChevronDown, ChevronUp, AlertTriangle, Lightbulb, Star,
-  RefreshCw, Send, History, Search, Copy, Check
+  Sparkles, Briefcase, Loader2, CheckCircle, BookmarkPlus,
+  RefreshCw, Search, History, Lightbulb, AlertTriangle, FileText,
+  ChevronDown, ChevronUp, Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import JobCard from "./JobCard";
+import VocationalFactsPanel from "./VocationalFactsPanel";
 
 const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-600 border-slate-200",
@@ -19,226 +21,189 @@ const STATUS_COLORS = {
   applied: "bg-green-100 text-green-700 border-green-200",
   rejected: "bg-red-100 text-red-600 border-red-200",
 };
+const STATUS_LABELS = { suggested: "Suggested", saved: "Saved", applied: "Applied", rejected: "Not a Fit" };
 
-const STATUS_LABELS = {
-  suggested: "Suggested",
-  saved: "Saved",
-  applied: "Applied",
-  rejected: "Not a Fit",
-};
-
-function FitScoreBadge({ score }) {
-  const color = score >= 80 ? "bg-green-100 text-green-800"
-    : score >= 60 ? "bg-amber-100 text-amber-800"
-    : "bg-slate-100 text-slate-600";
-  return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full", color)}>
-      <Star className="w-3 h-3" /> {score}% fit
-    </span>
-  );
-}
-
-function JobCard({ job, onStatusChange, isSaved }) {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-
-  const copyLink = () => {
-    if (job.source_url) {
-      navigator.clipboard.writeText(job.source_url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleStatus = async (status) => {
-    setUpdatingStatus(true);
-    await onStatusChange(job, status);
-    setUpdatingStatus(false);
-  };
+function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore, conflictsCount }) {
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className={cn(
-      "border rounded-xl bg-white overflow-hidden transition-all",
-      job.status === 'applied' ? "border-green-200" :
-      job.status === 'rejected' ? "border-red-100 opacity-60" :
-      job.status === 'saved' ? "border-blue-200" : "border-slate-200"
-    )}>
-      {/* Card header */}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold text-slate-900 text-sm">{job.job_title}</h4>
-              {job.fit_score > 0 && <FitScoreBadge score={job.fit_score} />}
-              {isSaved && job.status && (
-                <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border", STATUS_COLORS[job.status])}>
-                  {STATUS_LABELS[job.status]}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-600 mt-0.5">{job.employer}</p>
-            <div className="flex flex-wrap gap-2 mt-1.5">
-              {job.location && <span className="text-xs text-slate-500">📍 {job.location}</span>}
-              {job.pay && <span className="text-xs text-slate-500">💰 {job.pay}</span>}
-              {job.schedule && <span className="text-xs text-slate-500">🕐 {job.schedule}</span>}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {job.source_url && (
-              <a href={job.source_url} target="_blank" rel="noopener noreferrer"
-                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Open job posting">
-                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-              </a>
-            )}
-            {job.source_url && (
-              <button onClick={copyLink} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Copy link">
-                {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-              </button>
-            )}
-            <button onClick={() => setExpanded(e => !e)}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
-              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Fit reason preview */}
-        {job.fit_reason && (
-          <p className="text-xs text-slate-600 mt-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2 leading-relaxed">
-            <span className="font-medium text-green-800">Why it fits: </span>{job.fit_reason}
-          </p>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {job.source_url && (
-            <a href={job.source_url} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" className="h-7 text-xs px-2.5">
-                <Send className="w-3 h-3 mr-1" /> Apply Now
-              </Button>
-            </a>
+    <Card className="border-0 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-slate-800">Vocational Profile</span>
+          {assessmentsUsed?.length > 0 && (
+            <Badge className="text-[10px] bg-purple-100 text-purple-700 border-0">
+              {assessmentsUsed.length} assessment{assessmentsUsed.length !== 1 ? 's' : ''}
+            </Badge>
           )}
-          {isSaved ? (
-            <>
-              {job.status !== 'applied' && (
-                <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 border-green-300 text-green-700 hover:bg-green-50"
-                  onClick={() => handleStatus('applied')} disabled={updatingStatus}>
-                  <CheckCircle className="w-3 h-3 mr-1" /> Mark Applied
-                </Button>
-              )}
-              {job.status !== 'rejected' && (
-                <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 border-red-200 text-red-500 hover:bg-red-50"
-                  onClick={() => handleStatus('rejected')} disabled={updatingStatus}>
-                  <X className="w-3 h-3 mr-1" /> Not a Fit
-                </Button>
-              )}
-            </>
-          ) : (
-            <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 border-blue-300 text-blue-700 hover:bg-blue-50"
-              onClick={() => handleStatus('save')}>
-              <BookmarkPlus className="w-3 h-3 mr-1" /> Save
-            </Button>
+          {hasVFP && (
+            <Badge className="text-[10px] bg-green-100 text-green-700 border-0">
+              <CheckCircle className="w-2.5 h-2.5 mr-1" /> Grounded in facts profile
+            </Badge>
+          )}
+          {dataQualityScore != null && (
+            <Badge className={cn("text-[10px] border-0",
+              dataQualityScore >= 70 ? "bg-green-100 text-green-700" :
+              dataQualityScore >= 40 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-600"
+            )}>
+              {dataQualityScore}% quality
+            </Badge>
+          )}
+          {conflictsCount > 0 && (
+            <Badge className="text-[10px] bg-amber-100 text-amber-700 border-0">
+              <AlertTriangle className="w-2.5 h-2.5 mr-1" /> {conflictsCount} conflict{conflictsCount !== 1 ? 's' : ''} flagged
+            </Badge>
           )}
         </div>
-      </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
 
-      {/* Expanded details */}
-      {expanded && (
-        <div className="border-t border-slate-100 bg-slate-50/60 p-4 space-y-3">
-          {job.concerns && (
-            <div className="flex gap-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-semibold text-amber-700 mb-0.5">Potential Concerns</p>
-                <p className="text-xs text-slate-600">{job.concerns}</p>
+      {open && profile && (
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-100">
+          {profile.summary && (
+            <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-3 mt-3">
+              {profile.summary}
+            </p>
+          )}
+
+          {/* Data sources used */}
+          {profile.data_sources_used?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Data Sources Used</p>
+              <div className="flex flex-wrap gap-1">
+                {profile.data_sources_used.map((s, i) => (
+                  <span key={i} className="text-[10px] bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-full">{s}</span>
+                ))}
               </div>
             </div>
           )}
-          {job.support_strategy && (
-            <div className="flex gap-2">
-              <Lightbulb className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-semibold text-blue-700 mb-0.5">Support Strategy</p>
-                <p className="text-xs text-slate-600">{job.support_strategy}</p>
+
+          {/* Conflicts to review */}
+          {profile.conflicts_to_review?.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> Conflicts Flagged for Staff Review
+              </p>
+              <div className="space-y-2">
+                {profile.conflicts_to_review.map((c, i) => (
+                  <div key={i} className="text-xs bg-white rounded border border-amber-100 p-2">
+                    <p className="font-medium text-amber-900 mb-1">📌 {c.topic}</p>
+                    <p className="text-slate-600">{c.source_a}: <em>"{c.value_a}"</em></p>
+                    <p className="text-slate-600">{c.source_b}: <em>"{c.value_b}"</em></p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              { key: 'strengths', label: '💪 Strengths', color: 'text-green-700' },
+              { key: 'barriers', label: '⚠️ Barriers', color: 'text-amber-700' },
+              { key: 'support_needs', label: '🤝 Support Needs', color: 'text-blue-700' },
+              { key: 'work_environment_preferences', label: '🏢 Environment', color: 'text-purple-700' },
+              { key: 'schedule_constraints', label: '📅 Schedule', color: 'text-indigo-700' },
+              { key: 'suggested_job_targets', label: '🎯 Job Targets', color: 'text-slate-700', plain: true },
+            ].map(s => {
+              const items = profile[s.key] || [];
+              if (!items.length) return null;
+              return (
+                <div key={s.key} className="p-3 bg-white rounded-lg border border-slate-100">
+                  <p className={cn("text-xs font-semibold mb-1.5", s.color)}>{s.label}</p>
+                  <ul className="space-y-1">
+                    {items.map((item, i) => (
+                      <li key={i} className="text-xs text-slate-600 flex gap-1.5">
+                        <span className="shrink-0 mt-0.5">•</span>
+                        <span>
+                          {s.plain ? item : item.item}
+                          {!s.plain && item.source && (
+                            <span className="text-[10px] text-slate-400 ml-1">[{item.source}]</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+
+          {profile.benefits_considerations && (
+            <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800">
+              <span className="font-semibold">Benefits Considerations: </span>{profile.benefits_considerations}
+            </div>
+          )}
+
+          {profile.missing_information?.length > 0 && (
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <p className="text-xs font-semibold text-blue-800 mb-1.5 flex items-center gap-1">
+                <Info className="w-3.5 h-3.5" /> Missing Information (would improve recommendations)
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.missing_information.map((m, i) => (
+                  <span key={i} className="text-[10px] bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full">{m}</span>
+                ))}
               </div>
             </div>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
-function VocationalProfile({ profile }) {
-  const sections = [
-    { key: 'strengths', label: '💪 Strengths', color: 'text-green-700' },
-    { key: 'barriers', label: '⚠️ Barriers', color: 'text-amber-700' },
-    { key: 'support_needs', label: '🤝 Support Needs', color: 'text-blue-700' },
-    { key: 'work_environment_preferences', label: '🏢 Environment Preferences', color: 'text-purple-700' },
-    { key: 'suggested_job_targets', label: '🎯 Suggested Job Targets', color: 'text-slate-700' },
-  ];
-  return (
-    <div className="space-y-4">
-      {profile.summary && (
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-          <p className="text-sm text-slate-700 leading-relaxed">{profile.summary}</p>
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {sections.map(s => profile[s.key]?.length > 0 && (
-          <div key={s.key} className="p-3 bg-white rounded-lg border border-slate-100">
-            <p className={cn("text-xs font-semibold mb-1.5", s.color)}>{s.label}</p>
-            <ul className="space-y-1">
-              {profile[s.key].map((item, i) => (
-                <li key={i} className="text-xs text-slate-600 flex gap-1.5">
-                  <span className="shrink-0 mt-0.5">•</span>{item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      {profile.benefits_considerations && (
-        <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800">
-          <span className="font-semibold">Benefits Considerations: </span>{profile.benefits_considerations}
-        </div>
-      )}
-      {profile.missing_information?.length > 0 && (
-        <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-          <p className="text-xs font-semibold text-blue-800 mb-1">Missing Information (to improve recommendations):</p>
-          <ul className="space-y-0.5">
-            {profile.missing_information.map((m, i) => (
-              <li key={i} className="text-xs text-blue-700 flex gap-1.5"><span>•</span>{m}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function AIJobSearchPanel({ clientId, client }) {
-  const [tab, setTab] = useState('search'); // 'search' | 'saved'
-  const [step, setStep] = useState('idle'); // 'idle' | 'profiling' | 'searching' | 'done'
+export default function AIJobSearchPanel({ clientId, client: initialClient }) {
+  const [activeTab, setActiveTab] = useState('search'); // 'search' | 'saved' | 'facts'
+  const [step, setStep] = useState('idle');
   const [profile, setProfile] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [savedRecs, setSavedRecs] = useState([]);
   const [searchSummary, setSearchSummary] = useState('');
+  const [groundingNote, setGroundingNote] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
   const [assessmentsUsed, setAssessmentsUsed] = useState([]);
   const [clientFieldsUsed, setClientFieldsUsed] = useState([]);
   const [searchTermsUsed, setSearchTermsUsed] = useState([]);
   const [nextSteps, setNextSteps] = useState([]);
+  const [unresolvedConflicts, setUnresolvedConflicts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [savedBatchId, setSavedBatchId] = useState(null);
   const [loadingSaved, setLoadingSaved] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
+  const [client, setClient] = useState(initialClient);
+  const [hasVFP, setHasVFP] = useState(!!initialClient?.vocational_facts_profile);
+  const [profileMeta, setProfileMeta] = useState({
+    dataQualityScore: null,
+    conflictsCount: 0,
+  });
 
   useEffect(() => {
     loadSavedRecs();
+  }, [clientId]);
+
+  // Refresh client data (e.g. after extraction)
+  const refreshClient = useCallback(async () => {
+    try {
+      const res = await base44.functions.invoke('processAssessmentDocuments', {
+        action: 'get_vocational_facts',
+        clientId,
+      });
+      const vfp = res?.data?.profile;
+      setHasVFP(!!vfp);
+      setClient(prev => ({
+        ...prev,
+        vocational_facts_profile: vfp,
+        vocational_facts_extracted_at: res?.data?.extracted_at,
+        vocational_facts_extracted_by: res?.data?.extracted_by,
+        vocational_facts_document_count: res?.data?.document_count,
+        vocational_facts_assessment_count: res?.data?.assessment_count,
+      }));
+    } catch (e) {
+      // silently fail
+    }
   }, [clientId]);
 
   const loadSavedRecs = async () => {
@@ -264,7 +229,6 @@ export default function AIJobSearchPanel({ clientId, client }) {
     setStep('profiling');
 
     try {
-      // Step 1: Build vocational profile
       const profileRes = await base44.functions.invoke('jobSearchAssistant', {
         action: 'generate_vocational_profile',
         clientId,
@@ -273,8 +237,12 @@ export default function AIJobSearchPanel({ clientId, client }) {
       setProfile(profileData);
       setAssessmentsUsed(profileRes?.data?.assessments_used || []);
       setClientFieldsUsed(profileRes?.data?.client_fields_used || []);
+      setHasVFP(profileRes?.data?.has_vocational_facts || false);
+      setProfileMeta({
+        dataQualityScore: profileRes?.data?.data_quality_score,
+        conflictsCount: profileRes?.data?.conflicts_count || 0,
+      });
 
-      // Step 2: Find jobs using profile
       setStep('searching');
       const jobRes = await base44.functions.invoke('jobSearchAssistant', {
         action: 'find_jobs',
@@ -285,8 +253,10 @@ export default function AIJobSearchPanel({ clientId, client }) {
       const jobData = jobRes?.data?.data;
       setJobs(jobData?.jobs || []);
       setSearchSummary(jobData?.search_summary || '');
+      setGroundingNote(jobData?.grounding_note || '');
       setNextSteps(jobData?.next_steps || []);
       setSearchTermsUsed(jobData?.search_terms_used || []);
+      setUnresolvedConflicts(jobData?.unresolved_conflicts_affecting_search || []);
       setStep('done');
     } catch (e) {
       toast.error('Search failed: ' + (e?.response?.data?.error || e.message));
@@ -311,7 +281,7 @@ export default function AIJobSearchPanel({ clientId, client }) {
       setSavedBatchId(res?.data?.batch_id);
       toast.success(`${jobs.length} recommendations saved to client record`);
       await loadSavedRecs();
-      setTab('saved');
+      setActiveTab('saved');
     } catch (e) {
       toast.error('Failed to save: ' + e.message);
     } finally {
@@ -321,7 +291,6 @@ export default function AIJobSearchPanel({ clientId, client }) {
 
   const handleStatusChange = async (job, status) => {
     if (status === 'save') {
-      // Save single job
       try {
         await base44.functions.invoke('jobSearchAssistant', {
           action: 'save_recommendations',
@@ -338,7 +307,6 @@ export default function AIJobSearchPanel({ clientId, client }) {
       }
       return;
     }
-    // Update status of saved rec
     try {
       const rec = savedRecs.find(r =>
         r.job_title === job.job_title && r.employer === job.employer
@@ -356,14 +324,13 @@ export default function AIJobSearchPanel({ clientId, client }) {
     }
   };
 
-  // Sort saved recs: applied > saved > suggested > rejected
   const ORDER = { applied: 0, saved: 1, suggested: 2, rejected: 3 };
   const sortedSavedRecs = [...savedRecs].sort((a, b) => (ORDER[a.status] ?? 2) - (ORDER[b.status] ?? 2));
+  const statusCounts = savedRecs.reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {});
+  const reviewNeeded = savedRecs.filter(r => r.requires_staff_review).length;
 
-  const statusCounts = savedRecs.reduce((acc, r) => {
-    acc[r.status] = (acc[r.status] || 0) + 1;
-    return acc;
-  }, {});
+  const vfpConflicts = client?.vocational_facts_profile?.conflicts?.length || 0;
+  const needsFactExtraction = !hasVFP;
 
   return (
     <div className="space-y-4">
@@ -377,28 +344,72 @@ export default function AIJobSearchPanel({ clientId, client }) {
             AI Job Search Assistant
           </h3>
           <p className="text-xs text-slate-500 mt-0.5 ml-9">
-            Personalized job recommendations for {client?.first_name}
+            Grounded recommendations for {client?.first_name} · Citations included
           </p>
         </div>
-        <div className="flex gap-1.5">
-          <Button size="sm" variant={tab === 'search' ? 'default' : 'outline'}
-            className="h-8 text-xs" onClick={() => setTab('search')}>
+        <div className="flex gap-1.5 flex-wrap justify-end">
+          <Button size="sm" variant={activeTab === 'facts' ? 'default' : 'outline'}
+            className="h-8 text-xs" onClick={() => setActiveTab('facts')}>
+            <FileText className="w-3.5 h-3.5 mr-1" /> Facts
+            {vfpConflicts > 0 && (
+              <span className="ml-1 bg-amber-500 text-white rounded-full px-1.5 text-[9px]">{vfpConflicts}</span>
+            )}
+          </Button>
+          <Button size="sm" variant={activeTab === 'search' ? 'default' : 'outline'}
+            className="h-8 text-xs" onClick={() => setActiveTab('search')}>
             <Search className="w-3.5 h-3.5 mr-1" /> Search
           </Button>
-          <Button size="sm" variant={tab === 'saved' ? 'default' : 'outline'}
-            className="h-8 text-xs" onClick={() => setTab('saved')}>
+          <Button size="sm" variant={activeTab === 'saved' ? 'default' : 'outline'}
+            className="h-8 text-xs" onClick={() => setActiveTab('saved')}>
             <History className="w-3.5 h-3.5 mr-1" /> Saved
             {savedRecs.length > 0 && (
               <span className="ml-1 bg-white/20 rounded-full px-1.5 text-[10px]">{savedRecs.length}</span>
+            )}
+            {reviewNeeded > 0 && (
+              <span className="ml-1 bg-amber-400 text-white rounded-full px-1.5 text-[9px]">{reviewNeeded}</span>
             )}
           </Button>
         </div>
       </div>
 
+      {/* FACTS TAB */}
+      {activeTab === 'facts' && (
+        <VocationalFactsPanel
+          clientId={clientId}
+          client={client}
+          onFactsUpdated={refreshClient}
+        />
+      )}
+
       {/* SEARCH TAB */}
-      {tab === 'search' && (
+      {activeTab === 'search' && (
         <div className="space-y-4">
-          {/* Custom instructions */}
+          {/* VFP status notice */}
+          {needsFactExtraction && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-800">No Vocational Facts Profile found</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  For grounded, cited recommendations, first go to the <strong>Facts</strong> tab and run "Extract Facts".
+                  You can still search now — the AI will use available assessments and the client record.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-xs shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                onClick={() => setActiveTab('facts')}>
+                Go to Facts
+              </Button>
+            </div>
+          )}
+
+          {/* Grounding summary if available */}
+          {hasVFP && step === 'idle' && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-lg text-xs text-green-800">
+              <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
+              Vocational facts profile found — recommendations will be grounded in extracted client data with source citations.
+            </div>
+          )}
+
           <Card className="border-0 shadow-sm p-4 space-y-3">
             <Label className="text-xs text-slate-500 block">Additional instructions for the AI (optional)</Label>
             <Textarea
@@ -407,18 +418,14 @@ export default function AIJobSearchPanel({ clientId, client }) {
               onChange={e => setCustomInstructions(e.target.value)}
               className="text-sm min-h-[70px] resize-none"
             />
-            <Button
-              className="w-full"
-              onClick={runSearch}
-              disabled={loading}
-            >
+            <Button className="w-full" onClick={runSearch} disabled={loading}>
               {loading ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {step === 'profiling' ? 'Building vocational profile...' : 'Searching live jobs...'}
+                  {step === 'profiling' ? 'Building grounded vocational profile...' : 'Searching live jobs with citations...'}
                 </>
               ) : (
                 <><Sparkles className="w-4 h-4 mr-2" />
-                  {step === 'done' ? 'Search Again' : 'Find Jobs for This Client'}
+                  {step === 'done' ? 'Search Again' : 'Find Grounded Jobs for This Client'}
                 </>
               )}
             </Button>
@@ -426,37 +433,42 @@ export default function AIJobSearchPanel({ clientId, client }) {
 
           {/* Vocational profile result */}
           {profile && (
-            <Card className="border-0 shadow-sm">
-              <button
-                onClick={() => setShowProfile(p => !p)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors rounded-xl"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-800">Vocational Profile</span>
-                  {assessmentsUsed.length > 0 && (
-                    <Badge className="text-[10px] bg-purple-100 text-purple-700 border-0">
-                      {assessmentsUsed.length} assessment{assessmentsUsed.length !== 1 ? 's' : ''} used
-                    </Badge>
-                  )}
-                </div>
-                {showProfile ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-              </button>
-              {showProfile && (
-                <div className="px-4 pb-4">
-                  <VocationalProfile profile={profile} />
-                </div>
-              )}
-            </Card>
+            <ProfileSummaryCard
+              profile={profile}
+              assessmentsUsed={assessmentsUsed}
+              hasVFP={hasVFP}
+              dataQualityScore={profileMeta.dataQualityScore}
+              conflictsCount={profileMeta.conflictsCount}
+            />
+          )}
+
+          {/* Unresolved conflicts affecting search */}
+          {unresolvedConflicts.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> Unresolved Conflicts Affecting This Search
+              </p>
+              <ul className="space-y-0.5">
+                {unresolvedConflicts.map((c, i) => (
+                  <li key={i} className="text-xs text-amber-700 flex gap-1.5">
+                    <span className="shrink-0">•</span>{c}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* Search results */}
           {jobs.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">{jobs.length} Job Recommendations</p>
-                  {searchSummary && (
-                    <p className="text-xs text-slate-500 mt-0.5">{searchSummary}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-800">{jobs.length} Grounded Recommendations</p>
+                  {searchSummary && <p className="text-xs text-slate-500 mt-0.5">{searchSummary}</p>}
+                  {groundingNote && (
+                    <p className="text-xs text-violet-700 mt-1 bg-violet-50 border border-violet-100 rounded px-2 py-1">
+                      <Info className="w-3 h-3 inline mr-1" />{groundingNote}
+                    </p>
                   )}
                   {searchTermsUsed.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
@@ -466,27 +478,21 @@ export default function AIJobSearchPanel({ clientId, client }) {
                     </div>
                   )}
                 </div>
-                {!savedBatchId && (
-                  <Button size="sm" onClick={saveAllToClient} disabled={savingAll} className="h-8 text-xs">
+                {!savedBatchId ? (
+                  <Button size="sm" onClick={saveAllToClient} disabled={savingAll} className="h-8 text-xs shrink-0">
                     {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
-                    Save All to Record
+                    Save All
                   </Button>
-                )}
-                {savedBatchId && (
+                ) : (
                   <Badge className="bg-green-100 text-green-700 border-0 text-xs">
-                    <CheckCircle className="w-3 h-3 mr-1" /> Saved to record
+                    <CheckCircle className="w-3 h-3 mr-1" /> Saved
                   </Badge>
                 )}
               </div>
 
               <div className="space-y-3">
-                {jobs.sort((a, b) => (b.fit_score || 0) - (a.fit_score || 0)).map((job, i) => (
-                  <JobCard
-                    key={i}
-                    job={job}
-                    onStatusChange={handleStatusChange}
-                    isSaved={false}
-                  />
+                {[...jobs].sort((a, b) => (b.fit_score || 0) - (a.fit_score || 0)).map((job, i) => (
+                  <JobCard key={i} job={job} onStatusChange={handleStatusChange} isSaved={false} />
                 ))}
               </div>
 
@@ -496,9 +502,9 @@ export default function AIJobSearchPanel({ clientId, client }) {
                     <Lightbulb className="w-3.5 h-3.5" /> Suggested Next Steps
                   </p>
                   <ul className="space-y-1.5">
-                    {nextSteps.map((step, i) => (
+                    {nextSteps.map((s, i) => (
                       <li key={i} className="text-xs text-blue-700 flex gap-2">
-                        <span className="shrink-0 font-medium">{i + 1}.</span>{step}
+                        <span className="shrink-0 font-medium">{i + 1}.</span>{s}
                       </li>
                     ))}
                   </ul>
@@ -510,16 +516,20 @@ export default function AIJobSearchPanel({ clientId, client }) {
       )}
 
       {/* SAVED TAB */}
-      {tab === 'saved' && (
+      {activeTab === 'saved' && (
         <div className="space-y-3">
-          {/* Status summary */}
           {savedRecs.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {Object.entries(statusCounts).map(([status, count]) => (
                 <span key={status} className={cn("text-xs font-medium px-2.5 py-1 rounded-full border", STATUS_COLORS[status])}>
                   {STATUS_LABELS[status]}: {count}
                 </span>
               ))}
+              {reviewNeeded > 0 && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />Staff Review: {reviewNeeded}
+                </span>
+              )}
             </div>
           )}
 
@@ -536,12 +546,7 @@ export default function AIJobSearchPanel({ clientId, client }) {
           ) : (
             <div className="space-y-3">
               {sortedSavedRecs.map((rec, i) => (
-                <JobCard
-                  key={rec.id || i}
-                  job={rec}
-                  onStatusChange={handleStatusChange}
-                  isSaved={true}
-                />
+                <JobCard key={rec.id || i} job={rec} onStatusChange={handleStatusChange} isSaved={true} />
               ))}
               <Button size="sm" variant="outline" className="w-full text-xs h-8" onClick={loadSavedRecs}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh

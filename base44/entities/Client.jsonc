@@ -169,6 +169,27 @@
     "employment_start_date": {
       "type": "string",
       "format": "date"
+    },
+    "vocational_facts_profile": {
+      "type": "object",
+      "description": "Structured employment facts extracted from assessments and documents by AI preprocessing",
+      "additionalProperties": true
+    },
+    "vocational_facts_extracted_at": {
+      "type": "string",
+      "description": "ISO datetime when vocational facts were last extracted"
+    },
+    "vocational_facts_extracted_by": {
+      "type": "string",
+      "description": "Email of user who ran the extraction"
+    },
+    "vocational_facts_document_count": {
+      "type": "number",
+      "description": "Number of documents analyzed in last extraction"
+    },
+    "vocational_facts_assessment_count": {
+      "type": "number",
+      "description": "Number of assessments analyzed in last extraction"
     }
   },
   "required": [
