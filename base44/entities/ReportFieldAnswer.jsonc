@@ -1,0 +1,41 @@
+{
+  "name": "ReportFieldAnswer",
+  "type": "object",
+  "description": "Stores all dynamic field answers for a single TimeEntry. One record per time entry, with all answers as a JSON map keyed by field_key.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "time_entry_id": {
+      "type": "string",
+      "description": "Reference to the TimeEntry this answer set belongs to"
+    },
+    "entry_type_id": {
+      "type": "string",
+      "description": "Reference to the EntryType at time of submission (snapshot)"
+    },
+    "entry_type_code": {
+      "type": "string",
+      "description": "Denormalized entry type code at time of submission"
+    },
+    "answers": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "JSON map of field_key -> value. e.g. { 'goal_addressed': 'Employment', 'employer_name': 'Acme Corp', 'units': 2 }"
+    },
+    "is_complete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether all required fields have been filled"
+    },
+    "submitted_at": {
+      "type": "string",
+      "description": "ISO datetime when the report was finalized"
+    }
+  },
+  "required": [
+    "time_entry_id",
+    "entry_type_id"
+  ]
+}

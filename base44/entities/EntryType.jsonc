@@ -1,0 +1,36 @@
+{
+  "name": "EntryType",
+  "type": "object",
+  "description": "Defines a category of time entry (e.g. Job Coaching, CBH, Pre-ETS). Each type can have its own set of report fields.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for this entry type (e.g. 'Job Coaching', 'CBH', 'Pre-ETS')"
+    },
+    "code": {
+      "type": "string",
+      "description": "Short machine-readable code (e.g. 'job_coaching', 'cbh', 'pre_ets')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of what this entry type covers"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this entry type is available for selection"
+    },
+    "color": {
+      "type": "string",
+      "description": "Optional hex color for UI display"
+    }
+  },
+  "required": [
+    "name",
+    "code"
+  ]
+}

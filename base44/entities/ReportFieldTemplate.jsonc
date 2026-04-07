@@ -1,0 +1,81 @@
+{
+  "name": "ReportFieldTemplate",
+  "type": "object",
+  "description": "Defines a single question/field that belongs to a specific EntryType report. Changing or adding fields here does not affect the TimeEntry structure.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "entry_type_id": {
+      "type": "string",
+      "description": "Reference to EntryType this field belongs to"
+    },
+    "entry_type_code": {
+      "type": "string",
+      "description": "Denormalized code for fast lookups (e.g. 'job_coaching')"
+    },
+    "field_key": {
+      "type": "string",
+      "description": "Machine-readable key used to store/retrieve the answer (e.g. 'goal_addressed', 'employer_name')"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label shown in the form"
+    },
+    "field_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "textarea",
+        "number",
+        "date",
+        "select",
+        "multiselect",
+        "checkbox",
+        "boolean",
+        "time"
+      ],
+      "default": "text",
+      "description": "Type of input control to render"
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "For select/multiselect fields: list of allowed options"
+    },
+    "is_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this field must be filled before saving"
+    },
+    "order": {
+      "type": "number",
+      "description": "Display order within the form"
+    },
+    "section": {
+      "type": "string",
+      "description": "Optional grouping label (e.g. 'Service Details', 'Employer Info')"
+    },
+    "placeholder": {
+      "type": "string",
+      "description": "Optional placeholder text for the input"
+    },
+    "help_text": {
+      "type": "string",
+      "description": "Optional helper text shown beneath the field"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Soft-delete: inactive fields are hidden from new entries but preserved in old answers"
+    }
+  },
+  "required": [
+    "entry_type_id",
+    "field_key",
+    "label"
+  ]
+}

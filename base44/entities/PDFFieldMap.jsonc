@@ -1,0 +1,60 @@
+{
+  "name": "PDFFieldMap",
+  "type": "object",
+  "description": "Maps a stored data field (field_key from ReportFieldTemplate, or a built-in TimeEntry field) to a named field in a specific PDF template. Update this when a new PDF version uses different field names.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "pdf_template_id": {
+      "type": "string",
+      "description": "Reference to the PDFTemplate this mapping belongs to"
+    },
+    "source_field": {
+      "type": "string",
+      "description": "The field_key from ReportFieldTemplate or a built-in field name (e.g. 'date', 'duration_minutes', 'client.first_name', 'goal_addressed')"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "time_entry",
+        "report_answer",
+        "client",
+        "employee"
+      ],
+      "description": "Where to look up the source_field value when generating the PDF"
+    },
+    "pdf_field_name": {
+      "type": "string",
+      "description": "Exact field name in the PDF form (as it appears in the PDF's AcroForm field list)"
+    },
+    "transform": {
+      "type": "string",
+      "enum": [
+        "none",
+        "date_format",
+        "time_format",
+        "hours_from_minutes",
+        "uppercase",
+        "full_name"
+      ],
+      "default": "none",
+      "description": "Optional transformation to apply to the value before filling the PDF field"
+    },
+    "transform_options": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extra params for the transform, e.g. { 'format': 'MM/DD/YYYY' } for date_format"
+    },
+    "default_value": {
+      "type": "string",
+      "description": "Value to use if source_field is empty or null"
+    }
+  },
+  "required": [
+    "pdf_template_id",
+    "source_field",
+    "pdf_field_name"
+  ]
+}
