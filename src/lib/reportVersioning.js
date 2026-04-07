@@ -241,15 +241,10 @@ export async function getVersionHistory(base44, clientId, reportType, periodStar
  */
 export async function isTimeEntryInLockedPeriod(base44, timeEntry) {
   try {
-    if (!timeEntry.entry_type_id) return false;
+    if (!timeEntry.entry_type_code) return false;
 
-    // Get entry type info
-    const entryTypes = await base44.entities.EntryType.list();
-    const entryType = entryTypes.find(et => et.id === timeEntry.entry_type_id);
-    if (!entryType) return false;
-
-    // Map entry type to report type
-    const reportType = mapEntryTypeToReportType(entryType.code);
+    // Map entry type code to report type
+    const reportType = mapEntryTypeCodeToReportType(timeEntry.entry_type_code);
 
     // Check for locked period containing this date
     const versions = await base44.entities.ReportVersion.filter({
@@ -342,7 +337,7 @@ export function getReportAuditTrail(reportVersion) {
 /**
  * Map EntryType code to ReportVersion report_type
  */
-function mapEntryTypeToReportType(entryTypeCode) {
+function mapEntryTypeCodeToReportType(entryTypeCode) {
   const mapping = {
     'job_development': 'job_development',
     'job_coaching': 'job_coaching',

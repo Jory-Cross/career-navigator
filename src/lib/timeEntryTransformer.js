@@ -37,12 +37,13 @@ export class TimeEntryTransformer {
 
   /**
    * Group entries by entry type
+   * Uses entry_type_code as grouping key (not legacy category)
    */
   groupByEntryType() {
     const grouped = {};
 
     this.timeEntries.forEach(entry => {
-      const key = entry.entry_type_id || 'unknown';
+      const key = entry.entry_type_code || 'unknown';
       if (!grouped[key]) {
         grouped[key] = [];
       }
@@ -140,8 +141,8 @@ export class TimeEntryTransformer {
         date: entry.date,
         duration_minutes: entry.duration_minutes || 0,
         duration_hours: ((entry.duration_minutes || 0) / 60).toFixed(2),
-        entry_type: entry.entry_type_id || '',
-        category: entry.category || '',
+        entry_type_id: entry.entry_type_id || '',
+        entry_type_code: entry.entry_type_code || '',
         description: entry.description || '',
         general_notes: entry.general_notes || '',
         // Spread all structured field answers
@@ -164,17 +165,18 @@ export class TimeEntryTransformer {
     this.timeEntries.forEach(entry => {
       const answers = this.answersMap[entry.id] || {};
 
-      // Aggregate by entry type
-      if (!byEntryType[entry.entry_type_id]) {
-        byEntryType[entry.entry_type_id] = {
+      // Aggregate by entry type (use code as key)
+      const typeKey = entry.entry_type_code || 'unknown';
+      if (!byEntryType[typeKey]) {
+        byEntryType[typeKey] = {
           count: 0,
           total_minutes: 0,
           entries: []
         };
       }
-      byEntryType[entry.entry_type_id].count++;
-      byEntryType[entry.entry_type_id].total_minutes += entry.duration_minutes || 0;
-      byEntryType[entry.entry_type_id].entries.push(entry.id);
+      byEntryType[typeKey].count++;
+      byEntryType[typeKey].total_minutes += entry.duration_minutes || 0;
+      byEntryType[typeKey].entries.push(entry.id);
 
       // Aggregate by employer
       const employer = answers.employer_name || 'Unknown';

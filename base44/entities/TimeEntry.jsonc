@@ -23,6 +23,20 @@
     "description": {
       "type": "string"
     },
+    "entry_type_id": {
+      "type": "string",
+      "description": "Reference to EntryType.id (true source of truth for VR reporting)"
+    },
+    "entry_type_code": {
+      "type": "string",
+      "description": "Denormalized EntryType.code for fast lookups (e.g. job_coaching, cbh)"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
     "category": {
       "type": "string",
       "enum": [
@@ -37,17 +51,7 @@
         "admin",
         "other"
       ],
-      "default": "consultation"
-    },
-    "start_time": {
-      "type": "string"
-    },
-    "end_time": {
-      "type": "string"
-    },
-    "entry_type_id": {
-      "type": "string",
-      "description": "Reference to EntryType used when logging (links to dynamic report fields)"
+      "description": "Legacy field for backward compatibility only. Do not use for VR reporting."
     },
     "general_notes": {
       "type": "string",
@@ -55,6 +59,8 @@
     }
   },
   "required": [
-    "duration_minutes"
+    "duration_minutes",
+    "entry_type_id",
+    "entry_type_code"
   ]
 }

@@ -60,9 +60,9 @@ export async function validateTimeEntryAgainstAuthorization(base44, timeEntry) {
   if (timeEntry.service_authorization_id) {
     authorization = await base44.entities.ServiceAuthorization.list()
       .then(all => all.find(a => a.id === timeEntry.service_authorization_id));
-  } else if (timeEntry.client_id && timeEntry.category) {
-    // Map category to service_type
-    const serviceType = mapCategoryToServiceType(timeEntry.category);
+  } else if (timeEntry.client_id && timeEntry.entry_type_code) {
+    // Map entry_type_code to service_type
+    const serviceType = mapEntryTypeCodeToServiceType(timeEntry.entry_type_code);
     authorization = await getActiveAuthorization(base44, timeEntry.client_id, serviceType, timeEntry.date);
   }
 
@@ -179,23 +179,20 @@ export async function getAuthorizationHoursUsedInPeriod(base44, authorizationId,
 }
 
 /**
- * Map TimeEntry category to ServiceAuthorization service_type
+ * Map EntryType code to ServiceAuthorization service_type
  */
-export function mapCategoryToServiceType(category) {
+export function mapEntryTypeCodeToServiceType(entryTypeCode) {
   const mapping = {
+    'job_development': 'job_development',
     'job_coaching': 'job_coaching',
     'life_skills': 'life_skills',
     'cbh': 'cbh',
-    'job_search': 'job_development',
-    'resume_work': 'job_development',
-    'interview_prep': 'job_development',
-    'follow_up': 'job_development',
-    'consultation': 'job_development',
+    'pre_ets': 'pre_ets',
     'admin': null,
     'other': null
   };
 
-  return mapping[category] || 'job_development';
+  return mapping[entryTypeCode] || 'job_development';
 }
 
 /**
