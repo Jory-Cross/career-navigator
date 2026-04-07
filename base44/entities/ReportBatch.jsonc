@@ -1,0 +1,81 @@
+{
+  "name": "ReportBatch",
+  "type": "object",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "pdf_template_id": {
+      "type": "string",
+      "description": "Reference to PDFTemplate"
+    },
+    "entry_type": {
+      "type": "string",
+      "description": "Entry type used (job_development, job_coaching, life_skills, etc.)"
+    },
+    "date_range_start": {
+      "type": "string",
+      "format": "date"
+    },
+    "date_range_end": {
+      "type": "string",
+      "format": "date"
+    },
+    "client_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Client IDs included in batch"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "processing",
+        "completed",
+        "failed"
+      ],
+      "default": "processing"
+    },
+    "generated_documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "pdf_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Generated document references"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email of user who created batch"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO datetime"
+    },
+    "error_message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pdf_template_id",
+    "entry_type",
+    "date_range_start",
+    "date_range_end",
+    "client_ids"
+  ]
+}
