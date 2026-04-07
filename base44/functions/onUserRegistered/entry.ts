@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 // Triggered by entity automation when a new User record is created.
 // 1. Applies any pending role assignment
 // 2. Stamps the user's org_id based on their inviter's org
+// 3. Sets manager_id to the inviter (hierarchy)
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -31,20 +32,25 @@ Deno.serve(async (req) => {
     }
 
     const assignment = pending[0];
-    console.log(`Applying role '${assignment.role}' to ${email}`);
+    console.log(`Applying role '${assignment.role}' to ${email}, manager: ${assignment.invited_by_id}`);
 
     const updateData = { role: assignment.role };
 
-    // Stamp org_id from the pending assignment if present
+    // Stamp org_id
     if (assignment.org_id) {
       updateData.org_id = assignment.org_id;
-      console.log(`Stamping org_id ${assignment.org_id} on user ${email}`);
+    }
+
+    // Stamp manager_id — the person who invited this user becomes their manager
+    if (assignment.invited_by_id) {
+      updateData.manager_id = assignment.invited_by_id;
     }
 
     await base44.asServiceRole.entities.User.update(user.id, updateData);
     await base44.asServiceRole.entities.PendingRoleAssignment.delete(assignment.id);
 
-    return Response.json({ success: true, email, role: assignment.role, org_id: assignment.org_id });
+    console.log(`User ${email} updated: role=${assignment.role}, org_id=${assignment.org_id}, manager_id=${assignment.invited_by_id}`);
+    return Response.json({ success: true, email, role: assignment.role, org_id: assignment.org_id, manager_id: assignment.invited_by_id });
   } catch (error) {
     console.error('onUserRegistered error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

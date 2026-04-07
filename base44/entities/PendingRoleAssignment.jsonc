@@ -18,6 +18,10 @@
     "org_id": {
       "type": "string",
       "description": "Org ID to stamp on the user when they register"
+    },
+    "invited_by_id": {
+      "type": "string",
+      "description": "User ID of the person who sent the invite \u2014 becomes the new user's manager_id"
     }
   },
   "required": [
