@@ -172,7 +172,7 @@ export default function Clients() {
           className="gap-2"
         >
           <Archive className="w-4 h-4" />
-          {showArchived ? "Active" : "Archived"}
+          {showArchived ? "Hide Archived" : "Show Archived"}
         </Button>
       </div>
 
