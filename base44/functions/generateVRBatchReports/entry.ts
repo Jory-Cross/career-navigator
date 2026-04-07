@@ -1,6 +1,101 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
+// Import transformer (inline since we can't use local imports in Deno)
+class TimeEntryTransformer {
+  constructor(timeEntries = [], fieldAnswers = [], client = {}) {
+    this.timeEntries = timeEntries;
+    this.fieldAnswers = fieldAnswers;
+    this.client = client;
+    this.answersMap = {};
+    fieldAnswers.forEach(fa => {
+      this.answersMap[fa.time_entry_id] = fa.answers || {};
+    });
+  }
+
+  transform() {
+    return {
+      header: this.buildHeader(),
+      rows: this.buildRows(),
+      summary: this.buildSummary()
+    };
+  }
+
+  buildHeader() {
+    const dateRange = this.getDateRange();
+    return {
+      client_name: `${this.client.first_name || ''} ${this.client.last_name || ''}`.trim(),
+      client_email: this.client.email || '',
+      client_phone: this.client.phone || '',
+      client_address: this.client.address || '',
+      reporting_period_start: dateRange.start,
+      reporting_period_end: dateRange.end,
+      report_generated_date: new Date().toISOString().split('T')[0],
+      total_entries: this.timeEntries.length,
+      total_hours: this.getTotalHours().toFixed(2),
+      total_minutes: this.getTotalMinutes()
+    };
+  }
+
+  buildRows() {
+    return this.timeEntries.map((entry, index) => {
+      const answers = this.answersMap[entry.id] || {};
+      return {
+        row_number: index + 1,
+        date: entry.date,
+        duration_minutes: entry.duration_minutes || 0,
+        duration_hours: ((entry.duration_minutes || 0) / 60).toFixed(2),
+        entry_type: entry.entry_type_id || '',
+        category: entry.category || '',
+        description: entry.description || '',
+        general_notes: entry.general_notes || '',
+        ...answers
+      };
+    });
+  }
+
+  buildSummary() {
+    const byEntryType = {};
+    let totalMinutes = 0;
+
+    this.timeEntries.forEach(entry => {
+      const key = entry.entry_type_id || 'unknown';
+      if (!byEntryType[key]) {
+        byEntryType[key] = { count: 0, total_minutes: 0 };
+      }
+      byEntryType[key].count++;
+      byEntryType[key].total_minutes += entry.duration_minutes || 0;
+      totalMinutes += entry.duration_minutes || 0;
+    });
+
+    return {
+      total_entries: this.timeEntries.length,
+      total_hours: (totalMinutes / 60).toFixed(2),
+      total_minutes: totalMinutes,
+      by_entry_type: byEntryType
+    };
+  }
+
+  getTotalHours() {
+    return this.getTotalMinutes() / 60;
+  }
+
+  getTotalMinutes() {
+    return this.timeEntries.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
+  }
+
+  getDateRange() {
+    if (this.timeEntries.length === 0) {
+      return { start: '', end: '' };
+    }
+    const sorted = [...this.timeEntries].sort((a, b) => a.date.localeCompare(b.date));
+    return {
+      start: sorted[0].date,
+      end: sorted[sorted.length - 1].date
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -143,6 +238,10 @@ async function generateClientReport(base44, user, templateId, entryType, clientI
       return { success: false, error: 'Client not found' };
     }
 
+    // Transform time entries into structured PDF data
+    const transformer = new TimeEntryTransformer(timeEntries, answers, client);
+    const transformed = transformer.transform();
+
     // Load base PDF
     const pdfResponse = await fetch(template.pdf_file_url);
     if (!pdfResponse.ok) throw new Error('Failed to fetch template PDF');
@@ -151,8 +250,8 @@ async function generateClientReport(base44, user, templateId, entryType, clientI
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const form = pdfDoc.getForm();
 
-    // Fill repeating rows and header fields with structured data
-    fillPDFFields(form, mappings, timeEntries, answersMap, client, dateFrom, dateTo);
+    // Fill PDF fields using transformed data
+    fillPDFFields(form, mappings, transformed);
 
     // Flatten and save
     form.flatten();
@@ -189,24 +288,18 @@ async function generateClientReport(base44, user, templateId, entryType, clientI
   }
 }
 
-function fillPDFFields(form, mappings, timeEntries, answersMap, client, dateFrom, dateTo) {
+function fillPDFFields(form, mappings, transformed) {
   const fields = form.getFields();
 
-  // Build aggregated field data from structured answers
-  const aggregatedData = aggregateFieldData(timeEntries, answersMap);
-
-  // Build context
+  // Context from transformed data
   const context = {
-    client,
-    timeEntries,
-    answersMap,
-    aggregatedData,
-    dateFrom,
-    dateTo,
+    header: transformed.header,
+    rows: transformed.rows,
+    summary: transformed.summary,
     currentDate: new Date().toISOString().split('T')[0]
   };
 
-  // Fill each mapped field
+  // Fill each mapped field using transformed data
   mappings.forEach((mapping) => {
     const field = fields.find(f => f.getName() === mapping.pdf_field_name);
     if (!field) return;
@@ -221,82 +314,54 @@ function fillPDFFields(form, mappings, timeEntries, answersMap, client, dateFrom
   });
 }
 
-function aggregateFieldData(timeEntries, answersMap) {
-  // Count, sum, and group structured field data by field_key
-  const aggregated = {};
-
-  timeEntries.forEach((entry) => {
-    const answers = answersMap[entry.id] || {};
-    Object.entries(answers).forEach(([fieldKey, value]) => {
-      if (!aggregated[fieldKey]) {
-        aggregated[fieldKey] = { count: 0, values: [], sum: 0, last: null };
-      }
-      aggregated[fieldKey].count++;
-      aggregated[fieldKey].values.push(value);
-      aggregated[fieldKey].last = value;
-
-      // Sum numeric values
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue)) {
-        aggregated[fieldKey].sum += numValue;
-      }
-    });
-  });
-
-  return aggregated;
-}
-
 function resolveValue(mapping, context) {
   const { source_type, source_field, transform } = mapping;
 
-  // Client fields
-  if (source_type === "client") {
-    const value = context.client?.[source_field];
+  // Header fields
+  if (source_type === "header") {
+    const value = context.header?.[source_field];
     return applyTransform(value, transform, mapping.transform_options);
   }
 
-  // Time entry fields
-  if (source_type === "time_entry") {
-    if (source_field === "total_hours") {
-      const total = context.timeEntries.reduce((sum, te) => sum + ((te.duration_minutes || 0) / 60), 0);
-      return applyTransform(total.toFixed(2), transform, mapping.transform_options);
+  // Summary/aggregate fields
+  if (source_type === "summary") {
+    const summary = context.summary;
+    if (source_field === "total_hours" || source_field === "total_entries" || source_field === "total_minutes") {
+      return summary[source_field] || "";
     }
-    if (source_field === "entry_count") {
-      return context.timeEntries.length;
+    // By type aggregations
+    if (source_field.startsWith("by_entry_type_")) {
+      const typeKey = source_field.replace("by_entry_type_", "");
+      const typeData = summary.by_entry_type?.[typeKey];
+      if (typeData) {
+        if (transform === "count") return typeData.count;
+        if (transform === "sum") return (typeData.total_minutes / 60).toFixed(2);
+      }
     }
+    return summary[source_field] || "";
   }
 
-  // Report/summary fields
-  if (source_type === "report_answer") {
-    const agg = context.aggregatedData[source_field];
-    if (agg) {
-      if (transform === "sum") {
-        return agg.sum.toFixed(2);
-      }
-      if (transform === "count") {
-        return agg.count;
-      }
-      if (transform === "last") {
-        return agg.last;
-      }
-      // Default: concatenate values
-      return agg.values.join(" | ");
-    }
+  // Row/repeating data (used with row iteration)
+  if (source_type === "row") {
+    // This requires row context — handled in row iteration
+    return context.rows?.[0]?.[source_field] || "";
   }
 
   // Calculated report fields
   if (source_type === "report_field") {
     switch (source_field) {
       case "month_year":
-        const date = new Date(context.dateFrom);
-        return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        if (context.header.reporting_period_start) {
+          const date = new Date(context.header.reporting_period_start);
+          return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        }
+        return "";
       case "report_date":
         return context.currentDate;
       case "total_hours":
-        const total = context.timeEntries.reduce((sum, te) => sum + ((te.duration_minutes || 0) / 60), 0);
-        return applyTransform(total.toFixed(2), transform, mapping.transform_options);
-      case "entry_count":
-        return context.timeEntries.length;
+        return context.header.total_hours;
+      case "total_entries":
+        return context.header.total_entries;
       default:
         return "";
     }
