@@ -1,45 +1,56 @@
 {
   "name": "PDFTemplate",
   "type": "object",
-  "description": "Stores a PDF form file and its metadata. Can be updated independently of EntryType or field definitions.",
+  "description": "Uploaded fillable PDF template used for report generation.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "entry_type_id": {
-      "type": "string",
-      "description": "The EntryType this PDF template is used for"
+      "type": "string"
     },
     "entry_type_code": {
-      "type": "string",
-      "description": "Denormalized entry type code"
+      "type": "string"
     },
     "name": {
+      "type": "string"
+    },
+    "template_code": {
+      "type": "string"
+    },
+    "report_mode": {
       "type": "string",
-      "description": "Template name (e.g. 'Job Coaching Monthly Report v2')"
+      "enum": [
+        "usor95_monthly",
+        "usor96_monthly",
+        "usor148_service_period",
+        "custom"
+      ]
     },
     "pdf_file_url": {
-      "type": "string",
-      "description": "URL of the uploaded fillable PDF base file"
+      "type": "string"
     },
-    "version": {
-      "type": "string",
-      "description": "Version label (e.g. '2024-Q1', 'v3')"
+    "template_version": {
+      "type": "string"
+    },
+    "field_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "Whether this is the current active template for its entry type"
+      "default": true
     },
     "notes": {
-      "type": "string",
-      "description": "Internal notes about this template version"
+      "type": "string"
     }
   },
   "required": [
-    "entry_type_id",
     "name",
-    "pdf_file_url"
+    "entry_type_code",
+    "pdf_file_url",
+    "template_version"
   ]
 }
