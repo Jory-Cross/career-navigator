@@ -124,8 +124,8 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
     }
   }
 
-  const primaryCodes = serviceCodes.filter(c => c.is_primary);
-  const secondaryCodes = serviceCodes.filter(c => c.is_secondary);
+  // Show all 15 USOR service codes in both dropdowns
+  const allCodes = serviceCodes;
 
   if (loadingCodes) {
     return (
@@ -204,15 +204,12 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
             <SelectValue placeholder="Select service code..." />
           </SelectTrigger>
           <SelectContent>
-            {primaryCodes.map(code => (
-              <SelectItem key={code.id} value={code.code}>
-                <div className="flex flex-col">
-                  <span className="font-medium">{code.display_label}</span>
-                  <span className="text-xs text-slate-500">{code.full_description}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
+             {allCodes.map(code => (
+               <SelectItem key={code.id} value={code.code}>
+                 {code.display_label}
+               </SelectItem>
+             ))}
+           </SelectContent>
         </Select>
         <p className="text-xs text-slate-400">Select the primary service provided</p>
         {errors.primary_service_code && (
@@ -232,7 +229,7 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>None</SelectItem>
-            {secondaryCodes.map(code => (
+            {allCodes.map(code => (
               <SelectItem key={code.id} value={code.code}>
                 {code.display_label}
               </SelectItem>
