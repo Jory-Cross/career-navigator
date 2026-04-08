@@ -1,83 +1,42 @@
 {
   "name": "ReportFieldAnswer",
   "type": "object",
-  "description": "Stores all dynamic field answers for a single TimeEntry, with schema snapshot for backward compatibility. One record per time entry, preserving the field definitions used at submission time.",
+  "description": "Snapshot of all dynamic answers for a single TimeEntry.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "time_entry_id": {
-      "type": "string",
-      "description": "Reference to the TimeEntry this answer set belongs to"
+      "type": "string"
     },
     "entry_type_id": {
-      "type": "string",
-      "description": "Reference to the EntryType at time of submission (snapshot)"
+      "type": "string"
     },
     "entry_type_code": {
-      "type": "string",
-      "description": "Denormalized entry type code at time of submission"
-    },
-    "answers": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "JSON map of field_key -> value. e.g. { 'goal_addressed': 'Employment', 'employer_name': 'Acme Corp', 'units': 2 }"
+      "type": "string"
     },
     "field_schema_version": {
-      "type": "string",
-      "description": "Version of the field schema used at submission time (e.g. '2024-Q1', 'v3'). Matches PDFTemplate.version."
+      "type": "number",
+      "default": 1
     },
     "field_schema_snapshot": {
       "type": "object",
-      "additionalProperties": true,
-      "description": "Complete snapshot of ReportFieldTemplate records at time of submission. Preserves field definitions so old entries remain stable. Structure: { field_key: { label, field_type, is_required, options, ... }, ... }"
+      "additionalProperties": true
+    },
+    "answers": {
+      "type": "object",
+      "additionalProperties": true
     },
     "required_fields_complete": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether all required fields (per schema snapshot) have been filled at submission time"
+      "default": false
     },
     "report_ready": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether this entry is ready for report generation. True if required_fields_complete=true and answers are valid."
-    },
-    "is_complete": {
-      "type": "boolean",
-      "default": false,
-      "deprecated": true,
-      "description": "Legacy field. Use required_fields_complete instead."
+      "default": false
     },
     "submitted_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO datetime when the field answers were finalized and submitted"
-    },
-    "submitted_by": {
-      "type": "string",
-      "description": "Email of user who submitted the answers"
-    },
-    "validation_errors": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "description": "Any validation errors encountered at submission time (for audit/debugging)"
-    },
-    "revision_number": {
-      "type": "number",
-      "default": 1,
-      "description": "Increments if answers are re-submitted/edited. Allows tracking changes."
-    },
-    "previous_revision_id": {
-      "type": "string",
-      "description": "Reference to prior ReportFieldAnswer record if this is a revision (for audit trail)"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Internal notes about submission (e.g. 'Resubmitted due to missing fields')"
+      "type": "string"
     }
   },
   "required": [
