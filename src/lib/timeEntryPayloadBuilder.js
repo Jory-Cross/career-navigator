@@ -7,6 +7,7 @@
  */
 
 import { getEntryTypeConfig } from "@/lib/entryTypeRegistry";
+import { mapTemplateFields } from "@/lib/templateFieldMapper";
 
 /**
  * Normalize duration to minutes (from various input formats)
@@ -87,10 +88,16 @@ function extractDate(formData) {
 }
 
 /**
- * Map all dynamic template fields into normalized data object
- * Excludes reserved system fields
+ * Build template data using schema-based mapping
+ * Falls back to dynamic field extraction if schema unavailable
  */
-function mapTemplateFields(formData, excludeKeys = new Set()) {
+function buildTemplateData(formData, schemaFields = null, excludeKeys = new Set()) {
+  // If schema available, use deterministic schema-based mapping
+  if (schemaFields && Array.isArray(schemaFields)) {
+    return mapTemplateFields(schemaFields, formData, { excludeKeys });
+  }
+
+  // Fallback: extract non-reserved fields
   const reservedKeys = new Set([
     "date", "duration", "duration_minutes", "duration_hours", "description", 
     "entry_type_code", "entry_type_id", "start_time", "end_time", 
@@ -100,7 +107,6 @@ function mapTemplateFields(formData, excludeKeys = new Set()) {
     "location"
   ]);
 
-  // Merge reserved + caller-provided exclusions
   const allExcluded = new Set([...reservedKeys, ...excludeKeys]);
 
   return Object.fromEntries(
@@ -118,6 +124,7 @@ function mapTemplateFields(formData, excludeKeys = new Set()) {
  * @param {string} options.entryTypeCode - Service code (e.g., 'job_coaching', 'life_skills')
  * @param {string} [options.description] - Optional notes/description
  * @param {Object} [options.timeFields] - Optional {start_time, end_time}
+ * @param {Array} [options.schemaFields] - Optional schema field definitions (enables deterministic mapping)
  * @param {Set} [options.excludeKeys] - Additional fields to exclude from dynamic data
  * @returns {Object} Normalized payload ready for API
  */
@@ -126,6 +133,7 @@ export function buildTimeEntryPayload({
   entryTypeCode,
   description = null,
   timeFields = {},
+  schemaFields = null,
   excludeKeys = new Set()
 }) {
   // Get entry type config to validate it exists
@@ -145,8 +153,8 @@ export function buildTimeEntryPayload({
     throw new Error("Missing or invalid duration");
   }
 
-  // Map all template/dynamic fields
-  const templateData = mapTemplateFields(formData, excludeKeys);
+  // Map template fields using schema if available, fallback to dynamic extraction
+  const templateData = buildTemplateData(formData, schemaFields, excludeKeys);
 
   // Build base payload
   const payload = {
@@ -171,12 +179,13 @@ export function buildTimeEntryPayload({
 /**
  * Build payload for create operation (adds defaults)
  */
-export function buildCreatePayload({ formData, entryTypeCode, description, timeFields, excludeKeys }) {
+export function buildCreatePayload({ formData, entryTypeCode, description, timeFields, schemaFields, excludeKeys }) {
   const basePayload = buildTimeEntryPayload({
     formData,
     entryTypeCode,
     description,
     timeFields,
+    schemaFields,
     excludeKeys
   });
 
@@ -193,12 +202,13 @@ export function buildCreatePayload({ formData, entryTypeCode, description, timeF
 /**
  * Build payload for update operation
  */
-export function buildUpdatePayload({ formData, entryTypeCode, description, timeFields, excludeKeys }) {
+export function buildUpdatePayload({ formData, entryTypeCode, description, timeFields, schemaFields, excludeKeys }) {
   return buildTimeEntryPayload({
     formData,
     entryTypeCode,
     description,
     timeFields,
+    schemaFields,
     excludeKeys
   });
 }
