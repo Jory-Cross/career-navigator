@@ -141,18 +141,32 @@ export default function VRTimeEntryForm({ clientId, onSuccess }) {
         return acc;
       }, {});
 
-      // Create TimeEntry
+      // Create TimeEntry — dual-write legacy + new schema fields
       const duration = calculateDuration();
+      const durationMinutes = Math.round(duration * 60);
+      const reportingPeriodKey = coreData.date_of_service ? coreData.date_of_service.slice(0, 7) : null;
+      
       const timeEntry = await base44.entities.TimeEntry.create({
+        // ── Legacy fields (preserve existing reads) ──
         org_id: null,
         client_id: clientId || null,
         date: coreData.date_of_service,
         start_time: coreData.start_time,
         end_time: coreData.end_time,
-        duration_minutes: Math.round(duration * 60),
+        duration_minutes: durationMinutes,
         description: coreData.location_of_service,
         category: entryType.code,
+        legacy_category: entryType.code,
         ...(coreData.general_notes && { general_notes: coreData.general_notes }),
+        // ── New schema fields (dual-write) ──
+        entry_type_id: entryType.id,
+        entry_type_code: entryType.code,
+        reporting_period_key: reportingPeriodKey,
+        status: "submitted",
+        is_reportable: entryType.report_mode !== "none",
+        is_billable: entryType.is_billable ?? false,
+        is_payroll_eligible: entryType.is_payroll_eligible ?? true,
+        report_ready: false,
       });
 
       // Create ReportFieldAnswer

@@ -121,25 +121,43 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
 
     setSaving(true);
     try {
+      const reportingPeriodKey = form.date ? form.date.slice(0, 7) : null;
+      
       if (editingEntry) {
         await base44.entities.TimeEntry.update(editingEntry.id, {
+          // ── Legacy fields ──
           date: form.date,
           duration_minutes: duration,
           description: form.description,
           category: form.category,
           start_time: form.start_time || undefined,
-          end_time: form.end_time || undefined
+          end_time: form.end_time || undefined,
+          // ── New schema fields (dual-write) ──
+          legacy_category: form.category,
+          reporting_period_key: reportingPeriodKey,
+          is_reportable: true,
+          is_billable: false,
+          is_payroll_eligible: true
         });
         toast.success("Time entry updated");
       } else {
         await base44.entities.TimeEntry.create({
+          // ── Legacy fields ──
           client_id: clientId,
           date: form.date,
           duration_minutes: duration,
           description: form.description,
           category: form.category,
           start_time: form.start_time || undefined,
-          end_time: form.end_time || undefined
+          end_time: form.end_time || undefined,
+          // ── New schema fields (dual-write) ──
+          legacy_category: form.category,
+          reporting_period_key: reportingPeriodKey,
+          status: "submitted",
+          is_reportable: true,
+          is_billable: false,
+          is_payroll_eligible: true,
+          report_ready: false
         });
 
         // Create a calendar entry for new entries only
