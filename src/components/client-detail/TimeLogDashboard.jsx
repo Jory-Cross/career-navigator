@@ -550,18 +550,26 @@ export default function TimeLogDashboard({
                    try {
                       // Extract duration in minutes from multiple possible fields
                       const durationMinutes = payload.duration_minutes || payload.duration || 0;
+
+                      // For structured forms (job_coaching, etc), extract date from form_data
+                      let dateValue = payload.date;
+                      if (!dateValue && payload.form_data) {
+                        // Check for common date field prefixes (jc_, jd_, etc)
+                        dateValue = payload.form_data.jc_date || payload.form_data.jd_date || payload.form_data.ls_date;
+                      }
+
                       console.log("[TimeLogDashboard] Duration minutes:", durationMinutes);
-                      console.log("[TimeLogDashboard] Date:", payload.date);
+                      console.log("[TimeLogDashboard] Date:", dateValue);
                       console.log("[TimeLogDashboard] Entry type code:", payload.entry_type_code);
 
                       // Validate required fields
-                      if (!payload.date) throw new Error("Missing date");
+                      if (!dateValue) throw new Error("Missing date");
                       if (!durationMinutes) throw new Error("Missing duration");
                       const entryTypeCode = payload.entry_type_code || activeEntryTypeCode;
                       if (!entryTypeCode) throw new Error("Missing entry type");
 
                       const updateData = {
-                        date: payload.date,
+                        date: dateValue,
                         duration_minutes: durationMinutes,
                         description: payload.description,
                         entry_type_code: entryTypeCode,
