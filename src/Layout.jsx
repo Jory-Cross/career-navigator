@@ -339,14 +339,14 @@ export default function Layout({ children, currentPageName }) {
               <div className="space-y-1">
                 <Label className="text-xs">Assigned Manager / Admin</Label>
                 <Select
-                  value={profileForm.manager_id || ""}
-                  onValueChange={val => setProfileForm(p => ({ ...p, manager_id: val === "none" ? "" : val }))}
+                  value={profileForm.manager_id || "unset"}
+                  onValueChange={val => setProfileForm(p => ({ ...p, manager_id: val === "unset" ? "" : val }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a manager..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— None —</SelectItem>
+                    <SelectItem value="unset">— None —</SelectItem>
                     {managers.map(m => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.full_name} <span className="text-slate-400 text-xs ml-1">({ROLE_LABELS[m.role] || m.role})</span>
