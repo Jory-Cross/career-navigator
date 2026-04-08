@@ -44,9 +44,11 @@ export default function EntryTypePicker({
     setError(null);
     base44.entities.EntryType.filter({ is_active: true })
       .then(types => {
-        // Sort by name within each program type
-        const sorted = types.sort((a, b) => a.name.localeCompare(b.name));
-        setEntryTypes(sorted);
+        // Deduplicate by code, keeping first occurrence
+        const uniqueEntryTypes = Array.from(
+          new Map(types.map(t => [t.code, t])).values()
+        ).sort((a, b) => a.name.localeCompare(b.name));
+        setEntryTypes(uniqueEntryTypes);
       })
       .catch(err => {
         console.error("Failed to load entry types:", err);

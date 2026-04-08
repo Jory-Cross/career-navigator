@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { Clock, Plus, AlertCircle, ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -21,6 +22,26 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
    const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
    const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
    const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
+   const [entryTypes, setEntryTypes] = useState([]);
+   const [loadingEntryTypes, setLoadingEntryTypes] = useState(true);
+
+  // Load entry types (deduplicated)
+  useEffect(() => {
+    setLoadingEntryTypes(true);
+    base44.entities.EntryType.filter({ is_active: true })
+      .then(types => {
+        // Deduplicate by code, keeping first occurrence
+        const uniqueEntryTypes = Array.from(
+          new Map(types.map(t => [t.code, t])).values()
+        ).sort((a, b) => a.name.localeCompare(b.name));
+        setEntryTypes(uniqueEntryTypes);
+      })
+      .catch(err => {
+        console.error("Failed to load entry types:", err);
+        setEntryTypes([]);
+      })
+      .finally(() => setLoadingEntryTypes(false));
+  }, []);
 
   // Route to Job Coaching form if selected
   useEffect(() => {
@@ -221,16 +242,34 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
           className="border-slate-200 text-sm"
         />
 
-        {/* Entry Type Picker - compact mode */}
-        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+        {/* Service Type Dropdown */}
+        <div>
           <label className="text-xs font-medium text-slate-700 block mb-2">Service Type *</label>
-          <EntryTypePicker
-            value={selectedEntryType?.id}
-            onChange={setSelectedEntryType}
-            mode="compact"
-            showDescriptions={false}
-            groupByProgram={false}
-          />
+          {loadingEntryTypes ? (
+            <div className="flex items-center justify-center py-2 text-slate-400">
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+              <span className="text-xs">Loading...</span>
+            </div>
+          ) : (
+            <Select 
+              value={selectedEntryType?.id || ""} 
+              onValueChange={val => {
+                const selected = entryTypes.find(t => t.id === val);
+                if (selected) setSelectedEntryType(selected);
+              }}
+            >
+              <SelectTrigger className="border-slate-200 text-sm">
+                <SelectValue placeholder="Select a service type..." />
+              </SelectTrigger>
+              <SelectContent>
+                {entryTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Required fields warning */}
