@@ -11,6 +11,25 @@ import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 
+// Simple entry types that are always quick-loggable (no required reporting fields)
+const SIMPLE_ENTRY_TYPES = [
+  "admin_time",
+  "miscellaneous",
+  "end_of_month_reporting",
+  "pre_ets_training",
+  "wsa",
+  "work_based_learning",
+];
+
+// Structured entry types that may require full form
+const STRUCTURED_ENTRY_TYPES = [
+  "job_coaching",
+  "job_development",
+  "usor96",
+  "life_skills",
+  "csb_hours",
+];
+
 export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
    const [clientId, setClientId] = useState("");
    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -52,7 +71,21 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
 
   // Check for required report fields when entry type changes
   useEffect(() => {
-    if (selectedEntryType?.id && selectedEntryType?.code !== "job_coaching") {
+    if (!selectedEntryType?.id) {
+      setHasRequiredReportFields(false);
+      setIsBillableOrReportable(false);
+      return;
+    }
+
+    // Simple entry types never require structured fields
+    if (isSimpleEntryType(selectedEntryType.code)) {
+      setHasRequiredReportFields(false);
+      setIsBillableOrReportable(false);
+      return;
+    }
+
+    // For structured types, check billable/reportable and required fields
+    if (selectedEntryType.code !== "job_coaching") {
       setIsBillableOrReportable((selectedEntryType?.is_billable || selectedEntryType?.report_mode !== "none") ?? false);
 
       // Check if this entry type has required reporting fields
@@ -75,8 +108,13 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
     const [endHour, endMin] = endTime.split(":").map(Number);
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    return endMinutes - startMinutes;
+    const duration = endMinutes - startMinutes;
+    return duration;
   };
+
+  const isSimpleEntryType = (code) => SIMPLE_ENTRY_TYPES.includes(code);
+
+  const isStructuredEntryType = (code) => STRUCTURED_ENTRY_TYPES.includes(code);
 
   // Calculate reporting period key (YYYY-MM for monthly)
   const getReportingPeriodKey = () => {
@@ -86,6 +124,11 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
   const handleQuickSave = async (asDraft = false) => {
     if (!clientId || !startTime || !endTime || !selectedEntryType) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!description?.trim()) {
+      toast.error("Description is required");
       return;
     }
 
@@ -272,8 +315,8 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
           )}
         </div>
 
-        {/* Required fields warning */}
-        {hasRequiredReportFields && isBillableOrReportable && (
+        {/* Required fields warning - only for structured types */}
+        {hasRequiredReportFields && isBillableOrReportable && isStructuredEntryType(selectedEntryType?.code) && (
           <div className="flex gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
             <div className="flex-1">
@@ -288,23 +331,25 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
           <Button
             className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
             onClick={() => handleQuickSave(false)}
-            disabled={!clientId || !startTime || !endTime || !selectedEntryType || saving}
+            disabled={!clientId || !startTime || !endTime || !selectedEntryType || !description?.trim() || saving}
           >
             <Clock className="w-4 h-4 mr-2" /> Log Time
           </Button>
 
-          {hasRequiredReportFields && (
+          {/* Only show Full Form button for structured types with required fields */}
+          {hasRequiredReportFields && isStructuredEntryType(selectedEntryType?.code) && (
             <Button
               variant="outline"
               className="flex-1"
               onClick={() => onRouteToStructuredForm?.(clientId, selectedEntryType?.code, { date, startTime, endTime, description })}
-              disabled={!clientId || !startTime || !endTime || !selectedEntryType || saving}
+              disabled={!clientId || !startTime || !endTime || !selectedEntryType || !description?.trim() || saving}
             >
               <ArrowRight className="w-4 h-4 mr-1" /> Full Form
             </Button>
           )}
 
-          {hasRequiredReportFields && (
+          {/* Only show Draft button for structured types with required fields */}
+          {hasRequiredReportFields && isStructuredEntryType(selectedEntryType?.code) && (
             <Button
               variant="ghost"
               className="px-3"
