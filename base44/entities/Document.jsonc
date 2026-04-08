@@ -41,22 +41,28 @@
       "default": "other"
     },
     "document_subtype": {
-      "type": "string"
+      "type": "string",
+      "description": "e.g. 'usor95', 'usor96', 'usor148' for generated reports; 'signed', 'draft' for other docs"
     },
     "source_type": {
-      "type": "string"
+      "type": "string",
+      "description": "Entity type that produced this document (e.g. 'ReportBatch', 'GeneratedReport')"
     },
     "source_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID of the source entity record"
     },
     "generated_from_template_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to PDFTemplate used to generate this document"
     },
     "report_batch_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to ReportBatch if produced by a bulk run"
     },
     "report_version": {
-      "type": "number"
+      "type": "number",
+      "description": "Version number of the report at time of generation"
     },
     "reporting_period_start": {
       "type": "string",
@@ -71,7 +77,8 @@
       "default": 1
     },
     "parent_document_id": {
-      "type": "string"
+      "type": "string",
+      "description": "If this is a re-generated version, ID of the document it supersedes"
     },
     "tags": {
       "type": "array",
@@ -84,11 +91,20 @@
     },
     "is_generated": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "True for system-generated PDFs; false for staff-uploaded files"
     },
     "is_archived": {
       "type": "boolean",
       "default": false
+    },
+    "generated_report_id": {
+      "type": "string",
+      "description": "NEW: FK to GeneratedReport record this file belongs to"
+    },
+    "entry_type_code": {
+      "type": "string",
+      "description": "NEW: Entry type this report document covers (for filtering)"
     }
   },
   "required": [

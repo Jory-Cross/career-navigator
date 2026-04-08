@@ -46,7 +46,19 @@
     },
     "locked_in_report_id": {
       "type": "string",
-      "description": "ID of GeneratedReport that locked these answers. Null if not yet included in a report."
+      "description": "NEW: ID of GeneratedReport that locked these answers. Null if not yet included in a report."
+    },
+    "validation_errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "NEW: List of field_keys that failed validation on last submit attempt"
+    },
+    "completion_percent": {
+      "type": "number",
+      "default": 0,
+      "description": "NEW: 0-100 percent of required fields completed. Useful for UI progress indicators."
     }
   },
   "required": [

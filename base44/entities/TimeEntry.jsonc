@@ -72,6 +72,19 @@
     "legacy_category": {
       "type": "string",
       "description": "Backward-compat field for pre-EntryType category enum. Do not use for new entries."
+    },
+    "employer_name": {
+      "type": "string",
+      "description": "NEW: Denormalized employer for entries where employer may differ per visit"
+    },
+    "report_ready": {
+      "type": "boolean",
+      "default": false,
+      "description": "NEW: True when field answers are complete and entry is approved for reporting"
+    },
+    "locked_in_report_id": {
+      "type": "string",
+      "description": "NEW: ID of GeneratedReport that locked this entry. Null if not yet in a final report."
     }
   },
   "required": [

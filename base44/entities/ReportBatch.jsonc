@@ -67,6 +67,26 @@
     },
     "error_message": {
       "type": "string"
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "NEW: ISO datetime when batch finished (success or failure)"
+    },
+    "total_clients": {
+      "type": "number",
+      "description": "NEW: Total number of clients in this batch run"
+    },
+    "success_count": {
+      "type": "number",
+      "description": "NEW: Number of clients whose reports generated successfully"
+    },
+    "failure_count": {
+      "type": "number",
+      "description": "NEW: Number of clients whose reports failed"
+    },
+    "template_version": {
+      "type": "string",
+      "description": "NEW: Version of PDFTemplate used \u2014 for audit trail"
     }
   },
   "required": [

@@ -93,6 +93,15 @@
     "is_active": {
       "type": "boolean",
       "default": true
+    },
+    "pdf_field_name": {
+      "type": "string",
+      "description": "NEW: Direct PDF field name this field maps to (for simple 1:1 mappings without PDFFieldMap)"
+    },
+    "display_in_summary": {
+      "type": "boolean",
+      "default": false,
+      "description": "NEW: Whether this field's value should appear in the report summary section"
     }
   },
   "required": [
