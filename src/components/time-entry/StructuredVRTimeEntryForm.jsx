@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ValidationResultsPanel from "@/components/reports/ValidationResultsPanel";
 import ServiceAuthorizationSelector from "@/components/authorization/ServiceAuthorizationSelector";
+import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 
 /**
  * StructuredVRTimeEntryForm - Primary Structured VR Entry Experience
@@ -68,19 +69,16 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
 
   const [saving, setSaving] = useState(false);
 
-  // ── Load entry types and employees ────────────────────────────────────────
+  // ── Load employees ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    // Load entry types
-    base44.entities.EntryType.filter({ is_active: true })
-      .then(setEntryTypes)
-      .catch(() => toast.error("Failed to load entry types"))
-      .finally(() => setLoadingTypes(false));
-
     // Load employees (staff)
     base44.entities.User.filter({ role: "employee" })
       .then(setEmployees)
       .catch(() => setEmployees([]));
+    
+    // Signal that types are loaded by EntryTypePicker
+    setLoadingTypes(false);
   }, []);
 
   useEffect(() => {
@@ -266,37 +264,19 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
   // ── STEP 1: Select entry type ─────────────────────────────────────────────
 
   if (step === "select_type") {
-    if (loadingTypes) return <LoadingCard label="Loading entry types..." />;
     return (
       <Card className="p-6 space-y-4">
         <div>
           <h3 className="font-semibold text-base">Step 1 of 4: Select Entry Type</h3>
           <p className="text-xs text-slate-500 mt-1">What type of service was provided?</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {entryTypes.map(et => (
-            <button
-              key={et.id}
-              onClick={() => { setEntryType(et); setStep("core_fields"); }}
-              className="p-4 text-left rounded-lg border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all"
-              style={{ borderColor: et.color ? et.color + "80" : undefined }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-sm">{et.name}</p>
-                  {et.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{et.description}</p>}
-                  <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
-                    {et.is_billable && <Badge className="bg-blue-100 text-blue-700">Billable</Badge>}
-                    {et.is_payroll_eligible && <Badge className="bg-emerald-100 text-emerald-700">Payroll</Badge>}
-                  </div>
-                </div>
-                {et.color && (
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: et.color }} />
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
+        <EntryTypePicker
+          value={entryType?.id}
+          onChange={(type) => { setEntryType(type); setStep("core_fields"); }}
+          mode="grid"
+          showDescriptions={true}
+          groupByProgram={true}
+        />
       </Card>
     );
   }

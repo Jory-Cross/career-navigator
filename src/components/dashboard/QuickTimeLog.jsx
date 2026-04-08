@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Clock, Plus, AlertCircle, ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 
 export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
   const [clientId, setClientId] = useState("");
@@ -13,43 +14,29 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [description, setDescription] = useState("");
-  const [entryTypeCode, setEntryTypeCode] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [entryTypes, setEntryTypes] = useState([]);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
   const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
 
-  // Load entry types on mount
-  useEffect(() => {
-    base44.entities.EntryType.filter({ is_active: true })
-      .then(types => setEntryTypes(types))
-      .catch(err => console.error('Failed to load entry types:', err));
-  }, []);
-
   // Check for required report fields when entry type changes
   useEffect(() => {
-    if (entryTypeCode) {
-      const et = entryTypes.find(t => t.code === entryTypeCode);
-      setSelectedEntryType(et || null);
-      setIsBillableOrReportable((et?.is_billable || et?.report_mode !== "none") ?? false);
+    if (selectedEntryType?.id) {
+      setIsBillableOrReportable((selectedEntryType?.is_billable || selectedEntryType?.report_mode !== "none") ?? false);
 
       // Check if this entry type has required reporting fields
-      if (et?.id) {
-        base44.entities.ReportFieldTemplate.filter({
-          entry_type_id: et.id,
-          is_required: true,
-          is_active: true
-        })
-          .then(fields => setHasRequiredReportFields(fields.length > 0))
-          .catch(() => setHasRequiredReportFields(false));
-      }
+      base44.entities.ReportFieldTemplate.filter({
+        entry_type_id: selectedEntryType.id,
+        is_required: true,
+        is_active: true
+      })
+        .then(fields => setHasRequiredReportFields(fields.length > 0))
+        .catch(() => setHasRequiredReportFields(false));
     } else {
-      setSelectedEntryType(null);
       setHasRequiredReportFields(false);
       setIsBillableOrReportable(false);
     }
-  }, [entryTypeCode, entryTypes]);
+  }, [selectedEntryType?.id]);
 
   const calculateDuration = () => {
     if (!startTime || !endTime) return 0;
@@ -66,7 +53,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
   };
 
   const handleQuickSave = async (asDraft = false) => {
-    if (!clientId || !startTime || !endTime || !entryTypeCode) {
+    if (!clientId || !startTime || !endTime || !selectedEntryType) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -93,7 +80,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
         client_id: actualClientId,
         employee_id: (await base44.auth.me()).id,
         entry_type_id: selectedEntryType?.id,
-        entry_type_code: entryTypeCode,
+        entry_type_code: selectedEntryType?.code,
         date,
         start_time: startTime,
         end_time: endTime,
@@ -113,7 +100,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
         await base44.entities.ReportFieldAnswer.create({
           time_entry_id: entry.id,
           entry_type_id: selectedEntryType?.id,
-          entry_type_code: entryTypeCode,
+          entry_type_code: selectedEntryType?.code,
           answers: {},
           required_fields_complete: false,
           report_ready: false
@@ -137,7 +124,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
     setStartTime("");
     setEndTime("");
     setDescription("");
-    setEntryTypeCode("");
+    setSelectedEntryType(null);
   };
 
   return (
@@ -205,19 +192,17 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
           className="border-slate-200 text-sm"
         />
 
-        {/* Entry Type - required */}
-        <Select value={entryTypeCode} onValueChange={setEntryTypeCode}>
-          <SelectTrigger className="border-slate-200 text-sm">
-            <SelectValue placeholder="Select entry type..." />
-          </SelectTrigger>
-          <SelectContent>
-            {entryTypes.map(et => (
-              <SelectItem key={et.code} value={et.code}>
-                {et.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Entry Type Picker - compact mode */}
+        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+          <label className="text-xs font-medium text-slate-700 block mb-2">Service Type *</label>
+          <EntryTypePicker
+            value={selectedEntryType?.id}
+            onChange={setSelectedEntryType}
+            mode="compact"
+            showDescriptions={false}
+            groupByProgram={false}
+          />
+        </div>
 
         {/* Required fields warning */}
         {hasRequiredReportFields && isBillableOrReportable && (
@@ -235,7 +220,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
           <Button
             className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
             onClick={() => handleQuickSave(false)}
-            disabled={!clientId || !startTime || !endTime || !entryTypeCode || saving}
+            disabled={!clientId || !startTime || !endTime || !selectedEntryType || saving}
           >
             <Clock className="w-4 h-4 mr-2" /> Log Time
           </Button>
@@ -244,8 +229,8 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => onRouteToStructuredForm?.(clientId, entryTypeCode, { date, startTime, endTime, description })}
-              disabled={!clientId || !startTime || !endTime || !entryTypeCode || saving}
+              onClick={() => onRouteToStructuredForm?.(clientId, selectedEntryType?.code, { date, startTime, endTime, description })}
+              disabled={!clientId || !startTime || !endTime || !selectedEntryType || saving}
             >
               <ArrowRight className="w-4 h-4 mr-1" /> Full Form
             </Button>
