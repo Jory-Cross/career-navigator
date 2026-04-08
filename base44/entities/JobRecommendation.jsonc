@@ -1,7 +1,7 @@
 {
   "name": "JobRecommendation",
   "type": "object",
-  "description": "AI-generated job recommendation for a specific client, saved to their record",
+  "description": "Job recommendation for a client. AI-generated recommendations start as 'suggested' and require staff review before being shared with the client.",
   "properties": {
     "client_id": {
       "type": "string",
@@ -9,7 +9,11 @@
     },
     "batch_id": {
       "type": "string",
-      "description": "Groups all recommendations from one generation run"
+      "description": "Groups all recommendations from one generation run (legacy)"
+    },
+    "source_search_batch_id": {
+      "type": "string",
+      "description": "ID of the job search batch that produced this recommendation"
     },
     "job_title": {
       "type": "string"
@@ -50,15 +54,43 @@
       "type": "string",
       "enum": [
         "suggested",
-        "saved",
+        "staff_reviewed",
+        "shared_with_client",
         "applied",
-        "rejected"
+        "interview",
+        "closed_not_fit",
+        "closed_declined",
+        "hired"
       ],
-      "default": "suggested"
+      "default": "suggested",
+      "description": "Workflow state. AI-generated recommendations start at 'suggested' \u2014 staff must review before progressing."
+    },
+    "generated_by_ai": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this recommendation was produced by AI rather than manually entered by staff"
     },
     "generated_by": {
       "type": "string",
-      "description": "Email of user who generated"
+      "description": "Email of user (or system) who generated this recommendation"
+    },
+    "reviewed_by_staff": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a staff member has reviewed and approved this recommendation"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email of staff member who reviewed"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO datetime when staff review was completed"
+    },
+    "review_notes": {
+      "type": "string",
+      "description": "Staff notes from review (e.g. concerns, edits made, rationale for sharing)"
     },
     "assessments_used": {
       "type": "array",

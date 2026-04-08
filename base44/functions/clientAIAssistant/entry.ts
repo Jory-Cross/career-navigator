@@ -372,8 +372,8 @@ async function saveCoachingPlan(base44, user, clientId, body) {
 }
 
 async function saveJobRecommendations(base44, user, clientId, body) {
-  const { job_recommendations } = body;
-  const batchId = `batch_${Date.now()}`;
+  const { job_recommendations, source_search_batch_id } = body;
+  const batchId = source_search_batch_id || `batch_${Date.now()}`;
   const saved = [];
 
   for (const job of (job_recommendations || [])) {
@@ -382,10 +382,13 @@ async function saveJobRecommendations(base44, user, clientId, body) {
       job_title: job.job_title,
       employer: job.employer || 'To be researched',
       fit_reason: job.why_fit,
-      fit_score: 75,
+      fit_score: job.fit_score || 75,
       status: 'suggested',
+      generated_by_ai: true,
       generated_by: user.email,
+      reviewed_by_staff: false,
       batch_id: batchId,
+      source_search_batch_id: batchId,
       client_fields_used: ['vocational_facts_profile', 'goals']
     });
     saved.push(rec);
