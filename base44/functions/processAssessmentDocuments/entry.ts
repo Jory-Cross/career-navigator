@@ -2,8 +2,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 /**
  * Preprocessing workflow for uploaded assessment documents.
- * Detects document type, extracts 14 employment-related fact categories,
- * and saves a structured VocationalFactsProfile to the client record.
+ * Extracts 14 employment-related fact categories with full provenance,
+ * saves structured metadata, and provides reusable AI-grounding payloads.
+ *
+ * Actions:
+ *   - extract_from_documents: Process documents/assessments and extract profile
+ *   - get_vocational_facts: Retrieve current profile with metadata
+ *   - get_ai_grounding: Compact profile for AI job recommendations and coaching
+ *   - get_profile_provenance: Facts with source document/assessment IDs
  */
 Deno.serve(async (req) => {
   try {
@@ -154,49 +160,147 @@ Also identify:
         }
       });
 
+      // Build structured extraction metadata
+      const extractionMetadata = {
+        version: 1,
+        extracted_at: new Date().toISOString(),
+        extracted_by: user.email,
+        source_document_ids: targetDocs.map(d => d.id),
+        source_assessment_ids: assessments.map(a => a.id),
+        data_quality_score: result.data_quality_score || 0,
+        conflicts_count: (result.conflicts || []).length,
+        missing_fields_count: (result.missing_critical_data || []).length
+      };
+
+      // Preserve existing profile if newer extraction is weaker
+      const existingProfile = client.vocational_facts_profile;
+      const existingMetadata = client.vocational_facts_metadata;
+      const shouldUpdate = !existingMetadata || 
+                          result.data_quality_score >= (existingMetadata.data_quality_score || 0) ||
+                          targetDocs.length > (existingMetadata.source_document_ids?.length || 0);
+
       // Save the vocational facts profile to the client record
       const profilePayload = {
         vocational_facts_profile: result,
-        vocational_facts_extracted_at: new Date().toISOString(),
-        vocational_facts_extracted_by: user.email,
-        vocational_facts_document_count: targetDocs.length,
-        vocational_facts_assessment_count: assessments.length,
+        vocational_facts_metadata: extractionMetadata,
+        vocational_facts_last_updated_at: new Date().toISOString(),
       };
 
-      await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+      // Only update if stronger or no existing profile
+      if (shouldUpdate || !existingProfile) {
+        await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+        console.log(`[processAssessmentDocuments] Updated profile for client ${clientId}, quality: ${result.data_quality_score}`);
+      } else {
+        console.log(`[processAssessmentDocuments] Skipped update for client ${clientId}; existing profile is stronger (${existingMetadata.data_quality_score} vs ${result.data_quality_score})`);
+      }
 
       // Log activity
       await base44.asServiceRole.entities.Activity.create({
         client_id: clientId,
         activity_type: 'note_added',
         title: 'Vocational Facts Profile Extracted',
-        description: `${user.full_name || user.email} extracted employment facts from ${targetDocs.length} documents and ${assessments.length} assessments. Quality score: ${result.data_quality_score || 'N/A'}%. ${result.conflicts?.length > 0 ? `⚠️ ${result.conflicts.length} conflict(s) flagged for review.` : ''}`,
+        description: `${user.full_name || user.email} extracted employment facts from ${targetDocs.length} documents and ${assessments.length} assessments. Quality score: ${result.data_quality_score}%. ${result.conflicts?.length > 0 ? `⚠️ ${result.conflicts.length} conflict(s) flagged for review.` : ''}`,
       });
 
       return Response.json({
         success: true,
         profile: result,
+        metadata: extractionMetadata,
         documents_processed: targetDocs.length,
         assessments_processed: assessments.length,
         conflicts_found: result.conflicts?.length || 0,
         data_quality_score: result.data_quality_score,
+        update_status: shouldUpdate ? 'updated' : 'skipped_weaker_profile'
       });
     }
 
     // ── ACTION: get_vocational_facts ──────────────────────────────────────────
+    // Returns full profile with metadata for review UI
     if (action === 'get_vocational_facts') {
       const allClients = await base44.asServiceRole.entities.Client.list();
       const client = allClients.find(c => c.id === clientId);
       if (!client) {
         return Response.json({ error: 'Client not found' }, { status: 404 });
       }
+      const metadata = client.vocational_facts_metadata || {};
       return Response.json({
         success: true,
         profile: client.vocational_facts_profile || null,
-        extracted_at: client.vocational_facts_extracted_at || null,
-        extracted_by: client.vocational_facts_extracted_by || null,
-        document_count: client.vocational_facts_document_count || 0,
-        assessment_count: client.vocational_facts_assessment_count || 0,
+        metadata: {
+          version: metadata.version || 1,
+          extracted_at: metadata.extracted_at || null,
+          extracted_by: metadata.extracted_by || null,
+          data_quality_score: metadata.data_quality_score || 0,
+          conflicts_count: metadata.conflicts_count || 0,
+          missing_fields_count: metadata.missing_fields_count || 0,
+          source_document_ids: metadata.source_document_ids || [],
+          source_assessment_ids: metadata.source_assessment_ids || []
+        },
+        last_updated_at: client.vocational_facts_last_updated_at || null,
+      });
+    }
+
+    // ── ACTION: get_ai_grounding ──────────────────────────────────────────────
+    // Returns compact, flattened profile for job recommendations and AI coaching
+    if (action === 'get_ai_grounding') {
+      const allClients = await base44.asServiceRole.entities.Client.list();
+      const client = allClients.find(c => c.id === clientId);
+      if (!client || !client.vocational_facts_profile) {
+        return Response.json({ error: 'No vocational profile available for this client' }, { status: 404 });
+      }
+      const profile = client.vocational_facts_profile;
+      const compact = flattenProfileForAI(profile);
+      return Response.json({
+        success: true,
+        grounding: compact,
+        quality_score: profile.data_quality_score || 0,
+        conflicts: profile.conflicts || [],
+        missing_data: profile.missing_critical_data || []
+      });
+    }
+
+    // ── ACTION: get_profile_provenance ────────────────────────────────────────
+    // Returns facts with source document/assessment IDs for traceability
+    if (action === 'get_profile_provenance') {
+      const allClients = await base44.asServiceRole.entities.Client.list();
+      const client = allClients.find(c => c.id === clientId);
+      if (!client || !client.vocational_facts_profile) {
+        return Response.json({ error: 'No vocational profile available for this client' }, { status: 404 });
+      }
+      const profile = client.vocational_facts_profile;
+      const metadata = client.vocational_facts_metadata || {};
+      const sourceDocsMap = new Map(
+        (metadata.source_document_ids || []).map((id, idx) => [id, `doc_${idx + 1}`])
+      );
+      const sourceAssessmentsMap = new Map(
+        (metadata.source_assessment_ids || []).map((id, idx) => [id, `assessment_${idx + 1}`])
+      );
+      
+      // Group facts by category with sources
+      const provenance = {};
+      const CATEGORIES = [
+        'skills', 'interests', 'preferred_tasks', 'work_environment_preferences',
+        'schedule_availability', 'transportation', 'social_communication_needs',
+        'sensory_environmental_needs', 'physical_restrictions', 'support_needs',
+        'job_readiness_level', 'employer_preferences', 'barriers', 'goals'
+      ];
+      
+      CATEGORIES.forEach(cat => {
+        if (profile[cat]) {
+          provenance[cat] = profile[cat].map(fact => ({
+            fact: fact.fact || fact,
+            source: fact.source || 'unattributed'
+          }));
+        }
+      });
+
+      return Response.json({
+        success: true,
+        provenance,
+        source_document_ids: metadata.source_document_ids || [],
+        source_assessment_ids: metadata.source_assessment_ids || [],
+        conflicts: profile.conflicts || [],
+        data_quality_score: profile.data_quality_score || 0
       });
     }
 
@@ -207,3 +311,30 @@ Also identify:
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helper: Flatten profile for AI grounding (job recommendations, coaching)
+// ──────────────────────────────────────────────────────────────────────────────
+function flattenProfileForAI(profile) {
+  const flatten = (arr) => {
+    if (!arr || arr.length === 0) return [];
+    return arr.map(item => (typeof item === 'object' ? item.fact : item)).filter(Boolean);
+  };
+
+  return {
+    skills: flatten(profile.skills),
+    interests: flatten(profile.interests),
+    preferred_tasks: flatten(profile.preferred_tasks),
+    work_environment: flatten(profile.work_environment_preferences),
+    schedule: flatten(profile.schedule_availability),
+    transportation: flatten(profile.transportation),
+    communication_needs: flatten(profile.social_communication_needs),
+    sensory_environmental_needs: flatten(profile.sensory_environmental_needs),
+    physical_restrictions: flatten(profile.physical_restrictions),
+    support_needs: flatten(profile.support_needs),
+    job_readiness: flatten(profile.job_readiness_level),
+    employer_preferences: flatten(profile.employer_preferences),
+    barriers: flatten(profile.barriers),
+    goals: flatten(profile.goals),
+  };
+}
