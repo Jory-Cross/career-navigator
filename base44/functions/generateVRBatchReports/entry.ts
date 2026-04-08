@@ -233,6 +233,34 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     generated_document_id: document.id
   });
 
+  // Step 6 — Lock billable/reportable entries in this period
+  // Updates each entry to track which GeneratedReport locked it
+  const billableOrReportable = assembled.included_time_entry_ids.filter(id => {
+    const entry = timeEntries.find(e => e.id === id);
+    return entry && (entry.is_billable || entry.is_reportable);
+  });
+
+  if (billableOrReportable.length > 0) {
+    // Batch update entries to mark them as locked in this report
+    for (const entryId of billableOrReportable) {
+      await base44.entities.TimeEntry.update(entryId, {
+        locked_in_report_id: generatedReport.id,
+        report_ready: true // Mark report ready when locked
+      });
+    }
+    console.log(`[batch ${batch_id}] locked ${billableOrReportable.length} entries in report ${generatedReport.id}`);
+  }
+
+  // Also lock corresponding field answers
+  if (assembled.included_answer_ids && assembled.included_answer_ids.length > 0) {
+    for (const answerId of assembled.included_answer_ids) {
+      await base44.entities.ReportFieldAnswer.update(answerId, {
+        locked_in_report_id: generatedReport.id,
+        report_ready: true
+      });
+    }
+  }
+
   return {
     status:               'success',
     generated_report_id:  generatedReport.id,
@@ -240,6 +268,7 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     pdf_url:              pdfUrl,
     version_number:       versionNumber,
     entry_count:          assembled.totals.entry_count,
-    total_hours:          assembled.totals.total_hours
+    total_hours:          assembled.totals.total_hours,
+    locked_entry_count:   billableOrReportable.length
   };
 }
