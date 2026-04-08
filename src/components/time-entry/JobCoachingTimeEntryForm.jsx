@@ -36,21 +36,22 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
   const [errors, setErrors] = useState({});
 
   // Load service codes fresh on mount (no cached data)
-  useEffect(() => {
-    serviceCodeCache.fetchServiceCodes(true)
-      .then(codes => {
-        setServiceCodes(codes);
-        // Validate consistency
-        const options = codes.map(c => c.display_label);
-        serviceCodeCache.validateConsistency(options);
-      })
-      .catch(err => {
-        console.error('Failed to load service codes:', err);
-        toast.error("Failed to load service codes");
-        setServiceCodes([]);
-      })
-      .finally(() => setLoadingCodes(false));
-  }, []);
+   useEffect(() => {
+     serviceCodeCache.fetchServiceCodes(true)
+       .then(codes => {
+         console.log('[JobCoachingTimeEntryForm] Loaded service codes:', codes.length);
+         setServiceCodes(codes);
+         // Validate consistency
+         const options = codes.map(c => c.display_label);
+         serviceCodeCache.validateConsistency(options);
+       })
+       .catch(err => {
+         console.error('[JobCoachingTimeEntryForm] Failed to load service codes:', err);
+         toast.error("Failed to load service codes");
+         setServiceCodes([]);
+       })
+       .finally(() => setLoadingCodes(false));
+   }, []);
 
 
 
@@ -201,17 +202,21 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
           onValueChange={val => setForm(p => ({ ...p, primary_service_code: val }))}
         >
           <SelectTrigger className={errors.primary_service_code ? "border-red-500" : ""}>
-            <SelectValue placeholder="Select service code..." />
+            <SelectValue placeholder={allCodes.length > 0 ? "Select service code..." : "Loading codes..."} />
           </SelectTrigger>
           <SelectContent>
-             {allCodes.map(code => (
-               <SelectItem key={code.id} value={code.code}>
-                 {code.display_label}
-               </SelectItem>
-             ))}
+             {allCodes.length > 0 ? (
+               allCodes.map(code => (
+                 <SelectItem key={code.id} value={code.code}>
+                   {code.display_label}
+                 </SelectItem>
+               ))
+             ) : (
+               <div className="p-2 text-xs text-slate-500">No service codes available</div>
+             )}
            </SelectContent>
         </Select>
-        <p className="text-xs text-slate-400">Select the primary service provided</p>
+        <p className="text-xs text-slate-400">Select the primary service provided ({allCodes.length} available)</p>
         {errors.primary_service_code && (
           <p className="text-xs text-red-500">{errors.primary_service_code}</p>
         )}
