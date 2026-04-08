@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CheckCircle, XCircle, Share2, Briefcase, Loader2, ChevronDown,
-  ChevronUp, ExternalLink, RefreshCw, AlertTriangle, Clock, User
+  ChevronUp, ExternalLink, RefreshCw, AlertTriangle, Clock, User, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -245,9 +245,10 @@ function RecommendationCard({ rec, onReviewed }) {
 
 function BatchGroup({ batch, recs, onReviewed }) {
   const [open, setOpen] = useState(true);
+  const [showMeta, setShowMeta] = useState(false);
   const pending = recs.filter(r => r.status === "suggested").length;
-  const batchDate = batch.created_at
-    ? format(new Date(batch.created_at), "MMM d, yyyy · h:mm a")
+  const batchDate = batch.generated_at || batch.created_at
+    ? format(new Date(batch.generated_at || batch.created_at), "MMM d, yyyy · h:mm a")
     : "Unknown date";
 
   return (
@@ -258,14 +259,9 @@ function BatchGroup({ batch, recs, onReviewed }) {
       >
         <div className="flex items-center gap-2 flex-wrap text-left">
           <span className="text-xs font-semibold text-slate-700">Batch: {batchDate}</span>
-          {batch.filters?.workType && batch.filters.workType !== "any" && (
-            <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              {batch.filters.workType}
-            </span>
-          )}
-          {batch.filters?.employmentType && batch.filters.employmentType !== "any" && (
-            <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              {batch.filters.employmentType}
+          {batch.search_terms_used?.length > 0 && (
+            <span className="text-[10px] text-slate-500">
+              {batch.search_terms_used.slice(0, 2).join(', ')}{batch.search_terms_used.length > 2 ? '...' : ''}
             </span>
           )}
           {batch.has_vocational_facts && (
@@ -273,15 +269,76 @@ function BatchGroup({ batch, recs, onReviewed }) {
               VFP grounded
             </span>
           )}
+          {batch.data_quality_score != null && batch.data_quality_score > 0 && (
+            <span className={cn("text-[10px] border px-1.5 py-0.5 rounded-full",
+              batch.data_quality_score >= 70 ? "bg-green-50 text-green-600 border-green-100" :
+              batch.data_quality_score >= 40 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-red-50 text-red-600 border-red-100"
+            )}>
+              {batch.data_quality_score}% quality
+            </span>
+          )}
           <span className="text-[10px] text-slate-500">{recs.length} jobs</span>
           {pending > 0 && (
             <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
-              <AlertTriangle className="w-2.5 h-2.5" /> {pending} pending review
+              <AlertTriangle className="w-2.5 h-2.5" /> {pending} pending
             </span>
           )}
         </div>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); setShowMeta(m => !m); }}
+            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+            title="Show batch details">
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+          {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+        </div>
       </button>
+
+      {showMeta && (
+        <div className="px-3 py-2 bg-violet-50 border border-violet-100 rounded-lg space-y-2">
+          {batch.search_summary && (
+            <div>
+              <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Search Summary</p>
+              <p className="text-xs text-violet-800 mt-0.5">{batch.search_summary}</p>
+            </div>
+          )}
+          {batch.grounding_note && (
+            <div>
+              <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Grounding</p>
+              <p className="text-xs text-violet-800 mt-0.5">{batch.grounding_note}</p>
+            </div>
+          )}
+          {batch.search_terms_used?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Search Terms</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {batch.search_terms_used.map((t, i) => (
+                  <span key={i} className="text-[10px] bg-white border border-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {batch.data_sources_used?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Data Sources</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {batch.data_sources_used.map((d, i) => (
+                  <span key={i} className="text-[10px] bg-white border border-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full">
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-[10px] text-violet-600 pt-1 border-t border-violet-100 flex items-center gap-2">
+            <User className="w-2.5 h-2.5" />
+            {batch.generated_by}
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="space-y-2 pl-1">

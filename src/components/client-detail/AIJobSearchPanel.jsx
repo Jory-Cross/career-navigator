@@ -213,14 +213,30 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
     try {
-      const res = await base44.functions.invoke('jobSearchAssistant', {
-        action: 'get_saved_recommendations',
-        clientId,
-      });
-      setSavedRecs(res?.data?.data || []);
-      setSavedBatches(res?.data?.batches || {});
+      // Fetch all saved recommendations
+      const recs = await base44.entities.JobRecommendation.filter(
+        { client_id: clientId },
+        '-created_date',
+        100
+      );
+
+      // Fetch all batches and group recs by batch
+      const batchIds = [...new Set(recs.map(r => r.batch_id).filter(Boolean))];
+      const batches = {};
+      
+      if (batchIds.length > 0) {
+        const batchObjs = await base44.entities.JobRecommendationBatch.filter(
+          { id: { $in: batchIds } }
+        );
+        batchObjs.forEach(b => {
+          batches[b.id] = b;
+        });
+      }
+
+      setSavedRecs(recs);
+      setSavedBatches(batches);
     } catch (e) {
-      console.error(e);
+      console.error('Error loading saved recommendations:', e);
     } finally {
       setLoadingSaved(false);
     }
@@ -281,16 +297,27 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
         clientId,
         jobs,
         assessmentsUsed,
-        clientFieldsUsed,
+        clientFieldsUsed: clientFieldsUsed,
         searchTermsUsed,
+        dataSourcesUsed: ['vocational_facts_profile', 'assessments', 'goals', 'support_notes', 'job_applications'].filter(s => {
+          if (s === 'vocational_facts_profile') return hasVFP;
+          if (s === 'assessments') return assessmentsUsed.length > 0;
+          return true;
+        }),
         filters,
         has_vocational_facts: hasVFP,
+        vocational_profile_version: 1,
         search_summary: searchSummary,
         grounding_note: groundingNote,
         custom_instructions: customInstructions,
+        data_quality_score: profileMeta.dataQualityScore,
       });
       setSavedBatchId(res?.data?.batch_id);
-      toast.success(`${jobs.length} recommendations saved to client record`);
+      // Store batch metadata for UI
+      if (res?.data?.batch) {
+        setSavedBatches(prev => ({ ...prev, [res.data.batch_id]: res.data.batch }));
+      }
+      toast.success(`${jobs.length} recommendations saved and pending staff review`);
       await loadSavedRecs();
       setActiveTab('saved');
     } catch (e) {
