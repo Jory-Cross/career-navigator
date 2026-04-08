@@ -32,11 +32,16 @@ function normalizeDurationMinutes(formData) {
     return Number(formData.duration_minutes);
   }
 
-  // Separate hours and minutes fields
+  // Separate hours and minutes fields (PRIMARY FIX)
   if (formData.hours != null || formData.minutes != null) {
     const hours = Number(formData.hours || 0);
     const minutes = Number(formData.minutes || 0);
     return (hours * 60) + minutes;
+  }
+
+  // Fallback support for hours_spent (alternate field name)
+  if (formData.hours_spent != null) {
+    return Number(formData.hours_spent) * 60;
   }
 
   // Generic duration field (assume minutes)
@@ -82,6 +87,9 @@ export function buildTimeEntryPayload({
   formData = {},
   schema
 }) {
+  // ⚠️ Debug: Log form data before processing
+  console.log("🔍 FORM DATA:", formData);
+
   // ⚠️ Guard: entry type ID required
   if (!entryType?.id) {
     throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
