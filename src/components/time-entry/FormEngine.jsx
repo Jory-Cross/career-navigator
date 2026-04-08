@@ -29,7 +29,7 @@ export default function FormEngine({
           
           // Log service code field population
           const serviceCodeFields = dynamicSchema.filter(f => 
-            (f.key.includes("service_code") || f.key.includes("service")) && f.type === "select"
+            f.key.toLowerCase().includes("service_code") && f.type === "select"
           );
           serviceCodeFields.forEach(f => {
             console.log(`[FormEngine] ${f.key}: ${f.options?.length || 0} options loaded`);

@@ -98,10 +98,11 @@ export async function loadVocRehabSchema(entryTypeCode) {
           options: t.options || [],
         };
 
-        // Inject service code options for known fields
-        if ((t.field_key === "primary_service_code" || t.field_key === "jc_primary_service_code") && primaryCodes.length > 0) {
+        // Inject service code options for primary/secondary code fields (supports all prefixes: jc_, jd_, or none)
+        const fieldKeyLower = t.field_key.toLowerCase();
+        if (fieldKeyLower.includes("primary_service_code") && primaryCodes.length > 0) {
           field.options = primaryCodes;
-        } else if ((t.field_key === "secondary_service_code" || t.field_key === "jc_secondary_service_code") && secondaryCodes.length > 0) {
+        } else if (fieldKeyLower.includes("secondary_service_code") && secondaryCodes.length > 0) {
           field.options = secondaryCodes;
         }
 
