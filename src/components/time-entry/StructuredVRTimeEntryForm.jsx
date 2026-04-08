@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import ValidationResultsPanel from "@/components/reports/ValidationResultsPanel";
 import ServiceAuthorizationSelector from "@/components/authorization/ServiceAuthorizationSelector";
 import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
+import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 
 /**
  * StructuredVRTimeEntryForm - Primary Structured VR Entry Experience
@@ -156,71 +157,35 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
 
     setSaving(true);
     try {
-      const durationMinutes = Math.round(Number(coreData.duration_hours) * 60);
-
-      // Compute reporting_period_key (YYYY-MM)
-      const reportingPeriodKey = coreData.date ? coreData.date.slice(0, 7) : null;
-
-      // 1. Create TimeEntry — dual-write legacy + new schema fields
       const durationMinutes = coreData.start_time && coreData.end_time
         ? Math.round(((new Date(`2000-01-01T${coreData.end_time}`) - new Date(`2000-01-01T${coreData.start_time}`)) / 1000) / 60)
         : Math.round(Number(coreData.duration_hours) * 60);
 
-      const timeEntry = await base44.entities.TimeEntry.create({
-        // ── Legacy fields ──
-        client_id:        clientId,
-        date:             coreData.date,
-        start_time:       coreData.start_time || null,
-        end_time:         coreData.end_time || null,
-        duration_minutes: durationMinutes,
-        location:         coreData.location || null,
-        employee_id:      coreData.employee_id,
-        service_authorization_id: coreData.service_authorization_id || null,
-        employer_name:    coreData.employer_name || null,
-        description:      coreData.general_notes || "",
-        // ── New schema fields ──
-        entry_type_id:       entryType.id,
-        entry_type_code:     entryType.code,
-        reporting_period_key: reportingPeriodKey,
-        status:              isDraft ? "draft" : "submitted",
-        is_reportable:       entryType.report_mode !== "none",
-        is_billable:         entryType.is_billable ?? false,
-        is_payroll_eligible: entryType.is_payroll_eligible ?? true,
-        report_ready:        false
+      // DUAL-WRITE: Use standardized submission function
+      const result = await submitTimeEntryWithDualWrite({
+        clientId,
+        entryTypeId: entryType.id,
+        entryTypeCode: entryType.code,
+        date: coreData.date,
+        startTime: coreData.start_time || null,
+        endTime: coreData.end_time || null,
+        durationMinutes,
+        location: coreData.location || null,
+        description: coreData.general_notes || "",
+        serviceAuthorizationId: coreData.service_authorization_id || null,
+        fieldAnswers: answers,
+        asDraft: isDraft
       });
-
-      // 2. Submit field answers via backend (schema snapshot + validation)
-      const result = await base44.functions.invoke("submitFieldAnswers", {
-        time_entry_id:   timeEntry.id,
-        entry_type_id:   entryType.id,
-        entry_type_code: entryType.code,
-        answers,
-        notes: isDraft ? "Draft save" : "Final submission"
-      });
-
-      if (!result?.data?.success) {
-        const msg = result?.data?.validation?.errors?.[0]?.message || "Failed to save field answers";
-        throw new Error(msg);
-      }
-
-      const { required_fields_complete, report_ready } = result.data;
-
-      // Back-fill report_ready on TimeEntry once we know the answer status
-      if (!isDraft && report_ready) {
-        await base44.entities.TimeEntry.update(timeEntry.id, { report_ready: true });
-      } else if (!isDraft && required_fields_complete) {
-        await base44.entities.TimeEntry.update(timeEntry.id, { report_ready: true });
-      }
 
       if (isDraft) {
         toast.success("Draft saved");
-      } else if (report_ready) {
+      } else if (result.report_ready) {
         toast.success("Entry submitted — ready for report generation");
       } else {
-        toast.warning(`Entry saved (${result.data.summary?.completion_percentage ?? 0}% complete — some required fields missing)`);
+        toast.warning(`Entry saved (${result.completion_percent}% complete — some required fields missing)`);
       }
 
-      onSuccess?.(timeEntry, isDraft);
+      onSuccess?.({ id: result.time_entry_id }, isDraft);
       resetForm();
 
     } catch (err) {

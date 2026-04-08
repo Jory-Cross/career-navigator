@@ -7,6 +7,7 @@ import { Clock, Plus, AlertCircle, ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
+import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 
 export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
   const [clientId, setClientId] = useState("");
@@ -73,39 +74,22 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
     setSaving(true);
     try {
       const actualClientId = clientId?.startsWith('self:') ? null : clientId;
-      const reportingPeriodKey = getReportingPeriodKey();
 
-      // Create time entry
-      const entry = await base44.entities.TimeEntry.create({
-        client_id: actualClientId,
-        employee_id: (await base44.auth.me()).id,
-        entry_type_id: selectedEntryType?.id,
-        entry_type_code: selectedEntryType?.code,
+      // DUAL-WRITE: Use standardized submission function
+      const result = await submitTimeEntryWithDualWrite({
+        clientId: actualClientId,
+        entryTypeId: selectedEntryType?.id,
+        entryTypeCode: selectedEntryType?.code,
         date,
-        start_time: startTime,
-        end_time: endTime,
-        duration_minutes: duration,
-        reporting_period_key: reportingPeriodKey,
+        startTime,
+        endTime,
+        durationMinutes: duration,
         location: null,
         description: description || "Quick log entry",
-        is_billable: selectedEntryType?.is_billable || false,
-        is_reportable: selectedEntryType?.report_mode !== "none",
-        status: asDraft ? "draft" : "submitted",
-        is_payroll_eligible: selectedEntryType?.is_payroll_eligible !== false,
-        report_ready: !hasRequiredReportFields && !asDraft
+        serviceAuthorizationId: null,
+        fieldAnswers: {},
+        asDraft
       });
-
-      // Create empty field answers if required
-      if (hasRequiredReportFields) {
-        await base44.entities.ReportFieldAnswer.create({
-          time_entry_id: entry.id,
-          entry_type_id: selectedEntryType?.id,
-          entry_type_code: selectedEntryType?.code,
-          answers: {},
-          required_fields_complete: false,
-          report_ready: false
-        });
-      }
 
       toast.success(asDraft ? "Entry saved as draft" : "Time logged");
       resetForm();
