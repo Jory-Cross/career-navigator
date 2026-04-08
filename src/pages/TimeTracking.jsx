@@ -405,7 +405,7 @@ export default function TimeTracking() {
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
               {/* Route to Life Skills form if entry is life_skills */}
-              {selectedEntry && selectedEntry.entry_type_code === 'life_skills' && editMode && (
+              {selectedEntry && selectedEntry.entry_type_code === 'life_skills' && (
                 <StructuredVocRehabForm
                   entryTypeCode="life_skills"
                   clientId={selectedEntry.client_id}
