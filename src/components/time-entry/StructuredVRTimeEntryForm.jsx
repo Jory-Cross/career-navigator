@@ -95,6 +95,25 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
       .catch(() => toast.error("Failed to load form fields"))
       .finally(() => setLoadingFields(false));
 
+    // Prefill employer_name and job_title for job_coaching from active service authorization
+    if (entryType.code === "job_coaching" && clientId) {
+      base44.entities.ServiceAuthorization.filter({
+        client_id: clientId,
+        entry_type_code: "job_coaching",
+        status: "active"
+      })
+        .then(auths => {
+          const auth = auths[0]; // Get first active auth
+          if (auth) {
+            setCoreData(p => ({
+              ...p,
+              employer_name: auth.employer_name || "",
+              service_authorization_id: auth.id
+            }));
+          }
+        })
+        .catch(() => {}); // Silently fail, not critical
+    }
 
   }, [entryType?.id, clientId]);
 
