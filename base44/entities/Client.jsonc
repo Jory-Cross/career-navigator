@@ -190,6 +190,24 @@
     "vocational_facts_assessment_count": {
       "type": "number",
       "description": "Number of assessments analyzed in last extraction"
+    },
+    "case_number": {
+      "type": "string",
+      "description": "VR case number assigned to this client"
+    },
+    "primary_vr_counselor_name": {
+      "type": "string"
+    },
+    "primary_vr_counselor_email": {
+      "type": "string"
+    },
+    "primary_vr_counselor_phone": {
+      "type": "string"
+    },
+    "authorization_summary": {
+      "type": "object",
+      "description": "Cached summary of active authorizations for quick access",
+      "additionalProperties": true
     }
   },
   "required": [
