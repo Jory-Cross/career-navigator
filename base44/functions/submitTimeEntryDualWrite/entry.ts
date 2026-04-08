@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
 
     // Fetch entry type to get program type and report mode
     console.log('[submitTimeEntryDualWrite] Fetching EntryType with id:', entry_type_id);
-    const entryType = await base44.entities.EntryType.read(entry_type_id);
+    const entryTypeResults = await base44.entities.EntryType.filter({ id: entry_type_id });
+    const entryType = entryTypeResults[0];
     if (!entryType) {
       console.error('[submitTimeEntryDualWrite] ERROR: EntryType not found for id:', entry_type_id);
       return Response.json({ error: 'EntryType not found' }, { status: 404 });
@@ -64,7 +65,8 @@ Deno.serve(async (req) => {
 
     // Validate authorization if required
     if (entryType.requires_authorization && service_authorization_id) {
-      const auth = await base44.entities.ServiceAuthorization.read(service_authorization_id);
+      const authResults = await base44.entities.ServiceAuthorization.filter({ id: service_authorization_id });
+      const auth = authResults[0];
       if (!auth || auth.status !== 'active') {
         return Response.json(
           { error: 'ServiceAuthorization is not active' },
