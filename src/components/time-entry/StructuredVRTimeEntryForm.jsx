@@ -771,9 +771,10 @@ function FieldInput({ field, value, error, onChange }) {
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
+            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => {
+              const trimmed = opt.trim();
+              return trimmed ? <SelectItem key={trimmed} value={trimmed}>{trimmed}</SelectItem> : null;
+            })}
           </SelectContent>
         </Select>
       )}
@@ -784,9 +785,10 @@ function FieldInput({ field, value, error, onChange }) {
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
+            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => {
+              const trimmed = opt.trim();
+              return trimmed ? <SelectItem key={trimmed} value={trimmed}>{trimmed}</SelectItem> : null;
+            })}
           </SelectContent>
         </Select>
       )}
