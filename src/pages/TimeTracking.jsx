@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
 import TimeEntryForm from "@/components/time-entry/TimeEntryForm";
+import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
@@ -157,6 +158,9 @@ export default function TimeTracking() {
   const totalMinutes = filtered.reduce((s, t) => s + (t.duration_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
 
+  // Detect legacy entries (using category field instead of entry_type_code)
+  const legacyEntries = scopedTimeEntries.filter(e => e.category && !e.entry_type_code);
+
   // Group by client
   const byClient = {};
   filtered.forEach(e => {
@@ -176,6 +180,15 @@ export default function TimeTracking() {
           <Plus className="w-4 h-4 mr-1" /> New Entry
         </Button>
       </div>
+
+      {legacyEntries.length > 0 && (
+        <LegacyDataWarning
+          type="banner"
+          recordCount={legacyEntries.length}
+          issues={["legacy_category", "unstructured_entry"]}
+          recordIds={legacyEntries.map(e => e.id)}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

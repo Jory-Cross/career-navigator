@@ -11,6 +11,7 @@ import { Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
+import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { toast } from "sonner";
 
 const catColors = {
@@ -41,6 +42,9 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
 
   const totalMinutes = timeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+
+  // Detect legacy entries
+  const legacyEntries = timeEntries.filter(e => e.category && !e.entry_type_code);
 
   const sorted = [...timeEntries].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
@@ -198,6 +202,15 @@ export default function TimeLogSection({ timeEntries, clientId, onRefresh }) {
 
   return (
     <>
+      {legacyEntries.length > 0 && (
+        <div className="mb-4">
+          <LegacyDataWarning
+            type="inline"
+            recordCount={legacyEntries.length}
+            issues={["legacy_category"]}
+          />
+        </div>
+      )}
       <Card className="border-0 shadow-sm">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-800">Time Log</h3>
