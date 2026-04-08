@@ -9,16 +9,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Get service codes for job_coaching - order by code for consistency
-    const serviceCodes = await base44.asServiceRole.entities.ServiceCode.filter({
+    // Get all 4 service codes
+    const allCodes = await base44.asServiceRole.entities.ServiceCode.filter({
       service_type: "job_coaching",
       is_active: true
     });
 
-    serviceCodes.sort((a, b) => a.code.localeCompare(b.code));
+    allCodes.sort((a, b) => a.code.localeCompare(b.code));
 
-    // Build option labels: "CODE - description"
-    const options = serviceCodes.map(sc => sc.display_label);
+    const allOptions = allCodes.map(c => c.display_label);
+
+    console.log(`Found ${allCodes.length} codes:`, allOptions);
 
     // Get job_coaching entry type
     const entryTypes = await base44.asServiceRole.entities.EntryType.filter({
@@ -32,31 +33,44 @@ Deno.serve(async (req) => {
 
     const entryType = entryTypes[0];
 
-    // Update service code fields with options
-    const fields = await base44.asServiceRole.entities.ReportFieldTemplate.filter({
+    // Get both service code fields
+    const serviceCodeFields = await base44.asServiceRole.entities.ReportFieldTemplate.filter({
       entry_type_id: entryType.id,
-      is_active: true,
       field_type: "select"
     });
 
     let updated = 0;
 
-    for (const field of fields) {
+    // Update both service code dropdowns
+    for (const field of serviceCodeFields) {
       if (field.field_key === "primary_service_code" || field.field_key === "secondary_service_code") {
+        console.log(`Updating ${field.field_key} with ${allOptions.length} options`);
+        
         await base44.asServiceRole.entities.ReportFieldTemplate.update(field.id, {
-          options: options
+          options: allOptions
         });
         updated++;
       }
     }
 
+    // Verify update
+    const updated_fields = await base44.asServiceRole.entities.ReportFieldTemplate.filter({
+      entry_type_id: entryType.id,
+      field_type: "select"
+    });
+
+    const primField = updated_fields.find(f => f.field_key === "primary_service_code");
+    const secField = updated_fields.find(f => f.field_key === "secondary_service_code");
+
     return Response.json({
       status: 'success',
       updated_fields: updated,
-      service_code_options: options,
-      total_codes: serviceCodes.length
+      primary_options_count: primField?.options?.length || 0,
+      secondary_options_count: secField?.options?.length || 0,
+      all_options: allOptions
     });
   } catch (error) {
+    console.error('Error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
