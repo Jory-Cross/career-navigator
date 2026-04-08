@@ -343,7 +343,7 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
       {!collapsed && (
         <div className="p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 w-full mb-4 h-9 bg-slate-100/80">
+            <TabsList className="grid grid-cols-5 w-full mb-4 h-9 bg-slate-100/80">
               {tabConfig.map(t => (
                 <TabsTrigger key={t.key} value={t.key} className="text-xs flex items-center gap-1.5">
                   <t.icon className="w-3.5 h-3.5" />

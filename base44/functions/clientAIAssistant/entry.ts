@@ -9,96 +9,161 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, clientId } = body;
 
-    // Load FULL client context via data-aware pattern
-    const [client, assessments, timeEntries, applications, recommendations, tasks, goals, notes] = await Promise.all([
-      base44.entities.Client.list().then(all => all.find(c => c.id === clientId)),
-      base44.entities.Assessment.filter({ client_id: clientId }, "-created_date", 10),
-      base44.entities.TimeEntry.filter({ client_id: clientId }, "-created_date", 30),
-      base44.entities.JobApplication.filter({ client_id: clientId }, "-created_date", 20),
-      base44.entities.JobRecommendation.filter({ client_id: clientId }, "-created_date", 15),
-      base44.entities.Task.filter({ ...(Array.isArray(body.client_ids) ? { client_ids: clientId } : {}) }, "-created_date", 20),
-      base44.entities.Goal.filter({ client_id: clientId }),
-      base44.entities.SupportNote.filter({ client_id: clientId }, "-created_date", 15),
-    ]);
+    if (!clientId) return Response.json({ error: 'clientId required' }, { status: 400 });
 
-    if (!client) return Response.json({ error: 'Client not found' }, { status: 404 });
+    // --- Handle save/persist actions first (no LLM needed) ---
 
-    // Enrich time entries with structured field answers
-    const enrichedTimeEntries = await Promise.all(
-      timeEntries.map(async (te) => {
-        const answer = await base44.entities.ReportFieldAnswer.filter({ time_entry_id: te.id }).then(a => a[0]);
-        return { ...te, structured_answers: answer?.answers || {} };
-      })
-    );
+    if (action === 'save_coaching_plan') {
+      return await saveCoachingPlan(base44, user, clientId, body);
+    }
 
-    const clientTasks = tasks.filter(t => t.client_ids?.includes(clientId));
+    if (action === 'save_job_recommendations') {
+      return await saveJobRecommendations(base44, user, clientId, body);
+    }
 
-    // Build vocational context from assessments and extracted facts
-    const vocationalContext = client.vocational_facts_profile
-      ? `
-VOCATIONAL FACTS (extracted from assessments):
-${['skills', 'barriers', 'interests', 'preferred_tasks', 'schedule_availability', 'support_needs']
-  .map(key => {
-    const items = client.vocational_facts_profile[key] || [];
-    if (!items.length) return null;
-    return `${key.toUpperCase().replace(/_/g, ' ')}:\n${items.map(i => `  • ${i.fact || i} [${i.source || 'assessment'}]`).join('\n')}`;
-  })
-  .filter(Boolean)
-  .join('\n\n')}`
-      : 'No vocational facts extracted yet — run assessment preprocessing to enable data-driven recommendations.';
+    // --- Load structured client context (compact, targeted) ---
+    const context = await loadClientContext(base44, clientId, action);
+    if (!context.client) return Response.json({ error: 'Client not found' }, { status: 404 });
 
-    const contextSummary = `
-=== CLIENT PROFILE ===
-Name: ${client.first_name} ${client.last_name}
-Email: ${client.email}
-Type: ${client.client_type}
-Status: ${client.status}
-Location: ${client.location || 'Not specified'}
-Target Role: ${client.target_role || 'Not specified'}
-Industry: ${client.industry || 'Not specified'}
-Barriers: ${client.barriers?.join(', ') || 'Not documented'}
+    // --- Build action-specific prompt from structured context ---
+    const { prompt, responseSchema } = buildPrompt(action, context, body);
+    if (!prompt) return Response.json({ error: 'Unknown action' }, { status: 400 });
 
-=== EMPLOYMENT GOALS ===
-${goals.length > 0 ? goals.map(g => `• [${g.category}] ${g.title} (${g.status})`).join('\n') : 'No goals set'}
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt,
+      response_json_schema: responseSchema
+    });
 
-=== STRUCTURED TIME ENTRIES (${enrichedTimeEntries.length} total) ===
-${enrichedTimeEntries.slice(0, 10).map(te => {
-  const activity = Object.values(te.structured_answers).slice(0, 2).join(' | ');
-  return `• ${te.date}: ${te.category} (${(te.duration_minutes / 60).toFixed(1)}h) - ${activity || 'logged'}`;
-}).join('\n')}
+    return Response.json({ success: true, data: result, action });
 
-=== VOCATIONAL CONTEXT (DATA-DRIVEN) ===
-${vocationalContext}
+  } catch (error) {
+    console.error('clientAIAssistant error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
 
-=== JOB APPLICATIONS (${applications.length} total) ===
-${applications.slice(0, 8).map(a => `• ${a.company} / ${a.position} — ${a.status} (${a.applied_date || 'N/A'})`).join('\n') || 'No applications'}
+// ─── Context Loader ───────────────────────────────────────────────────────────
+// Loads only what each action needs. Avoids fetching time entries for email drafts, etc.
 
-=== SAVED JOB RECOMMENDATIONS (${recommendations.length} total) ===
-${recommendations.slice(0, 5).map(r => `• ${r.job_title} @ ${r.employer} (fit: ${r.fit_score}/100)`).join('\n') || 'No recommendations yet'}
+async function loadClientContext(base44, clientId, action) {
+  const needsApplications = ['summarize', 'suggest_tasks', 'coaching_recommendations', 'engagement_insights'].includes(action);
+  const needsAssessments  = ['summarize', 'coaching_recommendations'].includes(action);
+  const needsNotes        = ['summarize', 'suggest_tasks', 'engagement_insights'].includes(action);
+  const needsGoals        = ['summarize', 'coaching_recommendations', 'suggest_tasks'].includes(action);
+  const needsTimeEntries  = ['engagement_insights', 'coaching_recommendations'].includes(action);
 
-=== SUPPORT NOTES ===
-${notes.slice(0, 5).map(n => `• [${n.date}] ${n.note_type}: ${n.title}`).join('\n') || 'None'}
+  const fetches = {
+    client:       base44.entities.Client.filter({ id: clientId }).then(r => r[0] || null),
+    goals:        needsGoals        ? base44.entities.Goal.filter({ client_id: clientId }) : Promise.resolve([]),
+    assessments:  needsAssessments  ? base44.entities.Assessment.filter({ client_id: clientId }, '-created_date', 5) : Promise.resolve([]),
+    applications: needsApplications ? base44.entities.JobApplication.filter({ client_id: clientId }, '-created_date', 10) : Promise.resolve([]),
+    notes:        needsNotes        ? base44.entities.SupportNote.filter({ client_id: clientId }, '-created_date', 8) : Promise.resolve([]),
+    timeEntries:  needsTimeEntries  ? base44.entities.TimeEntry.filter({ client_id: clientId }, '-date', 20) : Promise.resolve([]),
+  };
 
-=== PENDING TASKS ===
-${clientTasks.filter(t => t.status === 'pending').slice(0, 5).map(t => `• ${t.title} (due: ${t.due_date || 'no date'})`).join('\n') || 'All caught up!'}
-    `.trim();
+  const [client, goals, assessments, applications, notes, timeEntries] = await Promise.all([
+    fetches.client, fetches.goals, fetches.assessments,
+    fetches.applications, fetches.notes, fetches.timeEntries
+  ]);
 
-    let prompt = '';
-    let responseSchema = null;
+  return { client, goals, assessments, applications, notes, timeEntries };
+}
 
-    if (action === 'summarize') {
-      prompt = `You are a CRM AI assistant for an employment services organization. Based on the following client data, provide a concise, insightful summary of this client's situation, progress, and key highlights. Focus on what matters most for the employment specialist.
+// ─── Grounding Payload Builders ───────────────────────────────────────────────
+// Each builder returns only the fields the LLM actually needs — no raw text blobs.
 
-${contextSummary}
+function buildClientCore(client) {
+  return {
+    name: `${client.first_name} ${client.last_name}`,
+    type: client.client_type,
+    status: client.status,
+    target_role: client.target_role || null,
+    industry: client.industry || null,
+    location: client.location || null,
+  };
+}
 
-Provide a structured summary with:
-1. Current situation overview (2-3 sentences)
-2. Key progress highlights
-3. Main challenges or concerns
-4. Overall engagement level (High/Medium/Low) with brief reasoning
+function buildVocationalFacts(client) {
+  const vf = client.vocational_facts_profile;
+  if (!vf) return null;
+  const keys = ['skills', 'barriers', 'interests', 'preferred_tasks', 'schedule_availability', 'support_needs'];
+  const result = {};
+  keys.forEach(k => {
+    const items = vf[k] || [];
+    if (items.length) result[k] = items.map(i => i.fact || i).slice(0, 6);
+  });
+  return Object.keys(result).length ? result : null;
+}
 
-Keep it practical and actionable for a job coach.`;
-      responseSchema = {
+function buildGoalsSummary(goals) {
+  return goals.map(g => ({ category: g.category, title: g.title, status: g.status }));
+}
+
+function buildApplicationsSummary(applications) {
+  return applications.map(a => ({
+    company: a.company,
+    position: a.position,
+    status: a.status,
+    applied_date: a.applied_date || null
+  }));
+}
+
+function buildNotesSummary(notes) {
+  return notes.map(n => ({ date: n.date, type: n.note_type, title: n.title }));
+}
+
+function buildAssessmentsSummary(assessments) {
+  return assessments.map(a => ({ type: a.assessment_type, completed_by: a.completed_by }));
+}
+
+function buildTimeEntrySummary(timeEntries) {
+  const byType = {};
+  timeEntries.forEach(te => {
+    const k = te.entry_type_code || te.category || 'other';
+    if (!byType[k]) byType[k] = { count: 0, total_hours: 0 };
+    byType[k].count++;
+    byType[k].total_hours += (te.duration_minutes || 0) / 60;
+  });
+  return {
+    total_entries: timeEntries.length,
+    recent_dates: timeEntries.slice(0, 5).map(te => te.date),
+    by_type: Object.entries(byType).map(([type, s]) => ({
+      type,
+      count: s.count,
+      total_hours: Math.round(s.total_hours * 10) / 10
+    }))
+  };
+}
+
+// ─── Prompt Builder ───────────────────────────────────────────────────────────
+
+function buildPrompt(action, context, body) {
+  const { client, goals, assessments, applications, notes, timeEntries } = context;
+
+  const clientCore       = buildClientCore(client);
+  const vocationalFacts  = buildVocationalFacts(client);
+
+  if (action === 'summarize') {
+    const payload = {
+      client: clientCore,
+      vocational_facts: vocationalFacts,
+      goals: buildGoalsSummary(goals),
+      recent_applications: buildApplicationsSummary(applications).slice(0, 5),
+      recent_notes: buildNotesSummary(notes).slice(0, 5),
+      assessments_on_file: buildAssessmentsSummary(assessments)
+    };
+    return {
+      prompt: `You are a CRM AI assistant for an employment services organization. Using the structured client data below, produce a concise situation summary for the employment specialist.
+
+CLIENT DATA:
+${JSON.stringify(payload, null, 2)}
+
+Return a structured summary covering:
+1. Current situation (2-3 sentences)
+2. Key progress highlights (from goals, applications)
+3. Main concerns (from notes, missing data, stalled applications)
+4. Engagement level (High/Medium/Low) with brief reasoning`,
+      responseSchema: {
         type: "object",
         properties: {
           overview: { type: "string" },
@@ -107,14 +172,25 @@ Keep it practical and actionable for a job coach.`;
           engagement_level: { type: "string", enum: ["High", "Medium", "Low"] },
           engagement_reasoning: { type: "string" }
         }
-      };
-    } else if (action === 'suggest_tasks') {
-      prompt = `You are a CRM AI assistant for an employment services organization. Based on the following client data, suggest 3-5 specific, actionable follow-up tasks or actions the employment specialist should take in the next 1-2 weeks.
+      }
+    };
+  }
 
-${contextSummary}
+  if (action === 'suggest_tasks') {
+    const payload = {
+      client: clientCore,
+      goals: buildGoalsSummary(goals),
+      applications: buildApplicationsSummary(applications),
+      notes: buildNotesSummary(notes)
+    };
+    return {
+      prompt: `You are a CRM AI assistant for an employment services organization. Based on the structured client data below, suggest 3-5 specific, actionable follow-up tasks for the next 1-2 weeks.
 
-Consider: pending applications needing follow-up, upcoming deadlines, gaps in support, or logical next steps in the job search process. Be specific and time-sensitive.`;
-      responseSchema = {
+CLIENT DATA:
+${JSON.stringify(payload, null, 2)}
+
+Focus on: pending applications needing follow-up, stalled goals, gaps noted in support notes. Be specific.`,
+      responseSchema: {
         type: "object",
         properties: {
           suggested_tasks: {
@@ -131,42 +207,51 @@ Consider: pending applications needing follow-up, upcoming deadlines, gaps in su
             }
           }
         }
-      };
-    } else if (action === 'draft_email') {
-      const { emailPurpose, emailContext } = await req.json().catch(() => ({}));
-      const purpose = emailPurpose || 'general check-in';
-      prompt = `You are a CRM AI assistant for an employment services organization. Draft a professional, warm, and personalized email from the employment specialist to this client.
+      }
+    };
+  }
 
-${contextSummary}
+  if (action === 'draft_email') {
+    const { emailPurpose, emailContext: emailCtx } = body;
+    const payload = {
+      client: clientCore,
+      recent_applications: buildApplicationsSummary(applications).slice(0, 3)
+    };
+    return {
+      prompt: `You are a CRM AI assistant. Draft a professional, personalized email from an employment specialist to this client.
 
-Email purpose: ${purpose}
-Additional context: ${emailContext || 'None'}
+CLIENT DATA:
+${JSON.stringify(payload, null, 2)}
 
-Draft a professional email that:
-- Sounds personalized and human, not generic
-- References specific details from their profile/history when relevant
-- Has a clear subject line
-- Is concise (150-250 words max)
-- Has a friendly but professional tone`;
-      responseSchema = {
+Email purpose: ${emailPurpose || 'general check-in'}
+Additional context: ${emailCtx || 'none'}
+
+Requirements: Sound human and personalized. Reference specific details. 150-250 words. Clear subject.`,
+      responseSchema: {
         type: "object",
         properties: {
           subject: { type: "string" },
           body: { type: "string" }
         }
-      };
-    } else if (action === 'engagement_insights') {
-      prompt = `You are a CRM AI assistant for an employment services organization. Analyze the engagement patterns for this client and provide insights to help the employment specialist better support them.
+      }
+    };
+  }
 
-${contextSummary}
+  if (action === 'engagement_insights') {
+    const payload = {
+      client: clientCore,
+      time_entry_summary: buildTimeEntrySummary(timeEntries),
+      recent_notes: buildNotesSummary(notes),
+      application_statuses: buildApplicationsSummary(applications).map(a => a.status)
+    };
+    return {
+      prompt: `You are a CRM AI assistant. Analyze engagement patterns for this client using structured data below.
 
-Provide insights on:
-1. Activity frequency and consistency patterns
-2. Response/engagement trends (improving, declining, steady)
-3. Which types of support seem most effective
-4. Risk signals or red flags (if any)
-5. Recommendations to boost engagement`;
-      responseSchema = {
+CLIENT DATA:
+${JSON.stringify(payload, null, 2)}
+
+Analyze: activity frequency, trends, what's working, risk signals, and recommendations to improve engagement.`,
+      responseSchema: {
         type: "object",
         properties: {
           activity_pattern: { type: "string" },
@@ -176,19 +261,31 @@ Provide insights on:
           risk_signals: { type: "array", items: { type: "string" } },
           recommendations: { type: "array", items: { type: "string" } }
         }
-      };
-    } else if (action === 'coaching_recommendations') {
-      prompt = `You are an expert job coach. Based on this client's profile, assessments, time entries, and work history, provide specific coaching recommendations and job search strategy.
+      }
+    };
+  }
 
-${contextSummary}
+  if (action === 'coaching_recommendations') {
+    const payload = {
+      client: clientCore,
+      vocational_facts: vocationalFacts,
+      goals: buildGoalsSummary(goals),
+      assessments_on_file: buildAssessmentsSummary(assessments),
+      time_entry_summary: buildTimeEntrySummary(timeEntries)
+    };
+    return {
+      prompt: `You are an expert job coach. Using the structured client data below, provide a targeted coaching plan.
+
+CLIENT DATA:
+${JSON.stringify(payload, null, 2)}
 
 Provide:
-1. Key coaching priorities for this client based on their barriers and goals
-2. Specific job search strategy tailored to their vocational facts
+1. Coaching priorities (based on barriers, goals, support needs from vocational_facts)
+2. Job search strategy tailored to their skills and interests
 3. Skill gaps to address before next interview
-4. Support accommodations that would help them succeed
-5. 3-5 specific job roles (titles + key reasons why they'd fit based on the data)`;
-      responseSchema = {
+4. Recommended accommodations
+5. 3-5 specific job role recommendations with reasoning grounded in the data`,
+      responseSchema: {
         type: 'object',
         properties: {
           coaching_priorities: { type: 'array', items: { type: 'string' } },
@@ -202,89 +299,97 @@ Provide:
               properties: {
                 job_title: { type: 'string' },
                 why_fit: { type: 'string' },
-                data_basis: { type: 'string', description: 'Which client data informed this recommendation' }
+                data_basis: { type: 'string' }
               }
             }
           },
           next_coaching_session_focus: { type: 'string' }
         }
-      };
-    } else if (action === 'save_coaching_plan') {
-      const { coaching_priorities, job_search_strategy, recommended_accommodations, next_session_focus } = body;
-
-      // Save as a structured client document/summary
-      const doc = await base44.asServiceRole.entities.Document.create({
-        client_id: clientId,
-        title: `AI-Generated Coaching Plan - ${new Date().toLocaleDateString()}`,
-        file_url: `data:text/plain;base64,${btoa(JSON.stringify({coaching_priorities, job_search_strategy, recommended_accommodations}, null, 2))}`,
-        file_name: `coaching-plan-${clientId}.json`,
-        category: 'reference',
-        tags: ['ai-generated', 'coaching', 'plan'],
-        notes: `Generated by AI assistant on ${new Date().toISOString()} by ${user.email}. Based on client vocational facts, assessments, and time entries.`
-      });
-
-      // Create task for next session focus
-      if (next_session_focus) {
-        await base44.asServiceRole.entities.Task.create({
-          title: `Coaching Session: ${next_session_focus.substring(0, 50)}`,
-          description: next_session_focus,
-          status: 'pending',
-          category: 'follow_up',
-          priority: 'high',
-          client_ids: [clientId],
-          due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
-        });
       }
-
-      return Response.json({
-        success: true,
-        message: 'Coaching plan saved to Documents and task created',
-        document_id: doc.id,
-        data: { coaching_priorities, job_search_strategy, recommended_accommodations }
-      });
-
-    } else if (action === 'save_job_recommendations') {
-      const { job_recommendations, data_basis } = body;
-      const batchId = `batch_${Date.now()}`;
-      const saved = [];
-
-      for (const job of (job_recommendations || [])) {
-        const rec = await base44.asServiceRole.entities.JobRecommendation.create({
-          client_id: clientId,
-          job_title: job.job_title,
-          employer: job.employer || 'To be researched',
-          fit_reason: job.why_fit,
-          fit_score: 75,
-          support_needs: job.recommended_accommodations || [],
-          status: 'suggested',
-          generated_by: user.email,
-          batch_id: batchId,
-          assessments_used: assessments.map(a => a.id),
-          client_fields_used: ['vocational_facts_profile', 'barriers', 'goals']
-        });
-        saved.push(rec);
-      }
-
-      return Response.json({
-        success: true,
-        saved_count: saved.length,
-        batch_id: batchId,
-        data: saved
-      });
-
-    } else {
-      return Response.json({ error: 'Unknown action' }, { status: 400 });
-    }
-
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: responseSchema
-    });
-
-    return Response.json({ success: true, data: result, action });
-  } catch (error) {
-    console.error('clientAIAssistant error:', error);
-    console.error('Error details:', error.data || error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    };
   }
-});
+
+  return { prompt: null, responseSchema: null };
+}
+
+// ─── Structured Save Actions ───────────────────────────────────────────────────
+
+async function saveCoachingPlan(base44, user, clientId, body) {
+  const { coaching_priorities, job_search_strategy, recommended_accommodations, skill_gaps, next_session_focus } = body;
+
+  // Store as structured Goal records instead of a raw file blob
+  const savedGoals = [];
+  if (coaching_priorities?.length) {
+    for (const priority of coaching_priorities.slice(0, 3)) {
+      const g = await base44.asServiceRole.entities.Goal.create({
+        client_id: clientId,
+        title: priority,
+        category: 'employment',
+        status: 'in_progress',
+        progress_notes: `AI coaching priority — ${new Date().toLocaleDateString()}`
+      });
+      savedGoals.push(g.id);
+    }
+  }
+
+  // Save plan summary as a support note (searchable, structured)
+  const planNote = await base44.asServiceRole.entities.SupportNote.create({
+    client_id: clientId,
+    note_type: 'progress_update',
+    title: `AI Coaching Plan — ${new Date().toLocaleDateString()}`,
+    content: [
+      job_search_strategy ? `Job Search Strategy: ${job_search_strategy}` : null,
+      skill_gaps?.length ? `Skill Gaps: ${skill_gaps.join(', ')}` : null,
+      recommended_accommodations?.length ? `Accommodations: ${recommended_accommodations.join(', ')}` : null,
+    ].filter(Boolean).join('\n\n'),
+    date: new Date().toISOString().split('T')[0],
+    follow_up_required: !!next_session_focus,
+    follow_up_notes: next_session_focus || null
+  });
+
+  // Create a task for next session focus
+  let taskId = null;
+  if (next_session_focus) {
+    const task = await base44.asServiceRole.entities.Task.create({
+      title: `Coaching Session: ${next_session_focus.substring(0, 60)}`,
+      description: next_session_focus,
+      status: 'pending',
+      category: 'follow_up',
+      priority: 'high',
+      client_ids: [clientId],
+      due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+    });
+    taskId = task.id;
+  }
+
+  return Response.json({
+    success: true,
+    message: 'Coaching plan saved as goals, support note, and task',
+    note_id: planNote.id,
+    goal_ids: savedGoals,
+    task_id: taskId
+  });
+}
+
+async function saveJobRecommendations(base44, user, clientId, body) {
+  const { job_recommendations } = body;
+  const batchId = `batch_${Date.now()}`;
+  const saved = [];
+
+  for (const job of (job_recommendations || [])) {
+    const rec = await base44.asServiceRole.entities.JobRecommendation.create({
+      client_id: clientId,
+      job_title: job.job_title,
+      employer: job.employer || 'To be researched',
+      fit_reason: job.why_fit,
+      fit_score: 75,
+      status: 'suggested',
+      generated_by: user.email,
+      batch_id: batchId,
+      client_fields_used: ['vocational_facts_profile', 'goals']
+    });
+    saved.push(rec);
+  }
+
+  return Response.json({ success: true, saved_count: saved.length, batch_id: batchId, data: saved });
+}
