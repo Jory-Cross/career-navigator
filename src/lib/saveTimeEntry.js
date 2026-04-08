@@ -5,9 +5,6 @@ import { buildTimeEntryPayload } from "@/lib/timeEntryPayloadBuilder";
 /**
  * Hard guards before persistence.
  * Fails loudly if payload structure is invalid.
- * 
- * @param {Record<string, any>} payload
- * @throws {Error} If validation fails
  */
 function validateBeforeSave(payload) {
   if (!payload.entry_type_id) {
@@ -21,6 +18,40 @@ function validateBeforeSave(payload) {
   if (typeof payload.form_data !== "object" || payload.form_data == null) {
     throw new Error("❌ Hard Guard Failed: missing or invalid form_data");
   }
+}
+
+/**
+ * Round-trip integrity check.
+ * Verifies that the saved entry matches what we sent.
+ * Catches mapping errors early.
+ */
+function validateRoundTripIntegrity(sentPayload, retrievedEntry) {
+  const issues = [];
+
+  // Check critical fields
+  if (retrievedEntry.entry_type_id !== sentPayload.entry_type_id) {
+    issues.push(`entry_type_id mismatch: sent=${sentPayload.entry_type_id}, got=${retrievedEntry.entry_type_id}`);
+  }
+
+  if (Number(retrievedEntry.duration_minutes) !== Number(sentPayload.duration_minutes)) {
+    issues.push(`duration_minutes mismatch: sent=${sentPayload.duration_minutes}, got=${retrievedEntry.duration_minutes}`);
+  }
+
+  // Check form_data keys match
+  if (sentPayload.form_data && retrievedEntry.form_data) {
+    const sentKeys = Object.keys(sentPayload.form_data).sort();
+    const gotKeys = Object.keys(retrievedEntry.form_data).sort();
+    if (JSON.stringify(sentKeys) !== JSON.stringify(gotKeys)) {
+      issues.push(`form_data keys mismatch: sent=${sentKeys.join(",")}, got=${gotKeys.join(",")}`);
+    }
+  }
+
+  if (issues.length > 0) {
+    console.warn("⚠️ Round-trip integrity issues found:", issues);
+    throw new Error(`❌ Round-trip integrity check failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("✅ Round-trip integrity verified: all fields match");
 }
 
 /**
@@ -63,19 +94,21 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
     validateBeforeSave(payload);
 
     // PERSIST
+    let savedEntry = null;
+
     if (existingEntry?.id) {
       // UPDATE
       console.log("[saveTimeEntry] Updating entry:", existingEntry.id);
       await base44.entities.TimeEntry.update(existingEntry.id, payload);
-      console.log("[saveTimeEntry] Update successful");
       
-      // ⚠️ Guard: Verify update actually persisted
+      // Round-trip integrity check
       const updated = await base44.entities.TimeEntry.get(existingEntry.id);
       if (!updated) {
         throw new Error("❌ Post-update verification failed: could not retrieve updated entry");
       }
-      console.log("[saveTimeEntry] Fresh record after update:", updated);
       
+      savedEntry = updated;
+      validateRoundTripIntegrity(payload, updated);
       toast.success("Entry updated");
     } else {
       // CREATE
@@ -90,7 +123,6 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
         employee_id: currentUser.id
       };
 
-      // ⚠️ Guard: Verify create data has authentication
       if (!createData.employee_id) {
         throw new Error("❌ Create payload missing employee_id");
       }
@@ -98,15 +130,18 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
       console.log("[saveTimeEntry] Creating TimeEntry with payload:", createData);
       const result = await base44.entities.TimeEntry.create(createData);
       
-      // ⚠️ Guard: Verify create returned a record
       if (!result || !result.id) {
         throw new Error("❌ Create operation failed - no ID returned");
       }
 
-      console.log("[saveTimeEntry] Create successful, entry ID:", result.id);
+      // Reload to verify all fields persisted
+      const freshEntry = await base44.entities.TimeEntry.get(result.id);
+      savedEntry = freshEntry;
+      validateRoundTripIntegrity(payload, freshEntry);
       toast.success("Entry created");
     }
 
+    console.log("✅ Round-trip verification passed, saved entry:", savedEntry);
     console.log("[saveTimeEntry] === SUCCESS ===");
   } catch (err) {
     console.error("🔴 Save Entry Failed:", {

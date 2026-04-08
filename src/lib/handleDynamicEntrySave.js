@@ -22,23 +22,35 @@ export async function handleDynamicEntrySave({
   refreshEntries,
   closeModal,
 }) {
-  // Build unified payload
+  // 1️⃣ Build unified payload
   const payload = buildTimeEntryPayload({ entryType, formData, schema });
 
-  console.log("[handleDynamicEntrySave] Payload:", payload);
-
-  // Hard guards before save
+  // 2️⃣ Hard guards before save
   validateBeforeSave(payload);
 
-  // Persist
-  await saveEntry(payload);
+  // 3️⃣ Freeze payload shape (prevents accidental mutations)
+  Object.freeze(payload);
+  Object.freeze(payload.form_data);
 
-  // Refresh entry list if callback provided
+  // 4️⃣ Snapshot logging (critical for debugging)
+  console.log("🟢 FINAL PAYLOAD:", JSON.stringify(payload, null, 2));
+
+  // 5️⃣ Persist with response validation
+  const result = await saveEntry(payload);
+
+  // 6️⃣ Backend response validation
+  if (!result?.id) {
+    throw new Error("❌ Save succeeded but no ID returned from backend");
+  }
+
+  console.log("✅ Entry saved with ID:", result.id);
+
+  // 7️⃣ Refresh entry list if callback provided
   if (refreshEntries) {
     await refreshEntries();
   }
 
-  // Close modal if callback provided
+  // 8️⃣ Close modal if callback provided
   if (closeModal) {
     closeModal();
   }
