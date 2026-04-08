@@ -568,8 +568,8 @@ export default function TimeLogDashboard({
                   );
                 }
                 
-                // Voc Rehab entry types use StructuredVocRehabForm
-                if (activeEntryTypeCode && selectedType?.program_type === 'vr') {
+                // CSB and Voc Rehab entry types use StructuredVocRehabForm
+                if (activeEntryTypeCode && (selectedType?.program_type === 'vr' || activeEntryTypeCode === 'csb_hours')) {
                   return (
                     <StructuredVocRehabForm
                       entryTypeCode={activeEntryTypeCode}
