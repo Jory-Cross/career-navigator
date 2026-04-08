@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
+import StructuredVocRehabForm from "@/components/time-entry/StructuredVocRehabForm";
 import TimeEntryFormContent from "@/components/client-detail/TimeLogDashboard";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
@@ -390,8 +391,8 @@ export default function TimeTracking() {
 
       {/* Entry Detail Dialog */}
       <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setEditMode(false); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle className="flex items-center gap-2">
               {editMode ? "Edit Time Entry" : "Time Entry Details"}
               {selectedEntry && duplicateIds.has(selectedEntry.id) && !editMode && (
@@ -401,7 +402,20 @@ export default function TimeTracking() {
               )}
             </DialogTitle>
           </DialogHeader>
-          {selectedEntry && !editMode && (
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 py-4">
+              {/* Route to Life Skills form if entry is life_skills */}
+              {selectedEntry && selectedEntry.entry_type_code === 'life_skills' && editMode && (
+                <StructuredVocRehabForm
+                  entryTypeCode="life_skills"
+                  clientId={selectedEntry.client_id}
+                  entry={selectedEntry}
+                  onSuccess={() => { setSelectedEntry(null); setEditMode(false); handleRefresh(); }}
+                  onCancel={() => { setSelectedEntry(null); setEditMode(false); }}
+                />
+              )}
+              {/* Generic view/edit mode for other entry types */}
+              {selectedEntry && selectedEntry.entry_type_code !== 'life_skills' && !editMode && (
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="space-y-0.5">
@@ -480,7 +494,7 @@ export default function TimeTracking() {
               </div>
             </div>
           )}
-          {selectedEntry && editMode && (
+          {selectedEntry && selectedEntry.entry_type_code !== 'life_skills' && editMode && (
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -553,8 +567,10 @@ export default function TimeTracking() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+             </div>
+           </div>
+         </DialogContent>
+       </Dialog>
+     </div>
+   );
+ }
