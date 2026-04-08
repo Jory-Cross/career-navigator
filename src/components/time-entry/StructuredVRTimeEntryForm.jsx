@@ -13,20 +13,27 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /**
- * StructuredVRTimeEntryForm
+ * StructuredVRTimeEntryForm - Primary Structured VR Entry Experience
  *
- * Fully database-driven form. Loads EntryType and ReportFieldTemplate from DB.
- * Separates internal-only notes from reportable fields.
- * Supports draft save (no validation) and final submit (full validation).
+ * 4-Step database-driven workflow:
+ *   Step 1: Select entry type
+ *   Step 2: Core time entry fields (date, times, client, employee, authorization)
+ *   Step 3: Dynamic reportable fields for that entry type
+ *   Step 4: Review + save (draft or final submit)
  *
- * Core time entry fields (date, duration) are always rendered explicitly —
- * not guessed from field template keys.
+ * Features:
+ * - Database-driven (EntryType, ReportFieldTemplate)
+ * - Separate reportable fields from internal-only notes
+ * - Show whether entry is billable, payroll-eligible, report-ready
+ * - Support Save Draft (no validation) and Final Submit (full validation)
+ * - Create ReportFieldAnswer with schema snapshot metadata
  *
  * Props:
  *   clientId     - required
+ *   clients      - array of Client records for selection
  *   onSuccess(timeEntry, isDraft) - called after save
  */
-export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
+export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSuccess }) {
   const [step, setStep] = useState("select_type");
 
   // Selected entry type
@@ -39,8 +46,20 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
   const [loadingFields, setLoadingFields] = useState(false);
 
   // Core time entry fields (always present, not from templates)
-  const [coreData, setCoreData] = useState({ date: "", duration_hours: "", general_notes: "" });
+  const [coreData, setCoreData] = useState({
+    date: "",
+    start_time: "",
+    end_time: "",
+    duration_hours: "",
+    employee_id: "",
+    location: "",
+    service_authorization_id: entryType?.requires_authorization ? "" : null,
+    employer_name: "",
+    general_notes: ""
+  });
   const [coreErrors, setCoreErrors] = useState({});
+  const [employees, setEmployees] = useState([]);
+  const [authorizations, setAuthorizations] = useState([]);
 
   // Dynamic reportable field answers
   const [answers, setAnswers] = useState({});
@@ -48,13 +67,19 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
 
   const [saving, setSaving] = useState(false);
 
-  // ── Load entry types ──────────────────────────────────────────────────────
+  // ── Load entry types and employees ────────────────────────────────────────
 
   useEffect(() => {
+    // Load entry types
     base44.entities.EntryType.filter({ is_active: true })
       .then(setEntryTypes)
       .catch(() => toast.error("Failed to load entry types"))
       .finally(() => setLoadingTypes(false));
+
+    // Load employees (staff)
+    base44.entities.User.filter({ role: "employee" })
+      .then(setEmployees)
+      .catch(() => setEmployees([]));
   }, []);
 
   useEffect(() => {
@@ -63,11 +88,24 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
     setTemplates([]);
     setAnswers({});
     setFieldErrors({});
+    
+    // Load field templates
     base44.entities.ReportFieldTemplate.filter({ entry_type_id: entryType.id, is_active: true })
       .then(t => setTemplates(t.sort((a, b) => (a.order || 0) - (b.order || 0))))
       .catch(() => toast.error("Failed to load form fields"))
       .finally(() => setLoadingFields(false));
-  }, [entryType?.id]);
+
+    // Load available service authorizations for this entry type
+    if (entryType.requires_authorization && clientId) {
+      base44.entities.ServiceAuthorization.filter({
+        client_id: clientId,
+        entry_type_code: entryType.code,
+        status: "active"
+      })
+        .then(setAuthorizations)
+        .catch(() => setAuthorizations([]));
+    }
+  }, [entryType?.id, clientId]);
 
   // ── Field classification ──────────────────────────────────────────────────
 
@@ -90,8 +128,18 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
   function validateCore() {
     const errs = {};
     if (!coreData.date) errs.date = "Date is required";
-    if (!coreData.duration_hours || isNaN(Number(coreData.duration_hours)) || Number(coreData.duration_hours) <= 0)
-      errs.duration_hours = "Duration must be a positive number";
+    if (!coreData.employee_id) errs.employee_id = "Employee is required";
+    if (!coreData.start_time && !coreData.duration_hours) errs.time = "Either duration or start/end times required";
+    if (coreData.duration_hours) {
+      if (isNaN(Number(coreData.duration_hours)) || Number(coreData.duration_hours) <= 0)
+        errs.duration_hours = "Duration must be a positive number";
+    }
+    if (entryType?.requires_authorization && !coreData.service_authorization_id) {
+      errs.service_authorization_id = "Service authorization required for this entry type";
+    }
+    if (entryType?.requires_employer && !coreData.employer_name) {
+      errs.employer_name = "Employer name required for this entry type";
+    }
     setCoreErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -124,12 +172,22 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
       const reportingPeriodKey = coreData.date ? coreData.date.slice(0, 7) : null;
 
       // 1. Create TimeEntry — dual-write legacy + new schema fields
+      const durationMinutes = coreData.start_time && coreData.end_time
+        ? Math.round(((new Date(`2000-01-01T${coreData.end_time}`) - new Date(`2000-01-01T${coreData.start_time}`)) / 1000) / 60)
+        : Math.round(Number(coreData.duration_hours) * 60);
+
       const timeEntry = await base44.entities.TimeEntry.create({
         // ── Legacy fields ──
         client_id:        clientId,
         date:             coreData.date,
+        start_time:       coreData.start_time || null,
+        end_time:         coreData.end_time || null,
         duration_minutes: durationMinutes,
-        general_notes:    coreData.general_notes || "",
+        location:         coreData.location || null,
+        employee_id:      coreData.employee_id,
+        service_authorization_id: coreData.service_authorization_id || null,
+        employer_name:    coreData.employer_name || null,
+        description:      coreData.general_notes || "",
         // ── New schema fields ──
         entry_type_id:       entryType.id,
         entry_type_code:     entryType.code,
@@ -138,9 +196,7 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
         is_reportable:       entryType.report_mode !== "none",
         is_billable:         entryType.is_billable ?? false,
         is_payroll_eligible: entryType.is_payroll_eligible ?? true,
-        report_ready:        false,
-        // Carry any internal template field extras
-        ...buildInternalExtras()
+        report_ready:        false
       });
 
       // 2. Submit field answers via backend (schema snapshot + validation)
@@ -198,10 +254,22 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
     setStep("select_type");
     setEntryType(null);
     setTemplates([]);
-    setCoreData({ date: "", duration_hours: "", general_notes: "" });
+    setCoreData({
+      date: "",
+      start_time: "",
+      end_time: "",
+      duration_hours: "",
+      employee_id: "",
+      location: "",
+      service_authorization_id: null,
+      employer_name: "",
+      general_notes: ""
+    });
     setCoreErrors({});
     setAnswers({});
     setFieldErrors({});
+    setEmployees([]);
+    setAuthorizations([]);
   }
 
   // ── STEP 1: Select entry type ─────────────────────────────────────────────
@@ -210,12 +278,15 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
     if (loadingTypes) return <LoadingCard label="Loading entry types..." />;
     return (
       <Card className="p-6 space-y-4">
-        <h3 className="font-semibold text-base">Select Entry Type</h3>
+        <div>
+          <h3 className="font-semibold text-base">Step 1 of 4: Select Entry Type</h3>
+          <p className="text-xs text-slate-500 mt-1">What type of service was provided?</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {entryTypes.map(et => (
             <button
               key={et.id}
-              onClick={() => { setEntryType(et); setStep("enter_data"); }}
+              onClick={() => { setEntryType(et); setStep("core_fields"); }}
               className="p-4 text-left rounded-lg border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all"
               style={{ borderColor: et.color ? et.color + "80" : undefined }}
             >
@@ -223,6 +294,10 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
                 <div>
                   <p className="font-semibold text-sm">{et.name}</p>
                   {et.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{et.description}</p>}
+                  <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
+                    {et.is_billable && <Badge className="bg-blue-100 text-blue-700">Billable</Badge>}
+                    {et.is_payroll_eligible && <Badge className="bg-emerald-100 text-emerald-700">Payroll</Badge>}
+                  </div>
                 </div>
                 {et.color && (
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: et.color }} />
@@ -235,81 +310,209 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
     );
   }
 
-  // ── STEP 2: Enter data ────────────────────────────────────────────────────
+  // ── STEP 2: Core fields ───────────────────────────────────────────────────
 
-  if (step === "enter_data") {
-    if (loadingFields) return <LoadingCard label="Loading form fields..." />;
+  if (step === "core_fields") {
     return (
       <Card className="p-6 space-y-5">
-        {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-base">{entryType.name}</h3>
-            {entryType.color && (
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entryType.color }} />
-            )}
+          <div>
+            <h3 className="font-semibold text-base">Step 2 of 4: Time Entry Details</h3>
+            <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+              <span className="font-medium">{entryType.name}</span>
+              {entryType.color && (
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entryType.color }} />
+              )}
+            </p>
           </div>
           <button
-            onClick={resetForm}
+            onClick={() => { setEntryType(null); setStep("select_type"); }}
             className="text-xs text-slate-500 hover:text-slate-800 underline"
           >
             Change Type
           </button>
         </div>
 
-        {/* ── Core Fields (always present) ── */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Time Entry</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Date <span className="text-red-500">*</span></Label>
-              <Input
-                type="date"
-                value={coreData.date}
-                onChange={e => setCoreData(p => ({ ...p, date: e.target.value }))}
-                className={coreErrors.date ? "border-red-500" : ""}
-              />
-              {coreErrors.date && <p className="text-xs text-red-500">{coreErrors.date}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Duration (hours) <span className="text-red-500">*</span></Label>
-              <Input
-                type="number"
-                step="0.25"
-                min="0"
-                placeholder="e.g. 1.5"
-                value={coreData.duration_hours}
-                onChange={e => setCoreData(p => ({ ...p, duration_hours: e.target.value }))}
-                className={coreErrors.duration_hours ? "border-red-500" : ""}
-              />
-              {coreErrors.duration_hours && <p className="text-xs text-red-500">{coreErrors.duration_hours}</p>}
-            </div>
+        {/* Client (always shown) */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Client <span className="text-red-500">*</span></Label>
+          <div className="p-2.5 bg-slate-50 rounded-lg text-sm text-slate-600">
+            {clients.find(c => c.id === clientId)?.first_name} {clients.find(c => c.id === clientId)?.last_name}
           </div>
         </div>
 
-        {/* ── Reportable Fields (from ReportFieldTemplate, grouped by section) ── */}
-        {Object.entries(groupedReportable).map(([section, sectionFields]) => (
-          <div key={section} className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{section}</h4>
-            <div className="space-y-3">
-              {sectionFields.map(f => (
-                <FieldInput
-                  key={f.id}
-                  field={f}
-                  value={answers[f.field_key] ?? ""}
-                  error={fieldErrors[f.field_key]}
-                  onChange={val => {
-                    setAnswers(p => ({ ...p, [f.field_key]: val }));
-                    if (fieldErrors[f.field_key]) setFieldErrors(p => ({ ...p, [f.field_key]: null }));
-                  }}
-                />
+        {/* Employee */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Employee <span className="text-red-500">*</span></Label>
+          <Select value={coreData.employee_id} onValueChange={val => setCoreData(p => ({ ...p, employee_id: val }))}>
+            <SelectTrigger className={coreErrors.employee_id ? "border-red-500" : ""}>
+              <SelectValue placeholder="Select employee..." />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map(emp => (
+                <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          {coreErrors.employee_id && <p className="text-xs text-red-500">{coreErrors.employee_id}</p>}
+        </div>
+
+        {/* Service Authorization (if required) */}
+        {entryType?.requires_authorization && (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Service Authorization <span className="text-red-500">*</span></Label>
+            <Select value={coreData.service_authorization_id || ""} onValueChange={val => setCoreData(p => ({ ...p, service_authorization_id: val }))}>
+              <SelectTrigger className={coreErrors.service_authorization_id ? "border-red-500" : ""}>
+                <SelectValue placeholder="Select authorization..." />
+              </SelectTrigger>
+              <SelectContent>
+                {authorizations.map(auth => (
+                  <SelectItem key={auth.id} value={auth.id}>
+                    {auth.authorization_number} - {auth.job_goal}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {coreErrors.service_authorization_id && <p className="text-xs text-red-500">{coreErrors.service_authorization_id}</p>}
+          </div>
+        )}
+
+        {/* Date, Start Time, End Time, Location */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Date <span className="text-red-500">*</span></Label>
+            <Input
+              type="date"
+              value={coreData.date}
+              onChange={e => setCoreData(p => ({ ...p, date: e.target.value }))}
+              className={coreErrors.date ? "border-red-500" : ""}
+            />
+            {coreErrors.date && <p className="text-xs text-red-500">{coreErrors.date}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Location</Label>
+            <Input
+              value={coreData.location}
+              onChange={e => setCoreData(p => ({ ...p, location: e.target.value }))}
+              placeholder="e.g. Client's workplace"
+            />
+          </div>
+        </div>
+
+        {/* Duration: Start/End Time OR Hours */}
+        <div className="space-y-2 p-3 bg-slate-50 rounded-lg">
+          <p className="text-xs font-medium text-slate-600">Duration</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-600">Start Time</Label>
+              <Input
+                type="time"
+                value={coreData.start_time}
+                onChange={e => setCoreData(p => ({ ...p, start_time: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-600">End Time</Label>
+              <Input
+                type="time"
+                value={coreData.end_time}
+                onChange={e => setCoreData(p => ({ ...p, end_time: e.target.value }))}
+              />
             </div>
           </div>
-        ))}
+          <p className="text-xs text-slate-400">OR</p>
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-600">Duration (hours)</Label>
+            <Input
+              type="number"
+              step="0.25"
+              min="0"
+              placeholder="e.g. 1.5"
+              value={coreData.duration_hours}
+              onChange={e => setCoreData(p => ({ ...p, duration_hours: e.target.value }))}
+              className={coreErrors.duration_hours ? "border-red-500" : ""}
+            />
+            {coreErrors.duration_hours && <p className="text-xs text-red-500">{coreErrors.duration_hours}</p>}
+          </div>
+        </div>
 
-        {/* ── Internal Notes (not in report) ── */}
-        <div className="space-y-2 pt-1 border-t border-dashed border-slate-200">
+        {/* Employer (if required) */}
+        {entryType?.requires_employer && (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Employer <span className="text-red-500">*</span></Label>
+            <Input
+              value={coreData.employer_name}
+              onChange={e => setCoreData(p => ({ ...p, employer_name: e.target.value }))}
+              placeholder="Employer name"
+              className={coreErrors.employer_name ? "border-red-500" : ""}
+            />
+            {coreErrors.employer_name && <p className="text-xs text-red-500">{coreErrors.employer_name}</p>}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex gap-2 pt-2 border-t border-slate-200">
+          <Button variant="outline" onClick={() => { setEntryType(null); setStep("select_type"); }} className="flex-none">
+            Back
+          </Button>
+          <Button
+            onClick={() => {
+              if (validateCore()) setStep("dynamic_fields");
+            }}
+            className="flex-1"
+          >
+            Next <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  // ── STEP 3: Dynamic reportable fields ────────────────────────────────────
+
+  if (step === "dynamic_fields") {
+    if (loadingFields) return <LoadingCard label="Loading form fields..." />;
+    return (
+      <Card className="p-6 space-y-5">
+        <div>
+          <h3 className="font-semibold text-base">Step 3 of 4: Service Details</h3>
+          <p className="text-xs text-slate-500 mt-1">Complete any additional required fields for this service type</p>
+        </div>
+
+        {/* Reportable Fields (from ReportFieldTemplate, grouped by section) */}
+        {reportableFields.length === 0 ? (
+          <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-600 text-center">
+            No additional fields required for <strong>{entryType.name}</strong>
+          </div>
+        ) : (
+          Object.entries(groupedReportable).map(([section, sectionFields]) => (
+            <div key={section} className="space-y-3 pb-3 border-b border-slate-100 last:border-0">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{section}</h4>
+                <span className="text-xs text-slate-400">
+                  {sectionFields.filter(f => f.is_required).length > 0 && "(includes required fields)"}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {sectionFields.map(f => (
+                  <FieldInput
+                    key={f.id}
+                    field={f}
+                    value={answers[f.field_key] ?? ""}
+                    error={fieldErrors[f.field_key]}
+                    onChange={val => {
+                      setAnswers(p => ({ ...p, [f.field_key]: val }));
+                      if (fieldErrors[f.field_key]) setFieldErrors(p => ({ ...p, [f.field_key]: null }));
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* Internal Notes (not in report) */}
+        <div className="space-y-2 pt-2">
           <div className="flex items-center gap-1.5">
             <Lock className="w-3 h-3 text-slate-400" />
             <h4 className="text-xs font-medium text-slate-400">Internal Notes (not included in reports)</h4>
@@ -322,7 +525,7 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
           />
         </div>
 
-        {/* ── Completion indicator ── */}
+        {/* Completion indicator */}
         {reportableFields.length > 0 && (
           <CompletionBar
             reportableFields={reportableFields}
@@ -330,10 +533,110 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
           />
         )}
 
-        {/* ── Actions ── */}
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={resetForm} className="flex-none">
-            Cancel
+        {/* Navigation */}
+        <div className="flex gap-2 pt-2 border-t border-slate-200">
+          <Button variant="outline" onClick={() => setStep("core_fields")} className="flex-none">
+            Back
+          </Button>
+          <Button
+            onClick={() => setStep("review")}
+            className="flex-1"
+          >
+            Review <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  // ── STEP 4: Review + Save ─────────────────────────────────────────────────
+
+  if (step === "review") {
+    const reportable = reportableFields.filter(f => !INTERNAL_KEYS.has(f.field_key));
+    const requiredFields = reportable.filter(f => f.is_required);
+    const completedRequired = requiredFields.filter(f => answers[f.field_key]);
+    const reportReady = completedRequired.length === requiredFields.length;
+
+    return (
+      <Card className="p-6 space-y-5">
+        <div>
+          <h3 className="font-semibold text-base">Step 4 of 4: Review & Submit</h3>
+          <p className="text-xs text-slate-500 mt-1">Verify your entry before submitting</p>
+        </div>
+
+        {/* Entry Status Summary */}
+        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-blue-900">{entryType.name}</span>
+            <div className="flex gap-1">
+              {entryType.is_billable && <Badge className="bg-blue-600 text-white text-xs">Billable</Badge>}
+              {entryType.is_payroll_eligible && <Badge className="bg-emerald-600 text-white text-xs">Payroll</Badge>}
+              {entryType.report_mode !== "none" && <Badge className="bg-purple-600 text-white text-xs">Reportable</Badge>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+            <div>
+              <p className="font-medium">Date</p>
+              <p>{coreData.date}</p>
+            </div>
+            <div>
+              <p className="font-medium">Duration</p>
+              <p>
+                {coreData.start_time && coreData.end_time
+                  ? `${coreData.start_time} - ${coreData.end_time}`
+                  : `${coreData.duration_hours} hours`
+                }
+              </p>
+            </div>
+            {coreData.location && (
+              <div className="col-span-2">
+                <p className="font-medium">Location</p>
+                <p>{coreData.location}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Fields Summary */}
+        {reportable.length > 0 && (
+          <div className="space-y-3 border-t pt-4">
+            <h4 className="text-xs font-semibold text-slate-600">Submitted Fields</h4>
+            <div className="space-y-2">
+              {reportable.filter(f => answers[f.field_key]).map(f => (
+                <div key={f.id} className="flex justify-between text-xs py-1.5 px-2 bg-slate-50 rounded">
+                  <span className="font-medium text-slate-700">{f.label}</span>
+                  <span className="text-slate-600 text-right max-w-xs truncate">{String(answers[f.field_key])}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Report Ready Status */}
+        <div className={cn("p-3 rounded-lg border", reportReady ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200")}>
+          <div className="flex items-start gap-2">
+            {reportReady ? (
+              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <p className={cn("text-sm font-medium", reportReady ? "text-green-800" : "text-amber-800")}>
+                {reportReady ? "Report Ready" : "Not Yet Report Ready"}
+              </p>
+              {!reportReady && requiredFields.length > 0 && (
+                <p className="text-xs text-amber-700 mt-1">
+                  Missing: {requiredFields.filter(f => !answers[f.field_key]).map(f => f.label).join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-2 border-t border-slate-200">
+          <Button variant="outline" onClick={() => setStep("dynamic_fields")} className="flex-none">
+            Back
           </Button>
           <Button
             variant="outline"
@@ -341,15 +644,15 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
             disabled={saving}
             className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-50"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
             Save Draft
           </Button>
           <Button
             onClick={() => save(false)}
-            disabled={saving}
+            disabled={saving || (reportable.length > 0 && !reportReady)}
             className="flex-1"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
             Submit Entry
           </Button>
         </div>
