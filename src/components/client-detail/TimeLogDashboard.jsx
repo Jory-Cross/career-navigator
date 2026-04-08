@@ -574,16 +574,18 @@ export default function TimeLogDashboard({
                         toast.success("Entry updated");
                       } else {
                         // Create new entry
+                        const currentUser = await base44.auth.me();
                         const createData = {
                           ...updateData,
                           client_id: clientId,
+                          employee_id: currentUser?.id,
                           status: "submitted",
                           is_reportable: true,
                           is_billable: false,
                           is_payroll_eligible: true,
-                          reporting_period_key: payload.date.substring(0, 7)
+                          reporting_period_key: payload.date ? payload.date.substring(0, 7) : null
                         };
-                        console.log("[TimeLogDashboard] Creating new entry with data:", createData);
+                        console.log("[TimeLogDashboard] Creating TimeEntry with payload:", createData);
                         await base44.entities.TimeEntry.create(createData);
                         console.log("[TimeLogDashboard] Create successful");
                         toast.success("Entry created");
