@@ -18,7 +18,7 @@ export const FORM_SCHEMAS = {
     { key: "observations_comments", label: "Observations & Comments", type: "textarea", required: false },
   ],
 
-  voc_rehab_dynamic: [], // Placeholder - will be loaded from ReportFieldTemplate
+  voc_rehab: [], // Placeholder - always loaded from ReportFieldTemplate for job_coaching, job_development, usor96
 };
 
 export function getSchema(schemaKey) {
@@ -36,6 +36,11 @@ export async function loadVocRehabSchema(entryTypeCode) {
       pdf_context: "row",
       is_internal_only: false
     });
+
+    if (!templates.length) {
+      console.warn(`No ReportFieldTemplate found for ${entryTypeCode}`);
+      return [];
+    }
 
     return templates
       .sort((a, b) => (a.order || 0) - (b.order || 0))

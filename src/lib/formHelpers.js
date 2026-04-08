@@ -26,12 +26,14 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
     form_data: formData,
   };
 
+  // Standard fields
   if (formData.date) topLevel.date = formData.date;
   if (formData.description) topLevel.description = formData.description;
   if (formData.duration) topLevel.duration = formData.duration;
   if (formData.start_time) topLevel.start_time = formData.start_time;
   if (formData.end_time) topLevel.end_time = formData.end_time;
 
+  // Life skills field mappings
   if (formData.billable_service_date && !topLevel.date) {
     topLevel.date = formData.billable_service_date;
   }
@@ -44,8 +46,14 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
     topLevel.description = formData.activity_description;
   }
 
+  // Voc Rehab field mappings
+  if (formData.coaching_date && !topLevel.date) {
+    topLevel.date = formData.coaching_date;
+  }
+
   if (formData.hours && !topLevel.duration) {
-    topLevel.duration = formData.hours;
+    // Convert hours to minutes for duration_minutes
+    topLevel.duration = parseInt(formData.hours) * 60;
   }
 
   if (formData.activity && !topLevel.description) {

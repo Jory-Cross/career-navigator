@@ -7,7 +7,13 @@ const SIMPLE_TYPES = [
   "work_based_learning",
 ];
 
-export function validateEntryForm(entryTypeCode, formData) {
+const VOC_REHAB_TYPES = [
+  "job_coaching",
+  "job_development",
+  "usor96",
+];
+
+export function validateEntryForm(entryTypeCode, formData, schema = []) {
   if (!formData) return "Form data is missing.";
 
   if (SIMPLE_TYPES.includes(entryTypeCode)) {
@@ -28,14 +34,22 @@ export function validateEntryForm(entryTypeCode, formData) {
     if (!formData.activity_description?.trim()) return "Activity Description is required.";
   }
 
-  if (
-    entryTypeCode === "job_coaching" ||
-    entryTypeCode === "job_development" ||
-    entryTypeCode === "usor96"
-  ) {
-    if (!formData.date) return "Date is required.";
-    if (!formData.hours) return "Hours is required.";
-    if (!formData.activity?.trim()) return "Activity is required.";
+  if (VOC_REHAB_TYPES.includes(entryTypeCode)) {
+    // For voc_rehab types, validate required fields from schema
+    if (schema && schema.length > 0) {
+      for (const field of schema) {
+        if (field.required) {
+          const value = formData[field.key];
+          if (!value || (typeof value === "string" && !value.trim())) {
+            return `${field.label} is required.`;
+          }
+        }
+      }
+    } else {
+      // Fallback validation if schema not provided
+      if (!formData.date) return "Date is required.";
+      if (!formData.hours) return "Hours is required.";
+    }
   }
 
   return null;

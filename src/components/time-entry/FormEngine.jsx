@@ -20,15 +20,14 @@ export default function FormEngine({
   // Load schema, with dynamic loading for voc_rehab types
   useEffect(() => {
     const loadSchema = async () => {
-      const baseSchema = getSchemaForEntryType(entryTypeCode);
-      
-      // For voc_rehab-like entry types, load from ReportFieldTemplate
-      if (config?.schemaKey === "voc_rehab_dynamic" || !baseSchema.length) {
+      // For voc_rehab entry types (job_coaching, job_development, usor96), always load from ReportFieldTemplate
+      if (config?.schemaKey === "voc_rehab") {
         setLoading(true);
         const dynamicSchema = await loadVocRehabSchema(entryTypeCode);
         setSchema(dynamicSchema);
         setLoading(false);
       } else {
+        const baseSchema = getSchemaForEntryType(entryTypeCode);
         setSchema(baseSchema);
       }
     };

@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
 import FieldRenderer from "./FieldRenderer";
 import { buildInitialFormData, normalizeTopLevelFields } from "@/lib/formHelpers";
 import { validateEntryForm } from "@/lib/validationRules";
+import { base44 } from "@/api/base44Client";
 
 export default function DynamicEntryForm({
   entryTypeCode,
@@ -17,6 +18,18 @@ export default function DynamicEntryForm({
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [entryTypeObj, setEntryTypeObj] = useState(null);
+
+  // Resolve entry type object to get id
+  useEffect(() => {
+    base44.entities.EntryType.filter({ code: entryTypeCode, is_active: true })
+      .then(results => {
+        if (results.length > 0) {
+          setEntryTypeObj(results[0]);
+        }
+      })
+      .catch(err => console.error("Failed to load entry type:", err));
+  }, [entryTypeCode]);
 
   function handleChange(key, value) {
     setFormData((prev) => ({
@@ -28,7 +41,7 @@ export default function DynamicEntryForm({
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const validationError = validateEntryForm(entryTypeCode, formData);
+    const validationError = validateEntryForm(entryTypeCode, formData, schema);
     if (validationError) {
       setError(validationError);
       return;
@@ -39,6 +52,13 @@ export default function DynamicEntryForm({
 
     try {
       const payload = normalizeTopLevelFields(entryTypeCode, formData);
+
+      // Add entry type metadata
+      if (entryTypeObj) {
+        payload.entry_type_id = entryTypeObj.id;
+      }
+      payload.category = entryTypeObj?.category || "structured";
+      payload.legacy_category = entryTypeObj?.legacy_category || null;
 
       if (entry?.id) {
         payload.id = entry.id;
