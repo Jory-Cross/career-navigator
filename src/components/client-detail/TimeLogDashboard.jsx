@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
+import { saveTimeEntry } from "@/lib/saveTimeEntry";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -544,103 +545,23 @@ export default function TimeLogDashboard({
                 }
 
                 const handleFormSave = async (payload) => {
-                   console.log("[TimeLogDashboard] === FORM SAVE START ===");
-                   console.log("[TimeLogDashboard] Incoming payload:", JSON.stringify(payload, null, 2));
-
                    try {
-                      // Extract duration in minutes from multiple possible fields
-                      let durationMinutes = payload.duration_minutes || payload.duration || 0;
-
-                      // For structured forms, extract hours from form_data and convert to minutes
-                      if (durationMinutes === 0 && payload.form_data) {
-                        const hours = payload.form_data.jc_hours || payload.form_data.jd_hours || 
-                                     payload.form_data.development_hours || payload.form_data.ls_hours;
-                        if (hours) {
-                          durationMinutes = parseFloat(hours) * 60;
-                        }
-                      }
-
-                      // For structured forms, extract date from form_data
-                      let dateValue = payload.date;
-                      if (!dateValue && payload.form_data) {
-                        // Check for common date field names and prefixes
-                        dateValue = payload.form_data.jc_date || payload.form_data.jd_date || 
-                                   payload.form_data.development_date || payload.form_data.ls_date;
-                      }
-
-                      console.log("[TimeLogDashboard] Duration minutes:", durationMinutes);
-                      console.log("[TimeLogDashboard] Date:", dateValue);
-                      console.log("[TimeLogDashboard] Entry type code:", payload.entry_type_code);
-
-                      // Validate required fields
-                      if (!dateValue) throw new Error("Missing date");
-                      if (!durationMinutes) throw new Error("Missing duration");
-                      const entryTypeCode = payload.entry_type_code || activeEntryTypeCode;
-                      if (!entryTypeCode) throw new Error("Missing entry type");
-
-                      // Build form_data: use payload.form_data if present, otherwise extract non-reserved keys
-                      const reservedKeys = new Set([
-                        "date", "duration", "duration_minutes", "description", "entry_type_code",
-                        "start_time", "end_time", "client_id", "employee_id", "status",
-                        "is_reportable", "is_billable", "is_payroll_eligible", "reporting_period_key",
-                        "entry_type_id", "category", "legacy_category"
-                      ]);
-
-                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
-                        ? payload.form_data
-                        : Object.fromEntries(
-                            Object.entries(payload).filter(([key]) => !reservedKeys.has(key))
-                          );
-
-                      console.log("[TimeLogDashboard] Derived form_data:", derivedFormData);
-
-                      const updateData = {
-                        date: dateValue,
-                        duration_minutes: durationMinutes,
-                        description: payload.description,
-                        entry_type_code: entryTypeCode,
-                        start_time: payload.start_time || null,
-                        end_time: payload.end_time || null,
-                        form_data: derivedFormData
-                      };
-
-                      console.log("[TimeLogDashboard] Update/create data:", updateData);
-
-                      if (editingEntry?.id) {
-                        // Update existing entry
-                        console.log("[TimeLogDashboard] Updating entry:", editingEntry.id);
-                        await base44.entities.TimeEntry.update(editingEntry.id, updateData);
-                        console.log("[TimeLogDashboard] Update successful");
-                        toast.success("Entry updated");
-                      } else {
-                        // Create new entry
-                        const currentUser = await base44.auth.me();
-                        const createData = {
-                          ...updateData,
-                          client_id: clientId,
-                          employee_id: currentUser?.id,
-                          status: "submitted",
-                          is_reportable: true,
-                          is_billable: false,
-                          is_payroll_eligible: true,
-                          reporting_period_key: payload.date ? payload.date.substring(0, 7) : null
-                        };
-                        console.log("[TimeLogDashboard] Creating TimeEntry with payload:", createData);
-                        await base44.entities.TimeEntry.create(createData);
-                        console.log("[TimeLogDashboard] Create successful");
-                        toast.success("Entry created");
-                      }
-                      setShowForm(false);
-                      setEditingEntry(null);
-                      setSelectedEntryTypeCode("");
-                      onRefresh();
-                    } catch (err) {
-                      console.error("[TimeLogDashboard] Full error object:", err);
-                      console.error("[TimeLogDashboard] Error message:", err?.message);
-                      console.error("[TimeLogDashboard] Error status:", err?.status);
-                      toast.error(err?.message || "Failed to save entry");
-                    }
-                  };
+                     await saveTimeEntry({
+                       payload: {
+                         ...payload,
+                         entry_type_code: payload.entry_type_code || activeEntryTypeCode
+                       },
+                       existingEntry: editingEntry,
+                       clientId
+                     });
+                     setShowForm(false);
+                     setEditingEntry(null);
+                     setSelectedEntryTypeCode("");
+                     onRefresh();
+                   } catch (err) {
+                     toast.error(err?.message || "Failed to save entry");
+                   }
+                 };
 
                 return (
                   <FormEngine

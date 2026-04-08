@@ -11,6 +11,7 @@ import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plu
 import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
+import { saveTimeEntry } from "@/lib/saveTimeEntry";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
@@ -501,118 +502,18 @@ export default function TimeTracking() {
                   mode="edit"
                   onSave={async (payload) => {
                     try {
-                      console.log("[TimeTracking] Edit save payload:", payload);
-
-                      const normalizeDate = (value) => {
-                        if (!value) return value;
-                        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-
-                        const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                        if (m) {
-                          const [, mm, dd, yyyy] = m;
-                          return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-                        }
-
-                        return value;
-                      };
-
-                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
-                      console.log("[TimeTracking] Raw payload.date:", payload.date);
-                      console.log("[TimeTracking] payload.form_data:", payload.form_data);
-
-                      let dateValue = normalizeDate(payload.date);
-
-                      if (!dateValue && payload.form_data) {
-                        dateValue =
-                          payload.form_data.jc_date ||
-                          payload.form_data.jd_date ||
-                          payload.form_data.development_date ||
-                          payload.form_data.ls_date ||
-                          payload.form_data.coaching_date ||
-                          payload.form_data.job_dev_date ||
-                          null;
-
-                        dateValue = normalizeDate(dateValue);
-                      }
-
-                      console.log("[TimeTracking] Normalized dateValue:", dateValue);
-                      const entryTypeCode = payload.entry_type_code || selectedEntry.entry_type_code;
-                      console.log("[TimeTracking] Final derived dateValue:", dateValue);
-
-                      if (!dateValue) {
-                        throw new Error("Missing date");
-                      }
-
-                      if (!durationMinutes) {
-                        throw new Error("Missing duration");
-                      }
-
-                      const reservedKeys = new Set([
-                        "id",
-                        "date",
-                        "duration",
-                        "duration_minutes",
-                        "description",
-                        "entry_type_code",
-                        "start_time",
-                        "end_time",
-                        "client_id",
-                        "employee_id",
-                        "status",
-                        "is_reportable",
-                        "is_billable",
-                        "is_payroll_eligible",
-                        "reporting_period_key",
-                        "entry_type_id",
-                        "category",
-                        "legacy_category",
-                        "created_date",
-                        "updated_date"
-                      ]);
-
-                      const topLevelDynamicFields = Object.fromEntries(
-                        Object.entries(payload).filter(([key, value]) =>
-                          !reservedKeys.has(key) && value !== undefined
-                        )
-                      );
-
-                      const derivedFormData = {
-                        ...(selectedEntry?.form_data || {}),
-                        ...topLevelDynamicFields,
-                        ...(payload.form_data || {})
-                      };
-
-                      console.log("[TimeTracking] topLevelDynamicFields:", topLevelDynamicFields);
-                      console.log("[TimeTracking] merged derivedFormData:", derivedFormData);
-
-                      const updateData = {
-                        date: dateValue,
-                        duration_minutes: durationMinutes,
-                        description: payload.description,
-                        entry_type_code: entryTypeCode,
-                        start_time: payload.start_time || null,
-                        end_time: payload.end_time || null,
-                        form_data: derivedFormData
-                      };
-
-                      console.log("[TimeTracking] Edit updateData:", updateData);
-                      console.log("[TimeTracking] Editing entry ID:", selectedEntry?.id);
-
-                      console.log("[TimeTracking] About to call TimeEntry.update");
-                      await base44.entities.TimeEntry.update(selectedEntry.id, updateData);
-                      console.log("[TimeTracking] TimeEntry.update resolved successfully");
-
-                      const updated = await base44.entities.TimeEntry.get(selectedEntry.id);
-                      console.log("[TimeTracking] Fresh record after update:", updated);
-
-                      toast.success("Entry updated");
+                      await saveTimeEntry({
+                        payload: {
+                          ...payload,
+                          entry_type_code: payload.entry_type_code || selectedEntry.entry_type_code
+                        },
+                        existingEntry: selectedEntry,
+                        clientId: selectedEntry?.client_id || null
+                      });
                       setShowEditForm(false);
                       setSelectedEntry(null);
                       handleRefresh();
                     } catch (err) {
-                      console.error("[TimeTracking] Edit save failed:", err);
-                      console.error("[TimeTracking] Message:", err?.message);
-                      console.error("[TimeTracking] Status:", err?.status);
                       toast.error(err?.message || "Failed to update entry");
                     }
                   }}
