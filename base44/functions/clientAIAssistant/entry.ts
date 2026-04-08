@@ -34,7 +34,27 @@ Deno.serve(async (req) => {
       response_json_schema: responseSchema
     });
 
-    return Response.json({ success: true, data: result, action });
+    // Build metadata about what data sources were used
+    const dataSourcesUsed = [];
+    if (vocationalFacts) dataSourcesUsed.push('vocational_facts_profile');
+    if (assessments.length > 0) dataSourcesUsed.push(`${assessments.length} assessment(s)`);
+    if (goals.length > 0) dataSourcesUsed.push('goals');
+    if (notes.length > 0) dataSourcesUsed.push('support_notes');
+    if (applications.length > 0) dataSourcesUsed.push('job_applications');
+    if (timeEntries.length > 0) dataSourcesUsed.push('time_entries');
+    if (documents.length > 0) dataSourcesUsed.push('documents');
+
+    return Response.json({
+      success: true,
+      data: result,
+      action,
+      metadata: {
+        assessments_used: assessments.map(a => a.id),
+        client_fields_used: Object.keys(client).filter(k => client[k]),
+        data_sources_used: dataSourcesUsed,
+        timestamp: new Date().toISOString()
+      }
+    });
 
   } catch (error) {
     console.error('clientAIAssistant error:', error.message);
@@ -46,27 +66,18 @@ Deno.serve(async (req) => {
 // Loads only what each action needs. Avoids fetching time entries for email drafts, etc.
 
 async function loadClientContext(base44, clientId, action) {
-  const needsApplications = ['summarize', 'suggest_tasks', 'coaching_recommendations', 'engagement_insights'].includes(action);
-  const needsAssessments  = ['summarize', 'coaching_recommendations'].includes(action);
-  const needsNotes        = ['summarize', 'suggest_tasks', 'engagement_insights'].includes(action);
-  const needsGoals        = ['summarize', 'coaching_recommendations', 'suggest_tasks'].includes(action);
-  const needsTimeEntries  = ['engagement_insights', 'coaching_recommendations'].includes(action);
-
-  const fetches = {
-    client:       base44.entities.Client.filter({ id: clientId }).then(r => r[0] || null),
-    goals:        needsGoals        ? base44.entities.Goal.filter({ client_id: clientId }) : Promise.resolve([]),
-    assessments:  needsAssessments  ? base44.entities.Assessment.filter({ client_id: clientId }, '-created_date', 5) : Promise.resolve([]),
-    applications: needsApplications ? base44.entities.JobApplication.filter({ client_id: clientId }, '-created_date', 10) : Promise.resolve([]),
-    notes:        needsNotes        ? base44.entities.SupportNote.filter({ client_id: clientId }, '-created_date', 8) : Promise.resolve([]),
-    timeEntries:  needsTimeEntries  ? base44.entities.TimeEntry.filter({ client_id: clientId }, '-date', 20) : Promise.resolve([]),
-  };
-
-  const [client, goals, assessments, applications, notes, timeEntries] = await Promise.all([
-    fetches.client, fetches.goals, fetches.assessments,
-    fetches.applications, fetches.notes, fetches.timeEntries
+  // Load full context upfront for all actions — allows consistent data tracking
+  const [client, goals, assessments, applications, notes, timeEntries, documents] = await Promise.all([
+    base44.entities.Client.filter({ id: clientId }).then(r => r[0] || null),
+    base44.entities.Goal.filter({ client_id: clientId }),
+    base44.entities.Assessment.filter({ client_id: clientId }, '-created_date', 10),
+    base44.entities.JobApplication.filter({ client_id: clientId }, '-created_date', 15),
+    base44.entities.SupportNote.filter({ client_id: clientId }, '-created_date', 15),
+    base44.entities.TimeEntry.filter({ client_id: clientId }, '-date', 30).catch(() => []),
+    base44.entities.Document.filter({ client_id: clientId }).catch(() => []),
   ]);
 
-  return { client, goals, assessments, applications, notes, timeEntries };
+  return { client, goals, assessments, applications, notes, timeEntries, documents };
 }
 
 // ─── Grounding Payload Builders ───────────────────────────────────────────────
@@ -138,10 +149,16 @@ function buildTimeEntrySummary(timeEntries) {
 // ─── Prompt Builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(action, context, body) {
-  const { client, goals, assessments, applications, notes, timeEntries } = context;
+  const { client, goals, assessments, applications, notes, timeEntries, documents } = context;
 
   const clientCore       = buildClientCore(client);
   const vocationalFacts  = buildVocationalFacts(client);
+
+  // Track which data sources are actually used for this action
+  const dataSourcesUsed = [];
+  const trackSource = (source, hasData) => {
+    if (hasData) dataSourcesUsed.push(source);
+  };
 
   if (action === 'summarize') {
     const payload = {
@@ -315,10 +332,21 @@ Provide:
 // ─── Structured Save Actions ───────────────────────────────────────────────────
 
 async function saveCoachingPlan(base44, user, clientId, body) {
-  const { coaching_priorities, job_search_strategy, recommended_accommodations, skill_gaps, next_session_focus } = body;
+  const {
+    coaching_priorities,
+    job_search_strategy,
+    recommended_accommodations,
+    skill_gaps,
+    next_session_focus,
+    assessments_used = [],
+    client_fields_used = [],
+    data_sources_used = []
+  } = body;
+
+  const savedAt = new Date().toISOString();
+  const savedGoals = [];
 
   // Store as structured Goal records instead of a raw file blob
-  const savedGoals = [];
   if (coaching_priorities?.length) {
     for (const priority of coaching_priorities.slice(0, 3)) {
       const g = await base44.asServiceRole.entities.Goal.create({
@@ -326,7 +354,7 @@ async function saveCoachingPlan(base44, user, clientId, body) {
         title: priority,
         category: 'employment',
         status: 'in_progress',
-        progress_notes: `AI coaching priority — ${new Date().toLocaleDateString()}`
+        progress_notes: `AI coaching priority (${new Date().toLocaleDateString()}) — grounded in: ${data_sources_used.join(', ')}`
       });
       savedGoals.push(g.id);
     }
@@ -341,6 +369,7 @@ async function saveCoachingPlan(base44, user, clientId, body) {
       job_search_strategy ? `Job Search Strategy: ${job_search_strategy}` : null,
       skill_gaps?.length ? `Skill Gaps: ${skill_gaps.join(', ')}` : null,
       recommended_accommodations?.length ? `Accommodations: ${recommended_accommodations.join(', ')}` : null,
+      data_sources_used.length > 0 ? `\nGenerated using: ${data_sources_used.join(', ')}` : null
     ].filter(Boolean).join('\n\n'),
     date: new Date().toISOString().split('T')[0],
     follow_up_required: !!next_session_focus,
@@ -362,37 +391,96 @@ async function saveCoachingPlan(base44, user, clientId, body) {
     taskId = task.id;
   }
 
+  // Log the plan creation with metadata
+  await base44.asServiceRole.entities.Activity.create({
+    client_id: clientId,
+    activity_type: 'note_added',
+    title: `AI Coaching Plan Created — ${coaching_priorities?.length || 0} priorities`,
+    description: `${coaching_priorities?.length || 0} coaching priorities generated by ${user.email}. Data sources: ${data_sources_used.join(', ')}`,
+    metadata: {
+      created_at: savedAt,
+      created_by: user.email,
+      assessments_used: assessments_used,
+      client_fields_used: client_fields_used,
+      data_sources_used: data_sources_used,
+      goal_ids: savedGoals,
+      note_id: planNote.id,
+      task_id: taskId
+    }
+  });
+
   return Response.json({
     success: true,
     message: 'Coaching plan saved as goals, support note, and task',
     note_id: planNote.id,
     goal_ids: savedGoals,
-    task_id: taskId
+    task_id: taskId,
+    metadata: {
+      assessments_used: assessments_used,
+      client_fields_used: client_fields_used,
+      data_sources_used: data_sources_used
+    }
   });
 }
 
 async function saveJobRecommendations(base44, user, clientId, body) {
-  const { job_recommendations, source_search_batch_id } = body;
+  const {
+    job_recommendations,
+    source_search_batch_id,
+    assessments_used = [],
+    client_fields_used = [],
+    search_terms_used = [],
+    data_sources_used = [],
+    data_basis = ''
+  } = body;
+
   const batchId = source_search_batch_id || `batch_${Date.now()}`;
+  const savedAt = new Date().toISOString();
   const saved = [];
 
   for (const job of (job_recommendations || [])) {
+    const fitReason = job.data_basis ? `${job.why_fit}\n\nData basis: ${job.data_basis}` : job.why_fit;
+
     const rec = await base44.asServiceRole.entities.JobRecommendation.create({
       client_id: clientId,
+      batch_id: batchId,
+      source_search_batch_id: batchId,
       job_title: job.job_title,
       employer: job.employer || 'To be researched',
-      fit_reason: job.why_fit,
+      location: job.location || '',
+      pay: job.pay || '',
+      schedule: job.schedule || '',
+      source_url: job.source_url || '',
+      fit_reason: fitReason,
       fit_score: job.fit_score || 75,
       status: 'suggested',
       generated_by_ai: true,
       generated_by: user.email,
       reviewed_by_staff: false,
-      batch_id: batchId,
-      source_search_batch_id: batchId,
-      client_fields_used: ['vocational_facts_profile', 'goals']
+      assessments_used: assessments_used,
+      client_fields_used: client_fields_used,
+      search_terms_used: search_terms_used
     });
     saved.push(rec);
   }
+
+  // Persist batch metadata as Activity
+  await base44.asServiceRole.entities.Activity.create({
+    client_id: clientId,
+    activity_type: 'note_added',
+    title: `AI Coaching Job Recommendations — ${saved.length} jobs`,
+    description: `${saved.length} AI-generated recommendations from ${user.full_name || user.email}. Data sources: ${data_sources_used.join(', ')}`,
+    metadata: {
+      batch_id: batchId,
+      created_at: savedAt,
+      created_by: user.email,
+      job_count: saved.length,
+      assessments_used: assessments_used,
+      client_fields_used: client_fields_used,
+      search_terms_used: search_terms_used,
+      data_sources_used: data_sources_used
+    }
+  });
 
   return Response.json({ success: true, saved_count: saved.length, batch_id: batchId, data: saved });
 }
