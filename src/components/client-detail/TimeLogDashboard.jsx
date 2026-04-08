@@ -13,9 +13,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
-import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
-import Usor96Launcher from "@/components/time-entry/Usor96Launcher";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -218,14 +216,6 @@ export default function TimeLogDashboard({
               <Filter className="w-3.5 h-3.5" />
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
-            <JobCoachingLauncher
-              clientId={clientId}
-              onSuccess={onRefresh}
-            />
-            <Usor96Launcher
-              clientId={clientId}
-              onSuccess={onRefresh}
-            />
             <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowForm(true); }} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Entry
