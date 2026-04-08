@@ -1,10 +1,21 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 /**
- * Grounded job search assistant.
- * Every recommendation is cited to specific stored client factors from the
- * vocational facts profile (extracted by processAssessmentDocuments).
- * Conflicts are flagged rather than resolved by AI guessing.
+ * Grounded job search assistant with batch tracking and staff review workflow.
+ *
+ * Every recommendation is:
+ *   - Grounded in stored client factors (vocational facts profile)
+ *   - Linked to a batch for group review
+ *   - Traced with search filters, terms, assessments, and sources
+ *   - Subject to staff review before action
+ *
+ * Actions:
+ *   - generate_vocational_profile: Create profile from client data
+ *   - find_jobs: Search and return recommendations (not yet saved)
+ *   - save_recommendations: Create batch + JobRecommendation records
+ *   - get_saved_recommendations: Retrieve with batch grouping
+ *   - review_recommendation: Staff review workflow
+ *   - update_recommendation_status: Track employment outcome
  */
 Deno.serve(async (req) => {
   try {
@@ -20,39 +31,60 @@ Deno.serve(async (req) => {
     // ── Lightweight actions (no full client load needed) ──────────────────────
     if (action === 'get_saved_recommendations') {
       const recs = await base44.asServiceRole.entities.JobRecommendation.filter(
-        { client_id: clientId }, '-created_date', 50
+        { client_id: clientId }, '-created_date', 100
       );
-      // Also fetch batch metadata from Activity records tagged as job search batches
-      const batchActivities = await base44.asServiceRole.entities.Activity.filter(
-        { client_id: clientId, activity_type: 'note_added' }, '-created_date', 50
-      ).catch(() => []);
-      const batches = {};
-      batchActivities
-        .filter(a => a.metadata?.batch_id)
-        .forEach(a => { batches[a.metadata.batch_id] = a.metadata; });
-      return Response.json({ success: true, data: recs, batches });
+      return Response.json({
+        success: true,
+        recommendations: recs,
+        total: recs.length
+      });
+    }
+
+    if (action === 'get_batch_details') {
+      const { batchId } = body;
+      if (!batchId) return Response.json({ error: 'batchId required' }, { status: 400 });
+
+      const [batch, recommendations] = await Promise.all([
+        base44.asServiceRole.entities.JobRecommendationBatch.get(batchId).catch(() => null),
+        base44.asServiceRole.entities.JobRecommendation.filter({ batch_id: batchId }, '-created_date')
+      ]);
+
+      if (!batch) return Response.json({ error: 'Batch not found' }, { status: 404 });
+
+      return Response.json({
+        success: true,
+        batch,
+        recommendations
+      });
     }
 
     if (action === 'update_recommendation_status') {
       const { recommendationId, status } = body;
+      const VALID_STATUSES = [
+        'suggested', 'staff_reviewed', 'shared_with_client',
+        'applied', 'interview', 'closed_not_fit', 'closed_declined', 'hired'
+      ];
+      if (!VALID_STATUSES.includes(status)) {
+        return Response.json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` }, { status: 400 });
+      }
       await base44.asServiceRole.entities.JobRecommendation.update(recommendationId, { status });
-      return Response.json({ success: true });
+      return Response.json({ success: true, status });
     }
 
     if (action === 'review_recommendation') {
-      const { recommendationId, status, review_notes } = body;
-      if (!recommendationId || !status) {
-        return Response.json({ error: 'Missing recommendationId or status' }, { status: 400 });
+      const { recommendationId, approved, review_notes } = body;
+      if (!recommendationId) {
+        return Response.json({ error: 'Missing recommendationId' }, { status: 400 });
       }
       const now = new Date().toISOString();
       await base44.asServiceRole.entities.JobRecommendation.update(recommendationId, {
-        status,
         reviewed_by_staff: true,
         reviewed_by: user.email,
         reviewed_at: now,
         review_notes: review_notes || null,
+        status: approved ? 'staff_reviewed' : 'suggested' // Only move to reviewed if approved
       });
-      return Response.json({ success: true, status, reviewed_at: now });
+      return Response.json({ success: true, reviewed_at: now });
     }
 
     // ── Load full client context ──────────────────────────────────────────────
@@ -440,16 +472,44 @@ TARGET: 5-8 diverse, realistic recommendations that genuinely exist or existed r
     }
 
     // ── ACTION: save_recommendations ──────────────────────────────────────────
+    // Create batch record + linked JobRecommendation records with full provenance
     if (action === 'save_recommendations') {
       const {
         jobs, assessmentsUsed, clientFieldsUsed: fields, searchTermsUsed,
-        dataSourcesUsed, filters, has_vocational_facts, search_summary, grounding_note, custom_instructions
+        dataSourcesUsed, filters, has_vocational_facts, vocational_profile_version,
+        search_summary, grounding_note, custom_instructions, data_quality_score
       } = body;
-      const bId = `batch_${Date.now()}`;
-      const savedAt = new Date().toISOString();
-      const saved = [];
 
-      for (const job of (jobs || [])) {
+      if (!jobs || jobs.length === 0) {
+        return Response.json({ error: 'No jobs to save' }, { status: 400 });
+      }
+
+      // Step 1: Create the batch record (new entity: JobRecommendationBatch)
+      const savedAt = new Date().toISOString();
+      const batch = await base44.asServiceRole.entities.JobRecommendationBatch.create({
+        client_id: clientId,
+        search_summary: search_summary || '',
+        grounding_note: grounding_note || '',
+        custom_instructions: custom_instructions || '',
+        search_filters: filters || {},
+        search_terms_used: searchTermsUsed || [],
+        assessments_used: assessmentsUsed || [],
+        client_fields_used: fields || [],
+        data_sources_used: dataSourcesUsed || [],
+        vocational_profile_version: vocational_profile_version || 1,
+        has_vocational_facts: has_vocational_facts || false,
+        data_quality_score: data_quality_score || 0,
+        job_count: jobs.length,
+        generated_by: user.email,
+        generated_at: savedAt,
+        status: 'pending_review' // Batch status: pending_review → fully_reviewed → actioned
+      });
+
+      console.log(`[jobSearchAssistant] Created batch ${batch.id} with ${jobs.length} jobs`);
+
+      // Step 2: Create JobRecommendation records linked to batch
+      const saved = [];
+      for (const job of jobs) {
         const fitReason = job.cited_factors?.length > 0
           ? (job.fit_reason || '') + '\n\nCited Factors:\n' +
             job.cited_factors.map(f => `• ${f.factor} [${f.source}]: ${f.relevance}`).join('\n')
@@ -457,8 +517,7 @@ TARGET: 5-8 diverse, realistic recommendations that genuinely exist or existed r
 
         const rec = await base44.asServiceRole.entities.JobRecommendation.create({
           client_id: clientId,
-          batch_id: bId,
-          source_search_batch_id: bId,
+          batch_id: batch.id,
           job_title: job.job_title,
           employer: job.employer,
           location: job.location || '',
@@ -473,6 +532,9 @@ TARGET: 5-8 diverse, realistic recommendations that genuinely exist or existed r
           generated_by_ai: true,
           generated_by: user.email,
           reviewed_by_staff: false,
+          requires_staff_review: job.requires_staff_review || false,
+          review_reason: job.review_reason || null,
+          constraint_violations: job.constraint_violations || [],
           assessments_used: assessmentsUsed || [],
           client_fields_used: fields || [],
           search_terms_used: searchTermsUsed || [],
@@ -480,30 +542,20 @@ TARGET: 5-8 diverse, realistic recommendations that genuinely exist or existed r
         saved.push(rec);
       }
 
-      // Persist batch metadata as Activity so it can be retrieved with batch_id lookup
+      // Step 3: Log batch as activity for audit trail
       await base44.asServiceRole.entities.Activity.create({
         client_id: clientId,
         activity_type: 'note_added',
-        title: `AI Job Search Batch — ${saved.length} recommendations`,
-        description: `${saved.length} grounded recommendations generated by ${user.full_name || user.email}. ${has_vocational_facts ? 'VFP grounded. ' : ''}${(assessmentsUsed || []).length} assessment(s) used. Data sources: ${(dataSourcesUsed || []).join(', ')}`,
-        metadata: {
-          batch_id: bId,
-          created_at: savedAt,
-          created_by: user.email,
-          job_count: saved.length,
-          has_vocational_facts: has_vocational_facts || false,
-          assessments_used: assessmentsUsed || [],
-          client_fields_used: fields || [],
-          search_terms_used: searchTermsUsed || [],
-          data_sources_used: dataSourcesUsed || [],
-          filters: filters || {},
-          search_summary: search_summary || '',
-          grounding_note: grounding_note || '',
-          custom_instructions: custom_instructions || '',
-        }
+        title: `AI Job Search Batch Created — ${saved.length} recommendations`,
+        description: `Batch ${batch.id}: ${saved.length} grounded recommendations generated by ${user.full_name || user.email}. ${has_vocational_facts ? 'VFP grounded. ' : ''}Search terms: ${(searchTermsUsed || []).slice(0, 3).join(', ')}. Status: PENDING STAFF REVIEW.`,
       });
 
-      return Response.json({ success: true, saved_count: saved.length, batch_id: bId });
+      return Response.json({
+        success: true,
+        batch_id: batch.id,
+        saved_count: saved.length,
+        batch_status: 'pending_review'
+      });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });

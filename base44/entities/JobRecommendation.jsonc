@@ -1,16 +1,18 @@
 {
   "name": "JobRecommendation",
   "type": "object",
-  "description": "AI-generated recommendation with staff review workflow.",
+  "description": "AI-generated job recommendation with batch tracking and staff review workflow.",
   "properties": {
     "org_id": {
       "type": "string"
     },
     "client_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to Client"
     },
     "batch_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to JobRecommendationBatch \u2014 groups related recommendations"
     },
     "job_title": {
       "type": "string"
@@ -31,16 +33,20 @@
       "type": "string"
     },
     "fit_reason": {
-      "type": "string"
+      "type": "string",
+      "description": "Why this job fits, including cited factors with sources"
     },
     "concerns": {
-      "type": "string"
+      "type": "string",
+      "description": "Identified barriers or support needs relevant to this role"
     },
     "support_strategy": {
-      "type": "string"
+      "type": "string",
+      "description": "Recommended accommodations tied to documented support needs"
     },
     "fit_score": {
-      "type": "number"
+      "type": "number",
+      "description": "0-100 AI fit assessment"
     },
     "status": {
       "type": "string",
@@ -54,45 +60,76 @@
         "closed_declined",
         "hired"
       ],
-      "default": "suggested"
+      "default": "suggested",
+      "description": "Employment outcome tracking"
     },
     "generated_by": {
-      "type": "string"
+      "type": "string",
+      "description": "Email of staff who triggered search"
     },
     "generated_by_ai": {
       "type": "boolean",
       "default": true
     },
     "reviewed_by_staff": {
-      "type": "string"
+      "type": "boolean",
+      "default": false,
+      "description": "Whether staff has reviewed this recommendation"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email of staff reviewer"
     },
     "reviewed_at": {
-      "type": "string"
+      "type": "string",
+      "format": "date-time",
+      "description": "When staff reviewed"
     },
     "review_notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Staff review comments"
+    },
+    "requires_staff_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "Flag set by AI if recommendation needs special review (conflicts, concerns, etc.)"
+    },
+    "review_reason": {
+      "type": "string",
+      "description": "Why staff review is required (if requires_staff_review is true)"
+    },
+    "constraint_violations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Documented constraints this job conflicts with (empty = no violations)"
     },
     "assessments_used": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Assessment IDs used in search that generated this"
     },
     "client_fields_used": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Client fields used (e.g., target_role, industry)"
     },
     "search_terms_used": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Search query terms used"
     }
   },
   "required": [
     "client_id",
+    "batch_id",
     "job_title",
     "employer"
   ]
