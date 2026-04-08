@@ -72,11 +72,21 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
   }
 
   async function handleSave() {
-    if (!validate()) return;
+     if (!validate()) return;
 
-    setSaving(true);
-    try {
-      const durationMinutes = Math.round(Number(form.hours_of_coaching) * 60);
+     setSaving(true);
+     try {
+       const durationMinutes = Math.round(Number(form.hours_of_coaching) * 60);
+
+       console.log('[JobCoachingTimeEntryForm.handleSave] Starting save with:', {
+         clientId,
+         coaching_date: form.coaching_date,
+         hours_of_coaching: form.hours_of_coaching,
+         durationMinutes,
+         job_coach_name: form.job_coach_name,
+         primary_service_code: form.primary_service_code,
+         secondary_service_code: form.secondary_service_code
+       });
 
       const fieldAnswers = {
         coaching_date: form.coaching_date,
@@ -87,18 +97,38 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
       };
 
       // Get the entry type record
+      console.log('[JobCoachingTimeEntryForm.handleSave] Fetching job_coaching EntryType...');
       const entryTypes = await base44.entities.EntryType.filter({
         code: "job_coaching",
         is_active: true
       });
+      console.log('[JobCoachingTimeEntryForm.handleSave] EntryType query returned:', entryTypes.length, 'results');
       const entryType = entryTypes[0];
 
       if (!entryType) {
+        console.error('[JobCoachingTimeEntryForm.handleSave] ERROR: job_coaching EntryType not found or not active');
         toast.error("Job Coaching entry type not found");
         return;
       }
 
-      await submitTimeEntryWithDualWrite({
+      console.log('[JobCoachingTimeEntryForm.handleSave] EntryType found:', {
+        id: entryType.id,
+        code: entryType.code,
+        name: entryType.name,
+        requires_authorization: entryType.requires_authorization,
+        requires_field_answers: entryType.requires_field_answers
+      });
+
+      console.log('[JobCoachingTimeEntryForm.handleSave] Calling submitTimeEntryWithDualWrite with payload:', {
+        clientId,
+        entryTypeId: entryType.id,
+        entryTypeCode: "job_coaching",
+        date: form.coaching_date,
+        durationMinutes,
+        fieldAnswers
+      });
+
+      const response = await submitTimeEntryWithDualWrite({
         clientId,
         entryTypeId: entryType.id,
         entryTypeCode: "job_coaching",
@@ -113,6 +143,7 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
         asDraft: false
       });
 
+      console.log('[JobCoachingTimeEntryForm.handleSave] Success response:', response);
       toast.success("Job coaching entry saved");
       // Invalidate cache so next form fetch is fresh
       serviceCodeCache.invalidate();

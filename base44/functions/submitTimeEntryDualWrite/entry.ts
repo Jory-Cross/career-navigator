@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
+    console.log('[submitTimeEntryDualWrite] Incoming payload:', JSON.stringify(payload, null, 2));
     const {
       client_id,
       entry_type_id,
@@ -48,10 +49,18 @@ Deno.serve(async (req) => {
     }
 
     // Fetch entry type to get program type and report mode
+    console.log('[submitTimeEntryDualWrite] Fetching EntryType with id:', entry_type_id);
     const entryType = await base44.entities.EntryType.read(entry_type_id);
     if (!entryType) {
+      console.error('[submitTimeEntryDualWrite] ERROR: EntryType not found for id:', entry_type_id);
       return Response.json({ error: 'EntryType not found' }, { status: 404 });
     }
+    console.log('[submitTimeEntryDualWrite] EntryType found:', {
+      id: entryType.id,
+      code: entryType.code,
+      name: entryType.name,
+      requires_authorization: entryType.requires_authorization
+    });
 
     // Validate authorization if required
     if (entryType.requires_authorization && service_authorization_id) {
@@ -79,14 +88,22 @@ Deno.serve(async (req) => {
     }
 
     // Fetch field templates for this entry type
+    console.log('[submitTimeEntryDualWrite] Fetching field templates for entry_type_id:', entry_type_id);
     const fieldTemplates = await base44.entities.ReportFieldTemplate.filter({
       entry_type_id: entry_type_id,
       is_active: true
     });
+    console.log('[submitTimeEntryDualWrite] Found', fieldTemplates.length, 'field templates');
 
     // Validate required fields are present
     const requiredFields = fieldTemplates.filter(f => f.is_required);
     const missingRequired = requiredFields.filter(f => !field_answers[f.field_key]);
+    console.log('[submitTimeEntryDualWrite] Field validation:', {
+      total_templates: fieldTemplates.length,
+      required_fields: requiredFields.length,
+      missing_required: missingRequired.map(f => f.field_key),
+      provided_answers: Object.keys(field_answers)
+    });
 
     // Create/Update TimeEntry with DUAL WRITE
     // NEW: Structured fields (entry_type_id, entry_type_code, reporting_period_key)
@@ -116,7 +133,16 @@ Deno.serve(async (req) => {
       legacy_category: entryType.code || null
     };
 
+    console.log('[submitTimeEntryDualWrite] Creating TimeEntry with data:', {
+      client_id: timeEntryData.client_id,
+      employee_id: timeEntryData.employee_id,
+      entry_type_code: timeEntryData.entry_type_code,
+      date: timeEntryData.date,
+      duration_minutes: timeEntryData.duration_minutes,
+      status: timeEntryData.status
+    });
     const timeEntry = await base44.entities.TimeEntry.create(timeEntryData);
+    console.log('[submitTimeEntryDualWrite] TimeEntry created with id:', timeEntry.id);
 
     // Create schema snapshot for field answers (CRITICAL for immutability)
     const fieldSchemaSnapshot = {};
@@ -154,8 +180,16 @@ Deno.serve(async (req) => {
         : 0
     };
 
+    console.log('[submitTimeEntryDualWrite] Creating ReportFieldAnswer with data:', {
+      time_entry_id: reportFieldAnswerData.time_entry_id,
+      entry_type_code: reportFieldAnswerData.entry_type_code,
+      answers: Object.keys(reportFieldAnswerData.answers),
+      required_fields_complete: reportFieldAnswerData.required_fields_complete
+    });
     const fieldAnswer = await base44.entities.ReportFieldAnswer.create(reportFieldAnswerData);
+    console.log('[submitTimeEntryDualWrite] ReportFieldAnswer created with id:', fieldAnswer.id);
 
+    console.log('[submitTimeEntryDualWrite] SUCCESS: Both TimeEntry and ReportFieldAnswer created');
     return Response.json({
       success: true,
       time_entry_id: timeEntry.id,
@@ -165,7 +199,12 @@ Deno.serve(async (req) => {
       completion_percent: reportFieldAnswerData.completion_percent
     });
   } catch (error) {
-    console.error('submitTimeEntryDualWrite error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[submitTimeEntryDualWrite] CAUGHT ERROR:', error);
+    console.error('[submitTimeEntryDualWrite] Error message:', error.message);
+    console.error('[submitTimeEntryDualWrite] Error stack:', error.stack);
+    return Response.json({ 
+      error: error.message,
+      details: error.toString()
+    }, { status: 500 });
   }
 });
