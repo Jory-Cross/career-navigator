@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import JobCard from "./JobCard";
 import VocationalFactsPanel from "./VocationalFactsPanel";
 import JobSearchFilters from "./JobSearchFilters";
+import RecommendationBatchReview from "./RecommendationBatchReview";
 
 const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-600 border-slate-200",
@@ -162,6 +163,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
   const [profile, setProfile] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [savedRecs, setSavedRecs] = useState([]);
+  const [savedBatches, setSavedBatches] = useState({});
   const [searchSummary, setSearchSummary] = useState('');
   const [groundingNote, setGroundingNote] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
@@ -216,6 +218,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
         clientId,
       });
       setSavedRecs(res?.data?.data || []);
+      setSavedBatches(res?.data?.batches || {});
     } catch (e) {
       console.error(e);
     } finally {
@@ -280,6 +283,11 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
         assessmentsUsed,
         clientFieldsUsed,
         searchTermsUsed,
+        filters,
+        has_vocational_facts: hasVFP,
+        search_summary: searchSummary,
+        grounding_note: groundingNote,
+        custom_instructions: customInstructions,
       });
       setSavedBatchId(res?.data?.batch_id);
       toast.success(`${jobs.length} recommendations saved to client record`);
@@ -327,10 +335,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     }
   };
 
-  const ORDER = { applied: 0, saved: 1, suggested: 2, rejected: 3 };
-  const sortedSavedRecs = [...savedRecs].sort((a, b) => (ORDER[a.status] ?? 2) - (ORDER[b.status] ?? 2));
-  const statusCounts = savedRecs.reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {});
-  const reviewNeeded = savedRecs.filter(r => r.requires_staff_review).length;
+  const reviewNeeded = savedRecs.filter(r => r.status === 'suggested').length;
 
   const vfpConflicts = client?.vocational_facts_profile?.conflicts?.length || 0;
   const needsFactExtraction = !hasVFP;
@@ -523,43 +528,12 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
 
       {/* SAVED TAB */}
       {activeTab === 'saved' && (
-        <div className="space-y-3">
-          {savedRecs.length > 0 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              {Object.entries(statusCounts).map(([status, count]) => (
-                <span key={status} className={cn("text-xs font-medium px-2.5 py-1 rounded-full border", STATUS_COLORS[status])}>
-                  {STATUS_LABELS[status]}: {count}
-                </span>
-              ))}
-              {reviewNeeded > 0 && (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700">
-                  <AlertTriangle className="w-3 h-3 inline mr-1" />Staff Review: {reviewNeeded}
-                </span>
-              )}
-            </div>
-          )}
-
-          {loadingSaved ? (
-            <div className="flex items-center gap-2 text-slate-400 py-6 justify-center">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading saved recommendations...
-            </div>
-          ) : sortedSavedRecs.length === 0 ? (
-            <Card className="border-0 shadow-sm p-8 text-center">
-              <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No saved recommendations yet.</p>
-              <p className="text-xs text-slate-400 mt-1">Use the Search tab to find and save jobs.</p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {sortedSavedRecs.map((rec, i) => (
-                <JobCard key={rec.id || i} job={rec} onStatusChange={handleStatusChange} isSaved={true} />
-              ))}
-              <Button size="sm" variant="outline" className="w-full text-xs h-8" onClick={loadSavedRecs}>
-                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
-              </Button>
-            </div>
-          )}
-        </div>
+        <RecommendationBatchReview
+          recs={savedRecs}
+          batches={savedBatches}
+          loading={loadingSaved}
+          onRefresh={loadSavedRecs}
+        />
       )}
     </div>
   );
