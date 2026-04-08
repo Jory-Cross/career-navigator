@@ -5,8 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "lucide-react";
 import PayrollReport from "@/components/reports/PayrollReport";
-import PDFReportGenerator from "@/components/reports/PDFReportGenerator";
-import BatchPDFReportGenerator from "@/components/reports/BatchPDFReportGenerator";
+import SafeReportGenerator from "@/components/reports/SafeReportGenerator";
 import PDFTemplateSetupFlow from "@/components/reports/PDFTemplateSetupFlow";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -456,14 +455,9 @@ export default function Reports() {
         </Card>
       )}
 
-      {/* PDF Report Generator */}
-      {(user?.role === 'admin' || user?.role === 'management' || user?.role === 'employee') && (
-        <PDFReportGenerator userRole={user?.role} />
-      )}
-
-      {/* Batch PDF Report Generator */}
+      {/* Safe Report Generator */}
       {(user?.role === 'admin' || user?.role === 'management') && (
-        <BatchPDFReportGenerator userRole={user?.role} />
+        <SafeReportGenerator />
       )}
 
       {/* Payroll Report - Admin/Management only */}
