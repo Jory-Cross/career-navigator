@@ -142,9 +142,16 @@ function FieldRenderer({ field, value, onChange }) {
   }
 }
 
-export default function TimeEntryForm({ clients, onSaved, onCancel }) {
-   console.log('[DEBUG] TimeEntryForm MOUNTED');
-   const [step, setStep] = useState("basics");
+export default function TimeEntryForm({ clients, onSaved, onCancel, entryType }) {
+    console.log('[DEBUG] TimeEntryForm MOUNTED', entryType?.code);
+
+    // Guard: Block Job Coaching from using generic form
+    if (entryType?.code === 'job_coaching') {
+      console.warn('[DEBUG] TimeEntryForm BLOCKED for job_coaching - use JobCoachingTimeEntryForm instead');
+      return null;
+    }
+
+    const [step, setStep] = useState("basics");
   const [saving, setSaving] = useState(false);
 
   // Step 1: core fields

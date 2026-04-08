@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
 import TimeEntryForm from "@/components/time-entry/TimeEntryForm";
+import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -334,6 +335,8 @@ export default function TimeTracking() {
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
           </DialogHeader>
+          {/* Job Coaching uses dedicated form */}
+          {/* TODO: First select entry type, then route to appropriate form */}
           <TimeEntryForm
             clients={allClients}
             onSaved={() => { setShowNewEntry(false); handleRefresh(); }}
