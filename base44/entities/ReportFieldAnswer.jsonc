@@ -1,13 +1,14 @@
 {
   "name": "ReportFieldAnswer",
   "type": "object",
-  "description": "Snapshot of all dynamic answers for a single TimeEntry.",
+  "description": "Schema-versioned snapshot of all dynamic field answers for a single TimeEntry. One record per TimeEntry. Immutable after report generation.",
   "properties": {
     "org_id": {
       "type": "string"
     },
     "time_entry_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to TimeEntry (1:1)"
     },
     "entry_type_id": {
       "type": "string"
@@ -17,15 +18,18 @@
     },
     "field_schema_version": {
       "type": "number",
-      "default": 1
+      "default": 1,
+      "description": "Version of the ReportFieldTemplate schema at time of submission"
     },
     "field_schema_snapshot": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Point-in-time copy of field definitions used. Preserves meaning even if templates change."
     },
     "answers": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Map of field_key \u2192 answer value. These values populate PDF row fields."
     },
     "required_fields_complete": {
       "type": "boolean",
@@ -33,10 +37,16 @@
     },
     "report_ready": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "True when all required fields are complete and entry is approved"
     },
     "submitted_at": {
-      "type": "string"
+      "type": "string",
+      "description": "ISO datetime of last answer submission"
+    },
+    "locked_in_report_id": {
+      "type": "string",
+      "description": "ID of GeneratedReport that locked these answers. Null if not yet included in a report."
     }
   },
   "required": [

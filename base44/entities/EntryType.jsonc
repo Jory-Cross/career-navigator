@@ -1,7 +1,7 @@
 {
   "name": "EntryType",
   "type": "object",
-  "description": "Defines a service/time-entry type and its reporting behavior.",
+  "description": "Defines a service/time-entry type and controls its reporting mode, billing, payroll eligibility, and authorization requirements.",
   "properties": {
     "org_id": {
       "type": "string"
@@ -10,7 +10,8 @@
       "type": "string"
     },
     "code": {
-      "type": "string"
+      "type": "string",
+      "description": "Unique machine-readable code used as the stable FK across the system (e.g. 'job_coaching', 'job_development')"
     },
     "description": {
       "type": "string"
@@ -35,10 +36,12 @@
         "usor148_service_period",
         "custom"
       ],
-      "default": "none"
+      "default": "none",
+      "description": "Controls which PDF template type and aggregation logic is used for reporting"
     },
     "default_pdf_template_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Default PDFTemplate to use when generating reports for this entry type"
     },
     "requires_client": {
       "type": "boolean",
@@ -46,26 +49,31 @@
     },
     "requires_authorization": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "If true, a valid ServiceAuthorization must exist before time can be logged"
     },
     "requires_employer": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "If true, employer_name is required on the ServiceAuthorization"
     },
     "is_billable": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "Whether time entries of this type are billable to VR"
     },
     "is_payroll_eligible": {
       "type": "boolean",
-      "default": true
+      "default": true,
+      "description": "Whether time entries count toward employee payroll"
     },
     "is_active": {
       "type": "boolean",
       "default": true
     },
     "color": {
-      "type": "string"
+      "type": "string",
+      "description": "Hex color for calendar/UI display"
     }
   },
   "required": [

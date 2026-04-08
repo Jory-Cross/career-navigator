@@ -1,7 +1,7 @@
 {
   "name": "PDFFieldMap",
   "type": "object",
-  "description": "Maps assembled report data into PDF fields, including repeating rows.",
+  "description": "Maps assembled report data to PDF form fields. Supports header (once per report), row (once per time entry), and summary (aggregated totals) scopes.",
   "properties": {
     "org_id": {
       "type": "string"
@@ -9,8 +9,13 @@
     "pdf_template_id": {
       "type": "string"
     },
+    "template_version": {
+      "type": "string",
+      "description": "Scopes this mapping to a specific template version"
+    },
     "pdf_field_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Exact PDF form field name as it appears in the fillable PDF"
     },
     "mapping_scope": {
       "type": "string",
@@ -20,7 +25,8 @@
         "summary",
         "static"
       ],
-      "default": "header"
+      "default": "header",
+      "description": "header=once per report, row=once per time entry (repeating), summary=aggregated totals, static=hardcoded value"
     },
     "source_type": {
       "type": "string",
@@ -32,19 +38,24 @@
         "authorization",
         "assembled_report",
         "static"
-      ]
+      ],
+      "description": "Which data source provides the value for this field"
     },
     "source_field": {
-      "type": "string"
+      "type": "string",
+      "description": "Field path within the source object (e.g. 'date', 'answers.employer_name')"
     },
     "row_group": {
-      "type": "string"
+      "type": "string",
+      "description": "For row-scope: groups fields that belong to the same repeating row block (e.g. 'row_1', 'row_2')"
     },
     "row_field_key": {
-      "type": "string"
+      "type": "string",
+      "description": "For row-scope: the semantic key within a row (e.g. 'date', 'hours', 'activity')"
     },
     "row_sort_order": {
-      "type": "number"
+      "type": "number",
+      "description": "For row-scope: order of this row block in the PDF (1-based)"
     },
     "aggregation_mode": {
       "type": "string",
@@ -57,7 +68,8 @@
         "custom",
         "none"
       ],
-      "default": "none"
+      "default": "none",
+      "description": "For summary-scope: how to aggregate values across all included time entries"
     },
     "transform": {
       "type": "string",
@@ -73,16 +85,16 @@
     },
     "transform_options": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Extra options for the transform (e.g. { format: 'MM/DD/YYYY' } for date_format)"
     },
     "default_value": {
-      "type": "string"
+      "type": "string",
+      "description": "Fallback value if source field is null or missing"
     },
     "static_value": {
-      "type": "string"
-    },
-    "template_version": {
-      "type": "string"
+      "type": "string",
+      "description": "For static-scope: the hardcoded value to always write to this PDF field"
     }
   },
   "required": [

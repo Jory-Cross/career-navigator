@@ -1,7 +1,7 @@
 {
   "name": "GeneratedReport",
   "type": "object",
-  "description": "Immutable record of one generated client report version.",
+  "description": "Immutable record of one generated client report version. Never mutated after creation \u2014 regeneration produces a new record with supersedes_report_id set.",
   "properties": {
     "org_id": {
       "type": "string"
@@ -10,7 +10,8 @@
       "type": "string"
     },
     "report_batch_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to ReportBatch if generated as part of a bulk run"
     },
     "entry_type_code": {
       "type": "string"
@@ -19,7 +20,8 @@
       "type": "string"
     },
     "template_version": {
-      "type": "string"
+      "type": "string",
+      "description": "Version of the PDFTemplate used \u2014 enables rollback comparison"
     },
     "report_start_date": {
       "type": "string",
@@ -33,37 +35,59 @@
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "IDs of TimeEntry records included in this report \u2014 audit trail for source data"
     },
     "included_answer_ids": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "IDs of ReportFieldAnswer records included \u2014 preserves which answer snapshot was used"
     },
     "assembled_report_snapshot": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "description": "Point-in-time copy of the assembled report data (header, rows, summary). Preserves report content even if source records change."
     },
     "generated_document_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to Document record holding the generated PDF file"
     },
     "version_number": {
       "type": "number",
-      "default": 1
+      "default": 1,
+      "description": "Auto-incremented per client+period+entry_type_code"
     },
     "supersedes_report_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID of the previous GeneratedReport this replaces. Null if this is the first version."
     },
     "generated_by": {
-      "type": "string"
+      "type": "string",
+      "description": "Email of staff user who triggered generation"
     },
     "generated_at": {
-      "type": "string"
+      "type": "string",
+      "description": "ISO datetime of generation"
     },
     "locked": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "When true, source TimeEntry records in this period cannot be edited or voided"
+    },
+    "locked_at": {
+      "type": "string",
+      "description": "ISO datetime when locked"
+    },
+    "locked_by": {
+      "type": "string",
+      "description": "Email of user who locked the period"
+    },
+    "is_final": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when submitted to VR \u2014 no further regeneration allowed"
     }
   },
   "required": [

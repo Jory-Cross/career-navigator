@@ -1,7 +1,7 @@
 {
   "name": "TimeEntry",
   "type": "object",
-  "description": "Source service record. One row per staff time entry.",
+  "description": "Source service record. One row per staff time entry. The authoritative data source for all VR reporting.",
   "properties": {
     "org_id": {
       "type": "string"
@@ -13,7 +13,8 @@
       "type": "string"
     },
     "service_authorization_id": {
-      "type": "string"
+      "type": "string",
+      "description": "FK to ServiceAuthorization"
     },
     "entry_type_id": {
       "type": "string"
@@ -36,14 +37,14 @@
     },
     "reporting_period_key": {
       "type": "string",
-      "description": "Example: 2026-04"
+      "description": "YYYY-MM for monthly reports, or YYYY-QN for service-period reports"
     },
     "location": {
       "type": "string"
     },
     "description": {
       "type": "string",
-      "description": "Internal summary only, not source of truth for reporting"
+      "description": "Internal staff note only \u2014 not used for PDF reporting"
     },
     "is_billable": {
       "type": "boolean",
@@ -70,7 +71,7 @@
     },
     "legacy_category": {
       "type": "string",
-      "description": "Optional backward-compat field for old category enum"
+      "description": "Backward-compat field for pre-EntryType category enum. Do not use for new entries."
     }
   },
   "required": [
