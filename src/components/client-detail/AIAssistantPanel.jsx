@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Sparkles, FileText, ListChecks, Mail, TrendingUp,
-  Loader2, Copy, CheckCheck, AlertTriangle, ChevronDown, ChevronUp
+  Loader2, Copy, CheckCheck, AlertTriangle, ChevronDown, ChevronUp,
+  Database, Eye, EyeOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
-import { Database } from "lucide-react";
+import GroundingSummary from "./GroundingSummary";
 
 const PRIORITY_COLORS = {
   high: "bg-red-100 text-red-700 border-red-200",
@@ -279,6 +280,8 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
   const [emailPurpose, setEmailPurpose] = useState("");
   const [emailContext, setEmailContext] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [groundingCollapsed, setGroundingCollapsed] = useState(true);
+  const [showGrounding, setShowGrounding] = useState(false);
 
   const run = async (action, extra = {}) => {
     setLoading(true);
@@ -316,13 +319,13 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
     }
   };
 
-  const tabConfig = [
-    { key: "summarize", label: "Summary", icon: FileText },
-    { key: "suggest_tasks", label: "Tasks", icon: ListChecks },
-    { key: "draft_email", label: "Email", icon: Mail },
-    { key: "engagement_insights", label: "Insights", icon: TrendingUp },
-    { key: "coaching_recommendations", label: "Coaching", icon: Sparkles },
-    { key: "provenance", label: "Data Sources", icon: Database },
+  const actionModes = [
+    { key: "summarize", label: "Summarize Client", icon: FileText, description: "AI-generated overview" },
+    { key: "suggest_tasks", label: "Next Steps", icon: ListChecks, description: "Follow-up actions" },
+    { key: "draft_email", label: "Draft Outreach", icon: Mail, description: "Personalized message" },
+    { key: "engagement_insights", label: "Engagement Insights", icon: TrendingUp, description: "Pattern analysis" },
+    { key: "coaching_recommendations", label: "Coaching Ideas", icon: Sparkles, description: "Job coaching" },
+    { key: "provenance", label: "Data Sources", icon: Database, description: "View grounding" },
   ];
 
   return (
@@ -335,122 +338,169 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
           </div>
           <div>
             <p className="font-semibold text-slate-900 text-sm">AI Assistant</p>
-            <p className="text-xs text-slate-400">Powered by advanced AI</p>
+            <p className="text-xs text-slate-400">Data-grounded insights</p>
           </div>
         </div>
-        <button onClick={() => setCollapsed(c => !c)} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
-          {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowGrounding(!showGrounding)}
+            className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+            title="Toggle data grounding"
+          >
+            {showGrounding ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+          <button onClick={() => setCollapsed(c => !c)} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {!collapsed && (
-        <div className="p-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 w-full mb-4 h-9 bg-slate-100/80">
-              {tabConfig.map(t => (
-                <TabsTrigger key={t.key} value={t.key} className="text-xs flex items-center gap-1.5">
-                  <t.icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+        <div className="flex flex-col h-full">
+          {/* Grounding Summary (if visible) */}
+          {showGrounding && (
+            <GroundingSummary
+              clientId={clientId}
+              isCollapsed={groundingCollapsed}
+              onToggle={() => setGroundingCollapsed(c => !c)}
+            />
+          )}
 
-            {/* Summary Tab */}
-            <TabsContent value="summarize" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">AI-generated summary of client notes, history, and current status.</p>
-              {results.summarize ? (
-                <SummaryResult data={results.summarize} />
-              ) : null}
-              <Button size="sm" onClick={() => run("summarize")} disabled={loading} className="w-full text-xs">
-                {loading && activeTab === "summarize" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                {results.summarize ? "Regenerate Summary" : "Generate Summary"}
-              </Button>
-            </TabsContent>
-
-            {/* Suggested Tasks Tab */}
-            <TabsContent value="suggest_tasks" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">AI-suggested follow-up actions based on recent activity and progress.</p>
-              {results.suggest_tasks ? (
-                <TasksResult data={results.suggest_tasks} clientId={clientId} onRefresh={onRefresh} />
-              ) : null}
-              <Button size="sm" onClick={() => run("suggest_tasks")} disabled={loading} className="w-full text-xs">
-                {loading && activeTab === "suggest_tasks" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                {results.suggest_tasks ? "Re-suggest Tasks" : "Suggest Follow-up Tasks"}
-              </Button>
-            </TabsContent>
-
-            {/* Email Draft Tab */}
-            <TabsContent value="draft_email" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">Draft a personalized email to this client based on their history.</p>
-              <div className="space-y-2">
-                <Label className="text-xs">Email purpose</Label>
-                <Input
-                  placeholder="e.g. Follow up on interview, check-in after job fair..."
-                  value={emailPurpose}
-                  onChange={e => setEmailPurpose(e.target.value)}
-                  className="text-xs h-8"
-                />
-                <Label className="text-xs">Additional context (optional)</Label>
-                <Textarea
-                  placeholder="Any specific details to include..."
-                  value={emailContext}
-                  onChange={e => setEmailContext(e.target.value)}
-                  className="text-xs min-h-[60px] resize-none"
-                />
+          <div className="p-4 space-y-3">
+            {/* Action Mode Selector */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Choose an action</p>
+              <div className="grid grid-cols-2 gap-2">
+                {actionModes.map(mode => (
+                  <button
+                    key={mode.key}
+                    onClick={() => setActiveTab(mode.key)}
+                    className={cn(
+                      "p-2.5 rounded-lg border text-left text-xs transition-all",
+                      activeTab === mode.key
+                        ? "border-purple-300 bg-purple-50 shadow-sm"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <mode.icon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", activeTab === mode.key ? "text-purple-600" : "text-slate-500")} />
+                      <div>
+                        <p className={cn("font-medium", activeTab === mode.key ? "text-purple-700" : "text-slate-700")}>
+                          {mode.label}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{mode.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-              {results.draft_email ? (
-                <EmailResult data={results.draft_email} onUseEmail={onUseEmail} />
-              ) : null}
-              <Button
-                size="sm"
-                onClick={() => run("draft_email", { emailPurpose, emailContext })}
-                disabled={loading}
-                className="w-full text-xs"
-              >
-                {loading && activeTab === "draft_email" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                {results.draft_email ? "Regenerate Draft" : "Draft Email"}
-              </Button>
-            </TabsContent>
-
-            {/* Insights Tab */}
-            <TabsContent value="engagement_insights" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">Analyze engagement patterns and get actionable recommendations.</p>
-              {results.engagement_insights ? (
-                <InsightsResult data={results.engagement_insights} />
-              ) : null}
-              <Button size="sm" onClick={() => run("engagement_insights")} disabled={loading} className="w-full text-xs">
-                {loading && activeTab === "engagement_insights" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                {results.engagement_insights ? "Refresh Insights" : "Analyze Engagement"}
-              </Button>
-            </TabsContent>
-
-            {/* Coaching Tab */}
-            <TabsContent value="coaching_recommendations" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">AI-generated job coaching strategy based on vocational profile and client data.</p>
-              {results.coaching_recommendations ? (
-                <CoachingResult 
-                  data={results.coaching_recommendations}
-                  clientId={clientId}
-                  onRefresh={onRefresh}
-                  onSave={saveCoachingPlan}
-                />
-              ) : null}
-              <Button size="sm" onClick={() => run("coaching_recommendations")} disabled={loading} className="w-full text-xs">
-                {loading && activeTab === "coaching_recommendations" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                {results.coaching_recommendations ? "Regenerate Coaching Plan" : "Generate Coaching Plan"}
-              </Button>
-            </TabsContent>
-
-            {/* Data Provenance Tab */}
-            <TabsContent value="provenance" className="space-y-3 mt-0">
-              <p className="text-xs text-slate-500">View data sources, quality metrics, and any conflicts in the underlying client data used for AI insights.</p>
-              <SourceProvenancePanel
-                variant="inline"
-              />
-            </TabsContent>
-            </Tabs>
             </div>
+
+            {/* Tabs for content rendering */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden">
+              <TabsList className="hidden" />
+            </Tabs>
+
+            {activeTab === "summarize" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">AI-generated summary of client notes, history, and current status.</p>
+                {results.summarize ? (
+                  <SummaryResult data={results.summarize} />
+                ) : null}
+                <Button size="sm" onClick={() => run("summarize")} disabled={loading} className="w-full text-xs">
+                  {loading && activeTab === "summarize" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                  {results.summarize ? "Regenerate Summary" : "Generate Summary"}
+                </Button>
+              </div>
             )}
-            </Card>
-            );
-            }
+
+            {activeTab === "suggest_tasks" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">AI-suggested follow-up actions based on recent activity and progress.</p>
+                {results.suggest_tasks ? (
+                  <TasksResult data={results.suggest_tasks} clientId={clientId} onRefresh={onRefresh} />
+                ) : null}
+                <Button size="sm" onClick={() => run("suggest_tasks")} disabled={loading} className="w-full text-xs">
+                  {loading && activeTab === "suggest_tasks" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                  {results.suggest_tasks ? "Re-suggest Tasks" : "Suggest Follow-up Tasks"}
+                </Button>
+              </div>
+            )}
+
+            {activeTab === "draft_email" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">Draft a personalized email to this client based on their history.</p>
+                <div className="space-y-2">
+                  <Label className="text-xs">Email purpose</Label>
+                  <Input
+                    placeholder="e.g. Follow up on interview, check-in after job fair..."
+                    value={emailPurpose}
+                    onChange={e => setEmailPurpose(e.target.value)}
+                    className="text-xs h-8"
+                  />
+                  <Label className="text-xs">Additional context (optional)</Label>
+                  <Textarea
+                    placeholder="Any specific details to include..."
+                    value={emailContext}
+                    onChange={e => setEmailContext(e.target.value)}
+                    className="text-xs min-h-[60px] resize-none"
+                  />
+                </div>
+                {results.draft_email ? (
+                  <EmailResult data={results.draft_email} onUseEmail={onUseEmail} />
+                ) : null}
+                <Button
+                  size="sm"
+                  onClick={() => run("draft_email", { emailPurpose, emailContext })}
+                  disabled={loading}
+                  className="w-full text-xs"
+                >
+                  {loading && activeTab === "draft_email" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                  {results.draft_email ? "Regenerate Draft" : "Draft Email"}
+                </Button>
+              </div>
+            )}
+
+            {activeTab === "engagement_insights" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">Analyze engagement patterns and get actionable recommendations.</p>
+                {results.engagement_insights ? (
+                  <InsightsResult data={results.engagement_insights} />
+                ) : null}
+                <Button size="sm" onClick={() => run("engagement_insights")} disabled={loading} className="w-full text-xs">
+                  {loading && activeTab === "engagement_insights" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                  {results.engagement_insights ? "Refresh Insights" : "Analyze Engagement"}
+                </Button>
+              </div>
+            )}
+
+            {activeTab === "coaching_recommendations" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">AI-generated job coaching strategy based on vocational profile and client data.</p>
+                {results.coaching_recommendations ? (
+                  <CoachingResult 
+                    data={results.coaching_recommendations}
+                    clientId={clientId}
+                    onRefresh={onRefresh}
+                    onSave={saveCoachingPlan}
+                  />
+                ) : null}
+                <Button size="sm" onClick={() => run("coaching_recommendations")} disabled={loading} className="w-full text-xs">
+                  {loading && activeTab === "coaching_recommendations" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                  {results.coaching_recommendations ? "Regenerate Coaching Plan" : "Generate Coaching Plan"}
+                </Button>
+              </div>
+            )}
+
+            {activeTab === "provenance" && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">View data sources, quality metrics, and conflicts in the underlying client data used for AI insights.</p>
+                <SourceProvenancePanel variant="inline" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
