@@ -18,15 +18,38 @@ export const FORM_SCHEMAS = {
     { key: "observations_comments", label: "Observations & Comments", type: "textarea", required: false },
   ],
 
-  voc_rehab: [
-    { key: "date", label: "Date", type: "date", required: true },
-    { key: "hours", label: "Hours", type: "number", required: true },
-    { key: "activity", label: "Activity", type: "textarea", required: true },
-    { key: "crp", label: "CRP", type: "text", required: false },
-    { key: "observations_comments", label: "Observations & Comments", type: "textarea", required: false },
-  ],
+  voc_rehab_dynamic: [], // Placeholder - will be loaded from ReportFieldTemplate
 };
 
 export function getSchema(schemaKey) {
   return FORM_SCHEMAS[schemaKey] || [];
+}
+
+export async function loadVocRehabSchema(entryTypeCode) {
+  try {
+    // Dynamic import of base44 only when needed
+    const { base44 } = await import("@/api/base44Client");
+    
+    const templates = await base44.entities.ReportFieldTemplate.filter({
+      entry_type_code: entryTypeCode,
+      is_active: true,
+      pdf_context: "row",
+      is_internal_only: false
+    });
+
+    return templates
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(t => ({
+        key: t.field_key,
+        label: t.label,
+        type: t.field_type,
+        required: t.is_required || false,
+        placeholder: t.placeholder,
+        help_text: t.help_text,
+        options: t.options || [],
+      }));
+  } catch (err) {
+    console.error("Failed to load voc_rehab schema:", err);
+    return [];
+  }
 }

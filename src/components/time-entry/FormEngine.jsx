@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import DynamicEntryForm from "./DynamicEntryForm";
 import { getEntryTypeConfig } from "@/lib/entryTypeRegistry";
 import { getSchemaForEntryType } from "@/lib/formHelpers";
+import { loadVocRehabSchema } from "@/lib/formSchemas";
 import { Card } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export default function FormEngine({
   entryTypeCode,
@@ -13,7 +14,29 @@ export default function FormEngine({
   onCancel,
 }) {
   const config = getEntryTypeConfig(entryTypeCode);
-  const schema = getSchemaForEntryType(entryTypeCode);
+  const [schema, setSchema] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load schema, with dynamic loading for voc_rehab types
+  useEffect(() => {
+    const loadSchema = async () => {
+      const baseSchema = getSchemaForEntryType(entryTypeCode);
+      
+      // For voc_rehab-like entry types, load from ReportFieldTemplate
+      if (config?.schemaKey === "voc_rehab_dynamic" || !baseSchema.length) {
+        setLoading(true);
+        const dynamicSchema = await loadVocRehabSchema(entryTypeCode);
+        setSchema(dynamicSchema);
+        setLoading(false);
+      } else {
+        setSchema(baseSchema);
+      }
+    };
+
+    if (config) {
+      loadSchema();
+    }
+  }, [entryTypeCode, config]);
 
   if (!config) {
     return (
@@ -22,6 +45,17 @@ export default function FormEngine({
         <div>
           <p className="text-sm font-medium text-red-700">Unknown entry type</p>
           <p className="text-xs text-red-600 mt-0.5">{entryTypeCode}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card className="p-4 flex gap-3">
+        <Loader2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5 animate-spin" />
+        <div>
+          <p className="text-sm font-medium text-blue-700">Loading form...</p>
         </div>
       </Card>
     );
