@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useViewAs } from "@/lib/ViewAsContext";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
-import TimeEntryForm from "@/components/time-entry/TimeEntryForm";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
+import TimeEntryFormContent from "@/components/client-detail/TimeLogDashboard";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -40,16 +41,19 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [editSaving, setEditSaving] = useState(false);
-  const [showNewEntry, setShowNewEntry] = useState(false);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+   const [editMode, setEditMode] = useState(false);
+   const [editForm, setEditForm] = useState({});
+   const [editSaving, setEditSaving] = useState(false);
+   const [showNewEntry, setShowNewEntry] = useState(false);
+   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+   const [entryTypes, setEntryTypes] = useState([]);
+   const queryClient = useQueryClient();
+   const navigate = useNavigate();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
+     base44.auth.me().then(setUser).catch(() => {});
+     base44.entities.EntryType.filter({ is_active: true }).then(setEntryTypes).catch(() => {});
+   }, []);
 
   // Effective user: admin viewing as someone else uses that person's perspective
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
@@ -337,16 +341,32 @@ export default function TimeTracking() {
         </div>
       </div>
       {/* New Entry Dialog */}
-      <Dialog open={showNewEntry} onOpenChange={setShowNewEntry}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Time Entry</DialogTitle>
+      <Dialog open={showNewEntry} onOpenChange={open => { if (!open) { setShowNewEntry(false); setSelectedEntryTypeCode(""); } }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
+            <DialogTitle>Add Time Entry</DialogTitle>
           </DialogHeader>
-          <TimeEntryForm
-            clients={allClients}
-            onSaved={() => { setShowNewEntry(false); handleRefresh(); }}
-            onCancel={() => setShowNewEntry(false)}
-          />
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 py-4">
+              {/* Route to JobCoachingTimeEntryForm for Job Coaching, generic form otherwise */}
+              {selectedEntryTypeCode === 'job_coaching' ? (
+                <JobCoachingTimeEntryForm
+                  clientId={null}
+                  onSuccess={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); handleRefresh(); }}
+                  onCancel={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
+                />
+              ) : (
+                <TimeEntryFormContent
+                  entry={null}
+                  clientId={null}
+                  onClose={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
+                  onSave={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); handleRefresh(); }}
+                  entryTypes={entryTypes}
+                  onEntryTypeChange={setSelectedEntryTypeCode}
+                />
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
