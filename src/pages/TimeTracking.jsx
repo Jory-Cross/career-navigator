@@ -117,6 +117,27 @@ export default function TimeTracking() {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
   };
 
+  const handleOpenEntry = async (entry) => {
+    if (!entry?.id) {
+      toast.error("Invalid entry");
+      return;
+    }
+
+    try {
+      const fresh = await base44.entities.TimeEntry.get(entry.id);
+      if (!fresh) {
+        toast.error("This entry no longer exists");
+        handleRefresh();
+        return;
+      }
+      setSelectedEntry(fresh);
+    } catch (err) {
+      console.error("Failed to open entry:", err);
+      toast.error("This entry no longer exists");
+      handleRefresh();
+    }
+  };
+
   const getClientName = (id) => {
     if (!id) return "Myself";
     const c = allClients.find(c => c.id === id);
@@ -295,7 +316,7 @@ export default function TimeTracking() {
                   <div
                     key={entry.id}
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors", isDuplicate && "bg-amber-50 hover:bg-amber-100 border-l-4 border-amber-400")}
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => handleOpenEntry(entry)}
                   >
                     <div className="text-right shrink-0 w-16">
                       <p className="text-sm font-bold text-slate-800">{entry.duration_minutes}min</p>
