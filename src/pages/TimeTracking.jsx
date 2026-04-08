@@ -335,13 +335,7 @@ export default function TimeTracking() {
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
           </DialogHeader>
-          {/* Job Coaching uses dedicated form */}
-          {/* TODO: First select entry type, then route to appropriate form */}
-          <TimeEntryForm
-            clients={allClients}
-            onSaved={() => { setShowNewEntry(false); handleRefresh(); }}
-            onCancel={() => setShowNewEntry(false)}
-          />
+          <p className="text-sm text-slate-500 text-center py-4">Please select an entry type. Use TimeLogDashboard or edit an entry to select Job Coaching.</p>
         </DialogContent>
       </Dialog>
 
