@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Clock, Plus, Pencil, Copy, Loader2, Filter, AlertCircle, CheckCircle2, Lock, FileText, Trash2, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Pencil, Copy, Loader2, Filter, AlertCircle, CheckCircle2, FileText, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
+import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
+import Usor96Launcher from "@/components/time-entry/Usor96Launcher";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -216,6 +218,14 @@ export default function TimeLogDashboard({
               <Filter className="w-3.5 h-3.5" />
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
+            <JobCoachingLauncher
+              clientId={clientId}
+              onSuccess={onRefresh}
+            />
+            <Usor96Launcher
+              clientId={clientId}
+              onSuccess={onRefresh}
+            />
             <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowForm(true); }} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Entry
