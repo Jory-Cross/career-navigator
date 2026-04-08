@@ -1,19 +1,16 @@
 {
   "name": "JobRecommendation",
   "type": "object",
-  "description": "Job recommendation for a client. AI-generated recommendations start as 'suggested' and require staff review before being shared with the client.",
+  "description": "AI-generated recommendation with staff review workflow.",
   "properties": {
+    "org_id": {
+      "type": "string"
+    },
     "client_id": {
-      "type": "string",
-      "description": "Reference to the Client"
+      "type": "string"
     },
     "batch_id": {
-      "type": "string",
-      "description": "Groups all recommendations from one generation run (legacy)"
-    },
-    "source_search_batch_id": {
-      "type": "string",
-      "description": "ID of the job search batch that produced this recommendation"
+      "type": "string"
     },
     "job_title": {
       "type": "string"
@@ -31,24 +28,19 @@
       "type": "string"
     },
     "source_url": {
-      "type": "string",
-      "description": "Direct application / job posting link"
+      "type": "string"
     },
     "fit_reason": {
-      "type": "string",
-      "description": "Why this job matches the client"
+      "type": "string"
     },
     "concerns": {
-      "type": "string",
-      "description": "Potential barriers or concerns"
+      "type": "string"
     },
     "support_strategy": {
-      "type": "string",
-      "description": "Recommended accommodations / support"
+      "type": "string"
     },
     "fit_score": {
-      "type": "number",
-      "description": "0-100 confidence/fit score"
+      "type": "number"
     },
     "status": {
       "type": "string",
@@ -62,49 +54,35 @@
         "closed_declined",
         "hired"
       ],
-      "default": "suggested",
-      "description": "Workflow state. AI-generated recommendations start at 'suggested' \u2014 staff must review before progressing."
+      "default": "suggested"
+    },
+    "generated_by": {
+      "type": "string"
     },
     "generated_by_ai": {
       "type": "boolean",
-      "default": false,
-      "description": "True if this recommendation was produced by AI rather than manually entered by staff"
-    },
-    "generated_by": {
-      "type": "string",
-      "description": "Email of user (or system) who generated this recommendation"
+      "default": true
     },
     "reviewed_by_staff": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether a staff member has reviewed and approved this recommendation"
-    },
-    "reviewed_by": {
-      "type": "string",
-      "description": "Email of staff member who reviewed"
+      "type": "string"
     },
     "reviewed_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO datetime when staff review was completed"
+      "type": "string"
     },
     "review_notes": {
-      "type": "string",
-      "description": "Staff notes from review (e.g. concerns, edits made, rationale for sharing)"
+      "type": "string"
     },
     "assessments_used": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs of assessments used to generate this recommendation"
+      }
     },
     "client_fields_used": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "List of client fields that informed this recommendation"
+      }
     },
     "search_terms_used": {
       "type": "array",
