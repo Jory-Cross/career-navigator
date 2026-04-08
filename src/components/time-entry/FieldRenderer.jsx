@@ -62,11 +62,15 @@ export default function FieldRenderer({ field, value, onChange }) {
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
+            {(field.options || []).map((opt) => {
+              const optValue = typeof opt === "string" ? opt : opt.value;
+              const optLabel = typeof opt === "string" ? opt : opt.label;
+              return (
+                <SelectItem key={optValue} value={optValue}>
+                  {optLabel}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       )}

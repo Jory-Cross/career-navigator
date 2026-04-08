@@ -10,7 +10,29 @@ export const FORM_SCHEMAS = {
   life_skills: [
     { key: "billable_service_date", label: "Billable Service Date", type: "date", required: true },
     { key: "billable_hours", label: "Billable Hours", type: "number", required: true },
-    { key: "life_skills_area", label: "Life Skills Area", type: "text", required: true },
+    { 
+      key: "life_skills_area", 
+      label: "Life Skills Area", 
+      type: "select", 
+      required: true,
+      options: [
+        "Personal Hygiene & Grooming",
+        "Money Management",
+        "Transportation & Mobility",
+        "Meal Planning & Food Preparation",
+        "Home Management & Cleaning",
+        "Health & Wellness",
+        "Social & Interpersonal Skills",
+        "Communication Skills",
+        "Time Management & Organization",
+        "Job Readiness & Work Habits",
+        "Educational Support",
+        "Leisure & Recreation",
+        "Community Integration",
+        "Safety & Emergency Preparedness",
+        "Other"
+      ]
+    },
     { key: "specific_skill_taught", label: "Specific Skill Taught", type: "text", required: true },
     { key: "client_progress_mastery_level", label: "Client Progress/Mastery Level", type: "text", required: true },
     { key: "practice_homework_assigned", label: "Practice/Homework Assigned", type: "textarea", required: false },
