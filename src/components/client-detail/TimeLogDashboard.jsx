@@ -45,7 +45,6 @@ export default function TimeLogDashboard({
     payrollEligible: "all"
   });
   const [showForm, setShowForm] = useState(false);
-  const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
   const [employees, setEmployees] = useState([]);
@@ -218,7 +217,7 @@ export default function TimeLogDashboard({
               <Filter className="w-3.5 h-3.5" />
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
-            <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowTypeSelector(true); }} className="gap-1.5">
+            <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowForm(true); }} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Entry
             </Button>
@@ -504,40 +503,46 @@ export default function TimeLogDashboard({
         )}
       </Card>
 
-      {/* Type Selector Dialog (Step 1) */}
-      <Dialog open={showTypeSelector} onOpenChange={open => { if (!open) { setShowTypeSelector(false); setSelectedEntryTypeCode(""); } }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
-            <DialogTitle>Select Entry Type</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4">
-              <EntryTypePicker
-                mode="grid"
-                showDescriptions={true}
-                groupByProgram={true}
-                onChange={(type) => {
-                  setSelectedEntryTypeCode(type.code);
-                  setShowTypeSelector(false);
-                  setShowForm(true);
-                }}
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit/Add Dialog (Step 2) */}
+      {/* Add/Edit Dialog with Entry Type Selector at top */}
       <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); } }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle>{editingEntry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4">
-              {/* Route to dedicated forms based on entry type */}
+            <div className="px-6 py-4 space-y-4">
+              {/* Entry Type Dropdown */}
+              {!editingEntry && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Entry Type</Label>
+                  <Select
+                    value={selectedEntryTypeCode}
+                    onValueChange={setSelectedEntryTypeCode}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Select an entry type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {entryTypes.map(t => (
+                        <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Render appropriate form based on selected type */}
               {(() => {
                 const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
+                
+                // For new entries, only render form if an entry type is selected
+                if (!editingEntry && !activeEntryTypeCode) {
+                  return (
+                    <div className="p-4 text-center text-sm text-slate-500">
+                      Select an entry type above to begin
+                    </div>
+                  );
+                }
                 
                 if (activeEntryTypeCode === 'job_coaching') {
                   return (
@@ -555,7 +560,7 @@ export default function TimeLogDashboard({
                       onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                     />
                   );
-                } else {
+                } else if (activeEntryTypeCode) {
                   return (
                     <TimeEntryFormContent
                       entry={editingEntry}
@@ -563,7 +568,7 @@ export default function TimeLogDashboard({
                       onClose={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                       onSave={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
                       entryTypes={entryTypes}
-                      onEntryTypeChange={setSelectedEntryTypeCode}
+                      selectedTypeCode={activeEntryTypeCode}
                     />
                   );
                 }
@@ -581,10 +586,12 @@ export default function TimeLogDashboard({
  * Uses EntryType instead of legacy category
  * NOW LOADS AND DISPLAYS DYNAMIC QUESTIONS FROM ReportFieldTemplate
  */
-function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, onEntryTypeChange }) {
+function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, selectedTypeCode }) {
     console.log('[DEBUG] TimeEntryFormContent MOUNTED with entry_type_code:', entry?.entry_type_code);
     // Filter out job_coaching and usor96 from available types
     const availableEntryTypes = entryTypes.filter(t => t.code !== 'job_coaching' && t.code !== 'usor96');
+    
+    const typeObj = entryTypes.find(t => t.code === (entry?.entry_type_code || selectedTypeCode));
     
     const [form, setForm] = useState(
       entry ? {
@@ -598,8 +605,8 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, on
       } : {
         date: format(new Date(), "yyyy-MM-dd"),
         duration_minutes: "",
-        entry_type_id: "",
-        entry_type_code: "",
+        entry_type_id: typeObj?.id || "",
+        entry_type_code: selectedTypeCode || "",
         description: "",
         start_time: "",
         end_time: ""
@@ -697,97 +704,40 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, on
 
    return (
      <div className="space-y-4">
-       {/* Only render base fields if NO template questions exist (fallback) */}
-       {questions.length === 0 && (
-         <>
-           <div className="grid grid-cols-2 gap-3">
-             <div className="space-y-1">
-               <Label className="text-xs">Date</Label>
-               <Input
-                 type="date"
-                 value={form.date}
-                 onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-               />
-             </div>
-             <div className="space-y-1">
-               <Label className="text-xs">Entry Type</Label>
-               <Select
-                 value={form.entry_type_code}
-                 onValueChange={v => {
-                   const type = entryTypes.find(t => t.code === v);
-                   setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
-                   onEntryTypeChange?.(v);
-                 }}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Select..." />
-                 </SelectTrigger>
-                 <SelectContent>
-                   {availableEntryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
-                 </SelectContent>
-               </Select>
-             </div>
-           </div>
+       {/* Base fields (Date, Duration) */}
+       <div className="grid grid-cols-2 gap-3">
+         <div className="space-y-1">
+           <Label className="text-xs">Date</Label>
+           <Input
+             type="date"
+             value={form.date}
+             onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+           />
+         </div>
+         <div className="space-y-1">
+           <Label className="text-xs">Duration (minutes)</Label>
+           <Input
+             type="number"
+             value={form.duration_minutes}
+             onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
+             placeholder="60"
+           />
+         </div>
+       </div>
 
-           <div className="space-y-1">
-             <Label className="text-xs">Description</Label>
-             <Input
-               value={form.description}
-               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-               placeholder="What did you work on?"
-             />
-           </div>
+       <div className="space-y-1">
+         <Label className="text-xs">Description</Label>
+         <Input
+           value={form.description}
+           onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+           placeholder="What did you work on?"
+         />
+       </div>
 
-           <div className="space-y-2 p-3 bg-slate-50 rounded">
-             <p className="text-xs font-medium text-slate-600">Duration</p>
-             <div className="grid grid-cols-3 gap-2">
-               <div className="space-y-1">
-                 <Label className="text-xs">Start Time</Label>
-                 <Input
-                   type="time"
-                   value={form.start_time}
-                   onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
-                 />
-               </div>
-               <div className="space-y-1">
-                 <Label className="text-xs">End Time</Label>
-                 <Input
-                   type="time"
-                   value={form.end_time}
-                   onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
-                 />
-               </div>
-               <div className="space-y-1">
-                 <Label className="text-xs">Minutes</Label>
-                 <Input
-                   type="number"
-                   value={form.duration_minutes}
-                   onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
-                   placeholder="60"
-                 />
-               </div>
-             </div>
-           </div>
-         </>
-       )}
-
-       {/* Dynamic Questions Section - REPLACES base fields when available */}
-       {form.entry_type_code && (
-         <>
-           {/* Entry Type selector at top */}
-           {questions.length > 0 && (
-             <div className="space-y-1">
-               <Label className="text-xs">Entry Type</Label>
-               <div className="p-2 bg-slate-50 rounded text-xs text-slate-600">
-                 {entryTypes.find(t => t.code === form.entry_type_code)?.name}
-               </div>
-             </div>
-           )}
-
-           {/* Template-driven form */}
-           {questions.length > 0 && (
-             <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
-               <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
+       {/* Dynamic Questions Section */}
+       {form.entry_type_code && questions.length > 0 && (
+         <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
+           <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
            <div className="space-y-3">
              {loadingQuestions ? (
                <p className="text-xs text-slate-500 italic">Loading questions...</p>
@@ -851,13 +801,11 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, on
                  </div>
                ))
              )}
-             </div>
-             </div>
-             )}
-             </>
-             )}
+           </div>
+         </div>
+       )}
 
-             <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
+       <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
          <Button variant="outline" onClick={onClose}>Cancel</Button>
          <Button onClick={handleSave} disabled={saving}>
            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
