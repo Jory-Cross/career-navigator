@@ -733,9 +733,10 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
                          <SelectValue placeholder={q.placeholder || 'Select...'} />
                        </SelectTrigger>
                        <SelectContent>
-                         {q.options?.map(opt => (
-                           <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                         ))}
+                         {q.options?.filter(opt => opt && opt.trim()).map(opt => {
+                           const trimmed = opt.trim();
+                           return trimmed ? <SelectItem key={trimmed} value={trimmed}>{trimmed}</SelectItem> : null;
+                         })}
                        </SelectContent>
                      </Select>
                    ) : q.field_type === 'date' ? (
