@@ -758,7 +758,7 @@ export default function Calendar() {
                 {unloggedMeetings.map(meeting => {
                   const client = clients.find(c => c.id === meeting.client_id);
                   return (
-                    <div key={meeting.id} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 cursor-pointer" onClick={() => openEdit(meeting)}>
+                    <div key={meeting.id} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
@@ -778,20 +778,38 @@ export default function Calendar() {
                           Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedMeeting(meeting);
-                          setConvertNotes(meeting.description || "");
-                          setShowConvert(true);
-                        }}
-                      >
-                        <Timer className="w-3 h-3 mr-1" />
-                        Log Time
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMeeting(meeting);
+                            setConvertNotes(meeting.description || "");
+                            setShowConvert(true);
+                          }}
+                        >
+                          <Timer className="w-3 h-3 mr-1" />
+                          Log Time
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-slate-400 hover:text-slate-600 hover:bg-amber-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            base44.entities.Meeting.update(meeting.id, { status: 'not_selected' }).then(() => {
+                              queryClient.invalidateQueries({ queryKey: ['meetings'] });
+                              toast.success("Meeting dismissed");
+                            }).catch(() => {
+                              toast.error("Failed to dismiss meeting");
+                            });
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
