@@ -766,12 +766,12 @@ function FieldInput({ field, value, error, onChange }) {
       )}
 
       {field.field_type === "select" && (
-        <Select value={value} onValueChange={onChange}>
+        <Select value={value || ""} onValueChange={onChange}>
           <SelectTrigger className={inputClass}>
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).filter(opt => opt !== "").map(opt => (
+            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => (
               <SelectItem key={opt} value={opt}>{opt}</SelectItem>
             ))}
           </SelectContent>
@@ -779,12 +779,12 @@ function FieldInput({ field, value, error, onChange }) {
       )}
 
       {field.field_type === "multiselect" && (
-        <Select value={Array.isArray(value) ? value[0] : value} onValueChange={onChange}>
+        <Select value={Array.isArray(value) ? value[0] || "" : (value || "")} onValueChange={onChange}>
           <SelectTrigger className={inputClass}>
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).filter(opt => opt !== "").map(opt => (
+            {(field.options || []).filter(opt => opt && opt.trim() !== "").map(opt => (
               <SelectItem key={opt} value={opt}>{opt}</SelectItem>
             ))}
           </SelectContent>
