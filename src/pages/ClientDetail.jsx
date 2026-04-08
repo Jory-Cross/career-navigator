@@ -10,7 +10,7 @@ import ClientHeader from "@/components/client-detail/ClientHeader";
 import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
 import TasksSection from "@/components/client-detail/TasksSection";
 import ResumeSection from "@/components/client-detail/ResumeSection";
-import TimeLogSection from "@/components/client-detail/TimeLogSection";
+import TimeLogDashboard from "@/components/client-detail/TimeLogDashboard";
 import OnboardingSection from "@/components/client-detail/OnboardingSection";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
 import DocumentsSection from "@/components/client-detail/DocumentsSection";
@@ -170,10 +170,10 @@ export default function ClientDetail() {
           <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} client={client} />
         </TabsContent>
         <TabsContent value="time">
-          <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
+          <TimeLogDashboard timeEntries={timeEntries} clientId={clientId} clients={[client]} onRefresh={refresh} />
         </TabsContent>
         <TabsContent value="job_supports">
-          <TimeLogSection timeEntries={timeEntries} clientId={clientId} onRefresh={refresh} />
+          <TimeLogDashboard timeEntries={timeEntries} clientId={clientId} clients={[client]} onRefresh={refresh} />
         </TabsContent>
         <TabsContent value="activity">
           <ActivitySection clientId={clientId} />
