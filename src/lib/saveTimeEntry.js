@@ -3,6 +3,27 @@ import { toast } from "sonner";
 import { buildTimeEntryPayload } from "@/lib/timeEntryPayloadBuilder";
 
 /**
+ * Hard guards before persistence.
+ * Fails loudly if payload structure is invalid.
+ * 
+ * @param {Record<string, any>} payload
+ * @throws {Error} If validation fails
+ */
+function validateBeforeSave(payload) {
+  if (!payload.entry_type_id) {
+    throw new Error("❌ Hard Guard Failed: missing entry_type_id");
+  }
+
+  if (payload.duration_minutes == null || Number.isNaN(Number(payload.duration_minutes))) {
+    throw new Error(`❌ Hard Guard Failed: invalid duration_minutes (${payload.duration_minutes})`);
+  }
+
+  if (typeof payload.form_data !== "object" || payload.form_data == null) {
+    throw new Error("❌ Hard Guard Failed: missing or invalid form_data");
+  }
+}
+
+/**
  * Unified time entry save helper.
  * Uses centralized buildTimeEntryPayload for all create/update operations.
  * 
@@ -38,13 +59,8 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
     console.log("[saveTimeEntry] Built payload:", JSON.stringify(payload, null, 2));
     console.log("🟢 Saving Entry Payload:", payload);
 
-    // ⚠️ Guard: Validate payload has required fields
-    if (!payload.duration_minutes || payload.duration_minutes <= 0) {
-      throw new Error("❌ Payload validation failed: invalid duration_minutes");
-    }
-    if (!payload.entry_type_id) {
-      throw new Error("❌ Payload validation failed: missing entry_type_id");
-    }
+    // ⚠️ Hard Guards: Validate payload before any persistence
+    validateBeforeSave(payload);
 
     // PERSIST
     if (existingEntry?.id) {
@@ -74,13 +90,7 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
         employee_id: currentUser.id
       };
 
-      // ⚠️ Guard: Verify create data has minimum required fields
-      if (!createData.duration_minutes || createData.duration_minutes <= 0) {
-        throw new Error("❌ Create payload invalid duration_minutes");
-      }
-      if (!createData.entry_type_id) {
-        throw new Error("❌ Create payload missing entry_type_id");
-      }
+      // ⚠️ Guard: Verify create data has authentication
       if (!createData.employee_id) {
         throw new Error("❌ Create payload missing employee_id");
       }
