@@ -37,6 +37,7 @@ export default function StructuredVocRehabForm({
         const types = await base44.entities.EntryType.filter({ code: entryTypeCode });
         if (types.length > 0) {
           setEntryType(types[0]);
+          console.log("[StructuredVocRehabForm] Entry type loaded:", types[0]);
         }
 
         // Get field templates for this entry type
@@ -46,8 +47,12 @@ export default function StructuredVocRehabForm({
           is_internal_only: false
         });
 
+        console.log("[StructuredVocRehabForm] Raw templates loaded:", templates.length);
+        console.log("[StructuredVocRehabForm] Template codes:", templates.map(t => t.entry_type_code));
+
         // Sort by order
         const sorted = templates.sort((a, b) => (a.order || 0) - (b.order || 0));
+        console.log("[StructuredVocRehabForm] Final questions:", sorted.map(q => q.field_key));
         setQuestions(sorted);
 
         // If editing, populate answers from entry's field answers
@@ -119,10 +124,18 @@ export default function StructuredVocRehabForm({
 
   if (questions.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-slate-500 mb-4">
+      <div className="text-center py-8 space-y-3">
+        <p className="text-sm text-slate-500">
           No fields configured for this entry type yet.
         </p>
+        <p className="text-xs text-slate-400">
+          Entry Type Code: <code className="bg-slate-100 px-2 py-1 rounded">{entryTypeCode}</code>
+        </p>
+        {entryType && (
+          <p className="text-xs text-slate-400">
+            Program Type: <code className="bg-slate-100 px-2 py-1 rounded">{entryType.program_type}</code>
+          </p>
+        )}
         <div className="flex gap-2 justify-center pt-4 border-t border-slate-200">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
         </div>

@@ -535,6 +535,7 @@ export default function TimeLogDashboard({
               {(() => {
                 const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
                 const selectedType = entryTypes.find(t => t.code === activeEntryTypeCode);
+                console.log("Selected entry type", selectedType);
                 
                 // For new entries, only render form if an entry type is selected
                 if (!editingEntry && !activeEntryTypeCode) {
