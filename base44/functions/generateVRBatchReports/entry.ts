@@ -115,17 +115,17 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     return { status: 'failed', message: msg };
   }
 
-  const reportData = assembleRes.data.data;
+  const assembled = assembleRes.data.data;
 
   // Skip clients with no entries
-  if (!reportData.totals?.entry_count || reportData.totals.entry_count === 0) {
+  if (!assembled.totals?.entry_count || assembled.totals.entry_count === 0) {
     return { status: 'skipped', message: 'No entries in period' };
   }
 
   // Step 2 — Generate PDF via generatePDFReport
   const pdfRes = await base44.functions.invoke('generatePDFReport', {
     templateId: template.id,
-    reportData
+    assembled
   });
 
   if (!pdfRes?.data?.success || !pdfRes?.data?.pdf_url) {
@@ -149,12 +149,12 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     ? periodReports.sort((a, b) => (b.version_number || 1) - (a.version_number || 1))[0].id
     : null;
 
-  const clientHeader = reportData.header;
+  const clientHeader = assembled.header;
   const clientName   = clientHeader.client_full_name || clientId;
   const fileName     = `${entry_type_code}-${clientHeader.client_last_name || clientId}-${date_from}-${date_to}-v${versionNumber}.pdf`;
   const title        = `${entry_type_code.replace(/_/g, ' ').toUpperCase()} — ${clientName} (${date_from} to ${date_to})`;
 
-  // Step 4 — Create GeneratedReport record
+  // Step 4 — Create GeneratedReport record (stores immutable snapshot of assembled data)
   const generatedReport = await base44.entities.GeneratedReport.create({
     client_id:                   clientId,
     report_batch_id:             batch_id,
@@ -163,9 +163,9 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     template_version:            template.template_version || 'v1',
     report_start_date:           date_from,
     report_end_date:             date_to,
-    included_time_entry_ids:     reportData.included_time_entry_ids || [],
-    included_answer_ids:         reportData.included_answer_ids     || [],
-    assembled_report_snapshot:   reportData,
+    included_time_entry_ids:     assembled.included_time_entry_ids || [],
+    included_answer_ids:         assembled.included_answer_ids     || [],
+    assembled_report_snapshot:   assembled,
     version_number:              versionNumber,
     supersedes_report_id:        supersedes,
     generated_by:                user.email,
@@ -193,7 +193,7 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     reporting_period_start:      date_from,
     reporting_period_end:        date_to,
     tags:                        [entry_type_code, report_mode, 'vr-report'],
-    notes:                       `Batch ${batch_id} — ${reportData.totals.entry_count} entries, v${versionNumber}`
+    notes:                       `Batch ${batch_id} — ${assembled.totals.entry_count} entries, v${versionNumber}`
   });
 
   // Update GeneratedReport with the document FK
@@ -207,7 +207,7 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     document_id:          document.id,
     pdf_url:              pdfUrl,
     version_number:       versionNumber,
-    entry_count:          reportData.totals.entry_count,
-    total_hours:          reportData.totals.total_hours
+    entry_count:          assembled.totals.entry_count,
+    total_hours:          assembled.totals.total_hours
   };
 }

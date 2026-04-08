@@ -4,12 +4,16 @@ import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 /**
  * generatePDFReport
  *
- * Accepts only pre-assembled report data + a template ID.
- * Never reads TimeEntry or raw records directly.
+ * Generates a PDF from ONLY pre-assembled report data.
+ * Never queries TimeEntry, ReportFieldAnswer, or other source entities directly.
+ * PDF field values come exclusively from:
+ *   - assembled.header (client, authorization, period metadata)
+ *   - assembled.rows (repeating entries, sorted by date)
+ *   - assembled.summary (aggregations by entry type/employer/field)
  *
  * Input:
  *   templateId    – PDFTemplate record ID
- *   reportData    – { header, rows, summary, totals } from getReportAggregation
+ *   assembled     – { metadata, header, rows, summary, totals, included_* } from assembleClientReport
  *
  * Output:
  *   { success, pdf_url }
@@ -21,10 +25,13 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { templateId, reportData } = await req.json();
+    const { templateId, assembled } = await req.json();
 
     if (!templateId)  return Response.json({ error: 'templateId is required' }, { status: 400 });
-    if (!reportData)  return Response.json({ error: 'reportData is required' }, { status: 400 });
+    if (!assembled)   return Response.json({ error: 'assembled report data is required' }, { status: 400 });
+    if (!assembled.header || !assembled.rows === undefined || !assembled.summary) {
+      return Response.json({ error: 'assembled must have header, rows, and summary' }, { status: 400 });
+    }
 
     const [templates, fieldMaps] = await Promise.all([
       base44.entities.PDFTemplate.filter({ id: templateId }),
@@ -36,9 +43,9 @@ Deno.serve(async (req) => {
 
     const activeMaps = fieldMaps.filter(m => m.is_active !== false);
 
-    const pdf_url = await fillAndUploadPDF(base44, template, activeMaps, reportData);
+    const pdf_url = await fillAndUploadPDF(base44, template, activeMaps, assembled);
 
-    return Response.json({ success: true, pdf_url });
+    return Response.json({ success: true, pdf_url, metadata: assembled.metadata });
 
   } catch (error) {
     console.error('generatePDFReport error:', error.message);
@@ -48,7 +55,14 @@ Deno.serve(async (req) => {
 
 // ─── PDF Fill + Upload ────────────────────────────────────────────────────────
 
-async function fillAndUploadPDF(base44, template, fieldMaps, report) {
+/**
+ * Fill PDF form using ONLY assembled report data
+ * @param {Object} base44 - SDK client
+ * @param {Object} template - PDFTemplate record
+ * @param {Array} fieldMaps - PDFFieldMap records (active only)
+ * @param {Object} assembled - { metadata, header, rows, summary, totals, ... }
+ */
+async function fillAndUploadPDF(base44, template, fieldMaps, assembled) {
   const pdfRes = await fetch(template.pdf_file_url);
   if (!pdfRes.ok) throw new Error(`Failed to fetch PDF template: ${pdfRes.status}`);
 
@@ -70,22 +84,24 @@ async function fillAndUploadPDF(base44, template, fieldMaps, report) {
     row:     fieldMaps.filter(m => m.mapping_scope === 'row')
   };
 
-  // Static
-  byScope.static.forEach(m => setField(m.pdf_field_name, m.static_value ?? m.default_value ?? ''));
+  // Static values (hardcoded in mapping)
+  byScope.static.forEach(m => {
+    setField(m.pdf_field_name, m.static_value ?? m.default_value ?? '');
+  });
 
-  // Header
+  // Header fields (pulled from assembled.header)
   byScope.header.forEach(m => {
-    const val = resolveValue(report.header || {}, m.source_field, m.default_value);
+    const val = resolveValue(assembled.header || {}, m.source_field, m.default_value);
     setField(m.pdf_field_name, applyTransform(val, m));
   });
 
-  // Summary
+  // Summary fields (pulled from assembled.summary)
   byScope.summary.forEach(m => {
-    const val = resolveValue(report.summary || {}, m.source_field, m.default_value);
+    const val = resolveValue(assembled.summary || {}, m.source_field, m.default_value);
     setField(m.pdf_field_name, applyTransform(val, m));
   });
 
-  // Row (repeating) — group by row_group so multiple fields per row stay aligned
+  // Row fields (repeating, one per assembled.rows entry, sorted by date)
   const rowGroups = {};
   byScope.row.forEach(m => {
     const g = m.row_group || 'default';
@@ -93,7 +109,7 @@ async function fillAndUploadPDF(base44, template, fieldMaps, report) {
     rowGroups[g].push(m);
   });
 
-  const rows = report.rows || [];
+  const rows = assembled.rows || [];
   Object.values(rowGroups).forEach(groupMappings => {
     rows.forEach((row, rowIdx) => {
       groupMappings.forEach(m => {
