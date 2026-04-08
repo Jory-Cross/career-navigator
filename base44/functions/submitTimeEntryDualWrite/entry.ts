@@ -69,13 +69,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate reporting period key
+    // Calculate reporting period key (YYYY-MM for monthly, YYYY-QN for quarterly)
     const dateObj = new Date(date);
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const year = dateObj.getFullYear();
-    const reportingPeriodKey = entryType.report_mode.includes('service_period')
-      ? `${year}-Q${Math.ceil((dateObj.getMonth() + 1) / 3)}`
-      : `${year}-${month}`;
+    let reportingPeriodKey = `${year}-${month}`;
+    if (entryType.report_mode === 'usor148_service_period') {
+      reportingPeriodKey = `${year}-Q${Math.ceil((dateObj.getMonth() + 1) / 3)}`;
+    }
 
     // Fetch field templates for this entry type
     const fieldTemplates = await base44.entities.ReportFieldTemplate.filter({
