@@ -13,9 +13,8 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
-import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
-import Usor96Launcher from "@/components/time-entry/Usor96Launcher";
+import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -46,6 +45,7 @@ export default function TimeLogDashboard({
     payrollEligible: "all"
   });
   const [showForm, setShowForm] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
   const [employees, setEmployees] = useState([]);
@@ -218,15 +218,7 @@ export default function TimeLogDashboard({
               <Filter className="w-3.5 h-3.5" />
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
-            <JobCoachingLauncher
-              clientId={clientId}
-              onSuccess={onRefresh}
-            />
-            <Usor96Launcher
-              clientId={clientId}
-              onSuccess={onRefresh}
-            />
-            <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowForm(true); }} className="gap-1.5">
+            <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowTypeSelector(true); }} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Entry
             </Button>
@@ -512,7 +504,30 @@ export default function TimeLogDashboard({
         )}
       </Card>
 
-      {/* Edit/Add Dialog */}
+      {/* Type Selector Dialog (Step 1) */}
+      <Dialog open={showTypeSelector} onOpenChange={open => { if (!open) { setShowTypeSelector(false); setSelectedEntryTypeCode(""); } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
+            <DialogTitle>Select Entry Type</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 py-4">
+              <EntryTypePicker
+                mode="grid"
+                showDescriptions={true}
+                groupByProgram={true}
+                onChange={(type) => {
+                  setSelectedEntryTypeCode(type.code);
+                  setShowTypeSelector(false);
+                  setShowForm(true);
+                }}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit/Add Dialog (Step 2) */}
       <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); } }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
@@ -568,6 +583,9 @@ export default function TimeLogDashboard({
  */
 function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, onEntryTypeChange }) {
     console.log('[DEBUG] TimeEntryFormContent MOUNTED with entry_type_code:', entry?.entry_type_code);
+    // Filter out job_coaching and usor96 from available types
+    const availableEntryTypes = entryTypes.filter(t => t.code !== 'job_coaching' && t.code !== 'usor96');
+    
     const [form, setForm] = useState(
       entry ? {
         date: entry.date,
@@ -705,7 +723,7 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, on
                    <SelectValue placeholder="Select..." />
                  </SelectTrigger>
                  <SelectContent>
-                   {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
+                   {availableEntryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
                  </SelectContent>
                </Select>
              </div>
