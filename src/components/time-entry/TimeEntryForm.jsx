@@ -174,7 +174,7 @@ export default function TimeEntryForm({ clients, onSaved, onCancel }) {
     if (!selectedEntryType) { setFieldTemplates([]); return; }
     setLoadingFields(true);
     base44.entities.ReportFieldTemplate.filter(
-      { entry_type_id: selectedEntryType.id, is_active: true },
+      { entry_type_id: selectedEntryType.id, is_active: true, pdf_context: 'row', is_internal_only: false },
       "order"
     )
       .then(fields => setFieldTemplates(fields))
