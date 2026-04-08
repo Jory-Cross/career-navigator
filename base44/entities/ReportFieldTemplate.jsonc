@@ -1,27 +1,22 @@
 {
   "name": "ReportFieldTemplate",
   "type": "object",
-  "description": "Defines a single question/field that belongs to a specific EntryType report. Changing or adding fields here does not affect the TimeEntry structure.",
+  "description": "Defines a dynamic form field/question for a specific entry type.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "entry_type_id": {
-      "type": "string",
-      "description": "Reference to EntryType this field belongs to"
+      "type": "string"
     },
     "entry_type_code": {
-      "type": "string",
-      "description": "Denormalized code for fast lookups (e.g. 'job_coaching')"
+      "type": "string"
     },
     "field_key": {
-      "type": "string",
-      "description": "Machine-readable key used to store/retrieve the answer (e.g. 'goal_addressed', 'employer_name')"
+      "type": "string"
     },
     "label": {
-      "type": "string",
-      "description": "Human-readable label shown in the form"
+      "type": "string"
     },
     "field_type": {
       "type": "string",
@@ -30,51 +25,79 @@
         "textarea",
         "number",
         "date",
+        "time",
         "select",
         "multiselect",
         "checkbox",
-        "boolean",
-        "time"
+        "boolean"
       ],
-      "default": "text",
-      "description": "Type of input control to render"
+      "default": "text"
+    },
+    "field_group": {
+      "type": "string"
+    },
+    "section": {
+      "type": "string"
+    },
+    "order": {
+      "type": "number"
     },
     "options": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "For select/multiselect fields: list of allowed options"
+      }
+    },
+    "placeholder": {
+      "type": "string"
+    },
+    "help_text": {
+      "type": "string"
     },
     "is_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether this field must be filled before saving"
+      "default": false
     },
-    "order": {
+    "is_reportable": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_internal_only": {
+      "type": "boolean",
+      "default": false
+    },
+    "pdf_context": {
+      "type": "string",
+      "enum": [
+        "header",
+        "row",
+        "summary",
+        "none"
+      ],
+      "default": "row"
+    },
+    "maps_to_form_code": {
+      "type": "string"
+    },
+    "validation_rule": {
+      "type": "string"
+    },
+    "conditional_logic": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "schema_version": {
       "type": "number",
-      "description": "Display order within the form"
-    },
-    "section": {
-      "type": "string",
-      "description": "Optional grouping label (e.g. 'Service Details', 'Employer Info')"
-    },
-    "placeholder": {
-      "type": "string",
-      "description": "Optional placeholder text for the input"
-    },
-    "help_text": {
-      "type": "string",
-      "description": "Optional helper text shown beneath the field"
+      "default": 1
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "Soft-delete: inactive fields are hidden from new entries but preserved in old answers"
+      "default": true
     }
   },
   "required": [
     "entry_type_id",
+    "entry_type_code",
     "field_key",
     "label"
   ]
