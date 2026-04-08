@@ -14,8 +14,14 @@ export default function DynamicEntryForm({
   onSave,
   onCancel,
 }) {
-  const initialData = useMemo(() => buildInitialFormData(schema, entry), [schema, entry]);
-  const [formData, setFormData] = useState(initialData);
+  const initialData = useMemo(() => {
+    console.log("[DynamicEntryForm] EDIT ENTRY:", entry);
+    console.log("[DynamicEntryForm] ENTRY FORM_DATA:", entry?.form_data);
+    const data = buildInitialFormData(schema, entry);
+    console.log("[DynamicEntryForm] Initial form data after hydration:", data);
+    return data;
+  }, [schema, entry]);
+   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
@@ -56,26 +62,27 @@ export default function DynamicEntryForm({
     setSaving(true);
 
     try {
-      const payload = normalizeTopLevelFields(entryTypeCode, formData);
-      console.log("[DynamicEntryForm] Normalized payload:", payload);
+       const payload = normalizeTopLevelFields(entryTypeCode, formData);
+       console.log("[DynamicEntryForm] Normalized payload:", payload);
 
-      // Add entry type metadata
-      if (entryTypeObj) {
-        payload.entry_type_id = entryTypeObj.id;
-        console.log("[DynamicEntryForm] Added entry_type_id:", entryTypeObj.id);
-      } else {
-        console.warn("[DynamicEntryForm] Entry type object not resolved");
-      }
-      payload.entry_type_code = entryTypeCode;
-      payload.category = entryTypeObj?.category || "structured";
-      payload.legacy_category = entryTypeObj?.legacy_category || null;
+       // Add entry type metadata
+       if (entryTypeObj) {
+         payload.entry_type_id = entryTypeObj.id;
+         console.log("[DynamicEntryForm] Added entry_type_id:", entryTypeObj.id);
+       } else {
+         console.warn("[DynamicEntryForm] Entry type object not resolved");
+       }
+       payload.entry_type_code = entryTypeCode;
+       payload.category = entryTypeObj?.category || "structured";
+       payload.legacy_category = entryTypeObj?.legacy_category || null;
 
-      if (entry?.id) {
-        payload.id = entry.id;
-      }
+       if (entry?.id) {
+         payload.id = entry.id;
+       }
 
-      console.log("[DynamicEntryForm] Final payload before onSave:", JSON.stringify(payload, null, 2));
-      await onSave?.(payload);
+       console.log("[DynamicEntryForm] SUBMIT PAYLOAD:", JSON.stringify(payload, null, 2));
+       console.log("[DynamicEntryForm] form_data contents:", payload.form_data);
+       await onSave?.(payload);
     } catch (err) {
       const errorMsg = err?.message || "Failed to save entry";
       console.error("[DynamicEntryForm] Save failed:", err);
