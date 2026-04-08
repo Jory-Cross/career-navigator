@@ -500,17 +500,21 @@ export default function TimeLogDashboard({
 
       {/* Edit/Add Dialog */}
       <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle>{editingEntry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
           </DialogHeader>
-          <TimeEntryFormContent
-            entry={editingEntry}
-            clientId={clientId}
-            onClose={() => { setShowForm(false); setEditingEntry(null); }}
-            onSave={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
-            entryTypes={entryTypes}
-          />
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 py-4">
+              <TimeEntryFormContent
+                entry={editingEntry}
+                clientId={clientId}
+                onClose={() => { setShowForm(false); setEditingEntry(null); }}
+                onSave={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
+                entryTypes={entryTypes}
+              />
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -630,153 +634,152 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
    };
 
    return (
-     <>
-       <div className="space-y-4 py-4">
-         <div className="grid grid-cols-2 gap-3">
+     <div className="space-y-4">
+       <div className="grid grid-cols-2 gap-3">
+         <div className="space-y-1">
+           <Label className="text-xs">Date</Label>
+           <Input
+             type="date"
+             value={form.date}
+             onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+           />
+         </div>
+         <div className="space-y-1">
+           <Label className="text-xs">Entry Type</Label>
+           <Select
+             value={form.entry_type_code}
+             onValueChange={v => {
+               const type = entryTypes.find(t => t.code === v);
+               setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
+             }}
+           >
+             <SelectTrigger>
+               <SelectValue placeholder="Select..." />
+             </SelectTrigger>
+             <SelectContent>
+               {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
+             </SelectContent>
+           </Select>
+         </div>
+       </div>
+
+       <div className="space-y-1">
+         <Label className="text-xs">Description</Label>
+         <Input
+           value={form.description}
+           onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+           placeholder="What did you work on?"
+         />
+       </div>
+
+       <div className="space-y-2 p-3 bg-slate-50 rounded">
+         <p className="text-xs font-medium text-slate-600">Duration</p>
+         <div className="grid grid-cols-3 gap-2">
            <div className="space-y-1">
-             <Label className="text-xs">Date</Label>
+             <Label className="text-xs">Start Time</Label>
              <Input
-               type="date"
-               value={form.date}
-               onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+               type="time"
+               value={form.start_time}
+               onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
              />
            </div>
            <div className="space-y-1">
-             <Label className="text-xs">Entry Type</Label>
-             <Select
-               value={form.entry_type_code}
-               onValueChange={v => {
-                 const type = entryTypes.find(t => t.code === v);
-                 setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
-               }}
-             >
-               <SelectTrigger>
-                 <SelectValue placeholder="Select..." />
-               </SelectTrigger>
-               <SelectContent>
-                 {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
-               </SelectContent>
-             </Select>
+             <Label className="text-xs">End Time</Label>
+             <Input
+               type="time"
+               value={form.end_time}
+               onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
+             />
+           </div>
+           <div className="space-y-1">
+             <Label className="text-xs">Minutes</Label>
+             <Input
+               type="number"
+               value={form.duration_minutes}
+               onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
+               placeholder="60"
+             />
            </div>
          </div>
+       </div>
 
-         <div className="space-y-1">
-           <Label className="text-xs">Description</Label>
-           <Input
-             value={form.description}
-             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-             placeholder="What did you work on?"
-           />
-         </div>
-
-         <div className="space-y-2 p-3 bg-slate-50 rounded">
-           <p className="text-xs font-medium text-slate-600">Duration</p>
-           <div className="grid grid-cols-3 gap-2">
-             <div className="space-y-1">
-               <Label className="text-xs">Start Time</Label>
-               <Input
-                 type="time"
-                 value={form.start_time}
-                 onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
-               />
-             </div>
-             <div className="space-y-1">
-               <Label className="text-xs">End Time</Label>
-               <Input
-                 type="time"
-                 value={form.end_time}
-                 onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
-               />
-             </div>
-             <div className="space-y-1">
-               <Label className="text-xs">Minutes</Label>
-               <Input
-                 type="number"
-                 value={form.duration_minutes}
-                 onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
-                 placeholder="60"
-               />
-             </div>
+       {/* Dynamic Questions Section */}
+       {questions.length > 0 && (
+         <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
+           <p className="text-xs font-semibold text-blue-900">Reporting Questions ({questions.length})</p>
+           <div className="space-y-3">
+             {loadingQuestions ? (
+               <p className="text-xs text-slate-500 italic">Loading questions...</p>
+             ) : (
+               questions.map(q => (
+                 <div key={q.field_key} className="space-y-1.5">
+                   <Label className="text-xs">
+                     {q.label}
+                     {q.is_required && <span className="text-red-500 ml-1">*</span>}
+                   </Label>
+                   {q.field_type === 'textarea' ? (
+                     <textarea
+                       className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none min-h-20"
+                       value={fieldAnswers[q.field_key] || ''}
+                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                       placeholder={q.placeholder || ''}
+                     />
+                   ) : q.field_type === 'select' ? (
+                     <Select
+                       value={fieldAnswers[q.field_key] || ''}
+                       onValueChange={v => setFieldAnswers(p => ({ ...p, [q.field_key]: v }))}
+                     >
+                       <SelectTrigger className="h-8 text-xs">
+                         <SelectValue placeholder={q.placeholder || 'Select...'} />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {q.options?.map(opt => (
+                           <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   ) : q.field_type === 'date' ? (
+                     <Input
+                       type="date"
+                       value={fieldAnswers[q.field_key] || ''}
+                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                     />
+                   ) : q.field_type === 'time' ? (
+                     <Input
+                       type="time"
+                       value={fieldAnswers[q.field_key] || ''}
+                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                     />
+                   ) : q.field_type === 'number' ? (
+                     <Input
+                       type="number"
+                       value={fieldAnswers[q.field_key] || ''}
+                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                       placeholder={q.placeholder || ''}
+                     />
+                   ) : (
+                     <Input
+                       type="text"
+                       value={fieldAnswers[q.field_key] || ''}
+                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                       placeholder={q.placeholder || ''}
+                     />
+                   )}
+                   {q.help_text && <p className="text-xs text-slate-500 italic">{q.help_text}</p>}
+                 </div>
+               ))
+             )}
            </div>
          </div>
+       )}
 
-         {/* Dynamic Questions Section */}
-         {questions.length > 0 && (
-           <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
-             <p className="text-xs font-semibold text-blue-900">Reporting Questions ({questions.length})</p>
-             <div className="space-y-3">
-               {loadingQuestions ? (
-                 <p className="text-xs text-slate-500 italic">Loading questions...</p>
-               ) : (
-                 questions.map(q => (
-                   <div key={q.field_key} className="space-y-1">
-                     <Label className="text-xs">
-                       {q.label}
-                       {q.is_required && <span className="text-red-500 ml-1">*</span>}
-                     </Label>
-                     {q.field_type === 'textarea' ? (
-                       <textarea
-                         className="flex h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                         value={fieldAnswers[q.field_key] || ''}
-                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                         placeholder={q.placeholder || ''}
-                       />
-                     ) : q.field_type === 'select' ? (
-                       <Select
-                         value={fieldAnswers[q.field_key] || ''}
-                         onValueChange={v => setFieldAnswers(p => ({ ...p, [q.field_key]: v }))}
-                       >
-                         <SelectTrigger className="h-8 text-xs">
-                           <SelectValue placeholder={q.placeholder || 'Select...'} />
-                         </SelectTrigger>
-                         <SelectContent>
-                           {q.options?.map(opt => (
-                             <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                     ) : q.field_type === 'date' ? (
-                       <Input
-                         type="date"
-                         value={fieldAnswers[q.field_key] || ''}
-                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                       />
-                     ) : q.field_type === 'time' ? (
-                       <Input
-                         type="time"
-                         value={fieldAnswers[q.field_key] || ''}
-                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                       />
-                     ) : q.field_type === 'number' ? (
-                       <Input
-                         type="number"
-                         value={fieldAnswers[q.field_key] || ''}
-                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                         placeholder={q.placeholder || ''}
-                       />
-                     ) : (
-                       <Input
-                         type="text"
-                         value={fieldAnswers[q.field_key] || ''}
-                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                         placeholder={q.placeholder || ''}
-                       />
-                     )}
-                     {q.help_text && <p className="text-xs text-slate-500 italic">{q.help_text}</p>}
-                   </div>
-                 ))
-               )}
-             </div>
-           </div>
-         )}
-         </div>
-       <DialogFooter>
+       <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
          <Button variant="outline" onClick={onClose}>Cancel</Button>
          <Button onClick={handleSave} disabled={saving}>
            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
            {entry ? "Save" : "Add"}
          </Button>
-       </DialogFooter>
-     </>
+       </div>
+     </div>
    );
 }
