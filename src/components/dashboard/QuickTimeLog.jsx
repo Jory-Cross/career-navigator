@@ -30,19 +30,19 @@ const STRUCTURED_ENTRY_TYPES = [
   "csb_hours",
 ];
 
+/**
+ * 🚫 DEPRECATED - Use FormEngine instead
+ * 
+ * This component provided "quick log" vs "structured form" branching logic.
+ * FormEngine now handles all entry types dynamically based on schema.
+ * No more branching logic needed.
+ * 
+ * Keep for backward compatibility only.
+ */
 export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
-   const [clientId, setClientId] = useState("");
-   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-   const [startTime, setStartTime] = useState("");
-   const [endTime, setEndTime] = useState("");
-   const [description, setDescription] = useState("");
-   const [selectedEntryType, setSelectedEntryType] = useState(null);
-   const [saving, setSaving] = useState(false);
-   const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
-   const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
-   const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
-   const [entryTypes, setEntryTypes] = useState([]);
-   const [loadingEntryTypes, setLoadingEntryTypes] = useState(true);
+   // Block deprecated component - all rendering should use FormEngine
+   console.warn('[QuickTimeLog] DEPRECATED - Use FormEngine instead');
+   return null;
 
   // Load entry types (deduplicated)
   useEffect(() => {

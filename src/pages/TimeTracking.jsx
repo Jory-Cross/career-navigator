@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
-import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { saveTimeEntry } from "@/lib/saveTimeEntry";
@@ -17,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 
 export default function TimeTracking() {
@@ -187,15 +185,9 @@ export default function TimeTracking() {
           <h1 className="text-2xl font-bold text-slate-900">Time Tracking</h1>
           <p className="text-sm text-slate-500 mt-1">Log and review time spent with clients</p>
         </div>
-        <div className="flex gap-2">
-          <JobCoachingLauncher
-            clientId={null}
-            onSuccess={handleRefresh}
-          />
-          <Button onClick={() => setShowNewEntry(true)}>
-            <Plus className="w-4 h-4 mr-1" /> New Entry
-          </Button>
-        </div>
+        <Button onClick={() => setShowNewEntry(true)}>
+          <Plus className="w-4 h-4 mr-1" /> New Entry
+        </Button>
       </div>
 
       {legacyEntries.length > 0 && (
@@ -333,14 +325,7 @@ export default function TimeTracking() {
         </div>
 
         <div className="space-y-6">
-          <QuickTimeLog 
-            clients={allClients} 
-            onTimeSaved={handleRefresh}
-            onRouteToStructuredForm={(clientId, entryTypeCode, prefill) => {
-              // Route to structured form if needed
-              console.log("Route to structured form:", clientId, entryTypeCode, prefill);
-            }}
-          />
+          {/* Removed QuickTimeLog - consolidated into unified FormEngine */}
         </div>
       </div>
       {/* New Entry Dialog with FormEngine */}
@@ -373,40 +358,19 @@ export default function TimeTracking() {
                   mode="create"
                   onSave={async (payload) => {
                     try {
-                      const currentUser = await base44.auth.me();
-                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
-                      const dateValue = payload.date;
-                      const entryTypeCode = payload.entry_type_code || selectedEntryTypeCode;
+                      // 1️⃣ Save entry
+                      await saveTimeEntry({
+                        payload,
+                        existingEntry: null,
+                        clientId: null
+                      });
 
-                      if (!dateValue || !durationMinutes || !entryTypeCode) {
-                        throw new Error("Missing required fields");
-                      }
+                      // 2️⃣ Refresh data to sync UI with DB (critical)
+                      await handleRefresh();
 
-                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
-                        ? payload.form_data
-                        : {};
-
-                      const createData = {
-                        date: dateValue,
-                        duration_minutes: durationMinutes,
-                        description: payload.description,
-                        entry_type_code: entryTypeCode,
-                        start_time: payload.start_time || null,
-                        end_time: payload.end_time || null,
-                        form_data: derivedFormData,
-                        employee_id: currentUser?.id,
-                        status: "submitted",
-                        is_reportable: true,
-                        is_billable: false,
-                        is_payroll_eligible: true,
-                        reporting_period_key: dateValue ? dateValue.substring(0, 7) : null
-                      };
-
-                      await base44.entities.TimeEntry.create(createData);
-                      toast.success("Entry created");
+                      // 3️⃣ Close modal and reset state
                       setShowNewEntry(false);
                       setSelectedEntryTypeCode("");
-                      handleRefresh();
                     } catch (err) {
                       toast.error(err?.message || "Failed to save entry");
                     }

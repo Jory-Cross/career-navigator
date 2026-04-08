@@ -142,14 +142,19 @@ function FieldRenderer({ field, value, onChange }) {
   }
 }
 
+/**
+ * 🚫 DEPRECATED - Use FormEngine instead
+ * 
+ * This component has been superseded by FormEngine which provides
+ * a unified render path for all entry types via dynamicschema.
+ * 
+ * Keep this file for backward compatibility only.
+ */
 export default function TimeEntryForm({ clients, onSaved, onCancel, entryType }) {
-    console.log('[DEBUG] TimeEntryForm MOUNTED', entryType?.code);
-
-    // Guard: Block Job Coaching from using generic form
-    if (entryType?.code === 'job_coaching') {
-      console.warn('[DEBUG] TimeEntryForm BLOCKED for job_coaching - use JobCoachingTimeEntryForm instead');
-      return null;
-    }
+    console.warn('[TimeEntryForm] DEPRECATED - Use FormEngine instead');
+    
+    // Block legacy form - all rendering should go through FormEngine
+    return null;
 
     const [step, setStep] = useState("basics");
   const [saving, setSaving] = useState(false);
