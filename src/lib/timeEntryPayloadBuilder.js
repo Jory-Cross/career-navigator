@@ -68,36 +68,7 @@ function emptyToNull(value) {
   return value === "" || value === undefined ? null : value;
 }
 
-/**
- * Map template/form fields to structured data object.
- * Only includes fields defined in schema with saveToTopLevel !== true.
- * 
- * @param {Object} schema - Field schema
- * @param {Record<string, any>} formData - Raw form data
- * @returns {Record<string, any>} Mapped template fields
- */
-function mapTemplateFields(schema, formData) {
-  if (!schema || !schema.fields || !Array.isArray(schema.fields)) {
-    // If no schema provided, return form data as-is (for backward compatibility)
-    return formData || {};
-  }
 
-  const mapped = {};
-
-  for (const field of schema.fields) {
-    const { key, saveToTopLevel } = field;
-    
-    // Skip fields that go to top level
-    if (saveToTopLevel === true) continue;
-    
-    // Only include if defined in formData
-    if (key && formData.hasOwnProperty(key)) {
-      mapped[key] = formData[key];
-    }
-  }
-
-  return mapped;
-}
 
 /**
  * Unified time entry payload builder.
@@ -157,10 +128,38 @@ export function buildTimeEntryPayload({
 }
 
 /**
+ * Map form data to template fields based on schema.
+ * Only saves fields defined in schema—prevents labels, UI helpers, and duplicates from leaking.
+ * 
+ * @param {Object} schema - Field schema
+ * @param {Record<string, any>} formData
+ * @returns {Record<string, any>} Filtered form data
+ */
+function mapTemplateFields(schema, formData) {
+  const result = {};
+  const fields = schema?.fields ?? [];
+
+  for (const field of fields) {
+    const key = field.key;
+    if (!key) continue;
+
+    // Skip fields that should be saved at top level
+    if (field.saveToTopLevel) continue;
+
+    // Only include if defined in form data
+    if (formData[key] !== undefined) {
+      result[key] = formData[key];
+    }
+  }
+
+  return result;
+}
+
+/**
  * Export normalizeDurationMinutes for direct use.
  * This is the ONLY function to use for duration normalization.
  */
-export { normalizeDurationMinutes };
+export { normalizeDurationMinutes, mapTemplateFields };
 
 /**
  * Legacy exports for backward compatibility.
