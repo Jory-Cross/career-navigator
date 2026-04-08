@@ -544,50 +544,61 @@ export default function TimeLogDashboard({
                 }
 
                 const handleFormSave = async (payload) => {
-                   try {
-                     // Extract duration in minutes from multiple possible fields
-                     const durationMinutes = payload.duration_minutes || payload.duration || 0;
+                   console.log("[TimeLogDashboard] === FORM SAVE START ===");
+                   console.log("[TimeLogDashboard] Incoming payload:", JSON.stringify(payload, null, 2));
 
-                     if (editingEntry?.id) {
-                       // Update existing entry
-                       await base44.entities.TimeEntry.update(editingEntry.id, {
-                         date: payload.date,
-                         duration_minutes: durationMinutes,
-                         description: payload.description,
-                         entry_type_code: payload.entry_type_code,
-                         start_time: payload.start_time || null,
-                         end_time: payload.end_time || null,
-                         form_data: payload.form_data
-                       });
-                       toast.success("Entry updated");
-                     } else {
-                       // Create new entry
-                       await base44.entities.TimeEntry.create({
-                         client_id: clientId,
-                         date: payload.date,
-                         duration_minutes: durationMinutes,
-                         description: payload.description,
-                         entry_type_code: payload.entry_type_code,
-                         start_time: payload.start_time || null,
-                         end_time: payload.end_time || null,
-                         form_data: payload.form_data,
-                         status: "submitted",
-                         is_reportable: true,
-                         is_billable: false,
-                         is_payroll_eligible: true,
-                         reporting_period_key: payload.date.substring(0, 7)
-                       });
-                       toast.success("Entry created");
-                     }
-                     setShowForm(false);
-                     setEditingEntry(null);
-                     setSelectedEntryTypeCode("");
-                     onRefresh();
-                   } catch (err) {
-                     console.error("Failed to save entry:", err);
-                     toast.error("Failed to save entry");
-                   }
-                 };
+                   try {
+                      // Extract duration in minutes from multiple possible fields
+                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
+                      console.log("[TimeLogDashboard] Duration minutes:", durationMinutes);
+                      console.log("[TimeLogDashboard] Date:", payload.date);
+                      console.log("[TimeLogDashboard] Entry type code:", payload.entry_type_code);
+
+                      const updateData = {
+                        date: payload.date,
+                        duration_minutes: durationMinutes,
+                        description: payload.description,
+                        entry_type_code: payload.entry_type_code,
+                        start_time: payload.start_time || null,
+                        end_time: payload.end_time || null,
+                        form_data: payload.form_data
+                      };
+
+                      console.log("[TimeLogDashboard] Update/create data:", updateData);
+
+                      if (editingEntry?.id) {
+                        // Update existing entry
+                        console.log("[TimeLogDashboard] Updating entry:", editingEntry.id);
+                        await base44.entities.TimeEntry.update(editingEntry.id, updateData);
+                        console.log("[TimeLogDashboard] Update successful");
+                        toast.success("Entry updated");
+                      } else {
+                        // Create new entry
+                        const createData = {
+                          ...updateData,
+                          client_id: clientId,
+                          status: "submitted",
+                          is_reportable: true,
+                          is_billable: false,
+                          is_payroll_eligible: true,
+                          reporting_period_key: payload.date.substring(0, 7)
+                        };
+                        console.log("[TimeLogDashboard] Creating new entry with data:", createData);
+                        await base44.entities.TimeEntry.create(createData);
+                        console.log("[TimeLogDashboard] Create successful");
+                        toast.success("Entry created");
+                      }
+                      setShowForm(false);
+                      setEditingEntry(null);
+                      setSelectedEntryTypeCode("");
+                      onRefresh();
+                    } catch (err) {
+                      console.error("[TimeLogDashboard] Full error object:", err);
+                      console.error("[TimeLogDashboard] Error message:", err?.message);
+                      console.error("[TimeLogDashboard] Error status:", err?.status);
+                      toast.error(err?.message || "Failed to save entry");
+                    }
+                  };
 
                 return (
                   <FormEngine

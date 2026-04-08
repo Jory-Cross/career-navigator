@@ -21,6 +21,9 @@ export function buildInitialFormData(schema, entry = null) {
 }
 
 export function normalizeTopLevelFields(entryTypeCode, formData) {
+  console.log("[normalizeTopLevelFields] Entry type:", entryTypeCode);
+  console.log("[normalizeTopLevelFields] Raw form data:", formData);
+
   const topLevel = {
     entry_type_code: entryTypeCode,
     form_data: formData,
@@ -47,19 +50,40 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
     topLevel.description = formData.activity_description;
   }
 
-  // Voc Rehab field mappings
-  if (formData.coaching_date && !topLevel.date) {
-    topLevel.date = formData.coaching_date;
+  // Voc Rehab field mappings - support all prefixes (jc_, jd_, or generic)
+  // Date field detection
+  if (!topLevel.date) {
+    if (formData.coaching_date) {
+      topLevel.date = formData.coaching_date;
+      console.log("[normalizeTopLevelFields] Mapped coaching_date →", topLevel.date);
+    } else if (formData.job_dev_date) {
+      topLevel.date = formData.job_dev_date;
+      console.log("[normalizeTopLevelFields] Mapped job_dev_date →", topLevel.date);
+    }
   }
 
-  if (formData.hours && !topLevel.duration_minutes) {
-    // Convert hours to minutes for duration_minutes
-    topLevel.duration_minutes = parseInt(formData.hours) * 60;
+  // Hours to duration_minutes conversion - detect any hours/coaching_hours field
+  if (!topLevel.duration_minutes) {
+    const hoursField = 
+      formData.hours_of_coaching ||
+      formData.hours ||
+      formData.coaching_hours ||
+      formData.job_dev_hours;
+    
+    if (hoursField) {
+      const hours = parseInt(hoursField);
+      if (!isNaN(hours)) {
+        topLevel.duration_minutes = hours * 60;
+        console.log("[normalizeTopLevelFields] Converted", hoursField, "to duration_minutes:", topLevel.duration_minutes);
+      }
+    }
   }
 
-  if (formData.activity_description && !topLevel.description) {
+  // Activity description mapping
+  if (!topLevel.description && formData.activity_description) {
     topLevel.description = formData.activity_description;
   }
 
+  console.log("[normalizeTopLevelFields] Normalized result:", topLevel);
   return topLevel;
 }

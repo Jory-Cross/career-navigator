@@ -41,8 +41,13 @@ export default function DynamicEntryForm({
   async function handleSubmit(e) {
     e.preventDefault();
 
+    console.log("[DynamicEntryForm] === SUBMIT START ===");
+    console.log("[DynamicEntryForm] Schema:", schema);
+    console.log("[DynamicEntryForm] Form data:", formData);
+
     const validationError = validateEntryForm(entryTypeCode, formData, schema);
     if (validationError) {
+      console.warn("[DynamicEntryForm] Validation error:", validationError);
       setError(validationError);
       return;
     }
@@ -52,11 +57,16 @@ export default function DynamicEntryForm({
 
     try {
       const payload = normalizeTopLevelFields(entryTypeCode, formData);
+      console.log("[DynamicEntryForm] Normalized payload:", payload);
 
       // Add entry type metadata
       if (entryTypeObj) {
         payload.entry_type_id = entryTypeObj.id;
+        console.log("[DynamicEntryForm] Added entry_type_id:", entryTypeObj.id);
+      } else {
+        console.warn("[DynamicEntryForm] Entry type object not resolved");
       }
+      payload.entry_type_code = entryTypeCode;
       payload.category = entryTypeObj?.category || "structured";
       payload.legacy_category = entryTypeObj?.legacy_category || null;
 
@@ -64,7 +74,7 @@ export default function DynamicEntryForm({
         payload.id = entry.id;
       }
 
-      console.log("[DynamicEntryForm] Submitting payload:", payload);
+      console.log("[DynamicEntryForm] Final payload before onSave:", JSON.stringify(payload, null, 2));
       await onSave?.(payload);
     } catch (err) {
       const errorMsg = err?.message || "Failed to save entry";
