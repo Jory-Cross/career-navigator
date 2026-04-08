@@ -1,35 +1,29 @@
 {
   "name": "TimeEntry",
   "type": "object",
+  "description": "Source service record. One row per staff time entry.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "client_id": {
       "type": "string"
     },
+    "employee_id": {
+      "type": "string"
+    },
     "service_authorization_id": {
-      "type": "string",
-      "description": "Reference to ServiceAuthorization this time entry applies to"
+      "type": "string"
+    },
+    "entry_type_id": {
+      "type": "string"
+    },
+    "entry_type_code": {
+      "type": "string"
     },
     "date": {
       "type": "string",
       "format": "date"
-    },
-    "duration_minutes": {
-      "type": "number"
-    },
-    "description": {
-      "type": "string"
-    },
-    "entry_type_id": {
-      "type": "string",
-      "description": "Reference to EntryType.id (true source of truth for VR reporting)"
-    },
-    "entry_type_code": {
-      "type": "string",
-      "description": "Denormalized EntryType.code for fast lookups (e.g. job_coaching, cbh)"
     },
     "start_time": {
       "type": "string"
@@ -37,30 +31,53 @@
     "end_time": {
       "type": "string"
     },
-    "category": {
+    "duration_minutes": {
+      "type": "number"
+    },
+    "reporting_period_key": {
+      "type": "string",
+      "description": "Example: 2026-04"
+    },
+    "location": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "Internal summary only, not source of truth for reporting"
+    },
+    "is_billable": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_payroll_eligible": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_reportable": {
+      "type": "boolean",
+      "default": true
+    },
+    "status": {
       "type": "string",
       "enum": [
-        "consultation",
-        "resume_work",
-        "job_search",
-        "interview_prep",
-        "follow_up",
-        "job_coaching",
-        "life_skills",
-        "cbh",
-        "admin",
-        "other"
+        "draft",
+        "submitted",
+        "approved",
+        "locked",
+        "void"
       ],
-      "description": "Legacy field for backward compatibility only. Do not use for VR reporting."
+      "default": "submitted"
     },
-    "general_notes": {
+    "legacy_category": {
       "type": "string",
-      "description": "Internal notes not included in VR reports"
+      "description": "Optional backward-compat field for old category enum"
     }
   },
   "required": [
-    "duration_minutes",
+    "employee_id",
     "entry_type_id",
-    "entry_type_code"
+    "entry_type_code",
+    "date",
+    "duration_minutes"
   ]
 }
