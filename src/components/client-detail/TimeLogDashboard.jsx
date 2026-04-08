@@ -563,7 +563,12 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
        entry_type_code: form.entry_type_code,
        is_active: true
      }).then(templates => {
-       setQuestions(templates.sort((a, b) => (a.order || 0) - (b.order || 0)));
+       // STRICT FILTERING: Only show row-level, non-internal fields
+       const filtered = templates.filter(t => 
+         t.pdf_context === 'row' && 
+         !t.is_internal_only
+       );
+       setQuestions(filtered.sort((a, b) => (a.order || 0) - (b.order || 0)));
      }).catch(err => {
        console.error('Failed to load questions:', err);
        toast.error('Failed to load form questions');
@@ -706,7 +711,7 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
        {/* Dynamic Questions Section */}
        {questions.length > 0 && (
          <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
-           <p className="text-xs font-semibold text-blue-900">Reporting Questions ({questions.length})</p>
+           <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
            <div className="space-y-3">
              {loadingQuestions ? (
                <p className="text-xs text-slate-500 italic">Loading questions...</p>
