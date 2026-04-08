@@ -1,18 +1,16 @@
 {
   "name": "ReportBatch",
   "type": "object",
+  "description": "Tracks a multi-client report generation run.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "pdf_template_id": {
-      "type": "string",
-      "description": "Reference to PDFTemplate"
+      "type": "string"
     },
-    "entry_type": {
-      "type": "string",
-      "description": "Entry type used (job_development, job_coaching, life_skills, etc.)"
+    "entry_type_code": {
+      "type": "string"
     },
     "date_range_start": {
       "type": "string",
@@ -26,19 +24,25 @@
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Client IDs included in batch"
+      }
     },
     "status": {
       "type": "string",
       "enum": [
         "processing",
         "completed",
+        "partial_failure",
         "failed"
       ],
       "default": "processing"
     },
-    "generated_documents": {
+    "created_by": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "results": {
       "type": "array",
       "items": {
         "type": "object",
@@ -46,26 +50,20 @@
           "client_id": {
             "type": "string"
           },
-          "document_id": {
+          "generated_report_id": {
             "type": "string"
           },
-          "pdf_url": {
+          "document_id": {
             "type": "string"
           },
           "status": {
             "type": "string"
+          },
+          "message": {
+            "type": "string"
           }
         }
-      },
-      "description": "Generated document references"
-    },
-    "created_by": {
-      "type": "string",
-      "description": "Email of user who created batch"
-    },
-    "created_at": {
-      "type": "string",
-      "description": "ISO datetime"
+      }
     },
     "error_message": {
       "type": "string"
@@ -73,7 +71,7 @@
   },
   "required": [
     "pdf_template_id",
-    "entry_type",
+    "entry_type_code",
     "date_range_start",
     "date_range_end",
     "client_ids"
