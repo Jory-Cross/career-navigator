@@ -520,28 +520,53 @@ export default function TimeLogDashboard({
 /**
  * TimeEntryFormContent - Form content for adding/editing time entries
  * Uses EntryType instead of legacy category
+ * NOW LOADS AND DISPLAYS DYNAMIC QUESTIONS FROM ReportFieldTemplate
  */
 function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) {
    const [form, setForm] = useState(
-     entry ? {
-       date: entry.date,
-       duration_minutes: entry.duration_minutes,
-       entry_type_id: entry.entry_type_id,
-       entry_type_code: entry.entry_type_code,
-       description: entry.description,
-       start_time: entry.start_time || "",
-       end_time: entry.end_time || ""
-     } : {
-       date: format(new Date(), "yyyy-MM-dd"),
-       duration_minutes: "",
-       entry_type_id: "",
-       entry_type_code: "",
-       description: "",
-       start_time: "",
-       end_time: ""
-     }
+      entry ? {
+        date: entry.date,
+        duration_minutes: entry.duration_minutes,
+        entry_type_id: entry.entry_type_id,
+        entry_type_code: entry.entry_type_code,
+        description: entry.description,
+        start_time: entry.start_time || "",
+        end_time: entry.end_time || ""
+      } : {
+        date: format(new Date(), "yyyy-MM-dd"),
+        duration_minutes: "",
+        entry_type_id: "",
+        entry_type_code: "",
+        description: "",
+        start_time: "",
+        end_time: ""
+      }
    );
+   const [fieldAnswers, setFieldAnswers] = useState({});
+   const [questions, setQuestions] = useState([]);
+   const [loadingQuestions, setLoadingQuestions] = useState(false);
    const [saving, setSaving] = useState(false);
+
+   // Load dynamic questions when entry type changes
+   useEffect(() => {
+     if (!form.entry_type_code) {
+       setQuestions([]);
+       return;
+     }
+
+     setLoadingQuestions(true);
+     base44.entities.ReportFieldTemplate.filter({
+       entry_type_code: form.entry_type_code,
+       is_active: true
+     }).then(templates => {
+       setQuestions(templates.sort((a, b) => (a.order || 0) - (b.order || 0)));
+     }).catch(err => {
+       console.error('Failed to load questions:', err);
+       toast.error('Failed to load form questions');
+     }).finally(() => {
+       setLoadingQuestions(false);
+     });
+   }, [form.entry_type_code]);
 
    const handleSave = async () => {
      if (!form.date || !form.entry_type_code) {
@@ -590,7 +615,7 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
            location: null,
            description: form.description,
            serviceAuthorizationId: null,
-           fieldAnswers: {},
+           fieldAnswers: fieldAnswers,
            asDraft: false
          });
          toast.success("Entry created with reporting fields");
@@ -674,7 +699,77 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
              </div>
            </div>
          </div>
-       </div>
+
+         {/* Dynamic Questions Section */}
+         {questions.length > 0 && (
+           <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
+             <p className="text-xs font-semibold text-blue-900">Reporting Questions ({questions.length})</p>
+             <div className="space-y-3">
+               {loadingQuestions ? (
+                 <p className="text-xs text-slate-500 italic">Loading questions...</p>
+               ) : (
+                 questions.map(q => (
+                   <div key={q.field_key} className="space-y-1">
+                     <Label className="text-xs">
+                       {q.label}
+                       {q.is_required && <span className="text-red-500 ml-1">*</span>}
+                     </Label>
+                     {q.field_type === 'textarea' ? (
+                       <textarea
+                         className="flex h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                         value={fieldAnswers[q.field_key] || ''}
+                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                         placeholder={q.placeholder || ''}
+                       />
+                     ) : q.field_type === 'select' ? (
+                       <Select
+                         value={fieldAnswers[q.field_key] || ''}
+                         onValueChange={v => setFieldAnswers(p => ({ ...p, [q.field_key]: v }))}
+                       >
+                         <SelectTrigger className="h-8 text-xs">
+                           <SelectValue placeholder={q.placeholder || 'Select...'} />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {q.options?.map(opt => (
+                             <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     ) : q.field_type === 'date' ? (
+                       <Input
+                         type="date"
+                         value={fieldAnswers[q.field_key] || ''}
+                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                       />
+                     ) : q.field_type === 'time' ? (
+                       <Input
+                         type="time"
+                         value={fieldAnswers[q.field_key] || ''}
+                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                       />
+                     ) : q.field_type === 'number' ? (
+                       <Input
+                         type="number"
+                         value={fieldAnswers[q.field_key] || ''}
+                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                         placeholder={q.placeholder || ''}
+                       />
+                     ) : (
+                       <Input
+                         type="text"
+                         value={fieldAnswers[q.field_key] || ''}
+                         onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
+                         placeholder={q.placeholder || ''}
+                       />
+                     )}
+                     {q.help_text && <p className="text-xs text-slate-500 italic">{q.help_text}</p>}
+                   </div>
+                 ))
+               )}
+             </div>
+           </div>
+         )}
+         </div>
        <DialogFooter>
          <Button variant="outline" onClick={onClose}>Cancel</Button>
          <Button onClick={handleSave} disabled={saving}>
