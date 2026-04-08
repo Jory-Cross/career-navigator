@@ -1,0 +1,72 @@
+{
+  "name": "ServiceCode",
+  "type": "object",
+  "description": "Centralized reference for VR service codes used across time entry, reporting, and validation. Ensures consistent code-to-description mapping.",
+  "properties": {
+    "org_id": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string",
+      "description": "Unique service code identifier (e.g., JC01, JC02, JD01)"
+    },
+    "program_type": {
+      "type": "string",
+      "enum": [
+        "vr",
+        "pre_ets",
+        "dspd"
+      ],
+      "description": "Program this code is used for"
+    },
+    "service_type": {
+      "type": "string",
+      "enum": [
+        "job_coaching",
+        "job_development",
+        "life_skills"
+      ],
+      "description": "Which service entry type uses this code"
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief service description (e.g., 'Direct On-Site Support')"
+    },
+    "full_description": {
+      "type": "string",
+      "description": "Complete description for reporting (e.g., 'Job Coaching: Direct On-Site Support')"
+    },
+    "display_label": {
+      "type": "string",
+      "description": "Full formatted label for dropdowns (e.g., 'JC01 - Job Coaching: Direct On-Site Support')"
+    },
+    "category": {
+      "type": "string",
+      "description": "Service category for grouping (e.g., 'Direct Service', 'Indirect Service')"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": true,
+      "description": "Can be used as primary service code"
+    },
+    "is_secondary": {
+      "type": "boolean",
+      "default": true,
+      "description": "Can be used as secondary service code"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "service_type",
+    "short_description",
+    "full_description",
+    "display_label"
+  ]
+}
