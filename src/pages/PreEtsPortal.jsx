@@ -339,7 +339,7 @@ export default function PreEtsPortal() {
           <ClockInOut 
             clientId={activeClient?.id} 
             clientName={`${activeClient?.first_name} ${activeClient?.last_name}`}
-            isPreEtsStudent={!isStaff}
+            isPreEtsStudent={user?.role === 'pre_ets'}
           />
         </TabsContent>
 
