@@ -434,6 +434,7 @@ export default function TimeLogDashboard({
                       className="h-7 text-xs gap-1"
                       onClick={() => {
                         setEditingEntry(entry);
+                        setSelectedEntryTypeCode(entry.entry_type_code || "");
                         setShowForm(true);
                       }}
                     >
@@ -510,28 +511,38 @@ export default function TimeLogDashboard({
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
               {/* Route to dedicated forms based on entry type */}
-              {selectedEntryTypeCode === 'job_coaching' ? (
-                <JobCoachingTimeEntryForm
-                  clientId={clientId}
-                  onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                  onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                />
-              ) : selectedEntryTypeCode === 'usor96' ? (
-                <Usor96TimeEntryForm
-                  clientId={clientId}
-                  onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                  onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                />
-              ) : (
-                <TimeEntryFormContent
-                  entry={editingEntry}
-                  clientId={clientId}
-                  onClose={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                  onSave={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                  entryTypes={entryTypes}
-                  onEntryTypeChange={setSelectedEntryTypeCode}
-                />
-              )}
+              {(() => {
+                const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
+                
+                if (activeEntryTypeCode === 'job_coaching') {
+                  return (
+                    <JobCoachingTimeEntryForm
+                      clientId={clientId}
+                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                    />
+                  );
+                } else if (activeEntryTypeCode === 'usor96') {
+                  return (
+                    <Usor96TimeEntryForm
+                      clientId={clientId}
+                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                    />
+                  );
+                } else {
+                  return (
+                    <TimeEntryFormContent
+                      entry={editingEntry}
+                      clientId={clientId}
+                      onClose={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                      onSave={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                      entryTypes={entryTypes}
+                      onEntryTypeChange={setSelectedEntryTypeCode}
+                    />
+                  );
+                }
+              })()}
             </div>
           </div>
         </DialogContent>
