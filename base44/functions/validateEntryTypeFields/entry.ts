@@ -10,6 +10,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 const AUTO_DEACTIVATE = false;
 
 // Intended row-level field keys per entry type (extracted from live templates)
+// NOTE: These maps define the AUTHORITATIVE field schema for each entry type.
+// Do NOT assume active fields are correct just because they are active.
 const INTENDED_FIELDS = {
   job_coaching: [
     'jc_date',
@@ -19,14 +21,11 @@ const INTENDED_FIELDS = {
     'jc_secondary_service_code'
   ],
   job_development: [
-    'activity',
-    'activity_outcome',
-    'next_steps'
-  ],
-  usor96: [
-    'activity',
-    'activity_outcome',
-    'next_steps'
+    'development_date',      // USOR96: date of activity
+    'development_hours',     // USOR96: hours spent
+    'development_activity',  // USOR96: activity description
+    'activity_outcome',      // USOR96: outcome/result
+    'next_steps'            // USOR96: next steps
   ],
   life_skills: [
     'skill_area',
