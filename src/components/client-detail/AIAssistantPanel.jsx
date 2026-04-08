@@ -11,11 +11,11 @@ import {
   Sparkles, FileText, ListChecks, Mail, TrendingUp,
   Loader2, Copy, CheckCheck, AlertTriangle, ChevronDown, ChevronUp
 } from "lucide-react";
-import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
+import { Database } from "lucide-react";
 
 const PRIORITY_COLORS = {
   high: "bg-red-100 text-red-700 border-red-200",
@@ -322,6 +322,7 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
     { key: "draft_email", label: "Email", icon: Mail },
     { key: "engagement_insights", label: "Insights", icon: TrendingUp },
     { key: "coaching_recommendations", label: "Coaching", icon: Sparkles },
+    { key: "provenance", label: "Data Sources", icon: Database },
   ];
 
   return (
@@ -441,10 +442,9 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
             </TabsContent>
 
             {/* Data Provenance Tab */}
-            <TabsContent value="provenance" className="mt-0">
+            <TabsContent value="provenance" className="space-y-3 mt-0">
+              <p className="text-xs text-slate-500">View data sources, quality metrics, and any conflicts in the underlying client data used for AI insights.</p>
               <SourceProvenancePanel
-                profile={null}
-                client={null}
                 variant="inline"
               />
             </TabsContent>
