@@ -510,13 +510,13 @@ export default function TimeLogDashboard({
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
               {/* Route to dedicated forms based on entry type */}
-              {(editingEntry?.entry_type_code === 'job_coaching' || selectedEntryTypeCode === 'job_coaching') ? (
+              {selectedEntryTypeCode === 'job_coaching' ? (
                 <JobCoachingTimeEntryForm
                   clientId={clientId}
                   onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
                   onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                 />
-              ) : (editingEntry?.entry_type_code === 'usor96' || selectedEntryTypeCode === 'usor96') ? (
+              ) : selectedEntryTypeCode === 'usor96' ? (
                 <Usor96TimeEntryForm
                   clientId={clientId}
                   onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
