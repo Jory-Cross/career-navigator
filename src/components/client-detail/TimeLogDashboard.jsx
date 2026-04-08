@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
+import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
+import Usor96Launcher from "@/components/time-entry/Usor96Launcher";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -217,6 +219,10 @@ export default function TimeLogDashboard({
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
             <JobCoachingLauncher
+              clientId={clientId}
+              onSuccess={onRefresh}
+            />
+            <Usor96Launcher
               clientId={clientId}
               onSuccess={onRefresh}
             />
@@ -513,9 +519,15 @@ export default function TimeLogDashboard({
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
-              {/* Route to JobCoachingTimeEntryForm for both create and edit flows */}
+              {/* Route to dedicated forms based on entry type */}
               {(editingEntry?.entry_type_code === 'job_coaching' || selectedEntryTypeCode === 'job_coaching') ? (
                 <JobCoachingTimeEntryForm
+                  clientId={clientId}
+                  onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                  onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                />
+              ) : (editingEntry?.entry_type_code === 'usor96' || selectedEntryTypeCode === 'usor96') ? (
+                <Usor96TimeEntryForm
                   clientId={clientId}
                   onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
                   onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
