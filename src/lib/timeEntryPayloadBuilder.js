@@ -136,21 +136,22 @@ export function buildTimeEntryPayload({
   schemaFields = null,
   excludeKeys = new Set()
 }) {
-  // Get entry type config to validate it exists
+  // ⚠️ SILENT FAILURE GUARD - Validate entry type exists
   const config = getEntryTypeConfig(entryTypeCode);
   if (!config) {
-    throw new Error(`Unknown entry type: ${entryTypeCode}`);
+    throw new Error(`❌ Unknown entry type: "${entryTypeCode}" - entry type must be configured in entryTypeRegistry`);
   }
 
-  // Extract and normalize core fields
+  // ⚠️ Guard: Extract and validate date
   const date = extractDate(formData);
   if (!date) {
-    throw new Error("Missing or invalid date");
+    throw new Error("❌ Missing or invalid date - could not parse from formData.date or structured date fields (jc_date, jd_date, etc.)");
   }
 
+  // ⚠️ Guard: Extract and validate duration
   const durationMinutes = normalizeDuration(formData);
-  if (!durationMinutes) {
-    throw new Error("Missing or invalid duration");
+  if (!durationMinutes || durationMinutes <= 0) {
+    throw new Error(`❌ Missing or invalid duration - must be positive number. Got: ${durationMinutes}. Check duration_minutes, duration_hours, or structured fields (jc_hours, jd_hours, etc.)`);
   }
 
   // Map template fields using schema if available, fallback to dynamic extraction
