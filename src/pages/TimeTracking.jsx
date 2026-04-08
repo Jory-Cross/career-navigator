@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
 import TimeEntryForm from "@/components/time-entry/TimeEntryForm";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
+import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -177,9 +178,15 @@ export default function TimeTracking() {
           <h1 className="text-2xl font-bold text-slate-900">Time Tracking</h1>
           <p className="text-sm text-slate-500 mt-1">Log and review time spent with clients</p>
         </div>
-        <Button onClick={() => setShowNewEntry(true)}>
-          <Plus className="w-4 h-4 mr-1" /> New Entry
-        </Button>
+        <div className="flex gap-2">
+          <JobCoachingLauncher
+            clientId={null}
+            onSuccess={handleRefresh}
+          />
+          <Button onClick={() => setShowNewEntry(true)}>
+            <Plus className="w-4 h-4 mr-1" /> New Entry
+          </Button>
+        </div>
       </div>
 
       {legacyEntries.length > 0 && (
@@ -335,7 +342,11 @@ export default function TimeTracking() {
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-500 text-center py-4">Please select an entry type. Use TimeLogDashboard or edit an entry to select Job Coaching.</p>
+          <TimeEntryForm
+            clients={allClients}
+            onSaved={() => { setShowNewEntry(false); handleRefresh(); }}
+            onCancel={() => setShowNewEntry(false)}
+          />
         </DialogContent>
       </Dialog>
 
