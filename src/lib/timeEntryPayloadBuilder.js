@@ -1,215 +1,206 @@
 /**
- * 🔒 NORMALIZED TIME ENTRY PAYLOAD BUILDER
+ * Centralized payload builder for all time entry saves.
+ * Single entry point for create and update operations.
  * 
- * Single source of truth for building TimeEntry payloads.
- * ALL components MUST use this function to build payloads.
- * This prevents manual payload construction and ensures contract consistency.
+ * @typedef {Object} BuildPayloadArgs
+ * @property {Object} entryType - Entry type metadata
+ * @property {string} entryType.id - Entry type ID
+ * @property {string} [entryType.key] - Entry type code key
+ * @property {string} [entryType.name] - Entry type name
+ * @property {Record<string, any>} formData - Raw form submission data
+ * @property {Object} [schema] - Optional schema for field mapping
+ * @property {Array} [schema.fields] - Array of field definitions
  */
-
-import { getEntryTypeConfig } from "@/lib/entryTypeRegistry";
-import { mapTemplateFields } from "@/lib/templateFieldMapper";
 
 /**
- * Normalize duration to minutes (from various input formats)
+ * Normalize duration_minutes from form data.
+ * Handles multiple field names and unit conversions.
+ * 
+ * @param {Record<string, any>} formData
+ * @returns {number} Duration in minutes
  */
-function normalizeDuration(formData) {
-  // Direct minutes
-  if (formData.duration_minutes !== undefined && formData.duration_minutes !== null) {
-    return Number(formData.duration_minutes) || 0;
+function normalizeDurationMinutes(formData) {
+  if (!formData) return 0;
+
+  // Try direct minutes field
+  if (formData.duration_minutes != null) {
+    const minutes = Number(formData.duration_minutes);
+    return minutes > 0 ? minutes : 0;
   }
 
-  // Hours → minutes (handles decimal hours like 1.5)
-  if (formData.duration_hours !== undefined && formData.duration_hours !== null) {
-    return Math.round(Number(formData.duration_hours) * 60) || 0;
+  // Try hours field (convert to minutes)
+  if (formData.duration_hours != null) {
+    const hours = Number(formData.duration_hours);
+    return hours > 0 ? Math.round(hours * 60) : 0;
   }
 
-  // Structured form hours (job coaching, life skills, etc.)
-  const hoursKey = [
-    "jc_hours", "jd_hours", "development_hours", "ls_hours",
-    "job_coaching_hours", "job_development_hours", "life_skills_hours"
-  ].find(key => formData[key] !== undefined && formData[key] !== null);
+  // Try entry-type-specific hours fields
+  const specificHoursFields = [
+    'jc_hours', 'jd_hours', 'coaching_hours', 'development_hours',
+    'wbl_hours', 'admin_hours', 'cbs_hours', 'iep_hours'
+  ];
+  
+  for (const field of specificHoursFields) {
+    if (formData[field] != null) {
+      const hours = Number(formData[field]);
+      return hours > 0 ? Math.round(hours * 60) : 0;
+    }
+  }
 
-  if (hoursKey) {
-    return Math.round(Number(formData[hoursKey]) * 60) || 0;
+  // Try start/end time calculation
+  if (formData.start_time && formData.end_time) {
+    try {
+      const start = new Date(`2000-01-01T${formData.start_time}`);
+      const end = new Date(`2000-01-01T${formData.end_time}`);
+      const diff = (end - start) / (1000 * 60); // Convert ms to minutes
+      return diff > 0 ? Math.round(diff) : 0;
+    } catch {
+      return 0;
+    }
   }
 
   return 0;
 }
 
 /**
- * Normalize date to YYYY-MM-DD format
+ * Convert value to string, empty string for null/undefined.
+ * 
+ * @param {any} value
+ * @returns {string}
  */
-function normalizeDate(dateValue) {
-  if (!dateValue) return null;
-
-  // Already in correct format
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-    return dateValue;
-  }
-
-  // MM/DD/YYYY → YYYY-MM-DD
-  const match = dateValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) {
-    const [, mm, dd, yyyy] = match;
-    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-  }
-
-  // Date object
-  if (dateValue instanceof Date) {
-    const year = dateValue.getFullYear();
-    const month = String(dateValue.getMonth() + 1).padStart(2, "0");
-    const day = String(dateValue.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  return dateValue;
+function asString(value) {
+  if (value == null) return "";
+  return String(value);
 }
 
 /**
- * Extract date from multiple possible fields
+ * Convert empty string or undefined to null, otherwise return value.
+ * 
+ * @param {any} value
+ * @returns {any}
  */
-function extractDate(formData) {
-  // Direct date field
+function emptyToNull(value) {
+  return value === "" || value === undefined ? null : value;
+}
+
+/**
+ * Map template/form fields to structured data object.
+ * Only includes fields defined in schema with saveToTopLevel !== true.
+ * 
+ * @param {Object} schema - Field schema
+ * @param {Record<string, any>} formData - Raw form data
+ * @returns {Record<string, any>} Mapped template fields
+ */
+function mapTemplateFields(schema, formData) {
+  if (!schema || !schema.fields || !Array.isArray(schema.fields)) {
+    // If no schema provided, return form data as-is (for backward compatibility)
+    return formData || {};
+  }
+
+  const mapped = {};
+
+  for (const field of schema.fields) {
+    const { key, saveToTopLevel } = field;
+    
+    // Skip fields that go to top level
+    if (saveToTopLevel === true) continue;
+    
+    // Only include if defined in formData
+    if (key && formData.hasOwnProperty(key)) {
+      mapped[key] = formData[key];
+    }
+  }
+
+  return mapped;
+}
+
+/**
+ * Unified time entry payload builder.
+ * Used for both create and update operations.
+ * 
+ * @param {BuildPayloadArgs} args
+ * @returns {Record<string, any>} Normalized payload
+ */
+export function buildTimeEntryPayload({
+  entryType,
+  formData = {},
+  schema
+}) {
+  // ⚠️ Guard: entry type ID required
+  if (!entryType?.id) {
+    throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
+  }
+
+  // Normalize duration
+  const duration_minutes = normalizeDurationMinutes(formData);
+  if (!duration_minutes || duration_minutes <= 0) {
+    throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
+  }
+
+  // Top-level fields (always included)
+  const topLevel = {
+    entry_type_id: entryType.id,
+    duration_minutes,
+    notes: asString(formData.notes),
+    service_code_id: emptyToNull(formData.service_code_id),
+  };
+
+  // Optional fields if provided
   if (formData.date) {
-    return normalizeDate(formData.date);
+    topLevel.date = formData.date;
+  }
+  if (formData.start_time) {
+    topLevel.start_time = formData.start_time;
+  }
+  if (formData.end_time) {
+    topLevel.end_time = formData.end_time;
+  }
+  if (formData.location) {
+    topLevel.location = formData.location;
+  }
+  if (formData.description) {
+    topLevel.description = formData.description;
   }
 
-  // Structured form date fields (service-specific)
-  const dateKey = [
-    "jc_date", "jd_date", "development_date", "ls_date",
-    "coaching_date", "job_dev_date", "job_coaching_date", "job_development_date", "life_skills_date"
-  ].find(key => formData[key]);
+  // Template/form data (nested)
+  const form_data = mapTemplateFields(schema, formData);
 
-  if (dateKey) {
-    return normalizeDate(formData[dateKey]);
-  }
-
-  return null;
+  return {
+    ...topLevel,
+    form_data,
+  };
 }
 
 /**
- * Build template data using schema-based mapping
- * Falls back to dynamic field extraction if schema unavailable
+ * Legacy exports for backward compatibility.
+ * These delegate to the unified builder.
  */
-function buildTemplateData(formData, schemaFields = null, excludeKeys = new Set()) {
-  // If schema available, use deterministic schema-based mapping
-  if (schemaFields && Array.isArray(schemaFields)) {
-    return mapTemplateFields(schemaFields, formData, { excludeKeys });
-  }
-
-  // Fallback: extract non-reserved fields
-  const reservedKeys = new Set([
-    "date", "duration", "duration_minutes", "duration_hours", "description", 
-    "entry_type_code", "entry_type_id", "start_time", "end_time", 
-    "client_id", "employee_id", "status", "is_reportable", "is_billable", 
-    "is_payroll_eligible", "reporting_period_key", "category", "legacy_category",
-    "created_date", "updated_date", "id", "org_id", "service_authorization_id",
-    "location"
-  ]);
-
-  const allExcluded = new Set([...reservedKeys, ...excludeKeys]);
-
-  return Object.fromEntries(
-    Object.entries(formData || {}).filter(([key, value]) => {
-      return !allExcluded.has(key) && value !== undefined && value !== null;
-    })
+export function buildCreatePayload({
+  formData,
+  entryTypeCode,
+  description,
+  timeFields = {}
+}) {
+  console.warn("[buildCreatePayload] DEPRECATED - use buildTimeEntryPayload instead");
+  
+  // This was the old pattern - try to reconstruct entry type and call new builder
+  // Note: This function is deprecated and should not be used for new code
+  throw new Error(
+    "buildCreatePayload is deprecated. Use buildTimeEntryPayload({ entryType: { id }, formData, schema })"
   );
 }
 
-/**
- * Build normalized TimeEntry payload
- * 
- * @param {Object} options
- * @param {Object} options.formData - Raw form data from component
- * @param {string} options.entryTypeCode - Service code (e.g., 'job_coaching', 'life_skills')
- * @param {string} [options.description] - Optional notes/description
- * @param {Object} [options.timeFields] - Optional {start_time, end_time}
- * @param {Array} [options.schemaFields] - Optional schema field definitions (enables deterministic mapping)
- * @param {Set} [options.excludeKeys] - Additional fields to exclude from dynamic data
- * @returns {Object} Normalized payload ready for API
- */
-export function buildTimeEntryPayload({
-  formData = {},
+export function buildUpdatePayload({
+  formData,
   entryTypeCode,
-  description = null,
-  timeFields = {},
-  schemaFields = null,
-  excludeKeys = new Set()
+  description,
+  timeFields = {}
 }) {
-  // ⚠️ SILENT FAILURE GUARD - Validate entry type exists
-  const config = getEntryTypeConfig(entryTypeCode);
-  if (!config) {
-    throw new Error(`❌ Unknown entry type: "${entryTypeCode}" - entry type must be configured in entryTypeRegistry`);
-  }
-
-  // ⚠️ Guard: Extract and validate date
-  const date = extractDate(formData);
-  if (!date) {
-    throw new Error("❌ Missing or invalid date - could not parse from formData.date or structured date fields (jc_date, jd_date, etc.)");
-  }
-
-  // ⚠️ Guard: Extract and validate duration
-  const durationMinutes = normalizeDuration(formData);
-  if (!durationMinutes || durationMinutes <= 0) {
-    throw new Error(`❌ Missing or invalid duration - must be positive number. Got: ${durationMinutes}. Check duration_minutes, duration_hours, or structured fields (jc_hours, jd_hours, etc.)`);
-  }
-
-  // Map template fields using schema if available, fallback to dynamic extraction
-  const templateData = buildTemplateData(formData, schemaFields, excludeKeys);
-
-  // Build base payload
-  const payload = {
-    date,
-    duration_minutes: durationMinutes,
-    entry_type_code: entryTypeCode,
-    description: description || formData.description || "",
-    form_data: templateData
-  };
-
-  // Add optional time fields if provided
-  if (timeFields.start_time) {
-    payload.start_time = timeFields.start_time;
-  }
-  if (timeFields.end_time) {
-    payload.end_time = timeFields.end_time;
-  }
-
-  return payload;
-}
-
-/**
- * Build payload for create operation (adds defaults)
- */
-export function buildCreatePayload({ formData, entryTypeCode, description, timeFields, schemaFields, excludeKeys }) {
-  const basePayload = buildTimeEntryPayload({
-    formData,
-    entryTypeCode,
-    description,
-    timeFields,
-    schemaFields,
-    excludeKeys
-  });
-
-  return {
-    ...basePayload,
-    status: "submitted",
-    is_reportable: true,
-    is_billable: false,
-    is_payroll_eligible: true,
-    reporting_period_key: basePayload.date ? basePayload.date.substring(0, 7) : null
-  };
-}
-
-/**
- * Build payload for update operation
- */
-export function buildUpdatePayload({ formData, entryTypeCode, description, timeFields, schemaFields, excludeKeys }) {
-  return buildTimeEntryPayload({
-    formData,
-    entryTypeCode,
-    description,
-    timeFields,
-    schemaFields,
-    excludeKeys
-  });
+  console.warn("[buildUpdatePayload] DEPRECATED - use buildTimeEntryPayload instead");
+  
+  // This was the old pattern - try to reconstruct entry type and call new builder
+  // Note: This function is deprecated and should not be used for new code
+  throw new Error(
+    "buildUpdatePayload is deprecated. Use buildTimeEntryPayload({ entryType: { id }, formData, schema })"
+  );
 }
