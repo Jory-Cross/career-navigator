@@ -553,17 +553,19 @@ export default function TimeLogDashboard({
 
                       // For structured forms, extract hours from form_data and convert to minutes
                       if (durationMinutes === 0 && payload.form_data) {
-                        const hours = payload.form_data.jc_hours || payload.form_data.jd_hours || payload.form_data.ls_hours;
+                        const hours = payload.form_data.jc_hours || payload.form_data.jd_hours || 
+                                     payload.form_data.development_hours || payload.form_data.ls_hours;
                         if (hours) {
                           durationMinutes = parseFloat(hours) * 60;
                         }
                       }
 
-                      // For structured forms (job_coaching, etc), extract date from form_data
+                      // For structured forms, extract date from form_data
                       let dateValue = payload.date;
                       if (!dateValue && payload.form_data) {
-                        // Check for common date field prefixes (jc_, jd_, etc)
-                        dateValue = payload.form_data.jc_date || payload.form_data.jd_date || payload.form_data.ls_date;
+                        // Check for common date field names and prefixes
+                        dateValue = payload.form_data.jc_date || payload.form_data.jd_date || 
+                                   payload.form_data.development_date || payload.form_data.ls_date;
                       }
 
                       console.log("[TimeLogDashboard] Duration minutes:", durationMinutes);
