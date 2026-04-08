@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 import { 
   Briefcase, TrendingUp, AlertCircle, HeartHandshake, Clock, MapPin, 
   Target, Sparkles, RefreshCw, Loader2, Eye, ArrowRight, CheckCircle,
@@ -306,6 +307,16 @@ export default function VocationalProfileCard({ client, onRefresh, onOpenAssista
           </div>
         </CardContent>
       </Card>
+
+      {/* Data Provenance */}
+      <SourceProvenancePanel
+        profile={profile}
+        client={client}
+        extractedAt={client?.vocational_facts_extracted_at}
+        extractedBy={client?.vocational_facts_extracted_by}
+        documentCount={client?.vocational_facts_document_count}
+        assessmentCount={client?.vocational_facts_assessment_count}
+      />
 
       <SourcesModal open={showSources} onOpenChange={setShowSources} client={client} />
     </>

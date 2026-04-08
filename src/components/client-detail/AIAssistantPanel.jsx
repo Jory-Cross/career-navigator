@@ -11,9 +11,11 @@ import {
   Sparkles, FileText, ListChecks, Mail, TrendingUp,
   Loader2, Copy, CheckCheck, AlertTriangle, ChevronDown, ChevronUp
 } from "lucide-react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 
 const PRIORITY_COLORS = {
   high: "bg-red-100 text-red-700 border-red-200",
@@ -436,6 +438,15 @@ export default function AIAssistantPanel({ clientId, onUseEmail, onRefresh }) {
                 {loading && activeTab === "coaching_recommendations" ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
                 {results.coaching_recommendations ? "Regenerate Coaching Plan" : "Generate Coaching Plan"}
               </Button>
+            </TabsContent>
+
+            {/* Data Provenance Tab */}
+            <TabsContent value="provenance" className="mt-0">
+              <SourceProvenancePanel
+                profile={null}
+                client={null}
+                variant="inline"
+              />
             </TabsContent>
             </Tabs>
             </div>

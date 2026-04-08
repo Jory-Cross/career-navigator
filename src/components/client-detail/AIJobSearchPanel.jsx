@@ -16,6 +16,7 @@ import JobCard from "./JobCard";
 import VocationalFactsPanel from "./VocationalFactsPanel";
 import JobSearchFilters from "./JobSearchFilters";
 import RecommendationBatchReview from "./RecommendationBatchReview";
+import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 
 const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-600 border-slate-200",
@@ -471,13 +472,24 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
 
           {/* Vocational profile result */}
           {profile && (
-            <ProfileSummaryCard
-              profile={profile}
-              assessmentsUsed={assessmentsUsed}
-              hasVFP={hasVFP}
-              dataQualityScore={profileMeta.dataQualityScore}
-              conflictsCount={profileMeta.conflictsCount}
-            />
+            <>
+              <ProfileSummaryCard
+                profile={profile}
+                assessmentsUsed={assessmentsUsed}
+                hasVFP={hasVFP}
+                dataQualityScore={profileMeta.dataQualityScore}
+                conflictsCount={profileMeta.conflictsCount}
+              />
+              <SourceProvenancePanel
+                profile={client?.vocational_facts_profile}
+                client={client}
+                extractedAt={client?.vocational_facts_extracted_at}
+                extractedBy={client?.vocational_facts_extracted_by}
+                documentCount={client?.vocational_facts_document_count}
+                assessmentCount={client?.vocational_facts_assessment_count}
+                variant="inline"
+              />
+            </>
           )}
 
           {/* Unresolved conflicts affecting search */}
