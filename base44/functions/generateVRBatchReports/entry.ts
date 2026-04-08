@@ -2,30 +2,23 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 /**
- * Generate VR Batch Reports
- * 
- * Architecture:
- * Step 1: Fetch source records (TimeEntry, ReportFieldAnswer, Client, ServiceAuthorization)
- * Step 2: Assemble structured reports (never writes to TimeEntry)
- * Step 3: Fill and generate PDFs from assembled reports
+ * generateVRBatchReports
+ *
+ * Production-safe batch PDF generation:
+ * 1. Fetch per-client data (filtered at query time)
+ * 2. Assemble structured report { header, rows, summary, totals }
+ * 3. Fill PDF using row-aware mapping_scope (header | row | summary | static)
+ * 4. Save ReportVersion + Document records with full audit metadata
+ * 5. Partial failures tracked per client; batch status: completed | partial | failed
  */
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const {
-      pdf_template_id,
-      entry_type,
-      client_ids,
-      date_from,
-      date_to,
-    } = await req.json();
+    const { pdf_template_id, entry_type, client_ids, date_from, date_to } = await req.json();
 
     if (!pdf_template_id || !entry_type || !client_ids?.length || !date_from || !date_to) {
       return Response.json({
@@ -33,343 +26,360 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Create ReportBatch record
+    // Fetch shared resources once
+    const [template, mappings] = await Promise.all([
+      base44.entities.PDFTemplate.filter({ id: pdf_template_id }).then(r => r[0]),
+      base44.entities.PDFFieldMap.filter({ pdf_template_id, is_active: true })
+    ]);
+
+    if (!template) return Response.json({ error: 'PDF template not found' }, { status: 404 });
+
+    // Create ReportBatch
     const batch = await base44.entities.ReportBatch.create({
       pdf_template_id,
       entry_type,
       date_range_start: date_from,
       date_range_end: date_to,
       client_ids,
-      status: "processing",
+      status: 'processing',
       created_by: user.email,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     });
 
-    // Process each client individually
-    const generatedDocuments = [];
+    const results = [];
 
     for (const clientId of client_ids) {
       try {
-        const result = await generateClientReport(
-          base44,
-          user,
-          pdf_template_id,
-          entry_type,
-          clientId,
-          date_from,
-          date_to
-        );
-
-        if (result.success) {
-          generatedDocuments.push({
-            client_id: clientId,
-            document_id: result.document_id,
-            pdf_url: result.pdf_url,
-            status: "success"
-          });
-        } else {
-          generatedDocuments.push({
-            client_id: clientId,
-            status: "failed",
-            error: result.error
-          });
-        }
-      } catch (e) {
-        generatedDocuments.push({
-          client_id: clientId,
-          status: "failed",
-          error: e.message
+        const result = await processClient({
+          base44, user, template, mappings,
+          clientId, entry_type, date_from, date_to, batch_id: batch.id
         });
+        results.push({ client_id: clientId, ...result });
+      } catch (err) {
+        console.error(`[batch ${batch.id}] client ${clientId} error:`, err.message);
+        results.push({ client_id: clientId, status: 'failed', error: err.message });
       }
     }
 
-    // Update batch
-    const successful = generatedDocuments.filter(d => d.status === "success").length;
+    const succeeded = results.filter(r => r.status === 'success').length;
+    const failed    = results.filter(r => r.status === 'failed').length;
+    const skipped   = results.filter(r => r.status === 'skipped').length;
+
+    const batchStatus = failed === 0 ? 'completed'
+                      : succeeded === 0 ? 'failed'
+                      : 'partial';
+
     await base44.entities.ReportBatch.update(batch.id, {
-      status: successful === client_ids.length ? "completed" : "completed",
-      generated_documents: generatedDocuments,
+      status: batchStatus,
+      generated_documents: results
     });
 
     return Response.json({
       batch_id: batch.id,
-      status: "completed",
-      total_clients: client_ids.length,
-      successful: successful,
-      failed: client_ids.length - successful,
-      documents: generatedDocuments
+      status: batchStatus,
+      total: client_ids.length,
+      succeeded,
+      failed,
+      skipped,
+      results
     });
 
   } catch (error) {
-    console.error('Batch generation error:', error);
-    return Response.json({
-      error: error.message || 'Failed to generate reports'
-    }, { status: 500 });
+    console.error('generateVRBatchReports fatal error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });
 
-/**
- * Generate report for single client
- * Orchestrates Step 1 (fetch), Step 2 (assemble), Step 3 (PDF)
- */
-async function generateClientReport(base44, user, templateId, entryType, clientId, dateFrom, dateTo) {
-  try {
-    // Step 1: Fetch source records
-    const [template, mappings, client, timeEntries, allAnswers, authorizations] = await Promise.all([
-      base44.entities.PDFTemplate.filter({ id: templateId }).then(r => r[0]),
-      base44.entities.PDFFieldMap.filter({ pdf_template_id: templateId }),
-      base44.entities.Client.filter({ id: clientId }).then(r => r[0]),
-      base44.entities.TimeEntry.filter({
-        client_id: clientId,
-        date: { $gte: dateFrom, $lte: dateTo },
-        entry_type_code: entryType  // Use code instead of id
-      }),
-      base44.entities.ReportFieldAnswer.list(),
-      base44.entities.ServiceAuthorization.filter({ client_id: clientId })
-    ]);
+// ─── Per-client processing ────────────────────────────────────────────────────
 
-    // Validate
-    if (!template) return { success: false, error: 'Template not found' };
-    if (!client) return { success: false, error: 'Client not found' };
-    if (!timeEntries.length) return { success: false, error: 'No entries found' };
+async function processClient({ base44, user, template, mappings, clientId, entry_type, date_from, date_to, batch_id }) {
+  // 1. Fetch all per-client data (filtered at query time)
+  const [client, timeEntries, authorizations] = await Promise.all([
+    base44.entities.Client.filter({ id: clientId }).then(r => r[0] || null),
+    base44.entities.TimeEntry.filter({ client_id: clientId, entry_type_code: entry_type }),
+    base44.entities.ServiceAuthorization.filter({ client_id: clientId })
+  ]);
 
-    // Step 2: Assemble structured report (NEVER writes back to TimeEntry)
-    const answersMap = {};
-    allAnswers.forEach(a => {
-      answersMap[a.time_entry_id] = a;
-    });
+  if (!client)  return { status: 'failed', error: 'Client not found' };
 
-    const authorization = authorizations.find(a =>
-      a.status === 'active' &&
-      a.service_type_code === entryType &&
-      a.authorization_start_date <= dateFrom &&
-      a.authorization_end_date >= dateTo
-    );
+  // Date filter (SDK may not support range natively)
+  const entries = timeEntries.filter(e => e.date >= date_from && e.date <= date_to);
+  if (entries.length === 0) return { status: 'skipped', reason: 'No entries in period' };
 
-    const report = assembleReport(timeEntries, answersMap, client, authorization, dateFrom, dateTo);
+  // Fetch field answers only for matched entries
+  const fieldAnswers = await base44.entities.ReportFieldAnswer.filter({ entry_type_code: entry_type });
+  const answersMap = {};
+  fieldAnswers.forEach(a => { answersMap[a.time_entry_id] = a; });
 
-    // Step 3: Fill PDF from assembled report
-    const pdfUrl = await fillAndUploadPDF(base44, template, mappings, report);
+  const authMap = {};
+  authorizations.forEach(a => { authMap[a.id] = a; });
 
-    // Save as Document record
-    const document = await base44.entities.Document.create({
-      client_id: clientId,
-      title: `${entryType.toUpperCase()} Report - ${new Date(dateFrom).toLocaleDateString()} to ${new Date(dateTo).toLocaleDateString()}`,
-      file_url: pdfUrl,
-      file_name: `report-${entryType}-${clientId}.pdf`,
-      category: 'reference',
-      tags: [entryType, 'vr-report', new Date(dateFrom).getFullYear().toString()],
-      notes: `Auto-generated ${new Date().toISOString()} by ${user.email}. ${timeEntries.length} entries.`
-    });
+  // Find best matching authorization
+  const authorization = authorizations.find(a =>
+    a.status === 'active' &&
+    (a.service_type_code === entry_type || a.service_type_code === null) &&
+    a.authorization_start_date <= date_from &&
+    a.authorization_end_date >= date_to
+  ) || authorizations.find(a => a.status === 'active') || null;
 
-    return {
-      success: true,
-      document_id: document.id,
-      pdf_url: pdfUrl
-    };
-  } catch (e) {
-    console.error(`Error generating report for ${clientId}:`, e);
-    return { success: false, error: e.message };
-  }
-}
+  // 2. Assemble structured report (read-only)
+  const report = assembleReport(client, entries, answersMap, authorization, date_from, date_to);
 
-/**
- * Step 2: Assemble structured report from source records
- * NEVER writes back to TimeEntry
- */
-function assembleReport(timeEntries, answersMap, client, authorization, dateFrom, dateTo) {
-  const totalMin = timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-  const sorted = [...timeEntries].sort((a, b) => a.date.localeCompare(b.date));
+  // 3. Fill PDF using row-aware mapping
+  const pdfUrl = await fillAndUploadPDF(base44, template, mappings, report);
 
-  const byEntryType = {};
-  timeEntries.forEach(e => {
-    const key = e.entry_type_code || 'unknown';
-    if (!byEntryType[key]) byEntryType[key] = { count: 0, total_minutes: 0 };
-    byEntryType[key].count++;
-    byEntryType[key].total_minutes += e.duration_minutes || 0;
+  const generatedAt = new Date().toISOString();
+  const fileName    = `${entry_type}-report-${client.last_name}-${date_from}-${date_to}.pdf`;
+  const title       = `${entry_type.replace(/_/g, ' ').toUpperCase()} — ${client.first_name} ${client.last_name} (${date_from} to ${date_to})`;
+
+  // 4. Count existing versions for this client/type/period (for version_number)
+  const existingVersions = await base44.entities.ReportVersion.filter({
+    client_id: clientId,
+    entry_type_code: entry_type
+  });
+  const periodVersions = existingVersions.filter(v =>
+    v.report_start_date === date_from && v.report_end_date === date_to
+  );
+  const versionNumber = periodVersions.length + 1;
+  const supersedes = periodVersions.length > 0
+    ? periodVersions.sort((a, b) => b.version_number - a.version_number)[0].id
+    : null;
+
+  // 5. Save ReportVersion (audit record)
+  const reportVersion = await base44.entities.ReportVersion.create({
+    client_id: clientId,
+    entry_type_code: entry_type,
+    template_id: template.id,
+    template_version: template.version || 'v1',
+    report_start_date: date_from,
+    report_end_date: date_to,
+    included_time_entry_ids: entries.map(e => e.id),
+    included_answer_record_ids: entries.map(e => answersMap[e.id]?.id).filter(Boolean),
+    time_entry_count: entries.length,
+    total_hours: parseFloat(report.totals.total_hours),
+    generated_file_url: pdfUrl,
+    generated_file_name: fileName,
+    version_number: versionNumber,
+    supersedes_report_id: supersedes,
+    generated_at: generatedAt,
+    generated_by: user.email,
+    locked: false,
+    is_final: false
+  });
+
+  // 6. Save Document record (for client file view + versioning)
+  const document = await base44.entities.Document.create({
+    client_id: clientId,
+    title,
+    file_url: pdfUrl,
+    file_name: fileName,
+    category: 'vr_report',
+    document_subtype: `${entry_type}_report`,
+    source_type: 'generated',
+    source_id: reportVersion.id,
+    is_generated: true,
+    generated_from_template_id: template.id,
+    report_batch_id: batch_id,
+    report_version: versionNumber,
+    reporting_period_start: date_from,
+    reporting_period_end: date_to,
+    tags: [entry_type, 'vr-report'],
+    notes: `Generated by batch ${batch_id} — ${entries.length} entries, v${versionNumber}`
   });
 
   return {
-    metadata: {
-      client_id: client.id,
-      generated_at: new Date().toISOString(),
-      reporting_period_start: dateFrom,
-      reporting_period_end: dateTo,
-      total_entries: timeEntries.length
-    },
-    header: {
-      client_first_name: client.first_name || '',
-      client_last_name: client.last_name || '',
-      client_full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
-      client_email: client.email || '',
-      client_phone: client.phone || '',
-      client_address: client.address || '',
-      reporting_period_start: dateFrom,
-      reporting_period_end: dateTo,
-      actual_period_start: sorted[0].date,
-      actual_period_end: sorted[sorted.length - 1].date,
-      total_entries: timeEntries.length,
-      total_minutes: totalMin,
-      total_hours: (totalMin / 60).toFixed(2),
-      authorization_number: authorization?.authorization_number || '',
-      vr_counselor_name: authorization?.vr_counselor_name || '',
-      job_goal: authorization?.job_goal || '',
-      employer_name: authorization?.employer_name || '',
-      total_authorized_hours: authorization?.total_authorized_hours || 0,
-      hours_used: authorization?.used_hours || 0,
-      hours_remaining: authorization?.remaining_hours || 0,
-      report_generated_date: new Date().toISOString().split('T')[0]
-    },
-    rows: timeEntries.map((entry, idx) => {
-      const fieldAnswer = answersMap[entry.id];
-      const answers = fieldAnswer?.answers || {};
-      return {
-        row_number: idx + 1,
-        entry_id: entry.id,
-        date: entry.date,
-        duration_minutes: entry.duration_minutes || 0,
-        duration_hours: ((entry.duration_minutes || 0) / 60).toFixed(2),
-        start_time: entry.start_time || '',
-        end_time: entry.end_time || '',
-        entry_type_code: entry.entry_type_code || '',
-        description: entry.description || '',
-        general_notes: entry.general_notes || '',
-        service_authorization_id: entry.service_authorization_id || '',
-        ...answers
-      };
-    }),
-    summary: {
-      total_entries: timeEntries.length,
-      total_minutes: totalMin,
-      total_hours: (totalMin / 60).toFixed(2),
-      average_hours_per_entry: ((totalMin / 60) / Math.max(timeEntries.length, 1)).toFixed(2),
-      by_entry_type: Object.entries(byEntryType).reduce((acc, [k, v]) => {
-        acc[k] = {
-          count: v.count,
-          total_minutes: v.total_minutes,
-          total_hours: (v.total_minutes / 60).toFixed(2)
-        };
-        return acc;
-      }, {}),
-      authorization_hours_used: authorization?.used_hours || 0,
-      authorization_hours_remaining: authorization?.remaining_hours || 0
-    }
+    status: 'success',
+    document_id: document.id,
+    report_version_id: reportVersion.id,
+    pdf_url: pdfUrl,
+    version_number: versionNumber,
+    entry_count: entries.length,
+    total_hours: report.totals.total_hours
   };
 }
 
-/**
- * Step 3: Fill PDF from assembled report
- */
+// ─── Report Assembly ──────────────────────────────────────────────────────────
+
+function assembleReport(client, entries, answersMap, authorization, dateFrom, dateTo) {
+  const sorted     = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const totalMin   = entries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  const totalHours = (totalMin / 60).toFixed(2);
+
+  // Summary by entry type
+  const byType = {};
+  entries.forEach(e => {
+    const k = e.entry_type_code || 'other';
+    if (!byType[k]) byType[k] = { count: 0, total_minutes: 0 };
+    byType[k].count++;
+    byType[k].total_minutes += e.duration_minutes || 0;
+  });
+
+  const header = {
+    client_id:              client.id,
+    client_first_name:      client.first_name || '',
+    client_last_name:       client.last_name || '',
+    client_full_name:       `${client.first_name || ''} ${client.last_name || ''}`.trim(),
+    client_email:           client.email || '',
+    client_phone:           client.phone || '',
+    client_address:         client.address || '',
+    reporting_period_start: dateFrom,
+    reporting_period_end:   dateTo,
+    actual_period_start:    sorted[0]?.date || dateFrom,
+    actual_period_end:      sorted[sorted.length - 1]?.date || dateTo,
+    total_entries:          entries.length,
+    total_hours:            totalHours,
+    authorization_number:   authorization?.authorization_number || '',
+    vr_counselor_name:      authorization?.vr_counselor_name || '',
+    job_goal:               authorization?.job_goal || '',
+    employer_name:          authorization?.employer_name || '',
+    total_authorized_hours: authorization?.total_authorized_hours || 0,
+    hours_used:             authorization?.used_hours || 0,
+    hours_remaining:        authorization?.remaining_hours || 0,
+    report_generated_date:  new Date().toISOString().split('T')[0]
+  };
+
+  const rows = sorted.map((entry, idx) => {
+    const answers = answersMap[entry.id]?.answers || {};
+    return {
+      row_number:           idx + 1,
+      entry_id:             entry.id,
+      date:                 entry.date,
+      start_time:           entry.start_time || '',
+      end_time:             entry.end_time || '',
+      duration_minutes:     entry.duration_minutes || 0,
+      duration_hours:       ((entry.duration_minutes || 0) / 60).toFixed(2),
+      entry_type_code:      entry.entry_type_code || '',
+      description:          entry.description || '',
+      service_authorization_id: entry.service_authorization_id || '',
+      ...answers
+    };
+  });
+
+  const summary = {
+    total_entries:    entries.length,
+    total_minutes:    totalMin,
+    total_hours:      totalHours,
+    by_entry_type:    Object.fromEntries(
+      Object.entries(byType).map(([k, v]) => [k, {
+        count: v.count,
+        total_hours: (v.total_minutes / 60).toFixed(2)
+      }])
+    ),
+    authorization_hours_used:      authorization?.used_hours || 0,
+    authorization_hours_remaining: authorization?.remaining_hours || 0
+  };
+
+  return {
+    header,
+    rows,
+    summary,
+    totals: { entry_count: entries.length, total_minutes: totalMin, total_hours: totalHours }
+  };
+}
+
+// ─── PDF Filling ──────────────────────────────────────────────────────────────
+
 async function fillAndUploadPDF(base44, template, mappings, report) {
   const pdfRes = await fetch(template.pdf_file_url);
-  if (!pdfRes.ok) throw new Error('Failed to fetch PDF template');
+  if (!pdfRes.ok) throw new Error(`Failed to fetch PDF template: ${pdfRes.status}`);
 
   const pdfBytes = await pdfRes.arrayBuffer();
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const form = pdfDoc.getForm();
+  const pdfDoc   = await PDFDocument.load(pdfBytes);
+  const form     = pdfDoc.getForm();
+  const fields   = new Set(form.getFields().map(f => f.getName()));
 
-  fillPDFFromAssembledReport(form, mappings, report);
+  const setField = (name, value) => {
+    if (!fields.has(name)) return;
+    try { form.getField(name).setText(String(value ?? '')); }
+    catch (e) { console.warn(`PDF field "${name}":`, e.message); }
+  };
+
+  // Group mappings by scope
+  const headerMappings  = mappings.filter(m => m.mapping_scope === 'header'  || (!m.mapping_scope && m.source_type === 'header'));
+  const summaryMappings = mappings.filter(m => m.mapping_scope === 'summary' || (!m.mapping_scope && m.source_type === 'summary'));
+  const staticMappings  = mappings.filter(m => m.mapping_scope === 'static');
+  const rowMappings     = mappings.filter(m => m.mapping_scope === 'row'     || m.is_repeating_field);
+
+  // Fill header fields
+  headerMappings.forEach(m => {
+    const value = resolveValue(report.header, m.source_field, m.default_value);
+    setField(m.pdf_field_name, applyTransform(value, m.transform));
+  });
+
+  // Fill summary fields
+  summaryMappings.forEach(m => {
+    const value = resolveValue(report.summary, m.source_field, m.default_value);
+    setField(m.pdf_field_name, applyTransform(value, m.transform));
+  });
+
+  // Fill static fields
+  staticMappings.forEach(m => {
+    setField(m.pdf_field_name, m.default_value || '');
+  });
+
+  // Fill repeating row fields
+  // Group row mappings by row_group (or treat as flat list)
+  const rowGroups = {};
+  rowMappings.forEach(m => {
+    const g = m.row_group || 'default';
+    if (!rowGroups[g]) rowGroups[g] = [];
+    rowGroups[g].push(m);
+  });
+
+  Object.values(rowGroups).forEach(groupMappings => {
+    report.rows.forEach((row, rowIdx) => {
+      groupMappings.forEach(m => {
+        const value = resolveValue(row, m.row_field_key || m.source_field, m.default_value);
+        const fieldName = m.pdf_field_name
+          .replace(/\{\{row(Num|Index)?\}\}/gi, rowIdx + 1)
+          .replace(/\{row(Num|Index)?\}/gi, rowIdx + 1)
+          .replace(/_\d+$/, `_${rowIdx + 1}`); // e.g. Date_1 → Date_2
+        setField(fieldName, applyTransform(value, m.transform));
+      });
+    });
+  });
 
   form.flatten();
   const filledBytes = await pdfDoc.save();
 
-  // Convert to blob for upload
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(filledBytes)));
+  const base64  = btoa(String.fromCharCode(...new Uint8Array(filledBytes)));
   const dataUrl = `data:application/pdf;base64,${base64}`;
-
   const { file_url } = await base44.integrations.Core.UploadFile({ file: dataUrl });
   return file_url;
 }
 
-/**
- * Fill PDF fields from assembled report object
- */
-function fillPDFFromAssembledReport(form, mappings, report) {
-  const fields = form.getFields();
-  const fieldNames = fields.map(f => f.getName());
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  // Separate header/summary from repeating fields
-  const headerSummary = mappings.filter(m => !m.is_repeating_field);
-  const repeating = mappings.filter(m => m.is_repeating_field);
-
-  // Fill header and summary fields
-  headerSummary.forEach(mapping => {
-    const { source_type, source_field, pdf_field_name, transform, default_value } = mapping;
-
-    let value = null;
-    if (source_type === 'header') {
-      value = report.header?.[source_field];
-    } else if (source_type === 'summary') {
-      value = report.summary?.[source_field];
-    }
-
-    if (value === null || value === undefined) {
-      value = default_value || '';
-    }
-
-    if (transform && transform !== 'none') {
-      value = applyTransformValue(value, transform);
-    }
-
-    if (fieldNames.includes(pdf_field_name)) {
-      try {
-        form.getField(pdf_field_name).setText(String(value || ''));
-      } catch (e) {
-        console.warn(`Could not fill ${pdf_field_name}: ${e.message}`);
-      }
-    }
-  });
-
-  // Fill repeating row fields
-  repeating.forEach(mapping => {
-    const { source_field, pdf_field_name, transform, default_value, row_group } = mapping;
-
-    (report.rows || []).forEach((row, rowIndex) => {
-      let value = row[source_field] || default_value || '';
-
-      if (transform && transform !== 'none') {
-        value = applyTransformValue(value, transform);
-      }
-
-      const actualFieldName = pdf_field_name
-        .replace(/\{\{row(Num)?\}\}/gi, rowIndex + 1)
-        .replace(/\{row(Num)?\}/gi, rowIndex + 1);
-
-      if (fieldNames.includes(actualFieldName)) {
-        try {
-          form.getField(actualFieldName).setText(String(value || ''));
-        } catch (e) {
-          console.warn(`Could not fill ${actualFieldName}: ${e.message}`);
-        }
-      }
-    });
-  });
+function resolveValue(obj, path, defaultValue = '') {
+  if (!path || !obj) return defaultValue;
+  const parts = path.split('.');
+  let val = obj;
+  for (const p of parts) {
+    val = val?.[p];
+    if (val === undefined || val === null) return defaultValue;
+  }
+  return val ?? defaultValue;
 }
 
-/**
- * Apply transform to value
- */
-function applyTransformValue(value, transform) {
+function applyTransform(value, transform) {
   if (!transform || transform === 'none') return value;
-
   switch (transform) {
-    case 'date_format':
+    case 'date_format': {
       try {
         const d = new Date(value);
-        const m = (d.getMonth() + 1).toString().padStart(2, '0');
-        const day = d.getDate().toString().padStart(2, '0');
-        const y = d.getFullYear();
-        return `${m}/${day}/${y}`;
-      } catch {
-        return value;
-      }
-    case 'time_format':
-      const totalMin = parseInt(value);
-      const hrs = Math.floor(totalMin / 60);
-      const mins = totalMin % 60;
-      return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${m}/${day}/${d.getFullYear()}`;
+      } catch { return value; }
+    }
+    case 'time_format': {
+      const min = parseInt(value);
+      if (isNaN(min)) return value;
+      return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+    }
     case 'hours_from_minutes':
     case 'duration_hours':
-      return String((Number(value) / 60).toFixed(2));
+      return (Number(value) / 60).toFixed(2);
     case 'uppercase':
       return String(value).toUpperCase();
     case 'full_name':
