@@ -11,7 +11,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { saveTimeEntry } from "@/lib/saveTimeEntry";
@@ -53,16 +52,13 @@ export default function TimeLogDashboard({
   const [saving, setSaving] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Load reference data
-   useEffect(() => {
-     Promise.all([
-       base44.entities.User.filter({ role: "employee" }).catch(() => []),
-       base44.entities.GeneratedReport.filter({ client_id: clientId }).catch(() => [])
-     ]).then(([emps, reports]) => {
-       setEmployees(emps);
-       // Use canonical entry type options from registry
-       setEntryTypes(getEntryTypeOptions());
-      // Index reports by time entry ID for quick lookup
+  useEffect(() => {
+    Promise.all([
+      base44.entities.User.filter({ role: "employee" }).catch(() => []),
+      base44.entities.GeneratedReport.filter({ client_id: clientId }).catch(() => [])
+    ]).then(([emps, reports]) => {
+      setEmployees(emps);
+      setEntryTypes(getEntryTypeOptions());
       const indexed = {};
       reports.forEach(r => {
         r.included_time_entry_ids?.forEach(id => {
@@ -545,28 +541,22 @@ export default function TimeLogDashboard({
                 }
 
                 const handleFormSave = async (payload) => {
-                   try {
-                     // 1️⃣ Save entry
-                     await saveTimeEntry({
-                       payload: {
-                         ...payload,
-                         entry_type_code: payload.entry_type_code || activeEntryTypeCode
-                       },
-                       existingEntry: editingEntry,
-                       clientId
-                     });
-
-                     // 2️⃣ Refresh data to sync with DB (critical - prevents stale UI)
-                     await onRefresh();
-
-                     // 3️⃣ Close modal and reset state
-                     setShowForm(false);
-                     setEditingEntry(null);
-                     setSelectedEntryTypeCode("");
-                    } catch (err) {
-                      toast.error(err?.message || "Failed to save entry");
-                    }
-                  };
+                  try {
+                    await saveTimeEntry({
+                      entryTypeId: entryTypeObj?.id,
+                      formData: payload,
+                      schema: [],
+                      existingEntry: editingEntry,
+                      clientId
+                    });
+                    await onRefresh();
+                    setShowForm(false);
+                    setEditingEntry(null);
+                    setSelectedEntryTypeCode("");
+                  } catch (err) {
+                    toast.error(err?.message || "Failed to save entry");
+                  }
+                };
 
                 return (
                   <FormEngine

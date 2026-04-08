@@ -36,13 +36,10 @@ const STRUCTURED_ENTRY_TYPES = [
  * This component provided "quick log" vs "structured form" branching logic.
  * FormEngine now handles all entry types dynamically based on schema.
  * No more branching logic needed.
- * 
- * Keep for backward compatibility only.
  */
-export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
-   // Block deprecated component - all rendering should use FormEngine
-   console.warn('[QuickTimeLog] DEPRECATED - Use FormEngine instead');
-   return null;
+export default function QuickTimeLog() {
+  console.warn('[QuickTimeLog] DEPRECATED - Use FormEngine instead');
+  return null;
 
   // Load entry types (deduplicated)
   useEffect(() => {

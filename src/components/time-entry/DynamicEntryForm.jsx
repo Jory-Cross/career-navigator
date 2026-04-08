@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
 import FieldRenderer from "./FieldRenderer";
-import { buildInitialFormData, normalizeTopLevelFields } from "@/lib/formHelpers";
-import { validateEntryForm } from "@/lib/validationRules";
+import { buildInitialFormData } from "@/lib/formHelpers";
+import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
 import { base44 } from "@/api/base44Client";
 
 export default function DynamicEntryForm({
@@ -46,43 +46,16 @@ export default function DynamicEntryForm({
 
   async function handleSubmit(e) {
     e.preventDefault();
-
-    console.log("[DynamicEntryForm] === SUBMIT START ===");
-    console.log("[DynamicEntryForm] Schema:", schema);
-    console.log("[DynamicEntryForm] Form data:", formData);
-
-    const validationError = validateEntryForm(entryTypeCode, formData, schema);
-    if (validationError) {
-      console.warn("[DynamicEntryForm] Validation error:", validationError);
-      setError(validationError);
-      return;
-    }
-
     setError("");
     setSaving(true);
 
     try {
-       const payload = normalizeTopLevelFields(entryTypeCode, formData);
-       console.log("[DynamicEntryForm] Normalized payload:", payload);
-
-       // Add entry type metadata
-       if (entryTypeObj) {
-         payload.entry_type_id = entryTypeObj.id;
-         console.log("[DynamicEntryForm] Added entry_type_id:", entryTypeObj.id);
-       } else {
-         console.warn("[DynamicEntryForm] Entry type object not resolved");
-       }
-       payload.entry_type_code = entryTypeCode;
-       payload.category = entryTypeObj?.category || "structured";
-       payload.legacy_category = entryTypeObj?.legacy_category || null;
-
-       if (entry?.id) {
-         payload.id = entry.id;
-       }
-
-       console.log("[DynamicEntryForm] SUBMIT PAYLOAD:", JSON.stringify(payload, null, 2));
-       console.log("[DynamicEntryForm] form_data contents:", payload.form_data);
-       await onSave?.(payload);
+      await handleDynamicEntrySave({
+        entryType: { id: entryTypeObj?.id, code: entryTypeCode, name: entryTypeObj?.name },
+        formData,
+        schema,
+        saveEntry: onSave,
+      });
     } catch (err) {
       const errorMsg = err?.message || "Failed to save entry";
       console.error("[DynamicEntryForm] Save failed:", err);

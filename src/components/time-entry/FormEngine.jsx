@@ -17,27 +17,15 @@ export default function FormEngine({
   const [schema, setSchema] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Load schema, with dynamic loading for voc_rehab types
   useEffect(() => {
     const loadSchema = async () => {
-      // For voc_rehab entry types (job_coaching, job_development, usor96), always load from ReportFieldTemplate
       if (config?.schemaKey === "voc_rehab") {
         setLoading(true);
         try {
           const dynamicSchema = await loadVocRehabSchema(entryTypeCode);
-          console.log(`[FormEngine] Loaded voc_rehab schema for ${entryTypeCode}:`, dynamicSchema);
-          
-          // Log service code field population
-          const serviceCodeFields = dynamicSchema.filter(f => 
-            f.key.toLowerCase().includes("service_code") && f.type === "select"
-          );
-          serviceCodeFields.forEach(f => {
-            console.log(`[FormEngine] ${f.key}: ${f.options?.length || 0} options loaded`);
-          });
-          
           setSchema(dynamicSchema);
         } catch (err) {
-          console.error("[FormEngine] Failed to load voc_rehab schema:", err);
+          console.error("[FormEngine] Failed to load schema:", err);
           setSchema([]);
         } finally {
           setLoading(false);
