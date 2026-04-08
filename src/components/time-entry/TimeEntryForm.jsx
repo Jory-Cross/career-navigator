@@ -221,7 +221,11 @@ export default function TimeEntryForm({ clients, onSaved, onCancel }) {
     setSaving(true);
     const actualClientId = clientId?.startsWith("self:") ? null : clientId;
 
+    // Compute reporting_period_key (YYYY-MM)
+    const reportingPeriodKey = date ? date.slice(0, 7) : null;
+
     const timeEntry = await base44.entities.TimeEntry.create({
+      // ── Legacy fields (preserve existing reads) ──
       client_id: actualClientId,
       date,
       start_time: startTime,
@@ -229,19 +233,32 @@ export default function TimeEntryForm({ clients, onSaved, onCancel }) {
       duration_minutes: duration,
       description: description || selectedEntryType?.name || "Session",
       category: selectedEntryType?.code || "other",
+      // ── New schema fields (dual-write) ──
       entry_type_id: selectedEntryType?.id,
+      entry_type_code: selectedEntryType?.code,
+      reporting_period_key: reportingPeriodKey,
+      status: "submitted",
+      is_reportable: selectedEntryType ? (selectedEntryType.report_mode !== "none") : true,
+      is_billable: selectedEntryType?.is_billable ?? false,
+      is_payroll_eligible: selectedEntryType?.is_payroll_eligible ?? true,
+      report_ready: false,
     });
 
-    // Save dynamic field answers
-    if (Object.keys(answers).length > 0 && selectedEntryType) {
-      await base44.entities.ReportFieldAnswer.create({
-        time_entry_id: timeEntry.id,
-        entry_type_id: selectedEntryType.id,
+    // Save dynamic field answers (via backend for schema snapshot + validation)
+    if (selectedEntryType) {
+      const requiredFieldsComplete = missingRequired.length === 0;
+      await base44.functions.invoke("submitFieldAnswers", {
+        time_entry_id:   timeEntry.id,
+        entry_type_id:   selectedEntryType.id,
         entry_type_code: selectedEntryType.code,
         answers,
-        is_complete: missingRequired.length === 0,
-        submitted_at: new Date().toISOString(),
+        notes: "Submitted via TimeEntryForm",
       });
+
+      // Back-fill report_ready on the time entry if all required fields are complete
+      if (requiredFieldsComplete) {
+        await base44.entities.TimeEntry.update(timeEntry.id, { report_ready: true });
+      }
     }
 
     // Also create matching meeting

@@ -120,15 +120,26 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
     try {
       const durationMinutes = Math.round(Number(coreData.duration_hours) * 60);
 
-      // 1. Create TimeEntry
+      // Compute reporting_period_key (YYYY-MM)
+      const reportingPeriodKey = coreData.date ? coreData.date.slice(0, 7) : null;
+
+      // 1. Create TimeEntry — dual-write legacy + new schema fields
       const timeEntry = await base44.entities.TimeEntry.create({
+        // ── Legacy fields ──
         client_id:        clientId,
         date:             coreData.date,
         duration_minutes: durationMinutes,
-        entry_type_id:    entryType.id,
-        entry_type_code:  entryType.code,
         general_notes:    coreData.general_notes || "",
-        // Carry any internal template fields through as well
+        // ── New schema fields ──
+        entry_type_id:       entryType.id,
+        entry_type_code:     entryType.code,
+        reporting_period_key: reportingPeriodKey,
+        status:              isDraft ? "draft" : "submitted",
+        is_reportable:       entryType.report_mode !== "none",
+        is_billable:         entryType.is_billable ?? false,
+        is_payroll_eligible: entryType.is_payroll_eligible ?? true,
+        report_ready:        false,
+        // Carry any internal template field extras
         ...buildInternalExtras()
       });
 
@@ -147,6 +158,13 @@ export default function StructuredVRTimeEntryForm({ clientId, onSuccess }) {
       }
 
       const { required_fields_complete, report_ready } = result.data;
+
+      // Back-fill report_ready on TimeEntry once we know the answer status
+      if (!isDraft && report_ready) {
+        await base44.entities.TimeEntry.update(timeEntry.id, { report_ready: true });
+      } else if (!isDraft && required_fields_complete) {
+        await base44.entities.TimeEntry.update(timeEntry.id, { report_ready: true });
+      }
 
       if (isDraft) {
         toast.success("Draft saved");
