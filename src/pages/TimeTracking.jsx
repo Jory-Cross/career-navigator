@@ -503,8 +503,23 @@ export default function TimeTracking() {
                     try {
                       console.log("[TimeTracking] Edit save payload:", payload);
 
+                      const normalizeDate = (value) => {
+                        if (!value) return value;
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+                        const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                        if (m) {
+                          const [, mm, dd, yyyy] = m;
+                          return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+                        }
+
+                        return value;
+                      };
+
                       const durationMinutes = payload.duration_minutes || payload.duration || 0;
-                      const dateValue = payload.date;
+                      console.log("[TimeTracking] Raw payload.date:", payload.date);
+                      const dateValue = normalizeDate(payload.date);
+                      console.log("[TimeTracking] Normalized dateValue:", dateValue);
                       const entryTypeCode = payload.entry_type_code || selectedEntry.entry_type_code;
 
                       if (!dateValue || !durationMinutes) {
