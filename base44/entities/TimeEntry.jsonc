@@ -46,6 +46,11 @@
       "type": "string",
       "description": "Internal staff note only \u2014 not used for PDF reporting"
     },
+    "form_data": {
+      "type": "object",
+      "description": "Structured form field answers (all keys as submitted from FormEngine)",
+      "additionalProperties": true
+    },
     "is_billable": {
       "type": "boolean",
       "default": false
