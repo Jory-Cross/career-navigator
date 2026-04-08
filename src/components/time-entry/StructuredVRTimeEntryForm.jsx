@@ -752,7 +752,7 @@ function FieldInput({ field, value, error, onChange }) {
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).map(opt => (
+            {(field.options || []).filter(opt => opt !== "").map(opt => (
               <SelectItem key={opt} value={opt}>{opt}</SelectItem>
             ))}
           </SelectContent>
@@ -765,7 +765,7 @@ function FieldInput({ field, value, error, onChange }) {
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).map(opt => (
+            {(field.options || []).filter(opt => opt !== "").map(opt => (
               <SelectItem key={opt} value={opt}>{opt}</SelectItem>
             ))}
           </SelectContent>
