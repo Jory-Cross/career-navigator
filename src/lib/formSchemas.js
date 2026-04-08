@@ -99,9 +99,9 @@ export async function loadVocRehabSchema(entryTypeCode) {
         };
 
         // Inject service code options for known fields
-        if (t.field_key === "primary_service_code" && primaryCodes.length > 0) {
+        if ((t.field_key === "primary_service_code" || t.field_key === "jc_primary_service_code") && primaryCodes.length > 0) {
           field.options = primaryCodes;
-        } else if (t.field_key === "secondary_service_code" && secondaryCodes.length > 0) {
+        } else if ((t.field_key === "secondary_service_code" || t.field_key === "jc_secondary_service_code") && secondaryCodes.length > 0) {
           field.options = secondaryCodes;
         }
 
