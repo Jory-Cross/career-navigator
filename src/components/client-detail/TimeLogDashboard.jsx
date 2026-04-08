@@ -527,7 +527,8 @@ export default function TimeLogDashboard({
  * NOW LOADS AND DISPLAYS DYNAMIC QUESTIONS FROM ReportFieldTemplate
  */
 function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) {
-   const [form, setForm] = useState(
+    console.log('[DEBUG] TimeEntryFormContent MOUNTED with entry_type_code:', entry?.entry_type_code);
+    const [form, setForm] = useState(
       entry ? {
         date: entry.date,
         duration_minutes: entry.duration_minutes,
@@ -638,78 +639,96 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
 
    return (
      <div className="space-y-4">
-       <div className="grid grid-cols-2 gap-3">
-         <div className="space-y-1">
-           <Label className="text-xs">Date</Label>
-           <Input
-             type="date"
-             value={form.date}
-             onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-           />
-         </div>
-         <div className="space-y-1">
-           <Label className="text-xs">Entry Type</Label>
-           <Select
-             value={form.entry_type_code}
-             onValueChange={v => {
-               const type = entryTypes.find(t => t.code === v);
-               setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
-             }}
-           >
-             <SelectTrigger>
-               <SelectValue placeholder="Select..." />
-             </SelectTrigger>
-             <SelectContent>
-               {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
-             </SelectContent>
-           </Select>
-         </div>
-       </div>
+       {/* Only render base fields if NO template questions exist (fallback) */}
+       {questions.length === 0 && (
+         <>
+           <div className="grid grid-cols-2 gap-3">
+             <div className="space-y-1">
+               <Label className="text-xs">Date</Label>
+               <Input
+                 type="date"
+                 value={form.date}
+                 onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+               />
+             </div>
+             <div className="space-y-1">
+               <Label className="text-xs">Entry Type</Label>
+               <Select
+                 value={form.entry_type_code}
+                 onValueChange={v => {
+                   const type = entryTypes.find(t => t.code === v);
+                   setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
+                 }}
+               >
+                 <SelectTrigger>
+                   <SelectValue placeholder="Select..." />
+                 </SelectTrigger>
+                 <SelectContent>
+                   {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
+                 </SelectContent>
+               </Select>
+             </div>
+           </div>
 
-       <div className="space-y-1">
-         <Label className="text-xs">Description</Label>
-         <Input
-           value={form.description}
-           onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-           placeholder="What did you work on?"
-         />
-       </div>
-
-       <div className="space-y-2 p-3 bg-slate-50 rounded">
-         <p className="text-xs font-medium text-slate-600">Duration</p>
-         <div className="grid grid-cols-3 gap-2">
            <div className="space-y-1">
-             <Label className="text-xs">Start Time</Label>
+             <Label className="text-xs">Description</Label>
              <Input
-               type="time"
-               value={form.start_time}
-               onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+               value={form.description}
+               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+               placeholder="What did you work on?"
              />
            </div>
-           <div className="space-y-1">
-             <Label className="text-xs">End Time</Label>
-             <Input
-               type="time"
-               value={form.end_time}
-               onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
-             />
-           </div>
-           <div className="space-y-1">
-             <Label className="text-xs">Minutes</Label>
-             <Input
-               type="number"
-               value={form.duration_minutes}
-               onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
-               placeholder="60"
-             />
-           </div>
-         </div>
-       </div>
 
-       {/* Dynamic Questions Section */}
-       {questions.length > 0 && (
-         <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
-           <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
+           <div className="space-y-2 p-3 bg-slate-50 rounded">
+             <p className="text-xs font-medium text-slate-600">Duration</p>
+             <div className="grid grid-cols-3 gap-2">
+               <div className="space-y-1">
+                 <Label className="text-xs">Start Time</Label>
+                 <Input
+                   type="time"
+                   value={form.start_time}
+                   onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+                 />
+               </div>
+               <div className="space-y-1">
+                 <Label className="text-xs">End Time</Label>
+                 <Input
+                   type="time"
+                   value={form.end_time}
+                   onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
+                 />
+               </div>
+               <div className="space-y-1">
+                 <Label className="text-xs">Minutes</Label>
+                 <Input
+                   type="number"
+                   value={form.duration_minutes}
+                   onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
+                   placeholder="60"
+                 />
+               </div>
+             </div>
+           </div>
+         </>
+       )}
+
+       {/* Dynamic Questions Section - REPLACES base fields when available */}
+       {form.entry_type_code && (
+         <>
+           {/* Entry Type selector at top */}
+           {questions.length > 0 && (
+             <div className="space-y-1">
+               <Label className="text-xs">Entry Type</Label>
+               <div className="p-2 bg-slate-50 rounded text-xs text-slate-600">
+                 {entryTypes.find(t => t.code === form.entry_type_code)?.name}
+               </div>
+             </div>
+           )}
+
+           {/* Template-driven form */}
+           {questions.length > 0 && (
+             <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
+               <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
            <div className="space-y-3">
              {loadingQuestions ? (
                <p className="text-xs text-slate-500 italic">Loading questions...</p>
@@ -773,11 +792,13 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
                  </div>
                ))
              )}
-           </div>
-         </div>
-       )}
+             </div>
+             </div>
+             )}
+             </>
+             )}
 
-       <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
+             <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
          <Button variant="outline" onClick={onClose}>Cancel</Button>
          <Button onClick={handleSave} disabled={saving}>
            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}

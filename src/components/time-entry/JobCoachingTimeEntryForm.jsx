@@ -25,7 +25,8 @@ import { serviceCodeCache } from "@/lib/serviceCodeCache";
  * - Report assembly logic
  */
 export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel }) {
-  const [form, setForm] = useState({
+   console.log('[DEBUG] JobCoachingTimeEntryForm MOUNTED');
+   const [form, setForm] = useState({
     service_date: new Date().toISOString().split('T')[0],
     coaching_day: "",
     coaching_hours: "",

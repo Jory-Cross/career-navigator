@@ -143,7 +143,8 @@ function FieldRenderer({ field, value, onChange }) {
 }
 
 export default function TimeEntryForm({ clients, onSaved, onCancel }) {
-  const [step, setStep] = useState("basics");
+   console.log('[DEBUG] TimeEntryForm MOUNTED');
+   const [step, setStep] = useState("basics");
   const [saving, setSaving] = useState(false);
 
   // Step 1: core fields

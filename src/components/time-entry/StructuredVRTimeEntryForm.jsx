@@ -38,7 +38,8 @@ import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
  *   onSuccess(timeEntry, isDraft) - called after save
  */
 export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSuccess }) {
-  const [step, setStep] = useState("select_type");
+   console.log('[DEBUG] StructuredVRTimeEntryForm MOUNTED');
+   const [step, setStep] = useState("select_type");
 
   // Selected entry type
   const [entryType, setEntryType]   = useState(null); // full DB record
