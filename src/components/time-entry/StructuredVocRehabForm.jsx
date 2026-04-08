@@ -40,19 +40,20 @@ export default function StructuredVocRehabForm({
           console.log("[StructuredVocRehabForm] Entry type loaded:", types[0]);
         }
 
-        // Get field templates for this entry type
+        // Get field templates for this entry type (row-level only)
         const templates = await base44.entities.ReportFieldTemplate.filter({
           entry_type_code: entryTypeCode,
           is_active: true,
-          is_internal_only: false
+          is_internal_only: false,
+          pdf_context: 'row'
         });
 
         console.log("[StructuredVocRehabForm] Raw templates loaded:", templates.length);
-        console.log("[StructuredVocRehabForm] Template codes:", templates.map(t => t.entry_type_code));
+        console.log("[StructuredVocRehabForm] Field keys:", templates.map(t => t.field_key));
 
         // Sort by order
         const sorted = templates.sort((a, b) => (a.order || 0) - (b.order || 0));
-        console.log("[StructuredVocRehabForm] Final questions:", sorted.map(q => q.field_key));
+        console.log("[StructuredVocRehabForm] Final questions after sort:", sorted.map(q => ({ key: q.field_key, order: q.order })));
         setQuestions(sorted);
 
         // If editing, populate answers from entry's field answers
@@ -93,12 +94,25 @@ export default function StructuredVocRehabForm({
         toast.success("Entry updated");
       } else {
         // For creating: use dual-write to create both TimeEntry and ReportFieldAnswer
+        // Extract duration from field answers (look for hours/duration field), default to 1 hour
+        const durationMinutes = (() => {
+          const durationField = questions.find(q => 
+            q.field_key.toLowerCase().includes('duration') ||
+            q.field_key.toLowerCase().includes('hour')
+          );
+          if (durationField && fieldAnswers[durationField.field_key]) {
+            const val = parseFloat(fieldAnswers[durationField.field_key]);
+            return isNaN(val) || val <= 0 ? 60 : Math.round(val * 60);
+          }
+          return 60; // Default 1 hour
+        })();
+
         await submitTimeEntryWithDualWrite({
           clientId,
           entryTypeId: entryType.id,
           entryTypeCode: entryTypeCode,
           date: new Date().toISOString().split("T")[0],
-          durationMinutes: 0, // Voc Rehab forms determine their own duration logic
+          durationMinutes,
           fieldAnswers: fieldAnswers,
           asDraft: false
         });
