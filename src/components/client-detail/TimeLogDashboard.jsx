@@ -561,14 +561,12 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
      setLoadingQuestions(true);
      base44.entities.ReportFieldTemplate.filter({
        entry_type_code: form.entry_type_code,
-       is_active: true
+       is_active: true,
+       pdf_context: 'row',
+       is_internal_only: false
      }).then(templates => {
-       // STRICT FILTERING: Only show row-level, non-internal fields
-       const filtered = templates.filter(t => 
-         t.pdf_context === 'row' && 
-         !t.is_internal_only
-       );
-       setQuestions(filtered.sort((a, b) => (a.order || 0) - (b.order || 0)));
+       // Already filtered by query, just sort
+       setQuestions(templates.sort((a, b) => (a.order || 0) - (b.order || 0)));
      }).catch(err => {
        console.error('Failed to load questions:', err);
        toast.error('Failed to load form questions');
