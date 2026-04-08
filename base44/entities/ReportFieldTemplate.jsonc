@@ -76,6 +76,40 @@
       ],
       "default": "row"
     },
+    "source_form_code": {
+      "type": "string",
+      "enum": [
+        "USOR95",
+        "USOR96",
+        "USOR148"
+      ],
+      "description": "Report form code this field belongs to"
+    },
+    "data_source_layer": {
+      "type": "string",
+      "enum": [
+        "time_entry",
+        "client",
+        "authorization",
+        "report_assembly",
+        "finalization"
+      ],
+      "description": "Where this field's data comes from"
+    },
+    "source_form_field_name": {
+      "type": "string",
+      "description": "Internal canonical field name for PDF mapping"
+    },
+    "required_on_entry": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether staff must fill this field when entering time"
+    },
+    "required_for_report": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this field must be populated for report generation"
+    },
     "maps_to_form_code": {
       "type": "string"
     },
