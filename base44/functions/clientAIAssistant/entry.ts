@@ -1,5 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+/**
+ * clientAIAssistant — AI-powered CRM coaching and recommendations
+ *
+ * Uses compact structured grounding to replace text-heavy context injection.
+ * Loads data once, builds a structured context object, and reuses it across actions.
+ *
+ * Actions:
+ *   - summarize: Client situation overview
+ *   - suggest_tasks: Actionable follow-up tasks
+ *   - draft_email: Personalized client communication
+ *   - engagement_insights: Activity and trend analysis
+ *   - coaching_recommendations: Coaching priorities and job matches
+ *   - save_coaching_plan: Persist coaching plan as goals, notes, task
+ *   - save_job_recommendations: Persist job matches as batch records
+ */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,7 +27,6 @@ Deno.serve(async (req) => {
     if (!clientId) return Response.json({ error: 'clientId required' }, { status: 400 });
 
     // --- Handle save/persist actions first (no LLM needed) ---
-
     if (action === 'save_coaching_plan') {
       return await saveCoachingPlan(base44, user, clientId, body);
     }
@@ -21,12 +35,12 @@ Deno.serve(async (req) => {
       return await saveJobRecommendations(base44, user, clientId, body);
     }
 
-    // --- Load structured client context (compact, targeted) ---
-    const context = await loadClientContext(base44, clientId, action);
+    // --- Load and compile structured client context ---
+    const context = await loadClientContext(base44, clientId);
     if (!context.client) return Response.json({ error: 'Client not found' }, { status: 404 });
 
     // --- Build action-specific prompt from structured context ---
-    const { prompt, responseSchema } = buildPrompt(action, context, body);
+    const { prompt, responseSchema, dataSourcesUsed } = buildPrompt(action, context, body);
     if (!prompt) return Response.json({ error: 'Unknown action' }, { status: 400 });
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -34,23 +48,13 @@ Deno.serve(async (req) => {
       response_json_schema: responseSchema
     });
 
-    // Build metadata about what data sources were used
-    const dataSourcesUsed = [];
-    if (vocationalFacts) dataSourcesUsed.push('vocational_facts_profile');
-    if (assessments.length > 0) dataSourcesUsed.push(`${assessments.length} assessment(s)`);
-    if (goals.length > 0) dataSourcesUsed.push('goals');
-    if (notes.length > 0) dataSourcesUsed.push('support_notes');
-    if (applications.length > 0) dataSourcesUsed.push('job_applications');
-    if (timeEntries.length > 0) dataSourcesUsed.push('time_entries');
-    if (documents.length > 0) dataSourcesUsed.push('documents');
-
     return Response.json({
       success: true,
       data: result,
       action,
       metadata: {
-        assessments_used: assessments.map(a => a.id),
-        client_fields_used: Object.keys(client).filter(k => client[k]),
+        assessments_used: context.assessments.map(a => a.id),
+        client_fields_used: ['first_name', 'last_name', 'target_role', 'industry', 'location', 'client_type'],
         data_sources_used: dataSourcesUsed,
         timestamp: new Date().toISOString()
       }
@@ -63,25 +67,48 @@ Deno.serve(async (req) => {
 });
 
 // ─── Context Loader ───────────────────────────────────────────────────────────
-// Loads only what each action needs. Avoids fetching time entries for email drafts, etc.
+// Loads data once and builds a compact structured context object for all actions.
+// Batch ReportFieldAnswer lookups to avoid N+1 queries.
 
-async function loadClientContext(base44, clientId, action) {
-  // Load full context upfront for all actions — allows consistent data tracking
-  const [client, goals, assessments, applications, notes, timeEntries, documents] = await Promise.all([
+async function loadClientContext(base44, clientId) {
+  const [
+    client,
+    goals,
+    assessments,
+    applications,
+    notes,
+    timeEntries,
+    jobRecommendations
+  ] = await Promise.all([
     base44.entities.Client.filter({ id: clientId }).then(r => r[0] || null),
     base44.entities.Goal.filter({ client_id: clientId }),
     base44.entities.Assessment.filter({ client_id: clientId }, '-created_date', 10),
     base44.entities.JobApplication.filter({ client_id: clientId }, '-created_date', 15),
     base44.entities.SupportNote.filter({ client_id: clientId }, '-created_date', 15),
     base44.entities.TimeEntry.filter({ client_id: clientId }, '-date', 30).catch(() => []),
-    base44.entities.Document.filter({ client_id: clientId }).catch(() => []),
+    base44.entities.JobRecommendation.filter({ client_id: clientId }, '-created_date', 10).catch(() => [])
   ]);
 
-  return { client, goals, assessments, applications, notes, timeEntries, documents };
+  // Batch lookup ReportFieldAnswer records for recent time entries
+  const recentEntryIds = timeEntries.slice(0, 15).map(e => e.id);
+  const fieldAnswers = recentEntryIds.length > 0
+    ? await base44.entities.ReportFieldAnswer.filter({ time_entry_id: { $in: recentEntryIds } }).catch(() => [])
+    : [];
+
+  return {
+    client,
+    goals,
+    assessments,
+    applications,
+    notes,
+    timeEntries,
+    fieldAnswers,
+    jobRecommendations
+  };
 }
 
-// ─── Grounding Payload Builders ───────────────────────────────────────────────
-// Each builder returns only the fields the LLM actually needs — no raw text blobs.
+// ─── Compact Structured Grounding Builders ────────────────────────────────────
+// Summarize repeated data and extract key facts. Prioritize vocational_facts_profile.
 
 function buildClientCore(client) {
   return {
@@ -90,141 +117,210 @@ function buildClientCore(client) {
     status: client.status,
     target_role: client.target_role || null,
     industry: client.industry || null,
-    location: client.location || null,
+    location: client.location || null
   };
 }
 
-function buildVocationalFacts(client) {
+function buildVocationalFactsGround(client) {
   const vf = client.vocational_facts_profile;
   if (!vf) return null;
-  const keys = ['skills', 'barriers', 'interests', 'preferred_tasks', 'schedule_availability', 'support_needs'];
-  const result = {};
-  keys.forEach(k => {
-    const items = vf[k] || [];
-    if (items.length) result[k] = items.map(i => i.fact || i).slice(0, 6);
-  });
-  return Object.keys(result).length ? result : null;
+
+  // Extract only the top facts per category (max 4-6 items each for brevity)
+  return {
+    skills: (vf.skills || []).slice(0, 5).map(s => s.fact || s),
+    barriers: (vf.barriers || []).slice(0, 4).map(b => b.fact || b),
+    interests: (vf.interests || []).slice(0, 4).map(i => i.fact || i),
+    support_needs: (vf.support_needs || []).slice(0, 4).map(s => s.fact || s),
+    schedule_availability: (vf.schedule_availability || []).slice(0, 3).map(s => s.fact || s),
+    job_readiness_level: vf.job_readiness_level ? (vf.job_readiness_level[0]?.fact || vf.job_readiness_level[0]) : null,
+    conflict_count: vf.conflicts?.length || 0
+  };
 }
 
 function buildGoalsSummary(goals) {
-  return goals.map(g => ({ category: g.category, title: g.title, status: g.status }));
+  // Active goals first, then summarize by category
+  const active = goals.filter(g => g.status !== 'discontinued').slice(0, 5);
+  const byCat = {};
+  active.forEach(g => {
+    if (!byCat[g.category]) byCat[g.category] = [];
+    byCat[g.category].push({ title: g.title, status: g.status });
+  });
+  return byCat;
 }
 
 function buildApplicationsSummary(applications) {
-  return applications.map(a => ({
-    company: a.company,
-    position: a.position,
-    status: a.status,
-    applied_date: a.applied_date || null
-  }));
+  // Show recent 5, grouped by status
+  const recent = applications.slice(0, 5);
+  const byStatus = {};
+  recent.forEach(a => {
+    if (!byStatus[a.status]) byStatus[a.status] = [];
+    byStatus[a.status].push(a.company);
+  });
+  return { count: applications.length, by_status: byStatus };
 }
 
 function buildNotesSummary(notes) {
-  return notes.map(n => ({ date: n.date, type: n.note_type, title: n.title }));
+  // Summarize recent notes by type
+  const recent = notes.slice(0, 8);
+  const byType = {};
+  recent.forEach(n => {
+    if (!byType[n.note_type]) byType[n.note_type] = [];
+    byType[n.note_type].push(n.title);
+  });
+  return { recent_count: recent.length, total_count: notes.length, by_type: byType };
 }
 
 function buildAssessmentsSummary(assessments) {
-  return assessments.map(a => ({ type: a.assessment_type, completed_by: a.completed_by }));
+  // Show assessment types completed, not full responses
+  const types = {};
+  assessments.forEach(a => {
+    if (!types[a.assessment_type]) types[a.assessment_type] = 0;
+    types[a.assessment_type]++;
+  });
+  return types;
 }
 
-function buildTimeEntrySummary(timeEntries) {
+function buildTimeEntrySummary(timeEntries, fieldAnswers = []) {
+  // Summarize entry stats and recent activity
   const byType = {};
   timeEntries.forEach(te => {
     const k = te.entry_type_code || te.category || 'other';
-    if (!byType[k]) byType[k] = { count: 0, total_hours: 0 };
+    if (!byType[k]) byType[k] = { count: 0, total_hours: 0, entries: [] };
     byType[k].count++;
     byType[k].total_hours += (te.duration_minutes || 0) / 60;
+    byType[k].entries.push(te.date);
   });
+
+  const summary = {};
+  Object.entries(byType).forEach(([type, data]) => {
+    summary[type] = {
+      count: data.count,
+      total_hours: Math.round(data.total_hours * 10) / 10,
+      recent_dates: data.entries.slice(0, 3)
+    };
+  });
+
   return {
     total_entries: timeEntries.length,
-    recent_dates: timeEntries.slice(0, 5).map(te => te.date),
-    by_type: Object.entries(byType).map(([type, s]) => ({
-      type,
-      count: s.count,
-      total_hours: Math.round(s.total_hours * 10) / 10
-    }))
+    entry_types: summary,
+    has_field_answers: fieldAnswers.length > 0,
+    completed_field_answers: fieldAnswers.filter(f => f.required_fields_complete).length
+  };
+}
+
+function buildRecommendationsSummary(recommendations) {
+  // Show recent recommendations and their status
+  if (recommendations.length === 0) return null;
+  
+  const recent = recommendations.slice(0, 5);
+  const byStatus = {};
+  recent.forEach(r => {
+    if (!byStatus[r.status]) byStatus[r.status] = [];
+    byStatus[r.status].push(r.job_title);
+  });
+
+  return {
+    total_count: recommendations.length,
+    recent_by_status: byStatus,
+    requires_review: recommendations.filter(r => r.requires_staff_review).length
   };
 }
 
 // ─── Prompt Builder ───────────────────────────────────────────────────────────
+// Builds action-specific prompts using compact structured context.
+// Returns { prompt, responseSchema, dataSourcesUsed } for full traceability.
 
 function buildPrompt(action, context, body) {
-  const { client, goals, assessments, applications, notes, timeEntries, documents } = context;
+  const {
+    client,
+    goals,
+    assessments,
+    applications,
+    notes,
+    timeEntries,
+    fieldAnswers,
+    jobRecommendations
+  } = context;
 
-  const clientCore       = buildClientCore(client);
-  const vocationalFacts  = buildVocationalFacts(client);
-
-  // Track which data sources are actually used for this action
+  const clientCore = buildClientCore(client);
+  const vocFacts = buildVocationalFactsGround(client);
   const dataSourcesUsed = [];
+
+  // Helper to track which sources were actually included
   const trackSource = (source, hasData) => {
     if (hasData) dataSourcesUsed.push(source);
   };
 
+  trackSource('vocational_facts_profile', vocFacts);
+  trackSource('assessments', assessments.length > 0);
+  trackSource('goals', goals.length > 0);
+  trackSource('support_notes', notes.length > 0);
+  trackSource('job_applications', applications.length > 0);
+  trackSource('time_entries', timeEntries.length > 0);
+
   if (action === 'summarize') {
     const payload = {
       client: clientCore,
-      vocational_facts: vocationalFacts,
-      goals: buildGoalsSummary(goals),
-      recent_applications: buildApplicationsSummary(applications).slice(0, 5),
-      recent_notes: buildNotesSummary(notes).slice(0, 5),
-      assessments_on_file: buildAssessmentsSummary(assessments)
+      vocational_facts: vocFacts,
+      goals_by_category: buildGoalsSummary(goals),
+      applications_by_status: buildApplicationsSummary(applications),
+      notes_by_type: buildNotesSummary(notes),
+      assessments_completed: buildAssessmentsSummary(assessments)
     };
     return {
-      prompt: `You are a CRM AI assistant for an employment services organization. Using the structured client data below, produce a concise situation summary for the employment specialist.
+      prompt: `You are a CRM AI assistant. Using the structured client data below, produce a brief situation summary.
 
 CLIENT DATA:
 ${JSON.stringify(payload, null, 2)}
 
-Return a structured summary covering:
-1. Current situation (2-3 sentences)
-2. Key progress highlights (from goals, applications)
-3. Main concerns (from notes, missing data, stalled applications)
-4. Engagement level (High/Medium/Low) with brief reasoning`,
+Cover: (1) current situation, (2) progress highlights, (3) main concerns, (4) engagement level.`,
       responseSchema: {
-        type: "object",
+        type: 'object',
         properties: {
-          overview: { type: "string" },
-          highlights: { type: "array", items: { type: "string" } },
-          concerns: { type: "array", items: { type: "string" } },
-          engagement_level: { type: "string", enum: ["High", "Medium", "Low"] },
-          engagement_reasoning: { type: "string" }
+          overview: { type: 'string' },
+          highlights: { type: 'array', items: { type: 'string' } },
+          concerns: { type: 'array', items: { type: 'string' } },
+          engagement_level: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+          engagement_reasoning: { type: 'string' }
         }
-      }
+      },
+      dataSourcesUsed
     };
   }
 
   if (action === 'suggest_tasks') {
     const payload = {
       client: clientCore,
-      goals: buildGoalsSummary(goals),
-      applications: buildApplicationsSummary(applications),
-      notes: buildNotesSummary(notes)
+      goals_by_category: buildGoalsSummary(goals),
+      applications_summary: buildApplicationsSummary(applications),
+      recent_notes: buildNotesSummary(notes)
     };
     return {
-      prompt: `You are a CRM AI assistant for an employment services organization. Based on the structured client data below, suggest 3-5 specific, actionable follow-up tasks for the next 1-2 weeks.
+      prompt: `You are a CRM AI assistant. Based on the data below, suggest 3-5 specific actionable follow-up tasks for the next 1-2 weeks.
 
 CLIENT DATA:
 ${JSON.stringify(payload, null, 2)}
 
-Focus on: pending applications needing follow-up, stalled goals, gaps noted in support notes. Be specific.`,
+Focus on: pending applications, stalled goals, support gaps.`,
       responseSchema: {
-        type: "object",
+        type: 'object',
         properties: {
           suggested_tasks: {
-            type: "array",
+            type: 'array',
             items: {
-              type: "object",
+              type: 'object',
               properties: {
-                title: { type: "string" },
-                description: { type: "string" },
-                priority: { type: "string", enum: ["high", "medium", "low"] },
-                category: { type: "string" },
-                suggested_due_in_days: { type: "number" }
+                title: { type: 'string' },
+                description: { type: 'string' },
+                priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+                category: { type: 'string' },
+                suggested_due_in_days: { type: 'number' }
               }
             }
           }
         }
-      }
+      },
+      dataSourcesUsed
     };
   }
 
@@ -232,76 +328,74 @@ Focus on: pending applications needing follow-up, stalled goals, gaps noted in s
     const { emailPurpose, emailContext: emailCtx } = body;
     const payload = {
       client: clientCore,
-      recent_applications: buildApplicationsSummary(applications).slice(0, 3)
+      recent_applications: buildApplicationsSummary(applications)
     };
     return {
-      prompt: `You are a CRM AI assistant. Draft a professional, personalized email from an employment specialist to this client.
+      prompt: `Draft a professional, personalized email from an employment specialist to this client.
 
 CLIENT DATA:
 ${JSON.stringify(payload, null, 2)}
 
-Email purpose: ${emailPurpose || 'general check-in'}
-Additional context: ${emailCtx || 'none'}
+Purpose: ${emailPurpose || 'general check-in'}
+Context: ${emailCtx || 'none'}
 
-Requirements: Sound human and personalized. Reference specific details. 150-250 words. Clear subject.`,
+Requirements: Personal, specific, 150-250 words, clear subject.`,
       responseSchema: {
-        type: "object",
+        type: 'object',
         properties: {
-          subject: { type: "string" },
-          body: { type: "string" }
+          subject: { type: 'string' },
+          body: { type: 'string' }
         }
-      }
+      },
+      dataSourcesUsed
     };
   }
 
   if (action === 'engagement_insights') {
     const payload = {
       client: clientCore,
-      time_entry_summary: buildTimeEntrySummary(timeEntries),
-      recent_notes: buildNotesSummary(notes),
-      application_statuses: buildApplicationsSummary(applications).map(a => a.status)
+      time_entry_summary: buildTimeEntrySummary(timeEntries, fieldAnswers),
+      notes_summary: buildNotesSummary(notes),
+      applications_summary: buildApplicationsSummary(applications)
     };
     return {
-      prompt: `You are a CRM AI assistant. Analyze engagement patterns for this client using structured data below.
+      prompt: `Analyze engagement patterns for this client.
 
 CLIENT DATA:
 ${JSON.stringify(payload, null, 2)}
 
-Analyze: activity frequency, trends, what's working, risk signals, and recommendations to improve engagement.`,
+Analyze: activity frequency, trends, what works, risk signals, recommendations.`,
       responseSchema: {
-        type: "object",
+        type: 'object',
         properties: {
-          activity_pattern: { type: "string" },
-          trend: { type: "string", enum: ["Improving", "Declining", "Steady", "Inconsistent", "New Client"] },
-          trend_detail: { type: "string" },
-          effective_supports: { type: "array", items: { type: "string" } },
-          risk_signals: { type: "array", items: { type: "string" } },
-          recommendations: { type: "array", items: { type: "string" } }
+          activity_pattern: { type: 'string' },
+          trend: { type: 'string', enum: ['Improving', 'Declining', 'Steady', 'Inconsistent', 'New Client'] },
+          trend_detail: { type: 'string' },
+          effective_supports: { type: 'array', items: { type: 'string' } },
+          risk_signals: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } }
         }
-      }
+      },
+      dataSourcesUsed
     };
   }
 
   if (action === 'coaching_recommendations') {
     const payload = {
       client: clientCore,
-      vocational_facts: vocationalFacts,
-      goals: buildGoalsSummary(goals),
-      assessments_on_file: buildAssessmentsSummary(assessments),
-      time_entry_summary: buildTimeEntrySummary(timeEntries)
+      vocational_facts: vocFacts,
+      goals_by_category: buildGoalsSummary(goals),
+      assessments_completed: buildAssessmentsSummary(assessments),
+      time_entry_summary: buildTimeEntrySummary(timeEntries, fieldAnswers),
+      previous_recommendations: buildRecommendationsSummary(jobRecommendations)
     };
     return {
-      prompt: `You are an expert job coach. Using the structured client data below, provide a targeted coaching plan.
+      prompt: `You are an expert job coach. Using the structured client data, provide a targeted coaching plan.
 
 CLIENT DATA:
 ${JSON.stringify(payload, null, 2)}
 
-Provide:
-1. Coaching priorities (based on barriers, goals, support needs from vocational_facts)
-2. Job search strategy tailored to their skills and interests
-3. Skill gaps to address before next interview
-4. Recommended accommodations
-5. 3-5 specific job role recommendations with reasoning grounded in the data`,
+Provide: (1) coaching priorities, (2) job search strategy, (3) skill gaps, (4) recommended accommodations, (5) 3-5 job role recommendations grounded in the data.`,
       responseSchema: {
         type: 'object',
         properties: {
@@ -322,7 +416,8 @@ Provide:
           },
           next_coaching_session_focus: { type: 'string' }
         }
-      }
+      },
+      dataSourcesUsed
     };
   }
 
@@ -430,21 +525,23 @@ async function saveJobRecommendations(base44, user, clientId, body) {
     assessments_used = [],
     client_fields_used = [],
     search_terms_used = [],
-    data_sources_used = [],
-    data_basis = ''
+    data_sources_used = []
   } = body;
+
+  if (!job_recommendations || job_recommendations.length === 0) {
+    return Response.json({ error: 'No job recommendations to save' }, { status: 400 });
+  }
 
   const batchId = source_search_batch_id || `batch_${Date.now()}`;
   const savedAt = new Date().toISOString();
   const saved = [];
 
-  for (const job of (job_recommendations || [])) {
+  for (const job of job_recommendations) {
     const fitReason = job.data_basis ? `${job.why_fit}\n\nData basis: ${job.data_basis}` : job.why_fit;
 
     const rec = await base44.asServiceRole.entities.JobRecommendation.create({
       client_id: clientId,
       batch_id: batchId,
-      source_search_batch_id: batchId,
       job_title: job.job_title,
       employer: job.employer || 'To be researched',
       location: job.location || '',
@@ -464,23 +561,24 @@ async function saveJobRecommendations(base44, user, clientId, body) {
     saved.push(rec);
   }
 
-  // Persist batch metadata as Activity
+  // Audit log with full metadata
   await base44.asServiceRole.entities.Activity.create({
     client_id: clientId,
     activity_type: 'note_added',
     title: `AI Coaching Job Recommendations — ${saved.length} jobs`,
-    description: `${saved.length} AI-generated recommendations from ${user.full_name || user.email}. Data sources: ${data_sources_used.join(', ')}`,
-    metadata: {
-      batch_id: batchId,
-      created_at: savedAt,
-      created_by: user.email,
-      job_count: saved.length,
-      assessments_used: assessments_used,
-      client_fields_used: client_fields_used,
-      search_terms_used: search_terms_used,
-      data_sources_used: data_sources_used
-    }
+    description: `${saved.length} AI-generated job recommendations from ${user.full_name || user.email}. Data sources: ${data_sources_used.join(', ')}.`
   });
 
-  return Response.json({ success: true, saved_count: saved.length, batch_id: batchId, data: saved });
+  return Response.json({
+    success: true,
+    saved_count: saved.length,
+    batch_id: batchId,
+    metadata: {
+      assessments_used,
+      client_fields_used,
+      search_terms_used,
+      data_sources_used,
+      timestamp: savedAt
+    }
+  });
 }
