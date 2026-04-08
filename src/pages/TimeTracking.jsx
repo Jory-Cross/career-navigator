@@ -518,12 +518,33 @@ export default function TimeTracking() {
 
                       const durationMinutes = payload.duration_minutes || payload.duration || 0;
                       console.log("[TimeTracking] Raw payload.date:", payload.date);
-                      const dateValue = normalizeDate(payload.date);
+                      console.log("[TimeTracking] payload.form_data:", payload.form_data);
+
+                      let dateValue = normalizeDate(payload.date);
+
+                      if (!dateValue && payload.form_data) {
+                        dateValue =
+                          payload.form_data.jc_date ||
+                          payload.form_data.jd_date ||
+                          payload.form_data.development_date ||
+                          payload.form_data.ls_date ||
+                          payload.form_data.coaching_date ||
+                          payload.form_data.job_dev_date ||
+                          null;
+
+                        dateValue = normalizeDate(dateValue);
+                      }
+
                       console.log("[TimeTracking] Normalized dateValue:", dateValue);
                       const entryTypeCode = payload.entry_type_code || selectedEntry.entry_type_code;
+                      console.log("[TimeTracking] Final derived dateValue:", dateValue);
 
-                      if (!dateValue || !durationMinutes) {
-                        throw new Error("Missing required fields");
+                      if (!dateValue) {
+                        throw new Error("Missing date");
+                      }
+
+                      if (!durationMinutes) {
+                        throw new Error("Missing duration");
                       }
 
                       const reservedKeys = new Set([
