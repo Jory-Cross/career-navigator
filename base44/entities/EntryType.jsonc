@@ -1,32 +1,71 @@
 {
   "name": "EntryType",
   "type": "object",
-  "description": "Defines a category of time entry (e.g. Job Coaching, CBH, Pre-ETS). Each type can have its own set of report fields.",
+  "description": "Defines a service/time-entry type and its reporting behavior.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "name": {
-      "type": "string",
-      "description": "Display name for this entry type (e.g. 'Job Coaching', 'CBH', 'Pre-ETS')"
+      "type": "string"
     },
     "code": {
-      "type": "string",
-      "description": "Short machine-readable code (e.g. 'job_coaching', 'cbh', 'pre_ets')"
+      "type": "string"
     },
     "description": {
+      "type": "string"
+    },
+    "program_type": {
       "type": "string",
-      "description": "Optional description of what this entry type covers"
+      "enum": [
+        "vr",
+        "pre_ets",
+        "dspd",
+        "internal",
+        "other"
+      ],
+      "default": "vr"
+    },
+    "report_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "usor95_monthly",
+        "usor96_monthly",
+        "usor148_service_period",
+        "custom"
+      ],
+      "default": "none"
+    },
+    "default_pdf_template_id": {
+      "type": "string"
+    },
+    "requires_client": {
+      "type": "boolean",
+      "default": true
+    },
+    "requires_authorization": {
+      "type": "boolean",
+      "default": false
+    },
+    "requires_employer": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_billable": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_payroll_eligible": {
+      "type": "boolean",
+      "default": true
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "Whether this entry type is available for selection"
+      "default": true
     },
     "color": {
-      "type": "string",
-      "description": "Optional hex color for UI display"
+      "type": "string"
     }
   },
   "required": [
