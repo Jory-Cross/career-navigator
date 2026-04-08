@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import TimeEntryWithIncrements from "./TimeEntryWithIncrements";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,13 +10,18 @@ import { Clock, Play, Square, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-export default function ClockInOut({ clientId, clientName }) {
+export default function ClockInOut({ clientId, clientName, isPreEtsStudent = false }) {
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // For Pre-ETS students, use time entry component instead of live timer
+  if (isPreEtsStudent) {
+    return <TimeEntryWithIncrements clientId={clientId} clientName={clientName} />;
+  }
 
   // Timer effect
   useEffect(() => {
