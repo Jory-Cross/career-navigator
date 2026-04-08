@@ -548,17 +548,42 @@ export default function TimeTracking() {
                       }
 
                       const reservedKeys = new Set([
-                        "date", "duration", "duration_minutes", "description", "entry_type_code",
-                        "start_time", "end_time", "client_id", "employee_id", "status",
-                        "is_reportable", "is_billable", "is_payroll_eligible", "reporting_period_key",
-                        "entry_type_id", "category", "legacy_category"
+                        "id",
+                        "date",
+                        "duration",
+                        "duration_minutes",
+                        "description",
+                        "entry_type_code",
+                        "start_time",
+                        "end_time",
+                        "client_id",
+                        "employee_id",
+                        "status",
+                        "is_reportable",
+                        "is_billable",
+                        "is_payroll_eligible",
+                        "reporting_period_key",
+                        "entry_type_id",
+                        "category",
+                        "legacy_category",
+                        "created_date",
+                        "updated_date"
                       ]);
 
-                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
-                        ? payload.form_data
-                        : Object.fromEntries(
-                            Object.entries(payload).filter(([key]) => !reservedKeys.has(key))
-                          );
+                      const topLevelDynamicFields = Object.fromEntries(
+                        Object.entries(payload).filter(([key, value]) =>
+                          !reservedKeys.has(key) && value !== undefined
+                        )
+                      );
+
+                      const derivedFormData = {
+                        ...(selectedEntry?.form_data || {}),
+                        ...topLevelDynamicFields,
+                        ...(payload.form_data || {})
+                      };
+
+                      console.log("[TimeTracking] topLevelDynamicFields:", topLevelDynamicFields);
+                      console.log("[TimeTracking] merged derivedFormData:", derivedFormData);
 
                       const updateData = {
                         date: dateValue,
