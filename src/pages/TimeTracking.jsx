@@ -428,10 +428,16 @@ export default function TimeTracking() {
                   size="sm"
                   className="text-red-600 border-red-200 hover:bg-red-50"
                   onClick={async () => {
-                    await base44.entities.TimeEntry.delete(selectedEntry.id);
-                    toast.success("Entry deleted");
-                    setSelectedEntry(null);
-                    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                    try {
+                      await base44.entities.TimeEntry.delete(selectedEntry.id);
+                      toast.success("Entry deleted");
+                      setSelectedEntry(null);
+                      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                    } catch (err) {
+                      toast.error("Failed to delete entry");
+                      console.error(err);
+                      setSelectedEntry(null);
+                    }
                   }}
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
@@ -503,19 +509,25 @@ export default function TimeTracking() {
                 <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
                 <Button size="sm" disabled={editSaving} onClick={async () => {
                   setEditSaving(true);
-                  await base44.entities.TimeEntry.update(selectedEntry.id, {
-                    date: editForm.date,
-                    duration_minutes: parseInt(editForm.duration_minutes),
-                    description: editForm.description,
-                    category: editForm.category,
-                    start_time: editForm.start_time || undefined,
-                    end_time: editForm.end_time || undefined,
-                  });
-                  toast.success("Entry updated");
-                  setEditMode(false);
-                  setSelectedEntry(null);
-                  queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-                  setEditSaving(false);
+                  try {
+                    await base44.entities.TimeEntry.update(selectedEntry.id, {
+                      date: editForm.date,
+                      duration_minutes: parseInt(editForm.duration_minutes),
+                      description: editForm.description,
+                      category: editForm.category,
+                      start_time: editForm.start_time || undefined,
+                      end_time: editForm.end_time || undefined,
+                    });
+                    toast.success("Entry updated");
+                    setEditMode(false);
+                    setSelectedEntry(null);
+                    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                  } catch (err) {
+                    toast.error("Failed to update entry");
+                    console.error(err);
+                  } finally {
+                    setEditSaving(false);
+                  }
                 }}>
                   <Save className="w-3.5 h-3.5 mr-1" /> {editSaving ? "Saving..." : "Save Changes"}
                 </Button>
