@@ -546,6 +546,7 @@ export default function TimeLogDashboard({
 
                 const handleFormSave = async (payload) => {
                    try {
+                     // 1️⃣ Save entry
                      await saveTimeEntry({
                        payload: {
                          ...payload,
@@ -554,14 +555,18 @@ export default function TimeLogDashboard({
                        existingEntry: editingEntry,
                        clientId
                      });
+
+                     // 2️⃣ Refresh data to sync with DB (critical - prevents stale UI)
+                     await onRefresh();
+
+                     // 3️⃣ Close modal and reset state
                      setShowForm(false);
                      setEditingEntry(null);
                      setSelectedEntryTypeCode("");
-                     onRefresh();
-                   } catch (err) {
-                     toast.error(err?.message || "Failed to save entry");
-                   }
-                 };
+                    } catch (err) {
+                      toast.error(err?.message || "Failed to save entry");
+                    }
+                  };
 
                 return (
                   <FormEngine
