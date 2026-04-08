@@ -3,27 +3,45 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bot, Send, Loader2, Trash2 } from "lucide-react";
+import { Bot, Send, Loader2, Trash2, AlertCircle, CheckCircle, Info } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function AgentChatEmbed({ agentKey, title, description, clientId, systemContext }) {
+export default function AgentChatEmbed({ agentKey, title, description, clientId }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [grounding, setGrounding] = useState(null);
+  const [groundingLoading, setGroundingLoading] = useState(false);
+  const [showGrounding, setShowGrounding] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     initConversation();
-    return () => {};
+    loadGrounding();
   }, [agentKey, clientId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const loadGrounding = async () => {
+    if (!clientId) return;
+    setGroundingLoading(true);
+    try {
+      const res = await base44.functions.invoke('agentContextGrounding', { clientId });
+      if (res?.data?.success) {
+        setGrounding(res.data);
+      }
+    } catch (e) {
+      console.error('Error loading grounding:', e);
+    } finally {
+      setGroundingLoading(false);
+    }
+  };
 
   const initConversation = async () => {
     setInitializing(true);
@@ -63,12 +81,10 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     const text = input.trim();
     setInput("");
     setLoading(true);
-    // Always inject system context so the agent has current data (assessments, profile, etc.)
-    const content = systemContext
-      ? `<<SYS>>${systemContext}<</SYS>>\n\n${text}`
-      : text;
     try {
-      await base44.agents.addMessage(conversation, { role: "user", content });
+      // Send clean message without context injection
+      // Context is handled server-side via agentContextGrounding
+      await base44.agents.addMessage(conversation, { role: "user", content: text });
     } catch (error) {
       toast.error("Failed to send message");
     } finally {
@@ -91,14 +107,7 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
     await initConversation();
   };
 
-  const visibleMessages = messages
-    .filter(m => m.role !== "system")
-    .map(m => {
-      if (m.role === "user" && m.content?.includes("<<SYS>>")) {
-        return { ...m, content: m.content.replace(/<<SYS>>[\s\S]*?<<\/SYS>>\n\n/, "") };
-      }
-      return m;
-    });
+  const visibleMessages = messages.filter(m => m.role !== "system");
 
   return (
     <Card className="border-0 shadow-sm">
@@ -111,11 +120,89 @@ export default function AgentChatEmbed({ agentKey, title, description, clientId,
             <CardTitle className="text-base">{title}</CardTitle>
             {description && <p className="text-xs text-slate-400">{description}</p>}
           </div>
-          <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation" className="text-slate-400 hover:text-red-500">
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1.5">
+            {grounding && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowGrounding(!showGrounding)}
+                title="Show grounding context"
+                className={cn(
+                  "text-slate-400 hover:text-slate-600",
+                  showGrounding && "bg-violet-50 text-violet-600"
+                )}>
+                <Info className="w-4 h-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation" className="text-slate-400 hover:text-red-500">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
+
+      {/* Grounding context panel */}
+      {showGrounding && grounding && (
+        <div className="px-4 py-3 border-b border-slate-100 space-y-3 bg-violet-50/50">
+          {/* Data quality score */}
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-semibold text-slate-700">Data Quality:</div>
+            <div className="flex-1 bg-white rounded h-1.5 overflow-hidden">
+              <div
+                className={cn("h-full transition-all",
+                  grounding.data_quality_score >= 70 ? "bg-green-500" :
+                  grounding.data_quality_score >= 40 ? "bg-amber-500" : "bg-red-500"
+                )}
+                style={{ width: `${grounding.data_quality_score}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-slate-600">{grounding.data_quality_score}%</span>
+          </div>
+
+          {/* Data sources */}
+          <div>
+            <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Data Sources</p>
+            <div className="flex flex-wrap gap-1">
+              {grounding.sources.map((source, i) => (
+                <span key={i} className="text-[10px] bg-white border border-violet-200 text-violet-700 px-2 py-0.5 rounded-full">
+                  {source}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Warnings */}
+          {grounding.warnings?.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Warnings</p>
+              {grounding.warnings.map((warn, i) => (
+                <div key={i} className={cn("flex items-start gap-2 text-xs p-2 rounded-lg",
+                  warn.type === 'critical' ? "bg-red-50 text-red-800 border border-red-200" :
+                  warn.type === 'warning' ? "bg-amber-50 text-amber-800 border border-amber-200" :
+                  "bg-blue-50 text-blue-800 border border-blue-200"
+                )}>
+                  {warn.type === 'critical' ? <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" /> : <Info className="w-3 h-3 shrink-0 mt-0.5" />}
+                  <span>{warn.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* VFP status */}
+          {grounding.grounding.vocational_facts && (
+            <div className="bg-white rounded-lg p-2 text-xs border border-violet-100">
+              <div className="flex items-center gap-1.5 mb-1.5 text-green-700">
+                <CheckCircle className="w-3 h-3" />
+                <span className="font-semibold">Vocational Facts Profile</span>
+              </div>
+              <div className="text-slate-600 space-y-0.5">
+                <p>Quality: {grounding.grounding.vocational_facts.quality_score}%</p>
+                <p>Extracted: {new Date(grounding.grounding.vocational_facts.extracted_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <CardContent className="p-0">
         <div className="flex flex-col h-[480px]">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
