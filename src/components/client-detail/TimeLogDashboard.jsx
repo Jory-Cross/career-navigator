@@ -554,11 +554,17 @@ export default function TimeLogDashboard({
                       console.log("[TimeLogDashboard] Date:", payload.date);
                       console.log("[TimeLogDashboard] Entry type code:", payload.entry_type_code);
 
+                      // Validate required fields
+                      if (!payload.date) throw new Error("Missing date");
+                      if (!durationMinutes) throw new Error("Missing duration");
+                      const entryTypeCode = payload.entry_type_code || activeEntryTypeCode;
+                      if (!entryTypeCode) throw new Error("Missing entry type");
+
                       const updateData = {
                         date: payload.date,
                         duration_minutes: durationMinutes,
                         description: payload.description,
-                        entry_type_code: payload.entry_type_code,
+                        entry_type_code: entryTypeCode,
                         start_time: payload.start_time || null,
                         end_time: payload.end_time || null,
                         form_data: payload.form_data
