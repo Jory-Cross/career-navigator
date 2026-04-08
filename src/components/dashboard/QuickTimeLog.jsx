@@ -3,11 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Plus, AlertCircle } from "lucide-react";
+import { Clock, Plus, AlertCircle, ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
-export default function QuickTimeLog({ clients, onTimeSaved }) {
+export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
   const [clientId, setClientId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [startTime, setStartTime] = useState("");
@@ -17,7 +17,8 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
   const [saving, setSaving] = useState(false);
   const [entryTypes, setEntryTypes] = useState([]);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
-  const [requiresFieldCompletion, setRequiresFieldCompletion] = useState(false);
+  const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
+  const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
 
   // Load entry types on mount
   useEffect(() => {
@@ -26,15 +27,27 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
       .catch(err => console.error('Failed to load entry types:', err));
   }, []);
 
-  // Update selected entry type when code changes
+  // Check for required report fields when entry type changes
   useEffect(() => {
     if (entryTypeCode) {
       const et = entryTypes.find(t => t.code === entryTypeCode);
       setSelectedEntryType(et || null);
-      setRequiresFieldCompletion(et?.requires_field_answers || false);
+      setIsBillableOrReportable((et?.is_billable || et?.report_mode !== "none") ?? false);
+
+      // Check if this entry type has required reporting fields
+      if (et?.id) {
+        base44.entities.ReportFieldTemplate.filter({
+          entry_type_id: et.id,
+          is_required: true,
+          is_active: true
+        })
+          .then(fields => setHasRequiredReportFields(fields.length > 0))
+          .catch(() => setHasRequiredReportFields(false));
+      }
     } else {
       setSelectedEntryType(null);
-      setRequiresFieldCompletion(false);
+      setHasRequiredReportFields(false);
+      setIsBillableOrReportable(false);
     }
   }, [entryTypeCode, entryTypes]);
 
@@ -52,7 +65,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
     return date.substring(0, 7); // YYYY-MM
   };
 
-  const handleSave = async () => {
+  const handleQuickSave = async (asDraft = false) => {
     if (!clientId || !startTime || !endTime || !entryTypeCode) {
       toast.error("Please fill in all required fields");
       return;
@@ -64,10 +77,9 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
       return;
     }
 
-    // Check if entry is billable or reportable and requires field completion
-    const isBillableOrReportable = selectedEntryType?.is_billable || selectedEntryType?.is_reportable;
-    if (isBillableOrReportable && requiresFieldCompletion) {
-      toast.error("This entry type requires structured report fields. Please use the full time entry form to complete required fields.");
+    // Block finalized billable/reportable entries without required fields
+    if (!asDraft && isBillableOrReportable && hasRequiredReportFields) {
+      toast.error("This service type requires structured fields. Save as draft or use the full entry form.");
       return;
     }
 
@@ -76,9 +88,10 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
       const actualClientId = clientId?.startsWith('self:') ? null : clientId;
       const reportingPeriodKey = getReportingPeriodKey();
 
-      // Create time entry with full structured data
+      // Create time entry
       const entry = await base44.entities.TimeEntry.create({
         client_id: actualClientId,
+        employee_id: (await base44.auth.me()).id,
         entry_type_id: selectedEntryType?.id,
         entry_type_code: entryTypeCode,
         date,
@@ -86,15 +99,17 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
         end_time: endTime,
         duration_minutes: duration,
         reporting_period_key: reportingPeriodKey,
+        location: null,
         description: description || "Quick log entry",
         is_billable: selectedEntryType?.is_billable || false,
-        is_reportable: selectedEntryType?.is_reportable || true,
-        status: requiresFieldCompletion ? "draft" : "submitted",
-        is_payroll_eligible: selectedEntryType?.is_payroll_eligible !== false
+        is_reportable: selectedEntryType?.report_mode !== "none",
+        status: asDraft ? "draft" : "submitted",
+        is_payroll_eligible: selectedEntryType?.is_payroll_eligible !== false,
+        report_ready: !hasRequiredReportFields && !asDraft
       });
 
-      // Create empty field answers if required (allows staff to complete later)
-      if (requiresFieldCompletion) {
+      // Create empty field answers if required
+      if (hasRequiredReportFields) {
         await base44.entities.ReportFieldAnswer.create({
           time_entry_id: entry.id,
           entry_type_id: selectedEntryType?.id,
@@ -103,18 +118,10 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
           required_fields_complete: false,
           report_ready: false
         });
-        toast.success("Entry saved as draft. Complete required fields to finalize.");
-      } else {
-        toast.success("Time logged");
       }
 
-      setClientId("");
-      setDate(new Date().toISOString().split("T")[0]);
-      setStartTime("");
-      setEndTime("");
-      setDescription("");
-      setEntryTypeCode("");
-
+      toast.success(asDraft ? "Entry saved as draft" : "Time logged");
+      resetForm();
       if (onTimeSaved) onTimeSaved();
     } catch (error) {
       console.error("Failed to save time entry:", error);
@@ -122,6 +129,15 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const resetForm = () => {
+    setClientId("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setStartTime("");
+    setEndTime("");
+    setDescription("");
+    setEntryTypeCode("");
   };
 
   return (
@@ -189,7 +205,7 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
           className="border-slate-200 text-sm"
         />
 
-        {/* Entry Type - now required */}
+        {/* Entry Type - required */}
         <Select value={entryTypeCode} onValueChange={setEntryTypeCode}>
           <SelectTrigger className="border-slate-200 text-sm">
             <SelectValue placeholder="Select entry type..." />
@@ -203,23 +219,50 @@ export default function QuickTimeLog({ clients, onTimeSaved }) {
           </SelectContent>
         </Select>
 
-        {/* Field completion warning */}
-        {requiresFieldCompletion && (
+        {/* Required fields warning */}
+        {hasRequiredReportFields && isBillableOrReportable && (
           <div className="flex gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-700">
-              This entry type requires structured reporting fields. Entry will be saved as draft—you'll complete fields afterward.
-            </p>
+            <div className="flex-1">
+              <p className="text-xs text-amber-700 font-medium">Required reporting fields</p>
+              <p className="text-xs text-amber-600 mt-0.5">This {isBillableOrReportable ? "billable/reportable" : "entry"} type requires structured questions. Complete them to finalize the entry.</p>
+            </div>
           </div>
         )}
 
-        <Button
-          className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-          onClick={handleSave}
-          disabled={!clientId || !startTime || !endTime || !entryTypeCode || saving}
-        >
-          <Clock className="w-4 h-4 mr-2" /> {requiresFieldCompletion ? "Log (Draft)" : "Log Time"}
-        </Button>
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
+            onClick={() => handleQuickSave(false)}
+            disabled={!clientId || !startTime || !endTime || !entryTypeCode || saving}
+          >
+            <Clock className="w-4 h-4 mr-2" /> Log Time
+          </Button>
+
+          {hasRequiredReportFields && (
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onRouteToStructuredForm?.(clientId, entryTypeCode, { date, startTime, endTime, description })}
+              disabled={!clientId || !startTime || !endTime || !entryTypeCode || saving}
+            >
+              <ArrowRight className="w-4 h-4 mr-1" /> Full Form
+            </Button>
+          )}
+
+          {hasRequiredReportFields && (
+            <Button
+              variant="ghost"
+              className="px-3"
+              onClick={() => handleQuickSave(true)}
+              disabled={saving}
+              title="Save as draft and complete fields later"
+            >
+              Draft
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
