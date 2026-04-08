@@ -578,6 +578,22 @@ export default function TimeLogDashboard({
                       const entryTypeCode = payload.entry_type_code || activeEntryTypeCode;
                       if (!entryTypeCode) throw new Error("Missing entry type");
 
+                      // Build form_data: use payload.form_data if present, otherwise extract non-reserved keys
+                      const reservedKeys = new Set([
+                        "date", "duration", "duration_minutes", "description", "entry_type_code",
+                        "start_time", "end_time", "client_id", "employee_id", "status",
+                        "is_reportable", "is_billable", "is_payroll_eligible", "reporting_period_key",
+                        "entry_type_id", "category", "legacy_category"
+                      ]);
+
+                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
+                        ? payload.form_data
+                        : Object.fromEntries(
+                            Object.entries(payload).filter(([key]) => !reservedKeys.has(key))
+                          );
+
+                      console.log("[TimeLogDashboard] Derived form_data:", derivedFormData);
+
                       const updateData = {
                         date: dateValue,
                         duration_minutes: durationMinutes,
@@ -585,7 +601,7 @@ export default function TimeLogDashboard({
                         entry_type_code: entryTypeCode,
                         start_time: payload.start_time || null,
                         end_time: payload.end_time || null,
-                        form_data: payload.form_data
+                        form_data: derivedFormData
                       };
 
                       console.log("[TimeLogDashboard] Update/create data:", updateData);
