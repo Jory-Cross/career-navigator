@@ -522,9 +522,9 @@ export default function TimeLogDashboard({
                       <SelectValue placeholder="Select an entry type..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {entryTypes.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
+                       {entryTypes.map(opt => (
+                         <SelectItem key={opt.code} value={opt.code}>{opt.name}</SelectItem>
+                       ))}
                     </SelectContent>
                   </Select>
                 </div>
