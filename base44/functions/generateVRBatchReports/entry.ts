@@ -69,9 +69,15 @@ Deno.serve(async (req) => {
     const failed    = results.filter(r => r.status === 'failed').length;
     const skipped   = results.filter(r => r.status === 'skipped').length;
 
+    // Batch status logic:
+    // - completed: all clients succeeded (skipped clients are OK)
+    // - partial_failure: some succeeded AND some failed (do NOT mark completed)
+    // - failed: all clients failed or no clients succeeded
     const batchStatus = failed === 0      ? 'completed'
-                      : succeeded === 0   ? 'failed'
-                      :                    'partial_failure';
+                       : succeeded === 0   ? 'failed'
+                       :                    'partial_failure';
+
+    console.log(`[batch ${batch.id}] Final status: ${batchStatus} (${succeeded} success, ${failed} failed, ${skipped} skipped)`);
 
     await base44.entities.ReportBatch.update(batch.id, {
       status:          batchStatus,
@@ -174,27 +180,53 @@ async function processClient({ base44, user, template, clientId, entry_type_code
     is_final:                    false
   });
 
-  // Step 5 — Create Document record (for client file view)
-  const document = await base44.entities.Document.create({
-    client_id:                   clientId,
-    title,
-    file_url:                    pdfUrl,
-    file_name:                   fileName,
-    category:                    'generated_report',
-    document_subtype:            report_mode,
+  // Step 5 — Create or update Document record (for client file view)
+  // Look for existing document for this period/entry type
+  const existingDocs = await base44.entities.Document.filter({
+    client_id: clientId,
+    generated_report_id: null, // Find previous versions
     entry_type_code,
-    source_type:                 'GeneratedReport',
-    source_id:                   generatedReport.id,
-    generated_report_id:         generatedReport.id,
-    is_generated:                true,
-    generated_from_template_id:  template.id,
-    report_batch_id:             batch_id,
-    report_version:              versionNumber,
-    reporting_period_start:      date_from,
-    reporting_period_end:        date_to,
-    tags:                        [entry_type_code, report_mode, 'vr-report'],
-    notes:                       `Batch ${batch_id} — ${assembled.totals.entry_count} entries, v${versionNumber}`
+    category: 'generated_report',
+    reporting_period_start: date_from,
+    reporting_period_end: date_to
   });
+
+  let document;
+  if (existingDocs.length > 0 && versionNumber > 1) {
+    // Update the document (new version of same period)
+    const prevDoc = existingDocs[0];
+    document = await base44.entities.Document.update(prevDoc.id, {
+      file_url:                    pdfUrl,
+      file_name:                   fileName,
+      document_subtype:            report_mode,
+      generated_report_id:         generatedReport.id,
+      report_version:              versionNumber,
+      parent_document_id:          prevDoc.id,
+      notes:                       `Batch ${batch_id} — ${assembled.totals.entry_count} entries, v${versionNumber}`
+    });
+  } else {
+    // Create new document
+    document = await base44.entities.Document.create({
+      client_id:                   clientId,
+      title,
+      file_url:                    pdfUrl,
+      file_name:                   fileName,
+      category:                    'generated_report',
+      document_subtype:            report_mode,
+      entry_type_code,
+      source_type:                 'GeneratedReport',
+      source_id:                   generatedReport.id,
+      generated_report_id:         generatedReport.id,
+      is_generated:                true,
+      generated_from_template_id:  template.id,
+      report_batch_id:             batch_id,
+      report_version:              versionNumber,
+      reporting_period_start:      date_from,
+      reporting_period_end:        date_to,
+      tags:                        [entry_type_code, report_mode, 'vr-report'],
+      notes:                       `Batch ${batch_id} — ${assembled.totals.entry_count} entries, v${versionNumber}`
+    });
+  }
 
   // Update GeneratedReport with the document FK
   await base44.entities.GeneratedReport.update(generatedReport.id, {
