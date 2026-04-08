@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
+import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -43,6 +44,7 @@ export default function TimeLogDashboard({
   });
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
   const [employees, setEmployees] = useState([]);
   const [entryTypes, setEntryTypes] = useState([]);
   const [generatedReports, setGeneratedReports] = useState({});
@@ -213,7 +215,7 @@ export default function TimeLogDashboard({
               <Filter className="w-3.5 h-3.5" />
               Filters {Object.values(filters).some(v => v && v !== "all") && `(${Object.values(filters).filter(v => v && v !== "all").length})`}
             </Button>
-            <Button size="sm" onClick={() => { setEditingEntry(null); setShowForm(true); }} className="gap-1.5">
+            <Button size="sm" onClick={() => { setEditingEntry(null); setSelectedEntryTypeCode(""); setShowForm(true); }} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Entry
             </Button>
@@ -499,27 +501,28 @@ export default function TimeLogDashboard({
       </Card>
 
       {/* Edit/Add Dialog */}
-      <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); } }}>
+      <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); } }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle>{editingEntry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
-              {/* Job Coaching uses dedicated form */}
-              {editingEntry?.entry_type_code === 'job_coaching' ? (
+              {/* Route to JobCoachingTimeEntryForm for both create and edit flows */}
+              {(editingEntry?.entry_type_code === 'job_coaching' || selectedEntryTypeCode === 'job_coaching') ? (
                 <JobCoachingTimeEntryForm
                   clientId={clientId}
-                  onSuccess={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
-                  onCancel={() => { setShowForm(false); setEditingEntry(null); }}
+                  onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                  onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                 />
               ) : (
                 <TimeEntryFormContent
                   entry={editingEntry}
                   clientId={clientId}
-                  onClose={() => { setShowForm(false); setEditingEntry(null); }}
-                  onSave={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
+                  onClose={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                  onSave={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
                   entryTypes={entryTypes}
+                  onEntryTypeChange={setSelectedEntryTypeCode}
                 />
               )}
             </div>
@@ -535,7 +538,7 @@ export default function TimeLogDashboard({
  * Uses EntryType instead of legacy category
  * NOW LOADS AND DISPLAYS DYNAMIC QUESTIONS FROM ReportFieldTemplate
  */
-function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) {
+function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, onEntryTypeChange }) {
     console.log('[DEBUG] TimeEntryFormContent MOUNTED with entry_type_code:', entry?.entry_type_code);
     const [form, setForm] = useState(
       entry ? {
@@ -667,6 +670,7 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
                  onValueChange={v => {
                    const type = entryTypes.find(t => t.code === v);
                    setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
+                   onEntryTypeChange?.(v);
                  }}
                >
                  <SelectTrigger>
