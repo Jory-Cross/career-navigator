@@ -1,7 +1,7 @@
 {
   "name": "ReportVersion",
   "type": "object",
-  "description": "Tracks report versions with included time entries, PDF, and timestamp. Supports regeneration without overwriting previous versions. Optionally locks reporting period.",
+  "description": "Generated report version with period locking. Tracks which entries are included, preserves superseded versions, and prevents editing locked periods.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -9,57 +9,43 @@
     },
     "client_id": {
       "type": "string",
-      "description": "Client this report belongs to"
+      "description": "Client this report is for"
     },
-    "report_type": {
+    "entry_type_code": {
       "type": "string",
-      "enum": [
-        "job_development",
-        "job_coaching",
-        "life_skills",
-        "cbh",
-        "monthly_summary",
-        "quarterly_summary",
-        "other"
-      ],
-      "description": "Type of report"
+      "description": "Entry type included in report (e.g. 'job_coaching', 'job_development')"
     },
-    "pdf_template_id": {
+    "template_id": {
       "type": "string",
-      "description": "Reference to PDFTemplate used"
+      "description": "Reference to PDFTemplate used for generation"
     },
-    "entry_type_id": {
+    "template_version": {
       "type": "string",
-      "description": "Entry type this report covers"
+      "description": "Version of template used (e.g. '2024-Q1', 'v3'). Enables rollback/comparison."
     },
-    "reporting_period_start": {
+    "report_start_date": {
       "type": "string",
       "format": "date",
       "description": "First day of reporting period"
     },
-    "reporting_period_end": {
+    "report_end_date": {
       "type": "string",
       "format": "date",
       "description": "Last day of reporting period"
     },
-    "version_number": {
-      "type": "number",
-      "description": "Auto-incrementing version (1, 2, 3...)"
-    },
-    "pdf_url": {
-      "type": "string",
-      "description": "URL to generated PDF file"
-    },
-    "pdf_file_name": {
-      "type": "string",
-      "description": "Original PDF file name"
-    },
-    "time_entry_ids": {
+    "included_time_entry_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs of TimeEntry records included in this report"
+      "description": "IDs of TimeEntry records included in this report generation"
+    },
+    "included_answer_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of ReportFieldAnswer records included in this report (for audit trail)"
     },
     "time_entry_count": {
       "type": "number",
@@ -67,18 +53,34 @@
     },
     "total_hours": {
       "type": "number",
-      "description": "Sum of duration_minutes converted to hours for included entries"
+      "description": "Sum of hours from included entries"
+    },
+    "generated_file_url": {
+      "type": "string",
+      "description": "URL to generated PDF file"
+    },
+    "generated_file_name": {
+      "type": "string",
+      "description": "Original PDF file name"
+    },
+    "version_number": {
+      "type": "number",
+      "description": "Auto-incrementing version (1, 2, 3...)"
+    },
+    "supersedes_report_id": {
+      "type": "string",
+      "description": "If regenerating, ID of previous version this supersedes. null if initial version."
     },
     "generated_at": {
       "type": "string",
       "format": "date-time",
-      "description": "ISO datetime when this version was generated"
+      "description": "ISO datetime when report was generated"
     },
     "generated_by": {
       "type": "string",
       "description": "Email of user who generated this report"
     },
-    "is_locked": {
+    "locked": {
       "type": "boolean",
       "default": false,
       "description": "Whether the reporting period is locked (prevents TimeEntry changes)"
@@ -94,16 +96,12 @@
     },
     "lock_reason": {
       "type": "string",
-      "description": "Optional reason for locking period"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Internal notes about this version"
+      "description": "Why the period was locked (e.g., 'Submitted to VR', 'Finalized')"
     },
     "is_final": {
       "type": "boolean",
       "default": false,
-      "description": "Whether this is the final/submitted version"
+      "description": "Whether this is final/submitted version (no further regeneration)"
     },
     "submitted_at": {
       "type": "string",
@@ -113,15 +111,21 @@
     "submitted_by": {
       "type": "string",
       "description": "Email of user who submitted"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about this version or regeneration reason"
     }
   },
   "required": [
     "client_id",
-    "report_type",
-    "reporting_period_start",
-    "reporting_period_end",
-    "pdf_template_id",
-    "time_entry_ids",
-    "pdf_url"
+    "entry_type_code",
+    "template_id",
+    "report_start_date",
+    "report_end_date",
+    "included_time_entry_ids",
+    "included_answer_record_ids",
+    "generated_file_url",
+    "generated_at"
   ]
 }

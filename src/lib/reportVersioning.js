@@ -1,391 +1,404 @@
 /**
- * Report Versioning Utilities
- * Manages report versions, locking, and history
+ * Report Versioning & Period Locking
+ * 
+ * Manages:
+ * - Creating new report versions (with auto-incremented version_number)
+ * - Preserving superseded versions
+ * - Locking reporting periods to prevent entry modifications
+ * - Checking if entries are in locked periods
+ * - Regenerating reports with version tracking
  */
-
-/**
- * Get all versions for a reporting period
- */
-export async function getReportVersions(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const versions = await base44.entities.ReportVersion.filter({
-      client_id: clientId,
-      report_type: reportType,
-      reporting_period_start: periodStart,
-      reporting_period_end: periodEnd
-    });
-
-    return versions.sort((a, b) => a.version_number - b.version_number);
-  } catch (error) {
-    console.error('Error fetching report versions:', error);
-    return [];
-  }
-}
-
-/**
- * Get latest version for a reporting period
- */
-export async function getLatestReportVersion(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const versions = await getReportVersions(base44, clientId, reportType, periodStart, periodEnd);
-    return versions.length > 0 ? versions[versions.length - 1] : null;
-  } catch (error) {
-    console.error('Error fetching latest report version:', error);
-    return null;
-  }
-}
-
-/**
- * Get next version number for reporting period
- */
-export async function getNextVersionNumber(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const versions = await getReportVersions(base44, clientId, reportType, periodStart, periodEnd);
-    return versions.length > 0 ? Math.max(...versions.map(v => v.version_number)) + 1 : 1;
-  } catch (error) {
-    console.error('Error calculating next version number:', error);
-    return 1;
-  }
-}
 
 /**
  * Create a new report version
- * Automatically increments version number
+ * @param {Object} base44 - Base44 client
+ * @param {Object} params - {
+ *   client_id,
+ *   entry_type_code,
+ *   template_id,
+ *   template_version,
+ *   report_start_date,
+ *   report_end_date,
+ *   included_time_entry_ids,
+ *   included_answer_record_ids,
+ *   generated_file_url,
+ *   generated_file_name,
+ *   total_hours,
+ *   generated_by,
+ *   supersedes_report_id,
+ *   notes
+ * }
+ * @returns {Promise<Object>} Created ReportVersion record
  */
-export async function createReportVersion(base44, versionData) {
-  try {
-    const nextVersion = await getNextVersionNumber(
-      base44,
-      versionData.client_id,
-      versionData.report_type,
-      versionData.reporting_period_start,
-      versionData.reporting_period_end
-    );
+export async function createReportVersion(base44, params) {
+  const {
+    client_id,
+    entry_type_code,
+    template_id,
+    template_version = 'current',
+    report_start_date,
+    report_end_date,
+    included_time_entry_ids = [],
+    included_answer_record_ids = [],
+    generated_file_url,
+    generated_file_name,
+    total_hours = 0,
+    generated_by,
+    supersedes_report_id,
+    notes
+  } = params;
 
-    const reportVersion = await base44.asServiceRole.entities.ReportVersion.create({
-      ...versionData,
-      version_number: nextVersion,
-      time_entry_count: versionData.time_entry_ids?.length || 0,
-      generated_at: new Date().toISOString(),
-      org_id: versionData.org_id
-    });
-
-    return {
-      success: true,
-      version: reportVersion,
-      message: `Report version ${nextVersion} created successfully`
-    };
-  } catch (error) {
-    console.error('Error creating report version:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Check if reporting period is locked
- */
-export async function isReportingPeriodLocked(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const versions = await getReportVersions(base44, clientId, reportType, periodStart, periodEnd);
-    const lockedVersion = versions.find(v => v.is_locked);
-    return lockedVersion || null;
-  } catch (error) {
-    console.error('Error checking lock status:', error);
-    return null;
-  }
-}
-
-/**
- * Lock a reporting period
- * Prevents changes to TimeEntry records within period
- */
-export async function lockReportingPeriod(base44, clientId, reportType, periodStart, periodEnd, reason = '') {
-  try {
-    const versions = await getReportVersions(base44, clientId, reportType, periodStart, periodEnd);
-
-    if (versions.length === 0) {
-      return {
-        success: false,
-        error: 'No report version found for this period'
-      };
-    }
-
-    const user = await base44.auth.me();
-    const lockedAt = new Date().toISOString();
-
-    // Lock all versions for this period (mark last one as locked)
-    const lastVersion = versions[versions.length - 1];
-    const updated = await base44.asServiceRole.entities.ReportVersion.update(lastVersion.id, {
-      is_locked: true,
-      locked_at: lockedAt,
-      locked_by: user.email,
-      lock_reason: reason
-    });
-
-    return {
-      success: true,
-      versionId: lastVersion.id,
-      message: `Reporting period ${periodStart} to ${periodEnd} locked`,
-      lockedAt,
-      lockedBy: user.email
-    };
-  } catch (error) {
-    console.error('Error locking reporting period:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Unlock a reporting period
- */
-export async function unlockReportingPeriod(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const lockedVersion = await isReportingPeriodLocked(base44, clientId, reportType, periodStart, periodEnd);
-
-    if (!lockedVersion) {
-      return {
-        success: false,
-        error: 'Reporting period is not locked'
-      };
-    }
-
-    const updated = await base44.asServiceRole.entities.ReportVersion.update(lockedVersion.id, {
-      is_locked: false,
-      locked_at: null,
-      locked_by: null,
-      lock_reason: null
-    });
-
-    return {
-      success: true,
-      message: `Reporting period unlocked`,
-      versionId: lockedVersion.id
-    };
-  } catch (error) {
-    console.error('Error unlocking reporting period:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Submit/finalize a report version
- */
-export async function submitReportVersion(base44, versionId) {
-  try {
-    const user = await base44.auth.me();
-    const submittedAt = new Date().toISOString();
-
-    const updated = await base44.asServiceRole.entities.ReportVersion.update(versionId, {
-      is_final: true,
-      submitted_at: submittedAt,
-      submitted_by: user.email
-    });
-
-    return {
-      success: true,
-      version: updated,
-      message: 'Report submitted successfully',
-      submittedAt,
-      submittedBy: user.email
-    };
-  } catch (error) {
-    console.error('Error submitting report:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Get report version history with changes
- */
-export async function getVersionHistory(base44, clientId, reportType, periodStart, periodEnd) {
-  try {
-    const versions = await getReportVersions(base44, clientId, reportType, periodStart, periodEnd);
-
-    return versions.map((v, index) => ({
-      versionNumber: v.version_number,
-      generatedAt: v.generated_at,
-      generatedBy: v.generated_by,
-      timeEntryCount: v.time_entry_count,
-      totalHours: v.total_hours,
-      isFinal: v.is_final,
-      submittedAt: v.submitted_at,
-      isLocked: v.is_locked,
-      lockedAt: v.locked_at,
-      lockedBy: v.locked_by,
-      isLatest: index === versions.length - 1,
-      pdfUrl: v.pdf_url,
-      notes: v.notes,
-      entriesAdded: index === 0 ? v.time_entry_count : v.time_entry_count - (versions[index - 1].time_entry_count || 0),
-      entriesRemoved: index === 0 ? 0 : (versions[index - 1].time_entry_count || 0) - v.time_entry_count
-    }));
-  } catch (error) {
-    console.error('Error getting version history:', error);
-    return [];
-  }
-}
-
-/**
- * Check if time entry falls within locked period
- */
-export async function isTimeEntryInLockedPeriod(base44, timeEntry) {
-  try {
-    if (!timeEntry.entry_type_code) return false;
-
-    // Map entry type code to report type
-    const reportType = mapEntryTypeCodeToReportType(timeEntry.entry_type_code);
-
-    // Check for locked period containing this date
-    const versions = await base44.entities.ReportVersion.filter({
-      client_id: timeEntry.client_id,
-      report_type: reportType,
-      is_locked: true
-    });
-
-    const lockedPeriod = versions.find(v => {
-      const entryDate = new Date(timeEntry.date);
-      const periodStart = new Date(v.reporting_period_start);
-      const periodEnd = new Date(v.reporting_period_end);
-      return entryDate >= periodStart && entryDate <= periodEnd;
-    });
-
-    return lockedPeriod || null;
-  } catch (error) {
-    console.error('Error checking locked period:', error);
-    return null;
-  }
-}
-
-/**
- * Validate time entry modification against locked periods
- */
-export async function validateTimeEntryModification(base44, timeEntry, operation = 'create') {
-  try {
-    const lockedPeriod = await isTimeEntryInLockedPeriod(base44, timeEntry);
-
-    if (lockedPeriod) {
-      return {
-        allowed: false,
-        locked: true,
-        message: `Cannot ${operation} time entry. Reporting period is locked.`,
-        lockedAt: lockedPeriod.locked_at,
-        lockedBy: lockedPeriod.locked_by,
-        lockReason: lockedPeriod.lock_reason,
-        versionId: lockedPeriod.id
-      };
-    }
-
-    return {
-      allowed: true,
-      locked: false,
-      message: 'Time entry modification allowed'
-    };
-  } catch (error) {
-    console.error('Error validating modification:', error);
-    return {
-      allowed: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Get report signature/audit trail
- */
-export function getReportAuditTrail(reportVersion) {
-  const trail = [];
-
-  trail.push({
-    action: 'generated',
-    timestamp: reportVersion.generated_at,
-    by: reportVersion.generated_by,
-    note: `Version ${reportVersion.version_number} created with ${reportVersion.time_entry_count} entries (${reportVersion.total_hours?.toFixed(1)} hours)`
+  // Find previous version to determine version_number
+  const previousVersions = await base44.entities.ReportVersion.filter({
+    client_id,
+    entry_type_code,
+    report_start_date,
+    report_end_date
   });
 
-  if (reportVersion.is_locked) {
-    trail.push({
-      action: 'locked',
-      timestamp: reportVersion.locked_at,
-      by: reportVersion.locked_by,
-      note: reportVersion.lock_reason || 'Period locked'
-    });
-  }
+  const nextVersionNumber = Math.max(
+    0,
+    ...previousVersions.map(v => v.version_number || 0)
+  ) + 1;
 
-  if (reportVersion.is_final) {
-    trail.push({
-      action: 'submitted',
-      timestamp: reportVersion.submitted_at,
-      by: reportVersion.submitted_by,
-      note: 'Report finalized and submitted'
-    });
-  }
+  // Create new version
+  const reportVersion = await base44.entities.ReportVersion.create({
+    client_id,
+    entry_type_code,
+    template_id,
+    template_version,
+    report_start_date,
+    report_end_date,
+    included_time_entry_ids,
+    included_answer_record_ids,
+    time_entry_count: included_time_entry_ids.length,
+    total_hours,
+    generated_file_url,
+    generated_file_name,
+    version_number: nextVersionNumber,
+    supersedes_report_id: supersedes_report_id || null,
+    generated_at: new Date().toISOString(),
+    generated_by,
+    locked: false,
+    is_final: false,
+    notes: notes || (supersedes_report_id ? `Regenerated version ${nextVersionNumber}` : null)
+  });
 
-  return trail;
+  return reportVersion;
 }
 
 /**
- * Map EntryType code to ReportVersion report_type
+ * Get active (current) report version for a reporting period
+ * @param {Object} base44 - Base44 client
+ * @param {string} clientId - Client ID
+ * @param {string} entryTypeCode - Entry type code
+ * @param {string} startDate - Report start date (YYYY-MM-DD)
+ * @param {string} endDate - Report end date (YYYY-MM-DD)
+ * @returns {Promise<Object|null>} Latest ReportVersion or null
  */
-function mapEntryTypeCodeToReportType(entryTypeCode) {
-  const mapping = {
-    'job_development': 'job_development',
-    'job_coaching': 'job_coaching',
-    'life_skills': 'life_skills',
-    'cbh': 'cbh',
-    'pre_ets': 'other'
+export async function getActiveReportVersion(base44, clientId, entryTypeCode, startDate, endDate) {
+  const versions = await base44.entities.ReportVersion.filter({
+    client_id: clientId,
+    entry_type_code: entryTypeCode,
+    report_start_date: startDate,
+    report_end_date: endDate
+  });
+
+  if (versions.length === 0) return null;
+
+  // Return latest version (highest version_number)
+  return versions.sort((a, b) => (b.version_number || 0) - (a.version_number || 0))[0];
+}
+
+/**
+ * Get all versions for a reporting period (including superseded)
+ * @param {Object} base44 - Base44 client
+ * @param {string} clientId - Client ID
+ * @param {string} entryTypeCode - Entry type code
+ * @param {string} startDate - Report start date
+ * @param {string} endDate - Report end date
+ * @returns {Promise<Array>} All ReportVersion records, sorted by version_number DESC
+ */
+export async function getReportVersionHistory(base44, clientId, entryTypeCode, startDate, endDate) {
+  const versions = await base44.entities.ReportVersion.filter({
+    client_id: clientId,
+    entry_type_code: entryTypeCode,
+    report_start_date: startDate,
+    report_end_date: endDate
+  });
+
+  return versions.sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+}
+
+/**
+ * Lock a reporting period to prevent entry modifications
+ * @param {Object} base44 - Base44 client
+ * @param {string} reportVersionId - ReportVersion ID
+ * @param {string} lockedBy - Email of user locking
+ * @param {string} lockReason - Why period is locked
+ * @returns {Promise<Object>} Updated ReportVersion with locked=true
+ */
+export async function lockReportingPeriod(base44, reportVersionId, lockedBy, lockReason = '') {
+  const reportVersion = await base44.entities.ReportVersion.update(reportVersionId, {
+    locked: true,
+    locked_at: new Date().toISOString(),
+    locked_by: lockedBy,
+    lock_reason: lockReason || 'Period locked'
+  });
+
+  return reportVersion;
+}
+
+/**
+ * Unlock a reporting period to allow entry modifications
+ * @param {Object} base44 - Base44 client
+ * @param {string} reportVersionId - ReportVersion ID
+ * @returns {Promise<Object>} Updated ReportVersion with locked=false
+ */
+export async function unlockReportingPeriod(base44, reportVersionId) {
+  const reportVersion = await base44.entities.ReportVersion.update(reportVersionId, {
+    locked: false,
+    locked_at: null,
+    locked_by: null,
+    lock_reason: null
+  });
+
+  return reportVersion;
+}
+
+/**
+ * Check if a time entry date falls within a locked reporting period
+ * @param {Object} base44 - Base44 client
+ * @param {string} clientId - Client ID
+ * @param {string} entryDate - Entry date (YYYY-MM-DD)
+ * @param {string} entryTypeCode - Entry type code
+ * @returns {Promise<Object|null>} Locked ReportVersion if applicable, else null
+ */
+export async function getLockedPeriodForEntry(base44, clientId, entryDate, entryTypeCode) {
+  const versions = await base44.entities.ReportVersion.filter({
+    client_id: clientId,
+    entry_type_code: entryTypeCode,
+    locked: true
+  });
+
+  for (const version of versions) {
+    if (entryDate >= version.report_start_date && entryDate <= version.report_end_date) {
+      return version;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if entry can be modified (not in locked period)
+ * @param {Object} base44 - Base44 client
+ * @param {Object} timeEntry - TimeEntry record
+ * @returns {Promise<Object>} { canModify: boolean, lockedPeriod?: ReportVersion }
+ */
+export async function canModifyTimeEntry(base44, timeEntry) {
+  const lockedPeriod = await getLockedPeriodForEntry(
+    base44,
+    timeEntry.client_id,
+    timeEntry.date,
+    timeEntry.entry_type_code
+  );
+
+  return {
+    canModify: !lockedPeriod,
+    lockedPeriod
   };
-  return mapping[entryTypeCode] || 'other';
 }
 
 /**
- * Calculate differences between two versions
+ * Mark a report as final (submitted)
+ * @param {Object} base44 - Base44 client
+ * @param {string} reportVersionId - ReportVersion ID
+ * @param {string} submittedBy - Email of user submitting
+ * @returns {Promise<Object>} Updated ReportVersion
  */
-export async function compareReportVersions(base44, versionId1, versionId2) {
-  try {
-    const versions = await base44.entities.ReportVersion.list();
-    const v1 = versions.find(v => v.id === versionId1);
-    const v2 = versions.find(v => v.id === versionId2);
+export async function finalizeReport(base44, reportVersionId, submittedBy) {
+  const reportVersion = await base44.entities.ReportVersion.update(reportVersionId, {
+    is_final: true,
+    submitted_at: new Date().toISOString(),
+    submitted_by: submittedBy,
+    locked: true,
+    locked_at: new Date().toISOString(),
+    locked_by: submittedBy,
+    lock_reason: 'Report finalized'
+  });
 
-    if (!v1 || !v2) {
-      return {
-        success: false,
-        error: 'One or both versions not found'
+  return reportVersion;
+}
+
+/**
+ * Generate summary of all report versions for a client
+ * @param {Object} base44 - Base44 client
+ * @param {string} clientId - Client ID
+ * @returns {Promise<Object>} Summary with active versions by entry type and date range
+ */
+export async function getClientReportSummary(base44, clientId) {
+  const allVersions = await base44.entities.ReportVersion.filter({
+    client_id: clientId
+  });
+
+  // Group by period
+  const periods = {};
+  allVersions.forEach(version => {
+    const key = `${version.entry_type_code}_${version.report_start_date}_${version.report_end_date}`;
+    if (!periods[key]) {
+      periods[key] = {
+        entry_type_code: version.entry_type_code,
+        start_date: version.report_start_date,
+        end_date: version.report_end_date,
+        versions: []
       };
     }
+    periods[key].versions.push(version);
+  });
 
-    const entriesAdded = v2.time_entry_ids.filter(id => !v1.time_entry_ids.includes(id));
-    const entriesRemoved = v1.time_entry_ids.filter(id => !v2.time_entry_ids.includes(id));
-    const hoursChange = (v2.total_hours || 0) - (v1.total_hours || 0);
+  // Extract active version for each period
+  const activeReports = Object.values(periods).map(period => {
+    const activeVersion = period.versions.sort((a, b) => (b.version_number || 0) - (a.version_number || 0))[0];
+    return {
+      entry_type_code: period.entry_type_code,
+      start_date: period.start_date,
+      end_date: period.end_date,
+      version_number: activeVersion.version_number,
+      generated_at: activeVersion.generated_at,
+      is_locked: activeVersion.locked,
+      is_final: activeVersion.is_final,
+      total_versions: period.versions.length,
+      file_url: activeVersion.generated_file_url
+    };
+  });
 
-    return {
-      success: true,
-      comparison: {
-        version1: `v${v1.version_number}`,
-        version2: `v${v2.version_number}`,
-        entriesAdded: entriesAdded.length,
-        entriesRemoved: entriesRemoved.length,
-        entriesAddedIds: entriesAdded,
-        entriesRemovedIds: entriesRemoved,
-        hourChange: hoursChange,
-        countChange: v2.time_entry_count - v1.time_entry_count
-      }
-    };
-  } catch (error) {
-    console.error('Error comparing versions:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+  return {
+    client_id: clientId,
+    total_reports: allVersions.length,
+    active_reports: activeReports,
+    locked_periods: allVersions.filter(v => v.locked).length
+  };
+}
+
+/**
+ * Get all entries included in a report version
+ * @param {Object} base44 - Base44 client
+ * @param {Object} reportVersion - ReportVersion record
+ * @returns {Promise<Object>} { timeEntries: Array, fieldAnswers: Array }
+ */
+export async function getReportIncludedData(base44, reportVersion) {
+  const [timeEntries, fieldAnswers] = await Promise.all([
+    Promise.all(
+      reportVersion.included_time_entry_ids.map(id =>
+        base44.entities.TimeEntry.filter({ id }).then(r => r[0])
+      )
+    ),
+    Promise.all(
+      reportVersion.included_answer_record_ids.map(id =>
+        base44.entities.ReportFieldAnswer.filter({ id }).then(r => r[0])
+      )
+    )
+  ]);
+
+  return {
+    timeEntries: timeEntries.filter(Boolean),
+    fieldAnswers: fieldAnswers.filter(Boolean)
+  };
+}
+
+/**
+ * Create a new version by regenerating from existing time entries
+ * @param {Object} base44 - Base44 client
+ * @param {string} reportVersionId - ReportVersion ID to regenerate from
+ * @param {string} newFileUrl - URL of newly generated PDF
+ * @param {string} newFileName - File name of newly generated PDF
+ * @param {string} regeneratedBy - Email of user regenerating
+ * @returns {Promise<Object>} New ReportVersion record
+ */
+export async function regenerateReportVersion(base44, reportVersionId, newFileUrl, newFileName, regeneratedBy) {
+  // Get original report
+  const originalReport = await base44.entities.ReportVersion.filter({ id: reportVersionId })[0];
+  if (!originalReport) throw new Error('Report not found');
+
+  // Create new version with same entries but new file
+  return createReportVersion(base44, {
+    client_id: originalReport.client_id,
+    entry_type_code: originalReport.entry_type_code,
+    template_id: originalReport.template_id,
+    template_version: originalReport.template_version,
+    report_start_date: originalReport.report_start_date,
+    report_end_date: originalReport.report_end_date,
+    included_time_entry_ids: originalReport.included_time_entry_ids,
+    included_answer_record_ids: originalReport.included_answer_record_ids,
+    generated_file_url: newFileUrl,
+    generated_file_name: newFileName,
+    total_hours: originalReport.total_hours,
+    generated_by: regeneratedBy,
+    supersedes_report_id: reportVersionId,
+    notes: `Regenerated from version ${originalReport.version_number}`
+  });
+}
+
+/**
+ * Check if a period is locked (convenience helper)
+ * @param {Object} reportVersion - ReportVersion record
+ * @returns {boolean} Is period locked
+ */
+export function isPeriodLocked(reportVersion) {
+  return reportVersion.locked === true;
+}
+
+/**
+ * Get lock details for a reporting period
+ * @param {Object} reportVersion - ReportVersion record
+ * @returns {Object} Lock info with reason, locked_by, locked_at
+ */
+export function getLockDetails(reportVersion) {
+  if (!reportVersion.locked) {
+    return { locked: false };
   }
+
+  return {
+    locked: true,
+    locked_at: reportVersion.locked_at,
+    locked_by: reportVersion.locked_by,
+    reason: reportVersion.lock_reason,
+    is_final: reportVersion.is_final
+  };
+}
+
+/**
+ * Compare two report versions to show what changed
+ * @param {Object} base44 - Base44 client
+ * @param {Object} version1 - ReportVersion (older)
+ * @param {Object} version2 - ReportVersion (newer)
+ * @returns {Promise<Object>} Differences { added: [], removed: [], modified: [] }
+ */
+export async function compareReportVersions(base44, version1, version2) {
+  const changes = {
+    entries_added: [],
+    entries_removed: [],
+    entry_count_change: version2.time_entry_count - version1.time_entry_count,
+    hours_change: version2.total_hours - version1.total_hours,
+    template_version_changed: version1.template_version !== version2.template_version
+  };
+
+  // Find added/removed entries
+  const set1 = new Set(version1.included_time_entry_ids);
+  const set2 = new Set(version2.included_time_entry_ids);
+
+  version2.included_time_entry_ids.forEach(id => {
+    if (!set1.has(id)) {
+      changes.entries_added.push(id);
+    }
+  });
+
+  version1.included_time_entry_ids.forEach(id => {
+    if (!set2.has(id)) {
+      changes.entries_removed.push(id);
+    }
+  });
+
+  return changes;
 }

@@ -1,593 +1,392 @@
-# Report Versioning and Locking
+# Report Versioning & Period Locking
 
-Tracks report versions with full audit trail, prevents data loss, and allows optional period locking to prevent retroactive changes.
+Manages multi-version reports with period locking to prevent entry modifications after finalization.
 
 ## Overview
 
-**Problem:** Reports are generated multiple times as data changes. Staff need to:
-- See what changed between versions
-- Regenerate without losing previous versions
-- Lock periods to prevent accidental changes after submission
+```
+TimeEntry (editable)
+    ↓
+ReportFieldAnswer (with snapshot) 
+    ↓
+ReportVersion (immutable, versioned)
+    ↓
+Locked Period (prevents future TimeEntry changes)
+```
 
-**Solution:** ReportVersion entity auto-increments versions, stores TimeEntry IDs and PDFs, and allows optional period locking.
+**Key Features:**
+- Auto-incrementing version numbers
+- Previous versions preserved (for audit trail)
+- Reporting periods can be locked to prevent entry modifications
+- Supervisor override for locked periods
+- Final/submitted flag for officially submitted reports
 
-## Entity Structure
+## ReportVersion Entity
 
-### ReportVersion
+### Core Fields
 
-```json
+**Identification:**
+- `id` - Unique record ID
+- `client_id` - Client being reported on
+- `entry_type_code` - Entry type (job_coaching, job_development, etc.)
+
+**Period:**
+- `report_start_date` (YYYY-MM-DD) - First day of reporting period
+- `report_end_date` (YYYY-MM-DD) - Last day of reporting period
+
+**Template & Data:**
+- `template_id` - Reference to PDFTemplate
+- `template_version` - Version of template (e.g., "2024-Q1") for rollback/comparison
+- `included_time_entry_ids` - IDs of TimeEntry records in report
+- `included_answer_record_ids` - IDs of ReportFieldAnswer records (audit trail)
+
+**Report File:**
+- `generated_file_url` - URL to generated PDF
+- `generated_file_name` - Original file name
+- `total_hours` - Sum of hours (cached)
+- `time_entry_count` - Entry count (cached)
+
+### Versioning
+
+**Auto-Increment:**
+- `version_number` - Sequential version (1, 2, 3...)
+- Automatically calculated based on previous versions for same period
+
+**Regeneration:**
+- `supersedes_report_id` - ID of previous version (null if first)
+- Allows tracking which version replaced which
+- Old versions preserved for audit trail
+
+### Locking
+
+**Lock Status:**
+- `locked` (boolean) - Is period locked?
+- `locked_at` (datetime) - When locked
+- `locked_by` (email) - Who locked it
+- `lock_reason` (string) - Why (e.g., "Submitted to VR", "Finalized")
+
+**Finalization:**
+- `is_final` (boolean) - Is this the official submitted version?
+- `submitted_at` (datetime) - When submitted
+- `submitted_by` (email) - Who submitted
+
+### Audit Trail
+
+- `generated_at` - When report was created
+- `generated_by` - Who generated it
+- `notes` - Internal notes about version/regeneration reason
+
+## Usage
+
+### Generate Initial Report
+
+```javascript
+const response = await base44.functions.invoke('generateVersionedReport', {
+  client_id: 'client_001',
+  entry_type_code: 'job_coaching',
+  pdf_template_id: 'template_001',
+  template_version: '2024-Q1',
+  report_start_date: '2024-04-01',
+  report_end_date: '2024-04-30'
+});
+
+// Returns:
 {
-  "id": "rv_001",
-  "client_id": "client_123",
-  "report_type": "job_coaching",
-  "pdf_template_id": "tmpl_001",
-  "entry_type_id": "type_001",
-  "reporting_period_start": "2024-04-01",
-  "reporting_period_end": "2024-04-30",
-  "version_number": 1,
-  "pdf_url": "https://storage.com/report_v1.pdf",
-  "pdf_file_name": "JobCoaching_202404_v1.pdf",
-  "time_entry_ids": ["entry_001", "entry_002", "entry_003"],
-  "time_entry_count": 3,
-  "total_hours": 10.5,
-  "generated_at": "2024-05-01T10:30:00Z",
-  "generated_by": "staff@org.com",
-  "is_locked": true,
-  "locked_at": "2024-05-01T14:00:00Z",
-  "locked_by": "supervisor@org.com",
-  "lock_reason": "Submitted to VR agency",
-  "is_final": true,
-  "submitted_at": "2024-05-01T14:05:00Z",
-  "submitted_by": "supervisor@org.com"
+  success: true,
+  report_version_id: 'rv_001',
+  version_number: 1,
+  pdf_url: '...',
+  entries_included: 15,
+  message: 'Report generated (version 1)'
 }
 ```
 
-## Workflow
-
-### 1. Generate Initial Report
+### Regenerate Report (Create New Version)
 
 ```javascript
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'generate',
-  params: {
-    client_id: 'client_123',
-    report_type: 'job_coaching',
-    entry_type_id: 'type_001',
-    pdf_template_id: 'tmpl_001',
-    reporting_period_start: '2024-04-01',
-    reporting_period_end: '2024-04-30',
-    time_entry_ids: ['entry_001', 'entry_002', 'entry_003'],
-    pdf_file_url: 'https://storage.com/report.pdf',
-    pdf_file_name: 'JobCoaching_202404_v1.pdf'
+const response = await base44.functions.invoke('generateVersionedReport', {
+  client_id: 'client_001',
+  entry_type_code: 'job_coaching',
+  pdf_template_id: 'template_001',
+  template_version: '2024-Q1',
+  report_start_date: '2024-04-01',
+  report_end_date: '2024-04-30',
+  supersedes_report_id: 'rv_001'  // Regenerating from previous version
+});
+
+// Returns version 2, supersedes_report_id = 'rv_001'
+```
+
+### Lock Reporting Period
+
+```javascript
+import { lockReportingPeriod } from '@/lib/reportVersioning.js';
+
+const locked = await lockReportingPeriod(
+  base44,
+  'rv_001',
+  'supervisor@example.com',
+  'Submitted to VR agency'
+);
+
+// After locking:
+// - locked = true
+// - locked_at = "2024-04-15T10:30:00Z"
+// - locked_by = "supervisor@example.com"
+// - lock_reason = "Submitted to VR agency"
+```
+
+### Check if Entry Can Be Modified
+
+```javascript
+import { canModifyTimeEntry, getLockedPeriodForEntry } from '@/lib/reportVersioning.js';
+
+const timeEntry = await base44.entities.TimeEntry.filter({ id: 'entry_001' })[0];
+
+const { canModify, lockedPeriod } = await canModifyTimeEntry(base44, timeEntry);
+
+if (!canModify) {
+  console.log(`Cannot modify: locked by report period ${lockedPeriod.id}`);
+  console.log(`Reason: ${lockedPeriod.lock_reason}`);
+  console.log(`Locked by: ${lockedPeriod.locked_by} on ${lockedPeriod.locked_at}`);
+}
+```
+
+### Get Report History
+
+```javascript
+import { getReportVersionHistory } from '@/lib/reportVersioning.js';
+
+const versions = await getReportVersionHistory(
+  base44,
+  'client_001',
+  'job_coaching',
+  '2024-04-01',
+  '2024-04-30'
+);
+
+// Returns all versions, sorted by version_number DESC
+versions.forEach(v => {
+  console.log(`Version ${v.version_number}: ${v.generated_at} by ${v.generated_by}`);
+  if (v.supersedes_report_id) {
+    console.log(`  Supersedes: ${v.supersedes_report_id}`);
   }
 });
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "version": { ...ReportVersion },
-  "versionNumber": 1,
-  "totalHours": "10.5",
-  "message": "Report version 1 generated successfully"
-}
-```
-
-### 2. Add More Time Entries and Regenerate
-
-Add new time entries, then regenerate. Version increments automatically:
+### Get Active (Current) Report
 
 ```javascript
-// Create new TimeEntry records...
+import { getActiveReportVersion } from '@/lib/reportVersioning.js';
 
-// Regenerate report - version 2 created automatically
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'generate',
-  params: {
-    client_id: 'client_123',
-    report_type: 'job_coaching',
-    entry_type_id: 'type_001',
-    pdf_template_id: 'tmpl_001',
-    reporting_period_start: '2024-04-01',
-    reporting_period_end: '2024-04-30',
-    time_entry_ids: [
-      'entry_001', 'entry_002', 'entry_003',
-      'entry_004', 'entry_005'  // New entries
-    ],
-    pdf_file_url: 'https://storage.com/report.pdf',
-    pdf_file_name: 'JobCoaching_202404_v2.pdf'
-  }
-});
+const activeReport = await getActiveReportVersion(
+  base44,
+  'client_001',
+  'job_coaching',
+  '2024-04-01',
+  '2024-04-30'
+);
 
-// Returns versionNumber: 2
-// Version 1 still exists unchanged
+console.log(`Current version: ${activeReport.version_number}`);
+console.log(`PDF URL: ${activeReport.generated_file_url}`);
+console.log(`Is locked: ${activeReport.locked}`);
 ```
 
-### 3. Get All Versions for Period
+### Finalize Report (Mark as Submitted)
 
 ```javascript
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'get_versions',
-  params: {
-    client_id: 'client_123',
-    report_type: 'job_coaching',
-    reporting_period_start: '2024-04-01',
-    reporting_period_end: '2024-04-30'
-  }
-});
+import { finalizeReport } from '@/lib/reportVersioning.js';
+
+const final = await finalizeReport(base44, 'rv_001', 'supervisor@example.com');
+
+// After finalization:
+// - is_final = true
+// - submitted_at = current timestamp
+// - submitted_by = "supervisor@example.com"
+// - locked = true (automatically)
+// - lock_reason = "Report finalized"
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "versions": [
-    {
-      "versionNumber": 1,
-      "generatedAt": "2024-05-01T10:30:00Z",
-      "generatedBy": "staff@org.com",
-      "timeEntryCount": 3,
-      "totalHours": "10.5",
-      "isLatest": false,
-      "isLocked": false,
-      "isFinal": false,
-      "pdfUrl": "https://storage.com/report_v1.pdf"
-    },
-    {
-      "versionNumber": 2,
-      "generatedAt": "2024-05-02T14:00:00Z",
-      "generatedBy": "staff@org.com",
-      "timeEntryCount": 5,
-      "totalHours": "18.75",
-      "isLatest": true,
-      "isLocked": false,
-      "isFinal": false,
-      "pdfUrl": "https://storage.com/report_v2.pdf"
-    }
-  ],
-  "count": 2,
-  "latestVersion": 2,
-  "isPeriodLocked": false
-}
-```
-
-### 4. Lock Reporting Period
-
-After submitting to VR agency:
+### Compare Report Versions
 
 ```javascript
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'lock_period',
-  params: {
-    client_id: 'client_123',
-    report_type: 'job_coaching',
-    reporting_period_start: '2024-04-01',
-    reporting_period_end: '2024-04-30',
-    reason: 'Submitted to VR agency for approval'
-  }
+import { compareReportVersions } from '@/lib/reportVersioning.js';
+
+const changes = await compareReportVersions(base44, version1, version2);
+
+console.log(`Entries added: ${changes.entries_added.length}`);
+console.log(`Entries removed: ${changes.entries_removed.length}`);
+console.log(`Hours change: ${changes.hours_change}`);
+console.log(`Template changed: ${changes.template_version_changed}`);
+```
+
+### Get Report Summary
+
+```javascript
+import { getClientReportSummary } from '@/lib/reportVersioning.js';
+
+const summary = await getClientReportSummary(base44, 'client_001');
+
+console.log(`Total report versions: ${summary.total_reports}`);
+console.log(`Locked periods: ${summary.locked_periods}`);
+
+summary.active_reports.forEach(report => {
+  console.log(`${report.entry_type_code} (${report.start_date} to ${report.end_date})`);
+  console.log(`  Version: ${report.version_number}/${report.total_versions}`);
+  console.log(`  Locked: ${report.is_locked}, Final: ${report.is_final}`);
 });
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "versionId": "rv_002",
-  "versionNumber": 2,
-  "message": "Reporting period locked (2024-04-01 to 2024-04-30)",
-  "lockedAt": "2024-05-02T15:00:00Z",
-  "lockedBy": "supervisor@org.com"
-}
+## Workflow: Month-End Reporting
+
+### Step 1: Generate Initial Report
+```
+Employee submits time entries for April 1-30
+→ generateVersionedReport creates version 1
+→ PDF generated, version_number = 1
 ```
 
-**Effects of Locking:**
-- ❌ Cannot create new TimeEntry in locked period
-- ❌ Cannot modify TimeEntry in locked period
-- ❌ Cannot delete TimeEntry in locked period
-- ✓ Can still view/download reports
-- ✓ Can regenerate report (creates new version)
-- ✓ Can unlock if needed (supervisor only)
+### Step 2: Review & Revise
+```
+Supervisor reviews report
+→ Employee adds/fixes some entries for April
+→ generateVersionedReport creates version 2 (supersedes version 1)
+→ version_number = 2, supersedes_report_id = rv_001
+```
 
-### 5. Submit/Finalize Version
+### Step 3: Lock Period (Optional)
+```
+Supervisor locks period to prevent further entry changes
+→ lockReportingPeriod('rv_002', supervisor_email, 'Internal review')
+→ locked = true
+→ Any attempt to create/edit April entries → blocked
+```
 
-Mark report as officially submitted:
+### Step 4: Finalize & Submit
+```
+Supervisor submits report to VR agency
+→ finalizeReport('rv_002', supervisor_email)
+→ is_final = true, submitted_at = now
+→ locked = true, lock_reason = "Report finalized"
+→ Prevents any modifications unless unlocked by admin
+```
+
+## Preventing Entry Modifications in Locked Periods
+
+In TimeEntry create/update operations:
 
 ```javascript
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'submit_version',
-  params: {
-    version_id: 'rv_002'
-  }
-});
-```
+import { getLockedPeriodForEntry } from '@/lib/reportVersioning.js';
 
-**Response:**
-```json
-{
-  "success": true,
-  "version": { ...ReportVersion with is_final: true },
-  "message": "Report submitted and finalized",
-  "submittedAt": "2024-05-02T15:05:00Z",
-  "submittedBy": "supervisor@org.com"
+// Before creating/updating TimeEntry
+const lockedPeriod = await getLockedPeriodForEntry(
+  base44,
+  clientId,
+  entryDate,
+  entryTypeCode
+);
+
+if (lockedPeriod) {
+  // Block modification
+  throw new Error(
+    `Cannot modify entries in locked period (${lockedPeriod.report_start_date} to ${lockedPeriod.report_end_date}). ` +
+    `Locked by: ${lockedPeriod.locked_by}. Reason: ${lockedPeriod.lock_reason}`
+  );
 }
+
+// Safe to create/update entry
 ```
 
-## Version History
+## Versioning Rules
 
-Get detailed history with changes between versions:
+1. **Version Incrementing:**
+   - Each new report for a period increments version_number
+   - Example: Same period generated 3 times → versions 1, 2, 3
 
-```javascript
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'get_history',
-  params: {
-    client_id: 'client_123',
-    report_type: 'job_coaching',
-    reporting_period_start: '2024-04-01',
-    reporting_period_end: '2024-04-30'
-  }
-});
-```
+2. **Superseding:**
+   - New version's `supersedes_report_id` points to previous version
+   - Old versions never deleted (preserved for audit trail)
 
-**Response:**
-```json
-{
-  "success": true,
-  "history": [
-    {
-      "versionNumber": 1,
-      "generatedAt": "2024-05-01T10:30:00Z",
-      "generatedBy": "staff@org.com",
-      "timeEntryCount": 3,
-      "totalHours": "10.5",
-      "entriesAdded": 3,
-      "entriesRemoved": 0,
-      "hoursChanged": "10.5",
-      "events": [
-        {
-          "action": "generated",
-          "timestamp": "2024-05-01T10:30:00Z",
-          "by": "staff@org.com"
-        }
-      ]
-    },
-    {
-      "versionNumber": 2,
-      "generatedAt": "2024-05-02T14:00:00Z",
-      "generatedBy": "staff@org.com",
-      "timeEntryCount": 5,
-      "totalHours": "18.75",
-      "entriesAdded": 2,
-      "entriesRemoved": 0,
-      "hoursChanged": "8.25",
-      "events": [
-        {
-          "action": "generated",
-          "timestamp": "2024-05-02T14:00:00Z",
-          "by": "staff@org.com"
-        },
-        {
-          "action": "locked",
-          "timestamp": "2024-05-02T15:00:00Z",
-          "by": "supervisor@org.com",
-          "reason": "Submitted to VR agency"
-        },
-        {
-          "action": "submitted",
-          "timestamp": "2024-05-02T15:05:00Z",
-          "by": "supervisor@org.com"
-        }
-      ]
-    }
-  ],
-  "totalVersions": 2
-}
-```
+3. **Locking Independence:**
+   - Locking is per-version
+   - Each version can have separate lock status
+   - Typically, only active version is locked
 
-## Time Entry Validation Against Locked Periods
+4. **Template Version Tracking:**
+   - `template_version` field records which template version was used
+   - Allows rollback if template definition changes
 
-When staff tries to create/modify TimeEntry in locked period:
-
-```javascript
-// Backend: validateTimeEntryModification() from authorizationValidation.js
-const validation = await validateTimeEntryModification(base44, timeEntry, 'create');
-
-if (!validation.allowed) {
-  // Show error to user
-  toast.error(validation.message);
-  // "Cannot create time entry. Reporting period is locked."
-}
-```
-
-## Frontend Component
-
-Display versions and manage locking with ReportVersionHistory:
-
-```jsx
-import ReportVersionHistory from '@/components/reports/ReportVersionHistory';
-
-<ReportVersionHistory
-  clientId="client_123"
-  reportType="job_coaching"
-  periodStart="2024-04-01"
-  periodEnd="2024-04-30"
-  onVersionSelect={(version) => {
-    // Handle version selection
-  }}
-/>
-```
-
-Features:
-- Shows all versions with auto-increment numbers
-- Displays changes between versions (entries added/removed, hours changed)
-- Shows audit trail (generated by, locked by, submitted by)
-- Lock/unlock button for period
-- Submit button to finalize
-- Download PDF for each version
+5. **Final Submission:**
+   - `is_final=true` marks official version
+   - Only admin can unlock finalized reports
+   - Prevents accidental modifications after submission
 
 ## Audit Trail
 
-Complete history of each version:
+Every report version preserves:
+- Which entries were included (ids)
+- Which field answers were used (ids)
+- Template version used
+- When generated and by whom
+- Modification history (via supersedes_report_id chain)
 
+Example audit query:
 ```javascript
-const { history } = await base44.functions.invoke('generateVersionedReport', {
-  action: 'get_history',
-  params: {...}
-});
+// Get full history for a period
+const versions = await getReportVersionHistory(
+  base44, client_id, entry_type_code, start, end
+);
 
-history.forEach(v => {
-  console.log(`Version ${v.versionNumber}`);
-  v.events.forEach(e => {
-    console.log(`  - ${e.action}: ${new Date(e.timestamp).toLocaleString()} by ${e.by}`);
-  });
-});
-
-// Output:
-// Version 1
-//   - generated: 5/1/2024, 10:30 AM by staff@org.com
-// Version 2
-//   - generated: 5/2/2024, 2:00 PM by staff@org.com
-//   - locked: 5/2/2024, 3:00 PM by supervisor@org.com
-//   - submitted: 5/2/2024, 3:05 PM by supervisor@org.com
+// Trace back through supersedes chain
+let current = versions[0];  // Latest
+while (current.supersedes_report_id) {
+  current = versions.find(v => v.id === current.supersedes_report_id);
+  console.log(`← Version ${current.version_number}: ${current.generated_at}`);
+}
 ```
 
 ## Best Practices
 
-### 1. Auto-Increment Versions
+1. **Always use generateVersionedReport** for PDF creation
+   - Ensures version tracking
 
-Version numbers increment automatically. Never manually set version_number:
+2. **Lock before finalization**
+   - Lock period → Generate final PDF → Finalize report
 
-```javascript
-// ✓ Good - let system auto-increment
-const result = await base44.functions.invoke('generateVersionedReport', {
-  action: 'generate',
-  params: {
-    client_id: 'client_123',
-    // version_number NOT specified
-  }
-});
+3. **Check locked status before entry modifications**
+   - Use `canModifyTimeEntry()` in frontend/backend
 
-// ❌ Bad - don't set manually
-version_number: 3
-```
+4. **Preserve version history**
+   - Never delete old ReportVersion records
+   - Audit trail depends on preserving chain
 
-### 2. Store All TimeEntry IDs
+5. **Template versioning**
+   - Track which template version each report used
+   - Helps if template definitions change
 
-Always include complete list of TimeEntry IDs used in report:
+6. **Document lock reasons**
+   - Use lock_reason field to explain why period was locked
 
-```javascript
-// ✓ Good - complete list
-time_entry_ids: ['entry_001', 'entry_002', 'entry_003']
+## API Functions
 
-// ❌ Bad - incomplete
-time_entry_ids: ['entry_001', 'entry_003']  // Missing entry_002
-```
+**lib/reportVersioning.js:**
+- `createReportVersion(base44, params)` - Create new version
+- `getActiveReportVersion(base44, clientId, typeCode, start, end)` - Get current version
+- `getReportVersionHistory(base44, clientId, typeCode, start, end)` - All versions
+- `lockReportingPeriod(base44, reportId, lockedBy, reason)` - Lock period
+- `unlockReportingPeriod(base44, reportId)` - Unlock period
+- `canModifyTimeEntry(base44, timeEntry)` - Check if entry can be edited
+- `getLockedPeriodForEntry(base44, clientId, date, typeCode)` - Get lock info
+- `finalizeReport(base44, reportId, submittedBy)` - Mark as final/submitted
+- `regenerateReportVersion(base44, reportId, newUrl, newName, user)` - Regenerate from existing
+- `getClientReportSummary(base44, clientId)` - Overview
+- `compareReportVersions(base44, v1, v2)` - Diff two versions
 
-### 3. Lock After Submission
+**functions/generateVersionedReport.js:**
+- HTTP endpoint for generating versioned reports
 
-Lock period immediately after submitting to agency:
+## See Also
 
-```javascript
-// 1. Generate report
-const reportResult = await base44.functions.invoke('generateVersionedReport', {
-  action: 'generate',
-  params: {...}
-});
-
-// 2. Submit to agency (external)
-await sendToVRAgency(reportResult.data.version.pdf_url);
-
-// 3. Lock period
-await base44.functions.invoke('generateVersionedReport', {
-  action: 'lock_period',
-  params: {
-    reason: 'Submitted to VR agency, Authorization AUTH-2024-005678'
-  }
-});
-```
-
-### 4. Show Version History to Users
-
-Always display version history so staff can see:
-- What changed between versions
-- When period was locked
-- Who submitted the report
-
-### 5. Allow Unlocking for Corrections
-
-If VR agency requests changes, unlock period:
-
-```javascript
-await base44.functions.invoke('generateVersionedReport', {
-  action: 'unlock_period',
-  params: {...}
-});
-```
-
-## Integration with PDF Generation
-
-### Current Flow
-
-```
-1. Get TimeEntry records for period
-2. Transform to report data
-3. Fill PDF fields
-4. Upload PDF
-5. Create ReportVersion with:
-   - PDF URL
-   - TimeEntry IDs (snapshot)
-   - Timestamp
-   - Generated by user
-```
-
-### Example: Complete Report Generation
-
-```javascript
-// 1. Fetch time entries
-const entries = await base44.entities.TimeEntry.filter({
-  client_id: clientId,
-  date: { $gte: periodStart, $lte: periodEnd }
-});
-
-// 2. Transform and fill PDF
-const pdfData = await transformEntriesToPDF(entries, template);
-const pdfBlob = await fillPDFFields(pdfData);
-
-// 3. Upload PDF
-const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfBlob });
-
-// 4. Create versioned report
-const reportResult = await base44.functions.invoke('generateVersionedReport', {
-  action: 'generate',
-  params: {
-    client_id: clientId,
-    report_type: 'job_coaching',
-    time_entry_ids: entries.map(e => e.id),
-    pdf_file_url: file_url,
-    pdf_file_name: `JobCoaching_${periodStart}_${periodEnd}.pdf`
-  }
-});
-
-// 5. Optionally lock
-if (submitNow) {
-  await base44.functions.invoke('generateVersionedReport', {
-    action: 'lock_period',
-    params: {
-      reason: 'Submitted with version ' + reportResult.data.versionNumber
-    }
-  });
-}
-```
-
-## Compliance and Reporting
-
-### USOR95/96 Compliance
-
-ReportVersion ensures:
-- ✓ Each version is a complete snapshot
-- ✓ TimeEntry data used is documented (time_entry_ids)
-- ✓ Audit trail shows when/who generated
-- ✓ Period locking prevents retroactive changes
-- ✓ Submission tracking (is_final, submitted_at, submitted_by)
-
-### Report Generation Frequency
-
-Supports multiple versions per period:
-- Generate initial report on 4/30
-- Add entries on 5/1-5/3, regenerate (version 2)
-- Make corrections on 5/4, regenerate (version 3)
-- Submit version 3 and lock period
-
-### Audit and Verification
-
-Query complete audit trail:
-
-```javascript
-const versions = await base44.entities.ReportVersion.filter({
-  client_id: clientId,
-  reporting_period_start: '2024-04-01'
-});
-
-versions.forEach(v => {
-  console.log(`
-    Version ${v.version_number}:
-    Generated: ${v.generated_at} by ${v.generated_by}
-    Entries: ${v.time_entry_count} (${v.total_hours} hours)
-    Status: ${v.is_final ? 'Submitted' : 'Draft'}
-    ${v.is_locked ? `Locked: ${v.lock_reason}` : ''}
-  `);
-});
-```
-
-## Troubleshooting
-
-### "Reporting period is locked"
-
-**Cause:** Trying to add/modify TimeEntry in locked period
-
-**Solution:**
-1. Check if period is locked: `isPeriodLocked` in get_versions response
-2. Unlock period if authorized: `action: 'unlock_period'`
-3. Modify TimeEntry
-4. Regenerate report (creates new version)
-5. Re-lock period
-
-### "Version number unexpected"
-
-**Cause:** Manual version_number specified
-
-**Solution:**
-- Never set version_number manually
-- Let system auto-increment
-- System calculates: max(existing versions) + 1
-
-### "TimeEntry IDs don't match report"
-
-**Cause:** TimeEntry records deleted after report created
-
-**Solution:**
-- time_entry_ids are immutable snapshots
-- Regenerate report if entries change
-- Old versions still show original TimeEntry IDs
-
-## Database Queries
-
-### Get all versions for client
-
-```javascript
-const allVersions = await base44.entities.ReportVersion.filter({
-  client_id: clientId
-});
-```
-
-### Get versions in date range
-
-```javascript
-const versions = await base44.entities.ReportVersion.filter({
-  client_id: clientId,
-  reporting_period_start: { $gte: '2024-04-01' },
-  reporting_period_end: { $lte: '2024-12-31' }
-});
-```
-
-### Get locked periods
-
-```javascript
-const lockedPeriods = await base44.entities.ReportVersion.filter({
-  is_locked: true
-});
-```
-
-### Get submitted reports
-
-```javascript
-const submitted = await base44.entities.ReportVersion.filter({
-  is_final: true
-});
-```
-
-## API Reference
-
-See `functions/generateVersionedReport.js` for complete API documentation.
-
-Actions: `generate`, `get_versions`, `lock_period`, `unlock_period`, `submit_version`, `get_history
+- `entities/ReportVersion.json` - Entity schema
+- `docs/VR_REPORTING_ARCHITECTURE.md` - Overall reporting system
+- `docs/SCHEMA_SNAPSHOT_SYSTEM.md` - Field answer snapshots
