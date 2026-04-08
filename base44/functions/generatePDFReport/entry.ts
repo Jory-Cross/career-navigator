@@ -1,14 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
-// Note: pdfFieldMapper is available via integration call or inline logic
-// For Deno, we'll handle mapping inline since local imports not supported
-
 /**
- * Generate PDF Report - Step 3 Only
- * 
- * Takes assembled report object and fills PDF template
- * Never reads directly from TimeEntry or raw records
+ * generatePDFReport
+ *
+ * Accepts only pre-assembled report data + a template ID.
+ * Never reads TimeEntry or raw records directly.
+ *
+ * Input:
+ *   templateId    – PDFTemplate record ID
+ *   reportData    – { header, rows, summary, totals } from getReportAggregation
+ *
+ * Output:
+ *   { success, pdf_url }
  */
 
 Deno.serve(async (req) => {
@@ -17,306 +21,154 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const {
-      action,
-      templateId,
-      reportObject,        // Pre-assembled report from assembleClientReport()
-      clientId,
-      dateFrom,
-      dateTo
-    } = await req.json();
+    const { templateId, reportData } = await req.json();
 
-    if (!templateId) {
-      return Response.json({ error: 'templateId is required' }, { status: 400 });
-    }
+    if (!templateId)  return Response.json({ error: 'templateId is required' }, { status: 400 });
+    if (!reportData)  return Response.json({ error: 'reportData is required' }, { status: 400 });
 
-    // Fetch template and field mappings
     const [templates, fieldMaps] = await Promise.all([
       base44.entities.PDFTemplate.filter({ id: templateId }),
       base44.entities.PDFFieldMap.filter({ pdf_template_id: templateId })
     ]);
 
     const template = templates[0];
-    if (!template) {
-      return Response.json({ error: 'Template not found' }, { status: 404 });
-    }
+    if (!template) return Response.json({ error: 'Template not found' }, { status: 404 });
 
-    // If no pre-assembled report, assemble it now (Step 2)
-    let report = reportObject;
-    if (!report) {
-      if (!clientId || !dateFrom || !dateTo) {
-        return Response.json(
-          { error: 'Either reportObject or (clientId, dateFrom, dateTo) required' },
-          { status: 400 }
-        );
-      }
-      // Inline simple assembly for backward compatibility
-      report = await quickAssembleReport(base44, clientId, dateFrom, dateTo);
-    }
+    const activeMaps = fieldMaps.filter(m => m.is_active !== false);
 
-    if (!report) {
-      return Response.json({ error: 'No data to report' }, { status: 400 });
-    }
+    const pdf_url = await fillAndUploadPDF(base44, template, activeMaps, reportData);
 
-    // Step 3: Fill PDF from assembled report object
-    const pdfUrl = await fillAndUploadPDF(base44, template, fieldMaps, report);
+    return Response.json({ success: true, pdf_url });
 
-    return Response.json({ 
-      success: true,
-      pdf_url: pdfUrl,
-      client_id: report.metadata?.client_id
-    });
   } catch (error) {
-    console.error('generatePDFReport error:', error);
+    console.error('generatePDFReport error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
 
-/**
- * Fill PDF template from assembled report object
- * Step 3: PDF Generation only
- */
+// ─── PDF Fill + Upload ────────────────────────────────────────────────────────
+
 async function fillAndUploadPDF(base44, template, fieldMaps, report) {
-  // Fetch template PDF
   const pdfRes = await fetch(template.pdf_file_url);
-  if (!pdfRes.ok) {
-    throw new Error(`Failed to fetch PDF template: ${pdfRes.status}`);
-  }
+  if (!pdfRes.ok) throw new Error(`Failed to fetch PDF template: ${pdfRes.status}`);
 
-  const pdfBytes = await pdfRes.arrayBuffer();
-  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-  const form = pdfDoc.getForm();
+  const pdfDoc = await PDFDocument.load(await pdfRes.arrayBuffer(), { ignoreEncryption: true });
+  const form   = pdfDoc.getForm();
+  const fields = new Set(form.getFields().map(f => f.getName()));
 
-  // Fill all fields from report object
-  fillPDFFromReport(form, fieldMaps, report);
-
-  // Flatten and save
-  form.flatten();
-  const filledBytes = await pdfDoc.save();
-
-  // Upload
-  const blob = new Blob([filledBytes], { type: 'application/pdf' });
-  const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
-
-  return file_url;
-}
-
-/**
- * Fill PDF fields from assembled report object
- * Supports new mapping_scope structure (header, row, summary, static)
- */
-function fillPDFFromReport(form, fieldMaps, report) {
-  const fields = form.getFields();
-  const fieldNames = fields.map(f => f.getName());
-
-  // Build field instructions from new mapping structure
-  const instructions = buildFieldInstructions(fieldMaps, report);
-
-  // Fill PDF fields
-  Object.entries(instructions).forEach(([pdfFieldName, instruction]) => {
-    if (!fieldNames.includes(pdfFieldName)) {
-      return;
-    }
-    try {
-      form.getField(pdfFieldName).setText(String(instruction.value || ''));
-    } catch (e) {
-      console.warn(`Could not fill ${pdfFieldName}: ${e.message}`);
-    }
-  });
-}
-
-/**
- * Build field instructions from new mapping structure
- * Supports mapping_scope (header/row/summary/static) and row groups
- */
-function buildFieldInstructions(fieldMaps, report) {
-  const instructions = {};
-
-  // Filter active mappings
-  const activeMappings = fieldMaps.filter(m => m.is_active !== false);
-
-  // Group by mapping_scope (support both new and legacy structure)
-  const byScope = {
-    static: activeMappings.filter(m => m.mapping_scope === 'static'),
-    header: activeMappings.filter(m => m.mapping_scope === 'header' || (m.source_type === 'header' && !m.is_repeating_field)),
-    row: activeMappings.filter(m => m.mapping_scope === 'row' || m.is_repeating_field),
-    summary: activeMappings.filter(m => m.mapping_scope === 'summary' || m.source_type === 'summary')
+  const setField = (name, value) => {
+    if (!fields.has(name)) return;
+    try { form.getField(name).setText(String(value ?? '')); }
+    catch (e) { console.warn(`PDF field "${name}": ${e.message}`); }
   };
 
-  // Fill static values
-  byScope.static.forEach(m => {
-    instructions[m.pdf_field_name] = { value: String(m.default_value || '') };
-  });
+  // Split by scope
+  const byScope = {
+    static:  fieldMaps.filter(m => m.mapping_scope === 'static'),
+    header:  fieldMaps.filter(m => m.mapping_scope === 'header'),
+    summary: fieldMaps.filter(m => m.mapping_scope === 'summary'),
+    row:     fieldMaps.filter(m => m.mapping_scope === 'row')
+  };
 
-  // Fill header fields
+  // Static
+  byScope.static.forEach(m => setField(m.pdf_field_name, m.static_value ?? m.default_value ?? ''));
+
+  // Header
   byScope.header.forEach(m => {
-    const value = resolveValue(m.source_field, report.header || {});
-    const transformed = value !== null ? applyTransformAdvanced(value, m) : (m.default_value || '');
-    instructions[m.pdf_field_name] = { value: String(transformed || '') };
+    const val = resolveValue(report.header || {}, m.source_field, m.default_value);
+    setField(m.pdf_field_name, applyTransform(val, m));
   });
 
-  // Fill summary fields
+  // Summary
   byScope.summary.forEach(m => {
-    const value = resolveValue(m.source_field, report.summary || {});
-    const transformed = value !== null ? applyTransformAdvanced(value, m) : (m.default_value || '');
-    instructions[m.pdf_field_name] = { value: String(transformed || '') };
+    const val = resolveValue(report.summary || {}, m.source_field, m.default_value);
+    setField(m.pdf_field_name, applyTransform(val, m));
   });
 
-  // Fill row fields (grouped by row_group)
-  const rowsByGroup = {};
+  // Row (repeating) — group by row_group so multiple fields per row stay aligned
+  const rowGroups = {};
   byScope.row.forEach(m => {
-    const group = m.row_group || 'default';
-    if (!rowsByGroup[group]) rowsByGroup[group] = [];
-    rowsByGroup[group].push(m);
+    const g = m.row_group || 'default';
+    if (!rowGroups[g]) rowGroups[g] = [];
+    rowGroups[g].push(m);
   });
 
-  Object.entries(rowsByGroup).forEach(([rowGroup, groupMappings]) => {
-    const rows = report.rows || [];
-    const maxRows = groupMappings[0]?.max_rows || rows.length;
-
-    rows.slice(0, maxRows).forEach((row, rowIdx) => {
+  const rows = report.rows || [];
+  Object.values(rowGroups).forEach(groupMappings => {
+    rows.forEach((row, rowIdx) => {
       groupMappings.forEach(m => {
-        const value = row[m.source_field];
-        const transformed = value !== null && value !== undefined ? applyTransformAdvanced(value, m) : (m.default_value || '');
-        const pdfFieldName = substituteRowIndex(m.pdf_field_name, rowIdx);
-        instructions[pdfFieldName] = { value: String(transformed || '') };
+        const key = m.row_field_key || m.source_field;
+        const val = resolveValue(row, key, m.default_value);
+        const fieldName = substituteRowNumber(m.pdf_field_name, rowIdx + 1);
+        setField(fieldName, applyTransform(val, m));
       });
     });
   });
 
-  return instructions;
+  form.flatten();
+  const filledBytes = await pdfDoc.save();
+
+  // Upload as base64 data URL (Deno-safe)
+  const base64  = btoa(String.fromCharCode(...new Uint8Array(filledBytes)));
+  const dataUrl = `data:application/pdf;base64,${base64}`;
+  const { file_url } = await base44.integrations.Core.UploadFile({ file: dataUrl });
+  return file_url;
 }
 
-/**
- * Resolve dot-path value from object (e.g., 'client.first_name')
- */
-function resolveValue(path, obj) {
-  const parts = path.split('.');
-  let value = obj;
-  for (const part of parts) {
-    value = value?.[part];
-    if (value === null || value === undefined) return null;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function resolveValue(obj, path, defaultValue = '') {
+  if (!path || !obj) return defaultValue;
+  let val = obj;
+  for (const part of path.split('.')) {
+    val = val?.[part];
+    if (val === undefined || val === null) return defaultValue;
   }
-  return value;
+  return val ?? defaultValue;
 }
 
-/**
- * Substitute {{row}} or {row} pattern in PDF field name
- */
-function substituteRowIndex(template, rowIdx) {
-  const rowNum = rowIdx + 1;
+function substituteRowNumber(template, rowNum) {
   return template
     .replace(/\{\{row(Num)?\}\}/gi, String(rowNum))
-    .replace(/\{row(Num)?\}/gi, String(rowNum));
+    .replace(/\{row(Num)?\}/gi, String(rowNum))
+    .replace(/_\d+$/, `_${rowNum}`); // e.g. Date_1 → Date_2
 }
 
-/**
- * Apply transform to value (supports new transform_options structure)
- */
-function applyTransformAdvanced(value, mapping) {
-  if (!mapping.transform || mapping.transform === 'none') return value;
-
-  const { transform, transform_options = {} } = mapping;
+function applyTransform(value, mapping) {
+  const transform = mapping?.transform;
+  if (!transform || transform === 'none') return value;
+  const opts = mapping.transform_options || {};
 
   switch (transform) {
     case 'date_format': {
       try {
-        const d = new Date(value);
-        const format = transform_options.format || 'MM/DD/YYYY';
-        const m = (d.getMonth() + 1).toString().padStart(2, '0');
-        const day = d.getDate().toString().padStart(2, '0');
-        const y = d.getFullYear();
-        if (format === 'MM/DD/YYYY') return `${m}/${day}/${y}`;
-        if (format === 'YYYY-MM-DD') return `${y}-${m}-${day}`;
-        if (format === 'MMM DD, YYYY') {
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const d   = new Date(value);
+        const fmt = opts.format || 'MM/DD/YYYY';
+        const m   = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const y   = d.getFullYear();
+        if (fmt === 'MM/DD/YYYY')    return `${m}/${day}/${y}`;
+        if (fmt === 'YYYY-MM-DD')    return `${y}-${m}-${day}`;
+        if (fmt === 'MMM DD, YYYY') {
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           return `${months[d.getMonth()]} ${day}, ${y}`;
         }
         return value;
-      } catch {
-        return value;
-      }
+      } catch { return value; }
     }
     case 'time_format': {
-      const totalMin = parseInt(value);
-      if (isNaN(totalMin)) return value;
-      const hrs = Math.floor(totalMin / 60);
-      const mins = totalMin % 60;
-      return `${hrs}:${mins.toString().padStart(2, '0')}`;
+      const min = parseInt(value);
+      if (isNaN(min)) return value;
+      return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
     }
     case 'hours_from_minutes':
     case 'duration_hours':
-      return String((Number(value) / 60).toFixed(2));
+      return (Number(value) / 60).toFixed(2);
     case 'uppercase':
       return String(value).toUpperCase();
-    case 'currency': {
-      const num = parseFloat(value);
-      return isNaN(num) ? value : `$${num.toFixed(2)}`;
-    }
-    case 'phone_format': {
-      const digits = String(value).replace(/\D/g, '');
-      return digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : value;
-    }
     case 'full_name':
       return value?.full_name || String(value);
     default:
       return value;
   }
-}
-
-
-
-/**
- * Quick assembly helper for backward compatibility
- */
-async function quickAssembleReport(base44, clientId, dateFrom, dateTo) {
-  const [client, timeEntries, fieldAnswers] = await Promise.all([
-    base44.entities.Client.filter({ id: clientId }).then(r => r[0]),
-    base44.entities.TimeEntry.filter({ client_id: clientId, date: { $gte: dateFrom, $lte: dateTo } }),
-    base44.entities.ReportFieldAnswer.list()
-  ]);
-
-  if (!client || timeEntries.length === 0) return null;
-
-  const answersMap = {};
-  fieldAnswers.forEach(fa => {
-    answersMap[fa.time_entry_id] = fa;
-  });
-
-  const dateRange = getDateRange(timeEntries);
-  const totalMin = timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-
-  return {
-    metadata: { client_id: clientId, generated_at: new Date().toISOString() },
-    header: {
-      client_full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
-      client_email: client.email || '',
-      client_phone: client.phone || '',
-      reporting_period_start: dateFrom,
-      reporting_period_end: dateTo,
-      total_entries: timeEntries.length,
-      total_hours: (totalMin / 60).toFixed(2),
-      total_minutes: totalMin
-    },
-    rows: timeEntries.map((e, i) => ({
-      row_number: i + 1,
-      date: e.date,
-      duration_minutes: e.duration_minutes || 0,
-      duration_hours: ((e.duration_minutes || 0) / 60).toFixed(2),
-      entry_type_code: e.entry_type_code || '',
-      description: e.description || '',
-      ...(answersMap[e.id]?.answers || {})
-    })),
-    summary: {
-      total_entries: timeEntries.length,
-      total_hours: (totalMin / 60).toFixed(2),
-      total_minutes: totalMin
-    }
-  };
-}
-
-function getDateRange(timeEntries) {
-  if (!timeEntries.length) return { start: '', end: '' };
-  const sorted = [...timeEntries].sort((a, b) => a.date.localeCompare(b.date));
-  return { start: sorted[0].date, end: sorted[sorted.length - 1].date };
 }
