@@ -501,6 +501,8 @@ export default function TimeTracking() {
                   mode="edit"
                   onSave={async (payload) => {
                     try {
+                      console.log("[TimeTracking] Edit save payload:", payload);
+
                       const durationMinutes = payload.duration_minutes || payload.duration || 0;
                       const dateValue = payload.date;
                       const entryTypeCode = payload.entry_type_code || selectedEntry.entry_type_code;
@@ -532,12 +534,18 @@ export default function TimeTracking() {
                         form_data: derivedFormData
                       };
 
+                      console.log("[TimeTracking] Edit updateData:", updateData);
+                      console.log("[TimeTracking] Editing entry ID:", selectedEntry?.id);
+
                       await base44.entities.TimeEntry.update(selectedEntry.id, updateData);
                       toast.success("Entry updated");
                       setShowEditForm(false);
                       setSelectedEntry(null);
                       handleRefresh();
                     } catch (err) {
+                      console.error("[TimeTracking] Edit save failed:", err);
+                      console.error("[TimeTracking] Message:", err?.message);
+                      console.error("[TimeTracking] Status:", err?.status);
                       toast.error(err?.message || "Failed to update entry");
                     }
                   }}
