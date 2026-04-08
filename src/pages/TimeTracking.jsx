@@ -8,10 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
-import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import JobCoachingLauncher from "@/components/time-entry/JobCoachingLauncher";
-import StructuredVocRehabForm from "@/components/time-entry/StructuredVocRehabForm";
-import TimeEntryFormContent from "@/components/client-detail/TimeLogDashboard";
+import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,19 +17,7 @@ import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMo
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
-
-const catColors = {
-  consultation: "bg-emerald-50 text-emerald-700",
-  resume_work: "bg-blue-50 text-blue-700",
-  job_search: "bg-violet-50 text-violet-700",
-  interview_prep: "bg-amber-50 text-amber-700",
-  follow_up: "bg-cyan-50 text-cyan-700",
-  job_coaching: "bg-orange-50 text-orange-700",
-  life_skills: "bg-pink-50 text-pink-700",
-  cbh: "bg-purple-50 text-purple-700",
-  admin: "bg-slate-50 text-slate-600",
-  other: "bg-gray-50 text-gray-600"
-};
+import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 
 export default function TimeTracking() {
   const { viewAsUser } = useViewAs();
@@ -40,18 +26,16 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
-   const [editMode, setEditMode] = useState(false);
-   const [editForm, setEditForm] = useState({});
-   const [editSaving, setEditSaving] = useState(false);
-   const [showNewEntry, setShowNewEntry] = useState(false);
-   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
-   const [entryTypes, setEntryTypes] = useState([]);
-   const queryClient = useQueryClient();
-   const navigate = useNavigate();
+    const [showEditForm, setShowEditForm] = useState(false);
+    const [showNewEntry, setShowNewEntry] = useState(false);
+    const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+    const [entryTypes, setEntryTypes] = useState([]);
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
   useEffect(() => {
      base44.auth.me().then(setUser).catch(() => {});
-     base44.entities.EntryType.filter({ is_active: true }).then(setEntryTypes).catch(() => {});
+     setEntryTypes(getEntryTypeOptions());
    }, []);
 
   // Effective user: admin viewing as someone else uses that person's perspective
@@ -359,29 +343,75 @@ export default function TimeTracking() {
           />
         </div>
       </div>
-      {/* New Entry Dialog */}
+      {/* New Entry Dialog with FormEngine */}
       <Dialog open={showNewEntry} onOpenChange={open => { if (!open) { setShowNewEntry(false); setSelectedEntryTypeCode(""); } }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle>Add Time Entry</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4">
-              {/* Route to JobCoachingTimeEntryForm for Job Coaching, generic form otherwise */}
-              {selectedEntryTypeCode === 'job_coaching' ? (
-                <JobCoachingTimeEntryForm
-                  clientId={null}
-                  onSuccess={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); handleRefresh(); }}
-                  onCancel={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
-                />
-              ) : (
-                <TimeEntryFormContent
+            <div className="px-6 py-4 space-y-4">
+              {!selectedEntryTypeCode && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Entry Type</label>
+                  <Select value={selectedEntryTypeCode} onValueChange={setSelectedEntryTypeCode}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Select an entry type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {entryTypes.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedEntryTypeCode && (
+                <FormEngine
+                  entryTypeCode={selectedEntryTypeCode}
                   entry={null}
-                  clientId={null}
-                  onClose={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
-                  onSave={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); handleRefresh(); }}
-                  entryTypes={entryTypes}
-                  onEntryTypeChange={setSelectedEntryTypeCode}
+                  mode="create"
+                  onSave={async (payload) => {
+                    try {
+                      const currentUser = await base44.auth.me();
+                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
+                      const dateValue = payload.date;
+                      const entryTypeCode = payload.entry_type_code || selectedEntryTypeCode;
+
+                      if (!dateValue || !durationMinutes || !entryTypeCode) {
+                        throw new Error("Missing required fields");
+                      }
+
+                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
+                        ? payload.form_data
+                        : {};
+
+                      const createData = {
+                        date: dateValue,
+                        duration_minutes: durationMinutes,
+                        description: payload.description,
+                        entry_type_code: entryTypeCode,
+                        start_time: payload.start_time || null,
+                        end_time: payload.end_time || null,
+                        form_data: derivedFormData,
+                        employee_id: currentUser?.id,
+                        status: "submitted",
+                        is_reportable: true,
+                        is_billable: false,
+                        is_payroll_eligible: true,
+                        reporting_period_key: dateValue ? dateValue.substring(0, 7) : null
+                      };
+
+                      await base44.entities.TimeEntry.create(createData);
+                      toast.success("Entry created");
+                      setShowNewEntry(false);
+                      setSelectedEntryTypeCode("");
+                      handleRefresh();
+                    } catch (err) {
+                      toast.error(err?.message || "Failed to save entry");
+                    }
+                  }}
+                  onCancel={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
                 />
               )}
             </div>
@@ -389,13 +419,13 @@ export default function TimeTracking() {
         </DialogContent>
       </Dialog>
 
-      {/* Entry Detail Dialog */}
-      <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setEditMode(false); }}>
+      {/* Entry Detail Dialog with FormEngine */}
+      <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setShowEditForm(false); }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle className="flex items-center gap-2">
-              {editMode ? "Edit Time Entry" : "Time Entry Details"}
-              {selectedEntry && duplicateIds.has(selectedEntry.id) && !editMode && (
+              {showEditForm ? "Edit Time Entry" : "Time Entry Details"}
+              {selectedEntry && duplicateIds.has(selectedEntry.id) && !showEditForm && (
                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Duplicate
                 </Badge>
@@ -404,173 +434,121 @@ export default function TimeTracking() {
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
-              {/* Route to Life Skills form if entry is life_skills */}
-              {selectedEntry && selectedEntry.entry_type_code === 'life_skills' && (
-                <StructuredVocRehabForm
-                  entryTypeCode="life_skills"
-                  clientId={selectedEntry.client_id}
+              {selectedEntry && !showEditForm && (
+                <div className="space-y-3 py-2">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Client</p>
+                      <p className="font-medium text-slate-800">{getClientName(selectedEntry.client_id)}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Date</p>
+                      <p className="font-medium text-slate-800">{selectedEntry.date ? format(new Date(selectedEntry.date), "MMM d, yyyy") : "—"}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Duration</p>
+                      <p className="font-medium text-slate-800">{selectedEntry.duration_minutes} minutes</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Time</p>
+                      <p className="font-medium text-slate-800">{selectedEntry.start_time || "—"}{selectedEntry.end_time ? ` - ${selectedEntry.end_time}` : ""}</p>
+                    </div>
+                  </div>
+                  {selectedEntry.description && (
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">Description</p>
+                      <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{selectedEntry.description}</p>
+                    </div>
+                  )}
+                  {duplicateIds.has(selectedEntry.id) && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm text-amber-800">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                      <span>This entry appears to be a duplicate. Another entry exists for the same client, date, and time. Please review and delete one.</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={async () => {
+                        try {
+                          await base44.entities.TimeEntry.delete(selectedEntry.id);
+                          toast.success("Entry deleted");
+                          setSelectedEntry(null);
+                          queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                        } catch (err) {
+                          toast.error("Failed to delete entry");
+                          console.error(err);
+                          setSelectedEntry(null);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowEditForm(true)}>
+                        <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedEntry && showEditForm && (
+                <FormEngine
+                  entryTypeCode={selectedEntry.entry_type_code}
                   entry={selectedEntry}
-                  onSuccess={() => { setSelectedEntry(null); setEditMode(false); handleRefresh(); }}
-                  onCancel={() => { setSelectedEntry(null); setEditMode(false); }}
-                />
-              )}
-              {/* Generic view/edit mode for other entry types */}
-              {selectedEntry && selectedEntry.entry_type_code !== 'life_skills' && !editMode && (
-            <div className="space-y-3 py-2">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Client</p>
-                  <p className="font-medium text-slate-800">{getClientName(selectedEntry.client_id)}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Date</p>
-                  <p className="font-medium text-slate-800">{selectedEntry.date ? format(new Date(selectedEntry.date), "MMM d, yyyy") : "—"}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Duration</p>
-                  <p className="font-medium text-slate-800">{selectedEntry.duration_minutes} minutes</p>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Time</p>
-                  <p className="font-medium text-slate-800">{selectedEntry.start_time || "—"}{selectedEntry.end_time ? ` - ${selectedEntry.end_time}` : ""}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Category</p>
-                  <Badge className={cn("text-xs border-0", catColors[selectedEntry.category])}>{selectedEntry.category?.replace(/_/g, " ")}</Badge>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Logged</p>
-                  <p className="font-medium text-slate-800">{selectedEntry.created_date ? format(new Date(selectedEntry.created_date), "MMM d, h:mm a") : "—"}</p>
-                </div>
-              </div>
-              {selectedEntry.description && (
-                <div className="space-y-0.5">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide">Description</p>
-                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{selectedEntry.description}</p>
-                </div>
-              )}
-              {duplicateIds.has(selectedEntry.id) && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm text-amber-800">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                  <span>This entry appears to be a duplicate. Another entry exists for the same client, date, and time. Please review and delete one.</span>
-                </div>
-              )}
-              <div className="flex justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={async () => {
+                  mode="edit"
+                  onSave={async (payload) => {
                     try {
-                      await base44.entities.TimeEntry.delete(selectedEntry.id);
-                      toast.success("Entry deleted");
+                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
+                      const dateValue = payload.date;
+                      const entryTypeCode = payload.entry_type_code || selectedEntry.entry_type_code;
+
+                      if (!dateValue || !durationMinutes) {
+                        throw new Error("Missing required fields");
+                      }
+
+                      const reservedKeys = new Set([
+                        "date", "duration", "duration_minutes", "description", "entry_type_code",
+                        "start_time", "end_time", "client_id", "employee_id", "status",
+                        "is_reportable", "is_billable", "is_payroll_eligible", "reporting_period_key",
+                        "entry_type_id", "category", "legacy_category"
+                      ]);
+
+                      const derivedFormData = payload.form_data && Object.keys(payload.form_data).length > 0
+                        ? payload.form_data
+                        : Object.fromEntries(
+                            Object.entries(payload).filter(([key]) => !reservedKeys.has(key))
+                          );
+
+                      const updateData = {
+                        date: dateValue,
+                        duration_minutes: durationMinutes,
+                        description: payload.description,
+                        entry_type_code: entryTypeCode,
+                        start_time: payload.start_time || null,
+                        end_time: payload.end_time || null,
+                        form_data: derivedFormData
+                      };
+
+                      await base44.entities.TimeEntry.update(selectedEntry.id, updateData);
+                      toast.success("Entry updated");
+                      setShowEditForm(false);
                       setSelectedEntry(null);
-                      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+                      handleRefresh();
                     } catch (err) {
-                      toast.error("Failed to delete entry");
-                      console.error(err);
-                      setSelectedEntry(null);
+                      toast.error(err?.message || "Failed to update entry");
                     }
                   }}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => {
-                    setEditForm({
-                      date: selectedEntry.date || "",
-                      duration_minutes: selectedEntry.duration_minutes?.toString() || "",
-                      description: selectedEntry.description || "",
-                      category: selectedEntry.category || "consultation",
-                      start_time: selectedEntry.start_time || "",
-                      end_time: selectedEntry.end_time || "",
-                    });
-                    setEditMode(true);
-                  }}>
-                    <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
-                </div>
-              </div>
+                  onCancel={() => setShowEditForm(false)}
+                />
+              )}
             </div>
-          )}
-          {selectedEntry && selectedEntry.entry_type_code !== 'life_skills' && editMode && (
-            <div className="space-y-3 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500">Date</label>
-                  <Input type="date" value={editForm.date} onChange={e => setEditForm(p => ({ ...p, date: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500">Duration (min)</label>
-                  <Input type="number" value={editForm.duration_minutes} onChange={e => setEditForm(p => ({ ...p, duration_minutes: e.target.value }))} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">Category</label>
-                <Select value={editForm.category} onValueChange={v => setEditForm(p => ({ ...p, category: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="consultation">Consultation</SelectItem>
-                    <SelectItem value="resume_work">Resume Work</SelectItem>
-                    <SelectItem value="job_search">Job Search</SelectItem>
-                    <SelectItem value="interview_prep">Interview Prep</SelectItem>
-                    <SelectItem value="follow_up">Follow Up</SelectItem>
-                    <SelectItem value="job_coaching">Job Coaching</SelectItem>
-                    <SelectItem value="life_skills">Life Skills</SelectItem>
-                    <SelectItem value="cbh">CBH</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">Description</label>
-                <Input value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} placeholder="What was worked on?" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500">Start Time</label>
-                  <Input type="time" value={editForm.start_time} onChange={e => setEditForm(p => ({ ...p, start_time: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500">End Time</label>
-                  <Input type="time" value={editForm.end_time} onChange={e => setEditForm(p => ({ ...p, end_time: e.target.value }))} />
-                </div>
-              </div>
-              <div className="flex justify-between pt-2">
-                <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
-                <Button size="sm" disabled={editSaving} onClick={async () => {
-                  setEditSaving(true);
-                  try {
-                    await base44.entities.TimeEntry.update(selectedEntry.id, {
-                      date: editForm.date,
-                      duration_minutes: parseInt(editForm.duration_minutes),
-                      description: editForm.description,
-                      category: editForm.category,
-                      start_time: editForm.start_time || undefined,
-                      end_time: editForm.end_time || undefined,
-                    });
-                    toast.success("Entry updated");
-                    setEditMode(false);
-                    setSelectedEntry(null);
-                    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-                  } catch (err) {
-                    toast.error("Failed to update entry");
-                    console.error(err);
-                  } finally {
-                    setEditSaving(false);
-                  }
-                }}>
-                  <Save className="w-3.5 h-3.5 mr-1" /> {editSaving ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </div>
-          )}
-             </div>
-           </div>
-         </DialogContent>
-       </Dialog>
+          </div>
+        </DialogContent>
+      </Dialog>
      </div>
    );
  }
