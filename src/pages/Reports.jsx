@@ -7,6 +7,9 @@ import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "luci
 import PayrollReport from "@/components/reports/PayrollReport";
 import SafeReportGenerator from "@/components/reports/SafeReportGenerator";
 import PDFTemplateSetupFlow from "@/components/reports/PDFTemplateSetupFlow";
+import OperationalMetrics from "@/components/reports/OperationalMetrics";
+import ComplianceMetrics from "@/components/reports/ComplianceMetrics";
+import AuthorizationMetrics from "@/components/reports/AuthorizationMetrics";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -218,13 +221,24 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
-          <p className="text-sm text-slate-500 mt-1">Key metrics and performance insights</p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
+        <p className="text-sm text-slate-500 mt-1">Performance metrics and operational oversight</p>
+      </div>
+
+      {/* VR-Specific Metrics Dashboard */}
+      {(user?.role === 'management' || user?.role === 'admin') && (
+        <div className="space-y-6">
+          <OperationalMetrics />
+          <ComplianceMetrics />
+          <AuthorizationMetrics />
         </div>
-        {(user?.role === 'management' || user?.role === 'admin') && (
+      )}
+
+      {/* Analytics Filters & Charts */}
+      {(user?.role === 'management' || user?.role === 'admin') && (
+        <div className="space-y-4">
           <div className="flex gap-3">
             <div className="w-48">
               <Label className="text-xs text-slate-600 mb-1.5 block">Start Date</Label>
@@ -261,10 +275,10 @@ export default function Reports() {
               </Select>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Key Metrics */}
+      {/* Key Client Engagement Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
@@ -443,30 +457,31 @@ export default function Reports() {
         )}
       </div>
 
-      {/* PDF Template Setup Flow */}
+      {/* PDF Generation Controls */}
       {(user?.role === 'admin' || user?.role === 'management') && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">PDF Template Configuration</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PDFTemplateSetupFlow onComplete={() => loadData()} />
-          </CardContent>
-        </Card>
-      )}
+        <div className="space-y-6 border-t border-slate-200 pt-8 mt-8">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Report Generation</h2>
+            <p className="text-sm text-slate-500">Configure templates and generate PDF reports</p>
+          </div>
 
-      {/* Safe Report Generator */}
-      {(user?.role === 'admin' || user?.role === 'management') && (
-        <SafeReportGenerator />
-      )}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">PDF Template Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PDFTemplateSetupFlow onComplete={() => loadData()} />
+            </CardContent>
+          </Card>
 
-      {/* Payroll Report - Admin/Management only */}
-      {(user?.role === 'admin' || user?.role === 'management') && (
-        <PayrollReport
-          timeEntries={timeEntries}
-          allUsers={visibleUsers}
-          clients={clients}
-        />
+          <SafeReportGenerator />
+
+          <PayrollReport
+            timeEntries={timeEntries}
+            allUsers={visibleUsers}
+            clients={clients}
+          />
+        </div>
       )}
     </div>
   );
