@@ -7,6 +7,7 @@ import { Users, Briefcase, CheckCircle, Clock, TrendingUp, Calendar } from "luci
 import PayrollReport from "@/components/reports/PayrollReport";
 import PDFReportGenerator from "@/components/reports/PDFReportGenerator";
 import BatchPDFReportGenerator from "@/components/reports/BatchPDFReportGenerator";
+import PDFTemplateSetupFlow from "@/components/reports/PDFTemplateSetupFlow";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -442,6 +443,18 @@ export default function Reports() {
           </Card>
         )}
       </div>
+
+      {/* PDF Template Setup Flow */}
+      {(user?.role === 'admin' || user?.role === 'management') && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">PDF Template Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PDFTemplateSetupFlow onComplete={() => loadData()} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* PDF Report Generator */}
       {(user?.role === 'admin' || user?.role === 'management' || user?.role === 'employee') && (
