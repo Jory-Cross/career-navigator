@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -559,29 +560,40 @@ function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) 
 
      setSaving(true);
      try {
-       const data = {
-         date: form.date,
-         duration_minutes: duration,
-         entry_type_id: form.entry_type_id,
-         entry_type_code: form.entry_type_code,
-         description: form.description,
-         start_time: form.start_time || null,
-         end_time: form.end_time || null,
-         reporting_period_key: form.date.slice(0, 7),
-         is_reportable: true,
-         is_billable: false,
-         is_payroll_eligible: true
-       };
-
        if (entry) {
+         // Editing existing entry - update only
+         const data = {
+           date: form.date,
+           duration_minutes: duration,
+           entry_type_id: form.entry_type_id,
+           entry_type_code: form.entry_type_code,
+           description: form.description,
+           start_time: form.start_time || null,
+           end_time: form.end_time || null,
+           reporting_period_key: form.date.slice(0, 7),
+           is_reportable: true,
+           is_billable: false,
+           is_payroll_eligible: true
+         };
          await base44.entities.TimeEntry.update(entry.id, data);
          toast.success("Entry updated");
        } else {
-         data.client_id = clientId;
-         data.status = "submitted";
-         data.report_ready = false;
-         await base44.entities.TimeEntry.create(data);
-         toast.success("Entry created");
+         // Creating new entry - use dual-write to ensure ReportFieldAnswer is created
+         await submitTimeEntryWithDualWrite({
+           clientId,
+           entryTypeId: form.entry_type_id,
+           entryTypeCode: form.entry_type_code,
+           date: form.date,
+           startTime: form.start_time || null,
+           endTime: form.end_time || null,
+           durationMinutes: duration,
+           location: null,
+           description: form.description,
+           serviceAuthorizationId: null,
+           fieldAnswers: {},
+           asDraft: false
+         });
+         toast.success("Entry created with reporting fields");
        }
        onSave();
      } catch (err) {
