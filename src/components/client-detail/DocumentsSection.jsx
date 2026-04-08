@@ -16,13 +16,22 @@ import { format } from "date-fns";
 const categoryColors = {
   resume: "bg-blue-100 text-blue-700",
   cover_letter: "bg-green-100 text-green-700",
-  contract: "bg-violet-100 text-violet-700",
-  notes: "bg-amber-100 text-amber-700",
-  reference: "bg-pink-100 text-pink-700",
+  assessment: "bg-purple-100 text-purple-700",
+  authorization: "bg-orange-100 text-orange-700",
+  generated_report: "bg-emerald-100 text-emerald-700",
   certification: "bg-indigo-100 text-indigo-700",
   portfolio: "bg-cyan-100 text-cyan-700",
   other: "bg-slate-100 text-slate-600"
 };
+
+const filterOptions = [
+  { value: "all", label: "All Documents" },
+  { value: "generated_report", label: "Generated Reports" },
+  { value: "assessment", label: "Assessments" },
+  { value: "authorization", label: "Authorizations" },
+  { value: "resume", label: "Resumes" },
+  { value: "other", label: "Other Uploads" }
+];
 
 export default function DocumentsSection({ clientId, onRefresh }) {
   const [documents, setDocuments] = useState([]);
@@ -234,19 +243,15 @@ export default function DocumentsSection({ clientId, onRefresh }) {
               />
             </div>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[140px] h-9">
+              <SelectTrigger className="w-[160px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="resume">Resume</SelectItem>
-                <SelectItem value="cover_letter">Cover Letter</SelectItem>
-                <SelectItem value="contract">Contract</SelectItem>
-                <SelectItem value="notes">Notes</SelectItem>
-                <SelectItem value="reference">Reference</SelectItem>
-                <SelectItem value="certification">Certification</SelectItem>
-                <SelectItem value="portfolio">Portfolio</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                {filterOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {allTags.length > 0 && (
@@ -277,58 +282,75 @@ export default function DocumentsSection({ clientId, onRefresh }) {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredDocs.map(doc => (
-                <div key={doc.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors">
-                  <FileText className="w-5 h-5 text-slate-400 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-slate-800">{doc.title}</p>
-                      <Badge className={cn("text-xs", categoryColors[doc.category])}>
-                        {doc.category.replace(/_/g, ' ')}
-                      </Badge>
-                      {doc.version > 1 && (
-                        <Badge variant="outline" className="text-xs">v{doc.version}</Badge>
+              {filteredDocs.map(doc => {
+                const isGenerated = doc.is_generated || doc.category === 'generated_report';
+                
+                return (
+                  <div key={doc.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors border-l-4" style={{borderLeftColor: isGenerated ? '#10b981' : '#cbd5e1'}}>
+                    <FileText className="w-5 h-5 mt-0.5" style={{color: isGenerated ? '#10b981' : '#94a3b8'}} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-sm font-medium text-slate-800">{doc.title}</p>
+                        <Badge className={cn("text-xs", categoryColors[doc.category] || categoryColors.other)}>
+                          {doc.category.replace(/_/g, ' ')}
+                        </Badge>
+                        {isGenerated && <Badge className="text-xs bg-emerald-100 text-emerald-700">Generated</Badge>}
+                        {doc.report_version && <Badge variant="outline" className="text-xs">Report v{doc.report_version}</Badge>}
+                      </div>
+
+                      {/* Generated Report Metadata */}
+                      {isGenerated && (
+                        <div className="text-xs text-slate-600 space-y-1 mb-2">
+                          {doc.document_subtype && <p>📊 Type: <span className="font-medium">{doc.document_subtype.toUpperCase()}</span></p>}
+                          {doc.reporting_period_start && doc.reporting_period_end && (
+                            <p>📅 Period: <span className="font-medium">{format(new Date(doc.reporting_period_start), 'MMM d')} - {format(new Date(doc.reporting_period_end), 'MMM d, yyyy')}</span></p>
+                          )}
+                          {doc.generated_from_template_id && <p>📋 Template: <span className="font-mono text-[11px]">{doc.generated_from_template_id.slice(0, 8)}...</span></p>}
+                          {doc.created_by && <p>👤 Generated by: <span className="font-medium">{doc.created_by}</span></p>}
+                          <p>⏱️ {format(new Date(doc.created_date), 'MMM d, yyyy h:mm a')}</p>
+                        </div>
+                      )}
+
+                      {/* Uploaded File Metadata */}
+                      {!isGenerated && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                          <span>{doc.file_name}</span>
+                          <span>•</span>
+                          <span>{((doc.file_size || 0) / 1024).toFixed(0)} KB</span>
+                          <span>•</span>
+                          <span>{format(new Date(doc.created_date), 'MMM d, yyyy')}</span>
+                          {doc.created_by && <span>• {doc.created_by}</span>}
+                        </div>
+                      )}
+
+                      {doc.tags && doc.tags.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <Tag className="w-3 h-3 text-slate-400" />
+                          {doc.tags.map(tag => (
+                            <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>{doc.file_name}</span>
-                      <span>•</span>
-                      <span>{((doc.file_size || 0) / 1024).toFixed(0)} KB</span>
-                      <span>•</span>
-                      <span>{format(new Date(doc.created_date), 'MMM d, yyyy')}</span>
+                    <div className="flex gap-1">
+                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="ghost" className="h-7 px-2">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                      </a>
+                      {showArchived ? (
+                        <Button size="sm" variant="ghost" onClick={() => deleteDocument(doc.id)} className="h-7 px-2 text-red-500 hover:text-red-700">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => archiveDocument(doc.id)} className="h-7 px-2">
+                          <Archive className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
-                    {doc.tags && doc.tags.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <Tag className="w-3 h-3 text-slate-400" />
-                        {doc.tags.map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  <div className="flex gap-1">
-                    {(doc.category === 'resume' || doc.category === 'cover_letter') && (
-                      <Button size="sm" variant="ghost" onClick={() => loadVersions(doc.id)} className="h-7 px-2 text-xs">
-                        v{doc.version || 1}
-                      </Button>
-                    )}
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="ghost" className="h-7 px-2">
-                        <Download className="w-3.5 h-3.5" />
-                      </Button>
-                    </a>
-                    {showArchived ? (
-                      <Button size="sm" variant="ghost" onClick={() => deleteDocument(doc.id)} className="h-7 px-2 text-red-500 hover:text-red-700">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="ghost" onClick={() => archiveDocument(doc.id)} className="h-7 px-2">
-                        <Archive className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -364,10 +386,8 @@ export default function DocumentsSection({ clientId, onRefresh }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="resume">Resume</SelectItem>
-                  <SelectItem value="cover_letter">Cover Letter</SelectItem>
-                  <SelectItem value="contract">Contract</SelectItem>
-                  <SelectItem value="notes">Notes</SelectItem>
-                  <SelectItem value="reference">Reference</SelectItem>
+                  <SelectItem value="assessment">Assessment</SelectItem>
+                  <SelectItem value="authorization">Authorization</SelectItem>
                   <SelectItem value="certification">Certification</SelectItem>
                   <SelectItem value="portfolio">Portfolio</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
