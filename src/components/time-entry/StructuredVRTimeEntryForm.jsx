@@ -12,6 +12,7 @@ import { Loader2, ArrowRight, CheckCircle2, Save, AlertCircle, Lock } from "luci
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ValidationResultsPanel from "@/components/reports/ValidationResultsPanel";
+import ServiceAuthorizationSelector from "@/components/authorization/ServiceAuthorizationSelector";
 
 /**
  * StructuredVRTimeEntryForm - Primary Structured VR Entry Experience
@@ -60,7 +61,6 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
   });
   const [coreErrors, setCoreErrors] = useState({});
   const [employees, setEmployees] = useState([]);
-  const [authorizations, setAuthorizations] = useState([]);
 
   // Dynamic reportable field answers
   const [answers, setAnswers] = useState({});
@@ -96,16 +96,7 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
       .catch(() => toast.error("Failed to load form fields"))
       .finally(() => setLoadingFields(false));
 
-    // Load available service authorizations for this entry type
-    if (entryType.requires_authorization && clientId) {
-      base44.entities.ServiceAuthorization.filter({
-        client_id: clientId,
-        entry_type_code: entryType.code,
-        status: "active"
-      })
-        .then(setAuthorizations)
-        .catch(() => setAuthorizations([]));
-    }
+
   }, [entryType?.id, clientId]);
 
   // ── Field classification ──────────────────────────────────────────────────
@@ -270,7 +261,6 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
     setAnswers({});
     setFieldErrors({});
     setEmployees([]);
-    setAuthorizations([]);
   }
 
   // ── STEP 1: Select entry type ─────────────────────────────────────────────
@@ -360,21 +350,23 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
 
         {/* Service Authorization (if required) */}
         {entryType?.requires_authorization && (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Service Authorization <span className="text-red-500">*</span></Label>
-            <Select value={coreData.service_authorization_id || ""} onValueChange={val => setCoreData(p => ({ ...p, service_authorization_id: val }))}>
-              <SelectTrigger className={coreErrors.service_authorization_id ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select authorization..." />
-              </SelectTrigger>
-              <SelectContent>
-                {authorizations.map(auth => (
-                  <SelectItem key={auth.id} value={auth.id}>
-                    {auth.authorization_number} - {auth.job_goal}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {coreErrors.service_authorization_id && <p className="text-xs text-red-500">{coreErrors.service_authorization_id}</p>}
+          <div>
+            <ServiceAuthorizationSelector
+              clientId={clientId}
+              entryTypeCode={entryType?.code}
+              selectedDate={coreData.date}
+              value={coreData.service_authorization_id}
+              onChange={val => setCoreData(p => ({ ...p, service_authorization_id: val }))}
+              isRequired={true}
+              onValidationChange={(warnings) => {
+                if (warnings.some(w => w.severity === "error")) {
+                  setCoreErrors(p => ({ ...p, service_authorization_id: "Authorization issue detected" }));
+                } else {
+                  setCoreErrors(p => { const { service_authorization_id, ...rest } = p; return rest; });
+                }
+              }}
+            />
+            {coreErrors.service_authorization_id && <p className="text-xs text-red-500 mt-1">{coreErrors.service_authorization_id}</p>}
           </div>
         )}
 
