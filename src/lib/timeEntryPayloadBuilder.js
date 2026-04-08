@@ -14,39 +14,48 @@
 
 /**
  * Single source of truth for normalizing duration to minutes.
+ * Reads from schema to find the actual duration field (not hardcoded keys).
  * Prevents regressions by centralizing all duration conversions.
  * 
  * @param {Record<string, any>} formData
+ * @param {Object} [schema] - Field schema with fields array
  * @returns {number} Duration in minutes
  */
-function normalizeDurationMinutes(formData) {
+function normalizeDurationMinutes(formData, schema) {
+  console.log("🔍 FORM DATA:", formData);
+  
   if (!formData) return 0;
 
-  // Direct number value
+  // ✅ Already normalized as number
   if (typeof formData.duration_minutes === "number") {
     return formData.duration_minutes;
   }
 
-  // String value (parse it)
-  if (typeof formData.duration_minutes === "string" && formData.duration_minutes.trim()) {
-    return Number(formData.duration_minutes);
+  // 🔑 FIND DURATION FIELD FROM SCHEMA
+  const durationField = schema?.fields?.find(
+    f =>
+      f.isDuration ||
+      f.key.toLowerCase().includes("hour") ||
+      f.label?.toLowerCase().includes("hour")
+  );
+
+  if (durationField) {
+    const value = formData[durationField.key];
+
+    if (value != null) {
+      return Number(value) * 60;
+    }
   }
 
-  // Separate hours and minutes fields (PRIMARY FIX)
+  // Fallback (safety) - check common field names
   if (formData.hours != null || formData.minutes != null) {
     const hours = Number(formData.hours || 0);
     const minutes = Number(formData.minutes || 0);
     return (hours * 60) + minutes;
   }
 
-  // Fallback support for hours_spent (alternate field name)
   if (formData.hours_spent != null) {
     return Number(formData.hours_spent) * 60;
-  }
-
-  // Generic duration field (assume minutes)
-  if (formData.duration != null) {
-    return Number(formData.duration || 0);
   }
 
   return 0;
@@ -87,16 +96,13 @@ export function buildTimeEntryPayload({
   formData = {},
   schema
 }) {
-  // ⚠️ Debug: Log form data before processing
-  console.log("🔍 FORM DATA:", formData);
-
   // ⚠️ Guard: entry type ID required
   if (!entryType?.id) {
     throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
   }
 
-  // Normalize duration (single source of truth)
-  const duration_minutes = normalizeDurationMinutes(formData);
+  // Normalize duration (single source of truth) - pass schema for dynamic field lookup
+  const duration_minutes = normalizeDurationMinutes(formData, schema);
   if (duration_minutes <= 0) {
     throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
   }
