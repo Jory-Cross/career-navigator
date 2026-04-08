@@ -64,17 +64,49 @@ export async function loadVocRehabSchema(entryTypeCode) {
       return [];
     }
 
+    // Fetch service codes for primary and secondary code fields
+    let serviceCodes = [];
+    try {
+      serviceCodes = await base44.entities.ServiceCode.filter({
+        is_active: true,
+        program_type: "vr"
+      });
+    } catch (err) {
+      console.error("Failed to load service codes:", err);
+    }
+
+    const primaryCodes = serviceCodes.filter(c => c.is_primary).map(c => ({
+      value: c.code,
+      label: c.display_label || c.code
+    }));
+
+    const secondaryCodes = serviceCodes.filter(c => c.is_secondary).map(c => ({
+      value: c.code,
+      label: c.display_label || c.code
+    }));
+
     return templates
       .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map(t => ({
-        key: t.field_key,
-        label: t.label,
-        type: t.field_type,
-        required: t.is_required || false,
-        placeholder: t.placeholder,
-        help_text: t.help_text,
-        options: t.options || [],
-      }));
+      .map(t => {
+        const field = {
+          key: t.field_key,
+          label: t.label,
+          type: t.field_type,
+          required: t.is_required || false,
+          placeholder: t.placeholder,
+          help_text: t.help_text,
+          options: t.options || [],
+        };
+
+        // Inject service code options for known fields
+        if (t.field_key === "primary_service_code" && primaryCodes.length > 0) {
+          field.options = primaryCodes;
+        } else if (t.field_key === "secondary_service_code" && secondaryCodes.length > 0) {
+          field.options = secondaryCodes;
+        }
+
+        return field;
+      });
   } catch (err) {
     console.error("Failed to load voc_rehab schema:", err);
     return [];

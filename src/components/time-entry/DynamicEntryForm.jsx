@@ -64,7 +64,12 @@ export default function DynamicEntryForm({
         payload.id = entry.id;
       }
 
+      console.log("[DynamicEntryForm] Submitting payload:", payload);
       await onSave?.(payload);
+    } catch (err) {
+      const errorMsg = err?.message || "Failed to save entry";
+      console.error("[DynamicEntryForm] Save failed:", err);
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }

@@ -544,47 +544,50 @@ export default function TimeLogDashboard({
                 }
 
                 const handleFormSave = async (payload) => {
-                  try {
-                    if (editingEntry?.id) {
-                      // Update existing entry
-                      await base44.entities.TimeEntry.update(editingEntry.id, {
-                        date: payload.date,
-                        duration_minutes: payload.duration || (payload.billable_hours ? parseInt(payload.billable_hours) : 0),
-                        description: payload.description,
-                        entry_type_code: payload.entry_type_code,
-                        start_time: payload.start_time || null,
-                        end_time: payload.end_time || null,
-                        form_data: payload.form_data
-                      });
-                      toast.success("Entry updated");
-                    } else {
-                      // Create new entry
-                      await base44.entities.TimeEntry.create({
-                        client_id: clientId,
-                        date: payload.date,
-                        duration_minutes: payload.duration || (payload.billable_hours ? parseInt(payload.billable_hours) : 0),
-                        description: payload.description,
-                        entry_type_code: payload.entry_type_code,
-                        start_time: payload.start_time || null,
-                        end_time: payload.end_time || null,
-                        form_data: payload.form_data,
-                        status: "submitted",
-                        is_reportable: true,
-                        is_billable: false,
-                        is_payroll_eligible: true,
-                        reporting_period_key: payload.date.substring(0, 7)
-                      });
-                      toast.success("Entry created");
-                    }
-                    setShowForm(false);
-                    setEditingEntry(null);
-                    setSelectedEntryTypeCode("");
-                    onRefresh();
-                  } catch (err) {
-                    console.error("Failed to save entry:", err);
-                    toast.error("Failed to save entry");
-                  }
-                };
+                   try {
+                     // Extract duration in minutes from multiple possible fields
+                     const durationMinutes = payload.duration_minutes || payload.duration || 0;
+
+                     if (editingEntry?.id) {
+                       // Update existing entry
+                       await base44.entities.TimeEntry.update(editingEntry.id, {
+                         date: payload.date,
+                         duration_minutes: durationMinutes,
+                         description: payload.description,
+                         entry_type_code: payload.entry_type_code,
+                         start_time: payload.start_time || null,
+                         end_time: payload.end_time || null,
+                         form_data: payload.form_data
+                       });
+                       toast.success("Entry updated");
+                     } else {
+                       // Create new entry
+                       await base44.entities.TimeEntry.create({
+                         client_id: clientId,
+                         date: payload.date,
+                         duration_minutes: durationMinutes,
+                         description: payload.description,
+                         entry_type_code: payload.entry_type_code,
+                         start_time: payload.start_time || null,
+                         end_time: payload.end_time || null,
+                         form_data: payload.form_data,
+                         status: "submitted",
+                         is_reportable: true,
+                         is_billable: false,
+                         is_payroll_eligible: true,
+                         reporting_period_key: payload.date.substring(0, 7)
+                       });
+                       toast.success("Entry created");
+                     }
+                     setShowForm(false);
+                     setEditingEntry(null);
+                     setSelectedEntryTypeCode("");
+                     onRefresh();
+                   } catch (err) {
+                     console.error("Failed to save entry:", err);
+                     toast.error("Failed to save entry");
+                   }
+                 };
 
                 return (
                   <FormEngine

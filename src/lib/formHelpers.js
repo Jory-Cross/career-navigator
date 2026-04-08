@@ -29,7 +29,7 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
   // Standard fields
   if (formData.date) topLevel.date = formData.date;
   if (formData.description) topLevel.description = formData.description;
-  if (formData.duration) topLevel.duration = formData.duration;
+  if (formData.duration) topLevel.duration_minutes = parseInt(formData.duration) || 0;
   if (formData.start_time) topLevel.start_time = formData.start_time;
   if (formData.end_time) topLevel.end_time = formData.end_time;
 
@@ -38,8 +38,9 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
     topLevel.date = formData.billable_service_date;
   }
 
-  if (formData.billable_hours && !topLevel.duration) {
-    topLevel.duration = formData.billable_hours;
+  if (formData.billable_hours && !topLevel.duration_minutes) {
+    // Convert hours to minutes for duration_minutes
+    topLevel.duration_minutes = parseInt(formData.billable_hours) * 60;
   }
 
   if (formData.activity_description && !topLevel.description) {
@@ -51,13 +52,13 @@ export function normalizeTopLevelFields(entryTypeCode, formData) {
     topLevel.date = formData.coaching_date;
   }
 
-  if (formData.hours && !topLevel.duration) {
+  if (formData.hours && !topLevel.duration_minutes) {
     // Convert hours to minutes for duration_minutes
-    topLevel.duration = parseInt(formData.hours) * 60;
+    topLevel.duration_minutes = parseInt(formData.hours) * 60;
   }
 
-  if (formData.activity && !topLevel.description) {
-    topLevel.description = formData.activity;
+  if (formData.activity_description && !topLevel.description) {
+    topLevel.description = formData.activity_description;
   }
 
   return topLevel;

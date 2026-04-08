@@ -23,9 +23,25 @@ export default function FormEngine({
       // For voc_rehab entry types (job_coaching, job_development, usor96), always load from ReportFieldTemplate
       if (config?.schemaKey === "voc_rehab") {
         setLoading(true);
-        const dynamicSchema = await loadVocRehabSchema(entryTypeCode);
-        setSchema(dynamicSchema);
-        setLoading(false);
+        try {
+          const dynamicSchema = await loadVocRehabSchema(entryTypeCode);
+          console.log(`[FormEngine] Loaded voc_rehab schema for ${entryTypeCode}:`, dynamicSchema);
+          
+          // Log service code field population
+          const serviceCodeFields = dynamicSchema.filter(f => 
+            f.key.includes("service_code") && f.type === "select"
+          );
+          serviceCodeFields.forEach(f => {
+            console.log(`[FormEngine] ${f.key}: ${f.options?.length || 0} options loaded`);
+          });
+          
+          setSchema(dynamicSchema);
+        } catch (err) {
+          console.error("[FormEngine] Failed to load voc_rehab schema:", err);
+          setSchema([]);
+        } finally {
+          setLoading(false);
+        }
       } else {
         const baseSchema = getSchemaForEntryType(entryTypeCode);
         setSchema(baseSchema);
