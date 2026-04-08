@@ -319,7 +319,6 @@ export default function TimeTracking() {
                           ) : (
                             <span className="text-xs text-slate-500 flex items-center gap-1"><User className="w-3 h-3" />Myself</span>
                           )}
-                          <Badge className={cn("text-[10px] border-0", catColors[entry.category])}>{entry.category?.replace(/_/g, " ")}</Badge>
                         </div>
                     </div>
                     <div className="text-xs text-slate-400 shrink-0">
