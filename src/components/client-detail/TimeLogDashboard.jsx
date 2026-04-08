@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
-import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
+import StructuredVocRehabForm from "@/components/time-entry/StructuredVocRehabForm";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -534,6 +534,7 @@ export default function TimeLogDashboard({
               {/* Render appropriate form based on selected type */}
               {(() => {
                 const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
+                const selectedType = entryTypes.find(t => t.code === activeEntryTypeCode);
                 
                 // For new entries, only render form if an entry type is selected
                 if (!editingEntry && !activeEntryTypeCode) {
@@ -544,6 +545,7 @@ export default function TimeLogDashboard({
                   );
                 }
                 
+                // Dedicated Job Coaching form
                 if (activeEntryTypeCode === 'job_coaching') {
                   return (
                     <JobCoachingTimeEntryForm
@@ -552,7 +554,10 @@ export default function TimeLogDashboard({
                       onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                     />
                   );
-                } else if (activeEntryTypeCode === 'usor96') {
+                }
+                
+                // Dedicated USOR96 form
+                if (activeEntryTypeCode === 'usor96') {
                   return (
                     <Usor96TimeEntryForm
                       clientId={clientId}
@@ -560,7 +565,23 @@ export default function TimeLogDashboard({
                       onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                     />
                   );
-                } else if (activeEntryTypeCode) {
+                }
+                
+                // Voc Rehab entry types use StructuredVocRehabForm
+                if (activeEntryTypeCode && selectedType?.program_type === 'vr') {
+                  return (
+                    <StructuredVocRehabForm
+                      entryTypeCode={activeEntryTypeCode}
+                      clientId={clientId}
+                      entry={editingEntry}
+                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
+                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                    />
+                  );
+                }
+                
+                // All other types use generic form
+                if (activeEntryTypeCode) {
                   return (
                     <TimeEntryFormContent
                       entry={editingEntry}
