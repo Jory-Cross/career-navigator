@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
+import { serviceCodeCache } from "@/lib/serviceCodeCache";
 
 /**
  * JobCoachingTimeEntryForm - Minimal USOR95 Job Coaching Time Entry
@@ -37,16 +38,17 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Load service codes
+  // Load service codes fresh on mount (no cached data)
   useEffect(() => {
-    base44.entities.ServiceCode.filter({
-      service_type: "job_coaching",
-      is_active: true
-    })
+    serviceCodeCache.fetchServiceCodes(true)
       .then(codes => {
-        setServiceCodes(codes.sort((a, b) => a.code.localeCompare(b.code)));
+        setServiceCodes(codes);
+        // Validate consistency
+        const options = codes.map(c => c.display_label);
+        serviceCodeCache.validateConsistency(options);
       })
-      .catch(() => {
+      .catch(err => {
+        console.error('Failed to load service codes:', err);
         toast.error("Failed to load service codes");
         setServiceCodes([]);
       })
@@ -116,6 +118,8 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
       });
 
       toast.success("Job coaching entry saved");
+      // Invalidate cache so next form fetch is fresh
+      serviceCodeCache.invalidate();
       onSuccess?.();
     } catch (err) {
       toast.error("Failed to save: " + err.message);
