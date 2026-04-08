@@ -22,40 +22,48 @@
  * @returns {number} Duration in minutes
  */
 function normalizeDurationMinutes(formData, schema) {
-  console.log("🔍 FORM DATA:", formData);
-  
-  if (!formData) return 0;
+  console.log("🔍 FORM DATA FULL:", JSON.stringify(formData, null, 2));
+  console.log(
+    "🔍 SCHEMA FIELDS:",
+    JSON.stringify(
+      (schema?.fields || []).map(f => ({
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        isDuration: f.isDuration,
+      })),
+      null,
+      2
+    )
+  );
 
-  // ✅ Already normalized as number
   if (typeof formData.duration_minutes === "number") {
     return formData.duration_minutes;
   }
 
-  // 🔑 FIND DURATION FIELD FROM SCHEMA
-  const durationField = schema?.fields?.find(
-    f =>
-      f.isDuration ||
-      f.key.toLowerCase().includes("hour") ||
-      f.label?.toLowerCase().includes("hour")
-  );
+  if (
+    typeof formData.duration_minutes === "string" &&
+    formData.duration_minutes.trim()
+  ) {
+    return Number(formData.duration_minutes);
+  }
+
+  const fields = schema?.fields || [];
+
+  const durationField =
+    fields.find(f => f.isDuration === true) ||
+    fields.find(f => (f.key || "").toLowerCase().includes("duration")) ||
+    fields.find(f => (f.key || "").toLowerCase().includes("hour")) ||
+    fields.find(f => (f.label || "").toLowerCase().includes("hours spent")) ||
+    fields.find(f => (f.label || "").toLowerCase().includes("hours")) ||
+    fields.find(f => (f.label || "").toLowerCase().includes("duration"));
 
   if (durationField) {
-    const value = formData[durationField.key];
-
-    if (value != null) {
-      return Number(value) * 60;
+    const raw = formData[durationField.key];
+    const value = Number(raw || 0);
+    if (value > 0) {
+      return value * 60;
     }
-  }
-
-  // Fallback (safety) - check common field names
-  if (formData.hours != null || formData.minutes != null) {
-    const hours = Number(formData.hours || 0);
-    const minutes = Number(formData.minutes || 0);
-    return (hours * 60) + minutes;
-  }
-
-  if (formData.hours_spent != null) {
-    return Number(formData.hours_spent) * 60;
   }
 
   return 0;
