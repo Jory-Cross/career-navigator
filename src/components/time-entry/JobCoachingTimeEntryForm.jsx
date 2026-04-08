@@ -89,11 +89,11 @@ export default function JobCoachingTimeEntryForm({ clientId, onSuccess, onCancel
        });
 
       const fieldAnswers = {
-        coaching_date: form.coaching_date,
-        hours_of_coaching: form.hours_of_coaching,
-        job_coach_name: form.job_coach_name,
-        primary_service_code: form.primary_service_code,
-        ...(form.secondary_service_code && { secondary_service_code: form.secondary_service_code })
+        jc_date: form.coaching_date,
+        jc_hours: form.hours_of_coaching,
+        jc_job_coach_name: form.job_coach_name,
+        jc_primary_service_code: form.primary_service_code,
+        ...(form.secondary_service_code && { jc_secondary_service_code: form.secondary_service_code })
       };
 
       // Get the entry type record
