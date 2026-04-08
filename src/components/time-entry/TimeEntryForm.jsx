@@ -16,30 +16,31 @@ const STEPS = [
 ];
 
 function StepIndicator({ steps, currentStep }) {
-  return (
-    <div className="flex items-center gap-1 mb-6">
-      {steps.map((step, idx) => {
-        const currentIdx = steps.findIndex(s => s.id === currentStep);
-        const done = idx < currentIdx;
-        const active = idx === currentIdx;
-        return (
-          <React.Fragment key={step.id}>
-            <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-              done   ? "bg-emerald-100 text-emerald-700" :
-              active ? "bg-blue-600 text-white shadow-md shadow-blue-400/30" :
-                       "bg-slate-100 text-slate-400"
-            )}>
-              {done ? <Check className="w-3 h-3" /> : <step.icon className="w-3 h-3" />}
-              {step.label}
-            </div>
-            {idx < steps.length - 1 && <div className={cn("flex-1 h-px", done ? "bg-emerald-200" : "bg-slate-200")} />}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
+   return (
+     <div className="flex items-center gap-1 mb-6">
+       {steps.map((step, idx) => {
+         const currentIdx = steps.findIndex(s => s.id === currentStep);
+         const done = idx < currentIdx;
+         const active = idx === currentIdx;
+         const IconComponent = step.icon;
+         return (
+           <React.Fragment key={step.id}>
+             <div className={cn(
+               "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+               done   ? "bg-emerald-100 text-emerald-700" :
+               active ? "bg-blue-600 text-white shadow-md shadow-blue-400/30" :
+                        "bg-slate-100 text-slate-400"
+             )}>
+               {done ? <Check className="w-3 h-3" /> : <IconComponent className="w-3 h-3" />}
+               {step.label}
+             </div>
+             {idx < steps.length - 1 && <div className={cn("flex-1 h-px", done ? "bg-emerald-200" : "bg-slate-200")} />}
+           </React.Fragment>
+         );
+       })}
+     </div>
+   );
+ }
 
 function FieldRenderer({ field, value, onChange }) {
   const handleChange = (val) => onChange(field.field_key, val);
