@@ -99,11 +99,11 @@
     "is_active": {
       "type": "boolean",
       "default": true,
-      "description": "NEW: Soft-disable a mapping without deleting it"
+      "description": "Soft-disable a mapping without deleting it"
     },
     "notes": {
       "type": "string",
-      "description": "NEW: Internal notes explaining this mapping (e.g. 'Maps to line 3 in the USOR-95 header section')"
+      "description": "Internal notes explaining this mapping (e.g. 'Maps to line 3 in the USOR-95 header section')"
     }
   },
   "required": [

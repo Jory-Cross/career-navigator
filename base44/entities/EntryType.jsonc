@@ -77,12 +77,12 @@
     },
     "max_hours_per_period": {
       "type": "number",
-      "description": "NEW: Optional cap on hours per reporting period. Null = no cap."
+      "description": "Optional cap on hours per reporting period. Null = no cap."
     },
     "requires_field_answers": {
       "type": "boolean",
       "default": false,
-      "description": "NEW: If true, staff must complete ReportFieldAnswer before entry can be marked report_ready"
+      "description": "If true, staff must complete ReportFieldAnswer before entry can be marked report_ready"
     }
   },
   "required": [

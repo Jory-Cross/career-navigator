@@ -100,11 +100,11 @@
     },
     "generated_report_id": {
       "type": "string",
-      "description": "NEW: FK to GeneratedReport record this file belongs to"
+      "description": "FK to GeneratedReport record this file belongs to"
     },
     "entry_type_code": {
       "type": "string",
-      "description": "NEW: Entry type this report document covers (for filtering)"
+      "description": "Entry type this report document covers (for filtering)"
     }
   },
   "required": [

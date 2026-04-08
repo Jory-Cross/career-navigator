@@ -75,22 +75,20 @@
     },
     "employer_name": {
       "type": "string",
-      "description": "NEW: Denormalized employer for entries where employer may differ per visit"
+      "description": "Denormalized employer for entries where employer may differ per visit"
     },
     "report_ready": {
       "type": "boolean",
       "default": false,
-      "description": "NEW: True when field answers are complete and entry is approved for reporting"
+      "description": "True when field answers are complete and entry is approved for reporting"
     },
     "locked_in_report_id": {
       "type": "string",
-      "description": "NEW: ID of GeneratedReport that locked this entry. Null if not yet in a final report."
+      "description": "ID of GeneratedReport that locked this entry. Null if not yet in a final report."
     }
   },
   "required": [
     "employee_id",
-    "entry_type_id",
-    "entry_type_code",
     "date",
     "duration_minutes"
   ]

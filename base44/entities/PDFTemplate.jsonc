@@ -48,15 +48,15 @@
     },
     "max_rows": {
       "type": "number",
-      "description": "NEW: Maximum number of repeating row slots in this PDF template. Used by row mapper to know how many entries can fit."
+      "description": "Maximum number of repeating row slots in this PDF template. Used by row mapper to know how many entries can fit."
     },
     "row_field_prefix": {
       "type": "string",
-      "description": "NEW: Common prefix for row PDF field names (e.g. 'Row' \u2192 'Row1_Date', 'Row2_Date'). Helps auto-discover row fields."
+      "description": "Common prefix for row PDF field names (e.g. 'Row' \u2192 'Row1_Date', 'Row2_Date'). Helps auto-discover row fields."
     },
     "superseded_by_template_id": {
       "type": "string",
-      "description": "NEW: If this template version was replaced, points to the newer PDFTemplate ID."
+      "description": "If this template version was replaced, points to the newer PDFTemplate ID."
     }
   },
   "required": [
