@@ -1,32 +1,37 @@
 /**
- * VR Report Assembly
- * Step 2: Transform source records into structured report objects
+ * VR Report Assembly Layer
+ * Transforms source records into immutable structured report output
  * 
- * Inputs: TimeEntry, ReportFieldAnswer, Client, ServiceAuthorization
- * Output: Structured report object with header, rows, summary (never writes back)
+ * Inputs: TimeEntry, ReportFieldAnswer, Client, EntryType, ServiceAuthorization
+ * Output: Structured AssembledReport with header, rows, summary, totals, metadata, audit trail
+ * 
+ * ⚠️ READONLY: Never writes back to TimeEntry or ReportFieldAnswer
  */
 
 /**
- * Assemble a single client report
- * Groups entries by entry_type, client, and period
- * Returns structured object ready for PDF filling
+ * Assemble a single client report with full audit trail
+ * 
+ * Grouping rules:
+ *   - usor96_monthly: by client + month/year (all entry types)
+ *   - usor95_monthly: by client + employer + month/year (job_coaching type)
+ *   - usor148_service_period: by client + entry_type + date range
  */
 export async function assembleClientReport(base44, clientId, dateFrom, dateTo, options = {}) {
   const {
-    entryTypeId = null,
+    reportMode = 'usor95_monthly',  // usor95_monthly | usor96_monthly | usor148_service_period
     entryTypeCode = null,
-    groupByEmployer = false,
     includeAuthorization = true,
     clientData = null,
-    authorizationData = null
+    entryTypeData = null
   } = options;
 
   try {
-    // Fetch source records
-    const [client, timeEntries, fieldAnswers, authorizations] = await Promise.all([
+    // Fetch source records (read-only)
+    const [client, timeEntries, fieldAnswers, entryTypes, authorizations] = await Promise.all([
       clientData || fetchClient(base44, clientId),
-      fetchTimeEntries(base44, clientId, dateFrom, dateTo, entryTypeId, entryTypeCode),
-      fetchReportFieldAnswers(base44),
+      fetchTimeEntries(base44, clientId, dateFrom, dateTo, entryTypeCode),
+      fetchReportFieldAnswers(base44, entryTypeCode),
+      entryTypeData || fetchEntryTypes(base44),
       includeAuthorization ? fetchServiceAuthorizations(base44, clientId) : Promise.resolve([])
     ]);
 
@@ -38,53 +43,36 @@ export async function assembleClientReport(base44, clientId, dateFrom, dateTo, o
       return null; // No data to report
     }
 
-    // Build answers map for fast lookup
+    // Build maps for fast lookup
     const answersMap = {};
     fieldAnswers.forEach(fa => {
       answersMap[fa.time_entry_id] = fa;
     });
 
-    // Find matching authorization (first active one matching entry type)
-    let authorization = authorizationData;
-    if (!authorization && includeAuthorization && timeEntries.length > 0) {
-      const entryType = timeEntries[0].entry_type_code;
-      authorization = authorizations.find(a =>
-        a.status === 'active' &&
-        a.service_type_code === entryType &&
-        a.authorization_start_date <= dateFrom &&
-        a.authorization_end_date >= dateTo
-      );
-    }
+    const entryTypeMap = {};
+    entryTypes.forEach(et => {
+      entryTypeMap[et.code] = et;
+    });
 
-    // Group entries by employer if requested
-    let groupedEntries;
-    if (groupByEmployer) {
-      groupedEntries = groupEntriesByEmployer(timeEntries, answersMap);
-    } else {
-      groupedEntries = { 'all': timeEntries };
-    }
+    // Match entries to authorizations by entry_type_code and date range
+    const authMap = {};
+    authorizations.forEach(a => {
+      authMap[a.id] = a;
+    });
 
-    // Build structured report object
-    const report = {
-      metadata: {
-        client_id: clientId,
-        generated_at: new Date().toISOString(),
-        reporting_period_start: dateFrom,
-        reporting_period_end: dateTo,
-        total_entries: timeEntries.length,
-        group_by_employer: groupByEmployer
-      },
-      header: buildReportHeader(client, timeEntries, authorization, dateFrom, dateTo),
-      rows: buildReportRows(timeEntries, answersMap, authorization),
-      summary: buildReportSummary(timeEntries, answersMap, authorization),
-      groups: Object.entries(groupedEntries).map(([employer, entries]) => ({
-        employer,
-        rows: buildReportRows(entries, answersMap, authorization),
-        summary: buildReportSummary(entries, answersMap, authorization)
-      }))
-    };
+    // Assemble report using grouping rules for each report mode
+    const assembled = assembleByMode(
+      reportMode,
+      client,
+      timeEntries,
+      answersMap,
+      entryTypeMap,
+      authMap,
+      dateFrom,
+      dateTo
+    );
 
-    return report;
+    return assembled;
   } catch (error) {
     console.error(`assembleClientReport error for ${clientId}:`, error);
     throw error;
@@ -93,7 +81,7 @@ export async function assembleClientReport(base44, clientId, dateFrom, dateTo, o
 
 /**
  * Assemble batch reports for multiple clients
- * Returns array of assembled report objects
+ * Returns array of immutable assembled report objects
  */
 export async function assembleClientReports(base44, clientIds, dateFrom, dateTo, options = {}) {
   const reports = [];
@@ -114,10 +102,78 @@ export async function assembleClientReports(base44, clientIds, dateFrom, dateTo,
 }
 
 /**
+ * Assemble report by mode with appropriate grouping rules
+ */
+function assembleByMode(reportMode, client, timeEntries, answersMap, entryTypeMap, authMap, dateFrom, dateTo) {
+  const clientId = client.id;
+  const generatedAt = new Date().toISOString();
+
+  // Determine grouping based on report mode
+  let groups = [];
+  
+  if (reportMode === 'usor95_monthly') {
+    // Group by client + employer + month/year
+    groups = groupByEmployerAndMonth(timeEntries, answersMap);
+  } else if (reportMode === 'usor96_monthly') {
+    // Group by client + month/year (all types)
+    groups = groupByMonth(timeEntries, answersMap);
+  } else if (reportMode === 'usor148_service_period') {
+    // Group by client + entry_type + date range
+    groups = groupByEntryType(timeEntries, answersMap);
+  }
+
+  // Build header (shared across all groups)
+  const header = buildReportHeader(client, timeEntries, entryTypeMap, authMap, dateFrom, dateTo);
+
+  // Build rows and summaries for each group
+  const rows = buildReportRows(timeEntries, answersMap, entryTypeMap, authMap);
+  const summary = buildReportSummary(timeEntries, answersMap, entryTypeMap, authMap);
+  const totals = buildReportTotals(timeEntries);
+
+  // Audit trail: which source records are included
+  const included_time_entry_ids = timeEntries.map(e => e.id);
+  const included_answer_ids = timeEntries.map(e => answersMap[e.id]?.id).filter(Boolean);
+
+  return {
+    // Immutable structured output
+    metadata: {
+      client_id: clientId,
+      report_mode: reportMode,
+      generated_at: generatedAt,
+      reporting_period_start: dateFrom,
+      reporting_period_end: dateTo,
+      total_entries: timeEntries.length,
+      total_answers_captured: included_answer_ids.length,
+      groups_count: groups.length
+    },
+    header,
+    rows,
+    summary,
+    totals,
+    groups,
+    // Audit trail for GeneratedReport.included_* fields
+    included_time_entry_ids,
+    included_answer_ids
+  };
+}
+
+/**
  * Build report header with client and authorization metadata
  */
-function buildReportHeader(client, timeEntries, authorization, dateFrom, dateTo) {
+function buildReportHeader(client, timeEntries, entryTypeMap, authMap, dateFrom, dateTo) {
   const dateRange = getDateRange(timeEntries);
+  
+  // Find primary authorization (first active matching entry type)
+  let primaryAuth = null;
+  if (timeEntries.length > 0) {
+    const firstEntry = timeEntries[0];
+    primaryAuth = Object.values(authMap).find(a =>
+      a.status === 'active' &&
+      a.entry_type_code === firstEntry.entry_type_code &&
+      a.service_start_date <= dateFrom &&
+      a.service_end_date >= dateTo
+    );
+  }
 
   return {
     // Client info
@@ -143,13 +199,14 @@ function buildReportHeader(client, timeEntries, authorization, dateFrom, dateTo)
     total_hours: getTotalHours(timeEntries),
 
     // Authorization data
-    authorization_number: authorization?.authorization_number || '',
-    vr_counselor_name: authorization?.vr_counselor_name || '',
-    job_goal: authorization?.job_goal || '',
-    employer_name: authorization?.employer_name || '',
-    total_authorized_hours: authorization?.total_authorized_hours || 0,
-    hours_used: authorization?.used_hours || 0,
-    hours_remaining: authorization?.remaining_hours || 0,
+    authorization_number: primaryAuth?.authorization_number || '',
+    vr_counselor_name: primaryAuth?.vr_counselor_name || '',
+    vr_counselor_email: primaryAuth?.vr_counselor_email || '',
+    job_goal: primaryAuth?.job_goal || client.target_role || '',
+    employer_name: primaryAuth?.employer_name || client.workplace_name || '',
+    total_authorized_hours: primaryAuth?.total_authorized_hours || 0,
+    hours_used: primaryAuth?.used_hours || 0,
+    hours_remaining: primaryAuth?.remaining_hours || 0,
 
     // Metadata
     report_generated_date: new Date().toISOString().split('T')[0]
@@ -157,47 +214,54 @@ function buildReportHeader(client, timeEntries, authorization, dateFrom, dateTo)
 }
 
 /**
- * Build repeating row data (one row per time entry)
+ * Build repeating row data (one row per time entry, sorted by date)
  */
-function buildReportRows(timeEntries, answersMap, authorization) {
-  return timeEntries.map((entry, index) => {
-    const fieldAnswer = answersMap[entry.id];
-    const answers = fieldAnswer?.answers || {};
+function buildReportRows(timeEntries, answersMap, entryTypeMap, authMap) {
+  return [...timeEntries]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((entry, index) => {
+      const fieldAnswer = answersMap[entry.id];
+      const answers = fieldAnswer?.answers || {};
+      const entryType = entryTypeMap[entry.entry_type_code];
 
-    return {
-      // Row identifier
-      row_number: index + 1,
-      entry_id: entry.id,
+      return {
+        // Row identifier
+        row_number: index + 1,
+        time_entry_id: entry.id,
 
-      // Core time entry data
-      date: entry.date,
-      duration_minutes: entry.duration_minutes || 0,
-      duration_hours: ((entry.duration_minutes || 0) / 60).toFixed(2),
-      start_time: entry.start_time || '',
-      end_time: entry.end_time || '',
+        // Core time entry data
+        date: entry.date,
+        duration_minutes: entry.duration_minutes || 0,
+        duration_hours: roundHours(entry.duration_minutes),
+        start_time: entry.start_time || '',
+        end_time: entry.end_time || '',
 
-      // Entry classification
-      entry_type_id: entry.entry_type_id || '',
-      entry_type_code: entry.entry_type_code || '',
-      description: entry.description || '',
+        // Entry classification
+        entry_type_id: entry.entry_type_id || '',
+        entry_type_code: entry.entry_type_code || '',
+        entry_type_name: entryType?.name || '',
+        description: entry.description || '',
 
-      // Notes
-      general_notes: entry.general_notes || '',
+        // Notes (internal only)
+        general_notes: entry.general_notes || '',
 
-      // Dynamic report answers (e.g., employer_name, goal_addressed, units)
-      ...answers,
+        // Dynamic report field answers from ReportFieldAnswer.answers
+        ...answers,
 
-      // Authorization reference
-      service_authorization_id: entry.service_authorization_id || '',
-      _authorization_valid: isAuthorizationValidForEntry(entry, authorization)
-    };
-  });
+        // Authorization reference
+        service_authorization_id: entry.service_authorization_id || '',
+        authorization_valid: entry.service_authorization_id ? !!authMap[entry.service_authorization_id] : null,
+
+        // Report ready flag (indicates if all required fields are complete)
+        report_ready: entry.report_ready || false
+      };
+    });
 }
 
 /**
  * Build summary aggregations
  */
-function buildReportSummary(timeEntries, answersMap, authorization) {
+function buildReportSummary(timeEntries, answersMap, entryTypeMap, authMap) {
   const byEntryType = {};
   const byEmployer = {};
   const fieldTotals = {};
@@ -207,97 +271,148 @@ function buildReportSummary(timeEntries, answersMap, authorization) {
     const fieldAnswer = answersMap[entry.id];
     const answers = fieldAnswer?.answers || {};
 
-    // Aggregate by entry type
+    // Aggregate by entry type code
     const typeKey = entry.entry_type_code || 'unknown';
     if (!byEntryType[typeKey]) {
-      byEntryType[typeKey] = { count: 0, total_minutes: 0, entries: [] };
+      byEntryType[typeKey] = { count: 0, total_minutes: 0, entry_ids: [] };
     }
     byEntryType[typeKey].count++;
     byEntryType[typeKey].total_minutes += entry.duration_minutes || 0;
-    byEntryType[typeKey].entries.push(entry.id);
+    byEntryType[typeKey].entry_ids.push(entry.id);
 
-    // Aggregate by employer (from answers)
+    // Aggregate by employer (from field answers)
     const employer = answers.employer_name || 'Unknown';
     if (!byEmployer[employer]) {
-      byEmployer[employer] = { count: 0, total_minutes: 0, entries: [] };
+      byEmployer[employer] = { count: 0, total_minutes: 0, entry_ids: [] };
     }
     byEmployer[employer].count++;
     byEmployer[employer].total_minutes += entry.duration_minutes || 0;
-    byEmployer[employer].entries.push(entry.id);
+    byEmployer[employer].entry_ids.push(entry.id);
 
-    // Aggregate numeric answers
+    // Aggregate numeric field answers
     Object.entries(answers).forEach(([key, value]) => {
       const numValue = parseFloat(value);
       if (!isNaN(numValue)) {
         if (!fieldTotals[key]) {
-          fieldTotals[key] = { sum: 0, count: 0, avg: 0 };
+          fieldTotals[key] = { sum: 0, count: 0 };
         }
         fieldTotals[key].sum += numValue;
         fieldTotals[key].count++;
-        fieldTotals[key].avg = parseFloat((fieldTotals[key].sum / fieldTotals[key].count).toFixed(2));
       }
     });
 
     totalMinutes += entry.duration_minutes || 0;
   });
 
-  // Format aggregates
-  const formatAggregates = (agg) => {
-    const formatted = {};
-    Object.entries(agg).forEach(([key, data]) => {
-      if (key === 'entries') return; // Skip array
-      formatted[key] = key === 'count' ? data : typeof data === 'number' ? (data / 60).toFixed(2) : data;
-    });
-    return formatted;
-  };
-
   return {
     total_entries: timeEntries.length,
     total_minutes: totalMinutes,
-    total_hours: (totalMinutes / 60).toFixed(2),
-    average_hours_per_entry: ((totalMinutes / 60) / Math.max(timeEntries.length, 1)).toFixed(2),
-    by_entry_type: Object.entries(byEntryType).reduce((acc, [k, v]) => {
-      acc[k] = {
+    total_hours: roundHours(totalMinutes),
+    average_hours_per_entry: roundHours(totalMinutes / Math.max(timeEntries.length, 1)),
+    by_entry_type: Object.fromEntries(
+      Object.entries(byEntryType).map(([k, v]) => [k, {
         count: v.count,
         total_minutes: v.total_minutes,
-        total_hours: (v.total_minutes / 60).toFixed(2),
-        entry_ids: v.entries
-      };
-      return acc;
-    }, {}),
-    by_employer: Object.entries(byEmployer).reduce((acc, [k, v]) => {
-      acc[k] = {
+        total_hours: roundHours(v.total_minutes),
+        entry_ids: v.entry_ids
+      }])
+    ),
+    by_employer: Object.fromEntries(
+      Object.entries(byEmployer).map(([k, v]) => [k, {
         count: v.count,
         total_minutes: v.total_minutes,
-        total_hours: (v.total_minutes / 60).toFixed(2),
-        entry_ids: v.entries
-      };
-      return acc;
-    }, {}),
-    field_totals: fieldTotals,
-    authorization_hours_used: authorization?.used_hours || 0,
-    authorization_hours_remaining: authorization?.remaining_hours || 0
+        total_hours: roundHours(v.total_minutes),
+        entry_ids: v.entry_ids
+      }])
+    ),
+    field_totals: Object.fromEntries(
+      Object.entries(fieldTotals).map(([k, v]) => [k, {
+        sum: v.sum,
+        count: v.count,
+        average: roundHours(v.sum / v.count)
+      }])
+    )
   };
 }
 
 /**
- * Group entries by employer (from report field answers)
+ * Build totals aggregation
  */
-function groupEntriesByEmployer(timeEntries, answersMap) {
-  const grouped = {};
+function buildReportTotals(timeEntries) {
+  const totalMinutes = getTotalMinutes(timeEntries);
+  return {
+    entry_count: timeEntries.length,
+    total_minutes: totalMinutes,
+    total_hours: roundHours(totalMinutes)
+  };
+}
+
+/**
+ * Group entries by employer + month/year (USOR95)
+ */
+function groupByEmployerAndMonth(timeEntries, answersMap) {
+  const groups = {};
 
   timeEntries.forEach(entry => {
     const fieldAnswer = answersMap[entry.id];
     const answers = fieldAnswer?.answers || {};
     const employer = answers.employer_name || 'Unknown';
+    const monthKey = entry.date.substring(0, 7); // YYYY-MM
 
-    if (!grouped[employer]) {
-      grouped[employer] = [];
+    const groupKey = `${employer}|${monthKey}`;
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        employer,
+        month: monthKey,
+        entries: []
+      };
     }
-    grouped[employer].push(entry);
+    groups[groupKey].entries.push(entry);
   });
 
-  return grouped;
+  return Object.values(groups);
+}
+
+/**
+ * Group entries by month/year (USOR96 - all types)
+ */
+function groupByMonth(timeEntries, answersMap) {
+  const groups = {};
+
+  timeEntries.forEach(entry => {
+    const monthKey = entry.date.substring(0, 7); // YYYY-MM
+
+    if (!groups[monthKey]) {
+      groups[monthKey] = {
+        month: monthKey,
+        entries: []
+      };
+    }
+    groups[monthKey].entries.push(entry);
+  });
+
+  return Object.values(groups);
+}
+
+/**
+ * Group entries by entry_type (USOR148 service period)
+ */
+function groupByEntryType(timeEntries, answersMap) {
+  const groups = {};
+
+  timeEntries.forEach(entry => {
+    const typeCode = entry.entry_type_code || 'unknown';
+
+    if (!groups[typeCode]) {
+      groups[typeCode] = {
+        entry_type_code: typeCode,
+        entries: []
+      };
+    }
+    groups[typeCode].entries.push(entry);
+  });
+
+  return Object.values(groups);
 }
 
 /**
@@ -326,7 +441,7 @@ function getTotalMinutes(timeEntries) {
  * Helper: Get total hours
  */
 function getTotalHours(timeEntries) {
-  return (getTotalMinutes(timeEntries) / 60).toFixed(2);
+  return roundHours(getTotalMinutes(timeEntries));
 }
 
 /**
@@ -343,42 +458,48 @@ function getReportingMonth(dateStr) {
 }
 
 /**
- * Helper: Check if authorization is valid for entry
- */
-function isAuthorizationValidForEntry(entry, authorization) {
-  if (!authorization) return false;
-  return (
-    authorization.status === 'active' &&
-    entry.date >= authorization.authorization_start_date &&
-    entry.date <= authorization.authorization_end_date &&
-    authorization.remaining_hours > 0
-  );
-}
-
-/**
- * Fetch helpers (never write back)
+ * Fetch helpers (read-only, never write back)
  */
 async function fetchClient(base44, clientId) {
   const clients = await base44.entities.Client.filter({ id: clientId });
   return clients[0] || null;
 }
 
-async function fetchTimeEntries(base44, clientId, dateFrom, dateTo, entryTypeId, entryTypeCode) {
+async function fetchTimeEntries(base44, clientId, dateFrom, dateTo, entryTypeCode) {
   const query = {
     client_id: clientId,
-    date: { $gte: dateFrom, $lte: dateTo }
+    status: { $ne: 'void' }
   };
 
-  if (entryTypeId) query.entry_type_id = entryTypeId;
-  if (entryTypeCode) query.entry_type_code = entryTypeCode;
+  if (entryTypeCode) {
+    query.entry_type_code = entryTypeCode;
+  }
 
-  return await base44.entities.TimeEntry.filter(query);
+  const entries = await base44.entities.TimeEntry.filter(query);
+  
+  // Filter by date range
+  return entries.filter(e => e.date >= dateFrom && e.date <= dateTo);
 }
 
-async function fetchReportFieldAnswers(base44) {
-  return await base44.entities.ReportFieldAnswer.list();
+async function fetchReportFieldAnswers(base44, entryTypeCode) {
+  const query = entryTypeCode ? { entry_type_code: entryTypeCode } : {};
+  return await base44.entities.ReportFieldAnswer.filter(query);
+}
+
+async function fetchEntryTypes(base44) {
+  return await base44.entities.EntryType.filter({ is_active: true });
 }
 
 async function fetchServiceAuthorizations(base44, clientId) {
-  return await base44.entities.ServiceAuthorization.filter({ client_id: clientId });
+  return await base44.entities.ServiceAuthorization.filter({ 
+    client_id: clientId,
+    status: 'active'
+  });
+}
+
+/**
+ * Helper: Round minutes to hours with 2 decimal precision
+ */
+function roundHours(minutes) {
+  return Math.round(((minutes || 0) / 60) * 100) / 100;
 }
