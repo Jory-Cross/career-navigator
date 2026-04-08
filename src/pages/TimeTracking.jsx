@@ -318,7 +318,14 @@ export default function TimeTracking() {
 
         <div className="space-y-6">
           <ActiveTimer clients={allClients} onTimeSaved={handleRefresh} />
-          <QuickTimeLog clients={allClients} onTimeSaved={handleRefresh} />
+          <QuickTimeLog 
+            clients={allClients} 
+            onTimeSaved={handleRefresh}
+            onRouteToStructuredForm={(clientId, entryTypeCode, prefill) => {
+              // Route to structured form if needed
+              console.log("Route to structured form:", clientId, entryTypeCode, prefill);
+            }}
+          />
         </div>
       </div>
       {/* New Entry Dialog */}

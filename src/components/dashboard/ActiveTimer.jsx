@@ -1,20 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Play, Square, Clock, User } from "lucide-react";
+import { Play, Square, Clock, User, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
+import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 
 export default function ActiveTimer({ clients, onTimeSaved }) {
   const [isRunning, setIsRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [selectedClient, setSelectedClient] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("consultation");
+  const [selectedEntryType, setSelectedEntryType] = useState(null);
+  const [saving, setSaving] = useState(false);
   const intervalRef = useRef(null);
   const startTimeRef = useRef(null);
+  const startDateRef = useRef(null);
 
   useEffect(() => {
     if (isRunning) {
@@ -33,44 +38,54 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
   };
 
   const handleStart = () => {
-    if (!selectedClient) return;
+    if (!selectedClient || !selectedEntryType) {
+      toast.error("Please select a client and service type");
+      return;
+    }
     setIsRunning(true);
     startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+    startDateRef.current = new Date().toISOString().split("T")[0];
   };
 
   const handleStop = async () => {
     setIsRunning(false);
     clearInterval(intervalRef.current);
-    const durationMinutes = Math.max(1, Math.round(seconds / 60));
-    const endTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-    const date = new Date().toISOString().split("T")[0];
+    setSaving(true);
 
-    await base44.entities.TimeEntry.create({
-      client_id: selectedClient,
-      date,
-      duration_minutes: durationMinutes,
-      description: description || "Session",
-      category,
-      start_time: startTimeRef.current,
-      end_time: endTime
-    });
+    try {
+      const durationMinutes = Math.max(1, Math.round(seconds / 60));
+      const endTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+      const date = startDateRef.current || new Date().toISOString().split("T")[0];
+      const actualClientId = selectedClient?.startsWith('self:') ? null : selectedClient;
 
-    // Create calendar appointment
-    const startDateTime = `${date}T${startTimeRef.current}`;
-    const endDateTime = `${date}T${endTime}`;
-    
-    await base44.entities.Meeting.create({
-      client_id: selectedClient,
-      title: description || "Session",
-      meeting_type: category,
-      start_datetime: startDateTime,
-      end_datetime: endDateTime,
-      status: "completed"
-    });
+      // DUAL-WRITE: Use standardized submission function
+      await submitTimeEntryWithDualWrite({
+        clientId: actualClientId,
+        entryTypeId: selectedEntryType?.id,
+        entryTypeCode: selectedEntryType?.code,
+        date,
+        startTime: startTimeRef.current,
+        endTime: endTime,
+        durationMinutes,
+        location: null,
+        description: description || selectedEntryType?.name || "Timer session",
+        serviceAuthorizationId: null,
+        fieldAnswers: {},
+        asDraft: true // Save as draft since we may not have all required fields
+      });
 
-    setSeconds(0);
-    setDescription("");
-    if (onTimeSaved) onTimeSaved();
+      toast.success("Time logged");
+      setSeconds(0);
+      setDescription("");
+      setSelectedEntryType(null);
+      setSelectedClient("");
+      if (onTimeSaved) onTimeSaved();
+    } catch (error) {
+      console.error("Failed to save time entry:", error);
+      toast.error("Failed to log time");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const clientName = clients.find(c => c.id === selectedClient);
@@ -112,6 +127,7 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
                 <SelectValue placeholder="Select client..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="self:true">👤 Myself (no client)</SelectItem>
                 {clients.filter(c => c.status === "active" && !c.is_archived).map(c => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.first_name} {c.last_name}
@@ -119,26 +135,25 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
                 ))}
               </SelectContent>
             </Select>
+            
             <Input
-              placeholder="What are you working on?"
+              placeholder="Description (optional)..."
               value={description}
               onChange={e => setDescription(e.target.value)}
               className="border-slate-200 text-sm"
             />
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="border-slate-200 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="consultation">Consultation</SelectItem>
-                <SelectItem value="resume_work">Resume Work</SelectItem>
-                <SelectItem value="job_search">Job Search</SelectItem>
-                <SelectItem value="interview_prep">Interview Prep</SelectItem>
-                <SelectItem value="follow_up">Follow Up</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Entry Type Picker - compact mode */}
+            <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+              <label className="text-xs font-medium text-slate-700 block mb-1.5">Service Type *</label>
+              <EntryTypePicker
+                value={selectedEntryType?.id}
+                onChange={setSelectedEntryType}
+                mode="compact"
+                showDescriptions={false}
+                groupByProgram={false}
+              />
+            </div>
           </div>
         )}
 
@@ -150,9 +165,11 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
               : "bg-emerald-600 hover:bg-emerald-700 text-white"
           )}
           onClick={isRunning ? handleStop : handleStart}
-          disabled={!isRunning && !selectedClient}
+          disabled={(!isRunning && !selectedClient) || (!isRunning && !selectedEntryType) || saving}
         >
-          {isRunning ? (
+          {saving ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+          ) : isRunning ? (
             <><Square className="w-4 h-4 mr-2" /> Stop & Save</>
           ) : (
             <><Play className="w-4 h-4 mr-2" /> Start Timer</>
