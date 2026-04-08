@@ -552,7 +552,13 @@ export default function TimeTracking() {
                       console.log("[TimeTracking] Edit updateData:", updateData);
                       console.log("[TimeTracking] Editing entry ID:", selectedEntry?.id);
 
+                      console.log("[TimeTracking] About to call TimeEntry.update");
                       await base44.entities.TimeEntry.update(selectedEntry.id, updateData);
+                      console.log("[TimeTracking] TimeEntry.update resolved successfully");
+
+                      const updated = await base44.entities.TimeEntry.get(selectedEntry.id);
+                      console.log("[TimeTracking] Fresh record after update:", updated);
+
                       toast.success("Entry updated");
                       setShowEditForm(false);
                       setSelectedEntry(null);
