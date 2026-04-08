@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 
 const catColors = {
@@ -328,7 +327,6 @@ export default function TimeTracking() {
         </div>
 
         <div className="space-y-6">
-          <ActiveTimer clients={allClients} onTimeSaved={handleRefresh} />
           <QuickTimeLog 
             clients={allClients} 
             onTimeSaved={handleRefresh}
