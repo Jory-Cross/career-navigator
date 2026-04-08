@@ -13,29 +13,32 @@
  */
 
 /**
+ * Extract fields array from schema, supporting both shapes:
+ * - Array of fields directly
+ * - Object with { fields: [...] }
+ * 
+ * @param {Array | Object} schema
+ * @returns {Array} Fields array
+ */
+function getSchemaFields(schema) {
+  if (Array.isArray(schema)) return schema;
+  if (Array.isArray(schema?.fields)) return schema.fields;
+  return [];
+}
+
+/**
  * Single source of truth for normalizing duration to minutes.
  * Reads from schema to find the actual duration field (not hardcoded keys).
  * Prevents regressions by centralizing all duration conversions.
  * 
  * @param {Record<string, any>} formData
- * @param {Object} [schema] - Field schema with fields array
+ * @param {Array | Object} [schema] - Field schema (array or object with fields)
  * @returns {number} Duration in minutes
  */
 function normalizeDurationMinutes(formData, schema) {
   console.log("🔍 FORM DATA FULL:", JSON.stringify(formData, null, 2));
-  console.log(
-    "🔍 SCHEMA FIELDS:",
-    JSON.stringify(
-      (schema?.fields || []).map(f => ({
-        key: f.key,
-        label: f.label,
-        type: f.type,
-        isDuration: f.isDuration,
-      })),
-      null,
-      2
-    )
-  );
+
+  if (!formData) return 0;
 
   if (typeof formData.duration_minutes === "number") {
     return formData.duration_minutes;
@@ -48,7 +51,21 @@ function normalizeDurationMinutes(formData, schema) {
     return Number(formData.duration_minutes);
   }
 
-  const fields = schema?.fields || [];
+  const fields = getSchemaFields(schema);
+
+  console.log(
+    "🔍 SCHEMA FIELDS:",
+    JSON.stringify(
+      fields.map(f => ({
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        isDuration: f.isDuration,
+      })),
+      null,
+      2
+    )
+  );
 
   const durationField =
     fields.find(f => f.isDuration === true) ||
@@ -64,6 +81,16 @@ function normalizeDurationMinutes(formData, schema) {
     if (value > 0) {
       return value * 60;
     }
+  }
+
+  if (formData.hours != null || formData.minutes != null) {
+    const hours = Number(formData.hours || 0);
+    const minutes = Number(formData.minutes || 0);
+    return (hours * 60) + minutes;
+  }
+
+  if (formData.hours_spent != null) {
+    return Number(formData.hours_spent) * 60;
   }
 
   return 0;
@@ -109,8 +136,11 @@ export function buildTimeEntryPayload({
     throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
   }
 
+  // Normalize schema shape to object form for consistent handling
+  const normalizedSchema = Array.isArray(schema) ? { fields: schema } : schema;
+
   // Normalize duration (single source of truth) - pass schema for dynamic field lookup
-  const duration_minutes = normalizeDurationMinutes(formData, schema);
+  const duration_minutes = normalizeDurationMinutes(formData, normalizedSchema);
   if (duration_minutes <= 0) {
     throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
   }
@@ -141,7 +171,7 @@ export function buildTimeEntryPayload({
   }
 
   // Template/form data (nested)
-  const form_data = mapTemplateFields(schema, formData);
+  const form_data = mapTemplateFields(normalizedSchema, formData);
 
   return {
     ...topLevel,
@@ -153,13 +183,13 @@ export function buildTimeEntryPayload({
  * Map form data to template fields based on schema.
  * Only saves fields defined in schema—prevents labels, UI helpers, and duplicates from leaking.
  * 
- * @param {Object} schema - Field schema
+ * @param {Array | Object} schema - Field schema (array or object with fields)
  * @param {Record<string, any>} formData
  * @returns {Record<string, any>} Filtered form data
  */
 function mapTemplateFields(schema, formData) {
   const result = {};
-  const fields = schema?.fields ?? [];
+  const fields = getSchemaFields(schema);
 
   for (const field of fields) {
     const key = field.key;
