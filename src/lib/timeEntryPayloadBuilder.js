@@ -13,8 +13,8 @@
  */
 
 /**
- * Normalize duration_minutes from form data.
- * Handles multiple field names and unit conversions.
+ * Single source of truth for normalizing duration to minutes.
+ * Prevents regressions by centralizing all duration conversions.
  * 
  * @param {Record<string, any>} formData
  * @returns {number} Duration in minutes
@@ -22,41 +22,26 @@
 function normalizeDurationMinutes(formData) {
   if (!formData) return 0;
 
-  // Try direct minutes field
-  if (formData.duration_minutes != null) {
-    const minutes = Number(formData.duration_minutes);
-    return minutes > 0 ? minutes : 0;
+  // Direct number value
+  if (typeof formData.duration_minutes === "number") {
+    return formData.duration_minutes;
   }
 
-  // Try hours field (convert to minutes)
-  if (formData.duration_hours != null) {
-    const hours = Number(formData.duration_hours);
-    return hours > 0 ? Math.round(hours * 60) : 0;
+  // String value (parse it)
+  if (typeof formData.duration_minutes === "string" && formData.duration_minutes.trim()) {
+    return Number(formData.duration_minutes);
   }
 
-  // Try entry-type-specific hours fields
-  const specificHoursFields = [
-    'jc_hours', 'jd_hours', 'coaching_hours', 'development_hours',
-    'wbl_hours', 'admin_hours', 'cbs_hours', 'iep_hours'
-  ];
-  
-  for (const field of specificHoursFields) {
-    if (formData[field] != null) {
-      const hours = Number(formData[field]);
-      return hours > 0 ? Math.round(hours * 60) : 0;
-    }
+  // Separate hours and minutes fields
+  if (formData.hours != null || formData.minutes != null) {
+    const hours = Number(formData.hours || 0);
+    const minutes = Number(formData.minutes || 0);
+    return (hours * 60) + minutes;
   }
 
-  // Try start/end time calculation
-  if (formData.start_time && formData.end_time) {
-    try {
-      const start = new Date(`2000-01-01T${formData.start_time}`);
-      const end = new Date(`2000-01-01T${formData.end_time}`);
-      const diff = (end - start) / (1000 * 60); // Convert ms to minutes
-      return diff > 0 ? Math.round(diff) : 0;
-    } catch {
-      return 0;
-    }
+  // Generic duration field (assume minutes)
+  if (formData.duration != null) {
+    return Number(formData.duration || 0);
   }
 
   return 0;
@@ -131,9 +116,9 @@ export function buildTimeEntryPayload({
     throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
   }
 
-  // Normalize duration
+  // Normalize duration (single source of truth)
   const duration_minutes = normalizeDurationMinutes(formData);
-  if (!duration_minutes || duration_minutes <= 0) {
+  if (duration_minutes <= 0) {
     throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
   }
 
@@ -170,6 +155,12 @@ export function buildTimeEntryPayload({
     form_data,
   };
 }
+
+/**
+ * Export normalizeDurationMinutes for direct use.
+ * This is the ONLY function to use for duration normalization.
+ */
+export { normalizeDurationMinutes };
 
 /**
  * Legacy exports for backward compatibility.
