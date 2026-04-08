@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowRight, CheckCircle2, Save, AlertCircle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ValidationResultsPanel from "@/components/reports/ValidationResultsPanel";
 
 /**
  * StructuredVRTimeEntryForm - Primary Structured VR Entry Experience
@@ -557,14 +558,35 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
     const completedRequired = requiredFields.filter(f => answers[f.field_key]);
     const reportReady = completedRequired.length === requiredFields.length;
 
-    return (
-      <Card className="p-6 space-y-5">
-        <div>
-          <h3 className="font-semibold text-base">Step 4 of 4: Review & Submit</h3>
-          <p className="text-xs text-slate-500 mt-1">Verify your entry before submitting</p>
-        </div>
+    // Build field answers map for validation panel
+    const fieldAnswersMap = { [coreData.date]: answers };
 
-        {/* Entry Status Summary */}
+    // Create a mock time entry for validation
+    const mockTimeEntry = {
+      id: "pending",
+      date: coreData.date,
+      start_time: coreData.start_time,
+      end_time: coreData.end_time,
+      duration_minutes: coreData.duration_hours ? Math.round(Number(coreData.duration_hours) * 60) : 0,
+      is_billable: entryType?.is_billable || false,
+      is_reportable: entryType?.report_mode !== "none"
+    };
+
+    const mockAuth = coreData.service_authorization_id
+      ? authorizations.find(a => a.id === coreData.service_authorization_id)
+      : null;
+
+    const currentClient = clients.find(c => c.id === clientId);
+
+    return (
+      <div className="space-y-5">
+        <Card className="p-6 space-y-5">
+          <div>
+            <h3 className="font-semibold text-base">Step 4 of 4: Review & Submit</h3>
+            <p className="text-xs text-slate-500 mt-1">Verify your entry before submitting</p>
+          </div>
+
+          {/* Entry Status Summary */}
         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-blue-900">{entryType.name}</span>
@@ -633,30 +655,41 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-2 border-t border-slate-200">
-          <Button variant="outline" onClick={() => setStep("dynamic_fields")} className="flex-none">
-            Back
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => save(true)}
-            disabled={saving}
-            className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-            Save Draft
-          </Button>
-          <Button
-            onClick={() => save(false)}
-            disabled={saving || (reportable.length > 0 && !reportReady)}
-            className="flex-1"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-            Submit Entry
-          </Button>
-        </div>
-      </Card>
+          {/* Actions */}
+          <div className="flex gap-2 pt-2 border-t border-slate-200">
+            <Button variant="outline" onClick={() => setStep("dynamic_fields")} className="flex-none">
+              Back
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => save(true)}
+              disabled={saving}
+              className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+              Save Draft
+            </Button>
+            <Button
+              onClick={() => save(false)}
+              disabled={saving || (reportable.length > 0 && !reportReady)}
+              className="flex-1"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+              Submit Entry
+            </Button>
+          </div>
+        </Card>
+
+        {/* Validation Panel */}
+        <ValidationResultsPanel
+          clientId={clientId}
+          entryTypeCode={entryType?.code}
+          timeEntries={[mockTimeEntry]}
+          reportFieldAnswers={{ [mockTimeEntry.id]: answers }}
+          serviceAuthorization={mockAuth}
+          client={currentClient}
+        />
+      </div>
     );
   }
 
