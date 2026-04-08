@@ -549,7 +549,15 @@ export default function TimeLogDashboard({
 
                    try {
                       // Extract duration in minutes from multiple possible fields
-                      const durationMinutes = payload.duration_minutes || payload.duration || 0;
+                      let durationMinutes = payload.duration_minutes || payload.duration || 0;
+
+                      // For structured forms, extract hours from form_data and convert to minutes
+                      if (durationMinutes === 0 && payload.form_data) {
+                        const hours = payload.form_data.jc_hours || payload.form_data.jd_hours || payload.form_data.ls_hours;
+                        if (hours) {
+                          durationMinutes = parseFloat(hours) * 60;
+                        }
+                      }
 
                       // For structured forms (job_coaching, etc), extract date from form_data
                       let dateValue = payload.date;
