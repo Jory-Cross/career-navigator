@@ -7,22 +7,31 @@ import { Clock, Plus, AlertCircle, ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
+import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 
 export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructuredForm }) {
-  const [clientId, setClientId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedEntryType, setSelectedEntryType] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
-  const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
+   const [clientId, setClientId] = useState("");
+   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+   const [startTime, setStartTime] = useState("");
+   const [endTime, setEndTime] = useState("");
+   const [description, setDescription] = useState("");
+   const [selectedEntryType, setSelectedEntryType] = useState(null);
+   const [saving, setSaving] = useState(false);
+   const [hasRequiredReportFields, setHasRequiredReportFields] = useState(false);
+   const [isBillableOrReportable, setIsBillableOrReportable] = useState(false);
+   const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
+
+  // Route to Job Coaching form if selected
+  useEffect(() => {
+    if (selectedEntryType?.code === "job_coaching") {
+      setShowJobCoachingForm(true);
+    }
+  }, [selectedEntryType?.code]);
 
   // Check for required report fields when entry type changes
   useEffect(() => {
-    if (selectedEntryType?.id) {
+    if (selectedEntryType?.id && selectedEntryType?.code !== "job_coaching") {
       setIsBillableOrReportable((selectedEntryType?.is_billable || selectedEntryType?.report_mode !== "none") ?? false);
 
       // Check if this entry type has required reporting fields
@@ -37,7 +46,7 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
       setHasRequiredReportFields(false);
       setIsBillableOrReportable(false);
     }
-  }, [selectedEntryType?.id]);
+  }, [selectedEntryType?.id, selectedEntryType?.code]);
 
   const calculateDuration = () => {
     if (!startTime || !endTime) return 0;
@@ -111,10 +120,46 @@ export default function QuickTimeLog({ clients, onTimeSaved, onRouteToStructured
     setSelectedEntryType(null);
   };
 
+  if (showJobCoachingForm && clientId) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <div className="h-1 w-full bg-violet-50" />
+        <div className="p-5">
+          <div className="mb-4">
+            <button
+              className="text-sm text-slate-500 hover:text-slate-700"
+              onClick={() => {
+                setShowJobCoachingForm(false);
+                setSelectedEntryType(null);
+                resetForm();
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+          <JobCoachingTimeEntryForm
+            clientId={clientId}
+            onSuccess={() => {
+              setShowJobCoachingForm(false);
+              setSelectedEntryType(null);
+              resetForm();
+              onTimeSaved();
+            }}
+            onCancel={() => {
+              setShowJobCoachingForm(false);
+              setSelectedEntryType(null);
+              resetForm();
+            }}
+          />
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="border-0 shadow-sm">
-      <div className="h-1 w-full bg-violet-50" />
-      <div className="p-5 space-y-4">
+     <Card className="border-0 shadow-sm">
+       <div className="h-1 w-full bg-violet-50" />
+       <div className="p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
           <Plus className="w-4 h-4" />
           <span>Quick Log</span>

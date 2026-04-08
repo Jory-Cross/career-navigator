@@ -9,17 +9,19 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
+import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 
 export default function ActiveTimer({ clients, onTimeSaved }) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [seconds, setSeconds] = useState(0);
-  const [selectedClient, setSelectedClient] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedEntryType, setSelectedEntryType] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const intervalRef = useRef(null);
-  const startTimeRef = useRef(null);
-  const startDateRef = useRef(null);
+   const [isRunning, setIsRunning] = useState(false);
+   const [seconds, setSeconds] = useState(0);
+   const [selectedClient, setSelectedClient] = useState("");
+   const [description, setDescription] = useState("");
+   const [selectedEntryType, setSelectedEntryType] = useState(null);
+   const [saving, setSaving] = useState(false);
+   const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
+   const intervalRef = useRef(null);
+   const startTimeRef = useRef(null);
+   const startDateRef = useRef(null);
 
   useEffect(() => {
     if (isRunning) {
@@ -37,15 +39,26 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const handleStart = () => {
-    if (!selectedClient || !selectedEntryType) {
-      toast.error("Please select a client and service type");
-      return;
+  // Route to Job Coaching form if selected
+  useEffect(() => {
+    if (selectedEntryType?.code === "job_coaching" && selectedClient) {
+      setShowJobCoachingForm(true);
     }
-    setIsRunning(true);
-    startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-    startDateRef.current = new Date().toISOString().split("T")[0];
-  };
+  }, [selectedEntryType?.code, selectedClient]);
+
+  const handleStart = () => {
+     if (!selectedClient || !selectedEntryType) {
+       toast.error("Please select a client and service type");
+       return;
+     }
+     if (selectedEntryType?.code === "job_coaching") {
+       setShowJobCoachingForm(true);
+       return;
+     }
+     setIsRunning(true);
+     startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+     startDateRef.current = new Date().toISOString().split("T")[0];
+   };
 
   const handleStop = async () => {
     setIsRunning(false);
@@ -89,6 +102,42 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
   };
 
   const clientName = clients.find(c => c.id === selectedClient);
+
+  if (showJobCoachingForm && selectedClient) {
+    return (
+      <Card className={cn("border-0 shadow-sm overflow-hidden")}>
+        <div className="h-1 w-full bg-emerald-400" />
+        <div className="p-5">
+          <div className="mb-4">
+            <button
+              className="text-sm text-slate-500 hover:text-slate-700"
+              onClick={() => {
+                setShowJobCoachingForm(false);
+                setSelectedEntryType(null);
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+          <JobCoachingTimeEntryForm
+            clientId={selectedClient}
+            onSuccess={() => {
+              setShowJobCoachingForm(false);
+              setSelectedEntryType(null);
+              setSelectedClient("");
+              setDescription("");
+              setSeconds(0);
+              onTimeSaved();
+            }}
+            onCancel={() => {
+              setShowJobCoachingForm(false);
+              setSelectedEntryType(null);
+            }}
+          />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className={cn(

@@ -9,53 +9,174 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Job Coaching service codes
-    const jcCodes = [
-      {
-        code: "JC01",
-        service_type: "job_coaching",
-        program_type: "vr",
-        short_description: "Direct On-Site Support",
-        full_description: "Job Coaching: Direct On-Site Support",
-        display_label: "JC01 - Job Coaching: Direct On-Site Support",
-        category: "Direct Service",
-        is_primary: true,
-        is_secondary: true
-      },
-      {
-        code: "JC02",
-        service_type: "job_coaching",
-        program_type: "vr",
-        short_description: "Job Task Analysis",
-        full_description: "Job Coaching: Job Task Analysis",
-        display_label: "JC02 - Job Coaching: Job Task Analysis",
-        category: "Direct Service",
-        is_primary: true,
-        is_secondary: true
-      },
-      {
-        code: "JC03",
-        service_type: "job_coaching",
-        program_type: "vr",
-        short_description: "Employer Consultation",
-        full_description: "Job Coaching: Employer Consultation",
-        display_label: "JC03 - Job Coaching: Employer Consultation",
-        category: "Indirect Service",
-        is_primary: true,
-        is_secondary: true
-      },
-      {
-        code: "JC04",
-        service_type: "job_coaching",
-        program_type: "vr",
-        short_description: "Follow-Up Support",
-        full_description: "Job Coaching: Follow-Up Support",
-        display_label: "JC04 - Job Coaching: Follow-Up Support",
-        category: "Direct Service",
-        is_primary: true,
-        is_secondary: true
-      }
-    ];
+    // Job Coaching service codes (15 USOR approved codes)
+     const jcCodes = [
+       {
+         code: "JC01",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Direct On-Site Support",
+         full_description: "Job Coaching: Direct On-Site Support",
+         display_label: "JC01 - Job Coaching: Direct On-Site Support",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC02",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Job Task Analysis",
+         full_description: "Job Coaching: Job Task Analysis",
+         display_label: "JC02 - Job Coaching: Job Task Analysis",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC03",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Employer Consultation",
+         full_description: "Job Coaching: Employer Consultation",
+         display_label: "JC03 - Job Coaching: Employer Consultation",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC04",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Follow-Up Support",
+         full_description: "Job Coaching: Follow-Up Support",
+         display_label: "JC04 - Job Coaching: Follow-Up Support",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC05",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Behavior Management Coaching",
+         full_description: "Job Coaching: Behavior Management Coaching",
+         display_label: "JC05 - Job Coaching: Behavior Management Coaching",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC06",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Safety Training & Compliance",
+         full_description: "Job Coaching: Safety Training & Compliance",
+         display_label: "JC06 - Job Coaching: Safety Training & Compliance",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC07",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Performance Review Coaching",
+         full_description: "Job Coaching: Performance Review Coaching",
+         display_label: "JC07 - Job Coaching: Performance Review Coaching",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC08",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Workplace Accommodation Setup",
+         full_description: "Job Coaching: Workplace Accommodation Setup",
+         display_label: "JC08 - Job Coaching: Workplace Accommodation Setup",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC09",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Team Communication Support",
+         full_description: "Job Coaching: Team Communication Support",
+         display_label: "JC09 - Job Coaching: Team Communication Support",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC10",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Task Modification & Adaptation",
+         full_description: "Job Coaching: Task Modification & Adaptation",
+         display_label: "JC10 - Job Coaching: Task Modification & Adaptation",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC11",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Supervisor Consultation",
+         full_description: "Job Coaching: Supervisor Consultation",
+         display_label: "JC11 - Job Coaching: Supervisor Consultation",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC12",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Problem-Solving Coaching",
+         full_description: "Job Coaching: Problem-Solving Coaching",
+         display_label: "JC12 - Job Coaching: Problem-Solving Coaching",
+         category: "Direct Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC13",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Job Retention Planning",
+         full_description: "Job Coaching: Job Retention Planning",
+         display_label: "JC13 - Job Coaching: Job Retention Planning",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC14",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Work Schedule Adjustment",
+         full_description: "Job Coaching: Work Schedule Adjustment",
+         display_label: "JC14 - Job Coaching: Work Schedule Adjustment",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       },
+       {
+         code: "JC15",
+         service_type: "job_coaching",
+         program_type: "vr",
+         short_description: "Career Development Planning",
+         full_description: "Job Coaching: Career Development Planning",
+         display_label: "JC15 - Job Coaching: Career Development Planning",
+         category: "Indirect Service",
+         is_primary: true,
+         is_secondary: true
+       }
+     ];
 
     // Job Development codes
     const jdCodes = [
