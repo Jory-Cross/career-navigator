@@ -84,34 +84,58 @@ export default function StructuredVocRehabForm({
 
     setSaving(true);
     try {
+      // Extract duration from field answers (look for hours/duration field), default to 1 hour
+      const durationMinutes = (() => {
+        const durationField = questions.find(q => 
+          q.field_key.toLowerCase().includes('duration') ||
+          q.field_key.toLowerCase().includes('hour')
+        );
+        if (durationField && fieldAnswers[durationField.field_key]) {
+          const val = parseFloat(fieldAnswers[durationField.field_key]);
+          return isNaN(val) || val <= 0 ? 60 : Math.round(val * 60);
+        }
+        return 60; // Default 1 hour
+      })();
+
+      // Extract date from field answers (look for date field), fall back to today
+      const entryDate = (() => {
+        const dateField = questions.find(q => 
+          q.field_type === 'date' && 
+          (q.field_key.toLowerCase().includes('date') || q.field_key.toLowerCase().includes('day'))
+        );
+        if (dateField && fieldAnswers[dateField.field_key]) {
+          return fieldAnswers[dateField.field_key];
+        }
+        return new Date().toISOString().split("T")[0]; // Fall back to today
+      })();
+
       if (entry?.id) {
-        // For editing: update the existing entry and answers
-        // This is simplified - in production you'd update ReportFieldAnswer too
+        // For editing: update TimeEntry and ReportFieldAnswer
         await base44.entities.TimeEntry.update(entry.id, {
+          date: entryDate,
+          duration_minutes: durationMinutes,
           entry_type_code: entryTypeCode,
           entry_type_id: entryType.id
         });
+
+        // Update ReportFieldAnswer answers
+        const answers = await base44.entities.ReportFieldAnswer.filter({
+          time_entry_id: entry.id
+        });
+        if (answers.length > 0) {
+          await base44.entities.ReportFieldAnswer.update(answers[0].id, {
+            answers: fieldAnswers
+          });
+        }
+
         toast.success("Entry updated");
       } else {
         // For creating: use dual-write to create both TimeEntry and ReportFieldAnswer
-        // Extract duration from field answers (look for hours/duration field), default to 1 hour
-        const durationMinutes = (() => {
-          const durationField = questions.find(q => 
-            q.field_key.toLowerCase().includes('duration') ||
-            q.field_key.toLowerCase().includes('hour')
-          );
-          if (durationField && fieldAnswers[durationField.field_key]) {
-            const val = parseFloat(fieldAnswers[durationField.field_key]);
-            return isNaN(val) || val <= 0 ? 60 : Math.round(val * 60);
-          }
-          return 60; // Default 1 hour
-        })();
-
         await submitTimeEntryWithDualWrite({
           clientId,
           entryTypeId: entryType.id,
           entryTypeCode: entryTypeCode,
-          date: new Date().toISOString().split("T")[0],
+          date: entryDate,
           durationMinutes,
           fieldAnswers: fieldAnswers,
           asDraft: false

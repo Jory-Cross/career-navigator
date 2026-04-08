@@ -12,6 +12,7 @@ const AUTO_DEACTIVATE = false;
 // Intended row-level field keys per entry type (extracted from live templates)
 // NOTE: These maps define the AUTHORITATIVE field schema for each entry type.
 // Do NOT assume active fields are correct just because they are active.
+// NOTE: USOR96 reporting is modeled under job_development entry type (report_mode: usor96_monthly)
 const INTENDED_FIELDS = {
   job_coaching: [
     'jc_date',
@@ -21,11 +22,12 @@ const INTENDED_FIELDS = {
     'jc_secondary_service_code'
   ],
   job_development: [
-    'development_date',      // USOR96: date of activity
-    'development_hours',     // USOR96: hours spent
-    'development_activity',  // USOR96: activity description
-    'activity_outcome',      // USOR96: outcome/result
-    'next_steps'            // USOR96: next steps
+    // USOR96 row-level fields for Job Development activities
+    'development_date',      // Date of activity
+    'development_hours',     // Hours spent
+    'development_activity',  // Activity description
+    'activity_outcome',      // Outcome/result
+    'next_steps'            // Next steps
   ],
   life_skills: [
     'skill_area',
