@@ -115,9 +115,20 @@ export function buildFieldInstructions(mappings, report, options = {}) {
 
 /**
  * Resolve a header field from report object
+ * Supports authorization fields via 'authorization.*' path
  */
 function resolveHeaderField(mapping, report) {
   const { source_field } = mapping;
+
+  // Special handling for authorization fields
+  if (source_field.startsWith('authorization.')) {
+    const fieldName = source_field.substring('authorization.'.length);
+    // Authorization data comes from report header
+    if (report.header) {
+      return report.header[fieldName] || null;
+    }
+    return null;
+  }
 
   // Direct header path
   if (report.header && report.header[source_field]) {

@@ -134,6 +134,15 @@ function assembleByMode(reportMode, client, timeEntries, answersMap, entryTypeMa
   const included_time_entry_ids = timeEntries.map(e => e.id);
   const included_answer_ids = timeEntries.map(e => answersMap[e.id]?.id).filter(Boolean);
 
+  // Collect all authorization warnings from rows
+  const authWarnings = rows
+    .filter(r => r.authorization_warnings && r.authorization_warnings.length > 0)
+    .map(r => ({
+      time_entry_id: r.time_entry_id,
+      date: r.date,
+      warnings: r.authorization_warnings
+    }));
+
   return {
     // Immutable structured output
     metadata: {
@@ -144,13 +153,16 @@ function assembleByMode(reportMode, client, timeEntries, answersMap, entryTypeMa
       reporting_period_end: dateTo,
       total_entries: timeEntries.length,
       total_answers_captured: included_answer_ids.length,
-      groups_count: groups.length
+      groups_count: groups.length,
+      authorization_warnings_count: authWarnings.length
     },
     header,
     rows,
     summary,
     totals,
     groups,
+    // Authorization validation warnings (non-blocking)
+    authorization_warnings: authWarnings.length > 0 ? authWarnings : null,
     // Audit trail for GeneratedReport.included_* fields
     included_time_entry_ids,
     included_answer_ids
@@ -223,6 +235,28 @@ function buildReportRows(timeEntries, answersMap, entryTypeMap, authMap) {
       const fieldAnswer = answersMap[entry.id];
       const answers = fieldAnswer?.answers || {};
       const entryType = entryTypeMap[entry.entry_type_code];
+      
+      // Validate authorization if entry is billable or reportable
+      const warnings = [];
+      const auth = entry.service_authorization_id ? authMap[entry.service_authorization_id] : null;
+      
+      if ((entry.is_billable || entry.is_reportable) && entry.service_authorization_id) {
+        if (auth) {
+          // Warn if entry date is outside authorization date range
+          if (entry.date < auth.service_start_date || entry.date > auth.service_end_date) {
+            warnings.push(`Entry date (${entry.date}) falls outside authorization period (${auth.service_start_date} to ${auth.service_end_date})`);
+          }
+          
+          // Warn if hours would exceed remaining authorized hours
+          const entryHours = roundHours(entry.duration_minutes);
+          if (auth.remaining_hours > 0 && entryHours > auth.remaining_hours) {
+            warnings.push(`Entry hours (${entryHours}) exceed remaining authorized hours (${auth.remaining_hours})`);
+          }
+        } else if (entry.service_authorization_id) {
+          // Authorization was deleted or is no longer active
+          warnings.push(`Linked authorization (${entry.service_authorization_id}) not found or inactive`);
+        }
+      }
 
       return {
         // Row identifier
@@ -250,7 +284,8 @@ function buildReportRows(timeEntries, answersMap, entryTypeMap, authMap) {
 
         // Authorization reference
         service_authorization_id: entry.service_authorization_id || '',
-        authorization_valid: entry.service_authorization_id ? !!authMap[entry.service_authorization_id] : null,
+        authorization_valid: entry.service_authorization_id ? !!auth : null,
+        authorization_warnings: warnings.length > 0 ? warnings : null,
 
         // Report ready flag (indicates if all required fields are complete)
         report_ready: entry.report_ready || false
