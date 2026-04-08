@@ -498,178 +498,178 @@ export default function TimeLogDashboard({
       </Card>
 
       {/* Edit/Add Dialog */}
-      {showForm && (
-        <TimeEntryForm
-          entry={editingEntry}
-          clientId={clientId}
-          onClose={() => { setShowForm(false); setEditingEntry(null); }}
-          onSave={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
-          entryTypes={entryTypes}
-        />
-      )}
+      <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingEntry(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingEntry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
+          </DialogHeader>
+          <TimeEntryFormContent
+            entry={editingEntry}
+            clientId={clientId}
+            onClose={() => { setShowForm(false); setEditingEntry(null); }}
+            onSave={() => { setShowForm(false); setEditingEntry(null); onRefresh(); }}
+            entryTypes={entryTypes}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 /**
- * TimeEntryForm - Dialog for adding/editing time entries
+ * TimeEntryFormContent - Form content for adding/editing time entries
  * Uses EntryType instead of legacy category
  */
-function TimeEntryForm({ entry, clientId, onClose, onSave, entryTypes }) {
-  const [form, setForm] = useState(
-    entry ? {
-      date: entry.date,
-      duration_minutes: entry.duration_minutes,
-      entry_type_id: entry.entry_type_id,
-      entry_type_code: entry.entry_type_code,
-      description: entry.description,
-      start_time: entry.start_time || "",
-      end_time: entry.end_time || ""
-    } : {
-      date: format(new Date(), "yyyy-MM-dd"),
-      duration_minutes: "",
-      entry_type_id: "",
-      entry_type_code: "",
-      description: "",
-      start_time: "",
-      end_time: ""
-    }
-  );
-  const [saving, setSaving] = useState(false);
+function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes }) {
+   const [form, setForm] = useState(
+     entry ? {
+       date: entry.date,
+       duration_minutes: entry.duration_minutes,
+       entry_type_id: entry.entry_type_id,
+       entry_type_code: entry.entry_type_code,
+       description: entry.description,
+       start_time: entry.start_time || "",
+       end_time: entry.end_time || ""
+     } : {
+       date: format(new Date(), "yyyy-MM-dd"),
+       duration_minutes: "",
+       entry_type_id: "",
+       entry_type_code: "",
+       description: "",
+       start_time: "",
+       end_time: ""
+     }
+   );
+   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    if (!form.date || !form.entry_type_code) {
-      toast.error("Date and entry type are required");
-      return;
-    }
+   const handleSave = async () => {
+     if (!form.date || !form.entry_type_code) {
+       toast.error("Date and entry type are required");
+       return;
+     }
 
-    const duration = form.start_time && form.end_time && !form.duration_minutes
-      ? Math.round(((new Date(`2000-01-01T${form.end_time}`) - new Date(`2000-01-01T${form.start_time}`)) / 1000) / 60)
-      : parseInt(form.duration_minutes);
+     const duration = form.start_time && form.end_time && !form.duration_minutes
+       ? Math.round(((new Date(`2000-01-01T${form.end_time}`) - new Date(`2000-01-01T${form.start_time}`)) / 1000) / 60)
+       : parseInt(form.duration_minutes);
 
-    if (!duration || duration <= 0) {
-      toast.error("Duration required");
-      return;
-    }
+     if (!duration || duration <= 0) {
+       toast.error("Duration required");
+       return;
+     }
 
-    setSaving(true);
-    try {
-      const data = {
-        date: form.date,
-        duration_minutes: duration,
-        entry_type_id: form.entry_type_id,
-        entry_type_code: form.entry_type_code,
-        description: form.description,
-        start_time: form.start_time || null,
-        end_time: form.end_time || null,
-        reporting_period_key: form.date.slice(0, 7),
-        is_reportable: true,
-        is_billable: false,
-        is_payroll_eligible: true
-      };
+     setSaving(true);
+     try {
+       const data = {
+         date: form.date,
+         duration_minutes: duration,
+         entry_type_id: form.entry_type_id,
+         entry_type_code: form.entry_type_code,
+         description: form.description,
+         start_time: form.start_time || null,
+         end_time: form.end_time || null,
+         reporting_period_key: form.date.slice(0, 7),
+         is_reportable: true,
+         is_billable: false,
+         is_payroll_eligible: true
+       };
 
-      if (entry) {
-        await base44.entities.TimeEntry.update(entry.id, data);
-        toast.success("Entry updated");
-      } else {
-        data.client_id = clientId;
-        data.status = "submitted";
-        data.report_ready = false;
-        await base44.entities.TimeEntry.create(data);
-        toast.success("Entry created");
-      }
-      onSave();
-    } catch (err) {
-      toast.error("Failed to save");
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
+       if (entry) {
+         await base44.entities.TimeEntry.update(entry.id, data);
+         toast.success("Entry updated");
+       } else {
+         data.client_id = clientId;
+         data.status = "submitted";
+         data.report_ready = false;
+         await base44.entities.TimeEntry.create(data);
+         toast.success("Entry created");
+       }
+       onSave();
+     } catch (err) {
+       toast.error("Failed to save");
+       console.error(err);
+     } finally {
+       setSaving(false);
+     }
+   };
 
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{entry ? "Edit Time Entry" : "Add Time Entry"}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Date</Label>
-              <Input
-                type="date"
-                value={form.date}
-                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Entry Type</Label>
-              <Select
-                value={form.entry_type_code}
-                onValueChange={v => {
-                  const type = entryTypes.find(t => t.code === v);
-                  setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+   return (
+     <>
+       <div className="space-y-4 py-4">
+         <div className="grid grid-cols-2 gap-3">
+           <div className="space-y-1">
+             <Label className="text-xs">Date</Label>
+             <Input
+               type="date"
+               value={form.date}
+               onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+             />
+           </div>
+           <div className="space-y-1">
+             <Label className="text-xs">Entry Type</Label>
+             <Select
+               value={form.entry_type_code}
+               onValueChange={v => {
+                 const type = entryTypes.find(t => t.code === v);
+                 setForm(p => ({ ...p, entry_type_code: v, entry_type_id: type?.id }));
+               }}
+             >
+               <SelectTrigger>
+                 <SelectValue placeholder="Select..." />
+               </SelectTrigger>
+               <SelectContent>
+                 {entryTypes.map(t => <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
+           </div>
+         </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs">Description</Label>
-            <Input
-              value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="What did you work on?"
-            />
-          </div>
+         <div className="space-y-1">
+           <Label className="text-xs">Description</Label>
+           <Input
+             value={form.description}
+             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+             placeholder="What did you work on?"
+           />
+         </div>
 
-          <div className="space-y-2 p-3 bg-slate-50 rounded">
-            <p className="text-xs font-medium text-slate-600">Duration</p>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Start Time</Label>
-                <Input
-                  type="time"
-                  value={form.start_time}
-                  onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">End Time</Label>
-                <Input
-                  type="time"
-                  value={form.end_time}
-                  onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Minutes</Label>
-                <Input
-                  type="number"
-                  value={form.duration_minutes}
-                  onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
-                  placeholder="60"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-            {entry ? "Save" : "Add"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+         <div className="space-y-2 p-3 bg-slate-50 rounded">
+           <p className="text-xs font-medium text-slate-600">Duration</p>
+           <div className="grid grid-cols-3 gap-2">
+             <div className="space-y-1">
+               <Label className="text-xs">Start Time</Label>
+               <Input
+                 type="time"
+                 value={form.start_time}
+                 onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+               />
+             </div>
+             <div className="space-y-1">
+               <Label className="text-xs">End Time</Label>
+               <Input
+                 type="time"
+                 value={form.end_time}
+                 onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
+               />
+             </div>
+             <div className="space-y-1">
+               <Label className="text-xs">Minutes</Label>
+               <Input
+                 type="number"
+                 value={form.duration_minutes}
+                 onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
+                 placeholder="60"
+               />
+             </div>
+           </div>
+         </div>
+       </div>
+       <DialogFooter>
+         <Button variant="outline" onClick={onClose}>Cancel</Button>
+         <Button onClick={handleSave} disabled={saving}>
+           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+           {entry ? "Save" : "Add"}
+         </Button>
+       </DialogFooter>
+     </>
+   );
 }
