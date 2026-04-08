@@ -54,14 +54,18 @@ export default function TimeLogDashboard({
   const [showFilters, setShowFilters] = useState(false);
 
   // Load reference data
-  useEffect(() => {
-    Promise.all([
-      base44.entities.User.filter({ role: "employee" }).catch(() => []),
-      base44.entities.EntryType.filter({ is_active: true }).catch(() => []),
-      base44.entities.GeneratedReport.filter({ client_id: clientId }).catch(() => [])
-    ]).then(([emps, types, reports]) => {
-      setEmployees(emps);
-      setEntryTypes(types);
+   useEffect(() => {
+     Promise.all([
+       base44.entities.User.filter({ role: "employee" }).catch(() => []),
+       base44.entities.EntryType.filter({ is_active: true }).catch(() => []),
+       base44.entities.GeneratedReport.filter({ client_id: clientId }).catch(() => [])
+     ]).then(([emps, types, reports]) => {
+       setEmployees(emps);
+       // Deduplicate entry types by code, keeping first occurrence, sort alphabetically
+       const uniqueEntryTypes = Array.from(
+         new Map(types.map(t => [t.code, t])).values()
+       ).sort((a, b) => a.name.localeCompare(b.name));
+       setEntryTypes(uniqueEntryTypes);
       // Index reports by time entry ID for quick lookup
       const indexed = {};
       reports.forEach(r => {
