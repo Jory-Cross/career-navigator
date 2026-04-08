@@ -47,6 +47,7 @@ export async function saveTimeEntry({ payload, existingEntry, clientId }) {
         });
 
     console.log("[saveTimeEntry] Normalized payload:", JSON.stringify(builderPayload, null, 2));
+    console.log("🟢 Saving Entry Payload:", builderPayload);
 
     // PERSIST
     if (existingEntry?.id) {
@@ -76,6 +77,10 @@ export async function saveTimeEntry({ payload, existingEntry, clientId }) {
 
     console.log("[saveTimeEntry] === SUCCESS ===");
   } catch (err) {
+    console.error("🔴 Save Entry Failed:", {
+      payload,
+      error: err?.message || String(err)
+    });
     console.error("[saveTimeEntry] Error:", err?.message);
     console.log("[saveTimeEntry] === FAILED ===");
     throw err;
