@@ -12,9 +12,8 @@ import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
-import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
-import Usor96TimeEntryForm from "@/components/time-entry/Usor96TimeEntryForm";
-import StructuredVocRehabForm from "@/components/time-entry/StructuredVocRehabForm";
+import FormEngine from "@/components/time-entry/FormEngine";
+import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -57,15 +56,11 @@ export default function TimeLogDashboard({
    useEffect(() => {
      Promise.all([
        base44.entities.User.filter({ role: "employee" }).catch(() => []),
-       base44.entities.EntryType.filter({ is_active: true }).catch(() => []),
        base44.entities.GeneratedReport.filter({ client_id: clientId }).catch(() => [])
-     ]).then(([emps, types, reports]) => {
+     ]).then(([emps, reports]) => {
        setEmployees(emps);
-       // Deduplicate entry types by code, keeping first occurrence, sort alphabetically
-       const uniqueEntryTypes = Array.from(
-         new Map(types.map(t => [t.code, t])).values()
-       ).sort((a, b) => a.name.localeCompare(b.name));
-       setEntryTypes(uniqueEntryTypes);
+       // Use canonical entry type options from registry
+       setEntryTypes(getEntryTypeOptions());
       // Index reports by time entry ID for quick lookup
       const indexed = {};
       reports.forEach(r => {
@@ -527,20 +522,18 @@ export default function TimeLogDashboard({
                       <SelectValue placeholder="Select an entry type..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {entryTypes.map(t => (
-                        <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>
+                      {entryTypes.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
 
-              {/* Render appropriate form based on selected type */}
+              {/* Unified Form Engine */}
               {(() => {
                 const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
-                const selectedType = entryTypes.find(t => t.code === activeEntryTypeCode);
-                console.log("Selected entry type", selectedType);
-                
+
                 // For new entries, only render form if an entry type is selected
                 if (!editingEntry && !activeEntryTypeCode) {
                   return (
@@ -549,55 +542,59 @@ export default function TimeLogDashboard({
                     </div>
                   );
                 }
-                
-                // Dedicated Job Coaching form
-                if (activeEntryTypeCode === 'job_coaching') {
-                  return (
-                    <JobCoachingTimeEntryForm
-                      clientId={clientId}
-                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                    />
-                  );
-                }
-                
-                // Dedicated USOR96 form
-                if (activeEntryTypeCode === 'usor96') {
-                  return (
-                    <Usor96TimeEntryForm
-                      clientId={clientId}
-                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                    />
-                  );
-                }
-                
-                // CSB and Voc Rehab entry types use StructuredVocRehabForm
-                if (activeEntryTypeCode && (selectedType?.program_type === 'vr' || activeEntryTypeCode === 'csb_hours')) {
-                  return (
-                    <StructuredVocRehabForm
-                      entryTypeCode={activeEntryTypeCode}
-                      clientId={clientId}
-                      entry={editingEntry}
-                      onSuccess={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                      onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                    />
-                  );
-                }
-                
-                // All other types use generic form
-                if (activeEntryTypeCode) {
-                  return (
-                    <TimeEntryFormContent
-                      entry={editingEntry}
-                      clientId={clientId}
-                      onClose={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
-                      onSave={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); onRefresh(); }}
-                      entryTypes={entryTypes}
-                      selectedTypeCode={activeEntryTypeCode}
-                    />
-                  );
-                }
+
+                const handleFormSave = async (payload) => {
+                  try {
+                    if (editingEntry?.id) {
+                      // Update existing entry
+                      await base44.entities.TimeEntry.update(editingEntry.id, {
+                        date: payload.date,
+                        duration_minutes: payload.duration || (payload.billable_hours ? parseInt(payload.billable_hours) : 0),
+                        description: payload.description,
+                        entry_type_code: payload.entry_type_code,
+                        start_time: payload.start_time || null,
+                        end_time: payload.end_time || null,
+                        form_data: payload.form_data
+                      });
+                      toast.success("Entry updated");
+                    } else {
+                      // Create new entry
+                      await base44.entities.TimeEntry.create({
+                        client_id: clientId,
+                        date: payload.date,
+                        duration_minutes: payload.duration || (payload.billable_hours ? parseInt(payload.billable_hours) : 0),
+                        description: payload.description,
+                        entry_type_code: payload.entry_type_code,
+                        start_time: payload.start_time || null,
+                        end_time: payload.end_time || null,
+                        form_data: payload.form_data,
+                        status: "submitted",
+                        is_reportable: true,
+                        is_billable: false,
+                        is_payroll_eligible: true,
+                        reporting_period_key: payload.date.substring(0, 7)
+                      });
+                      toast.success("Entry created");
+                    }
+                    setShowForm(false);
+                    setEditingEntry(null);
+                    setSelectedEntryTypeCode("");
+                    onRefresh();
+                  } catch (err) {
+                    console.error("Failed to save entry:", err);
+                    toast.error("Failed to save entry");
+                  }
+                };
+
+                return (
+                  <FormEngine
+                    entryTypeCode={activeEntryTypeCode}
+                    entry={editingEntry}
+                    mode={editingEntry ? "edit" : "create"}
+                    onSave={handleFormSave}
+                    onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
+                  />
+                );
               })()}
             </div>
           </div>
@@ -605,239 +602,4 @@ export default function TimeLogDashboard({
       </Dialog>
     </div>
   );
-}
-
-/**
- * TimeEntryFormContent - Form content for adding/editing time entries
- * Uses EntryType instead of legacy category
- * NOW LOADS AND DISPLAYS DYNAMIC QUESTIONS FROM ReportFieldTemplate
- */
-function TimeEntryFormContent({ entry, clientId, onClose, onSave, entryTypes, selectedTypeCode }) {
-    console.log('[DEBUG] TimeEntryFormContent MOUNTED with entry_type_code:', entry?.entry_type_code);
-    // Filter out job_coaching and usor96 from available types
-    const availableEntryTypes = entryTypes.filter(t => t.code !== 'job_coaching' && t.code !== 'usor96');
-    
-    const typeObj = entryTypes.find(t => t.code === (entry?.entry_type_code || selectedTypeCode));
-    
-    const [form, setForm] = useState(
-      entry ? {
-        date: entry.date,
-        duration_minutes: entry.duration_minutes,
-        entry_type_id: entry.entry_type_id,
-        entry_type_code: entry.entry_type_code,
-        description: entry.description,
-        start_time: entry.start_time || "",
-        end_time: entry.end_time || ""
-      } : {
-        date: format(new Date(), "yyyy-MM-dd"),
-        duration_minutes: "",
-        entry_type_id: typeObj?.id || "",
-        entry_type_code: selectedTypeCode || "",
-        description: "",
-        start_time: "",
-        end_time: ""
-      }
-   );
-   const [fieldAnswers, setFieldAnswers] = useState({});
-   const [questions, setQuestions] = useState([]);
-   const [loadingQuestions, setLoadingQuestions] = useState(false);
-   const [saving, setSaving] = useState(false);
-
-   // Load dynamic questions when entry type changes
-   useEffect(() => {
-     if (!form.entry_type_code) {
-       setQuestions([]);
-       return;
-     }
-
-     setLoadingQuestions(true);
-     base44.entities.ReportFieldTemplate.filter({
-       entry_type_code: form.entry_type_code,
-       is_active: true,
-       pdf_context: 'row',
-       is_internal_only: false
-     }).then(templates => {
-       // Already filtered by query, just sort
-       setQuestions(templates.sort((a, b) => (a.order || 0) - (b.order || 0)));
-     }).catch(err => {
-       console.error('Failed to load questions:', err);
-       toast.error('Failed to load form questions');
-     }).finally(() => {
-       setLoadingQuestions(false);
-     });
-   }, [form.entry_type_code]);
-
-   const handleSave = async () => {
-     if (!form.date || !form.entry_type_code) {
-       toast.error("Date and entry type are required");
-       return;
-     }
-
-     const duration = form.start_time && form.end_time && !form.duration_minutes
-       ? Math.round(((new Date(`2000-01-01T${form.end_time}`) - new Date(`2000-01-01T${form.start_time}`)) / 1000) / 60)
-       : parseInt(form.duration_minutes);
-
-     if (!duration || duration <= 0) {
-       toast.error("Duration required");
-       return;
-     }
-
-     setSaving(true);
-     try {
-       if (entry) {
-         // Editing existing entry - update only
-         const data = {
-           date: form.date,
-           duration_minutes: duration,
-           entry_type_id: form.entry_type_id,
-           entry_type_code: form.entry_type_code,
-           description: form.description,
-           start_time: form.start_time || null,
-           end_time: form.end_time || null,
-           reporting_period_key: form.date.slice(0, 7),
-           is_reportable: true,
-           is_billable: false,
-           is_payroll_eligible: true
-         };
-         await base44.entities.TimeEntry.update(entry.id, data);
-         toast.success("Entry updated");
-       } else {
-         // Creating new entry - use dual-write to ensure ReportFieldAnswer is created
-         await submitTimeEntryWithDualWrite({
-           clientId,
-           entryTypeId: form.entry_type_id,
-           entryTypeCode: form.entry_type_code,
-           date: form.date,
-           startTime: form.start_time || null,
-           endTime: form.end_time || null,
-           durationMinutes: duration,
-           location: null,
-           description: form.description,
-           serviceAuthorizationId: null,
-           fieldAnswers: fieldAnswers,
-           asDraft: false
-         });
-         toast.success("Entry created with reporting fields");
-       }
-       onSave();
-     } catch (err) {
-       toast.error("Failed to save");
-       console.error(err);
-     } finally {
-       setSaving(false);
-     }
-   };
-
-   return (
-     <div className="space-y-4">
-       {/* Base fields (Date, Duration) */}
-       <div className="grid grid-cols-2 gap-3">
-         <div className="space-y-1">
-           <Label className="text-xs">Date</Label>
-           <Input
-             type="date"
-             value={form.date}
-             onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-           />
-         </div>
-         <div className="space-y-1">
-           <Label className="text-xs">Duration (minutes)</Label>
-           <Input
-             type="number"
-             value={form.duration_minutes}
-             onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))}
-             placeholder="60"
-           />
-         </div>
-       </div>
-
-       <div className="space-y-1">
-         <Label className="text-xs">Description</Label>
-         <Input
-           value={form.description}
-           onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-           placeholder="What did you work on?"
-         />
-       </div>
-
-       {/* Dynamic Questions Section */}
-       {form.entry_type_code && questions.length > 0 && (
-         <div className="space-y-3 p-3 bg-blue-50 rounded border border-blue-200">
-           <p className="text-xs font-semibold text-blue-900">Service Details ({questions.length})</p>
-           <div className="space-y-3">
-             {loadingQuestions ? (
-               <p className="text-xs text-slate-500 italic">Loading questions...</p>
-             ) : (
-               questions.map(q => (
-                 <div key={q.field_key} className="space-y-1.5">
-                   <Label className="text-xs">
-                     {q.label}
-                     {q.is_required && <span className="text-red-500 ml-1">*</span>}
-                   </Label>
-                   {q.field_type === 'textarea' ? (
-                     <textarea
-                       className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none min-h-20"
-                       value={fieldAnswers[q.field_key] || ''}
-                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                       placeholder={q.placeholder || ''}
-                     />
-                   ) : q.field_type === 'select' ? (
-                     <Select
-                       value={fieldAnswers[q.field_key] || ''}
-                       onValueChange={v => setFieldAnswers(p => ({ ...p, [q.field_key]: v }))}
-                     >
-                       <SelectTrigger className="h-8 text-xs">
-                         <SelectValue placeholder={q.placeholder || 'Select...'} />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {q.options?.filter(opt => opt && opt.trim()).map(opt => {
-                           const trimmed = opt.trim();
-                           return trimmed ? <SelectItem key={trimmed} value={trimmed}>{trimmed}</SelectItem> : null;
-                         })}
-                       </SelectContent>
-                     </Select>
-                   ) : q.field_type === 'date' ? (
-                     <Input
-                       type="date"
-                       value={fieldAnswers[q.field_key] || ''}
-                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                     />
-                   ) : q.field_type === 'time' ? (
-                     <Input
-                       type="time"
-                       value={fieldAnswers[q.field_key] || ''}
-                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                     />
-                   ) : q.field_type === 'number' ? (
-                     <Input
-                       type="number"
-                       value={fieldAnswers[q.field_key] || ''}
-                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                       placeholder={q.placeholder || ''}
-                     />
-                   ) : (
-                     <Input
-                       type="text"
-                       value={fieldAnswers[q.field_key] || ''}
-                       onChange={e => setFieldAnswers(p => ({ ...p, [q.field_key]: e.target.value }))}
-                       placeholder={q.placeholder || ''}
-                     />
-                   )}
-                   {q.help_text && <p className="text-xs text-slate-500 italic">{q.help_text}</p>}
-                 </div>
-               ))
-             )}
-           </div>
-         </div>
-       )}
-
-       <div className="flex gap-2 justify-end pt-2 mt-4 border-t border-slate-200">
-         <Button variant="outline" onClick={onClose}>Cancel</Button>
-         <Button onClick={handleSave} disabled={saving}>
-           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-           {entry ? "Save" : "Add"}
-         </Button>
-       </div>
-     </div>
-   );
 }
