@@ -540,30 +540,18 @@ export default function TimeLogDashboard({
                   );
                 }
 
-                const handleFormSave = async (payload) => {
-                  try {
-                    await saveTimeEntry({
-                      entryTypeId: entryTypeObj?.id,
-                      formData: payload,
-                      schema: [],
-                      existingEntry: editingEntry,
-                      clientId
-                    });
-                    await onRefresh();
-                    setShowForm(false);
-                    setEditingEntry(null);
-                    setSelectedEntryTypeCode("");
-                  } catch (err) {
-                    toast.error(err?.message || "Failed to save entry");
-                  }
-                };
-
                 return (
                   <FormEngine
                     entryTypeCode={activeEntryTypeCode}
                     entry={editingEntry}
                     mode={editingEntry ? "edit" : "create"}
-                    onSave={handleFormSave}
+                    onSave={async (payload, entryId) => {
+                      // onSave receives payload from saveTimeEntry, which already handles create/edit
+                      await onRefresh();
+                      setShowForm(false);
+                      setEditingEntry(null);
+                      setSelectedEntryTypeCode("");
+                    }}
                     onCancel={() => { setShowForm(false); setEditingEntry(null); setSelectedEntryTypeCode(""); }}
                   />
                 );

@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
 import FieldRenderer from "./FieldRenderer";
 import { buildInitialFormData } from "@/lib/formHelpers";
+import { buildFormDataFromEntry } from "@/lib/timeEntryRehydration";
 import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
+import { saveTimeEntry } from "@/lib/saveTimeEntry";
 import { base44 } from "@/api/base44Client";
 
 export default function DynamicEntryForm({
@@ -15,10 +17,16 @@ export default function DynamicEntryForm({
   onCancel,
 }) {
   const initialData = useMemo(() => {
-    console.log("[DynamicEntryForm] EDIT ENTRY:", entry);
-    console.log("[DynamicEntryForm] ENTRY FORM_DATA:", entry?.form_data);
-    const data = buildInitialFormData(schema, entry);
-    console.log("[DynamicEntryForm] Initial form data after hydration:", data);
+    // For edit mode: rehydrate from existing entry
+    if (entry?.id) {
+      console.log("[DynamicEntryForm] EDIT MODE - Rehydrating entry:", entry.id);
+      const data = buildFormDataFromEntry(entry, { fields: schema });
+      console.log("[DynamicEntryForm] Rehydrated form data:", data);
+      return data;
+    }
+    // For create mode: build fresh
+    const data = buildInitialFormData(schema, null);
+    console.log("[DynamicEntryForm] Create mode - Initial form data:", data);
     return data;
   }, [schema, entry]);
    const [formData, setFormData] = useState(initialData);
@@ -50,12 +58,35 @@ export default function DynamicEntryForm({
     setSaving(true);
 
     try {
+      // Save through the unified saveTimeEntry function
+      const user = await base44.auth.me();
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
       await handleDynamicEntrySave({
         entryType: { id: entryTypeObj?.id, code: entryTypeCode, name: entryTypeObj?.name },
         formData,
         schema,
-        saveEntry: onSave,
+        existingEntry: entry,
+        mode,
+        saveEntry: async (payload, entryId) => {
+          // Use saveTimeEntry which handles both create and edit
+          await saveTimeEntry({
+            entryTypeId: entryTypeObj?.id,
+            formData,
+            schema,
+            existingEntry: entry?.id ? entry : null,
+          });
+          // Return minimal result with ID for validation
+          return { id: entryId || entry?.id };
+        },
       });
+      
+      // Call the original onSave callback to refresh UI
+      if (onSave) {
+        await onSave();
+      }
     } catch (err) {
       const errorMsg = err?.message || "Failed to save entry";
       console.error("[DynamicEntryForm] Save failed:", err);

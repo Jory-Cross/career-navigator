@@ -2,13 +2,15 @@ import { buildTimeEntryPayload } from "@/lib/timeEntryPayloadBuilder";
 
 /**
  * Unified submit handler for all dynamic time entry forms.
+ * Supports both CREATE and EDIT modes with same payload builder.
  * Used by Job Coaching, Job Development, and other entry types.
- * Ensures consistent save path, validation, and lifecycle management.
  * 
  * @param {Object} config
  * @param {Object} config.entryType - Entry type metadata { id, key?, name? }
  * @param {Record<string, any>} config.formData - Form submission data
  * @param {any} config.schema - Field schema
+ * @param {Object} [config.existingEntry] - For edit mode, the entry being updated
+ * @param {string} [config.mode] - "create" or "edit" (defaults to "create")
  * @param {Function} config.saveEntry - Function to persist the entry
  * @param {Function} [config.refreshEntries] - Optional callback to refresh entry list
  * @param {Function} [config.closeModal] - Optional callback to close modal
@@ -18,11 +20,13 @@ export async function handleDynamicEntrySave({
   entryType,
   formData,
   schema,
+  existingEntry,
+  mode = "create",
   saveEntry,
   refreshEntries,
   closeModal,
 }) {
-  // 1️⃣ Build unified payload
+  // 1️⃣ Build unified payload (same for create & edit)
   const payload = buildTimeEntryPayload({ entryType, formData, schema });
 
   // 2️⃣ Hard guards before save
@@ -33,17 +37,25 @@ export async function handleDynamicEntrySave({
   Object.freeze(payload.form_data);
 
   // 4️⃣ Snapshot logging (critical for debugging)
-  console.log("🟢 FINAL PAYLOAD:", JSON.stringify(payload, null, 2));
+  const modeLabel = mode === "edit" ? "🔵 EDIT" : "🟢 CREATE";
+  console.log(`${modeLabel} FINAL PAYLOAD:`, JSON.stringify(payload, null, 2));
 
   // 5️⃣ Persist with response validation
-  const result = await saveEntry(payload);
+  let result;
+  if (mode === "edit" && existingEntry?.id) {
+    // Edit: pass existing entry ID
+    result = await saveEntry(payload, existingEntry.id);
+  } else {
+    // Create: no ID
+    result = await saveEntry(payload);
+  }
 
   // 6️⃣ Backend response validation
   if (!result?.id) {
     throw new Error("❌ Save succeeded but no ID returned from backend");
   }
 
-  console.log("✅ Entry saved with ID:", result.id);
+  console.log(`✅ Entry ${mode === "edit" ? "updated" : "created"} with ID:`, result.id);
 
   // 7️⃣ Refresh entry list if callback provided
   if (refreshEntries) {
