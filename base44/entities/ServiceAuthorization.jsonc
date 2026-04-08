@@ -1,91 +1,76 @@
 {
   "name": "ServiceAuthorization",
   "type": "object",
-  "description": "VR service authorization for a client. Tracks authorized hours, usage, and service details.",
+  "description": "Tracks authorized services/hours and report header values for a client.",
   "properties": {
     "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
+      "type": "string"
     },
     "client_id": {
-      "type": "string",
-      "description": "Reference to Client this authorization applies to"
+      "type": "string"
     },
-    "service_type_code": {
-      "type": "string",
-      "enum": [
-        "job_development",
-        "job_coaching",
-        "life_skills",
-        "cbh",
-        "pre_ets",
-        "admin",
-        "other"
-      ],
-      "description": "Type of VR service being authorized"
+    "entry_type_id": {
+      "type": "string"
+    },
+    "entry_type_code": {
+      "type": "string"
     },
     "authorization_number": {
-      "type": "string",
-      "description": "Unique authorization ID from VR agency (e.g. 'AUTH-2024-001234')"
+      "type": "string"
     },
     "vr_counselor_name": {
-      "type": "string",
-      "description": "Name of VR counselor who authorized this"
+      "type": "string"
+    },
+    "vr_counselor_email": {
+      "type": "string"
+    },
+    "vr_counselor_phone": {
+      "type": "string"
     },
     "job_goal": {
-      "type": "string",
-      "description": "Employment goal for this service (e.g. 'Retail Manager')"
+      "type": "string"
     },
     "employer_name": {
+      "type": "string"
+    },
+    "service_start_date": {
       "type": "string",
-      "description": "Employer or employer type if applicable"
+      "format": "date"
+    },
+    "service_end_date": {
+      "type": "string",
+      "format": "date"
     },
     "total_authorized_hours": {
       "type": "number",
-      "description": "Total hours authorized for this service"
+      "default": 0
     },
     "used_hours": {
       "type": "number",
-      "default": 0,
-      "description": "Hours logged against this authorization (auto-calculated)"
+      "default": 0
     },
     "remaining_hours": {
       "type": "number",
-      "description": "Calculated field: total_authorized_hours - used_hours"
-    },
-    "authorization_start_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Date authorization becomes effective"
-    },
-    "authorization_end_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Date authorization expires"
+      "default": 0
     },
     "status": {
       "type": "string",
       "enum": [
+        "draft",
         "active",
-        "pending",
         "expired",
-        "cancelled",
-        "exhausted"
+        "closed",
+        "cancelled"
       ],
-      "default": "active",
-      "description": "Authorization status"
+      "default": "active"
     },
     "notes": {
-      "type": "string",
-      "description": "Internal notes about this authorization"
+      "type": "string"
     }
   },
   "required": [
     "client_id",
-    "service_type_code",
-    "authorization_number",
-    "total_authorized_hours",
-    "authorization_start_date",
-    "authorization_end_date"
+    "entry_type_code",
+    "authorization_number"
   ]
 }
