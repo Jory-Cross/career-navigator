@@ -61,9 +61,10 @@ Deno.serve(async (req) => {
     // Step 3: Validate answers against schema
     const validation = validateAnswersAgainstSchema(answers, snapshot);
 
-    // Step 4: Determine completion status
+    // Step 4: Determine completion status and calculate completion percentage
     const requiredFieldsComplete = validation.required_fields_missing.length === 0;
     const reportReady = requiredFieldsComplete && validation.errors.length === 0;
+    const completionPercent = calculateCompletion(answers, snapshot);
 
     // Step 5: Check if record already exists
     const existingAnswers = await base44.entities.ReportFieldAnswer.filter({
@@ -78,17 +79,15 @@ Deno.serve(async (req) => {
       const existing = existingAnswers[0];
       fieldAnswer = await base44.entities.ReportFieldAnswer.update(existing.id, {
         answers,
+        entry_type_id,
+        entry_type_code,
         field_schema_version: template_version || 'current',
         field_schema_snapshot: snapshot,
         required_fields_complete: requiredFieldsComplete,
         report_ready: reportReady,
-        is_complete: requiredFieldsComplete,
         submitted_at: now,
-        submitted_by: user.email,
         validation_errors: validation.errors,
-        revision_number: (existing.revision_number || 1) + 1,
-        previous_revision_id: existing.id,
-        notes: notes || `Resubmitted revision ${(existing.revision_number || 1) + 1}`
+        completion_percent: completionPercent
       });
     } else {
       // Create new record
@@ -101,12 +100,9 @@ Deno.serve(async (req) => {
         field_schema_snapshot: snapshot,
         required_fields_complete: requiredFieldsComplete,
         report_ready: reportReady,
-        is_complete: requiredFieldsComplete,
         submitted_at: now,
-        submitted_by: user.email,
         validation_errors: validation.errors,
-        revision_number: 1,
-        notes: notes || 'Initial submission'
+        completion_percent: completionPercent
       });
     }
 
@@ -118,7 +114,7 @@ Deno.serve(async (req) => {
       required_fields_complete: requiredFieldsComplete,
       report_ready: reportReady,
       submitted_at: now,
-      revision_number: fieldAnswer.revision_number,
+      completion_percent: completionPercent,
       validation: {
         fields_answered: Object.keys(answers).length,
         required_fields: Object.values(snapshot).filter(f => f.is_required).length,
@@ -127,7 +123,7 @@ Deno.serve(async (req) => {
         warnings: validation.warnings
       },
       summary: {
-        completion_percentage: calculateCompletion(answers, snapshot),
+        completion_percentage: completionPercent,
         missing_required_fields: validation.required_fields_missing,
         can_generate_report: reportReady
       }
