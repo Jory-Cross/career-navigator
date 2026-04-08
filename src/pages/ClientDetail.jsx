@@ -20,6 +20,7 @@ import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 import EmailComposer from "@/components/EmailComposer";
 import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
+import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
 
 export default function ClientDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -27,6 +28,7 @@ export default function ClientDetail() {
   const queryClient = useQueryClient();
   const [showEmailComposer, setShowEmailComposer] = React.useState(false);
   const [user, setUser] = React.useState(null);
+  const [activeTab, setActiveTab] = React.useState(null);
 
   React.useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -183,8 +185,14 @@ export default function ClientDetail() {
       })()}
       </div>
 
-      {/* AI Assistant Sidebar */}
-      <div className="xl:sticky xl:top-20">
+      {/* Right Sidebar */}
+      <div className="xl:sticky xl:top-20 space-y-4">
+        <VocationalProfileCard
+          client={client}
+          onRefresh={refresh}
+          onOpenJobSearch={() => setActiveTab("ai_jobs")}
+          onOpenAssistant={() => {}}
+        />
         <AIAssistantPanel
           clientId={clientId}
           onRefresh={refresh}
