@@ -35,7 +35,10 @@ export function buildFormDataFromEntry(entry, schema) {
   result.notes = entry.notes ?? '';
   result.service_code_id = entry.service_code_id ?? null;
   result.duration_minutes = normalizeExistingDuration(entry.duration_minutes);
-
+// Job Coaching fix: map top-level "date" into schema field "jc_date"
+if (entry?.date && result.jc_date == null) {
+  result.jc_date = entry.date;
+}
   return result;
 }
 
