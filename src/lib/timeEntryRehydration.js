@@ -39,8 +39,13 @@ export function buildFormDataFromEntry(entry, schema) {
 if (entry?.date && result.jc_date == null) {
   result.jc_date = entry.date;
 }
-  return result;
+
+// Job Development fix: map top-level "date" into schema field "usor96_day"
+if (entry?.date && result.usor96_day == null) {
+  result.usor96_day = entry.date;
 }
+
+return result;
 
 /**
  * If form uses split hours/minutes inputs, derive them from duration_minutes
