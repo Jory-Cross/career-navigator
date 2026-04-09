@@ -97,6 +97,35 @@ function normalizeDurationMinutes(formData, schema) {
 }
 
 /**
+ * Normalize any date value to ISO YYYY-MM-DD format.
+ * Handles ISO strings, MM/DD/YYYY strings, and Date objects.
+ * 
+ * @param {string | Date | null | undefined} value
+ * @returns {string | null}
+ */
+function normalizeDateValue(value) {
+  if (!value) return null;
+
+  // Already ISO YYYY-MM-DD
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  // MM/DD/YYYY
+  if (typeof value === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [mm, dd, yyyy] = value.split("/");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Date object
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return String(value);
+}
+
+/**
  * Convert value to string, empty string for null/undefined.
  * 
  * @param {any} value
@@ -153,15 +182,16 @@ export function buildTimeEntryPayload({
     service_code_id: emptyToNull(formData.service_code_id),
   };
 
-  // Resolve date from any likely key the form/schema may use
-  const resolvedDate =
+  // Resolve date from any likely key the form/schema may use, normalize to ISO
+  const rawDate =
     formData.date ??
     formData.entry_date ??
     formData.service_date ??
     null;
 
-  if (resolvedDate) {
-    topLevel.date = resolvedDate;
+  const normalizedDate = normalizeDateValue(rawDate);
+  if (normalizedDate) {
+    topLevel.date = normalizedDate;
   }
 
   // Optional top-level fields
