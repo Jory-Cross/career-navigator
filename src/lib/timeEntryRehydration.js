@@ -35,9 +35,9 @@ export function buildFormDataFromEntry(entry, schema) {
     result.jc_date = entry.date;
   }
 
-  if (entry?.date && result.usor96_day == null) {
-    result.usor96_day = entry.date;
-  }
+  if (entry?.date && result.development_date == null) {
+  result.development_date = entry.date;
+}
 
   return result;
 }
