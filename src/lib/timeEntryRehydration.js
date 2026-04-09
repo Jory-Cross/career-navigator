@@ -31,16 +31,19 @@ export function buildFormDataFromEntry(entry, schema) {
   result.service_code_id = entry.service_code_id ?? null;
   result.duration_minutes = normalizeExistingDuration(entry.duration_minutes);
 
-  if (entry?.date && result.jc_date == null) {
-    result.jc_date = entry.date;
-  }
+ if (entry?.date && result.jc_date == null) {
+  result.jc_date = entry.date;
+}
 
-  if (entry?.date && result.development_date == null) {
+if (entry?.date && result.development_date == null) {
   result.development_date = entry.date;
 }
 
-  return result;
+if (entry?.date && result.billable_service_date == null) {
+  result.billable_service_date = entry.date;
 }
+
+return result;
 
 /**
  * If form uses split hours/minutes inputs, derive them from duration_minutes
