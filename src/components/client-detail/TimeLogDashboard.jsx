@@ -124,6 +124,34 @@ export default function TimeLogDashboard({
     return counts;
   }, [timeEntries]);
 
+  const resolveEntryTypeCode = async (entry) => {
+    // Prefer direct code on the entry
+    if (entry.entry_type_code) return entry.entry_type_code;
+
+    // Fall back: look up by entry_type_id from the DB
+    if (entry.entry_type_id) {
+      try {
+        const results = await base44.entities.EntryType.filter({ id: entry.entry_type_id });
+        if (results?.[0]?.code) return results[0].code;
+      } catch {}
+    }
+
+    // Last resort: check registry by any field
+    const fromRegistry = getEntryTypeOptions().find(
+      opt => opt.value === entry.entry_type_key || opt.value === entry.entry_type
+    );
+    return fromRegistry?.value || "";
+  };
+
+  const handleEditEntry = async (entry) => {
+    console.log("🟣 EDIT ENTRY RAW:", JSON.stringify(entry, null, 2));
+    const code = await resolveEntryTypeCode(entry);
+    console.log("🟣 RESOLVED ENTRY TYPE CODE:", code);
+    setEditingEntry(entry);
+    setSelectedEntryTypeCode(code);
+    setShowForm(true);
+  };
+
   const handleDuplicate = async (entry) => {
     try {
       const newEntry = { ...entry };
@@ -429,11 +457,7 @@ export default function TimeLogDashboard({
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs gap-1"
-                      onClick={() => {
-                        setEditingEntry(entry);
-                        setSelectedEntryTypeCode(entry.entry_type_code || "");
-                        setShowForm(true);
-                      }}
+                      onClick={() => handleEditEntry(entry)}
                     >
                       <Pencil className="w-3 h-3" />
                       Edit
@@ -529,7 +553,8 @@ export default function TimeLogDashboard({
 
               {/* Unified Form Engine */}
               {(() => {
-                const activeEntryTypeCode = editingEntry?.entry_type_code || selectedEntryTypeCode || "";
+                // For edits, selectedEntryTypeCode is pre-populated by handleEditEntry (resolved async)
+                const activeEntryTypeCode = selectedEntryTypeCode || editingEntry?.entry_type_code || "";
 
                 // For new entries, only render form if an entry type is selected
                 if (!editingEntry && !activeEntryTypeCode) {

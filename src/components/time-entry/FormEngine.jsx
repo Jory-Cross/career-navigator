@@ -43,12 +43,19 @@ export default function FormEngine({
   }, [entryTypeCode, config]);
 
   if (!config) {
+    console.warn("⚠️ FormEngine: unknown entry type code:", entryTypeCode, {
+      entry_type_id: entry?.entry_type_id,
+      entry_type_code: entry?.entry_type_code,
+      entry_type_key: entry?.entry_type_key,
+    });
     return (
       <Card className="p-4 flex gap-3">
-        <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-red-700">Unknown entry type</p>
-          <p className="text-xs text-red-600 mt-0.5">{entryTypeCode}</p>
+          <p className="text-sm font-medium text-amber-700">Could not resolve entry type</p>
+          <p className="text-xs text-amber-600 mt-0.5">
+            {entryTypeCode ? `Code "${entryTypeCode}" not found in registry` : "No entry type code available — please close and try again"}
+          </p>
         </div>
       </Card>
     );
