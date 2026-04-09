@@ -6,46 +6,41 @@
 export function buildFormDataFromEntry(entry, schema) {
   const result = {};
 
-  // Extract nested data from either 'data' or 'form_data' field
   const nestedData =
     (entry.data && typeof entry.data === 'object' ? entry.data : null) ||
     (entry.form_data && typeof entry.form_data === 'object' ? entry.form_data : null) ||
     {};
 
-  // Load schema fields
   if (schema?.fields) {
     for (const field of schema.fields) {
       const key = field.key;
       if (!key) continue;
 
-      // Top-level fields (e.g., client_id, service_authorization_id)
       if (field.saveToTopLevel) {
         result[key] = getTopLevelFieldValue(entry, key);
         continue;
       }
 
-      // Nested fields from data/form_data
       if (nestedData[key] !== undefined) {
         result[key] = nestedData[key];
       }
     }
   }
 
-  // Always include these top-level fields used by forms
   result.notes = entry.notes ?? '';
   result.service_code_id = entry.service_code_id ?? null;
   result.duration_minutes = normalizeExistingDuration(entry.duration_minutes);
-// Job Coaching fix: map top-level "date" into schema field "jc_date"
-if (entry?.date && result.jc_date == null) {
-  result.jc_date = entry.date;
-}
 
-// Job Development fix: map top-level "date" into schema field "usor96_day"
-if (entry?.date && result.usor96_day == null) {
-  result.usor96_day = entry.date;
-}
+  if (entry?.date && result.jc_date == null) {
+    result.jc_date = entry.date;
+  }
 
-return result;
+  if (entry?.date && result.usor96_day == null) {
+    result.usor96_day = entry.date;
+  }
+
+  return result;
+}
 
 /**
  * If form uses split hours/minutes inputs, derive them from duration_minutes
