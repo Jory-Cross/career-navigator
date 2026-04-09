@@ -7,8 +7,8 @@ export function buildFormDataFromEntry(entry, schema) {
   const result = {};
 
   const nestedData =
-    (entry.data && typeof entry.data === 'object' ? entry.data : null) ||
-    (entry.form_data && typeof entry.form_data === 'object' ? entry.form_data : null) ||
+    (entry.data && typeof entry.data === "object" ? entry.data : null) ||
+    (entry.form_data && typeof entry.form_data === "object" ? entry.form_data : null) ||
     {};
 
   if (schema?.fields) {
@@ -27,26 +27,25 @@ export function buildFormDataFromEntry(entry, schema) {
     }
   }
 
-  result.notes = entry.notes ?? '';
+  result.notes = entry.notes ?? "";
   result.service_code_id = entry.service_code_id ?? null;
   result.duration_minutes = normalizeExistingDuration(entry.duration_minutes);
 
-if (entry?.date && result.jc_date == null) {
-  result.jc_date = entry.date;
+  // Date rehydration for known schema-specific date fields
+  if (entry?.date && result.jc_date == null) {
+    result.jc_date = entry.date;
+  }
+
+  if (entry?.date && result.development_date == null) {
+    result.development_date = entry.date;
+  }
+
+  if (entry?.date && result.billable_service_date == null) {
+    result.billable_service_date = entry.date;
+  }
+
+  return result;
 }
-
-if (entry?.date && result.development_date == null) {
-  result.development_date = entry.date;
-}
-
-if (entry?.date && result.billable_service_date == null) {
-  result.billable_service_date = entry.date;
-}
-
-console.log("[timeEntryRehydration] final result:", result);
-return result;
-
-return result;
 
 /**
  * If form uses split hours/minutes inputs, derive them from duration_minutes
@@ -72,10 +71,10 @@ function getTopLevelFieldValue(entry, key) {
  * Normalize duration from various input formats to minutes (number)
  */
 function normalizeExistingDuration(value) {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string' && value.trim()) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim()) {
     const parsed = Number(value);
-    return isNaN(parsed) ? 0 : parsed;
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
   return 0;
 }
@@ -86,10 +85,10 @@ function normalizeExistingDuration(value) {
 export function validateRehydratedFormData(formData, schema) {
   const requiredFields = schema?.fields?.filter(f => f.required)?.map(f => f.key) || [];
   const missing = requiredFields.filter(key => !formData[key]);
-  
+
   if (missing.length > 0) {
-    console.warn('[timeEntryRehydration] Missing required fields on edit:', missing);
+    console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
   }
-  
+
   return missing.length === 0;
 }
