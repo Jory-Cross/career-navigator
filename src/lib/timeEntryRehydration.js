@@ -95,6 +95,3 @@ export function validateRehydratedFormData(formData, schema) {
     console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
   }
 }
-
-  return missing.length === 0;
-}
