@@ -409,8 +409,11 @@ export default function TimeTracking() {
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-xs text-slate-400 uppercase tracking-wide">Date</p>
-                      <p className="font-medium text-slate-800">{selectedEntry.date ? format(new Date(selectedEntry.date), "MMM d, yyyy") : "—"}</p>
-                    </div>
+                      <p className="font-medium text-slate-800">{selectedEntry.date ? (() => {
+  const [y, m, d] = selectedEntry.date.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[Number(m) - 1]} ${Number(d)}, ${y}`;
+})() : "—"}
                     <div className="space-y-0.5">
                       <p className="text-xs text-slate-400 uppercase tracking-wide">Duration</p>
                       <p className="font-medium text-slate-800">{selectedEntry.duration_minutes} minutes</p>
