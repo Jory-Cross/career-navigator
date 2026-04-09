@@ -27,6 +27,8 @@ export async function handleDynamicEntrySave({
   closeModal,
 }) {
   // 1️⃣ Build unified payload (same for create & edit)
+  console.log("🟣 HANDLE SAVE formData:", JSON.stringify(formData, null, 2));
+  console.log("🟣 HANDLE SAVE schema:", JSON.stringify(schema, null, 2));
   const payload = buildTimeEntryPayload({ entryType, formData, schema });
 
   // 2️⃣ Hard guards before save

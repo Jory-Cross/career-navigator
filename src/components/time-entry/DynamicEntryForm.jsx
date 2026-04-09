@@ -58,6 +58,8 @@ export default function DynamicEntryForm({
     setSaving(true);
 
     try {
+      console.log("🔍 SUBMIT FORM DATA FULL:", JSON.stringify(formData, null, 2));
+
       // Save through the unified saveTimeEntry function
       const user = await base44.auth.me();
       if (!user?.id) {

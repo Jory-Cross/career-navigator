@@ -182,12 +182,22 @@ export function buildTimeEntryPayload({
     service_code_id: emptyToNull(formData.service_code_id),
   };
 
-  // Resolve date from any likely key the form/schema may use, normalize to ISO
+  // Detect date field from schema (handles any key the schema uses)
+  const schemaFields = getSchemaFields(normalizedSchema);
+  const dateField =
+    schemaFields.find(f => f.isDate === true) ||
+    schemaFields.find(f => (f.type || "").toLowerCase() === "date") ||
+    schemaFields.find(f => (f.key || "").toLowerCase().includes("date")) ||
+    schemaFields.find(f => (f.label || "").toLowerCase().includes("date"));
+
+  // Resolve date from well-known keys first, then fall back to schema-detected key
   const rawDate =
     formData.date ??
     formData.entry_date ??
     formData.service_date ??
-    null;
+    (dateField ? formData[dateField.key] : null);
+
+  console.log("🗓️ DATE RESOLUTION:", { dateField: dateField?.key, rawDate });
 
   const normalizedDate = normalizeDateValue(rawDate);
   if (normalizedDate) {
@@ -232,7 +242,17 @@ function mapTemplateFields(schema, formData) {
   const fields = getSchemaFields(schema);
 
   // Date keys that belong at top level — never nest in form_data
+  // Also include any schema field of type "date" to prevent leakage
   const TOP_LEVEL_DATE_KEYS = new Set(["date", "entry_date", "service_date"]);
+  for (const f of fields) {
+    if (
+      f.isDate === true ||
+      (f.type || "").toLowerCase() === "date" ||
+      (f.key || "").toLowerCase().includes("date")
+    ) {
+      TOP_LEVEL_DATE_KEYS.add(f.key);
+    }
+  }
 
   for (const field of fields) {
     const key = field.key;
