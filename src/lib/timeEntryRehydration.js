@@ -2,6 +2,11 @@
  * Rehydrate an existing time entry into formData shape
  * Supports both legacy (data/form_data) and new schema structures
  */
+const DATE_FIELD_MAP = [
+  "jc_date",
+  "development_date",
+  "billable_service_date",
+];
 
 export function buildFormDataFromEntry(entry, schema) {
   const result = {};
@@ -27,21 +32,19 @@ export function buildFormDataFromEntry(entry, schema) {
     }
   }
 
-  result.notes = entry.notes ?? "";
-  result.service_code_id = entry.service_code_id ?? null;
-  result.duration_minutes = normalizeExistingDuration(entry.duration_minutes);
+  result.notes = entry?.notes ?? "";
+  result.service_code_id = entry?.service_code_id ?? null;
+  result.duration_minutes = normalizeExistingDuration(entry?.duration_minutes);
 
-  // Date rehydration for known schema-specific date fields
-  if (entry?.date && result.jc_date == null) {
-    result.jc_date = entry.date;
-  }
+  // Rehydrate top-level entry.date into the matching schema date field(s)
+  if (entry?.date && schema?.fields) {
+    const schemaKeys = new Set(schema.fields.map(field => field.key));
 
-  if (entry?.date && result.development_date == null) {
-    result.development_date = entry.date;
-  }
-
-  if (entry?.date && result.billable_service_date == null) {
-    result.billable_service_date = entry.date;
+    for (const key of DATE_FIELD_MAP) {
+      if (schemaKeys.has(key) && result[key] == null) {
+        result[key] = entry.date;
+      }
+    }
   }
 
   return result;
@@ -64,7 +67,7 @@ export function attachSplitDurationFields(formData) {
  * Get a top-level field value from entry (e.g., client_id, location)
  */
 function getTopLevelFieldValue(entry, key) {
-  return entry[key] ?? null;
+  return entry?.[key] ?? null;
 }
 
 /**
@@ -83,12 +86,15 @@ function normalizeExistingDuration(value) {
  * Sanity check: ensure rehydrated entry has required fields
  */
 export function validateRehydratedFormData(formData, schema) {
-  const requiredFields = schema?.fields?.filter(f => f.required)?.map(f => f.key) || [];
+  const requiredFields =
+    schema?.fields?.filter(field => field.required).map(field => field.key) || [];
+
   const missing = requiredFields.filter(key => !formData[key]);
 
   if (missing.length > 0) {
     console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
   }
+}
 
   return missing.length === 0;
 }
