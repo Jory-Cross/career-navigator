@@ -71,6 +71,8 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
   console.log("[saveTimeEntry] entryTypeId:", entryTypeId);
   console.log("[saveTimeEntry] formData:", JSON.stringify(formData, null, 2));
 
+  let payload = null;
+
   try {
     // ⚠️ SILENT FAILURE GUARD - Validate inputs
     if (!entryTypeId) {
@@ -81,7 +83,7 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
     }
 
     // Build unified payload
-    const payload = buildTimeEntryPayload({
+    payload = buildTimeEntryPayload({
       entryType: { id: entryTypeId },
       formData,
       schema
