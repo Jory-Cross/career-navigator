@@ -13,7 +13,6 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
-import { saveTimeEntry } from "@/lib/saveTimeEntry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 
 /**

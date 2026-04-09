@@ -5,7 +5,7 @@ import FieldRenderer from "./FieldRenderer";
 import { buildInitialFormData } from "@/lib/formHelpers";
 import { buildFormDataFromEntry } from "@/lib/timeEntryRehydration";
 import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
-import { saveTimeEntry } from "@/lib/saveTimeEntry";
+import { persistTimeEntry } from "@/lib/persistTimeEntry";
 import { base44 } from "@/api/base44Client";
 
 export default function DynamicEntryForm({
@@ -18,39 +18,32 @@ export default function DynamicEntryForm({
   onCancel,
 }) {
   const initialData = useMemo(() => {
-    // For edit mode: rehydrate from existing entry
     if (entry?.id) {
       console.log("[DynamicEntryForm] EDIT MODE - Rehydrating entry:", entry.id);
       const data = buildFormDataFromEntry(entry, { fields: schema });
       console.log("[DynamicEntryForm] Rehydrated form data:", data);
       return data;
     }
-    // For create mode: build fresh
     const data = buildInitialFormData(schema, null);
     console.log("[DynamicEntryForm] Create mode - Initial form data:", data);
     return data;
   }, [schema, entry]);
-   const [formData, setFormData] = useState(initialData);
+
+  const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
 
-  // Resolve entry type object to get id
   useEffect(() => {
     base44.entities.EntryType.filter({ code: entryTypeCode, is_active: true })
       .then(results => {
-        if (results.length > 0) {
-          setEntryTypeObj(results[0]);
-        }
+        if (results.length > 0) setEntryTypeObj(results[0]);
       })
       .catch(err => console.error("Failed to load entry type:", err));
   }, [entryTypeCode]);
 
   function handleChange(key, value) {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit(e) {
@@ -59,42 +52,25 @@ export default function DynamicEntryForm({
     setSaving(true);
 
     try {
-      console.log("🔍 SUBMIT FORM DATA FULL:", JSON.stringify(formData, null, 2));
+      console.log("🔍 SUBMIT FORM DATA:", JSON.stringify(formData, null, 2));
 
-      // Save through the unified saveTimeEntry function
-      const user = await base44.auth.me();
-      if (!user?.id) {
-        throw new Error("User not authenticated");
-      }
-
-      console.log("🟢 CURRENT CLIENT CONTEXT:", { clientId });
-
+      // Single save owner: handleDynamicEntrySave
+      // Payload is built once inside handleDynamicEntrySave via buildTimeEntryPayload.
+      // persistTimeEntry is the thin DB writer — receives the already-built payload.
       await handleDynamicEntrySave({
         entryType: { id: entryTypeObj?.id, code: entryTypeCode, name: entryTypeObj?.name },
         formData,
         schema,
         existingEntry: entry,
         mode,
-        saveEntry: async (payload, entryId) => {
-          const result = await saveTimeEntry({
-            entryTypeId: entryTypeObj?.id,
-            formData,
-            schema,
-            existingEntry: entry?.id ? entry : null,
-            clientId,
-          });
-          return result || { id: entryId || entry?.id };
-        },
+        saveEntry: (payload) => persistTimeEntry(payload, entry?.id ?? null, clientId),
+        // refresh/close are handled by the onSave callback below, not here
       });
-      
-      // Call the original onSave callback to refresh UI
-      if (onSave) {
-        await onSave();
-      }
+
+      if (onSave) await onSave();
     } catch (err) {
-      const errorMsg = err?.message || "Failed to save entry";
       console.error("[DynamicEntryForm] Save failed:", err);
-      setError(errorMsg);
+      setError(err?.message || "Failed to save entry");
     } finally {
       setSaving(false);
     }
@@ -119,18 +95,10 @@ export default function DynamicEntryForm({
       )}
 
       <div className="flex gap-2 pt-4 border-t border-slate-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={saving}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={saving}
-        >
+        <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {mode === "edit" ? "Save Changes" : "Save Entry"}
         </Button>
