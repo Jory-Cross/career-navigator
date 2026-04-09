@@ -5,12 +5,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, User, Calendar, Filter, AlertTriangle, Trash2, Pencil, Save, Plus } from "lucide-react";
+import { User, Filter, AlertTriangle, Trash2, Pencil, Plus } from "lucide-react";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
-import { saveTimeEntry } from "@/lib/saveTimeEntry";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
@@ -25,12 +23,13 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
-    const [showEditForm, setShowEditForm] = useState(false);
-    const [showNewEntry, setShowNewEntry] = useState(false);
-    const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
-    const [entryTypes, setEntryTypes] = useState([]);
-    const queryClient = useQueryClient();
-    const navigate = useNavigate();
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
+  const [showNewEntry, setShowNewEntry] = useState(false);
+  const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+  const [entryTypes, setEntryTypes] = useState([]);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
      base44.auth.me().then(setUser).catch(() => {});
@@ -101,12 +100,35 @@ export default function TimeTracking() {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
   };
 
+  // Same resolution logic as TimeLogDashboard
+  const resolveEntryTypeCode = async (entry) => {
+    if (entry.entry_type_code) return entry.entry_type_code;
+    if (entry.entry_type_id) {
+      try {
+        const results = await base44.entities.EntryType.filter({ id: entry.entry_type_id });
+        if (results?.[0]?.code) return results[0].code;
+      } catch {}
+    }
+    const fromRegistry = getEntryTypeOptions().find(
+      opt => opt.value === entry.entry_type_key || opt.value === entry.entry_type
+    );
+    return fromRegistry?.value || "";
+  };
+
+  const handleEditEntry = async (entry) => {
+    console.log("🟣 TIME TRACKING EDIT RAW ENTRY:", JSON.stringify(entry, null, 2));
+    const code = await resolveEntryTypeCode(entry);
+    console.log("🟣 TIME TRACKING RESOLVED TYPE CODE:", code);
+    setEditingEntry(entry);
+    setEditingEntryTypeCode(code);
+    setSelectedEntry(null);
+  };
+
   const handleOpenEntry = async (entry) => {
     if (!entry?.id) {
       toast.error("Invalid entry");
       return;
     }
-
     try {
       const fresh = await base44.entities.TimeEntry.get(entry.id);
       if (!fresh) {
@@ -383,13 +405,13 @@ export default function TimeTracking() {
         </DialogContent>
       </Dialog>
 
-      {/* Entry Detail Dialog with FormEngine */}
-      <Dialog open={!!selectedEntry} onOpenChange={() => { setSelectedEntry(null); setShowEditForm(false); }}>
+      {/* Entry Detail Dialog */}
+      <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
         <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
             <DialogTitle className="flex items-center gap-2">
-              {showEditForm ? "Edit Time Entry" : "Time Entry Details"}
-              {selectedEntry && duplicateIds.has(selectedEntry.id) && !showEditForm && (
+              Time Entry Details
+              {selectedEntry && duplicateIds.has(selectedEntry.id) && (
                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Duplicate
                 </Badge>
@@ -398,7 +420,7 @@ export default function TimeTracking() {
           </DialogHeader>
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-6 py-4">
-              {selectedEntry && !showEditForm && (
+              {selectedEntry && (
                 <div className="space-y-3 py-2">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="space-y-0.5">
@@ -451,7 +473,7 @@ export default function TimeTracking() {
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
                     </Button>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setShowEditForm(true)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEditEntry(selectedEntry)}>
                         <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>Close</Button>
@@ -459,29 +481,31 @@ export default function TimeTracking() {
                   </div>
                 </div>
               )}
-              {selectedEntry && showEditForm && (
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog — same pipeline as TimeLogDashboard */}
+      <Dialog open={!!editingEntry} onOpenChange={open => { if (!open) { setEditingEntry(null); setEditingEntryTypeCode(""); } }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
+            <DialogTitle>Edit Time Entry</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 py-4">
+              {editingEntry && (
                 <FormEngine
-                  entryTypeCode={selectedEntry.entry_type_code}
-                  entry={selectedEntry}
+                  entryTypeCode={editingEntryTypeCode}
+                  entry={editingEntry}
+                  clientId={editingEntry.client_id || null}
                   mode="edit"
-                  onSave={async (payload) => {
-                    try {
-                      await saveTimeEntry({
-                        payload: {
-                          ...payload,
-                          entry_type_code: payload.entry_type_code || selectedEntry.entry_type_code
-                        },
-                        existingEntry: selectedEntry,
-                        clientId: selectedEntry?.client_id || null
-                      });
-                      setShowEditForm(false);
-                      setSelectedEntry(null);
-                      handleRefresh();
-                    } catch (err) {
-                      toast.error(err?.message || "Failed to update entry");
-                    }
+                  onSave={async () => {
+                    setEditingEntry(null);
+                    setEditingEntryTypeCode("");
+                    handleRefresh();
                   }}
-                  onCancel={() => setShowEditForm(false)}
+                  onCancel={() => { setEditingEntry(null); setEditingEntryTypeCode(""); }}
                 />
               )}
             </div>
