@@ -42,31 +42,35 @@ export async function handleDynamicEntrySave({
   const modeLabel = mode === "edit" ? "🔵 EDIT" : "🟢 CREATE";
   console.log(`${modeLabel} FINAL PAYLOAD:`, JSON.stringify(payload, null, 2));
 
-  // 5️⃣ Persist with response validation
+  // 5️⃣ Persist
   let result;
   if (mode === "edit" && existingEntry?.id) {
-    // Edit: pass existing entry ID
     result = await saveEntry(payload, existingEntry.id);
   } else {
-    // Create: no ID
     result = await saveEntry(payload);
   }
 
-  // 6️⃣ Backend response validation
-  if (!result?.id) {
-    throw new Error("❌ Save succeeded but no ID returned from backend");
+  if (!result) {
+    throw new Error("❌ Save failed: no result returned from backend");
   }
 
-  console.log(`✅ Entry ${mode === "edit" ? "updated" : "created"} with ID:`, result.id);
+  // 6️⃣ Refresh and close (these confirm success in the UI)
+  await refreshEntries?.();
+  closeModal?.();
 
-  // 7️⃣ Refresh entry list if callback provided
-  if (refreshEntries) {
-    await refreshEntries();
-  }
+  // 7️⃣ Log ID if available (missing ID is a warning, not a failure)
+  const savedId =
+    result?.id ??
+    result?._id ??
+    result?.data?.id ??
+    result?.record?.id ??
+    result?.item?.id ??
+    (Array.isArray(result) ? result[0]?.id : null);
 
-  // 8️⃣ Close modal if callback provided
-  if (closeModal) {
-    closeModal();
+  if (savedId) {
+    console.log(`✅ Entry ${mode === "edit" ? "updated" : "created"} with ID:`, savedId);
+  } else {
+    console.warn("⚠️ Save succeeded but backend response had no top-level id", result);
   }
 }
 
