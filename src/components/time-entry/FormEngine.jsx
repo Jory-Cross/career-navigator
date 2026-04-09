@@ -9,6 +9,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 export default function FormEngine({
   entryTypeCode,
   entry = null,
+  clientId = null,
   mode = "create",
   onSave,
   onCancel,
@@ -89,6 +90,7 @@ export default function FormEngine({
         entryTypeCode={entryTypeCode}
         schema={schema}
         entry={entry}
+        clientId={clientId}
         mode={mode}
         onSave={onSave}
         onCancel={onCancel}

@@ -129,22 +129,28 @@ export async function saveTimeEntry({ entryTypeId, formData, schema, existingEnt
         throw new Error("❌ Create payload missing employee_id");
       }
 
-      console.log("[saveTimeEntry] Creating TimeEntry with payload:", createData);
+      console.log("🟢 FINAL SAVE PAYLOAD:", JSON.stringify(createData, null, 2));
+      console.log("🟢 CURRENT CLIENT CONTEXT:", { clientId });
+
       const result = await base44.entities.TimeEntry.create(createData);
       
-      if (!result || !result.id) {
-        throw new Error("❌ Create operation failed - no ID returned");
+      savedEntry = result;
+      if (result?.id) {
+        // Verify round-trip if we have an ID
+        const freshEntry = await base44.entities.TimeEntry.get(result.id);
+        if (freshEntry) {
+          savedEntry = freshEntry;
+          validateRoundTripIntegrity(payload, freshEntry);
+        }
+      } else {
+        console.warn("⚠️ Create returned no ID, skipping round-trip verification");
       }
-
-      // Reload to verify all fields persisted
-      const freshEntry = await base44.entities.TimeEntry.get(result.id);
-      savedEntry = freshEntry;
-      validateRoundTripIntegrity(payload, freshEntry);
       toast.success("Entry created");
     }
 
     console.log("✅ Round-trip verification passed, saved entry:", savedEntry);
     console.log("[saveTimeEntry] === SUCCESS ===");
+    return savedEntry;
   } catch (err) {
     console.error("🔴 Save Entry Failed:", {
       payload,

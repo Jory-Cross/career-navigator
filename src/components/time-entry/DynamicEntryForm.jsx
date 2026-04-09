@@ -12,6 +12,7 @@ export default function DynamicEntryForm({
   entryTypeCode,
   schema,
   entry = null,
+  clientId = null,
   mode = "create",
   onSave,
   onCancel,
@@ -66,6 +67,8 @@ export default function DynamicEntryForm({
         throw new Error("User not authenticated");
       }
 
+      console.log("🟢 CURRENT CLIENT CONTEXT:", { clientId });
+
       await handleDynamicEntrySave({
         entryType: { id: entryTypeObj?.id, code: entryTypeCode, name: entryTypeObj?.name },
         formData,
@@ -73,15 +76,14 @@ export default function DynamicEntryForm({
         existingEntry: entry,
         mode,
         saveEntry: async (payload, entryId) => {
-          // Use saveTimeEntry which handles both create and edit
-          await saveTimeEntry({
+          const result = await saveTimeEntry({
             entryTypeId: entryTypeObj?.id,
             formData,
             schema,
             existingEntry: entry?.id ? entry : null,
+            clientId,
           });
-          // Return minimal result with ID for validation
-          return { id: entryId || entry?.id };
+          return result || { id: entryId || entry?.id };
         },
       });
       

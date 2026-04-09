@@ -544,9 +544,9 @@ export default function TimeLogDashboard({
                   <FormEngine
                     entryTypeCode={activeEntryTypeCode}
                     entry={editingEntry}
+                    clientId={clientId}
                     mode={editingEntry ? "edit" : "create"}
-                    onSave={async (payload, entryId) => {
-                      // onSave receives payload from saveTimeEntry, which already handles create/edit
+                    onSave={async () => {
                       await onRefresh();
                       setShowForm(false);
                       setEditingEntry(null);
