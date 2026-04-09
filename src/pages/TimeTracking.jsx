@@ -153,8 +153,18 @@ export default function TimeTracking() {
     if ((effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && employeeFilter !== 'all' && e.client_id && !filteredClientIds.includes(e.client_id)) return false;
     if (clientFilter !== "all" && e.client_id !== clientFilter) return false;
     if (!e.date) return periodFilter === "all";
-    const [y, m, dStr] = (e.date || "").split("-");
-const d = new Date(Number(y), Number(m) - 1, Number(dStr));
+    if (!e.date) return periodFilter === "all";
+
+const parts = e.date.split("-");
+if (parts.length !== 3) return false;
+
+const y = Number(parts[0]);
+const m = Number(parts[1]);
+const dNum = Number(parts[2]);
+
+if (!y || !m || !dNum) return false;
+
+const d = new Date(y, m - 1, dNum);
     if (periodFilter === "payroll1") return d >= payroll1Start && d <= payroll1End;
     if (periodFilter === "payroll2") return d >= payroll2Start && d <= payroll2End;
     if (periodFilter === "week") return isWithinInterval(d, { start: startOfWeek(now), end: endOfWeek(now) });
