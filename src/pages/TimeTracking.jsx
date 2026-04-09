@@ -325,7 +325,11 @@ export default function TimeTracking() {
                         </div>
                     </div>
                     <div className="text-xs text-slate-400 shrink-0">
-                      {entry.date && format(new Date(entry.date), "MMM d")}
+                     {entry.date && (() => {
+  const [y, m, d] = entry.date.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[Number(m) - 1]} ${Number(d)}`;
+})()}
                     </div>
                   </div>
                 );
