@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { User, Filter, AlertTriangle, Trash2, Pencil, Plus } from "lucide-react";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
+// saveTimeEntry removed — DynamicEntryForm owns all save operations via handleDynamicEntrySave
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
+import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 
 export default function TimeTracking() {
   const { viewAsUser } = useViewAs();
@@ -100,21 +102,7 @@ export default function TimeTracking() {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
   };
 
-  // Same resolution logic as TimeLogDashboard
-  const resolveEntryTypeCode = async (entry) => {
-    if (entry.entry_type_code) return entry.entry_type_code;
-    if (entry.entry_type_id) {
-      try {
-        const results = await base44.entities.EntryType.filter({ id: entry.entry_type_id });
-        if (results?.[0]?.code) return results[0].code;
-      } catch {}
-    }
-    const fromRegistry = getEntryTypeOptions().find(
-      opt => opt.value === entry.entry_type_key || opt.value === entry.entry_type
-    );
-    return fromRegistry?.value || "";
-  };
-
+  // Edit launcher — uses shared resolveEntryTypeCode from lib/resolveEntryTypeCode.js
   const handleEditEntry = async (entry) => {
     console.log("🟣 TIME TRACKING EDIT RAW ENTRY:", JSON.stringify(entry, null, 2));
     const code = await resolveEntryTypeCode(entry);
@@ -377,25 +365,13 @@ export default function TimeTracking() {
                 <FormEngine
                   entryTypeCode={selectedEntryTypeCode}
                   entry={null}
+                  clientId={null}
                   mode="create"
-                  onSave={async (payload) => {
-                    try {
-                      // 1️⃣ Save entry
-                      await saveTimeEntry({
-                        payload,
-                        existingEntry: null,
-                        clientId: null
-                      });
-
-                      // 2️⃣ Refresh data to sync UI with DB (critical)
-                      await handleRefresh();
-
-                      // 3️⃣ Close modal and reset state
-                      setShowNewEntry(false);
-                      setSelectedEntryTypeCode("");
-                    } catch (err) {
-                      toast.error(err?.message || "Failed to save entry");
-                    }
+                  onSave={async () => {
+                    // DynamicEntryForm owns saving — onSave is called after success
+                    await handleRefresh();
+                    setShowNewEntry(false);
+                    setSelectedEntryTypeCode("");
                   }}
                   onCancel={() => { setShowNewEntry(false); setSelectedEntryTypeCode(""); }}
                 />

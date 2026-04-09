@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { saveTimeEntry } from "@/lib/saveTimeEntry";
+import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 
 /**
  * TimeLogDashboard - Operational dashboard for time entry management
@@ -124,27 +125,9 @@ export default function TimeLogDashboard({
     return counts;
   }, [timeEntries]);
 
-  const resolveEntryTypeCode = async (entry) => {
-    // Prefer direct code on the entry
-    if (entry.entry_type_code) return entry.entry_type_code;
-
-    // Fall back: look up by entry_type_id from the DB
-    if (entry.entry_type_id) {
-      try {
-        const results = await base44.entities.EntryType.filter({ id: entry.entry_type_id });
-        if (results?.[0]?.code) return results[0].code;
-      } catch {}
-    }
-
-    // Last resort: check registry by any field
-    const fromRegistry = getEntryTypeOptions().find(
-      opt => opt.value === entry.entry_type_key || opt.value === entry.entry_type
-    );
-    return fromRegistry?.value || "";
-  };
-
+  // Edit launcher — shared pipeline. resolveEntryTypeCode is imported from lib/resolveEntryTypeCode.js
   const handleEditEntry = async (entry) => {
-    console.log("🟣 EDIT ENTRY RAW:", JSON.stringify(entry, null, 2));
+    console.log("🟣 CLIENT EDIT RAW ENTRY:", JSON.stringify(entry, null, 2));
     const code = await resolveEntryTypeCode(entry);
     console.log("🟣 RESOLVED ENTRY TYPE CODE:", code);
     setEditingEntry(entry);
