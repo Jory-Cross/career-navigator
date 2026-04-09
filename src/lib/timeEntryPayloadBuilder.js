@@ -153,10 +153,18 @@ export function buildTimeEntryPayload({
     service_code_id: emptyToNull(formData.service_code_id),
   };
 
-  // Optional fields if provided
-  if (formData.date) {
-    topLevel.date = formData.date;
+  // Resolve date from any likely key the form/schema may use
+  const resolvedDate =
+    formData.date ??
+    formData.entry_date ??
+    formData.service_date ??
+    null;
+
+  if (resolvedDate) {
+    topLevel.date = resolvedDate;
   }
+
+  // Optional top-level fields
   if (formData.start_time) {
     topLevel.start_time = formData.start_time;
   }
@@ -169,6 +177,8 @@ export function buildTimeEntryPayload({
   if (formData.description) {
     topLevel.description = formData.description;
   }
+
+  console.log("🟢 FINAL SAVE PAYLOAD (pre-form_data):", JSON.stringify(topLevel, null, 2));
 
   // Template/form data (nested)
   const form_data = mapTemplateFields(normalizedSchema, formData);
@@ -191,12 +201,18 @@ function mapTemplateFields(schema, formData) {
   const result = {};
   const fields = getSchemaFields(schema);
 
+  // Date keys that belong at top level — never nest in form_data
+  const TOP_LEVEL_DATE_KEYS = new Set(["date", "entry_date", "service_date"]);
+
   for (const field of fields) {
     const key = field.key;
     if (!key) continue;
 
     // Skip fields that should be saved at top level
     if (field.saveToTopLevel) continue;
+
+    // Skip known top-level date keys
+    if (TOP_LEVEL_DATE_KEYS.has(key)) continue;
 
     // Only include if defined in form data
     if (formData[key] !== undefined) {
