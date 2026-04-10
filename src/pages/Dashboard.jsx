@@ -1,310 +1,305 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Clock, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
-import { ENTRY_TYPES } from "@/lib/timeEntries/EntryTypeRegistry";
-import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
+import React from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Users, Briefcase, Clock, ListChecks } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import StatCard from "@/components/dashboard/StatCard";
+import { useOrg } from "@/lib/useOrg";
+import OrgGate from "@/lib/OrgGate";
+import ActiveTimer from "@/components/dashboard/ActiveTimer";
+import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
+import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
+import RecentActivity from "@/components/dashboard/RecentActivity";
+import AccessRequestsPanel from "@/components/dashboard/AccessRequestsPanel";
 
-function generateQuarterHourOptions() {
-  const options = [];
+const DEFAULT_WIDGETS = {
+  stats: true,
+  quickLog: true,
+  tasks: true,
+  activity: true,
+};
 
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-      const displayHour = hour % 12 || 12;
-      const ampm = hour < 12 ? "AM" : "PM";
-      const displayMinute = String(minute).padStart(2, "0");
+export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { orgId } = useOrg();
+  const [user, setUser] = React.useState(null);
+  const [widgets, setWidgets] = React.useState(DEFAULT_WIDGETS);
 
-      options.push({
-        value,
-        label: `${displayHour}:${displayMinute} ${ampm}`,
-      });
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+
+    const saved = localStorage.getItem("dashboardWidgets");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setWidgets({
+          ...DEFAULT_WIDGETS,
+          ...parsed,
+        });
+      } catch {
+        setWidgets(DEFAULT_WIDGETS);
+      }
     }
-  }
-
-  return options;
-}
-
-function calculateDurationMinutes(startTime, endTime) {
-  if (!startTime || !endTime) return 0;
-
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
-
-  const startTotal = startHour * 60 + startMinute;
-  const endTotal = endHour * 60 + endMinute;
-  const diff = endTotal - startTotal;
-
-  if (diff <= 0) return 0;
-  return diff;
-}
-
-function isValidQuarterHourDuration(minutes) {
-  return minutes >= 15 && minutes % 15 === 0;
-}
-
-export default function ActiveTimer({ clients, onTimeSaved }) {
-  const [selectedClient, setSelectedClient] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedEntryTypeId, setSelectedEntryTypeId] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
-
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-
-  const timeOptions = useMemo(() => generateQuarterHourOptions(), []);
-
-  const entryTypeOptions = useMemo(() => {
-    return (ENTRY_TYPES || [])
-      .filter((type) => type && type.code)
-      .filter((type) => type.active !== false)
-      .map((type) => ({
-        id: type.id || type.code,
-        code: type.code,
-        label: type.label || type.name || type.code,
-        raw: type,
-      }));
   }, []);
 
-  const selectedEntryType = useMemo(() => {
-    return entryTypeOptions.find((type) => String(type.id) === String(selectedEntryTypeId)) || null;
-  }, [entryTypeOptions, selectedEntryTypeId]);
-
-  useEffect(() => {
-    if (selectedEntryType?.code === "job_coaching" && selectedClient) {
-      setShowJobCoachingForm(true);
-    }
-  }, [selectedEntryType?.code, selectedClient]);
-
-  const handleSave = async () => {
-    if (!selectedClient || !selectedEntryType) {
-      toast.error("Please select a client and service type");
-      return;
-    }
-
-    if (!date) {
-      toast.error("Please select a date");
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      toast.error("Please select clock in and clock out times");
-      return;
-    }
-
-    const durationMinutes = calculateDurationMinutes(startTime, endTime);
-
-    if (!isValidQuarterHourDuration(durationMinutes)) {
-      toast.error("Time must be at least 15 minutes and in 15-minute increments");
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const actualClientId = selectedClient?.startsWith("self:") ? null : selectedClient;
-
-      await submitTimeEntryWithDualWrite({
-        clientId: actualClientId,
-        entryTypeId: selectedEntryType?.id,
-        entryTypeCode: selectedEntryType?.code,
-        date,
-        startTime,
-        endTime,
-        durationMinutes,
-        location: null,
-        description: description || selectedEntryType?.label || "Time entry",
-        serviceAuthorizationId: null,
-        fieldAnswers: {},
-        asDraft: true,
-      });
-
-      toast.success("Time logged");
-      setDescription("");
-      setSelectedEntryTypeId("");
-      setSelectedClient("");
-      setDate("");
-      setStartTime("");
-      setEndTime("");
-
-      if (onTimeSaved) onTimeSaved();
-    } catch (error) {
-      console.error("Failed to save time entry:", error);
-      toast.error("Failed to log time");
-    } finally {
-      setSaving(false);
-    }
+  const toggleWidget = (key) => {
+    const updated = { ...widgets, [key]: !widgets[key] };
+    setWidgets(updated);
+    localStorage.setItem("dashboardWidgets", JSON.stringify(updated));
   };
 
-  const durationMinutes = calculateDurationMinutes(startTime, endTime);
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+    enabled: !!user,
+  });
 
-  if (showJobCoachingForm && selectedClient) {
-    return (
-      <Card className={cn("border-0 shadow-sm overflow-hidden")}>
-        <div className="h-1 w-full bg-emerald-400" />
-        <div className="p-5">
-          <div className="mb-4">
-            <button
-              className="text-sm text-slate-500 hover:text-slate-700"
-              onClick={() => {
-                setShowJobCoachingForm(false);
-                setSelectedEntryTypeId("");
-              }}
-            >
-              ← Back
-            </button>
-          </div>
-          <JobCoachingTimeEntryForm
-            clientId={selectedClient}
-            onSuccess={() => {
-              setShowJobCoachingForm(false);
-              setSelectedEntryTypeId("");
-              setSelectedClient("");
-              setDescription("");
-              setDate("");
-              setStartTime("");
-              setEndTime("");
-              onTimeSaved?.();
-            }}
-            onCancel={() => {
-              setShowJobCoachingForm(false);
-              setSelectedEntryTypeId("");
-            }}
-          />
-        </div>
-      </Card>
-    );
-  }
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients", user?.id, user?.role, orgId],
+    queryFn: async () => {
+      const allClients = orgId
+        ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.Client.list("-created_date");
+
+      if (!user) return [];
+      if (user.role === "admin") return allClients;
+
+      if (user.role === "management") {
+        const myEmployeeIds = allUsers
+          .filter((u) => u.manager_id === user.id)
+          .map((u) => u.id);
+
+        return allClients.filter((c) =>
+          myEmployeeIds.includes(c.assigned_employee_id)
+        );
+      }
+
+      if (user.role === "employee") {
+        return allClients.filter((c) => c.assigned_employee_id === user.id);
+      }
+
+      return [];
+    },
+    enabled: !!user && allUsers.length >= 0,
+  });
+
+  const clientIds = clients.map((c) => c.id);
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["applications", user?.role, orgId],
+    queryFn: async () => {
+      const apps = orgId
+        ? await base44.entities.JobApplication.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.JobApplication.list("-created_date");
+
+      if (!user || user.role === "management") return apps;
+
+      if (user.role === "employee") {
+        return apps.filter((a) => clientIds.includes(a.client_id));
+      }
+
+      return [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks", user?.role, orgId],
+    queryFn: async () => {
+      const allTasks = orgId
+        ? await base44.entities.Task.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.Task.list("-created_date");
+
+      if (!user || user.role === "management") return allTasks;
+
+      if (user.role === "employee") {
+        return allTasks.filter((t) =>
+          t.client_ids?.some((id) => clientIds.includes(id))
+        );
+      }
+
+      return [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", user?.role, orgId],
+    queryFn: async () => {
+      const entries = orgId
+        ? await base44.entities.TimeEntry.filter({ org_id: orgId }, "-created_date")
+        : await base44.entities.TimeEntry.list("-created_date");
+
+      if (!user || user.role === "management") return entries;
+
+      if (user.role === "employee") {
+        return entries.filter((e) => clientIds.includes(e.client_id));
+      }
+
+      return [];
+    },
+    enabled: !!user,
+  });
+
+  const now = new Date();
+  const day = now.getDate();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const payrollPeriodStart =
+    day <= 15 ? new Date(year, month, 1) : new Date(year, month, 16);
+
+  const payrollPeriodEnd =
+    day <= 15
+      ? new Date(year, month, 15, 23, 59, 59)
+      : new Date(year, month + 1, 0, 23, 59, 59);
+
+  const payrollLabel =
+    day <= 15
+      ? `${now.toLocaleString("default", { month: "short" })} 1–15`
+      : `${now.toLocaleString("default", { month: "short" })} 16–End`;
+
+  const payrollEntries = timeEntries.filter((e) => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d >= payrollPeriodStart && d <= payrollPeriodEnd;
+  });
+
+  const totalHours = Math.round(
+    payrollEntries.reduce((sum, t) => sum + (t.duration_minutes || 0), 0) / 60
+  );
+
+  const activeClients = clients.filter((c) => !c.is_archived).length;
+  const pendingTasks = tasks.filter(
+    (t) => t.status === "pending" || t.status === "in_progress"
+  ).length;
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+  };
+
+  const handleCompleteTask = async (task) => {
+    await base44.entities.Task.update(task.id, { status: "completed" });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+  };
 
   return (
-    <Card className="border-0 shadow-sm overflow-hidden">
-      <div className="h-1 w-full bg-slate-100" />
-      <div className="p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-          <Clock className="w-4 h-4" />
-          <span>Time Entry</span>
-        </div>
-
-        <div className="space-y-2.5">
-          <Select value={selectedClient} onValueChange={setSelectedClient}>
-            <SelectTrigger className="border-slate-200 text-sm">
-              <SelectValue placeholder="Select client..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="self:true">👤 Myself (no client)</SelectItem>
-              {clients
-                .filter((c) => c.status === "active" && !c.is_archived)
-                .map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border-slate-200 text-sm"
-          />
-
-          <Input
-            placeholder="Description (optional)..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="border-slate-200 text-sm"
-          />
-
+    <OrgGate>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
           <div>
-            <label className="text-xs font-medium text-slate-700 block mb-1.5">
-              Service Type *
-            </label>
-            <Select value={selectedEntryTypeId} onValueChange={setSelectedEntryTypeId}>
-              <SelectTrigger className="border-slate-200 text-sm">
-                <SelectValue placeholder="Select service type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {entryTypeOptions.map((type) => (
-                  <SelectItem key={type.id} value={String(type.id)}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Overview of your client management activity
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-medium text-slate-700 block mb-1.5">
-                Clock In
-              </label>
-              <Select value={startTime} onValueChange={setStartTime}>
-                <SelectTrigger className="border-slate-200 text-sm">
-                  <SelectValue placeholder="Start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <details className="relative">
+            <summary className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg cursor-pointer">
+              Customize Widgets
+            </summary>
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl p-2 z-10">
+              {Object.entries(widgets).map(([key, enabled]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={() => toggleWidget(key)}
+                    className="rounded"
+                  />
+                  <span className="text-xs text-slate-700 capitalize">{key}</span>
+                </label>
+              ))}
             </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-700 block mb-1.5">
-                Clock Out
-              </label>
-              <Select value={endTime} onValueChange={setEndTime}>
-                <SelectTrigger className="border-slate-200 text-sm">
-                  <SelectValue placeholder="End time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Duration: {durationMinutes > 0 ? `${durationMinutes} minutes` : "Select start and end time"}
-          </div>
+          </details>
         </div>
 
-        <Button
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-          onClick={handleSave}
-          disabled={!selectedClient || !selectedEntryType || saving}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>Save Time Entry</>
-          )}
-        </Button>
+        {(user?.role === "admin" ||
+          user?.role === "management" ||
+          user?.role === "employee") && <AccessRequestsPanel />}
+
+        {widgets.stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="cursor-pointer" onClick={() => navigate("/Clients")}>
+              <StatCard
+                label="Active Clients"
+                value={activeClients}
+                max={clients.length}
+                icon={Users}
+                color="text-blue-600"
+                bgColor="bg-blue-50"
+              />
+            </div>
+
+            <div className="cursor-pointer" onClick={() => navigate("/Clients")}>
+              <StatCard
+                label="Applications"
+                value={applications.length}
+                max={applications.length}
+                icon={Briefcase}
+                color="text-violet-600"
+                bgColor="bg-violet-50"
+              />
+            </div>
+
+            <div className="cursor-pointer" onClick={() => navigate("/TimeTracking")}>
+              <StatCard
+                label={`Hours (${payrollLabel})`}
+                value={`${totalHours}h`}
+                max={totalHours}
+                icon={Clock}
+                color="text-emerald-600"
+                bgColor="bg-emerald-50"
+              />
+            </div>
+
+            <div className="cursor-pointer" onClick={() => navigate("/Tasks")}>
+              <StatCard
+                label="Pending Tasks"
+                value={pendingTasks}
+                max={tasks.length}
+                icon={ListChecks}
+                color="text-orange-600"
+                bgColor="bg-orange-50"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {widgets.tasks && (
+              <UpcomingTasks
+                tasks={tasks}
+                clients={clients}
+                onComplete={handleCompleteTask}
+              />
+            )}
+            {widgets.activity && (
+              <RecentActivity
+                timeEntries={timeEntries}
+                applications={applications}
+                tasks={tasks}
+                clients={clients}
+              />
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <ActiveTimer clients={clients} onTimeSaved={handleRefresh} />
+
+            {widgets.quickLog && (
+              <QuickTimeLog clients={clients} onTimeSaved={handleRefresh} />
+            )}
+          </div>
+        </div>
       </div>
-    </Card>
+    </OrgGate>
   );
 }
