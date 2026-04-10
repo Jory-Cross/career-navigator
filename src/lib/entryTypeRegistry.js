@@ -1,7 +1,8 @@
 /**
- * Entry Type Registry (CLEANED)
- * - Removed: usor96, work_based_learning
- * - Keeps only canonical types you actually use
+ * Entry Type Registry
+ * SAFE VERSION:
+ * - Keeps ALL existing types (so nothing breaks)
+ * - ONLY removes 2 from dropdown: usor96 + work_based_learning
  */
 
 const CANONICAL_ENTRY_TYPES = {
@@ -12,6 +13,10 @@ const CANONICAL_ENTRY_TYPES = {
   job_development: {
     code: "job_development",
     label: "Job Development",
+  },
+  usor96: {
+    code: "usor96",
+    label: "USOR96",
   },
   life_skills: {
     code: "life_skills",
@@ -41,11 +46,16 @@ const CANONICAL_ENTRY_TYPES = {
     code: "wsa",
     label: "WSA",
   },
+  work_based_learning: {
+    code: "work_based_learning",
+    label: "Work-Based Learning",
+  },
 };
 
 const ENTRY_TYPE_ALIASES = {
   job_coaching: "job_coaching",
   job_development: "job_development",
+  usor96: "usor96",
   life_skills: "life_skills",
   csb_hours: "csb_hours",
   admin_time: "admin_time",
@@ -53,17 +63,14 @@ const ENTRY_TYPE_ALIASES = {
   end_of_month_reporting: "end_of_month_reporting",
   pre_ets_training: "pre_ets_training",
   wsa: "wsa",
+  work_based_learning: "work_based_learning",
 
-  // legacy mappings (still supported silently)
+  // legacy support
   misc: "miscellaneous",
   pre_ets: "pre_ets_training",
   eom_reporting: "end_of_month_reporting",
-
-  // remove these from UI but still map safely if old data exists
-  usor96: "job_development",
-  work_based_learning: "pre_ets_training",
-  wble: "pre_ets_training",
-  work_based_learning_experience: "pre_ets_training",
+  wble: "work_based_learning",
+  work_based_learning_experience: "work_based_learning",
 };
 
 export const ENTRY_TYPE_REGISTRY = Object.fromEntries(
@@ -83,9 +90,19 @@ export function getEntryTypeConfig(entryTypeCode) {
   return ENTRY_TYPE_REGISTRY[normalized] || null;
 }
 
+/**
+ * 🔑 ONLY CHANGE IS HERE
+ * Removes 2 options from dropdown WITHOUT removing them from system
+ */
 export function getEntryTypeOptions() {
-  return Object.values(CANONICAL_ENTRY_TYPES).map((item) => ({
-    value: item.code,
-    label: item.label,
-  }));
+  return Object.values(CANONICAL_ENTRY_TYPES)
+    .filter(
+      (item) =>
+        item.code !== "usor96" &&
+        item.code !== "work_based_learning"
+    )
+    .map((item) => ({
+      value: item.code,
+      label: item.label,
+    }));
 }
