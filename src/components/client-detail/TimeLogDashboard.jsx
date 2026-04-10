@@ -232,6 +232,15 @@ export default function TimeLogDashboard({
     entry.category ||
     "";
 
+  const getEntryTypeDisplay = (entry) => {
+  const rawCode =
+    entry.entry_type_code ||
+    entry.entry_type ||
+    entry.entry_type_key ||
+    entry.type ||
+    entry.category ||
+    "";
+
   const code = String(rawCode).toLowerCase();
 
   // 1. Try registry match first
@@ -249,6 +258,16 @@ export default function TimeLogDashboard({
   if (ENTRY_TYPE_LABEL_ALIASES[code]) {
     return ENTRY_TYPE_LABEL_ALIASES[code];
   }
+
+  // 3. Always show readable version of code
+  if (code) {
+    return code
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  return "Unknown Type";
+};
 
   // 3. Always show readable version of code
   if (code) {
