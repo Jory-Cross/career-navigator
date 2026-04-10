@@ -1,97 +1,129 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Play, Square, Clock, User, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { submitTimeEntryWithDualWrite } from "@/lib/dualWriteTimeEntry";
 import EntryTypePicker from "@/components/time-entry/EntryTypePicker";
 import JobCoachingTimeEntryForm from "@/components/time-entry/JobCoachingTimeEntryForm";
 
-export default function ActiveTimer({ clients, onTimeSaved }) {
-   const [isRunning, setIsRunning] = useState(false);
-   const [seconds, setSeconds] = useState(0);
-   const [selectedClient, setSelectedClient] = useState("");
-   const [description, setDescription] = useState("");
-   const [selectedEntryType, setSelectedEntryType] = useState(null);
-   const [saving, setSaving] = useState(false);
-   const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
-   const intervalRef = useRef(null);
-   const startTimeRef = useRef(null);
-   const startDateRef = useRef(null);
+function generateQuarterHourOptions() {
+  const options = [];
 
-  useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setSeconds(s => s + 1);
-      }, 1000);
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      const displayHour = hour % 12 || 12;
+      const ampm = hour < 12 ? "AM" : "PM";
+      const displayMinute = String(minute).padStart(2, "0");
+
+      options.push({
+        value,
+        label: `${displayHour}:${displayMinute} ${ampm}`,
+      });
     }
-    return () => clearInterval(intervalRef.current);
-  }, [isRunning]);
+  }
 
-  const formatTime = (totalSeconds) => {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
+  return options;
+}
 
-  // Route to Job Coaching form if selected
+function calculateDurationMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const startTotal = startHour * 60 + startMinute;
+  const endTotal = endHour * 60 + endMinute;
+  const diff = endTotal - startTotal;
+
+  if (diff <= 0) return 0;
+  return diff;
+}
+
+function isValidQuarterHourDuration(minutes) {
+  return minutes >= 15 && minutes % 15 === 0;
+}
+
+export default function ActiveTimer({ clients, onTimeSaved }) {
+  const [selectedClient, setSelectedClient] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedEntryType, setSelectedEntryType] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [showJobCoachingForm, setShowJobCoachingForm] = useState(false);
+
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+
+  const timeOptions = useMemo(() => generateQuarterHourOptions(), []);
+
   useEffect(() => {
     if (selectedEntryType?.code === "job_coaching" && selectedClient) {
       setShowJobCoachingForm(true);
     }
   }, [selectedEntryType?.code, selectedClient]);
 
-  const handleStart = () => {
-     if (!selectedClient || !selectedEntryType) {
-       toast.error("Please select a client and service type");
-       return;
-     }
-     if (selectedEntryType?.code === "job_coaching") {
-       setShowJobCoachingForm(true);
-       return;
-     }
-     setIsRunning(true);
-     startTimeRef.current = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-     startDateRef.current = new Date().toISOString().split("T")[0];
-   };
+  const handleSave = async () => {
+    if (!selectedClient || !selectedEntryType) {
+      toast.error("Please select a client and service type");
+      return;
+    }
 
-  const handleStop = async () => {
-    setIsRunning(false);
-    clearInterval(intervalRef.current);
+    if (!date) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      toast.error("Please select clock in and clock out times");
+      return;
+    }
+
+    const durationMinutes = calculateDurationMinutes(startTime, endTime);
+
+    if (!isValidQuarterHourDuration(durationMinutes)) {
+      toast.error("Time must be at least 15 minutes and in 15-minute increments");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const durationMinutes = Math.max(1, Math.round(seconds / 60));
-      const endTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-      const date = startDateRef.current || new Date().toISOString().split("T")[0];
-      const actualClientId = selectedClient?.startsWith('self:') ? null : selectedClient;
+      const actualClientId = selectedClient?.startsWith("self:") ? null : selectedClient;
 
-      // DUAL-WRITE: Use standardized submission function
       await submitTimeEntryWithDualWrite({
         clientId: actualClientId,
         entryTypeId: selectedEntryType?.id,
         entryTypeCode: selectedEntryType?.code,
         date,
-        startTime: startTimeRef.current,
-        endTime: endTime,
+        startTime,
+        endTime,
         durationMinutes,
         location: null,
-        description: description || selectedEntryType?.name || "Timer session",
+        description: description || selectedEntryType?.name || "Time entry",
         serviceAuthorizationId: null,
         fieldAnswers: {},
-        asDraft: true // Save as draft since we may not have all required fields
+        asDraft: true,
       });
 
       toast.success("Time logged");
-      setSeconds(0);
       setDescription("");
       setSelectedEntryType(null);
       setSelectedClient("");
+      setDate("");
+      setStartTime("");
+      setEndTime("");
+
       if (onTimeSaved) onTimeSaved();
     } catch (error) {
       console.error("Failed to save time entry:", error);
@@ -101,7 +133,7 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
     }
   };
 
-  const clientName = clients.find(c => c.id === selectedClient);
+  const durationMinutes = calculateDurationMinutes(startTime, endTime);
 
   if (showJobCoachingForm && selectedClient) {
     return (
@@ -126,8 +158,10 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
               setSelectedEntryType(null);
               setSelectedClient("");
               setDescription("");
-              setSeconds(0);
-              onTimeSaved();
+              setDate("");
+              setStartTime("");
+              setEndTime("");
+              onTimeSaved?.();
             }}
             onCancel={() => {
               setShowJobCoachingForm(false);
@@ -140,88 +174,113 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
   }
 
   return (
-    <Card className={cn(
-      "border-0 shadow-sm overflow-hidden transition-all duration-500",
-      isRunning ? "ring-2 ring-emerald-400/50 shadow-emerald-100" : ""
-    )}>
-      <div className={cn(
-        "h-1 w-full transition-colors duration-500",
-        isRunning ? "bg-emerald-400 animate-pulse" : "bg-slate-100"
-      )} />
+    <Card className="border-0 shadow-sm overflow-hidden">
+      <div className="h-1 w-full bg-slate-100" />
       <div className="p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
           <Clock className="w-4 h-4" />
-          <span>Time Tracker</span>
+          <span>Time Entry</span>
         </div>
 
-        <div className="text-center">
-          <p className={cn(
-            "text-4xl font-mono font-bold tracking-wider transition-colors",
-            isRunning ? "text-emerald-600" : "text-slate-300"
-          )}>
-            {formatTime(seconds)}
-          </p>
-          {isRunning && clientName && (
-            <p className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1">
-              <User className="w-3 h-3" />
-              {clientName.first_name} {clientName.last_name}
-            </p>
-          )}
-        </div>
-
-        {!isRunning && (
-          <div className="space-y-2.5">
-            <Select value={selectedClient} onValueChange={setSelectedClient}>
-              <SelectTrigger className="border-slate-200 text-sm">
-                <SelectValue placeholder="Select client..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="self:true">👤 Myself (no client)</SelectItem>
-                {clients.filter(c => c.status === "active" && !c.is_archived).map(c => (
+        <div className="space-y-2.5">
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="border-slate-200 text-sm">
+              <SelectValue placeholder="Select client..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="self:true">👤 Myself (no client)</SelectItem>
+              {clients
+                .filter(c => c.status === "active" && !c.is_archived)
+                .map(c => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.first_name} {c.last_name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-            
-            <Input
-              placeholder="Description (optional)..."
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="border-slate-200 text-sm"
-            />
+            </SelectContent>
+          </Select>
 
-            {/* Entry Type Picker - compact mode */}
-            <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
-              <label className="text-xs font-medium text-slate-700 block mb-1.5">Service Type *</label>
-              <EntryTypePicker
-                value={selectedEntryType?.id}
-                onChange={setSelectedEntryType}
-                mode="compact"
-                showDescriptions={false}
-                groupByProgram={false}
-              />
+          <Input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="border-slate-200 text-sm"
+          />
+
+          <Input
+            placeholder="Description (optional)..."
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            className="border-slate-200 text-sm"
+          />
+
+          <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+            <label className="text-xs font-medium text-slate-700 block mb-1.5">
+              Service Type *
+            </label>
+            <EntryTypePicker
+              value={selectedEntryType?.id}
+              onChange={setSelectedEntryType}
+              mode="compact"
+              showDescriptions={false}
+              groupByProgram={false}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                Clock In
+              </label>
+              <Select value={startTime} onValueChange={setStartTime}>
+                <SelectTrigger className="border-slate-200 text-sm">
+                  <SelectValue placeholder="Start time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                Clock Out
+              </label>
+              <Select value={endTime} onValueChange={setEndTime}>
+                <SelectTrigger className="border-slate-200 text-sm">
+                  <SelectValue placeholder="End time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        )}
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Duration: {durationMinutes > 0 ? `${durationMinutes} minutes` : "Select start and end time"}
+          </div>
+        </div>
 
         <Button
-          className={cn(
-            "w-full transition-all duration-300",
-            isRunning
-              ? "bg-red-500 hover:bg-red-600 text-white"
-              : "bg-emerald-600 hover:bg-emerald-700 text-white"
-          )}
-          onClick={isRunning ? handleStop : handleStart}
-          disabled={(!isRunning && !selectedClient) || (!isRunning && !selectedEntryType) || saving}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={handleSave}
+          disabled={!selectedClient || !selectedEntryType || saving}
         >
           {saving ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-          ) : isRunning ? (
-            <><Square className="w-4 h-4 mr-2" /> Stop & Save</>
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
           ) : (
-            <><Play className="w-4 h-4 mr-2" /> Start Timer</>
+            <>Save Time Entry</>
           )}
         </Button>
       </div>
