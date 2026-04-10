@@ -380,7 +380,7 @@ export default function Calendar() {
     });
   };
 
-  const convertToTimeEntry = async (meetingToConvert) => {
+ 
     const target = meetingToConvert || selectedMeeting;
     if (!target) return;
 
