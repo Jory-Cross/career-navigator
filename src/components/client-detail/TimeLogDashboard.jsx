@@ -198,31 +198,42 @@ export default function TimeLogDashboard({
     }
   };
 
-  const getEntryTypeDisplay = (entry) => {
-    const directCode =
-      entry.entry_type_code || entry.entry_type || entry.entry_type_key || "";
+ const getEntryTypeDisplay = (entry) => {
+  const rawCode =
+    entry.entry_type_code ||
+    entry.entry_type ||
+    entry.entry_type_key ||
+    entry.type ||
+    entry.category ||
+    "";
 
-    const match = entryTypes.find(
-      (type) => type.value === directCode || type.code === directCode
-    );
-    if (match?.label) return match.label;
-    if (match?.name) return match.name;
+  const code = String(rawCode).toLowerCase();
 
-    if (ENTRY_TYPE_LABEL_ALIASES[directCode]) {
-      return ENTRY_TYPE_LABEL_ALIASES[directCode];
-    }
+  // 1. Try registry match first
+  const match = entryTypes.find(
+    (type) =>
+      type.value === code ||
+      type.code === code ||
+      String(type.value).toLowerCase() === code
+  );
 
-    if (entry.legacy_category) {
-      return prettifyCode(entry.legacy_category);
-    }
+  if (match?.label) return match.label;
+  if (match?.name) return match.name;
 
-    if (directCode) {
-      return prettifyCode(directCode);
-    }
+  // 2. Known aliases
+  if (ENTRY_TYPE_LABEL_ALIASES[code]) {
+    return ENTRY_TYPE_LABEL_ALIASES[code];
+  }
 
-    return "Time Entry";
-  };
+  // 3. Always show readable version of code
+  if (code) {
+    return code
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
 
+  return "Unknown Type";
+};
   return (
     <div className="space-y-4">
       <Card className="p-4 space-y-4">
