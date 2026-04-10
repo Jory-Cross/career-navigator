@@ -104,14 +104,38 @@ export default function TimeLogDashboard({
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      base44.entities.User.filter({ role: "employee" }).catch(() => []),
-    ]).then(([emps]) => {
-      setEmployees(emps);
-      setEntryTypes(getEntryTypeOptions());
-    });
-  }, []);
+    useEffect(() => {
+    let active = true;
+
+    async function resolveAllEntryTypeCodes() {
+      if (!timeEntries?.length) {
+        setResolvedEntryTypeCodes({});
+        return;
+      }
+
+      const pairs = await Promise.all(
+        timeEntries.map(async (entry) => {
+          try {
+            const resolvedCode = await resolveEntryTypeCode(entry);
+            return [entry.id, resolvedCode || ""];
+          } catch (error) {
+            console.error("[TimeLogDashboard] Failed to resolve entry type code for row:", error);
+            return [entry.id, ""];
+          }
+        })
+      );
+
+      if (!active) return;
+
+      setResolvedEntryTypeCodes(Object.fromEntries(pairs));
+    }
+
+    resolveAllEntryTypeCodes();
+
+    return () => {
+      active = false;
+    };
+  }, [timeEntries]);
 
   const filtered = useMemo(() => {
     let result = [...timeEntries];
