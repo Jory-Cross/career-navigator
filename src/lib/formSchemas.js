@@ -1,19 +1,18 @@
 export const FORM_SCHEMAS = {
   simple_time: [
     { key: "date", label: "Date", type: "date", required: true },
-    { key: "duration", label: "Duration (minutes)", type: "number", required: false },
-    { key: "start_time", label: "Start Time", type: "time", required: false },
-    { key: "end_time", label: "End Time", type: "time", required: false },
+    { key: "start_time", label: "Start Time", type: "time", required: true, defaultValue: "07:00" },
+    { key: "end_time", label: "End Time", type: "time", required: true, defaultValue: "07:15" },
     { key: "description", label: "Description", type: "textarea", required: true },
   ],
 
   life_skills: [
     { key: "billable_service_date", label: "Billable Service Date", type: "date", required: true },
     { key: "billable_hours", label: "Billable Hours", type: "number", required: true },
-    { 
-      key: "life_skills_area", 
-      label: "Life Skills Area", 
-      type: "select", 
+    {
+      key: "life_skills_area",
+      label: "Life Skills Area",
+      type: "select",
       required: true,
       options: [
         "Personal Hygiene & Grooming",
@@ -30,8 +29,8 @@ export const FORM_SCHEMAS = {
         "Leisure & Recreation",
         "Community Integration",
         "Safety & Emergency Preparedness",
-        "Other"
-      ]
+        "Other",
+      ],
     },
     { key: "specific_skill_taught", label: "Specific Skill Taught", type: "text", required: true },
     { key: "client_progress_mastery_level", label: "Client Progress/Mastery Level", type: "text", required: true },
@@ -40,7 +39,7 @@ export const FORM_SCHEMAS = {
     { key: "observations_comments", label: "Observations & Comments", type: "textarea", required: false },
   ],
 
-  voc_rehab: [], // Placeholder - always loaded from ReportFieldTemplate for job_coaching, job_development, usor96
+  voc_rehab: [],
 };
 
 export function getSchema(schemaKey) {
@@ -49,14 +48,13 @@ export function getSchema(schemaKey) {
 
 export async function loadVocRehabSchema(entryTypeCode) {
   try {
-    // Dynamic import of base44 only when needed
     const { base44 } = await import("@/api/base44Client");
-    
+
     const templates = await base44.entities.ReportFieldTemplate.filter({
       entry_type_code: entryTypeCode,
       is_active: true,
       pdf_context: "row",
-      is_internal_only: false
+      is_internal_only: false,
     });
 
     if (!templates.length) {
@@ -64,30 +62,33 @@ export async function loadVocRehabSchema(entryTypeCode) {
       return [];
     }
 
-    // Fetch service codes for primary and secondary code fields
     let serviceCodes = [];
     try {
       serviceCodes = await base44.entities.ServiceCode.filter({
         is_active: true,
-        program_type: "vr"
+        program_type: "vr",
       });
     } catch (err) {
       console.error("Failed to load service codes:", err);
     }
 
-    const primaryCodes = serviceCodes.filter(c => c.is_primary).map(c => ({
-      value: c.code,
-      label: c.display_label || c.code
-    }));
+    const primaryCodes = serviceCodes
+      .filter((c) => c.is_primary)
+      .map((c) => ({
+        value: c.code,
+        label: c.display_label || c.code,
+      }));
 
-    const secondaryCodes = serviceCodes.filter(c => c.is_secondary).map(c => ({
-      value: c.code,
-      label: c.display_label || c.code
-    }));
+    const secondaryCodes = serviceCodes
+      .filter((c) => c.is_secondary)
+      .map((c) => ({
+        value: c.code,
+        label: c.display_label || c.code,
+      }));
 
     return templates
       .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map(t => {
+      .map((t) => {
         const field = {
           key: t.field_key,
           label: t.label,
@@ -98,8 +99,8 @@ export async function loadVocRehabSchema(entryTypeCode) {
           options: t.options || [],
         };
 
-        // Inject service code options for primary/secondary code fields (supports all prefixes: jc_, jd_, or none)
         const fieldKeyLower = t.field_key.toLowerCase();
+
         if (fieldKeyLower.includes("primary_service_code") && primaryCodes.length > 0) {
           field.options = primaryCodes;
         } else if (fieldKeyLower.includes("secondary_service_code") && secondaryCodes.length > 0) {
