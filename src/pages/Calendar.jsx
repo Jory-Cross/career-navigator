@@ -381,37 +381,7 @@ export default function Calendar() {
   };
 
  
-    const target = meetingToConvert || selectedMeeting;
-    if (!target) return;
 
-    // Block if a time entry already covers this time block
-    const conflict = getConflictingTimeEntry(target);
-    if (conflict) {
-      toast.error("A time entry already exists for this time period. Only one calendar event can be converted into a time entry.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const startTime = format(parseISO(target.start_datetime), 'HH:mm');
-      const endTime = target.end_datetime
-        ? format(parseISO(target.end_datetime), 'HH:mm')
-        : format(parseISO(target.start_datetime), 'HH:mm');
-      const date = format(parseISO(target.start_datetime), 'yyyy-MM-dd');
-
-      const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-      const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
-      const duration = Math.max(1, endMinutes - startMinutes);
-
-      const timeEntry = await base44.entities.TimeEntry.create({
-        client_id: target.client_id,
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        duration_minutes: duration,
-        description: convertNotes || target.title,
-        category: target.meeting_type || 'consultation'
-      });
 
       // Link the converted meeting to its time entry
       await base44.entities.Meeting.update(target.id, {
