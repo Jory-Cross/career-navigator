@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import StatCard from "@/components/dashboard/StatCard";
 import { useOrg } from "@/lib/useOrg";
 import OrgGate from "@/lib/OrgGate";
+import ActiveTimer from "@/components/dashboard/ActiveTimer";
 import QuickTimeLog from "@/components/dashboard/QuickTimeLog";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentActivity from "@/components/dashboard/RecentActivity";
@@ -287,6 +288,8 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
+            <ActiveTimer clients={clients} onTimeSaved={handleRefresh} />
+
             {widgets.quickLog && (
               <QuickTimeLog clients={clients} onTimeSaved={handleRefresh} />
             )}
