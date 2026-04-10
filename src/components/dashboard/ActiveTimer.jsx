@@ -38,8 +38,6 @@ function generateQuarterHourOptions() {
 
   return options;
 }
-  return options;
-}
 
 function calculateDurationMinutes(startTime, endTime) {
   if (!startTime || !endTime) return 0;
