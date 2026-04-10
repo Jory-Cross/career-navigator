@@ -97,10 +97,11 @@ export default function TimeLogDashboard({
     payrollEligible: "all",
   });
   const [showForm, setShowForm] = useState(false);
-  const [editingEntry, setEditingEntry] = useState(null);
+   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
   const [employees, setEmployees] = useState([]);
   const [entryTypes, setEntryTypes] = useState([]);
+  const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
