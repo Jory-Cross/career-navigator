@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X, Timer, Trash2, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Video, CheckCircle2, X, Trash2, Loader2 } from "lucide-react";
 import CalendarViewSelector, { USER_BLOCK_COLORS } from "@/components/calendar/CalendarViewSelector";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
@@ -24,8 +24,6 @@ export default function Calendar() {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
-  const [selectedMeeting, setSelectedMeeting] = useState(null);
-  const [convertNotes, setConvertNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState(null);
   const [linkedTimeEntry, setLinkedTimeEntry] = useState(null);
@@ -380,36 +378,6 @@ export default function Calendar() {
     });
   };
 
- 
-
-
-      // Link the converted meeting to its time entry
-      await base44.entities.Meeting.update(target.id, {
-        is_converted_to_time_entry: true,
-        linked_time_entry_id: timeEntry?.id || null,
-        status: 'completed'
-      });
-
-      // Mark all overlapping meetings as "not_selected"
-      const overlapping = getOverlappingMeetings(target);
-      await Promise.all(
-        overlapping
-          .filter(m => !m.is_converted_to_time_entry)
-          .map(m => base44.entities.Meeting.update(m.id, { status: 'not_selected' }))
-      );
-
-      queryClient.invalidateQueries({ queryKey: ['meetings'] });
-      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
-      setShowConvert(false);
-      setConvertNotes("");
-      setSelectedMeeting(null);
-      toast.success("Converted to time entry" + (overlapping.length > 0 ? ` — ${overlapping.length} overlapping event(s) marked as not selected` : ""));
-    } catch (error) {
-      toast.error("Failed to convert");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const getDaysInMonth = () => {
     const start = startOfMonth(currentDate);
@@ -750,20 +718,6 @@ export default function Calendar() {
                       <div className="flex gap-2 shrink-0">
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedMeeting(meeting);
-                            setConvertNotes(meeting.description || "");
-                            setShowConvert(true);
-                          }}
-                        >
-                          <Timer className="w-3 h-3 mr-1" />
-                          Log Time
-                        </Button>
-                        <Button
-                          size="sm"
                           variant="ghost"
                           className="text-xs text-slate-400 hover:text-slate-600 hover:bg-amber-100"
                           onClick={(e) => {
@@ -832,22 +786,6 @@ export default function Calendar() {
                         Client: {client ? `${client.first_name} ${client.last_name}` : 'Unknown'}
                       </p>
                     </div>
-                    {!hasTimeEntry && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedMeeting(meeting);
-                          setConvertNotes(meeting.description || "");
-                          setShowConvert(true);
-                        }}
-                        className="text-xs"
-                      >
-                        <Timer className="w-3 h-3 mr-1" />
-                        Log Time
-                      </Button>
-                    )}
                     {hasTimeEntry && (
                       <Badge className="text-xs bg-emerald-100 text-emerald-700 border-0 shrink-0">Logged</Badge>
                     )}
@@ -1043,16 +981,6 @@ export default function Calendar() {
                   <CheckCircle2 className="w-3 h-3" /> Time Entry Logged
                 </Badge>
               )}
-              {editingMeeting && !editingMeeting.is_converted_to_time_entry && editingMeeting.status !== 'cancelled' && editingMeeting.status !== 'not_selected' && (
-                <Button size="sm" variant="outline" onClick={() => {
-                  setSelectedMeeting(editingMeeting);
-                  setConvertNotes(editingMeeting.description || "");
-                  setShowConvert(true);
-                  setShowNew(false);
-                }}>
-                  <Timer className="w-3.5 h-3.5 mr-1" /> Log Time Entry
-                </Button>
-              )}
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
               <Button onClick={save} disabled={saving}>
                 {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
@@ -1136,91 +1064,6 @@ export default function Calendar() {
             }}>
               Continue Editing
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showConvert} onOpenChange={setShowConvert}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Log Time Entry</DialogTitle>
-          </DialogHeader>
-          {selectedMeeting && (() => {
-            const conflict = getConflictingTimeEntry(selectedMeeting);
-            const overlapping = getOverlappingMeetings(selectedMeeting);
-            return (
-              <div className="space-y-4 py-3">
-                {/* Blocked: time entry already exists */}
-                {conflict ? (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
-                    <div className="flex items-center gap-2 text-red-700 font-medium text-sm">
-                      <X className="w-4 h-4" /> Conversion Blocked
-                    </div>
-                    <p className="text-xs text-red-600">
-                      A time entry already exists for this time period (<strong>{conflict.start_time}–{conflict.end_time || '?'}</strong> on <strong>{conflict.date}</strong>). Only one calendar event can be converted into a time entry per time block.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Overlapping events warning */}
-                    {overlapping.length > 0 && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-                        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" /> {overlapping.length} overlapping event{overlapping.length > 1 ? 's' : ''} in this time block
-                        </p>
-                        <p className="text-xs text-amber-600">
-                          Converting this event will mark the other event{overlapping.length > 1 ? 's' : ''} as <strong>not selected</strong>. Only one event per time block can become a Time Entry.
-                        </p>
-                        <div className="space-y-1 mt-1">
-                          {overlapping.map(m => {
-                            const c = clients.find(cl => cl.id === m.client_id);
-                            return (
-                              <div key={m.id} className="text-xs text-amber-700 bg-amber-100 rounded px-2 py-1 flex items-center justify-between">
-                                <span className="truncate">{m.title} {c ? `— ${c.first_name} ${c.last_name}` : ''}</span>
-                                <Badge className={cn("text-[10px] ml-2 shrink-0", m.is_converted_to_time_entry ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                                  {m.is_converted_to_time_entry ? "converted" : m.status}
-                                </Badge>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Selected meeting summary */}
-                    <div className="p-3 bg-slate-50 rounded-lg space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <p className="text-sm font-medium text-slate-900">{selectedMeeting.title}</p>
-                      </div>
-                      <p className="text-xs text-slate-600 ml-6">
-                        {format(parseISO(selectedMeeting.start_datetime), 'MMM d, yyyy • h:mma')}
-                        {selectedMeeting.end_datetime && ` – ${format(parseISO(selectedMeeting.end_datetime), 'h:mma')}`}
-                      </p>
-                      {(() => { const c = clients.find(cl => cl.id === selectedMeeting.client_id); return c ? <p className="text-xs text-slate-500 ml-6">Client: {c.first_name} {c.last_name}</p> : null; })()}
-                    </div>
-
-                    <div>
-                      <Label className="text-xs">Notes / Description</Label>
-                      <Textarea
-                        value={convertNotes}
-                        onChange={e => setConvertNotes(e.target.value)}
-                        rows={3}
-                        placeholder="Add notes about what was worked on..."
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })()}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowConvert(false); setConvertNotes(""); }}>Cancel</Button>
-            {selectedMeeting && !getConflictingTimeEntry(selectedMeeting) && (
-              <Button onClick={() => convertToTimeEntry(selectedMeeting)} disabled={saving}>
-                {saving ? "Converting..." : "Convert to Time Entry"}
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
