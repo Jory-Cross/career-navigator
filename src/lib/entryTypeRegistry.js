@@ -1,4 +1,4 @@
-export const ENTRY_TYPE_REGISTRY = {
+const CANONICAL_ENTRY_TYPES = {
   job_coaching: {
     code: "job_coaching",
     label: "Job Coaching",
@@ -78,12 +78,50 @@ export const ENTRY_TYPE_REGISTRY = {
   },
 };
 
+const ENTRY_TYPE_ALIASES = {
+  // canonical -> canonical
+  job_coaching: "job_coaching",
+  job_development: "job_development",
+  usor96: "usor96",
+  life_skills: "life_skills",
+  csb_hours: "csb_hours",
+  end_of_month_reporting: "end_of_month_reporting",
+  admin_time: "admin_time",
+  miscellaneous: "miscellaneous",
+  pre_ets_training: "pre_ets_training",
+  wsa: "wsa",
+  work_based_learning: "work_based_learning",
+
+  // legacy / DB / seed aliases
+  eom_reporting: "end_of_month_reporting",
+  misc: "miscellaneous",
+  pre_ets: "pre_ets_training",
+  wble: "work_based_learning",
+  work_based_learning_experience: "work_based_learning",
+};
+
+export const ENTRY_TYPE_REGISTRY = Object.fromEntries(
+  Object.entries(CANONICAL_ENTRY_TYPES).flatMap(([key, config]) => {
+    const aliasesForKey = Object.entries(ENTRY_TYPE_ALIASES)
+      .filter(([, canonicalKey]) => canonicalKey === key)
+      .map(([alias]) => alias);
+
+    return aliasesForKey.map((alias) => [alias, config]);
+  })
+);
+
+export function normalizeEntryTypeCode(entryTypeCode) {
+  if (!entryTypeCode) return "";
+  return ENTRY_TYPE_ALIASES[entryTypeCode] || entryTypeCode;
+}
+
 export function getEntryTypeConfig(entryTypeCode) {
-  return ENTRY_TYPE_REGISTRY[entryTypeCode] || null;
+  const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
+  return ENTRY_TYPE_REGISTRY[normalizedCode] || null;
 }
 
 export function getEntryTypeOptions() {
-  return Object.values(ENTRY_TYPE_REGISTRY).map((item) => ({
+  return Object.values(CANONICAL_ENTRY_TYPES).map((item) => ({
     value: item.code,
     label: item.label,
   }));
