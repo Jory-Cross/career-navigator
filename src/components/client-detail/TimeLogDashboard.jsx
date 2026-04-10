@@ -223,34 +223,50 @@ export default function TimeLogDashboard({
     }
   };
 
- const getEntryTypeDisplay = (entry) => {
-  const rawCode =
-    entry.entry_type_code ||
-    entry.entry_type ||
-    entry.entry_type_key ||
-    entry.type ||
-    entry.category ||
-    "";
+   const getEntryTypeDisplay = (entry) => {
+    const resolvedCode =
+      resolvedEntryTypeCodes[entry.id] ||
+      entry.entry_type_code ||
+      entry.entry_type ||
+      entry.entry_type_key ||
+      entry.type ||
+      entry.category ||
+      "";
 
-  const getEntryTypeDisplay = (entry) => {
-  const rawCode =
-    entry.entry_type_code ||
-    entry.entry_type ||
-    entry.entry_type_key ||
-    entry.type ||
-    entry.category ||
-    "";
+    const code = String(resolvedCode).toLowerCase();
 
-  const code = String(rawCode).toLowerCase();
+    const directLabel =
+      entry.entry_type_name ||
+      entry.entry_type_label ||
+      entry.type_name ||
+      entry.type_label ||
+      "";
 
-  // 1. Try registry match first
-  const match = entryTypes.find(
-    (type) =>
-      type.value === code ||
-      type.code === code ||
-      String(type.value).toLowerCase() === code
-  );
+    if (directLabel) {
+      return directLabel;
+    }
 
+    const match = entryTypes.find(
+      (type) =>
+        String(type.value || "").toLowerCase() === code ||
+        String(type.code || "").toLowerCase() === code
+    );
+
+    if (match?.label) return match.label;
+    if (match?.name) return match.name;
+
+    if (ENTRY_TYPE_LABEL_ALIASES[code]) {
+      return ENTRY_TYPE_LABEL_ALIASES[code];
+    }
+
+    if (code) {
+      return code
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    return "Unknown Type";
+  };
   if (match?.label) return match.label;
   if (match?.name) return match.name;
 
