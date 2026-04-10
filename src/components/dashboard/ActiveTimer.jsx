@@ -190,8 +190,8 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
             <SelectContent>
               <SelectItem value="self:true">👤 Myself (no client)</SelectItem>
               {clients
-                .filter(c => c.status === "active" && !c.is_archived)
-                .map(c => (
+                .filter((c) => c.status === "active" && !c.is_archived)
+                .map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.first_name} {c.last_name}
                   </SelectItem>
@@ -202,25 +202,25 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
           <Input
             type="date"
             value={date}
-            onChange={e => setDate(e.target.value)}
+            onChange={(e) => setDate(e.target.value)}
             className="border-slate-200 text-sm"
           />
 
           <Input
             placeholder="Description (optional)..."
             value={description}
-            onChange={e => setDescription(e.target.value)}
+            onChange={(e) => setDescription(e.target.value)}
             className="border-slate-200 text-sm"
           />
 
-          <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+          <div>
             <label className="text-xs font-medium text-slate-700 block mb-1.5">
               Service Type *
             </label>
             <EntryTypePicker
-              value={selectedEntryType?.id}
+              value={selectedEntryType?.id || selectedEntryType?.code || ""}
               onChange={setSelectedEntryType}
-              mode="compact"
+              mode="select"
               showDescriptions={false}
               groupByProgram={false}
             />
@@ -236,7 +236,7 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
                   <SelectValue placeholder="Start time" />
                 </SelectTrigger>
                 <SelectContent>
-                  {timeOptions.map(option => (
+                  {timeOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -254,7 +254,7 @@ export default function ActiveTimer({ clients, onTimeSaved }) {
                   <SelectValue placeholder="End time" />
                 </SelectTrigger>
                 <SelectContent>
-                  {timeOptions.map(option => (
+                  {timeOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
