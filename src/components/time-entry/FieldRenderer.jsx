@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,8 +30,45 @@ function generateQuarterHourOptions() {
   return options;
 }
 
-export default function FieldRenderer({ field, value, onChange }) {
-  const timeOptions = useMemo(() => generateQuarterHourOptions(), []);
+function calculateDurationMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const startTotal = startHour * 60 + startMinute;
+  const endTotal = endHour * 60 + endMinute;
+  const diff = endTotal - startTotal;
+
+  if (diff <= 0) return 0;
+  return diff;
+}
+
+const TIME_OPTIONS = generateQuarterHourOptions();
+
+export default function FieldRenderer({ field, value, onChange, formData = {} }) {
+  const durationFromClock =
+    formData?.start_time && formData?.end_time
+      ? calculateDurationMinutes(formData.start_time, formData.end_time)
+      : 0;
+
+  // Hide editable duration field when clock-in/clock-out fields are present
+  if (
+    (field.key === "duration" || field.key === "duration_minutes") &&
+    formData?.start_time !== undefined &&
+    formData?.end_time !== undefined
+  ) {
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs font-medium">Duration</Label>
+        <div className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 flex items-center text-sm text-slate-600">
+          {durationFromClock > 0
+            ? `${durationFromClock} minutes`
+            : "Select start and end time"}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1">
@@ -70,12 +107,12 @@ export default function FieldRenderer({ field, value, onChange }) {
       {field.type === "time" && (
         <Select value={value ?? ""} onValueChange={onChange}>
           <SelectTrigger className="text-sm">
-            <SelectValue placeholder={field.label || "Select time"} />
+            <SelectValue placeholder="Select time..." />
           </SelectTrigger>
           <SelectContent>
-            {timeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+            {TIME_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
