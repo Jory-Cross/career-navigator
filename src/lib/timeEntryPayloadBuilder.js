@@ -168,7 +168,6 @@ function normalizeDurationMinutes(formData, schema) {
     formData.hours_of_coaching,
     formData.development_hours,
     formData.jc_hours,
-    formData.usor96_hours,
   ];
 
   for (const candidate of legacyHourCandidates) {
