@@ -84,7 +84,11 @@ export function getEntryTypeConfig(entryTypeCode) {
 
 export function getEntryTypeOptions() {
   return Object.values(ENTRY_TYPE_REGISTRY)
-    .filter((item) => item.code !== "work_based_learning")
+  .filter(
+  (item) =>
+    item.code !== "work_based_learning" &&
+    item.code !== "usor96"
+)
     .map((item) => ({
       value: item.code,
       label: item.label,
