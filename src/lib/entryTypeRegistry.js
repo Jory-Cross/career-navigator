@@ -1,113 +1,76 @@
+/**
+ * Entry Type Registry (CLEANED)
+ * - Removed: usor96, work_based_learning
+ * - Keeps only canonical types you actually use
+ */
+
 const CANONICAL_ENTRY_TYPES = {
   job_coaching: {
     code: "job_coaching",
     label: "Job Coaching",
-    schemaKey: "voc_rehab",
-    category: "structured",
-    programType: "vr",
   },
   job_development: {
     code: "job_development",
     label: "Job Development",
-    schemaKey: "voc_rehab",
-    category: "structured",
-    programType: "vr",
-  },
-  usor96: {
-    code: "usor96",
-    label: "USOR96",
-    schemaKey: "voc_rehab",
-    category: "structured",
-    programType: "vr",
   },
   life_skills: {
     code: "life_skills",
     label: "Life Skills",
-    schemaKey: "life_skills",
-    category: "structured",
-    programType: "vr",
   },
   csb_hours: {
     code: "csb_hours",
     label: "CSB Hours",
-    schemaKey: "life_skills",
-    category: "structured",
-    programType: "vr",
-  },
-  end_of_month_reporting: {
-    code: "end_of_month_reporting",
-    label: "End-of-Month Reporting",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "internal",
   },
   admin_time: {
     code: "admin_time",
     label: "Admin Time",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "internal",
   },
   miscellaneous: {
     code: "miscellaneous",
     label: "Miscellaneous",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "internal",
+  },
+  end_of_month_reporting: {
+    code: "end_of_month_reporting",
+    label: "End-of-Month Reporting",
   },
   pre_ets_training: {
     code: "pre_ets_training",
     label: "Pre-ETS",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "vr",
   },
   wsa: {
     code: "wsa",
     label: "WSA",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "vr",
-  },
-  work_based_learning: {
-    code: "work_based_learning",
-    label: "Work-Based Learning",
-    schemaKey: "simple_time",
-    category: "simple",
-    programType: "vr",
   },
 };
 
 const ENTRY_TYPE_ALIASES = {
-  // canonical -> canonical
   job_coaching: "job_coaching",
   job_development: "job_development",
-  usor96: "usor96",
   life_skills: "life_skills",
   csb_hours: "csb_hours",
-  end_of_month_reporting: "end_of_month_reporting",
   admin_time: "admin_time",
   miscellaneous: "miscellaneous",
+  end_of_month_reporting: "end_of_month_reporting",
   pre_ets_training: "pre_ets_training",
   wsa: "wsa",
-  work_based_learning: "work_based_learning",
 
-  // legacy / DB / seed aliases
-  eom_reporting: "end_of_month_reporting",
+  // legacy mappings (still supported silently)
   misc: "miscellaneous",
   pre_ets: "pre_ets_training",
-  wble: "work_based_learning",
-  work_based_learning_experience: "work_based_learning",
+  eom_reporting: "end_of_month_reporting",
+
+  // remove these from UI but still map safely if old data exists
+  usor96: "job_development",
+  work_based_learning: "pre_ets_training",
+  wble: "pre_ets_training",
+  work_based_learning_experience: "pre_ets_training",
 };
 
 export const ENTRY_TYPE_REGISTRY = Object.fromEntries(
-  Object.entries(CANONICAL_ENTRY_TYPES).flatMap(([key, config]) => {
-    const aliasesForKey = Object.entries(ENTRY_TYPE_ALIASES)
-      .filter(([, canonicalKey]) => canonicalKey === key)
-      .map(([alias]) => alias);
-
-    return aliasesForKey.map((alias) => [alias, config]);
-  })
+  Object.entries(ENTRY_TYPE_ALIASES).map(([alias, canonical]) => [
+    alias,
+    CANONICAL_ENTRY_TYPES[canonical],
+  ])
 );
 
 export function normalizeEntryTypeCode(entryTypeCode) {
@@ -116,8 +79,8 @@ export function normalizeEntryTypeCode(entryTypeCode) {
 }
 
 export function getEntryTypeConfig(entryTypeCode) {
-  const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
-  return ENTRY_TYPE_REGISTRY[normalizedCode] || null;
+  const normalized = normalizeEntryTypeCode(entryTypeCode);
+  return ENTRY_TYPE_REGISTRY[normalized] || null;
 }
 
 export function getEntryTypeOptions() {
