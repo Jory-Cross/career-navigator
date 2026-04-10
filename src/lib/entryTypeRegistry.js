@@ -78,17 +78,29 @@ export const ENTRY_TYPE_REGISTRY = {
   },
 };
 
+const ENTRY_TYPE_ALIASES = {
+  pre_ets: "pre_ets_training",
+  misc: "miscellaneous",
+  eom_reporting: "end_of_month_reporting",
+};
+
+export function normalizeEntryTypeCode(entryTypeCode) {
+  if (!entryTypeCode) return "";
+  return ENTRY_TYPE_ALIASES[entryTypeCode] || entryTypeCode;
+}
+
 export function getEntryTypeConfig(entryTypeCode) {
-  return ENTRY_TYPE_REGISTRY[entryTypeCode] || null;
+  const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
+  return ENTRY_TYPE_REGISTRY[normalizedCode] || null;
 }
 
 export function getEntryTypeOptions() {
   return Object.values(ENTRY_TYPE_REGISTRY)
-  .filter(
-  (item) =>
-    item.code !== "work_based_learning" &&
-    item.code !== "usor96"
-)
+    .filter(
+      (item) =>
+        item.code !== "work_based_learning" &&
+        item.code !== "usor96"
+    )
     .map((item) => ({
       value: item.code,
       label: item.label,
