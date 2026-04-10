@@ -8,6 +8,45 @@ import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
 import { persistTimeEntry } from "@/lib/persistTimeEntry";
 import { base44 } from "@/api/base44Client";
 
+const ENTRY_TYPE_CODE_ALIASES = {
+  pre_ets_training: ["pre_ets_training", "pre_ets"],
+  miscellaneous: ["miscellaneous", "misc"],
+  end_of_month_reporting: ["end_of_month_reporting", "eom_reporting"],
+  admin_time: ["admin_time"],
+  wsa: ["wsa"],
+  work_based_learning: ["work_based_learning", "wble", "work_based_learning_experience"],
+  job_coaching: ["job_coaching"],
+  job_development: ["job_development", "usor96"],
+  life_skills: ["life_skills"],
+  csb_hours: ["csb_hours"],
+};
+
+function getCandidateCodes(entryTypeCode) {
+  if (!entryTypeCode) return [];
+  return ENTRY_TYPE_CODE_ALIASES[entryTypeCode] || [entryTypeCode];
+}
+
+async function resolveEntryTypeByCode(entryTypeCode) {
+  const candidateCodes = getCandidateCodes(entryTypeCode);
+
+  for (const code of candidateCodes) {
+    try {
+      const results = await base44.entities.EntryType.filter({
+        code,
+        is_active: true,
+      });
+
+      if (results?.length) {
+        return results[0];
+      }
+    } catch (err) {
+      console.error(`[DynamicEntryForm] Failed entry type lookup for code "${code}":`, err);
+    }
+  }
+
+  return null;
+}
+
 export default function DynamicEntryForm({
   entryTypeCode,
   schema,
@@ -17,13 +56,14 @@ export default function DynamicEntryForm({
   onSave,
   onCancel,
 }) {
+  const normalizedSchema = Array.isArray(schema) ? schema : [];
+
   const initialData = useMemo(() => {
     if (entry?.id) {
-      const data = buildFormDataFromEntry(entry, { fields: schema });
-      return data;
+      return buildFormDataFromEntry(entry, { fields: normalizedSchema });
     }
-    return buildInitialFormData(schema, null);
-  }, [schema, entry]);
+    return buildInitialFormData(normalizedSchema, null);
+  }, [normalizedSchema, entry]);
 
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
@@ -45,19 +85,25 @@ export default function DynamicEntryForm({
       }
 
       setEntryTypeLoading(true);
-      try {
-        const results = await base44.entities.EntryType.filter({
-          code: entryTypeCode,
-          is_active: true,
-        });
+      setError("");
 
-        if (active) {
-          setEntryTypeObj(results?.[0] || null);
+      try {
+        const resolved = await resolveEntryTypeByCode(entryTypeCode);
+
+        if (!active) return;
+
+        if (!resolved) {
+          setEntryTypeObj(null);
+          setError(`Could not resolve entry type for code "${entryTypeCode}".`);
+          return;
         }
+
+        setEntryTypeObj(resolved);
       } catch (err) {
-        console.error("Failed to load entry type:", err);
+        console.error("[DynamicEntryForm] Failed to load entry type:", err);
         if (active) {
           setEntryTypeObj(null);
+          setError("Failed to load entry type.");
         }
       } finally {
         if (active) {
@@ -92,11 +138,11 @@ export default function DynamicEntryForm({
       await handleDynamicEntrySave({
         entryType: {
           id: entryTypeObj.id,
-          code: entryTypeCode,
+          code: entryTypeObj.code || entryTypeCode,
           name: entryTypeObj?.name,
         },
         formData,
-        schema,
+        schema: normalizedSchema,
         existingEntry: entry,
         mode,
         saveEntry: (payload) => persistTimeEntry(payload, entry?.id ?? null, clientId),
@@ -115,7 +161,7 @@ export default function DynamicEntryForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {schema.map((field) => (
+      {normalizedSchema.map((field) => (
         <FieldRenderer
           key={field.key}
           field={field}
