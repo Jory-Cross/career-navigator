@@ -168,6 +168,12 @@ function normalizeDurationMinutes(formData, schema) {
     formData.hours_of_coaching,
     formData.development_hours,
     formData.jc_hours,
+    formData.usor96_hours,
+    formData.preets_hours,
+    formData.wsa_hours,
+    formData.admin_hours,
+    formData.misc_hours,
+    formData.eom_total_hours,
   ];
 
   for (const candidate of legacyHourCandidates) {
@@ -193,7 +199,10 @@ function normalizeDateValue(value) {
   }
 
   if (value instanceof Date && !isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
+    const yyyy = value.getFullYear();
+    const mm = String(value.getMonth() + 1).padStart(2, "0");
+    const dd = String(value.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   return String(value);
@@ -262,6 +271,11 @@ export function buildTimeEntryPayload({
     formData.coaching_date ??
     formData.job_dev_date ??
     formData.development_date ??
+    formData.preets_date ??
+    formData.wsa_date ??
+    formData.admin_date ??
+    formData.misc_date ??
+    formData.eom_month ??
     (dateField ? formData[dateField.key] : null);
 
   const normalizedDate = normalizeDateValue(rawDate);
@@ -285,6 +299,16 @@ export function buildTimeEntryPayload({
     topLevel.description = formData.description;
   } else if (formData.activity_description) {
     topLevel.description = formData.activity_description;
+  } else if (formData.admin_description) {
+    topLevel.description = formData.admin_description;
+  } else if (formData.misc_description) {
+    topLevel.description = formData.misc_description;
+  } else if (formData.preets_activity) {
+    topLevel.description = formData.preets_activity;
+  } else if (formData.wsa_tasks_completed) {
+    topLevel.description = formData.wsa_tasks_completed;
+  } else if (formData.eom_services_provided) {
+    topLevel.description = formData.eom_services_provided;
   }
 
   const form_data = mapTemplateFields(normalizedSchema, {
@@ -311,6 +335,11 @@ function mapTemplateFields(schema, formData) {
     "coaching_date",
     "job_dev_date",
     "development_date",
+    "preets_date",
+    "wsa_date",
+    "admin_date",
+    "misc_date",
+    "eom_month",
   ]);
 
   for (const f of fields) {
