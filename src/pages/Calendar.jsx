@@ -24,7 +24,6 @@ export default function Calendar() {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
-  const [showConvert, setShowConvert] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [convertNotes, setConvertNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
