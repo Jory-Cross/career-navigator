@@ -8,6 +8,20 @@ import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
 import { persistTimeEntry } from "@/lib/persistTimeEntry";
 import { base44 } from "@/api/base44Client";
 
+function calculateDurationMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+
+  const [startHour, startMinute] = String(startTime).split(":").map(Number);
+  const [endHour, endMinute] = String(endTime).split(":").map(Number);
+
+  const startTotal = startHour * 60 + startMinute;
+  const endTotal = endHour * 60 + endMinute;
+  const diff = endTotal - startTotal;
+
+  if (diff <= 0) return 0;
+  return diff;
+}
+
 export default function DynamicEntryForm({
   entryTypeCode,
   schema,
@@ -19,14 +33,10 @@ export default function DynamicEntryForm({
 }) {
   const initialData = useMemo(() => {
     if (entry?.id) {
-      console.log("[DynamicEntryForm] EDIT MODE - Rehydrating entry:", entry.id);
       const data = buildFormDataFromEntry(entry, { fields: schema });
-      console.log("[DynamicEntryForm] Rehydrated form data:", data);
       return data;
     }
-    const data = buildInitialFormData(schema, null);
-    console.log("[DynamicEntryForm] Create mode - Initial form data:", data);
-    return data;
+    return buildInitialFormData(schema, null);
   }, [schema, entry]);
 
   const [formData, setFormData] = useState(initialData);
@@ -35,15 +45,55 @@ export default function DynamicEntryForm({
   const [entryTypeObj, setEntryTypeObj] = useState(null);
 
   useEffect(() => {
+    setFormData(initialData);
+  }, [initialData]);
+
+  useEffect(() => {
     base44.entities.EntryType.filter({ code: entryTypeCode, is_active: true })
-      .then(results => {
+      .then((results) => {
         if (results.length > 0) setEntryTypeObj(results[0]);
       })
-      .catch(err => console.error("Failed to load entry type:", err));
+      .catch((err) => console.error("Failed to load entry type:", err));
   }, [entryTypeCode]);
 
+  const hasClockRange = useMemo(() => {
+    const keys = new Set((schema || []).map((field) => field.key));
+    return keys.has("start_time") && keys.has("end_time");
+  }, [schema]);
+
+  const visibleFields = useMemo(() => {
+    if (!hasClockRange) return schema || [];
+
+    return (schema || []).filter((field) => {
+      const key = field.key || "";
+      const label = (field.label || "").toLowerCase();
+
+      if (key === "duration_minutes") return false;
+      if (key === "duration") return false;
+      if (key === "hours") return false;
+      if (key === "hours_spent") return false;
+      if (label.includes("duration")) return false;
+      if (label.includes("hours spent")) return false;
+
+      return true;
+    });
+  }, [schema, hasClockRange]);
+
+  const calculatedDuration = useMemo(() => {
+    return calculateDurationMinutes(formData.start_time, formData.end_time);
+  }, [formData.start_time, formData.end_time]);
+
   function handleChange(key, value) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (hasClockRange) {
+        const nextDuration = calculateDurationMinutes(next.start_time, next.end_time);
+        next.duration_minutes = nextDuration > 0 ? nextDuration : "";
+      }
+
+      return next;
+    });
   }
 
   async function handleSubmit(e) {
@@ -52,19 +102,32 @@ export default function DynamicEntryForm({
     setSaving(true);
 
     try {
-      console.log("🔍 SUBMIT FORM DATA:", JSON.stringify(formData, null, 2));
+      const finalFormData = { ...formData };
 
-      // Single save owner: handleDynamicEntrySave
-      // Payload is built once inside handleDynamicEntrySave via buildTimeEntryPayload.
-      // persistTimeEntry is the thin DB writer — receives the already-built payload.
+      if (hasClockRange) {
+        const nextDuration = calculateDurationMinutes(finalFormData.start_time, finalFormData.end_time);
+        finalFormData.duration_minutes = nextDuration;
+
+        if (!finalFormData.start_time || !finalFormData.end_time) {
+          throw new Error("Start time and end time are required.");
+        }
+
+        if (nextDuration < 15 || nextDuration % 15 !== 0) {
+          throw new Error("Duration must be at least 15 minutes and in 15-minute increments.");
+        }
+      }
+
       await handleDynamicEntrySave({
-        entryType: { id: entryTypeObj?.id, code: entryTypeCode, name: entryTypeObj?.name },
-        formData,
+        entryType: {
+          id: entryTypeObj?.id,
+          code: entryTypeCode,
+          name: entryTypeObj?.name,
+        },
+        formData: finalFormData,
         schema,
         existingEntry: entry,
         mode,
         saveEntry: (payload) => persistTimeEntry(payload, entry?.id ?? null, clientId),
-        // refresh/close are handled by the onSave callback below, not here
       });
 
       if (onSave) await onSave();
@@ -78,7 +141,7 @@ export default function DynamicEntryForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {schema.map((field) => (
+      {visibleFields.map((field) => (
         <FieldRenderer
           key={field.key}
           field={field}
@@ -86,6 +149,12 @@ export default function DynamicEntryForm({
           onChange={(value) => handleChange(field.key, value)}
         />
       ))}
+
+      {hasClockRange && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          Duration: {calculatedDuration > 0 ? `${calculatedDuration} minutes` : "Select start and end time"}
+        </div>
+      )}
 
       {error && (
         <div className="flex gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
