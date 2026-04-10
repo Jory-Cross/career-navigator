@@ -19,23 +19,11 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Copy, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
-
-/**
- * TimeLogDashboard
- *
- * Updated to:
- * - remove status tabs (draft / submitted / approved / locked)
- * - remove status badge from each row
- * - show service type clearly
- * - show minutes logged clearly
- * - avoid "Unknown" when an entry type code exists but uses a legacy alias
- */
 
 const ENTRY_TYPE_LABEL_ALIASES = {
   misc: "Miscellaneous",
@@ -72,13 +60,6 @@ function formatDurationMinutes(minutes) {
   return `${hours} hr ${remainder} min`;
 }
 
-function prettifyCode(code) {
-  if (!code) return "Time Entry";
-  return String(code)
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
 export default function TimeLogDashboard({
   timeEntries = [],
   clientId,
@@ -96,15 +77,25 @@ export default function TimeLogDashboard({
     billable: "all",
     payrollEligible: "all",
   });
+
   const [showForm, setShowForm] = useState(false);
-   const [editingEntry, setEditingEntry] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
   const [employees, setEmployees] = useState([]);
   const [entryTypes, setEntryTypes] = useState([]);
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
   const [showFilters, setShowFilters] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
+    Promise.all([
+      base44.entities.User.filter({ role: "employee" }).catch(() => []),
+    ]).then(([emps]) => {
+      setEmployees(emps);
+      setEntryTypes(getEntryTypeOptions());
+    });
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     async function resolveAllEntryTypeCodes() {
@@ -119,7 +110,10 @@ export default function TimeLogDashboard({
             const resolvedCode = await resolveEntryTypeCode(entry);
             return [entry.id, resolvedCode || ""];
           } catch (error) {
-            console.error("[TimeLogDashboard] Failed to resolve entry type code for row:", error);
+            console.error(
+              "[TimeLogDashboard] Failed to resolve entry type code for row:",
+              error
+            );
             return [entry.id, ""];
           }
         })
@@ -143,36 +137,48 @@ export default function TimeLogDashboard({
     if (filters.clientId) {
       result = result.filter((e) => e.client_id === filters.clientId);
     }
+
     if (filters.employeeId) {
       result = result.filter((e) => e.employee_id === filters.employeeId);
     }
+
     if (filters.entryTypeCode) {
       result = result.filter((e) => {
-        const code = e.entry_type_code || e.entry_type || e.entry_type_key || "";
-        return code === filters.entryTypeCode;
+        const code =
+          resolvedEntryTypeCodes[e.id] ||
+          e.entry_type_code ||
+          e.entry_type ||
+          e.entry_type_key ||
+          "";
+        return String(code).toLowerCase() === String(filters.entryTypeCode).toLowerCase();
       });
     }
+
     if (filters.dateFrom) {
       result = result.filter((e) => e.date >= filters.dateFrom);
     }
+
     if (filters.dateTo) {
       result = result.filter((e) => e.date <= filters.dateTo);
     }
+
     if (filters.reportable !== "all") {
       const val = filters.reportable === "true";
       result = result.filter((e) => e.is_reportable === val);
     }
+
     if (filters.billable !== "all") {
       const val = filters.billable === "true";
       result = result.filter((e) => e.is_billable === val);
     }
+
     if (filters.payrollEligible !== "all") {
       const val = filters.payrollEligible === "true";
       result = result.filter((e) => e.is_payroll_eligible === val);
     }
 
     return result.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [timeEntries, filters]);
+  }, [timeEntries, filters, resolvedEntryTypeCodes]);
 
   const totalMinutes = filtered.reduce(
     (sum, entry) => sum + Number(entry.duration_minutes || 0),
@@ -223,18 +229,7 @@ export default function TimeLogDashboard({
     }
   };
 
-   const getEntryTypeDisplay = (entry) => {
-    const resolvedCode =
-      resolvedEntryTypeCodes[entry.id] ||
-      entry.entry_type_code ||
-      entry.entry_type ||
-      entry.entry_type_key ||
-      entry.type ||
-      entry.category ||
-      "";
-
-    const code = String(resolvedCode).toLowerCase();
-
+  const getEntryTypeDisplay = (entry) => {
     const directLabel =
       entry.entry_type_name ||
       entry.entry_type_label ||
@@ -245,6 +240,17 @@ export default function TimeLogDashboard({
     if (directLabel) {
       return directLabel;
     }
+
+    const resolvedCode =
+      resolvedEntryTypeCodes[entry.id] ||
+      entry.entry_type_code ||
+      entry.entry_type ||
+      entry.entry_type_key ||
+      entry.type ||
+      entry.category ||
+      "";
+
+    const code = String(resolvedCode).toLowerCase();
 
     const match = entryTypes.find(
       (type) =>
@@ -267,33 +273,7 @@ export default function TimeLogDashboard({
 
     return "Unknown Type";
   };
-  if (match?.label) return match.label;
-  if (match?.name) return match.name;
 
-  // 2. Known aliases
-  if (ENTRY_TYPE_LABEL_ALIASES[code]) {
-    return ENTRY_TYPE_LABEL_ALIASES[code];
-  }
-
-  // 3. Always show readable version of code
-  if (code) {
-    return code
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  return "Unknown Type";
-};
-
-  // 3. Always show readable version of code
-  if (code) {
-    return code
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  return "Unknown Type";
-};
   return (
     <div className="space-y-4">
       <Card className="p-4 space-y-4">
