@@ -10,31 +10,40 @@ import { base44 } from "@/api/base44Client";
 import {
   normalizeEntryTypeCode,
   getEntryTypeConfig,
+  ENTRY_TYPE_ALIASES,
 } from "@/lib/entryTypeRegistry";
 
+function getCandidateCodes(entryTypeCode) {
+  if (!entryTypeCode) return [];
+
+  const originalCode = String(entryTypeCode).trim();
+  const normalizedCode = normalizeEntryTypeCode(originalCode);
+
+  const reverseAliases = Object.entries(ENTRY_TYPE_ALIASES)
+    .filter(([, canonical]) => canonical === normalizedCode)
+    .map(([alias]) => alias);
+
+  return [...new Set([originalCode, normalizedCode, ...reverseAliases])].filter(Boolean);
+}
+
 async function resolveEntryTypeByCode(entryTypeCode) {
-  const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
+  const candidateCodes = getCandidateCodes(entryTypeCode);
 
-  if (!normalizedCode) return null;
+  for (const code of candidateCodes) {
+    try {
+      const results = await base44.entities.EntryType.filter({
+        code,
+      });
 
-  const config = getEntryTypeConfig(normalizedCode);
-  if (!config) {
-    return null;
-  }
-
-  try {
-  const results = await base44.entities.EntryType.filter({
-  code: normalizedCode,
-});
-
-    if (results?.length) {
-      return results[0];
+      if (results?.length) {
+        return results[0];
+      }
+    } catch (err) {
+      console.error(
+        `[DynamicEntryForm] Failed entry type lookup for code "${code}":`,
+        err
+      );
     }
-  } catch (err) {
-    console.error(
-      `[DynamicEntryForm] Failed entry type lookup for code "${normalizedCode}":`,
-      err
-    );
   }
 
   return null;
@@ -78,19 +87,24 @@ export default function DynamicEntryForm({
         return;
       }
 
+      const config = getEntryTypeConfig(normalizedEntryTypeCode);
+      if (!config) {
+        setEntryTypeObj(null);
+        setError(`Could not resolve entry type for code "${normalizedEntryTypeCode}".`);
+        return;
+      }
+
       setEntryTypeLoading(true);
       setError("");
 
       try {
-        const resolved = await resolveEntryTypeByCode(normalizedEntryTypeCode);
+        const resolved = await resolveEntryTypeByCode(entryTypeCode || normalizedEntryTypeCode);
 
         if (!active) return;
 
         if (!resolved) {
           setEntryTypeObj(null);
-          setError(
-            `Could not resolve entry type for code "${normalizedEntryTypeCode}".`
-          );
+          setError(`Could not resolve entry type for code "${normalizedEntryTypeCode}".`);
           return;
         }
 
@@ -113,7 +127,7 @@ export default function DynamicEntryForm({
     return () => {
       active = false;
     };
-  }, [normalizedEntryTypeCode]);
+  }, [entryTypeCode, normalizedEntryTypeCode]);
 
   function handleChange(key, value) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -136,7 +150,7 @@ export default function DynamicEntryForm({
       await handleDynamicEntrySave({
         entryType: {
           id: entryTypeObj.id,
-          code: entryTypeObj.code || normalizedEntryTypeCode,
+          code: normalizeEntryTypeCode(entryTypeObj.code || normalizedEntryTypeCode),
           name: entryTypeObj?.name,
         },
         formData,
