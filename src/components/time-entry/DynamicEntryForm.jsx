@@ -23,10 +23,9 @@ async function resolveEntryTypeByCode(entryTypeCode) {
   }
 
   try {
-    const results = await base44.entities.EntryType.filter({
-      code: normalizedCode,
-      is_active: true,
-    });
+  const results = await base44.entities.EntryType.filter({
+  code: normalizedCode,
+});
 
     if (results?.length) {
       return results[0];
