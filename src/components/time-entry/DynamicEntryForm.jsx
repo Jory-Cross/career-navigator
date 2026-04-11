@@ -7,41 +7,35 @@ import { buildFormDataFromEntry } from "@/lib/timeEntryRehydration";
 import { handleDynamicEntrySave } from "@/lib/handleDynamicEntrySave";
 import { persistTimeEntry } from "@/lib/persistTimeEntry";
 import { base44 } from "@/api/base44Client";
-
-const ENTRY_TYPE_CODE_ALIASES = {
-  pre_ets_training: ["pre_ets_training", "pre_ets"],
-  miscellaneous: ["miscellaneous", "misc"],
-  end_of_month_reporting: ["end_of_month_reporting", "eom_reporting"],
-  admin_time: ["admin_time"],
-  wsa: ["wsa"],
-  work_based_learning: ["work_based_learning", "wble", "work_based_learning_experience"],
-  job_coaching: ["job_coaching"],
-  job_development: ["job_development", "usor96"],
-  life_skills: ["life_skills"],
-  csb_hours: ["csb_hours"],
-};
-
-function getCandidateCodes(entryTypeCode) {
-  if (!entryTypeCode) return [];
-  return ENTRY_TYPE_CODE_ALIASES[entryTypeCode] || [entryTypeCode];
-}
+import {
+  normalizeEntryTypeCode,
+  getEntryTypeConfig,
+} from "@/lib/entryTypeRegistry";
 
 async function resolveEntryTypeByCode(entryTypeCode) {
-  const candidateCodes = getCandidateCodes(entryTypeCode);
+  const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
 
-  for (const code of candidateCodes) {
-    try {
-      const results = await base44.entities.EntryType.filter({
-        code,
-        is_active: true,
-      });
+  if (!normalizedCode) return null;
 
-      if (results?.length) {
-        return results[0];
-      }
-    } catch (err) {
-      console.error(`[DynamicEntryForm] Failed entry type lookup for code "${code}":`, err);
+  const config = getEntryTypeConfig(normalizedCode);
+  if (!config) {
+    return null;
+  }
+
+  try {
+    const results = await base44.entities.EntryType.filter({
+      code: normalizedCode,
+      is_active: true,
+    });
+
+    if (results?.length) {
+      return results[0];
     }
+  } catch (err) {
+    console.error(
+      `[DynamicEntryForm] Failed entry type lookup for code "${normalizedCode}":`,
+      err
+    );
   }
 
   return null;
@@ -57,6 +51,7 @@ export default function DynamicEntryForm({
   onCancel,
 }) {
   const normalizedSchema = Array.isArray(schema) ? schema : [];
+  const normalizedEntryTypeCode = normalizeEntryTypeCode(entryTypeCode);
 
   const initialData = useMemo(() => {
     if (entry?.id) {
@@ -79,7 +74,7 @@ export default function DynamicEntryForm({
     let active = true;
 
     async function loadEntryType() {
-      if (!entryTypeCode) {
+      if (!normalizedEntryTypeCode) {
         setEntryTypeObj(null);
         return;
       }
@@ -88,13 +83,15 @@ export default function DynamicEntryForm({
       setError("");
 
       try {
-        const resolved = await resolveEntryTypeByCode(entryTypeCode);
+        const resolved = await resolveEntryTypeByCode(normalizedEntryTypeCode);
 
         if (!active) return;
 
         if (!resolved) {
           setEntryTypeObj(null);
-          setError(`Could not resolve entry type for code "${entryTypeCode}".`);
+          setError(
+            `Could not resolve entry type for code "${normalizedEntryTypeCode}".`
+          );
           return;
         }
 
@@ -117,7 +114,7 @@ export default function DynamicEntryForm({
     return () => {
       active = false;
     };
-  }, [entryTypeCode]);
+  }, [normalizedEntryTypeCode]);
 
   function handleChange(key, value) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -128,7 +125,9 @@ export default function DynamicEntryForm({
     setError("");
 
     if (!entryTypeObj?.id) {
-      setError("Entry type is still loading or could not be resolved. Please wait a moment and try again.");
+      setError(
+        "Entry type is still loading or could not be resolved. Please wait a moment and try again."
+      );
       return;
     }
 
@@ -138,14 +137,15 @@ export default function DynamicEntryForm({
       await handleDynamicEntrySave({
         entryType: {
           id: entryTypeObj.id,
-          code: entryTypeObj.code || entryTypeCode,
+          code: entryTypeObj.code || normalizedEntryTypeCode,
           name: entryTypeObj?.name,
         },
         formData,
         schema: normalizedSchema,
         existingEntry: entry,
         mode,
-        saveEntry: (payload) => persistTimeEntry(payload, entry?.id ?? null, clientId),
+        saveEntry: (payload) =>
+          persistTimeEntry(payload, entry?.id ?? null, clientId),
       });
 
       if (onSave) {
@@ -179,11 +179,21 @@ export default function DynamicEntryForm({
       )}
 
       <div className="flex gap-2 pt-4 border-t border-slate-200">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={saving}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={saving || entryTypeLoading || !entryTypeObj?.id}>
-          {(saving || entryTypeLoading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        <Button
+          type="submit"
+          disabled={saving || entryTypeLoading || !entryTypeObj?.id}
+        >
+          {(saving || entryTypeLoading) && (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          )}
           {mode === "edit" ? "Save Changes" : "Save Entry"}
         </Button>
       </div>
