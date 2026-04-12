@@ -327,7 +327,7 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
   const payroll2Start = new Date(nowYear, nowMonth, 16);
   const payroll2End = new Date(nowYear, nowMonth + 1, 0, 23, 59, 59);
 
-  const filteredClientIds = clients.map((c) => c.id);
+  const filteredClientIds = useMemo(() => clients.map((c) => c.id), [clients]);
 
   const filtered = scopedTimeEntries.filter((entry) => {
     if (
