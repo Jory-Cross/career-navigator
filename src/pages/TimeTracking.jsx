@@ -94,7 +94,8 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     enabled: !!user && (user.role === "admin" || user.role === "management"),
   });
 
-  const filterableEmployees = allUsers.filter((u) => {
+  const filterableEmployees = useMemo(() => {
+  return allUsers.filter((u) => {
     if (!u.is_archived) {
       if (effectiveUser?.role === "management") {
         return u.role === "employee" && u.manager_id === effectiveUser.id;
@@ -105,6 +106,7 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     }
     return false;
   });
+}, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
 
   const { data: allClients = [] } = useQuery({
     queryKey: ["clients", effectiveUser?.id, effectiveUser?.role],
