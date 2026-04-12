@@ -557,7 +557,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
           />
         </TabsContent>
 
-        {isStaff && (
+               {showInternalStaffContent && (
           <TabsContent value="time">
             <TimeLogSection 
               timeEntries={timeEntries} 
