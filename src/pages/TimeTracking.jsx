@@ -181,7 +181,38 @@ export default function TimeTracking() {
     queryFn: () => base44.entities.TimeEntry.list("-created_date"),
     enabled: !!effectiveUser,
   });
+  useEffect(() => {
+    let active = true;
 
+    async function resolveAllEntryTypeCodes() {
+      if (!timeEntries?.length) {
+        setResolvedEntryTypeCodes({});
+        return;
+      }
+
+      const pairs = await Promise.all(
+        timeEntries.map(async (entry) => {
+          try {
+            const resolvedCode = await resolveEntryTypeCode(entry);
+            return [entry.id, resolvedCode || ""];
+          } catch (error) {
+            console.error("[TimeTracking] Failed to resolve entry type code for row:", error);
+            return [entry.id, ""];
+          }
+        })
+      );
+
+      if (!active) return;
+
+      setResolvedEntryTypeCodes(Object.fromEntries(pairs));
+    }
+
+    resolveAllEntryTypeCodes();
+
+    return () => {
+      active = false;
+    };
+  }, [timeEntries]);
   const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
