@@ -329,12 +329,15 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
   const filteredClientIds = useMemo(() => clients.map((c) => c.id), [clients]);
 
-  const filtered = scopedTimeEntries.filter((entry) => {
+ const filtered = useMemo(() => {
+  const filteredClientIdSet = new Set(filteredClientIds);
+
+  return scopedTimeEntries.filter((entry) => {
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
       employeeFilter !== "all" &&
       entry.client_id &&
-      !filteredClientIds.includes(entry.client_id)
+      !filteredClientIdSet.has(entry.client_id)
     ) {
       return false;
     }
@@ -375,6 +378,20 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     }
 
     return true;
+  });
+}, [
+  scopedTimeEntries,
+  effectiveUser?.role,
+  employeeFilter,
+  filteredClientIds,
+  clientFilter,
+  periodFilter,
+  payroll1Start,
+  payroll1End,
+  payroll2Start,
+  payroll2End,
+  now,
+]);
   });
 
   const duplicateIds = new Set();
