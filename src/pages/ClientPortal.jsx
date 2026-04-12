@@ -128,11 +128,29 @@ export default function ClientPortal() {
     enabled: !!client
   });
 
-  const { data: activities = [] } = useQuery({
+   const { data: activities = [] } = useQuery({
     queryKey: ['client-activities', client?.id],
     queryFn: () => base44.entities.Activity.filter({ client_id: client.id }),
     enabled: !!client
   });
+
+  const clientVisibleActivities = isStaff
+    ? activities
+    : activities.filter((activity) =>
+        [
+          "application_created",
+          "application_updated",
+          "task_created",
+          "task_updated",
+          "assessment_completed",
+          "job_search",
+          "application_submitted",
+          "interview_completed",
+          "document_uploaded"
+        ].includes(activity.activity_type)
+      );
+
+  const clientVisibleMeetings = isStaff ? meetings : [];
 
   const { data: assessments = [] } = useQuery({
     queryKey: ['client-assessments', client?.id],
