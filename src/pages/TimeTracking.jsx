@@ -394,36 +394,51 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 ]);
   });
 
-  const duplicateIds = new Set();
+ const duplicateIds = useMemo(() => {
+  const ids = new Set();
   const seen = {};
+
   scopedTimeEntries.forEach((entry) => {
     const key = `${entry.client_id}__${entry.date}__${entry.start_time || "notime"}`;
     if (seen[key]) {
-      duplicateIds.add(entry.id);
-      duplicateIds.add(seen[key]);
+      ids.add(entry.id);
+      ids.add(seen[key]);
     } else {
       seen[key] = entry.id;
     }
   });
 
-  const totalMinutes = filtered.reduce(
-    (sum, entry) => sum + (entry.duration_minutes || 0),
-    0
-  );
+  return ids;
+}, [scopedTimeEntries]);
+
+  const totalMinutes = useMemo(() => {
+  return filtered.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
+}, [filtered]);
   const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
-  const legacyEntries = scopedTimeEntries.filter(
-    (entry) => entry.category && !entry.entry_type_code
-  );
+ const legacyEntries = useMemo(() => {
+  return scopedTimeEntries.filter((entry) => entry.category && !entry.entry_type_code);
+}, [scopedTimeEntries]);
 
-  const byClient = {};
+  const byClient = useMemo(() => {
+  const grouped = {};
+
+  const byClient = useMemo(() => {
+  const grouped = {};
+
   filtered.forEach((entry) => {
-    if (!byClient[entry.client_id]) {
-      byClient[entry.client_id] = { minutes: 0, entries: 0 };
+    if (!grouped[entry.client_id]) {
+      grouped[entry.client_id] = { minutes: 0, entries: 0 };
     }
-    byClient[entry.client_id].minutes += entry.duration_minutes || 0;
-    byClient[entry.client_id].entries += 1;
+    grouped[entry.client_id].minutes += entry.duration_minutes || 0;
+    grouped[entry.client_id].entries += 1;
   });
+
+  return grouped;
+}, [filtered]);
+
+  return grouped;
+}, [filtered]);
 
   return (
     <div className="space-y-6">
