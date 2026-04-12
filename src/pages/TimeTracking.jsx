@@ -154,10 +154,70 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     enabled: !!effectiveUser,
   });
 
-  useEffect(() => {
-    let active = true;
+ useEffect(() => {
+  let active = true;
 
-    async function resolveAllEntryTypeCodes() {
+  async function resolveAllEntryTypeCodes() {
+    if (!timeEntries?.length) {
+      setResolvedEntryTypeCodes({});
+      return;
+    }
+
+    const immediatePairs = [];
+    const needsAsync = [];
+
+    for (const entry of timeEntries) {
+      if (entry?.entry_type_code) {
+        immediatePairs.push([entry.id, entry.entry_type_code]);
+      } else if (entry?.entry_type || entry?.entry_type_key || entry?.type || entry?.category) {
+        immediatePairs.push([
+          entry.id,
+          entry.entry_type || entry.entry_type_key || entry.type || entry.category || "",
+        ]);
+      } else if (!resolvedEntryTypeCodes[entry.id]) {
+        needsAsync.push(entry);
+      }
+    }
+
+    const baseMap = Object.fromEntries(immediatePairs);
+
+    if (!needsAsync.length) {
+      if (active) {
+        setResolvedEntryTypeCodes((prev) => {
+          const next = { ...prev, ...baseMap };
+          return next;
+        });
+      }
+      return;
+    }
+
+    const asyncPairs = await Promise.all(
+      needsAsync.map(async (entry) => {
+        try {
+          const resolvedCode = await resolveEntryTypeCode(entry);
+          return [entry.id, resolvedCode || ""];
+        } catch (error) {
+          console.error("[TimeTracking] Failed to resolve entry type code for row:", error);
+          return [entry.id, ""];
+        }
+      })
+    );
+
+    if (!active) return;
+
+    setResolvedEntryTypeCodes((prev) => ({
+      ...prev,
+      ...baseMap,
+      ...Object.fromEntries(asyncPairs),
+    }));
+  }
+
+  resolveAllEntryTypeCodes();
+
+  return () => {
+    active = false;
+  };
+}, [timeEntries, resolvedEntryTypeCodes]);
       if (!timeEntries?.length) {
         setResolvedEntryTypeCodes({});
         return;
