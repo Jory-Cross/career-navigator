@@ -87,7 +87,7 @@ export default function TimeTracking() {
 }, []);
 
   const effectiveUser = (user?.role === "admin" && viewAsUser) ? viewAsUser : user;
-
+const entryTypes = useMemo(() => getEntryTypeOptions(), []);
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
