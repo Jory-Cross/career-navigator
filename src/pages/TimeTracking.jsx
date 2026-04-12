@@ -83,9 +83,8 @@ export default function TimeTracking() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-    setEntryTypes(getEntryTypeOptions());
-  }, []);
+  base44.auth.me().then(setUser).catch(() => {});
+}, []);
 
   const effectiveUser = (user?.role === "admin" && viewAsUser) ? viewAsUser : user;
 
