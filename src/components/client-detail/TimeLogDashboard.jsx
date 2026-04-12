@@ -480,15 +480,11 @@ export default function TimeLogDashboard({
                         </span>
                       </div>
 
-                      {(employee?.full_name || entry.description) && (
-                        <div className="flex gap-2 text-xs text-slate-600">
-                          {employee?.full_name && (
+                     {employee?.full_name && (
   <div className="flex gap-2 text-xs text-slate-600">
     <span>👤 {employee.full_name}</span>
   </div>
 )}
-                        </div>
-                      )}
                     </div>
                   </div>
 
