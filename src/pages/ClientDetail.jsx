@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 import ClientHeader from "@/components/client-detail/ClientHeader";
 import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
 import TasksSection from "@/components/client-detail/TasksSection";
@@ -22,10 +27,25 @@ import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
 import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
 
-export default function ClientDetail() {
+function getClientIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  const clientId = urlParams.get("id");
+  return urlParams.get("id");
+}
+
+function getDefaultTab(client, userRole) {
+  const isDspd = client?.client_type === "dspd";
+  const isEmployed = client?.client_type === "employed";
+
+  if (isDspd) return "onboarding";
+  if (isEmployed) return "documents";
+  if (userRole === "client") return "activity";
+  return "applications";
+}
+
+export default function ClientDetail() {
+  const clientId = React.useMemo(() => getClientIdFromUrl(), []);
   const queryClient = useQueryClient();
+
   const [showEmailComposer, setShowEmailComposer] = React.useState(false);
   const [user, setUser] = React.useState(null);
   const [activeTab, setActiveTab] = React.useState(null);
@@ -35,181 +55,377 @@ export default function ClientDetail() {
   }, []);
 
   const { data: client, isLoading } = useQuery({
-    queryKey: ["client", clientId, user?.role],
+    queryKey: ["client", clientId, user?.role, user?.id],
     queryFn: async () => {
-      const allClients = await base44.entities.Client.list();
-      const clientData = allClients.find(c => c.id === clientId);
+      if (!clientId) return null;
+
+      let clientData = null;
+
+      try {
+        clientData = await base44.entities.Client.get(clientId);
+      } catch (error) {
+        const allClients = await base44.entities.Client.list();
+        clientData = allClients.find((c) => c.id === clientId) || null;
+      }
+
       if (!clientData) return null;
       if (!user) return clientData;
-      if (user.role === 'admin') return clientData;
-      if (user.role === 'management') return clientData;
-      if (user.role === 'employee' && clientData.assigned_employee_id === user.id) return clientData;
+      if (user.role === "admin") return clientData;
+      if (user.role === "management") return clientData;
+      if (
+        user.role === "employee" &&
+        (clientData.assigned_employee_id === user.id ||
+          clientData.created_by === user.email)
+      ) {
+        return clientData;
+      }
+      if (user.role === "client" && clientData.id === clientId) {
+        return clientData;
+      }
+
       return null;
     },
-    enabled: !!clientId && !!user
+    enabled: !!clientId && !!user,
   });
+
+  const defaultTab = React.useMemo(() => {
+    return client ? getDefaultTab(client, user?.role) : null;
+  }, [client, user?.role]);
+
+  React.useEffect(() => {
+    if (defaultTab && !activeTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, activeTab]);
+
+  const isDspd = client?.client_type === "dspd";
+  const isEmployed = client?.client_type === "employed";
+  const isClientUser = user?.role === "client";
+
+  const shouldLoadApplications = !!clientId && activeTab === "applications";
+  const shouldLoadTasks = !!clientId && activeTab === "tasks";
+  const shouldLoadResumes = !!clientId && activeTab === "resumes";
+  const shouldLoadTime = !!clientId && (activeTab === "time" || activeTab === "job_supports");
+  const shouldLoadActivity = !!clientId && activeTab === "activity";
 
   const { data: applications = [] } = useQuery({
     queryKey: ["applications", clientId],
     queryFn: () => base44.entities.JobApplication.filter({ client_id: clientId }),
-    enabled: !!clientId
+    enabled: shouldLoadApplications,
   });
 
-  const { data: allTasks = [] } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => base44.entities.Task.list(),
-    enabled: !!clientId
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks", clientId],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Task.filter({ client_ids: clientId });
+      } catch (error) {
+        const allTasks = await base44.entities.Task.list();
+        return allTasks.filter((t) => t.client_ids?.includes(clientId));
+      }
+    },
+    enabled: shouldLoadTasks,
   });
-
-  const tasks = allTasks.filter(t => t.client_ids?.includes(clientId));
 
   const { data: resumes = [] } = useQuery({
     queryKey: ["resumes", clientId],
     queryFn: () => base44.entities.Resume.filter({ client_id: clientId }),
-    enabled: !!clientId
+    enabled: shouldLoadResumes,
   });
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", clientId],
     queryFn: () => base44.entities.TimeEntry.filter({ client_id: clientId }),
-    enabled: !!clientId
+    enabled: shouldLoadTime,
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", clientId],
     queryFn: () => base44.entities.Activity.filter({ client_id: clientId }),
-    enabled: !!clientId
+    enabled: shouldLoadActivity,
   });
 
-  const refresh = () => {
+  const refreshClient = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+  }, [queryClient, clientId]);
+
+  const refreshApplications = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["applications", clientId] });
+  }, [queryClient, clientId]);
+
+  const refreshTasks = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["tasks", clientId] });
+  }, [queryClient, clientId]);
+
+  const refreshResumes = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["resumes", clientId] });
+  }, [queryClient, clientId]);
+
+  const refreshTimeEntries = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["timeEntries", clientId] });
-  };
+  }, [queryClient, clientId]);
+
+  const refreshActivities = React.useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["activities", clientId] });
+  }, [queryClient, clientId]);
+
+  const refreshAll = React.useCallback(() => {
+    refreshClient();
+    refreshApplications();
+    refreshTasks();
+    refreshResumes();
+    refreshTimeEntries();
+    refreshActivities();
+  }, [
+    refreshClient,
+    refreshApplications,
+    refreshTasks,
+    refreshResumes,
+    refreshTimeEntries,
+    refreshActivities,
+  ]);
+
+  const portalUrl = React.useMemo(() => {
+    return `/ClientPortal?id=${clientId}`;
+  }, [clientId]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
+    return <div className="p-6">Loading...</div>;
   }
 
   if (!client) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-slate-400">Client not found</p>
-        <Link to={createPageUrl("Clients")}><Button variant="outline">Back to Clients</Button></Link>
+      <div className="p-6 space-y-4">
+        <div className="text-lg font-semibold">Client not found</div>
+        <Link to={createPageUrl("Clients")}>
+          <Button variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Clients
+          </Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link to={createPageUrl("Clients")} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Clients
+    <div className="p-6 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to={createPageUrl("Clients")}>
+          <Button variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Clients
+          </Button>
         </Link>
-        <div className="flex gap-2">
-          {client.client_type !== 'employed' && (
-            <Button variant="outline" onClick={() => window.open(`/ClientPortal?id=${clientId}`, '_blank')}>
-              <ExternalLink className="w-4 h-4 mr-1.5" /> Client Portal
+
+        <div className="flex flex-wrap gap-2">
+          {client.client_type !== "employed" && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(portalUrl, "_blank")}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Client Portal
             </Button>
           )}
-          <Button variant="outline" onClick={() => setShowEmailComposer(true)}>
-            Send Email
-          </Button>
+
+          {client.email && (
+            <Button onClick={() => setShowEmailComposer(true)}>
+              Send Email
+            </Button>
+          )}
         </div>
       </div>
 
-      <ClientHeader client={client} onUpdate={refresh} />
+      <ClientHeader client={client} onRefresh={refreshClient} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
-      <div>
-      {(() => {
-        const isDspd = client.client_type === 'dspd';
-        const isEmployed = client.client_type === 'employed';
-        const defaultTab = isDspd ? 'onboarding' : isEmployed ? 'documents' : 'applications';
-        return (
-      <Tabs defaultValue={defaultTab} className="space-y-4">
-        <TabsList className="bg-slate-100 p-1">
-          {user?.role !== 'client' && !isEmployed && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
-          {!isDspd && !isEmployed && <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>}
-          {!isDspd && !isEmployed && user?.role !== 'client' && <TabsTrigger value="ai_jobs">🤖 AI Job Search</TabsTrigger>}
-          {!isDspd && !isEmployed && <TabsTrigger value="interview">Interview Prep</TabsTrigger>}
-          {!isDspd && !isEmployed && user?.role !== 'client' && <TabsTrigger value="assessments">Assessments</TabsTrigger>}
-          {client.client_type === 'pre_ets' && user?.role !== 'client' && <TabsTrigger value="wble">WBLE Forms</TabsTrigger>}
-          {user?.role !== 'client' && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          {!isEmployed && <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>}
-          {!isDspd && !isEmployed && <TabsTrigger value="resumes">Resumes ({resumes.length})</TabsTrigger>}
-          {user?.role !== 'client' && isEmployed && <TabsTrigger value="job_supports">Job Supports ({timeEntries.length})</TabsTrigger>}
-          {user?.role !== 'client' && !isEmployed && <TabsTrigger value="time">Time ({timeEntries.length})</TabsTrigger>}
-          <TabsTrigger value="activity">Activity ({activities.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="onboarding">
-          <OnboardingSection client={client} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="applications">
-          <JobApplicationsSection clientId={clientId} applications={applications} client={client} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="ai_jobs">
-          <AIJobSearchPanel clientId={clientId} client={client} />
-        </TabsContent>
-        <TabsContent value="interview">
-          <InterviewPrepSection client={client} />
-        </TabsContent>
-        <TabsContent value="assessments">
-          <AssessmentSection clientId={clientId} />
-        </TabsContent>
-        <TabsContent value="wble">
-          <WBLEFormSection clientId={clientId} client={client} user={user} />
-        </TabsContent>
-        <TabsContent value="documents">
-          <DocumentsSection clientId={clientId} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="tasks">
-          <TasksSection clientId={clientId} tasks={tasks} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="resumes">
-          <ResumeSection clientId={clientId} resumes={resumes} onRefresh={refresh} client={client} />
-        </TabsContent>
-        <TabsContent value="time">
-          <TimeLogDashboard timeEntries={timeEntries} clientId={clientId} clients={[client]} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="job_supports">
-          <TimeLogDashboard timeEntries={timeEntries} clientId={clientId} clients={[client]} onRefresh={refresh} />
-        </TabsContent>
-        <TabsContent value="activity">
-          <ActivitySection clientId={clientId} />
-        </TabsContent>
-      </Tabs>
-        );
-      })()}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <Tabs
+            value={activeTab || defaultTab || "applications"}
+            onValueChange={setActiveTab}
+            className="space-y-6"
+          >
+            <TabsList className="flex flex-wrap h-auto">
+              {!isClientUser && !isEmployed && (
+                <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+              )}
+
+              {!isDspd && !isEmployed && (
+                <TabsTrigger value="applications">
+                  Applications {activeTab === "applications" ? `(${applications.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              {!isDspd && !isEmployed && !isClientUser && (
+                <TabsTrigger value="ai_jobs">AI Job Search</TabsTrigger>
+              )}
+
+              {!isDspd && !isEmployed && (
+                <TabsTrigger value="interview_prep">Interview Prep</TabsTrigger>
+              )}
+
+              {!isDspd && !isEmployed && !isClientUser && (
+                <TabsTrigger value="assessments">Assessments</TabsTrigger>
+              )}
+
+              {client.client_type === "pre_ets" && !isClientUser && (
+                <TabsTrigger value="wble_forms">WBLE Forms</TabsTrigger>
+              )}
+
+              {!isClientUser && (
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+              )}
+
+              {!isEmployed && (
+                <TabsTrigger value="tasks">
+                  Tasks {activeTab === "tasks" ? `(${tasks.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              {!isDspd && !isEmployed && (
+                <TabsTrigger value="resumes">
+                  Resumes {activeTab === "resumes" ? `(${resumes.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              {!isClientUser && isEmployed && (
+                <TabsTrigger value="job_supports">
+                  Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              {!isClientUser && !isEmployed && (
+                <TabsTrigger value="time">
+                  Time {activeTab === "time" ? `(${timeEntries.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              <TabsTrigger value="activity">
+                Activity {activeTab === "activity" ? `(${activities.length})` : ""}
+              </TabsTrigger>
+            </TabsList>
+
+            {!isClientUser && !isEmployed && (
+              <TabsContent value="onboarding">
+                <OnboardingSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="applications">
+                <JobApplicationsSection
+                  client={client}
+                  applications={applications}
+                  onRefresh={refreshApplications}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && !isClientUser && (
+              <TabsContent value="ai_jobs">
+                <AIJobSearchPanel client={client} />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="interview_prep">
+                <InterviewPrepSection
+                  client={client}
+                  onRefresh={refreshApplications}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && !isClientUser && (
+              <TabsContent value="assessments">
+                <AssessmentSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {client.client_type === "pre_ets" && !isClientUser && (
+              <TabsContent value="wble_forms">
+                <WBLEFormSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isClientUser && (
+              <TabsContent value="documents">
+                <DocumentsSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isEmployed && (
+              <TabsContent value="tasks">
+                <TasksSection
+                  client={client}
+                  tasks={tasks}
+                  onRefresh={refreshTasks}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="resumes">
+                <ResumeSection
+                  client={client}
+                  resumes={resumes}
+                  onRefresh={refreshResumes}
+                />
+              </TabsContent>
+            )}
+
+            {!isClientUser && isEmployed && (
+              <TabsContent value="job_supports">
+                <TimeLogDashboard
+                  clientId={clientId}
+                  clients={[client]}
+                  timeEntries={timeEntries}
+                  onRefresh={refreshTimeEntries}
+                />
+              </TabsContent>
+            )}
+
+            {!isClientUser && !isEmployed && (
+              <TabsContent value="time">
+                <TimeLogDashboard
+                  clientId={clientId}
+                  clients={[client]}
+                  timeEntries={timeEntries}
+                  onRefresh={refreshTimeEntries}
+                />
+              </TabsContent>
+            )}
+
+            <TabsContent value="activity">
+              <ActivitySection
+                client={client}
+                activities={activities}
+                onRefresh={refreshActivities}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div className="space-y-6">
+          <VocationalProfileCard client={client} onRefresh={refreshClient} />
+
+          <AIAssistantPanel
+            client={client}
+            onOpenJobSearch={() => setActiveTab("ai_jobs")}
+            onOpenAssistant={() => {}}
+          />
+        </div>
       </div>
 
-      {/* Right Sidebar */}
-      <div className="xl:sticky xl:top-20 space-y-4">
-        <VocationalProfileCard
-          client={client}
-          onRefresh={refresh}
-          onOpenJobSearch={() => setActiveTab("ai_jobs")}
-          onOpenAssistant={() => {}}
-        />
-        <AIAssistantPanel
+      {showEmailComposer && (
+        <EmailComposer
+          open={showEmailComposer}
+          onOpenChange={setShowEmailComposer}
           clientId={clientId}
-          onRefresh={refresh}
-          onUseEmail={(subject, body) => {
-            setShowEmailComposer(true);
-          }}
+          clientEmail={client.email}
+          clientName={`${client.first_name} ${client.last_name}`}
         />
-      </div>
-      </div>
-
-      <EmailComposer
-        open={showEmailComposer}
-        onClose={() => setShowEmailComposer(false)}
-        clientId={clientId}
-        clientEmail={client.email}
-        clientName={`${client.first_name} ${client.last_name}`}
-      />
+      )}
     </div>
   );
 }
