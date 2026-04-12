@@ -4,9 +4,20 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { User, Filter, AlertTriangle, Trash2, Pencil, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { User, Filter, AlertTriangle, Pencil, Plus } from "lucide-react";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
@@ -53,16 +64,40 @@ function parseDateOnly(dateString) {
 function formatShortEntryDate(dateString) {
   const parsed = parseDateOnly(dateString);
   if (!parsed) return "";
-
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${months[parsed.getMonth()]} ${parsed.getDate()}`;
 }
 
 function formatLongEntryDate(dateString) {
   const parsed = parseDateOnly(dateString);
   if (!parsed) return "—";
-
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
 }
 
@@ -77,17 +112,18 @@ export default function TimeTracking() {
   const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
-
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   useEffect(() => {
-  base44.auth.me().then(setUser).catch(() => {});
-}, []);
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
-  const effectiveUser = (user?.role === "admin" && viewAsUser) ? viewAsUser : user;
-const entryTypes = useMemo(() => getEntryTypeOptions(), []);
+  const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
+  const entryTypes = useMemo(() => getEntryTypeOptions(), []);
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
@@ -95,18 +131,18 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
   });
 
   const filterableEmployees = useMemo(() => {
-  return allUsers.filter((u) => {
-    if (!u.is_archived) {
-      if (effectiveUser?.role === "management") {
-        return u.role === "employee" && u.manager_id === effectiveUser.id;
+    return allUsers.filter((u) => {
+      if (!u.is_archived) {
+        if (effectiveUser?.role === "management") {
+          return u.role === "employee" && u.manager_id === effectiveUser.id;
+        }
+        if (user?.role === "admin" && !viewAsUser) {
+          return u.role === "employee" || u.role === "management";
+        }
       }
-      if (user?.role === "admin" && !viewAsUser) {
-        return u.role === "employee" || u.role === "management";
-      }
-    }
-    return false;
-  });
-}, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
+      return false;
+    });
+  }, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
 
   const { data: allClients = [] } = useQuery({
     queryKey: ["clients", effectiveUser?.id, effectiveUser?.role],
@@ -136,34 +172,39 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     },
     enabled: !!effectiveUser,
   });
-const clientById = useMemo(() => {
-  const map = {};
-  for (const client of allClients) {
-    map[client.id] = client;
-  }
-  return map;
-}, [allClients]);
 
-const employeeById = useMemo(() => {
-  const map = {};
-  for (const employee of filterableEmployees) {
-    map[employee.id] = employee;
-  }
-  return map;
-}, [filterableEmployees]);
- const clients = useMemo(() => {
-  if (
-    (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-    employeeFilter !== "all"
-  ) {
-    const emp = employeeById[employeeFilter];
-    return allClients.filter((c) => {
-      return emp && (c.assigned_employee_id === emp.id || c.created_by === emp.email);
-    });
-  }
+  const clientById = useMemo(() => {
+    const map = {};
+    for (const client of allClients) {
+      map[client.id] = client;
+    }
+    return map;
+  }, [allClients]);
 
-  return allClients;
-}, [allClients, effectiveUser?.role, employeeFilter, employeeById]);
+  const employeeById = useMemo(() => {
+    const map = {};
+    for (const employee of filterableEmployees) {
+      map[employee.id] = employee;
+    }
+    return map;
+  }, [filterableEmployees]);
+
+  const clients = useMemo(() => {
+    if (
+      (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+      employeeFilter !== "all"
+    ) {
+      const emp = employeeById[employeeFilter];
+      return allClients.filter((c) => {
+        return (
+          emp &&
+          (c.assigned_employee_id === emp.id || c.created_by === emp.email)
+        );
+      });
+    }
+
+    return allClients;
+  }, [allClients, effectiveUser?.role, employeeFilter, employeeById]);
 
   const clientIds = useMemo(() => allClients.map((c) => c.id), [allClients]);
 
@@ -173,70 +214,10 @@ const employeeById = useMemo(() => {
     enabled: !!effectiveUser,
   });
 
- useEffect(() => {
-  let active = true;
+  useEffect(() => {
+    let active = true;
 
-  async function resolveAllEntryTypeCodes() {
-    if (!timeEntries?.length) {
-      setResolvedEntryTypeCodes({});
-      return;
-    }
-
-    const immediatePairs = [];
-    const needsAsync = [];
-
-    for (const entry of timeEntries) {
-      if (entry?.entry_type_code) {
-        immediatePairs.push([entry.id, entry.entry_type_code]);
-      } else if (entry?.entry_type || entry?.entry_type_key || entry?.type || entry?.category) {
-        immediatePairs.push([
-          entry.id,
-          entry.entry_type || entry.entry_type_key || entry.type || entry.category || "",
-        ]);
-      } else if (!resolvedEntryTypeCodes[entry.id]) {
-        needsAsync.push(entry);
-      }
-    }
-
-    const baseMap = Object.fromEntries(immediatePairs);
-
-    if (!needsAsync.length) {
-      if (active) {
-        setResolvedEntryTypeCodes((prev) => {
-          const next = { ...prev, ...baseMap };
-          return next;
-        });
-      }
-      return;
-    }
-
-    const asyncPairs = await Promise.all(
-      needsAsync.map(async (entry) => {
-        try {
-          const resolvedCode = await resolveEntryTypeCode(entry);
-          return [entry.id, resolvedCode || ""];
-        } catch (error) {
-          console.error("[TimeTracking] Failed to resolve entry type code for row:", error);
-          return [entry.id, ""];
-        }
-      })
-    );
-
-    if (!active) return;
-
-    setResolvedEntryTypeCodes((prev) => ({
-      ...prev,
-      ...baseMap,
-      ...Object.fromEntries(asyncPairs),
-    }));
-  }
-
-  resolveAllEntryTypeCodes();
-
-  return () => {
-    active = false;
-  };
-}, [timeEntries, resolvedEntryTypeCodes]);
+    async function resolveAllEntryTypeCodes() {
       if (!timeEntries?.length) {
         setResolvedEntryTypeCodes({});
         return;
@@ -248,12 +229,21 @@ const employeeById = useMemo(() => {
       for (const entry of timeEntries) {
         if (entry?.entry_type_code) {
           immediatePairs.push([entry.id, entry.entry_type_code]);
-        } else if (entry?.entry_type || entry?.entry_type_key || entry?.type || entry?.category) {
+        } else if (
+          entry?.entry_type ||
+          entry?.entry_type_key ||
+          entry?.type ||
+          entry?.category
+        ) {
           immediatePairs.push([
             entry.id,
-            entry.entry_type || entry.entry_type_key || entry.type || entry.category || "",
+            entry.entry_type ||
+              entry.entry_type_key ||
+              entry.type ||
+              entry.category ||
+              "",
           ]);
-        } else {
+        } else if (!resolvedEntryTypeCodes[entry.id]) {
           needsAsync.push(entry);
         }
       }
@@ -262,7 +252,7 @@ const employeeById = useMemo(() => {
 
       if (!needsAsync.length) {
         if (active) {
-          setResolvedEntryTypeCodes(baseMap);
+          setResolvedEntryTypeCodes((prev) => ({ ...prev, ...baseMap }));
         }
         return;
       }
@@ -273,7 +263,10 @@ const employeeById = useMemo(() => {
             const resolvedCode = await resolveEntryTypeCode(entry);
             return [entry.id, resolvedCode || ""];
           } catch (error) {
-            console.error("[TimeTracking] Failed to resolve entry type code for row:", error);
+            console.error(
+              "[TimeTracking] Failed to resolve entry type code for row:",
+              error
+            );
             return [entry.id, ""];
           }
         })
@@ -281,10 +274,11 @@ const employeeById = useMemo(() => {
 
       if (!active) return;
 
-      setResolvedEntryTypeCodes({
+      setResolvedEntryTypeCodes((prev) => ({
+        ...prev,
         ...baseMap,
         ...Object.fromEntries(asyncPairs),
-      });
+      }));
     }
 
     resolveAllEntryTypeCodes();
@@ -292,52 +286,45 @@ const employeeById = useMemo(() => {
     return () => {
       active = false;
     };
-  }, [timeEntries]);
+  }, [timeEntries, resolvedEntryTypeCodes]);
 
   const scopedTimeEntries = useMemo(() => {
-  if (!effectiveUser) return timeEntries;
-  if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
+    if (!effectiveUser) return timeEntries;
+    if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
 
-  const clientIdSet = new Set(clientIds);
-  return timeEntries.filter((e) => !e.client_id || clientIdSet.has(e.client_id));
-}, [timeEntries, clientIds, effectiveUser?.role, !!viewAsUser]);
+    const clientIdSet = new Set(clientIds);
+    return timeEntries.filter((e) => !e.client_id || clientIdSet.has(e.client_id));
+  }, [timeEntries, clientIds, effectiveUser?.role, !!viewAsUser]);
+
   const handleRefresh = useCallback(() => {
-  queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-}, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+  }, [queryClient]);
 
   const handleEditEntry = async (entry) => {
     const code =
-      resolvedEntryTypeCodes[entry.id] ||
-      (await resolveEntryTypeCode(entry));
-
+      resolvedEntryTypeCodes[entry.id] || (await resolveEntryTypeCode(entry));
     setEditingEntry(entry);
     setEditingEntryTypeCode(code);
     setSelectedEntry(null);
   };
 
   const handleOpenEntry = useCallback((entry) => {
-  if (!entry?.id) {
-    toast.error("Invalid entry");
-    return;
-  }
-
-  setSelectedEntry(entry);
-}, []);
-        return;
-      }
-      setSelectedEntry(fresh);
-    } catch (err) {
-      console.error("Failed to open entry:", err);
-      toast.error("This entry no longer exists");
-      handleRefresh();
+    if (!entry?.id) {
+      toast.error("Invalid entry");
+      return;
     }
-  };
+    setSelectedEntry(entry);
+  }, []);
 
-  const getClientName = useCallback((id) => {
-  if (!id) return "Myself";
-  const client = clientById[id];
-  return client ? `${client.first_name} ${client.last_name}` : "Unknown";
-}, [clientById]);
+  const getClientName = useCallback(
+    (id) => {
+      if (!id) return "Myself";
+      const client = clientById[id];
+      return client ? `${client.first_name} ${client.last_name}` : "Unknown";
+    },
+    [clientById]
+  );
+
   const now = new Date();
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth();
@@ -348,351 +335,359 @@ const employeeById = useMemo(() => {
 
   const filteredClientIds = useMemo(() => clients.map((c) => c.id), [clients]);
 
- const filtered = useMemo(() => {
-  const filteredClientIdSet = new Set(filteredClientIds);
+  const filtered = useMemo(() => {
+    const filteredClientIdSet = new Set(filteredClientIds);
 
-  return scopedTimeEntries.filter((entry) => {
-    if (
-      (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-      employeeFilter !== "all" &&
-      entry.client_id &&
-      !filteredClientIdSet.has(entry.client_id)
-    ) {
-      return false;
-    }
+    return scopedTimeEntries.filter((entry) => {
+      if (
+        (effectiveUser?.role === "admin" ||
+          effectiveUser?.role === "management") &&
+        employeeFilter !== "all" &&
+        entry.client_id &&
+        !filteredClientIdSet.has(entry.client_id)
+      ) {
+        return false;
+      }
 
-    if (clientFilter !== "all" && entry.client_id !== clientFilter) {
-      return false;
-    }
+      if (clientFilter !== "all" && entry.client_id !== clientFilter) {
+        return false;
+      }
 
-    if (!entry.date) {
-      return periodFilter === "all";
-    }
+      if (!entry.date) {
+        return periodFilter === "all";
+      }
 
-    const parsedDate = parseDateOnly(entry.date);
-    if (!parsedDate) {
-      return false;
-    }
+      const parsedDate = parseDateOnly(entry.date);
+      if (!parsedDate) {
+        return false;
+      }
 
-    if (periodFilter === "payroll1") {
-      return parsedDate >= payroll1Start && parsedDate <= payroll1End;
-    }
+      if (periodFilter === "payroll1") {
+        return parsedDate >= payroll1Start && parsedDate <= payroll1End;
+      }
 
-    if (periodFilter === "payroll2") {
-      return parsedDate >= payroll2Start && parsedDate <= payroll2End;
-    }
+      if (periodFilter === "payroll2") {
+        return parsedDate >= payroll2Start && parsedDate <= payroll2End;
+      }
 
-    if (periodFilter === "week") {
-      return isWithinInterval(parsedDate, {
-        start: startOfWeek(now),
-        end: endOfWeek(now),
-      });
-    }
+      if (periodFilter === "week") {
+        return isWithinInterval(parsedDate, {
+          start: startOfWeek(now),
+          end: endOfWeek(now),
+        });
+      }
 
-    if (periodFilter === "month") {
-      return isWithinInterval(parsedDate, {
-        start: startOfMonth(now),
-        end: endOfMonth(now),
-      });
-    }
+      if (periodFilter === "month") {
+        return isWithinInterval(parsedDate, {
+          start: startOfMonth(now),
+          end: endOfMonth(now),
+        });
+      }
 
-    return true;
-  });
-}, [
-  scopedTimeEntries,
-  effectiveUser?.role,
-  employeeFilter,
-  filteredClientIds,
-  clientFilter,
-  periodFilter,
-  payroll1Start,
-  payroll1End,
-  payroll2Start,
-  payroll2End,
-  now,
-]);
-  });
+      return true;
+    });
+  }, [
+    scopedTimeEntries,
+    effectiveUser?.role,
+    employeeFilter,
+    filteredClientIds,
+    clientFilter,
+    periodFilter,
+    payroll1Start,
+    payroll1End,
+    payroll2Start,
+    payroll2End,
+    now,
+  ]);
 
- const duplicateIds = useMemo(() => {
-  const ids = new Set();
-  const seen = {};
+  const duplicateIds = useMemo(() => {
+    const ids = new Set();
+    const seen = {};
 
-  scopedTimeEntries.forEach((entry) => {
-    const key = `${entry.client_id}__${entry.date}__${entry.start_time || "notime"}`;
-    if (seen[key]) {
-      ids.add(entry.id);
-      ids.add(seen[key]);
-    } else {
-      seen[key] = entry.id;
-    }
-  });
+    scopedTimeEntries.forEach((entry) => {
+      const key = `${entry.client_id}__${entry.date}__${entry.start_time || "notime"}`;
+      if (seen[key]) {
+        ids.add(entry.id);
+        ids.add(seen[key]);
+      } else {
+        seen[key] = entry.id;
+      }
+    });
 
-  return ids;
-}, [scopedTimeEntries]);
+    return ids;
+  }, [scopedTimeEntries]);
 
   const totalMinutes = useMemo(() => {
-  return filtered.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
-}, [filtered]);
+    return filtered.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
+  }, [filtered]);
+
   const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
- const legacyEntries = useMemo(() => {
-  return scopedTimeEntries.filter((entry) => entry.category && !entry.entry_type_code);
-}, [scopedTimeEntries]);
+  const legacyEntries = useMemo(() => {
+    return scopedTimeEntries.filter(
+      (entry) => entry.category && !entry.entry_type_code
+    );
+  }, [scopedTimeEntries]);
 
   const byClient = useMemo(() => {
-  const grouped = {};
+    const grouped = {};
 
-  const byClient = useMemo(() => {
-  const grouped = {};
+    filtered.forEach((entry) => {
+      const key = entry.client_id || "__self__";
+      if (!grouped[key]) {
+        grouped[key] = { minutes: 0, entries: 0 };
+      }
+      grouped[key].minutes += entry.duration_minutes || 0;
+      grouped[key].entries += 1;
+    });
 
-  filtered.forEach((entry) => {
-    if (!grouped[entry.client_id]) {
-      grouped[entry.client_id] = { minutes: 0, entries: 0 };
-    }
-    grouped[entry.client_id].minutes += entry.duration_minutes || 0;
-    grouped[entry.client_id].entries += 1;
-  });
-
-  return grouped;
-}, [filtered]);
-
-  return grouped;
-}, [filtered]);
+    return grouped;
+  }, [filtered]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Time Tracking</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold">Time Tracking</h1>
+          <p className="text-muted-foreground">
             Log and review time spent with clients
           </p>
         </div>
-        <Button onClick={() => setShowNewEntry(true)}>
-          <Plus className="w-4 h-4 mr-1" /> New Entry
+
+        <Button onClick={() => setShowNewEntry(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          New Entry
         </Button>
       </div>
 
       {legacyEntries.length > 0 && (
-        <LegacyDataWarning
-          type="banner"
-          recordCount={legacyEntries.length}
-          issues={["legacy_category", "unstructured_entry"]}
-          recordIds={legacyEntries.map((entry) => entry.id)}
-        />
+        <LegacyDataWarning count={legacyEntries.length} />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="border-0 shadow-sm p-5 text-center">
-              <p className="text-xs text-slate-400 uppercase tracking-wider">
-                Total Hours
-              </p>
-              <p className="text-3xl font-bold text-slate-900 mt-1">{totalHours}h</p>
-            </Card>
-            <Card className="border-0 shadow-sm p-5 text-center">
-              <p className="text-xs text-slate-400 uppercase tracking-wider">
-                Sessions
-              </p>
-              <p className="text-3xl font-bold text-slate-900 mt-1">
-                {filtered.length}
-              </p>
-            </Card>
-            <Card className="border-0 shadow-sm p-5 text-center">
-              <p className="text-xs text-slate-400 uppercase tracking-wider">
-                Clients
-              </p>
-              <p className="text-3xl font-bold text-slate-900 mt-1">
-                {Object.keys(byClient).length}
-              </p>
-            </Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Total Hours</div>
+          <div className="text-2xl font-bold">{totalHours}h</div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Sessions</div>
+          <div className="text-2xl font-bold">{filtered.length}</div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Clients</div>
+          <div className="text-2xl font-bold">{Object.keys(byClient).length}</div>
+        </Card>
+      </div>
+
+      {Object.keys(byClient).length > 0 && (
+        <Card className="p-4 space-y-4">
+          <h3 className="font-semibold">Hours by Client</h3>
+
+          <div className="space-y-3">
+            {Object.entries(byClient)
+              .sort(([, a], [, b]) => b.minutes - a.minutes)
+              .map(([clientId, data]) => {
+                const pct = totalMinutes > 0 ? (data.minutes / totalMinutes) * 100 : 0;
+                const displayName =
+                  clientId === "__self__" ? "Myself" : getClientName(clientId);
+
+                return (
+                  <button
+                    key={clientId}
+                    type="button"
+                    className="w-full text-left space-y-1"
+                    onClick={() => {
+                      if (clientId !== "__self__") {
+                        navigate(`/ClientDetail?clientId=${clientId}`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="font-medium">{displayName}</span>
+                      <span className="text-muted-foreground">
+                        {Math.round((data.minutes / 60) * 10) / 10}h · {data.entries} sessions
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
           </div>
+        </Card>
+      )}
 
-          {Object.keys(byClient).length > 0 && (
-            <Card className="border-0 shadow-sm">
-              <div className="p-5 border-b border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-800">Hours by Client</h3>
-              </div>
-              <div className="p-5 space-y-3">
-                {Object.entries(byClient)
-                  .sort(([, a], [, b]) => b.minutes - a.minutes)
-                  .map(([clientId, data]) => {
-                    const pct = totalMinutes > 0 ? (data.minutes / totalMinutes) * 100 : 0;
+      <Card className="p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4" />
+          <span className="font-medium">Filters</span>
+        </div>
 
-                    return (
-                      <div key={clientId} className="space-y-1.5">
-                        <div className="flex justify-between text-sm">
-                          <button
-                            className="font-medium text-slate-700 hover:text-blue-600 hover:underline text-left"
-                            onClick={() => navigate(`/ClientDetail?clientId=${clientId}`)}
-                          >
-                            {getClientName(clientId)}
-                          </button>
-                          <span className="text-slate-500">
-                            {Math.round((data.minutes / 60) * 10) / 10}h · {data.entries} sessions
-                          </span>
-                        </div>
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-slate-700 to-slate-500 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </Card>
-          )}
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="payroll1">This Month 1–15</SelectItem>
+              <SelectItem value="payroll2">This Month 16–End</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <div className="flex flex-wrap gap-3 items-center">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <Select value={periodFilter} onValueChange={setPeriodFilter}>
-              <SelectTrigger className="w-36 border-slate-200 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="payroll1">This Month 1–15</SelectItem>
-                <SelectItem value="payroll2">This Month 16–End</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-              filterableEmployees.length > 0 && (
-                <Select
-                  value={employeeFilter}
-                  onValueChange={(value) => {
-                    setEmployeeFilter(value);
-                    setClientFilter("all");
-                  }}
-                >
-                  <SelectTrigger className="w-44 border-slate-200 text-sm">
-                    <SelectValue placeholder="All Employees" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Employees</SelectItem>
-                    {filterableEmployees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.full_name || employee.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="w-44 border-slate-200 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Clients</SelectItem>
-                {clients
-                  .filter((client) => !client.is_archived)
-                  .map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name}
+          {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+            filterableEmployees.length > 0 && (
+              <Select
+                value={employeeFilter}
+                onValueChange={(value) => {
+                  setEmployeeFilter(value);
+                  setClientFilter("all");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {filterableEmployees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.full_name || employee.email}
                     </SelectItem>
                   ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            )}
+
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clients
+                .filter((client) => !client.is_archived)
+                .map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.first_name} {client.last_name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center text-sm text-muted-foreground">
+            {format(now, "MMMM yyyy")}
           </div>
+        </div>
+      </Card>
 
-          {duplicateIds.size > 0 && (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-              <span>
-                <strong>{duplicateIds.size} duplicate entries detected</strong> — entries with the same client, date, and time are highlighted below.
-              </span>
-            </div>
-          )}
+      {duplicateIds.size > 0 && (
+        <Card className="p-4 border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+          <div className="flex items-start gap-2 text-amber-800 dark:text-amber-200">
+            <AlertTriangle className="w-4 h-4 mt-0.5" />
+            <p className="text-sm">
+              {duplicateIds.size} duplicate entries detected — entries with the same
+              client, date, and time are highlighted below.
+            </p>
+          </div>
+        </Card>
+      )}
 
-          <Card className="border-0 shadow-sm">
-            <div className="divide-y divide-slate-50">
-              {filtered.length === 0 ? (
-                <div className="p-8 text-center text-sm text-slate-400">
-                  No time entries found
-                </div>
-              ) : (
-                filtered.map((entry) => {
-                  const isDuplicate = duplicateIds.has(entry.id);
+      <Card className="p-4">
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-muted-foreground">
+            No time entries found
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((entry) => {
+              const isDuplicate = duplicateIds.has(entry.id);
 
-                  return (
-                    <div
-                      key={entry.id}
-                      className={cn(
-                        "p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors",
-                        isDuplicate && "bg-amber-50 hover:bg-amber-100 border-l-4 border-amber-400"
-                      )}
-                      onClick={() => handleOpenEntry(entry)}
-                    >
-                      <div className="text-right shrink-0 w-16">
-                        <p className="text-sm font-bold text-slate-800">
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => handleOpenEntry(entry)}
+                  className={cn(
+                    "w-full text-left rounded-lg border p-4 transition hover:bg-muted/40",
+                    isDuplicate && "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
+                  )}
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary">
                           {entry.duration_minutes}min
-                        </p>
+                        </Badge>
+
                         {entry.start_time && (
-                          <p className="text-[10px] text-slate-400">
+                          <Badge variant="outline">
                             {entry.start_time} - {entry.end_time}
-                          </p>
+                          </Badge>
+                        )}
+
+                        <Badge variant="outline">
+                          {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
+                        </Badge>
+
+                        {isDuplicate && (
+                          <Badge className="bg-amber-500 hover:bg-amber-500">
+                            Duplicate
+                          </Badge>
                         )}
                       </div>
 
-                      <div className="w-px h-10 bg-slate-100" />
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-slate-700">
-                            {entry.description || "Session"}
-                          </p>
-
-                          <Badge variant="outline" className="text-[11px]">
-                            {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
-                          </Badge>
-
-                          {isDuplicate && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-1">
-                          {entry.client_id ? (
-                            <button
-                              className="text-xs text-slate-500 flex items-center gap-1 hover:text-blue-600 hover:underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/ClientDetail?clientId=${entry.client_id}`);
-                              }}
-                            >
-                              <User className="w-3 h-3" />
-                              {getClientName(entry.client_id)}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              Myself
-                            </span>
-                          )}
-                        </div>
+                      <div className="font-medium">
+                        {entry.description || "Session"}
                       </div>
 
-                      <div className="text-xs text-slate-400 shrink-0">
-                        {entry.date ? formatShortEntryDate(entry.date) : ""}
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        {entry.client_id ? (
+                          <button
+                            type="button"
+                            className="hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/ClientDetail?clientId=${entry.client_id}`);
+                            }}
+                          >
+                            {getClientName(entry.client_id)}
+                          </button>
+                        ) : (
+                          <span>Myself</span>
+                        )}
+
+                        <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </Card>
-        </div>
 
-        <div className="space-y-6">
-          {/* Removed QuickTimeLog - consolidated into unified FormEngine */}
-        </div>
-      </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditEntry(entry);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
 
       <Dialog
         open={showNewEntry}
@@ -703,155 +698,47 @@ const employeeById = useMemo(() => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle>Add Time Entry</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4 space-y-4">
-              {!selectedEntryTypeCode && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Entry Type</label>
-                  <Select value={selectedEntryTypeCode} onValueChange={setSelectedEntryTypeCode}>
-                    <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="Select an entry type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {entryTypes.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
 
-              {selectedEntryTypeCode && (
-                <FormEngine
-                  entryTypeCode={selectedEntryTypeCode}
-                  entry={null}
-                  clientId={null}
-                  mode="create"
-                  onSave={async () => {
-                    await handleRefresh();
-                    setShowNewEntry(false);
-                    setSelectedEntryTypeCode("");
-                  }}
-                  onCancel={() => {
-                    setShowNewEntry(false);
-                    setSelectedEntryTypeCode("");
-                  }}
-                />
-              )}
+          {!selectedEntryTypeCode && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Entry Type</label>
+              <Select
+                value={selectedEntryTypeCode}
+                onValueChange={setSelectedEntryTypeCode}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select entry type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entryTypes.map((opt) => (
+                    <SelectItem key={opt.code} value={opt.code}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          )}
 
-      <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
-            <DialogTitle className="flex items-center gap-2">
-              Time Entry Details
-              {selectedEntry && duplicateIds.has(selectedEntry.id) && (
-                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Duplicate
-                </Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4">
-              {selectedEntry && (
-                <div className="space-y-3 py-2">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">Client</p>
-                      <p className="font-medium text-slate-800">
-                        {getClientName(selectedEntry.client_id)}
-                      </p>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">Date</p>
-                      <p className="font-medium text-slate-800">
-                        {selectedEntry.date ? formatLongEntryDate(selectedEntry.date) : "—"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">Duration</p>
-                      <p className="font-medium text-slate-800">
-                        {selectedEntry.duration_minutes} minutes
-                      </p>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">Time</p>
-                      <p className="font-medium text-slate-800">
-                        {selectedEntry.start_time || "—"}
-                        {selectedEntry.end_time ? ` - ${selectedEntry.end_time}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedEntry.description && (
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">Description</p>
-                      <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">
-                        {selectedEntry.description}
-                      </p>
-                    </div>
-                  )}
-
-                  {duplicateIds.has(selectedEntry.id) && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm text-amber-800">
-                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                      <span>
-                        This entry appears to be a duplicate. Another entry exists for the same client, date, and time. Please review and delete one.
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={async () => {
-                        try {
-                          await base44.entities.TimeEntry.delete(selectedEntry.id);
-                          toast.success("Entry deleted");
-                          setSelectedEntry(null);
-                          queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-                        } catch (err) {
-                          toast.error("Failed to delete entry");
-                          console.error(err);
-                          setSelectedEntry(null);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Entry
-                    </Button>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditEntry(selectedEntry)}
-                      >
-                        <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedEntry(null)}>
-                        Close
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {selectedEntryTypeCode && (
+            <FormEngine
+              mode="create"
+              entryTypeCode={selectedEntryTypeCode}
+              onSuccess={async () => {
+                await handleRefresh();
+                setShowNewEntry(false);
+                setSelectedEntryTypeCode("");
+              }}
+              onCancel={() => {
+                setShowNewEntry(false);
+                setSelectedEntryTypeCode("");
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -864,31 +751,105 @@ const employeeById = useMemo(() => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-200">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle>Edit Time Entry</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="px-6 py-4">
-              {editingEntry && (
-                <FormEngine
-                  entryTypeCode={editingEntryTypeCode}
-                  entry={editingEntry}
-                  clientId={editingEntry.client_id || null}
-                  mode="edit"
-                  onSave={async () => {
-                    setEditingEntry(null);
-                    setEditingEntryTypeCode("");
-                    handleRefresh();
-                  }}
-                  onCancel={() => {
-                    setEditingEntry(null);
-                    setEditingEntryTypeCode("");
-                  }}
-                />
+
+          {editingEntry && editingEntryTypeCode && (
+            <FormEngine
+              mode="edit"
+              entry={editingEntry}
+              entryTypeCode={editingEntryTypeCode}
+              onSuccess={async () => {
+                await handleRefresh();
+                setEditingEntry(null);
+                setEditingEntryTypeCode("");
+              }}
+              onCancel={() => {
+                setEditingEntry(null);
+                setEditingEntryTypeCode("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedEntry}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEntry(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Time Entry Details</DialogTitle>
+          </DialogHeader>
+
+          {selectedEntry && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Card className="p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Client</div>
+                  <div className="font-medium">
+                    {selectedEntry.client_id
+                      ? getClientName(selectedEntry.client_id)
+                      : "Myself"}
+                  </div>
+                </Card>
+
+                <Card className="p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Date</div>
+                  <div className="font-medium">
+                    {formatLongEntryDate(selectedEntry.date)}
+                  </div>
+                </Card>
+
+                <Card className="p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Duration</div>
+                  <div className="font-medium">
+                    {selectedEntry.duration_minutes || 0} minutes
+                  </div>
+                </Card>
+
+                <Card className="p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Type</div>
+                  <div className="font-medium">
+                    {getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
+                  </div>
+                </Card>
+              </div>
+
+              {(selectedEntry.start_time || selectedEntry.end_time) && (
+                <Card className="p-4">
+                  <div className="text-xs text-muted-foreground mb-1">Time</div>
+                  <div className="font-medium">
+                    {selectedEntry.start_time || "—"} - {selectedEntry.end_time || "—"}
+                  </div>
+                </Card>
               )}
+
+              <Card className="p-4">
+                <div className="text-xs text-muted-foreground mb-1">Description</div>
+                <div className="whitespace-pre-wrap">
+                  {selectedEntry.description || "—"}
+                </div>
+              </Card>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedEntry(null);
+                    handleEditEntry(selectedEntry);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
