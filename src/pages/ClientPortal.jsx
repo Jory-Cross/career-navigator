@@ -435,8 +435,7 @@ Return as JSON array of objects with: question, category (behavioral/technical/s
           <TabsTrigger value="coach">Career Coach</TabsTrigger>
           {isStaff && <TabsTrigger value="time">Time Log ({timeEntries.length})</TabsTrigger>}
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="activity">Activity ({meetings.length + activities.length})</TabsTrigger>
-          <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
+<TabsTrigger value="activity">Activity ({clientVisibleMeetings.length + clientVisibleActivities.length})</TabsTrigger>          <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>
         </TabsList>
 
