@@ -282,9 +282,9 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
   const clientIdSet = new Set(clientIds);
   return timeEntries.filter((e) => !e.client_id || clientIdSet.has(e.client_id));
 }, [timeEntries, clientIds, effectiveUser?.role, !!viewAsUser]);
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-  };
+  const handleRefresh = useCallback(() => {
+  queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+}, [queryClient]);
 
   const handleEditEntry = async (entry) => {
     const code =
