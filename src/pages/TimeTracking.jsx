@@ -757,20 +757,20 @@ export default function TimeTracking() {
           </DialogHeader>
 
           {editingEntry && editingEntryTypeCode && (
-            <FormEngine
-              mode="edit"
-              entry={editingEntry}
-              entryTypeCode={editingEntryTypeCode}
-              onSuccess={async () => {
-                await handleRefresh();
-                setEditingEntry(null);
-                setEditingEntryTypeCode("");
-              }}
-              onCancel={() => {
-                setEditingEntry(null);
-                setEditingEntryTypeCode("");
-              }}
-            />
+           <FormEngine
+  mode="edit"
+  entry={editingEntry}
+  entryTypeCode={editingEntryTypeCode}
+  onSave={async () => {
+    await handleRefresh();
+    setEditingEntry(null);
+    setEditingEntryTypeCode("");
+  }}
+  onCancel={() => {
+    setEditingEntry(null);
+    setEditingEntryTypeCode("");
+  }}
+/>
           )}
         </DialogContent>
       </Dialog>
