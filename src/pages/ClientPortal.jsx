@@ -570,8 +570,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
               <CardTitle className="text-base">My Activity & Appointments</CardTitle>
             </CardHeader>
             <CardContent>
-              {meetings.length === 0 && activities.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">No activity yet</div>
+{clientVisibleMeetings.length === 0 && clientVisibleActivities.length === 0 ? (                <div className="text-center py-8 text-sm text-slate-400">No activity yet</div>
               ) : (
                 <div className="space-y-3">
                   {/* Appointments */}
