@@ -62,7 +62,14 @@ function formatShortEntryDate(dateString) {
 }
 
 function formatLongEntryDate(dateString) {
-  function getEntryTypeLabel(entry) {
+  const parsed = parseDateOnly(dateString);
+  if (!parsed) return "—";
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
+}
+
+function getEntryTypeLabel(entry) {
   const rawCode =
     entry?.entry_type_code ||
     entry?.entry_type ||
@@ -85,12 +92,6 @@ function formatLongEntryDate(dateString) {
   }
 
   return "Time Entry";
-}
-  const parsed = parseDateOnly(dateString);
-  if (!parsed) return "—";
-
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
 }
 
 export default function TimeTracking() {
