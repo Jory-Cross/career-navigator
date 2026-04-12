@@ -144,10 +144,14 @@ export default function ClientPortal() {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
   }
 
-  const staffRoles = ['admin', 'management', 'employee'];
+    const staffRoles = ['admin', 'management', 'employee'];
   const isStaff = user && staffRoles.includes(user.role);
 
-  const clientVisibleActivities = isStaff
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPortalPreview = isStaff && !!urlParams.get("id");
+  const showInternalStaffContent = isStaff && !isPortalPreview;
+
+  const clientVisibleActivities = showInternalStaffContent
     ? activities
     : activities.filter((activity) =>
         [
@@ -163,7 +167,7 @@ export default function ClientPortal() {
         ].includes(activity.activity_type)
       );
 
-  const clientVisibleMeetings = isStaff ? meetings : [];
+  const clientVisibleMeetings = showInternalStaffContent ? meetings : [];
 
   if (!user || (!client && !loading)) {
     return (
