@@ -4,14 +4,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, Pencil, Copy, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import FormEngine from "@/components/time-entry/FormEngine";
-import { getEntryTypeOptions, normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
+import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
@@ -69,7 +80,9 @@ function hasActiveFilters(filters) {
 }
 
 function activeFilterCount(filters) {
-  return Object.values(filters).filter((value) => value && value !== "all").length;
+  return Object.values(filters).filter(
+    (value) => value && value !== "all"
+  ).length;
 }
 
 export default function TimeLogDashboard({
@@ -119,8 +132,9 @@ export default function TimeLogDashboard({
 
   useEffect(() => {
     setFilters((prev) => {
-      if (prev.clientId === (clientId || "")) return prev;
-      return { ...prev, clientId: clientId || "" };
+      const nextClientId = clientId || "";
+      if (prev.clientId === nextClientId) return prev;
+      return { ...prev, clientId: nextClientId };
     });
   }, [clientId]);
 
@@ -146,7 +160,7 @@ export default function TimeLogDashboard({
           "";
 
         if (directCode) {
-          immediatePairs.push([entry.id, normalizeEntryTypeCode(directCode) || directCode]);
+          immediatePairs.push([entry.id, directCode]);
         } else {
           needsAsync.push(entry);
         }
@@ -167,7 +181,10 @@ export default function TimeLogDashboard({
             const resolvedCode = await resolveEntryTypeCode(entry);
             return [entry.id, resolvedCode || ""];
           } catch (error) {
-            console.error("[TimeLogDashboard] Failed to resolve entry type code for row:", error);
+            console.error(
+              "[TimeLogDashboard] Failed to resolve entry type code for row:",
+              error
+            );
             return [entry.id, ""];
           }
         })
@@ -196,14 +213,6 @@ export default function TimeLogDashboard({
     return map;
   }, [employees]);
 
-  const clientById = useMemo(() => {
-    const map = {};
-    for (const client of clients) {
-      map[client.id] = client;
-    }
-    return map;
-  }, [clients]);
-
   const filtered = useMemo(() => {
     let result = [...timeEntries];
 
@@ -216,8 +225,6 @@ export default function TimeLogDashboard({
     }
 
     if (filters.entryTypeCode) {
-      const normalizedFilter = normalizeEntryTypeCode(filters.entryTypeCode) || filters.entryTypeCode;
-
       result = result.filter((e) => {
         const code =
           resolvedEntryTypeCodes[e.id] ||
@@ -228,8 +235,10 @@ export default function TimeLogDashboard({
           e.category ||
           "";
 
-        const normalizedCode = normalizeEntryTypeCode(code) || code;
-        return String(normalizedCode).toLowerCase() === String(normalizedFilter).toLowerCase();
+        return (
+          String(code).toLowerCase() ===
+          String(filters.entryTypeCode).toLowerCase()
+        );
       });
     }
 
@@ -269,74 +278,89 @@ export default function TimeLogDashboard({
   }, [timeEntries, filters, resolvedEntryTypeCodes]);
 
   const totalMinutes = useMemo(() => {
-    return filtered.reduce((sum, entry) => sum + Number(entry.duration_minutes || 0), 0);
+    return filtered.reduce(
+      (sum, entry) => sum + Number(entry.duration_minutes || 0),
+      0
+    );
   }, [filtered]);
 
   const totalHours = useMemo(() => {
     return (totalMinutes / 60).toFixed(1);
   }, [totalMinutes]);
 
-  const handleEditEntry = useCallback(async (entry) => {
-    if (typeof onEditEntry === "function") {
-      await onEditEntry(entry);
-      return;
-    }
-
-    const code =
-      resolvedEntryTypeCodes[entry.id] || (await resolveEntryTypeCode(entry));
-
-    setEditingEntry(entry);
-    setSelectedEntryTypeCode(code || "");
-    setShowForm(true);
-  }, [onEditEntry, resolvedEntryTypeCodes]);
-
-  const handleDuplicate = useCallback(async (entry) => {
-    try {
-      const newEntry = { ...entry };
-      delete newEntry.id;
-      delete newEntry.created_date;
-      delete newEntry.updated_date;
-
-      if (entry.date) {
-        newEntry.date = addOneDayDateOnly(entry.date);
+  const handleEditEntry = useCallback(
+    async (entry) => {
+      if (typeof onEditEntry === "function") {
+        await onEditEntry(entry);
+        return;
       }
 
-      await base44.entities.TimeEntry.create(newEntry);
-      toast.success("Entry duplicated");
-      await onRefresh?.();
-    } catch (err) {
-      console.error("Failed to duplicate entry:", err);
-      toast.error("Failed to duplicate entry");
-    }
-  }, [onRefresh]);
+      const code =
+        resolvedEntryTypeCodes[entry.id] || (await resolveEntryTypeCode(entry));
 
-  const handleDelete = useCallback(async (entry) => {
-    if (!window.confirm("Delete this entry permanently?")) return;
+      setEditingEntry(entry);
+      setSelectedEntryTypeCode(code || "");
+      setShowForm(true);
+    },
+    [onEditEntry, resolvedEntryTypeCodes]
+  );
 
-    try {
-      await base44.entities.TimeEntry.delete(entry.id);
-      toast.success("Entry deleted");
-      await onRefresh?.();
-    } catch (err) {
-      console.error("Failed to delete entry:", err);
-      toast.error("Failed to delete entry");
-    }
-  }, [onRefresh]);
+  const handleDuplicate = useCallback(
+    async (entry) => {
+      try {
+        const newEntry = { ...entry };
+        delete newEntry.id;
+        delete newEntry.created_date;
+        delete newEntry.updated_date;
 
-  const getEntryTypeDisplay = useCallback((entry) => {
-    const directLabel =
-      entry.entry_type_name ||
-      entry.entry_type_label ||
-      entry.type_name ||
-      entry.type_label ||
-      "";
+        if (entry.date) {
+          newEntry.date = addOneDayDateOnly(entry.date);
+        }
 
-    if (directLabel) {
-      return directLabel;
-    }
+        await base44.entities.TimeEntry.create(newEntry);
+        toast.success("Entry duplicated");
+        await onRefresh?.();
+      } catch (err) {
+        console.error("Failed to duplicate entry:", err);
+        toast.error("Failed to duplicate entry");
+      }
+    },
+    [onRefresh]
+  );
 
-    return getEntryTypeLabel(entry, resolvedEntryTypeCodes);
-  }, [resolvedEntryTypeCodes]);
+  const handleDelete = useCallback(
+    async (entry) => {
+      if (!window.confirm("Delete this entry permanently?")) return;
+
+      try {
+        await base44.entities.TimeEntry.delete(entry.id);
+        toast.success("Entry deleted");
+        await onRefresh?.();
+      } catch (err) {
+        console.error("Failed to delete entry:", err);
+        toast.error("Failed to delete entry");
+      }
+    },
+    [onRefresh]
+  );
+
+  const getEntryTypeDisplay = useCallback(
+    (entry) => {
+      const directLabel =
+        entry.entry_type_name ||
+        entry.entry_type_label ||
+        entry.type_name ||
+        entry.type_label ||
+        "";
+
+      if (directLabel) {
+        return directLabel;
+      }
+
+      return getEntryTypeLabel(entry, resolvedEntryTypeCodes);
+    },
+    [resolvedEntryTypeCodes]
+  );
 
   const resetFormState = useCallback(() => {
     setShowForm(false);
@@ -362,6 +386,8 @@ export default function TimeLogDashboard({
     editingEntry?.entry_type_code ||
     editingEntry?.entry_type ||
     editingEntry?.entry_type_key ||
+    editingEntry?.type ||
+    editingEntry?.category ||
     "";
 
   return (
@@ -383,7 +409,9 @@ export default function TimeLogDashboard({
           >
             <Filter className="w-4 h-4" />
             Filters
-            {hasActiveFilters(filters) ? ` (${activeFilterCount(filters)})` : ""}
+            {hasActiveFilters(filters)
+              ? ` (${activeFilterCount(filters)})`
+              : ""}
           </Button>
 
           <Button
@@ -541,7 +569,10 @@ export default function TimeLogDashboard({
               type="date"
               value={filters.dateFrom}
               onChange={(event) =>
-                setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
+                setFilters((prev) => ({
+                  ...prev,
+                  dateFrom: event.target.value,
+                }))
               }
               className="h-8 text-xs"
             />
@@ -553,21 +584,22 @@ export default function TimeLogDashboard({
               type="date"
               value={filters.dateTo}
               onChange={(event) =>
-                setFilters((prev) => ({ ...prev, dateTo: event.target.value }))
+                setFilters((prev) => ({
+                  ...prev,
+                  dateTo: event.target.value,
+                }))
               }
               className="h-8 text-xs"
             />
           </div>
 
-          <div className="md:col-span-2 xl:col-span-4">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="text-xs font-medium text-slate-600 hover:text-slate-800"
-            >
-              Clear filters
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="md:col-span-2 xl:col-span-4 text-xs text-slate-600 hover:text-slate-800 font-medium text-left"
+          >
+            Clear filters
+          </button>
         </div>
       )}
 
@@ -581,7 +613,6 @@ export default function TimeLogDashboard({
         <div className="space-y-3">
           {filtered.map((entry) => {
             const employee = employeeById[entry.employee_id];
-            const client = clientById[entry.client_id];
 
             return (
               <div
@@ -615,33 +646,17 @@ export default function TimeLogDashboard({
                     </div>
 
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                      {client && (
-                        <span>
-                          Client: {client.first_name} {client.last_name}
-                        </span>
-                      )}
-
-                      {employee?.full_name && (
-                        <span>Employee: {employee.full_name}</span>
-                      )}
-
-                      {entry.start_time && (
-                        <span>
-                          Time: {entry.start_time}
-                          {entry.end_time ? ` - ${entry.end_time}` : ""}
-                        </span>
-                      )}
+                      {employee?.full_name && <span>{employee.full_name}</span>}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 md:flex-col md:items-end">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditEntry(entry)}
-                      className="gap-1.5"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
 
@@ -649,9 +664,8 @@ export default function TimeLogDashboard({
                       variant="outline"
                       size="sm"
                       onClick={() => handleDuplicate(entry)}
-                      className="gap-1.5"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-4 h-4 mr-1" />
                       Duplicate
                     </Button>
 
@@ -659,9 +673,9 @@ export default function TimeLogDashboard({
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(entry)}
-                      className="gap-1.5 text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 mr-1" />
                       Delete
                     </Button>
                   </div>
@@ -708,31 +722,34 @@ export default function TimeLogDashboard({
             </div>
           )}
 
-          {(() => {
-            const normalizedActiveCode = normalizeEntryTypeCode(activeEntryTypeCode) || activeEntryTypeCode;
-
-            if (!editingEntry && !normalizedActiveCode) {
-              return (
-                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
-                  Select an entry type above to begin
-                </div>
-              );
-            }
-
-            return (
-              <FormEngine
-                mode={editingEntry ? "edit" : "create"}
-                entry={editingEntry || null}
-                clientId={clientId || editingEntry?.client_id || null}
-                entryTypeCode={normalizedActiveCode}
-                onSave={async () => {
-                  await onRefresh?.();
-                  resetFormState();
-                }}
-                onCancel={resetFormState}
-              />
-            );
-          })()}
+          {editingEntry ? (
+            <FormEngine
+              mode="edit"
+              entry={editingEntry}
+              clientId={clientId || editingEntry?.client_id || null}
+              entryTypeCode={activeEntryTypeCode}
+              onSave={async () => {
+                await onRefresh?.();
+                resetFormState();
+              }}
+              onCancel={resetFormState}
+            />
+          ) : selectedEntryTypeCode ? (
+            <FormEngine
+              mode="create"
+              clientId={clientId || null}
+              entryTypeCode={selectedEntryTypeCode}
+              onSave={async () => {
+                await onRefresh?.();
+                resetFormState();
+              }}
+              onCancel={resetFormState}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
+              Select an entry type above to begin
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>
