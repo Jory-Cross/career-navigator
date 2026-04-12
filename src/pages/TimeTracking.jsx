@@ -11,7 +11,6 @@ import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 import {
   format,
   startOfWeek,
@@ -22,12 +21,9 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  getEntryTypeOptions,
-  getEntryTypeConfig,
-  normalizeEntryTypeCode,
-} from "@/lib/entryTypeRegistry";
+import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
+import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
 function parseDateOnly(dateString) {
   if (!dateString || typeof dateString !== "string") return null;
@@ -77,7 +73,7 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
-   const [editingEntry, setEditingEntry] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
   const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
@@ -90,7 +86,7 @@ export default function TimeTracking() {
     base44.auth.me().then(setUser).catch(() => {});
     setEntryTypes(getEntryTypeOptions());
   }, []);
- 
+
   const effectiveUser = (user?.role === "admin" && viewAsUser) ? viewAsUser : user;
 
   const { data: allUsers = [] } = useQuery({
@@ -156,6 +152,7 @@ export default function TimeTracking() {
     queryFn: () => base44.entities.TimeEntry.list("-created_date"),
     enabled: !!effectiveUser,
   });
+
   useEffect(() => {
     let active = true;
 
@@ -165,8 +162,33 @@ export default function TimeTracking() {
         return;
       }
 
-      const pairs = await Promise.all(
-        timeEntries.map(async (entry) => {
+      const immediatePairs = [];
+      const needsAsync = [];
+
+      for (const entry of timeEntries) {
+        if (entry?.entry_type_code) {
+          immediatePairs.push([entry.id, entry.entry_type_code]);
+        } else if (entry?.entry_type || entry?.entry_type_key || entry?.type || entry?.category) {
+          immediatePairs.push([
+            entry.id,
+            entry.entry_type || entry.entry_type_key || entry.type || entry.category || "",
+          ]);
+        } else {
+          needsAsync.push(entry);
+        }
+      }
+
+      const baseMap = Object.fromEntries(immediatePairs);
+
+      if (!needsAsync.length) {
+        if (active) {
+          setResolvedEntryTypeCodes(baseMap);
+        }
+        return;
+      }
+
+      const asyncPairs = await Promise.all(
+        needsAsync.map(async (entry) => {
           try {
             const resolvedCode = await resolveEntryTypeCode(entry);
             return [entry.id, resolvedCode || ""];
@@ -179,7 +201,10 @@ export default function TimeTracking() {
 
       if (!active) return;
 
-      setResolvedEntryTypeCodes(Object.fromEntries(pairs));
+      setResolvedEntryTypeCodes({
+        ...baseMap,
+        ...Object.fromEntries(asyncPairs),
+      });
     }
 
     resolveAllEntryTypeCodes();
@@ -188,6 +213,7 @@ export default function TimeTracking() {
       active = false;
     };
   }, [timeEntries]);
+
   const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
@@ -199,9 +225,10 @@ export default function TimeTracking() {
   };
 
   const handleEditEntry = async (entry) => {
-    console.log("🟣 TIME TRACKING EDIT RAW ENTRY:", JSON.stringify(entry, null, 2));
-    const code = await resolveEntryTypeCode(entry);
-    console.log("🟣 TIME TRACKING RESOLVED TYPE CODE:", code);
+    const code =
+      resolvedEntryTypeCodes[entry.id] ||
+      (await resolveEntryTypeCode(entry));
+
     setEditingEntry(entry);
     setEditingEntryTypeCode(code);
     setSelectedEntry(null);
@@ -507,19 +534,19 @@ export default function TimeTracking() {
                       <div className="w-px h-10 bg-slate-100" />
 
                       <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2 flex-wrap">
-  <p className="text-sm font-medium text-slate-700">
-    {entry.description || "Session"}
-  </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-slate-700">
+                            {entry.description || "Session"}
+                          </p>
 
-   <Badge variant="outline" className="text-[11px]">
-    {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
-  </Badge>
+                          <Badge variant="outline" className="text-[11px]">
+                            {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
+                          </Badge>
 
-  {isDuplicate && (
-    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-  )}
-</div>
+                          {isDuplicate && (
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          )}
+                        </div>
 
                         <div className="flex items-center gap-2 mt-1">
                           {entry.client_id ? (
