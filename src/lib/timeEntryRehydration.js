@@ -2,13 +2,13 @@
  * Rehydrate an existing time entry into formData shape
  * Supports both legacy (data/form_data) and new schema structures
  *
- * Fix:
- * - always restores top-level entry.date into whatever date field the schema uses
- * - fixes simple_time edit forms where the schema key is literally "date"
- * - preserves the earlier Voc Rehab date mappings too
+ * Phase 4 cleanup:
+ * - keeps current behavior
+ * - makes edit hydration more predictable
+ * - always maps top-level date/time fields back into schema fields
  */
 
-const DATE_FIELD_MAP = [
+const KNOWN_DATE_KEYS = [
   "date",
   "jc_date",
   "development_date",
@@ -22,21 +22,27 @@ const DATE_FIELD_MAP = [
   "eom_month",
 ];
 
+const KNOWN_TIME_KEYS = {
+  start: ["start_time", "startTime", "clock_in", "clockIn"],
+  end: ["end_time", "endTime", "clock_out", "clockOut"],
+};
+
+const KNOWN_DESCRIPTION_KEYS = [
+  "description",
+  "activity_description",
+  "admin_description",
+  "misc_description",
+  "preets_activity",
+  "wsa_tasks_completed",
+  "eom_services_provided",
+];
+
 export function buildFormDataFromEntry(entry, schema) {
   const result = {};
+  const fields = getSchemaFields(schema);
+  const nestedData = getNestedEntryData(entry);
 
-  const fields = Array.isArray(schema?.fields)
-    ? schema.fields
-    : Array.isArray(schema)
-      ? schema
-      : [];
-
-  const nestedData =
-    (entry?.data && typeof entry.data === "object" ? entry.data : null) ||
-    (entry?.form_data && typeof entry.form_data === "object" ? entry.form_data : null) ||
-    {};
-
-  // 1) First hydrate fields from schema + nested form data
+  // 1) Load schema fields from nested data first
   for (const field of fields) {
     const key = field?.key;
     if (!key) continue;
@@ -51,53 +57,21 @@ export function buildFormDataFromEntry(entry, schema) {
     }
   }
 
-  // 2) Always restore common top-level values
+  // 2) Restore common top-level values
   result.notes = entry?.notes ?? "";
   result.service_code_id = entry?.service_code_id ?? null;
   result.duration_minutes = normalizeExistingDuration(entry?.duration_minutes);
 
-  // 3) Rehydrate top-level entry.date into matching schema date field(s)
-  if (entry?.date && fields.length) {
-    const normalizedDate = normalizeDateForInput(entry.date);
-    const schemaKeys = new Set(fields.map((field) => field?.key).filter(Boolean));
+  // 3) Restore date into matching schema field(s)
+  hydrateDateFields(result, entry, fields);
 
-    for (const key of DATE_FIELD_MAP) {
-      if (schemaKeys.has(key) && isEmpty(result[key])) {
-        result[key] = normalizedDate;
-      }
-    }
+  // 4) Restore top-level time values into matching schema fields
+  hydrateTimeFields(result, entry, fields);
 
-    // fallback: any field that looks like a date field
-    for (const field of fields) {
-      const key = field?.key;
-      if (!key) continue;
+  // 5) Restore description-like values when not present in nested data
+  hydrateDescriptionFields(result, entry, fields);
 
-      const looksLikeDateField =
-        field?.isDate === true ||
-        String(field?.type || "").toLowerCase() === "date" ||
-        String(key).toLowerCase().includes("date") ||
-        String(field?.label || "").toLowerCase().includes("date");
-
-      if (looksLikeDateField && isEmpty(result[key])) {
-        result[key] = normalizedDate;
-      }
-    }
-  }
-
-  // 4) Rehydrate simple top-level clock fields for simple_time edit flows
-  if (entry?.start_time && hasField(fields, "start_time") && isEmpty(result.start_time)) {
-    result.start_time = normalizeTimeForSelect(entry.start_time);
-  }
-
-  if (entry?.end_time && hasField(fields, "end_time") && isEmpty(result.end_time)) {
-    result.end_time = normalizeTimeForSelect(entry.end_time);
-  }
-
-  // 5) Rehydrate top-level description/location when not present in nested data
-  if (entry?.description && hasField(fields, "description") && isEmpty(result.description)) {
-    result.description = entry.description;
-  }
-
+  // 6) Restore location if used by schema
   if (entry?.location && hasField(fields, "location") && isEmpty(result.location)) {
     result.location = entry.location;
   }
@@ -119,15 +93,36 @@ export function attachSplitDurationFields(formData) {
 }
 
 /**
- * Get a top-level field value from entry (e.g., client_id, location)
+ * Warn if required schema fields are still missing after rehydration
  */
+export function validateRehydratedFormData(formData, schema) {
+  const fields = getSchemaFields(schema);
+  const requiredFields = fields.filter((field) => field.required).map((field) => field.key);
+  const missing = requiredFields.filter((key) => !formData[key]);
+
+  if (missing.length > 0) {
+    console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
+  }
+}
+
+function getSchemaFields(schema) {
+  if (Array.isArray(schema?.fields)) return schema.fields;
+  if (Array.isArray(schema)) return schema;
+  return [];
+}
+
+function getNestedEntryData(entry) {
+  return (
+    (entry?.data && typeof entry.data === "object" ? entry.data : null) ||
+    (entry?.form_data && typeof entry.form_data === "object" ? entry.form_data : null) ||
+    {}
+  );
+}
+
 function getTopLevelFieldValue(entry, key) {
   return entry?.[key] ?? null;
 }
 
-/**
- * Normalize duration from various input formats to minutes (number)
- */
 function normalizeExistingDuration(value) {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim()) {
@@ -148,18 +143,15 @@ function isEmpty(value) {
 function normalizeDateForInput(value) {
   if (!value) return "";
 
-  // already yyyy-mm-dd
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value;
   }
 
-  // mm/dd/yyyy -> yyyy-mm-dd
   if (typeof value === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
     const [mm, dd, yyyy] = value.split("/");
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // ISO datetime -> yyyy-mm-dd
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
     return value.slice(0, 10);
   }
@@ -174,7 +166,7 @@ function normalizeDateForInput(value) {
   return String(value);
 }
 
-function normalizeTimeForSelect(value) {
+function normalizeTimeForInput(value) {
   if (!value) return "";
 
   const raw = String(value).trim();
@@ -208,16 +200,103 @@ function normalizeTimeForSelect(value) {
   return raw;
 }
 
-/**
- * Sanity check: ensure rehydrated entry has required fields
- */
-export function validateRehydratedFormData(formData, schema) {
-  const requiredFields =
-    schema?.fields?.filter((field) => field.required).map((field) => field.key) || [];
+function looksLikeDateField(field) {
+  const key = String(field?.key || "").toLowerCase();
+  const label = String(field?.label || "").toLowerCase();
+  const type = String(field?.type || "").toLowerCase();
 
-  const missing = requiredFields.filter((key) => !formData[key]);
+  return (
+    field?.isDate === true ||
+    type === "date" ||
+    key.includes("date") ||
+    label.includes("date")
+  );
+}
 
-  if (missing.length > 0) {
-    console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
+function looksLikeDescriptionField(field) {
+  const key = String(field?.key || "").toLowerCase();
+  const label = String(field?.label || "").toLowerCase();
+
+  return (
+    key === "description" ||
+    key.includes("description") ||
+    key.includes("activity") ||
+    label.includes("description") ||
+    label.includes("activity")
+  );
+}
+
+function hydrateDateFields(result, entry, fields) {
+  if (!entry?.date || !fields.length) return;
+
+  const normalizedDate = normalizeDateForInput(entry.date);
+  const schemaKeys = new Set(fields.map((field) => field?.key).filter(Boolean));
+
+  for (const key of KNOWN_DATE_KEYS) {
+    if (schemaKeys.has(key) && isEmpty(result[key])) {
+      result[key] = normalizedDate;
+    }
+  }
+
+  for (const field of fields) {
+    const key = field?.key;
+    if (!key) continue;
+
+    if (looksLikeDateField(field) && isEmpty(result[key])) {
+      result[key] = normalizedDate;
+    }
+  }
+}
+
+function hydrateTimeFields(result, entry, fields) {
+  const startValue =
+    entry?.start_time ??
+    entry?.startTime ??
+    entry?.clock_in ??
+    entry?.clockIn ??
+    null;
+
+  const endValue =
+    entry?.end_time ??
+    entry?.endTime ??
+    entry?.clock_out ??
+    entry?.clockOut ??
+    null;
+
+  if (startValue) {
+    const normalizedStart = normalizeTimeForInput(startValue);
+    for (const key of KNOWN_TIME_KEYS.start) {
+      if (hasField(fields, key) && isEmpty(result[key])) {
+        result[key] = normalizedStart;
+      }
+    }
+  }
+
+  if (endValue) {
+    const normalizedEnd = normalizeTimeForInput(endValue);
+    for (const key of KNOWN_TIME_KEYS.end) {
+      if (hasField(fields, key) && isEmpty(result[key])) {
+        result[key] = normalizedEnd;
+      }
+    }
+  }
+}
+
+function hydrateDescriptionFields(result, entry, fields) {
+  if (!entry?.description) return;
+
+  for (const key of KNOWN_DESCRIPTION_KEYS) {
+    if (hasField(fields, key) && isEmpty(result[key])) {
+      result[key] = entry.description;
+    }
+  }
+
+  for (const field of fields) {
+    const key = field?.key;
+    if (!key) continue;
+
+    if (looksLikeDescriptionField(field) && isEmpty(result[key])) {
+      result[key] = entry.description;
+    }
   }
 }
