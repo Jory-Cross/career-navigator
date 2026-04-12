@@ -11,6 +11,7 @@ import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 import {
   format,
   startOfWeek,
@@ -67,32 +68,6 @@ function formatLongEntryDate(dateString) {
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
-}
-
-function getEntryTypeLabel(entry, resolvedEntryTypeCodes) {
-  const rawCode =
-    resolvedEntryTypeCodes?.[entry?.id] ||
-    entry?.entry_type_code ||
-    entry?.entry_type ||
-    entry?.entry_type_key ||
-    entry?.type ||
-    entry?.category ||
-    "";
-
-  const normalizedCode = normalizeEntryTypeCode(rawCode);
-  const config = getEntryTypeConfig(normalizedCode);
-
-  if (config?.label) {
-    return config.label;
-  }
-
-  if (normalizedCode) {
-    return String(normalizedCode)
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  return "Unknown Type";
 }
 
 export default function TimeTracking() {
