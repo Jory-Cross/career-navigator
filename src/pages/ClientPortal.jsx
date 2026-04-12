@@ -147,6 +147,24 @@ export default function ClientPortal() {
   const staffRoles = ['admin', 'management', 'employee'];
   const isStaff = user && staffRoles.includes(user.role);
 
+  const clientVisibleActivities = isStaff
+    ? activities
+    : activities.filter((activity) =>
+        [
+          "application_created",
+          "application_updated",
+          "task_created",
+          "task_updated",
+          "assessment_completed",
+          "job_search",
+          "application_submitted",
+          "interview_completed",
+          "document_uploaded"
+        ].includes(activity.activity_type)
+      );
+
+  const clientVisibleMeetings = isStaff ? meetings : [];
+
   if (!user || (!client && !loading)) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
