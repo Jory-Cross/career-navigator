@@ -62,6 +62,30 @@ function formatShortEntryDate(dateString) {
 }
 
 function formatLongEntryDate(dateString) {
+  function getEntryTypeLabel(entry) {
+  const rawCode =
+    entry?.entry_type_code ||
+    entry?.entry_type ||
+    entry?.entry_type_key ||
+    entry?.type ||
+    entry?.category ||
+    "";
+
+  const normalizedCode = normalizeEntryTypeCode(rawCode);
+  const config = getEntryTypeConfig(normalizedCode);
+
+  if (config?.label) {
+    return config.label;
+  }
+
+  if (normalizedCode) {
+    return String(normalizedCode)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  return "Time Entry";
+}
   const parsed = parseDateOnly(dateString);
   if (!parsed) return "—";
 
