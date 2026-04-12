@@ -275,4 +275,144 @@ export default function ClientDetail() {
                 </TabsTrigger>
               )}
 
-              {!isClientUser && isEmployed &&
+              {!isClientUser && isEmployed && (
+                <TabsTrigger value="job_supports">
+                  Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              {!isClientUser && !isEmployed && (
+                <TabsTrigger value="time">
+                  Time {activeTab === "time" ? `(${timeEntries.length})` : ""}
+                </TabsTrigger>
+              )}
+
+              <TabsTrigger value="activity">
+                Activity {activeTab === "activity" ? `(${activities.length})` : ""}
+              </TabsTrigger>
+            </TabsList>
+
+            {!isClientUser && !isEmployed && (
+              <TabsContent value="onboarding">
+                <OnboardingSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="applications">
+                <JobApplicationsSection
+                  client={client}
+                  applications={applications}
+                  onRefresh={refreshApplications}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && !isClientUser && (
+              <TabsContent value="ai_jobs">
+                <AIJobSearchPanel client={client} />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="interview_prep">
+                <InterviewPrepSection
+                  client={client}
+                  onRefresh={refreshApplications}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && !isClientUser && (
+              <TabsContent value="assessments">
+                <AssessmentSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {client.client_type === "pre_ets" && !isClientUser && (
+              <TabsContent value="wble_forms">
+                <WBLEFormSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isClientUser && (
+              <TabsContent value="documents">
+                <DocumentsSection client={client} onRefresh={refreshClient} />
+              </TabsContent>
+            )}
+
+            {!isEmployed && (
+              <TabsContent value="tasks">
+                <TasksSection
+                  client={client}
+                  tasks={tasks}
+                  onRefresh={refreshTasks}
+                />
+              </TabsContent>
+            )}
+
+            {!isDspd && !isEmployed && (
+              <TabsContent value="resumes">
+                <ResumeSection
+                  client={client}
+                  resumes={resumes}
+                  onRefresh={refreshResumes}
+                />
+              </TabsContent>
+            )}
+
+            {!isClientUser && isEmployed && (
+              <TabsContent value="job_supports">
+                <TimeLogDashboard
+                  clientId={clientId}
+                  clients={[client]}
+                  timeEntries={timeEntries}
+                  onRefresh={refreshTimeEntries}
+                />
+              </TabsContent>
+            )}
+
+            {!isClientUser && !isEmployed && (
+              <TabsContent value="time">
+                <TimeLogDashboard
+                  clientId={clientId}
+                  clients={[client]}
+                  timeEntries={timeEntries}
+                  onRefresh={refreshTimeEntries}
+                />
+              </TabsContent>
+            )}
+
+            <TabsContent value="activity">
+              <ActivitySection
+                client={client}
+                activities={activities}
+                onRefresh={refreshActivities}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div className="space-y-6">
+          <VocationalProfileCard client={client} onRefresh={refreshClient} />
+
+          <AIAssistantPanel
+            client={client}
+            onOpenJobSearch={() => setActiveTab("ai_jobs")}
+            onOpenAssistant={() => {}}
+          />
+        </div>
+      </div>
+
+      {showEmailComposer && (
+        <EmailComposer
+          open={showEmailComposer}
+          onOpenChange={setShowEmailComposer}
+          clientId={clientId}
+          clientEmail={client.email}
+          clientName={`${client.first_name} ${client.last_name}`}
+        />
+      )}
+    </div>
+  );
+}
