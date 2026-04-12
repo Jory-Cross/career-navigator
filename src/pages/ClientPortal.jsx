@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
 import TimeLogSection from "@/components/client-detail/TimeLogSection";
@@ -42,6 +42,7 @@ import {
   Phone,
   StickyNote,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import ImportFromIndeedDialog from "@/components/client-portal/ImportFromIndeedDialog";
 import AgentChatEmbed from "@/components/client-portal/AgentChatEmbed.jsx";
@@ -61,6 +62,37 @@ const CLIENT_VISIBLE_ACTIVITY_TYPES = [
   "interview_completed",
   "document_uploaded",
 ];
+
+const APPLICATION_STATUSES = [
+  "saved",
+  "applied",
+  "phone_screen",
+  "interview",
+  "final_round",
+  "offer",
+  "accepted",
+  "rejected",
+  "withdrawn",
+];
+
+const TASK_STATUS_COLORS = {
+  pending: "bg-amber-100 text-amber-700",
+  in_progress: "bg-blue-100 text-blue-700",
+  completed: "bg-green-100 text-green-700",
+  cancelled: "bg-slate-100 text-slate-600",
+};
+
+const APP_STATUS_COLORS = {
+  saved: "bg-slate-100 text-slate-700",
+  applied: "bg-blue-100 text-blue-700",
+  phone_screen: "bg-cyan-100 text-cyan-700",
+  interview: "bg-violet-100 text-violet-700",
+  final_round: "bg-purple-100 text-purple-700",
+  offer: "bg-emerald-100 text-emerald-700",
+  accepted: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-700",
+  withdrawn: "bg-amber-100 text-amber-700",
+};
 
 function getClientIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -84,10 +116,38 @@ function normalizeApplicationNotes(app) {
   return [];
 }
 
+function formatDate(value, dateFormat = "MMM d, yyyy") {
+  if (!value) return "";
+  try {
+    return format(new Date(value), dateFormat);
+  } catch {
+    return "";
+  }
+}
+
+function EmptyState({ title, description, action }) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="py-10 text-center">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+          <FileText className="h-5 w-5 text-slate-500" />
+        </div>
+        <p className="text-sm font-medium text-slate-800">{title}</p>
+        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+        {action ? <div className="mt-4">{action}</div> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ClientPortal() {
+  const queryClient = useQueryClient();
+
   const [user, setUser] = useState(null);
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [activeTab, setActiveTab] = useState("applications");
 
   const [showNewApp, setShowNewApp] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -95,22 +155,21 @@ export default function ClientPortal() {
   const [updatingApp, setUpdatingApp] = useState(false);
 
   const [showNewTask, setShowNewTask] = useState(false);
-  const [showUploadDoc, setShowUploadDoc] = useState(false);
-  const [showIndeedImport, setShowIndeedImport] = useState(false);
-
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskNotes, setTaskNotes] = useState("");
   const [taskStatus, setTaskStatus] = useState("");
   const [savingTask, setSavingTask] = useState(false);
 
+  const [showUploadDoc, setShowUploadDoc] = useState(false);
+  const [showIndeedImport, setShowIndeedImport] = useState(false);
   const [uploadCategory, setUploadCategory] = useState("resume");
+  const [uploading, setUploading] = useState(false);
+
   const [appForm, setAppForm] = useState({});
   const [newAppNote, setNewAppNote] = useState("");
   const [taskForm, setTaskForm] = useState({});
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
-  const queryClient = useQueryClient();
   const clientIdParam = useMemo(() => getClientIdFromUrl(), []);
 
   const loadClientData = useCallback(async () => {
@@ -120,9 +179,8 @@ export default function ClientPortal() {
 
       if (currentUser.role === "client") {
         const allClients = await base44.entities.Client.list();
-        const clientData =
-          allClients.find((c) => c.email === currentUser.email) || null;
-        setClient(clientData);
+        const ownClient = allClients.find((c) => c.email === currentUser.email) || null;
+        setClient(ownClient);
         return;
       }
 
@@ -166,13 +224,42 @@ export default function ClientPortal() {
     loadClientData();
   }, [loadClientData]);
 
-  const { data: applications = [] } = useQuery({
+  const isStaff = !!user && STAFF_ROLES.includes(user.role);
+  const isPortalPreview = isStaff && !!clientIdParam;
+  const showInternalStaffContent = isStaff && !isPortalPreview;
+
+  const shouldLoadApplications =
+    !!client?.id && (activeTab === "applications" || !!selectedApp || showNewApp);
+
+  const shouldLoadTasks =
+    !!client?.id && (activeTab === "tasks" || !!selectedTask || showNewTask);
+
+  const shouldLoadDocuments =
+    !!client?.id && (activeTab === "documents" || showUploadDoc);
+
+  const shouldLoadAssessments = !!client?.id && activeTab === "assessments";
+  const shouldLoadInterviews = !!client?.id && activeTab === "interview";
+  const shouldLoadTime = !!client?.id && activeTab === "time";
+  const shouldLoadActivity = !!client?.id && activeTab === "activity";
+  const shouldLoadMeetings = !!client?.id && activeTab === "activity";
+
+  const queryDefaults = {
+    enabled: !!client?.id,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  };
+
+  const { data: applications = [], isFetching: loadingApplications } = useQuery({
     queryKey: ["client-applications", client?.id],
     queryFn: () => base44.entities.JobApplication.filter({ client_id: client.id }),
-    enabled: !!client,
+    enabled: shouldLoadApplications,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks = [], isFetching: loadingTasks } = useQuery({
     queryKey: ["client-tasks", client?.id],
     queryFn: async () => {
       try {
@@ -182,57 +269,69 @@ export default function ClientPortal() {
         return allTasks.filter((t) => t.client_ids?.includes(client.id));
       }
     },
-    enabled: !!client,
+    enabled: shouldLoadTasks,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const { data: resumes = [] } = useQuery({
-    queryKey: ["client-resumes", client?.id],
-    queryFn: () => base44.entities.Resume.filter({ client_id: client.id }),
-    enabled: !!client,
+  const { data: documents = [], isFetching: loadingDocuments } = useQuery({
+    queryKey: ["client-documents", client?.id],
+    queryFn: () => base44.entities.Document.filter({ client_id: client.id }),
+    enabled: shouldLoadDocuments,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: assessments = [], isFetching: loadingAssessments } = useQuery({
+    queryKey: ["client-assessments", client?.id],
+    queryFn: () => base44.entities.Assessment.filter({ client_id: client.id }),
+    enabled: shouldLoadAssessments,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: interviewSessions = [] } = useQuery({
     queryKey: ["client-interviews", client?.id],
     queryFn: () => base44.entities.InterviewSession.filter({ client_id: client.id }),
-    enabled: !!client,
-  });
-
-  const { data: documents = [] } = useQuery({
-    queryKey: ["client-documents", client?.id],
-    queryFn: () => base44.entities.Document.filter({ client_id: client.id }),
-    enabled: !!client,
-  });
-
-  const { data: meetings = [] } = useQuery({
-    queryKey: ["client-meetings", client?.id],
-    queryFn: () => base44.entities.Meeting.filter({ client_id: client.id }),
-    enabled: !!client,
+    enabled: shouldLoadInterviews,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["client-time-entries", client?.id],
     queryFn: () => base44.entities.TimeEntry.filter({ client_id: client.id }),
-    enabled: !!client,
+    enabled: shouldLoadTime,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const { data: activities = [] } = useQuery({
+  const { data: activities = [], isFetching: loadingActivities } = useQuery({
     queryKey: ["client-activities", client?.id],
     queryFn: () => base44.entities.Activity.filter({ client_id: client.id }),
-    enabled: !!client,
+    enabled: shouldLoadActivity,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const { data: assessments = [] } = useQuery({
-    queryKey: ["client-assessments", client?.id],
-    queryFn: () => base44.entities.Assessment.filter({ client_id: client.id }),
-    enabled: !!client,
+  const { data: meetings = [] } = useQuery({
+    queryKey: ["client-meetings", client?.id],
+    queryFn: () => base44.entities.Meeting.filter({ client_id: client.id }),
+    enabled: shouldLoadMeetings,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
-
-  const isStaff = !!user && STAFF_ROLES.includes(user.role);
-  const isPortalPreview = isStaff && !!clientIdParam;
-  const showInternalStaffContent = isStaff && !isPortalPreview;
 
   const clientVisibleActivities = useMemo(() => {
     if (showInternalStaffContent) return activities;
+
     return activities.filter((activity) =>
       CLIENT_VISIBLE_ACTIVITY_TYPES.includes(activity.activity_type)
     );
@@ -260,9 +359,10 @@ export default function ClientPortal() {
           title,
           description,
         });
+
         await invalidate(["client-activities"]);
-      } catch (e) {
-        // silent
+      } catch (error) {
+        // intentionally silent
       }
     },
     [client?.id, invalidate]
@@ -277,17 +377,26 @@ export default function ClientPortal() {
     if (!client?.id) return;
 
     setSaving(true);
+
     try {
+      const noteEntries = Array.isArray(appForm.note_entries) ? appForm.note_entries : [];
+      const flattenedNotes = noteEntries.map((entry) => entry.text).join("\n\n");
+
       await base44.entities.JobApplication.create({
         ...appForm,
         client_id: client.id,
+        note_entries: noteEntries,
+        notes: flattenedNotes,
       });
+
       await logActivity(
         "application_created",
         `Application added: ${appForm.position} at ${appForm.company}`
       );
+
       toast.success("Application added");
       await invalidate(["client-applications"]);
+
       setShowNewApp(false);
       setAppForm({});
       setNewAppNote("");
@@ -307,14 +416,17 @@ export default function ClientPortal() {
     if (!client?.id) return;
 
     setSaving(true);
+
     try {
       await base44.entities.Task.create({
         ...taskForm,
         client_ids: [client.id],
       });
+
       await logActivity("task_created", `Task created: ${taskForm.title}`);
       toast.success("Task created");
       await invalidate(["client-tasks"]);
+
       setShowNewTask(false);
       setTaskForm({});
     } catch (error) {
@@ -327,13 +439,14 @@ export default function ClientPortal() {
   const openTaskDetail = useCallback((task) => {
     setSelectedTask(task);
     setTaskNotes(task.notes || "");
-    setTaskStatus(task.status);
+    setTaskStatus(task.status || "pending");
   }, []);
 
   const saveTaskDetail = useCallback(async () => {
     if (!selectedTask) return;
 
     setSavingTask(true);
+
     try {
       await base44.entities.Task.update(selectedTask.id, {
         notes: taskNotes,
@@ -342,11 +455,13 @@ export default function ClientPortal() {
         description: selectedTask.description,
         due_date: selectedTask.due_date,
       });
+
       await logActivity(
         "task_updated",
         `Task updated: ${selectedTask.title}`,
         `Status: ${taskStatus}`
       );
+
       toast.success("Task updated");
       await invalidate(["client-tasks"]);
       setSelectedTask(null);
@@ -378,6 +493,7 @@ export default function ClientPortal() {
       if (!file || !client?.id) return;
 
       setUploading(true);
+
       try {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
@@ -403,9 +519,13 @@ export default function ClientPortal() {
         await invalidate(["client-activities"]);
         setShowUploadDoc(false);
       } catch (error) {
-        toast.error("Upload failed: " + error.message);
+        toast.error(`Upload failed: ${error.message}`);
       } finally {
         setUploading(false);
+
+        if (e.target) {
+          e.target.value = "";
+        }
       }
     },
     [client?.id, uploadCategory, invalidate]
@@ -416,9 +536,14 @@ export default function ClientPortal() {
       if (!selectedApp) return;
 
       setUpdatingApp(true);
+
       try {
         const updated = { ...selectedApp, [field]: value };
-        await base44.entities.JobApplication.update(selectedApp.id, { [field]: value });
+
+        await base44.entities.JobApplication.update(selectedApp.id, {
+          [field]: value,
+        });
+
         setSelectedApp(updated);
         await invalidate(["client-applications"]);
 
@@ -456,6 +581,7 @@ export default function ClientPortal() {
     const flattenedNotes = nextEntries.map((entry) => entry.text).join("\n\n");
 
     setUpdatingApp(true);
+
     try {
       await base44.entities.JobApplication.update(selectedApp.id, {
         note_entries: nextEntries,
@@ -474,51 +600,33 @@ export default function ClientPortal() {
 
       setSelectedAppNewNote("");
       await invalidate(["client-applications"]);
+
       await logActivity(
         "application_updated",
         `Application note added: ${selectedApp.position} at ${selectedApp.company}`
       );
+
       toast.success("Note added");
     } catch (error) {
       toast.error("Failed to add note");
     } finally {
       setUpdatingApp(false);
     }
-  }, [selectedApp, selectedAppNewNote, user?.email, client?.email, invalidate, logActivity]);
-
-  const statusColors = {
-    saved: "bg-slate-100 text-slate-700",
-    applied: "bg-blue-100 text-blue-700",
-    phone_screen: "bg-cyan-100 text-cyan-700",
-    interview: "bg-violet-100 text-violet-700",
-    final_round: "bg-purple-100 text-purple-700",
-    offer: "bg-emerald-100 text-emerald-700",
-    accepted: "bg-green-100 text-green-700",
-    rejected: "bg-red-100 text-red-700",
-    withdrawn: "bg-amber-100 text-amber-700",
-  };
-
-  const taskStatusColors = {
-    pending: "bg-amber-100 text-amber-700",
-    in_progress: "bg-blue-100 text-blue-700",
-    completed: "bg-green-100 text-green-700",
-    cancelled: "bg-slate-100 text-slate-600",
-  };
+  }, [
+    selectedApp,
+    selectedAppNewNote,
+    user?.email,
+    client?.email,
+    invalidate,
+    logActivity,
+  ]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        Loading...
-      </div>
-    );
+    return <div className="p-6 text-sm text-slate-500">Loading...</div>;
   }
 
   if (!user || (!client && !loading)) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-slate-600 mb-4">Access denied or client not found.</p>
-      </div>
-    );
+    return <div className="p-6 text-sm text-slate-500">Access denied or client not found.</div>;
   }
 
   if (!client) return null;
@@ -544,419 +652,252 @@ export default function ClientPortal() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Welcome, {client.first_name}!
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Your career development portal
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl p-4 md:p-6">
+        <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="capitalize">
+                  {client.client_type?.replace(/_/g, " ") || "client"}
+                </Badge>
+                {isPortalPreview ? (
+                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                    Staff Portal Preview
+                  </Badge>
+                ) : null}
+              </div>
 
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {client.first_name?.[0]}
-              {client.last_name?.[0]}
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-slate-900">
-                {client.first_name} {client.last_name}
-              </h2>
-              <p className="text-sm text-slate-600">{client.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge>{client.status}</Badge>
-                {client.target_role && (
-                  <Badge variant="outline">{client.target_role}</Badge>
-                )}
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                {client.first_name || client.last_name
+                  ? `${client.first_name || ""} ${client.last_name || ""}`.trim()
+                  : client.full_name || client.email || "Client Portal"}
+              </h1>
+
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
+                {client.email ? (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                    <span>{client.email}</span>
+                  </div>
+                ) : null}
+
+                {client.phone ? (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-slate-400" />
+                    <span>{client.phone}</span>
+                  </div>
+                ) : null}
+
+                {client.location ? (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    <span>{client.location}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setShowIndeedImport(true)}>
+                Import from Indeed
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setUploadCategory("resume");
+                  setShowUploadDoc(true);
+                }}
+              >
+                Upload Resume
+              </Button>
+              <Button onClick={() => setShowNewApp(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Application
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Tabs defaultValue="applications" className="space-y-4">
-        <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
-          <TabsTrigger value="applications">
-            Applications ({applications.length})
-          </TabsTrigger>
-          <TabsTrigger value="interview">
-            Interview ({interviewSessions.length})
-          </TabsTrigger>
-          <TabsTrigger value="coach">Career Coach</TabsTrigger>
-          {showInternalStaffContent && (
-            <TabsTrigger value="time">
-              Time Log ({timeEntries.length})
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="activity">
-            Activity ({clientVisibleMeetings.length + clientVisibleActivities.length})
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            Documents ({documents.length})
-          </TabsTrigger>
-          <TabsTrigger value="assessments">
-            Assessments ({assessments.length})
-          </TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <div className="overflow-x-auto">
+            <TabsList className="inline-flex h-auto min-w-max gap-1 rounded-xl border bg-white p-1">
+              <TabsTrigger value="applications">Applications</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="assessments">Assessments</TabsTrigger>
+              <TabsTrigger value="interview">Interview Prep</TabsTrigger>
+              <TabsTrigger value="time">Time Log</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="jobs">Job Suggestions</TabsTrigger>
+              <TabsTrigger value="assistant">Assistant</TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="applications">
-          <JobSuggestionsSection
-            client={client}
-            onAddApplication={() =>
-              queryClient.invalidateQueries({ queryKey: ["client-applications"] })
-            }
-          />
+          <TabsContent value="applications" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>My Applications</CardTitle>
+                <Button size="sm" onClick={() => setShowNewApp(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Application
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingApplications ? (
+                  <div className="py-8 text-sm text-slate-500">Loading applications...</div>
+                ) : applications.length === 0 ? (
+                  <EmptyState
+                    title="No applications yet"
+                    description="Track job applications, statuses, follow-up dates, and running notes here."
+                    action={<Button onClick={() => setShowNewApp(true)}>Add Application</Button>}
+                  />
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {applications.map((app) => (
+                      <button
+                        key={app.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedApp(app);
+                          setSelectedAppNewNote("");
+                        }}
+                        className="rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-slate-900">{app.position}</p>
+                            <p className="truncate text-sm text-slate-500">{app.company}</p>
+                          </div>
+                          <Badge
+                            className={cn(
+                              "capitalize",
+                              APP_STATUS_COLORS[app.status] || "bg-slate-100 text-slate-700"
+                            )}
+                          >
+                            {(app.status || "saved").replace(/_/g, " ")}
+                          </Badge>
+                        </div>
 
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">My Applications</CardTitle>
-                <div className="flex gap-2">
+                        <div className="space-y-2 text-sm text-slate-600">
+                          {app.location ? (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-slate-400" />
+                              <span className="truncate">{app.location}</span>
+                            </div>
+                          ) : null}
+
+                          {app.applied_date ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span>Applied {formatDate(app.applied_date)}</span>
+                            </div>
+                          ) : null}
+
+                          {app.follow_up_date ? (
+                            <div className="flex items-center gap-2">
+                              <Bell className="h-4 w-4 text-amber-500" />
+                              <span>Follow-up {formatDate(app.follow_up_date)}</span>
+                            </div>
+                          ) : null}
+
+                          {normalizeApplicationNotes(app).length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <StickyNote className="h-4 w-4 text-slate-400" />
+                              <span>{normalizeApplicationNotes(app).length} running notes</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>My Tasks</CardTitle>
+                <Button size="sm" onClick={() => setShowNewTask(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Task
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingTasks ? (
+                  <div className="py-8 text-sm text-slate-500">Loading tasks...</div>
+                ) : tasks.length === 0 ? (
+                  <EmptyState
+                    title="No tasks yet"
+                    description="Create reminders, follow-ups, and action items here."
+                    action={<Button onClick={() => setShowNewTask(true)}>Create Task</Button>}
+                  />
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {tasks.map((task) => (
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => openTaskDetail(task)}
+                        className="rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <p className="font-medium text-slate-900">{task.title}</p>
+                          <Badge
+                            className={cn(
+                              "capitalize",
+                              TASK_STATUS_COLORS[task.status] || "bg-slate-100 text-slate-700"
+                            )}
+                          >
+                            {(task.status || "pending").replace(/_/g, " ")}
+                          </Badge>
+                        </div>
+
+                        {task.description ? (
+                          <p className="mb-3 line-clamp-2 text-sm text-slate-600">
+                            {task.description}
+                          </p>
+                        ) : null}
+
+                        <div className="space-y-2 text-sm text-slate-600">
+                          {task.due_date ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span>Due {formatDate(task.due_date)}</span>
+                            </div>
+                          ) : null}
+
+                          {task.notes ? (
+                            <div className="flex items-center gap-2">
+                              <StickyNote className="h-4 w-4 text-slate-400" />
+                              <span className="truncate">Has notes</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="documents" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>My Documents</CardTitle>
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setShowIndeedImport(true)}
-                  >
-                    <img
-                      src="https://upload.wikimedia.org/wikipedia/commons/f/fc/Indeed_logo.svg"
-                      alt="Indeed"
-                      className="h-3.5 mr-1"
-                    />
-                    Import from Indeed
-                  </Button>
-                  <Button size="sm" onClick={() => setShowNewApp(true)}>
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Application
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {applications.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">
-                  No applications yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {applications.map((app) => (
-                    <div
-                      key={app.id}
-                      className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"
-                      onClick={() => {
-                        setSelectedApp(app);
-                        setSelectedAppNewNote("");
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-slate-800">
-                              {app.position}
-                            </p>
-                            <Badge className={cn("text-xs", statusColors[app.status])}>
-                              {app.status.replace(/_/g, " ")}
-                            </Badge>
-                            {app.ai_fit_score && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs flex items-center gap-1"
-                              >
-                                <Target className="w-3 h-3" /> {app.ai_fit_score}% fit
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-600">
-                            <span className="flex items-center gap-1">
-                              <Building2 className="w-3 h-3" />
-                              {app.company}
-                            </span>
-                            {app.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {app.location}
-                              </span>
-                            )}
-                            {app.applied_date && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {format(new Date(app.applied_date), "MMM d, yyyy")}
-                              </span>
-                            )}
-                            {app.follow_up_date && (
-                              <span className="flex items-center gap-1 text-amber-600">
-                                <Bell className="w-3 h-3" />
-                                Follow-up {format(new Date(app.follow_up_date), "MMM d")}
-                              </span>
-                            )}
-                          </div>
-                          {app.next_step && (
-                            <p className="text-xs text-violet-600 mt-2 font-medium">
-                              → Next: {app.next_step}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {app.job_url && (
-                            <a
-                              href={app.job_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                            >
-                              Job Post ↗
-                            </a>
-                          )}
-                          <span className="text-xs text-slate-400">View →</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="interview">
-          <InterviewPrepSection client={client} />
-          <div className="mt-6">
-            <AgentChatEmbed
-              agentKey="interview_prep_coach"
-              title="Interview Coach"
-              description="Practice interviews and get real-time coaching feedback"
-              clientId={client?.id}
-              systemContext={`You are speaking with ${client?.first_name} ${client?.last_name}. Their target role is: ${client?.target_role || "not specified"}. Their target industry is: ${client?.industry || "not specified"}. Always address them by their first name (${client?.first_name}).`}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="coach">
-          <AgentChatEmbed
-            agentKey="career_coach"
-            title="Career Coach"
-            description="Your AI-powered career coaching assistant"
-            clientId={client?.id}
-            systemContext={`You are speaking with ${client?.first_name} ${client?.last_name}. Here is their profile:
-- Name: ${client?.first_name} ${client?.last_name}
-- Email: ${client?.email}
-- Location: ${client?.location || "not specified"}
-- Target Role: ${client?.target_role || "not specified"}
-- Target Industry: ${client?.industry || "not specified"}
-- Client Type: ${client?.client_type || "not specified"}
-- Status: ${client?.status || "active"}
-
-ASSESSMENTS ON FILE:
-${
-  assessments.length === 0
-    ? "No assessments completed yet."
-    : assessments
-        .map((a) => {
-          const responses = Object.entries(a.responses || {})
-            .filter(([k, v]) => v && !k.startsWith("_"))
-            .map(([k, v]) => `  - ${k.replace(/_/g, " ")}: ${v}`)
-            .join("\n");
-          return `[${a.assessment_type.replace(/_/g, " ").toUpperCase()}] (${new Date(a.created_date).toLocaleDateString()})\n${responses}`;
-        })
-        .join("\n\n")
-}
-
-Always address them by their first name (${client?.first_name}) and tailor all advice to their specific profile, location, career goals, and assessment results above.`}
-          />
-        </TabsContent>
-
-        {showInternalStaffContent && (
-          <TabsContent value="time">
-            <TimeLogSection
-              timeEntries={timeEntries}
-              clientId={client.id}
-              onRefresh={() =>
-                queryClient.invalidateQueries({ queryKey: ["client-time-entries"] })
-              }
-            />
-          </TabsContent>
-        )}
-
-        <TabsContent value="activity">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">My Activity & Appointments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {clientVisibleMeetings.length === 0 &&
-              clientVisibleActivities.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">
-                  No activity yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {clientVisibleMeetings.map((meeting) => (
-                    <div
-                      key={`meeting-${meeting.id}`}
-                      className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
-                    >
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-900">
-                            {meeting.title}
-                          </p>
-                          <p className="text-xs text-slate-600 mt-1">
-                            {meeting.meeting_type?.replace(/_/g, " ")}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-                            <span>
-                              {format(new Date(meeting.start_datetime), "MMM d, yyyy")}
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {format(new Date(meeting.start_datetime), "h:mm a")}
-                            </span>
-                          </div>
-                          {meeting.location && (
-                            <p className="text-xs text-slate-500 mt-1">
-                              📍 {meeting.location}
-                            </p>
-                          )}
-                          {meeting.description && (
-                            <p className="text-xs text-slate-600 mt-2">
-                              {meeting.description}
-                            </p>
-                          )}
-                          <Badge
-                            className={cn(
-                              "mt-2 text-xs",
-                              meeting.status === "scheduled"
-                                ? "bg-blue-100 text-blue-700"
-                                : meeting.status === "confirmed"
-                                  ? "bg-green-100 text-green-700"
-                                  : meeting.status === "completed"
-                                    ? "bg-slate-100 text-slate-600"
-                                    : meeting.status === "cancelled"
-                                      ? "bg-red-100 text-red-700"
-                                      : "bg-amber-100 text-amber-700"
-                            )}
-                          >
-                            {meeting.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {clientVisibleActivities.map((activity) => (
-                    <div
-                      key={`activity-${activity.id}`}
-                      className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-slate-300 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-900">
-                            {activity.title}
-                          </p>
-                          {activity.description && (
-                            <p className="text-xs text-slate-600 mt-1">
-                              {activity.description}
-                            </p>
-                          )}
-                          <p className="text-xs text-slate-400 mt-2">
-                            {format(new Date(activity.created_date), "MMM d, yyyy h:mm a")}
-                          </p>
-                          <Badge className="mt-2 text-xs bg-slate-200 text-slate-700">
-                            {activity.activity_type?.replace(/_/g, " ")}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tasks">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">My Tasks</CardTitle>
-                <Button size="sm" onClick={() => setShowNewTask(true)}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> New Task
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">
-                  No tasks yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
-                      onClick={() => openTaskDetail(task)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            {task.status === "completed" && (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            )}
-                            <p className="text-sm font-medium text-slate-800">
-                              {task.title}
-                            </p>
-                            <Badge className={cn("text-xs", taskStatusColors[task.status])}>
-                              {task.status.replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                          {task.description && (
-                            <p className="text-xs text-slate-600 mt-1">
-                              {task.description}
-                            </p>
-                          )}
-                          {task.due_date && (
-                            <p className="text-xs text-slate-500 mt-2">
-                              Due: {format(new Date(task.due_date), "MMM d, yyyy")}
-                            </p>
-                          )}
-                          {task.notes && (
-                            <p className="text-xs text-violet-600 mt-1 italic truncate">
-                              Note: {task.notes}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-xs text-slate-400 shrink-0">
-                          Edit →
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="documents">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">My Documents</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
                     onClick={() => {
                       setUploadCategory("resume");
                       setShowUploadDoc(true);
                     }}
                   >
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Resume
+                    Upload Resume
                   </Button>
                   <Button
                     size="sm"
@@ -966,129 +907,218 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                       setShowUploadDoc(true);
                     }}
                   >
-                    <Upload className="w-3.5 h-3.5 mr-1" /> Upload Cover Letter
+                    Upload Cover Letter
                   </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documents.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">
-                  No documents yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1">
-                          <FileText className="w-4 h-4 text-slate-500 mt-0.5" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-sm font-medium text-slate-800">
-                                {doc.title}
-                              </p>
-                              <Badge
-                                className={cn(
-                                  "text-xs",
-                                  doc.category === "resume"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-purple-100 text-purple-700"
-                                )}
-                              >
-                                {doc.category === "cover_letter"
-                                  ? "Cover Letter"
-                                  : doc.category}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-slate-500">
-                              {doc.file_size
-                                ? `${(doc.file_size / 1024).toFixed(1)} KB`
-                                : ""}{" "}
-                              • {format(new Date(doc.created_date), "MMM d, yyyy")}
+              </CardHeader>
+              <CardContent>
+                {loadingDocuments ? (
+                  <div className="py-8 text-sm text-slate-500">Loading documents...</div>
+                ) : documents.length === 0 ? (
+                  <EmptyState
+                    title="No documents yet"
+                    description="Upload resumes, cover letters, and supporting documents here."
+                  />
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-slate-900">{doc.title}</p>
+                            <p className="text-sm text-slate-500 capitalize">
+                              {doc.category === "cover_letter"
+                                ? "Cover Letter"
+                                : doc.category || "Document"}
                             </p>
                           </div>
-                        </div>
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost">
-                            <Download className="w-3.5 h-3.5" />
-                          </Button>
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="assessments">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">My Assessments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {assessments.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">
-                  No assessments on file yet
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {assessments.map((assessment) => (
-                    <div
-                      key={assessment.id}
-                      className="border border-slate-200 rounded-lg overflow-hidden"
-                    >
-                      <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border-b border-slate-200">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800 capitalize">
-                            {assessment.assessment_type.replace(/_/g, " ")}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Completed {format(new Date(assessment.created_date), "MMM d, yyyy")}
-                          </p>
+                          {doc.file_url ? (
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-500 hover:text-slate-700"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          ) : null}
                         </div>
-                        {assessment.pdf_url && (
-                          <a
-                            href={assessment.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Button size="sm" variant="outline">
-                              <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
-                            </Button>
-                          </a>
-                        )}
+
+                        <div className="space-y-2 text-sm text-slate-600">
+                          {doc.file_size ? (
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-slate-400" />
+                              <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                            </div>
+                          ) : null}
+
+                          {doc.created_date ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span>{formatDate(doc.created_date)}</span>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="p-4 space-y-3">
-                        {assessment.notes && (
-                          <p className="text-sm text-slate-600 italic">
-                            {assessment.notes}
-                          </p>
-                        )}
-                        {assessment.responses &&
-                          Object.entries(assessment.responses)
-                            .filter(([k, v]) => v && !k.startsWith("_"))
-                            .map(([key, value]) => (
-                              <div key={key} className="grid grid-cols-3 gap-2 text-sm">
-                                <p className="text-xs font-medium text-slate-500 capitalize col-span-1">
-                                  {key.replace(/_/g, " ")}
-                                </p>
-                                <p className="text-xs text-slate-700 col-span-2 whitespace-pre-wrap">
-                                  {String(value)}
-                                </p>
-                              </div>
-                            ))}
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="assessments" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Assessments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingAssessments ? (
+                  <div className="py-8 text-sm text-slate-500">Loading assessments...</div>
+                ) : assessments.length === 0 ? (
+                  <EmptyState
+                    title="No assessments on file yet"
+                    description="Completed assessments will appear here."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {assessments.map((assessment) => (
+                      <div key={assessment.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-slate-900 capitalize">
+                              {(assessment.assessment_type || "assessment").replace(/_/g, " ")}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              Completed {formatDate(assessment.created_date)}
+                            </p>
+                          </div>
+
+                          {assessment.pdf_url ? (
+                            <a
+                              href={assessment.pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download PDF
+                            </a>
+                          ) : null}
+                        </div>
+
+                        {assessment.notes ? (
+                          <p className="mb-3 text-sm text-slate-600">{assessment.notes}</p>
+                        ) : null}
+
+                        {assessment.responses ? (
+                          <div className="grid gap-2 md:grid-cols-2">
+                            {Object.entries(assessment.responses)
+                              .filter(([key, value]) => value && !key.startsWith("_"))
+                              .map(([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="rounded-xl bg-slate-50 px-3 py-2 text-sm"
+                                >
+                                  <p className="text-slate-500">{key.replace(/_/g, " ")}</p>
+                                  <p className="font-medium text-slate-800">{String(value)}</p>
+                                </div>
+                              ))}
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="interview" className="space-y-4">
+            <InterviewPrepSection client={client} interviewSessions={interviewSessions} />
+          </TabsContent>
+
+          <TabsContent value="time" className="space-y-4">
+            <TimeLogSection client={client} timeEntries={timeEntries} />
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingActivities ? (
+                  <div className="py-8 text-sm text-slate-500">Loading activity...</div>
+                ) : clientVisibleActivities.length === 0 && clientVisibleMeetings.length === 0 ? (
+                  <EmptyState
+                    title="No activity yet"
+                    description="Recent portal activity, updates, and meetings will appear here."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {clientVisibleMeetings.map((meeting) => (
+                      <div key={meeting.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">Meeting</Badge>
+                          {meeting.status ? (
+                            <Badge className="bg-slate-100 text-slate-700">{meeting.status}</Badge>
+                          ) : null}
+                        </div>
+                        <p className="font-medium text-slate-900">{meeting.title}</p>
+                        <p className="mt-1 text-sm text-slate-500 capitalize">
+                          {meeting.meeting_type?.replace(/_/g, " ") || "meeting"}
+                        </p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-600">
+                          {meeting.start_datetime ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span>{formatDate(meeting.start_datetime, "MMM d, yyyy • h:mm a")}</span>
+                            </div>
+                          ) : null}
+                          {meeting.location ? (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-slate-400" />
+                              <span>{meeting.location}</span>
+                            </div>
+                          ) : null}
+                          {meeting.description ? <p>{meeting.description}</p> : null}
+                        </div>
+                      </div>
+                    ))}
+
+                    {clientVisibleActivities.map((activity) => (
+                      <div key={activity.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {activity.activity_type?.replace(/_/g, " ")}
+                          </Badge>
+                        </div>
+                        <p className="font-medium text-slate-900">{activity.title}</p>
+                        {activity.description ? (
+                          <p className="mt-1 text-sm text-slate-600">{activity.description}</p>
+                        ) : null}
+                        <p className="mt-3 text-xs text-slate-400">
+                          {formatDate(activity.created_date, "MMM d, yyyy h:mm a")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="jobs" className="space-y-4">
+            <JobSuggestionsSection client={client} />
+          </TabsContent>
+
+          <TabsContent value="assistant" className="space-y-4">
+            <AgentChatEmbed client={client} />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       <Dialog
         open={!!selectedApp}
@@ -1099,149 +1129,123 @@ Always address them by their first name (${client?.first_name}) and tailor all a
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />
-              {selectedApp?.position}
-            </DialogTitle>
-            <p className="text-sm text-slate-500">{selectedApp?.company}</p>
+            <DialogTitle>{selectedApp?.position}</DialogTitle>
+            {selectedApp?.company ? (
+              <p className="text-sm text-slate-500">{selectedApp.company}</p>
+            ) : null}
           </DialogHeader>
-          {selectedApp && (
-            <div className="space-y-4 py-2">
+
+          {selectedApp ? (
+            <div className="space-y-5 py-2">
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Status</Label>
+                <Label className="mb-2 block text-xs text-slate-500">Status</Label>
                 <Select
-                  value={selectedApp.status}
+                  value={selectedApp.status || "saved"}
                   onValueChange={(val) => updateApplication("status", val)}
                 >
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[
-                      "saved",
-                      "applied",
-                      "phone_screen",
-                      "interview",
-                      "final_round",
-                      "offer",
-                      "accepted",
-                      "rejected",
-                      "withdrawn",
-                    ].map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s.replace(/_/g, " ")}
+                    {APPLICATION_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.replace(/_/g, " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {selectedApp.next_step && (
-                <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
-                  <p className="text-xs font-semibold text-violet-700 mb-1">
-                    Next Step
-                  </p>
-                  <p className="text-sm text-violet-800">{selectedApp.next_step}</p>
-                  {selectedApp.next_step_date && (
-                    <p className="text-xs text-violet-600 mt-1">
-                      Due: {format(new Date(selectedApp.next_step_date), "MMM d, yyyy")}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="grid gap-3 md:grid-cols-2">
+                {selectedApp.next_step ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Next Step</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedApp.next_step}</p>
+                    {selectedApp.next_step_date ? (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Due: {formatDate(selectedApp.next_step_date)}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {selectedApp.location && (
-                  <div>
-                    <p className="text-xs text-slate-400">Location</p>
-                    <p className="text-slate-700">{selectedApp.location}</p>
+                {selectedApp.location ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Location</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedApp.location}</p>
                   </div>
-                )}
-                {selectedApp.applied_date && (
-                  <div>
-                    <p className="text-xs text-slate-400">Applied</p>
-                    <p className="text-slate-700">
-                      {format(new Date(selectedApp.applied_date), "MMM d, yyyy")}
+                ) : null}
+
+                {selectedApp.applied_date ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Applied</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {formatDate(selectedApp.applied_date)}
                     </p>
                   </div>
-                )}
-                {selectedApp.salary_range && (
-                  <div>
-                    <p className="text-xs text-slate-400">Salary Range</p>
-                    <p className="text-slate-700">{selectedApp.salary_range}</p>
+                ) : null}
+
+                {selectedApp.salary_range ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Salary Range</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {selectedApp.salary_range}
+                    </p>
                   </div>
-                )}
-                {selectedApp.work_type && (
-                  <div>
-                    <p className="text-xs text-slate-400">Work Type</p>
-                    <p className="text-slate-700 capitalize">{selectedApp.work_type}</p>
+                ) : null}
+
+                {selectedApp.work_type ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Work Type</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedApp.work_type}</p>
                   </div>
-                )}
+                ) : null}
+
+                {selectedApp.follow_up_date ? (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-xs text-slate-500">Follow-up Date</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {formatDate(selectedApp.follow_up_date)}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
-              {selectedApp.follow_up_date && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-600 shrink-0" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-700">
-                      Follow-up Date
-                    </p>
-                    <p className="text-sm text-amber-800">
-                      {format(new Date(selectedApp.follow_up_date), "MMM d, yyyy")}
-                    </p>
+              {selectedApp.contact_name ||
+              selectedApp.contact_email ||
+              selectedApp.contact_phone ? (
+                <div className="rounded-xl border p-4">
+                  <p className="mb-3 text-sm font-medium text-slate-800">Employer Contact</p>
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {selectedApp.contact_name ? (
+                      <p>
+                        {selectedApp.contact_name}
+                        {selectedApp.contact_title
+                          ? ` · ${selectedApp.contact_title}`
+                          : ""}
+                      </p>
+                    ) : null}
+                    {selectedApp.contact_email ? <p>{selectedApp.contact_email}</p> : null}
+                    {selectedApp.contact_phone ? <p>{selectedApp.contact_phone}</p> : null}
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {(selectedApp.contact_name ||
-                selectedApp.contact_email ||
-                selectedApp.contact_phone) && (
-                <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                    <Phone className="w-3 h-3" /> Employer Contact
-                  </p>
-                  {selectedApp.contact_name && (
-                    <p className="text-sm text-slate-700">
-                      {selectedApp.contact_name}
-                      {selectedApp.contact_title
-                        ? ` · ${selectedApp.contact_title}`
-                        : ""}
-                    </p>
-                  )}
-                  {selectedApp.contact_email && (
-                    <p className="text-xs text-blue-600">
-                      {selectedApp.contact_email}
-                    </p>
-                  )}
-                  {selectedApp.contact_phone && (
-                    <p className="text-xs text-slate-600">
-                      {selectedApp.contact_phone}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="rounded-xl border p-4">
+                <p className="mb-3 text-sm font-medium text-slate-800">Running Notes</p>
 
-              <div>
-                <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                  <StickyNote className="w-3 h-3" /> Running Notes
-                </p>
-
-                <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                <div className="mb-4 space-y-2 max-h-56 overflow-y-auto">
                   {normalizeApplicationNotes(selectedApp).length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">
-                      No notes yet
-                    </p>
+                    <p className="text-sm text-slate-400">No notes yet</p>
                   ) : (
                     normalizeApplicationNotes(selectedApp).map((entry, idx) => (
-                      <div key={idx} className="bg-slate-50 rounded-lg p-2 text-xs">
-                        <p className="text-slate-700 whitespace-pre-wrap">
-                          {entry.text}
-                        </p>
-                        <p className="text-slate-400 mt-0.5">
+                      <div key={idx} className="rounded-xl bg-slate-50 p-3 text-sm">
+                        <p className="text-slate-800">{entry.text}</p>
+                        <p className="mt-1 text-xs text-slate-400">
                           {entry.created_at
-                            ? format(new Date(entry.created_at), "MMM d, h:mm a")
+                            ? formatDate(entry.created_at, "MMM d, h:mm a")
                             : ""}
                           {entry.created_by ? ` • ${entry.created_by}` : ""}
                         </p>
@@ -1250,7 +1254,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Textarea
                     value={selectedAppNewNote}
                     onChange={(e) => setSelectedAppNewNote(e.target.value)}
@@ -1270,38 +1274,37 @@ Always address them by their first name (${client?.first_name}) and tailor all a
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
-                  Job Posting URL
-                </Label>
-                <div className="flex gap-2 items-center">
+                <Label className="mb-1 block text-xs text-slate-500">Job Posting URL</Label>
+                <div className="flex items-center gap-2">
                   <Input
-                    className="h-8 text-sm"
+                    className="h-9 text-sm"
                     placeholder="https://..."
                     defaultValue={selectedApp.job_url || ""}
                     onBlur={(e) => {
-                      if (e.target.value !== selectedApp.job_url) {
+                      if (e.target.value !== (selectedApp.job_url || "")) {
                         updateApplication("job_url", e.target.value);
                       }
                     }}
                   />
-                  {selectedApp.job_url && (
+                  {selectedApp.job_url ? (
                     <a
                       href={selectedApp.job_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                      className="whitespace-nowrap text-sm text-blue-600 hover:underline"
                     >
                       Open ↗
                     </a>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
-              {updatingApp && (
-                <p className="text-xs text-slate-400 text-center">Saving...</p>
-              )}
+              {updatingApp ? (
+                <p className="text-center text-xs text-slate-400">Saving...</p>
+              ) : null}
             </div>
-          )}
+          ) : null}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedApp(null)}>
               Close
@@ -1315,140 +1318,158 @@ Always address them by their first name (${client?.first_name}) and tailor all a
           <DialogHeader>
             <DialogTitle>Add Job Application</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-3">
-            <div className="grid grid-cols-2 gap-3">
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <Label className="text-xs">Company *</Label>
                 <Input
                   value={appForm.company || ""}
                   onChange={(e) =>
-                    setAppForm((p) => ({ ...p, company: e.target.value }))
+                    setAppForm((prev) => ({ ...prev, company: e.target.value }))
                   }
                 />
               </div>
+
               <div>
                 <Label className="text-xs">Position *</Label>
                 <Input
                   value={appForm.position || ""}
                   onChange={(e) =>
-                    setAppForm((p) => ({ ...p, position: e.target.value }))
+                    setAppForm((prev) => ({ ...prev, position: e.target.value }))
                   }
                 />
               </div>
+
               <div>
                 <Label className="text-xs">Applied Date</Label>
                 <Input
                   type="date"
                   value={appForm.applied_date || ""}
                   onChange={(e) =>
-                    setAppForm((p) => ({ ...p, applied_date: e.target.value }))
+                    setAppForm((prev) => ({ ...prev, applied_date: e.target.value }))
                   }
                 />
               </div>
+
               <div>
                 <Label className="text-xs flex items-center gap-1">
-                  <Bell className="w-3 h-3 text-amber-500" /> Follow-up Date
+                  <Bell className="h-3 w-3 text-amber-500" />
+                  Follow-up Date
                 </Label>
                 <Input
                   type="date"
                   value={appForm.follow_up_date || ""}
                   onChange={(e) =>
-                    setAppForm((p) => ({ ...p, follow_up_date: e.target.value }))
+                    setAppForm((prev) => ({ ...prev, follow_up_date: e.target.value }))
                   }
                 />
               </div>
-              <div className="col-span-2">
+
+              <div className="md:col-span-2">
                 <Label className="text-xs">Job URL</Label>
                 <Input
                   value={appForm.job_url || ""}
                   onChange={(e) =>
-                    setAppForm((p) => ({ ...p, job_url: e.target.value }))
+                    setAppForm((prev) => ({ ...prev, job_url: e.target.value }))
                   }
                 />
               </div>
             </div>
 
-            <div className="border-t border-slate-200 pt-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5" /> Employer Contact
+            <div className="border-t pt-4">
+              <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-700">
+                <Phone className="h-3.5 w-3.5" />
+                Employer Contact
               </p>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <Label className="text-xs">Contact Name</Label>
                   <Input
                     value={appForm.contact_name || ""}
                     onChange={(e) =>
-                      setAppForm((p) => ({ ...p, contact_name: e.target.value }))
+                      setAppForm((prev) => ({ ...prev, contact_name: e.target.value }))
                     }
                   />
                 </div>
+
                 <div>
                   <Label className="text-xs">Contact Title</Label>
                   <Input
                     value={appForm.contact_title || ""}
                     onChange={(e) =>
-                      setAppForm((p) => ({ ...p, contact_title: e.target.value }))
+                      setAppForm((prev) => ({ ...prev, contact_title: e.target.value }))
                     }
                   />
                 </div>
+
                 <div>
                   <Label className="text-xs">Contact Email</Label>
                   <Input
                     type="email"
                     value={appForm.contact_email || ""}
                     onChange={(e) =>
-                      setAppForm((p) => ({ ...p, contact_email: e.target.value }))
+                      setAppForm((prev) => ({ ...prev, contact_email: e.target.value }))
                     }
                   />
                 </div>
+
                 <div>
                   <Label className="text-xs">Contact Phone</Label>
                   <Input
                     type="tel"
                     value={appForm.contact_phone || ""}
                     onChange={(e) =>
-                      setAppForm((p) => ({ ...p, contact_phone: e.target.value }))
+                      setAppForm((prev) => ({ ...prev, contact_phone: e.target.value }))
                     }
                   />
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-slate-200 pt-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
-                <StickyNote className="w-3.5 h-3.5" /> Notes
+            <div className="border-t pt-4">
+              <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-700">
+                <StickyNote className="h-3.5 w-3.5" />
+                Notes
               </p>
-              <div className="space-y-2 mb-2 max-h-36 overflow-y-auto">
-                {(appForm.note_entries || []).length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No notes yet</p>
-                )}
-                {(appForm.note_entries || []).map((entry, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-2 bg-slate-50 rounded-lg p-2 text-xs"
-                  >
-                    <div className="flex-1">
-                      <p className="text-slate-700">{entry.text}</p>
-                      <p className="text-slate-400 mt-0.5">
-                        {entry.created_at
-                          ? format(new Date(entry.created_at), "MMM d, h:mm a")
-                          : ""}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setAppForm((p) => ({
-                          ...p,
-                          note_entries: p.note_entries.filter((_, i) => i !== idx),
-                        }))
-                      }
-                      className="text-slate-300 hover:text-red-400"
+
+              <div className="mb-2 max-h-36 space-y-2 overflow-y-auto">
+                {(appForm.note_entries || []).length === 0 ? (
+                  <p className="text-xs italic text-slate-400">No notes yet</p>
+                ) : (
+                  (appForm.note_entries || []).map((entry, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 rounded-lg bg-slate-50 p-2 text-xs"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex-1">
+                        <p className="text-slate-700">{entry.text}</p>
+                        <p className="mt-0.5 text-slate-400">
+                          {entry.created_at
+                            ? formatDate(entry.created_at, "MMM d, h:mm a")
+                            : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAppForm((prev) => ({
+                            ...prev,
+                            note_entries: (prev.note_entries || []).filter(
+                              (_, i) => i !== idx
+                            ),
+                          }))
+                        }
+                        className="text-slate-300 hover:text-red-400"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
+
               <div className="flex gap-2">
                 <Textarea
                   value={newAppNote}
@@ -1464,16 +1485,18 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                   className="self-end"
                   onClick={() => {
                     if (!newAppNote.trim()) return;
-                    setAppForm((p) => ({
-                      ...p,
+
+                    setAppForm((prev) => ({
+                      ...prev,
                       note_entries: [
-                        ...(p.note_entries || []),
+                        ...(prev.note_entries || []),
                         {
                           text: newAppNote.trim(),
                           created_at: new Date().toISOString(),
                         },
                       ],
                     }));
+
                     setNewAppNote("");
                   }}
                 >
@@ -1482,6 +1505,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
               </div>
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewApp(false)}>
               Cancel
@@ -1494,41 +1518,45 @@ Always address them by their first name (${client?.first_name}) and tailor all a
       </Dialog>
 
       <Dialog open={showNewTask} onOpenChange={setShowNewTask}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Task</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-3">
+
+          <div className="space-y-3 py-2">
             <div>
               <Label className="text-xs">Task Title *</Label>
               <Input
                 value={taskForm.title || ""}
                 onChange={(e) =>
-                  setTaskForm((p) => ({ ...p, title: e.target.value }))
+                  setTaskForm((prev) => ({ ...prev, title: e.target.value }))
                 }
               />
             </div>
+
             <div>
               <Label className="text-xs">Description</Label>
               <Textarea
                 value={taskForm.description || ""}
                 onChange={(e) =>
-                  setTaskForm((p) => ({ ...p, description: e.target.value }))
+                  setTaskForm((prev) => ({ ...prev, description: e.target.value }))
                 }
                 rows={2}
               />
             </div>
+
             <div>
               <Label className="text-xs">Due Date</Label>
               <Input
                 type="date"
                 value={taskForm.due_date || ""}
                 onChange={(e) =>
-                  setTaskForm((p) => ({ ...p, due_date: e.target.value }))
+                  setTaskForm((prev) => ({ ...prev, due_date: e.target.value }))
                 }
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewTask(false)}>
               Cancel
@@ -1540,23 +1568,89 @@ Always address them by their first name (${client?.first_name}) and tailor all a
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedTask?.title || "Task"}</DialogTitle>
+          </DialogHeader>
+
+          {selectedTask ? (
+            <div className="space-y-4 py-2">
+              {selectedTask.description ? (
+                <div>
+                  <Label className="mb-1 block text-xs text-slate-500">Description</Label>
+                  <p className="text-sm text-slate-700">{selectedTask.description}</p>
+                </div>
+              ) : null}
+
+              <div>
+                <Label className="mb-1 block text-xs text-slate-500">Status</Label>
+                <Select value={taskStatus || "pending"} onValueChange={setTaskStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">pending</SelectItem>
+                    <SelectItem value="in_progress">in progress</SelectItem>
+                    <SelectItem value="completed">completed</SelectItem>
+                    <SelectItem value="cancelled">cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1 block text-xs text-slate-500">Notes</Label>
+                <Textarea
+                  value={taskNotes}
+                  onChange={(e) => setTaskNotes(e.target.value)}
+                  rows={5}
+                  placeholder="Add task notes..."
+                />
+              </div>
+
+              {selectedTask.due_date ? (
+                <div className="text-sm text-slate-500">
+                  Due: {formatDate(selectedTask.due_date)}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+            <Button
+              variant="destructive"
+              onClick={() => deleteTask(selectedTask.id, selectedTask.title)}
+              disabled={savingTask}
+            >
+              Delete
+            </Button>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSelectedTask(null)}>
+                Cancel
+              </Button>
+              <Button onClick={saveTaskDetail} disabled={savingTask}>
+                {savingTask ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showUploadDoc} onOpenChange={setShowUploadDoc}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Upload {uploadCategory === "resume" ? "Resume" : "Cover Letter"}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
+
+          <div className="py-4">
             <Label htmlFor="file-upload" className="cursor-pointer">
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors">
-                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-                <p className="text-sm text-slate-600 mb-1">
-                  Click to upload or drag and drop
-                </p>
-                <p className="text-xs text-slate-400">
-                  PDF, DOC, DOCX (max 10MB)
-                </p>
+              <div className="rounded-lg border-2 border-dashed border-slate-300 p-8 text-center transition-colors hover:border-slate-400">
+                <Upload className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                <p className="mb-1 text-sm text-slate-600">Click to upload or drag and drop</p>
+                <p className="text-xs text-slate-400">PDF, DOC, DOCX (max 10MB)</p>
               </div>
               <Input
                 id="file-upload"
@@ -1567,147 +1661,25 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                 disabled={uploading}
               />
             </Label>
-            {uploading && (
-              <div className="flex items-center justify-center gap-2 mt-4 text-sm text-slate-600">
-                <Loader2 className="w-4 h-4 animate-spin" />
+
+            {uploading ? (
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Uploading...
               </div>
-            )}
+            ) : null}
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowUploadDoc(false)}
-              disabled={uploading}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!selectedTask}
-        onOpenChange={(open) => {
-          if (!open) setSelectedTask(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-slate-500" />
-              {isStaff ? "Edit Task" : selectedTask?.title}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedTask && (
-            <div className="space-y-4 py-2">
-              {isStaff ? (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-500">Title</Label>
-                    <Input
-                      value={selectedTask.title}
-                      onChange={(e) =>
-                        setSelectedTask((t) => ({ ...t, title: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-500">Description</Label>
-                    <Textarea
-                      value={selectedTask.description || ""}
-                      onChange={(e) =>
-                        setSelectedTask((t) => ({
-                          ...t,
-                          description: e.target.value,
-                        }))
-                      }
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-500">Due Date</Label>
-                    <Input
-                      type="date"
-                      value={selectedTask.due_date || ""}
-                      onChange={(e) =>
-                        setSelectedTask((t) => ({
-                          ...t,
-                          due_date: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  {selectedTask.description && (
-                    <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
-                      {selectedTask.description}
-                    </p>
-                  )}
-                  {selectedTask.due_date && (
-                    <p className="text-xs text-slate-500">
-                      Due: {format(new Date(selectedTask.due_date), "MMM d, yyyy")}
-                    </p>
-                  )}
-                </>
-              )}
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Status</Label>
-                <Select value={taskStatus} onValueChange={setTaskStatus}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">
-                  {isStaff ? "Staff Notes" : "My Notes"}
-                </Label>
-                <Textarea
-                  value={taskNotes}
-                  onChange={(e) => setTaskNotes(e.target.value)}
-                  placeholder="Add notes, updates, or questions here..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {isStaff && selectedTask && (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="sm:mr-auto"
-                onClick={() => deleteTask(selectedTask.id, selectedTask.title)}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Task
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setSelectedTask(null)}>
-              Cancel
-            </Button>
-            <Button onClick={saveTaskDetail} disabled={savingTask}>
-              {savingTask ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <ImportFromIndeedDialog
         open={showIndeedImport}
-        onClose={() => setShowIndeedImport(false)}
-        clientId={client?.id}
-        onImported={() =>
-          queryClient.invalidateQueries({ queryKey: ["client-applications"] })
-        }
+        onOpenChange={setShowIndeedImport}
+        client={client}
+        onImported={async () => {
+          await invalidate(["client-applications"]);
+          toast.success("Applications imported");
+        }}
       />
     </div>
   );
