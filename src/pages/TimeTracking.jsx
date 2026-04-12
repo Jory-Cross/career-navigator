@@ -151,14 +151,19 @@ const employeeById = useMemo(() => {
   }
   return map;
 }, [filterableEmployees]);
-  const clients =
+ const clients = useMemo(() => {
+  if (
     (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
     employeeFilter !== "all"
-      ? allClients.filter((c) => {
-          const emp = filterableEmployees.find((e) => e.id === employeeFilter);
-          return emp && (c.assigned_employee_id === emp.id || c.created_by === emp.email);
-        })
-      : allClients;
+  ) {
+    const emp = employeeById[employeeFilter];
+    return allClients.filter((c) => {
+      return emp && (c.assigned_employee_id === emp.id || c.created_by === emp.email);
+    });
+  }
+
+  return allClients;
+}, [allClients, effectiveUser?.role, employeeFilter, employeeById]);
 
   const clientIds = useMemo(() => allClients.map((c) => c.id), [allClients]);
 
