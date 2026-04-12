@@ -62,6 +62,28 @@ const CLIENT_VISIBLE_ACTIVITY_TYPES = [
   "document_uploaded",
 ];
 
+function getClientIdFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get("id");
+}
+
+function normalizeApplicationNotes(app) {
+  if (Array.isArray(app?.note_entries)) {
+    return app.note_entries;
+  }
+
+  if (app?.notes && typeof app.notes === "string") {
+    return [
+      {
+        text: app.notes,
+        created_at: app.updated_date || app.created_date || new Date().toISOString(),
+      },
+    ];
+  }
+
+  return [];
+}
+
 export default function ClientPortal() {
   const [user, setUser] = useState(null);
   const [client, setClient] = useState(null);
@@ -69,6 +91,7 @@ export default function ClientPortal() {
 
   const [showNewApp, setShowNewApp] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [selectedAppNewNote, setSelectedAppNewNote] = useState("");
   const [updatingApp, setUpdatingApp] = useState(false);
 
   const [showNewTask, setShowNewTask] = useState(false);
@@ -88,12 +111,7 @@ export default function ClientPortal() {
   const [uploading, setUploading] = useState(false);
 
   const queryClient = useQueryClient();
-
-  const urlParams = useMemo(
-    () => new URLSearchParams(window.location.search),
-    []
-  );
-  const clientIdParam = urlParams.get("id");
+  const clientIdParam = useMemo(() => getClientIdFromUrl(), []);
 
   const loadClientData = useCallback(async () => {
     try {
@@ -108,10 +126,7 @@ export default function ClientPortal() {
         return;
       }
 
-      if (
-        STAFF_ROLES.includes(currentUser.role) &&
-        clientIdParam
-      ) {
+      if (STAFF_ROLES.includes(currentUser.role) && clientIdParam) {
         let clientData = null;
 
         try {
@@ -151,17 +166,13 @@ export default function ClientPortal() {
     loadClientData();
   }, [loadClientData]);
 
-  const {
-    data: applications = [],
-  } = useQuery({
+  const { data: applications = [] } = useQuery({
     queryKey: ["client-applications", client?.id],
     queryFn: () => base44.entities.JobApplication.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: tasks = [],
-  } = useQuery({
+  const { data: tasks = [] } = useQuery({
     queryKey: ["client-tasks", client?.id],
     queryFn: async () => {
       try {
@@ -174,57 +185,43 @@ export default function ClientPortal() {
     enabled: !!client,
   });
 
-  const {
-    data: resumes = [],
-  } = useQuery({
+  const { data: resumes = [] } = useQuery({
     queryKey: ["client-resumes", client?.id],
     queryFn: () => base44.entities.Resume.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: interviewSessions = [],
-  } = useQuery({
+  const { data: interviewSessions = [] } = useQuery({
     queryKey: ["client-interviews", client?.id],
     queryFn: () => base44.entities.InterviewSession.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: documents = [],
-  } = useQuery({
+  const { data: documents = [] } = useQuery({
     queryKey: ["client-documents", client?.id],
     queryFn: () => base44.entities.Document.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: meetings = [],
-  } = useQuery({
+  const { data: meetings = [] } = useQuery({
     queryKey: ["client-meetings", client?.id],
     queryFn: () => base44.entities.Meeting.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: timeEntries = [],
-  } = useQuery({
+  const { data: timeEntries = [] } = useQuery({
     queryKey: ["client-time-entries", client?.id],
     queryFn: () => base44.entities.TimeEntry.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: activities = [],
-  } = useQuery({
+  const { data: activities = [] } = useQuery({
     queryKey: ["client-activities", client?.id],
     queryFn: () => base44.entities.Activity.filter({ client_id: client.id }),
     enabled: !!client,
   });
 
-  const {
-    data: assessments = [],
-  } = useQuery({
+  const { data: assessments = [] } = useQuery({
     queryKey: ["client-assessments", client?.id],
     queryFn: () => base44.entities.Assessment.filter({ client_id: client.id }),
     enabled: !!client,
@@ -443,6 +440,52 @@ export default function ClientPortal() {
     [selectedApp, invalidate, logActivity]
   );
 
+  const addApplicationNote = useCallback(async () => {
+    if (!selectedApp || !selectedAppNewNote.trim()) return;
+
+    const existingEntries = normalizeApplicationNotes(selectedApp);
+    const nextEntries = [
+      ...existingEntries,
+      {
+        text: selectedAppNewNote.trim(),
+        created_at: new Date().toISOString(),
+        created_by: user?.email || client?.email || "client",
+      },
+    ];
+
+    const flattenedNotes = nextEntries.map((entry) => entry.text).join("\n\n");
+
+    setUpdatingApp(true);
+    try {
+      await base44.entities.JobApplication.update(selectedApp.id, {
+        note_entries: nextEntries,
+        notes: flattenedNotes,
+      });
+
+      setSelectedApp((prev) =>
+        prev
+          ? {
+              ...prev,
+              note_entries: nextEntries,
+              notes: flattenedNotes,
+            }
+          : prev
+      );
+
+      setSelectedAppNewNote("");
+      await invalidate(["client-applications"]);
+      await logActivity(
+        "application_updated",
+        `Application note added: ${selectedApp.position} at ${selectedApp.company}`
+      );
+      toast.success("Note added");
+    } catch (error) {
+      toast.error("Failed to add note");
+    } finally {
+      setUpdatingApp(false);
+    }
+  }, [selectedApp, selectedAppNewNote, user?.email, client?.email, invalidate, logActivity]);
+
   const statusColors = {
     saved: "bg-slate-100 text-slate-700",
     applied: "bg-blue-100 text-blue-700",
@@ -602,7 +645,10 @@ export default function ClientPortal() {
                     <div
                       key={app.id}
                       className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"
-                      onClick={() => setSelectedApp(app)}
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setSelectedAppNewNote("");
+                      }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
@@ -1044,7 +1090,15 @@ Always address them by their first name (${client?.first_name}) and tailor all a
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
+      <Dialog
+        open={!!selectedApp}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedApp(null);
+            setSelectedAppNewNote("");
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1169,30 +1223,51 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                 </div>
               )}
 
-              {(selectedApp.note_entries?.length > 0 || selectedApp.notes) && (
-                <div>
-                  <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                    <StickyNote className="w-3 h-3" /> Notes
-                  </p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {selectedApp.note_entries?.map((entry, idx) => (
+              <div>
+                <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                  <StickyNote className="w-3 h-3" /> Running Notes
+                </p>
+
+                <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                  {normalizeApplicationNotes(selectedApp).length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">
+                      No notes yet
+                    </p>
+                  ) : (
+                    normalizeApplicationNotes(selectedApp).map((entry, idx) => (
                       <div key={idx} className="bg-slate-50 rounded-lg p-2 text-xs">
-                        <p className="text-slate-700">{entry.text}</p>
+                        <p className="text-slate-700 whitespace-pre-wrap">
+                          {entry.text}
+                        </p>
                         <p className="text-slate-400 mt-0.5">
                           {entry.created_at
                             ? format(new Date(entry.created_at), "MMM d, h:mm a")
                             : ""}
+                          {entry.created_by ? ` • ${entry.created_by}` : ""}
                         </p>
                       </div>
-                    ))}
-                    {selectedApp.notes && !selectedApp.note_entries?.length && (
-                      <p className="text-sm text-slate-700 bg-slate-50 rounded p-2">
-                        {selectedApp.notes}
-                      </p>
-                    )}
-                  </div>
+                    ))
+                  )}
                 </div>
-              )}
+
+                <div className="flex gap-2">
+                  <Textarea
+                    value={selectedAppNewNote}
+                    onChange={(e) => setSelectedAppNewNote(e.target.value)}
+                    rows={3}
+                    placeholder="Add a note about your follow-up, contact attempt, interview prep, or any progress on this application..."
+                    className="text-sm flex-1"
+                  />
+                  <Button
+                    type="button"
+                    className="self-end"
+                    onClick={addApplicationNote}
+                    disabled={updatingApp || !selectedAppNewNote.trim()}
+                  >
+                    {updatingApp ? "Saving..." : "Add Note"}
+                  </Button>
+                </div>
+              </div>
 
               <div>
                 <Label className="text-xs text-slate-500 mb-1 block">
