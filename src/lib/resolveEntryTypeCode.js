@@ -5,6 +5,8 @@ import {
   getEntryTypeConfig,
 } from "@/lib/entryTypeRegistry";
 
+const entryTypeIdCache = new Map();
+
 function resolveCodeFromLabel(label) {
   if (!label) return "";
 
@@ -25,16 +27,9 @@ function resolveCodeFromLabel(label) {
 /**
  * Shared entry type code resolver.
  *
- * Resolution order:
- * 1. direct entry fields
- * 2. direct label/name fields
- * 3. DB lookup via entry_type_id
- * 4. normalized registry fallback
- *
- * Used by:
- * - TimeLogDashboard
- * - TimeTracking
- * - edit launchers
+ * Optimized:
+ * - exits fast when direct code exists
+ * - caches DB lookups by entry_type_id
  */
 export async function resolveEntryTypeCode(entry) {
   if (!entry) return "";
@@ -70,8 +65,12 @@ export async function resolveEntryTypeCode(entry) {
     }
   }
 
-  // 3) DB lookup by entry_type_id
+  // 3) DB lookup by entry_type_id with cache
   if (entry.entry_type_id) {
+    if (entryTypeIdCache.has(entry.entry_type_id)) {
+      return entryTypeIdCache.get(entry.entry_type_id) || "";
+    }
+
     try {
       let entryTypeRecord = null;
 
@@ -98,6 +97,7 @@ export async function resolveEntryTypeCode(entry) {
 
         if (dbCode) {
           const normalized = normalizeEntryTypeCode(dbCode);
+          entryTypeIdCache.set(entry.entry_type_id, normalized || "");
           if (getEntryTypeConfig(normalized)) {
             return normalized;
           }
@@ -105,28 +105,21 @@ export async function resolveEntryTypeCode(entry) {
         }
 
         const resolvedFromDbLabel = resolveCodeFromLabel(dbLabel);
+        entryTypeIdCache.set(entry.entry_type_id, resolvedFromDbLabel || "");
         if (resolvedFromDbLabel) {
           return resolvedFromDbLabel;
         }
       }
+
+      entryTypeIdCache.set(entry.entry_type_id, "");
     } catch (err) {
       console.warn("[resolveEntryTypeCode] DB lookup failed:", err?.message);
     }
   }
 
-  console.warn("[resolveEntryTypeCode] Could not resolve entry type for entry:", {
-    id: entry?.id,
-    entry_type_id: entry?.entry_type_id,
-    entry_type_code: entry?.entry_type_code,
-    entry_type_key: entry?.entry_type_key,
-    entry_type: entry?.entry_type,
-    type: entry?.type,
-    category: entry?.category,
-    entry_type_name: entry?.entry_type_name,
-    entry_type_label: entry?.entry_type_label,
-    type_name: entry?.type_name,
-    type_label: entry?.type_label,
-  });
-
   return "";
+}
+
+export function clearEntryTypeResolutionCache() {
+  entryTypeIdCache.clear();
 }
