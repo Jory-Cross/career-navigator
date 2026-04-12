@@ -72,6 +72,7 @@ export default function ClientDetail() {
       if (!user) return clientData;
       if (user.role === "admin") return clientData;
       if (user.role === "management") return clientData;
+
       if (
         user.role === "employee" &&
         (clientData.assigned_employee_id === user.id ||
@@ -79,6 +80,7 @@ export default function ClientDetail() {
       ) {
         return clientData;
       }
+
       if (user.role === "client" && clientData.id === clientId) {
         return clientData;
       }
@@ -105,7 +107,8 @@ export default function ClientDetail() {
   const shouldLoadApplications = !!clientId && activeTab === "applications";
   const shouldLoadTasks = !!clientId && activeTab === "tasks";
   const shouldLoadResumes = !!clientId && activeTab === "resumes";
-  const shouldLoadTime = !!clientId && (activeTab === "time" || activeTab === "job_supports");
+  const shouldLoadTime =
+    !!clientId && (activeTab === "time" || activeTab === "job_supports");
   const shouldLoadActivity = !!clientId && activeTab === "activity";
 
   const { data: applications = [] } = useQuery({
@@ -169,22 +172,6 @@ export default function ClientDetail() {
     queryClient.invalidateQueries({ queryKey: ["activities", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshAll = React.useCallback(() => {
-    refreshClient();
-    refreshApplications();
-    refreshTasks();
-    refreshResumes();
-    refreshTimeEntries();
-    refreshActivities();
-  }, [
-    refreshClient,
-    refreshApplications,
-    refreshTasks,
-    refreshResumes,
-    refreshTimeEntries,
-    refreshActivities,
-  ]);
-
   const portalUrl = React.useMemo(() => {
     return `/ClientPortal?id=${clientId}`;
   }, [clientId]);
@@ -236,7 +223,7 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <ClientHeader client={client} onRefresh={refreshClient} />
+      <ClientHeader client={client} onUpdate={refreshClient} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
