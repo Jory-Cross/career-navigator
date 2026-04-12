@@ -146,7 +146,7 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
         })
       : allClients;
 
-  const clientIds = allClients.map((c) => c.id);
+  const clientIds = useMemo(() => allClients.map((c) => c.id), [allClients]);
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries"],
