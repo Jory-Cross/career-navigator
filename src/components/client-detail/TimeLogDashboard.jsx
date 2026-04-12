@@ -482,12 +482,11 @@ export default function TimeLogDashboard({
 
                       {(employee?.full_name || entry.description) && (
                         <div className="flex gap-2 text-xs text-slate-600">
-                          {employee?.full_name && <span>👤 {employee.full_name}</span>}
-                          {entry.description && (
-                            <span className="text-slate-500 italic line-clamp-1">
-                              {entry.description}
-                            </span>
-                          )}
+                          {employee?.full_name && (
+  <div className="flex gap-2 text-xs text-slate-600">
+    <span>👤 {employee.full_name}</span>
+  </div>
+)}
                         </div>
                       )}
                     </div>
