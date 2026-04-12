@@ -314,12 +314,11 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     }
   };
 
-  const getClientName = (id) => {
-    if (!id) return "Myself";
-    const client = allClients.find((c) => c.id === id);
-    return client ? `${client.first_name} ${client.last_name}` : "Unknown";
-  };
-
+  const getClientName = useCallback((id) => {
+  if (!id) return "Myself";
+  const client = clientById[id];
+  return client ? `${client.first_name} ${client.last_name}` : "Unknown";
+}, [clientById]);
   const now = new Date();
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth();
