@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 import {
   Select,
   SelectContent,
@@ -24,25 +25,6 @@ import { toast } from "sonner";
 import FormEngine from "@/components/time-entry/FormEngine";
 import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
-
-const ENTRY_TYPE_LABEL_ALIASES = {
-  misc: "Miscellaneous",
-  miscellaneous: "Miscellaneous",
-  pre_ets: "Pre-ETS",
-  pre_ets_training: "Pre-ETS",
-  eom_reporting: "End-of-Month Reporting",
-  end_of_month_reporting: "End-of-Month Reporting",
-  admin_time: "Admin Time",
-  wsa: "WSA",
-  work_based_learning: "Work-Based Learning",
-  wble: "Work-Based Learning",
-  work_based_learning_experience: "Work-Based Learning",
-  job_coaching: "Job Coaching",
-  job_development: "Job Development",
-  usor96: "Job Development",
-  life_skills: "Life Skills",
-  csb_hours: "CSB Hours",
-};
 
 function formatDurationMinutes(minutes) {
   const total = Number(minutes || 0);
