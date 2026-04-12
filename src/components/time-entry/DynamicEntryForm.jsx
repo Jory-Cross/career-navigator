@@ -49,6 +49,78 @@ async function resolveEntryTypeByCode(entryTypeCode) {
   return null;
 }
 
+function parseTimeToMinutes(value) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+
+  const ampmMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let hour = Number(ampmMatch[1]);
+    const minute = Number(ampmMatch[2]);
+    const ampm = ampmMatch[3].toUpperCase();
+
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    if (minute < 0 || minute > 59) return null;
+    if (hour < 1 || hour > 12) return null;
+
+    if (ampm === "AM") {
+      if (hour === 12) hour = 0;
+    } else {
+      if (hour !== 12) hour += 12;
+    }
+
+    return hour * 60 + minute;
+  }
+
+  const hhmmMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (hhmmMatch) {
+    const hour = Number(hhmmMatch[1]);
+    const minute = Number(hhmmMatch[2]);
+
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    if (hour < 0 || hour > 23) return null;
+    if (minute < 0 || minute > 59) return null;
+
+    return hour * 60 + minute;
+  }
+
+  return null;
+}
+
+function validateChronologicalTimes(formData) {
+  const startTime =
+    formData?.start_time ??
+    formData?.startTime ??
+    formData?.clock_in ??
+    formData?.clockIn ??
+    null;
+
+  const endTime =
+    formData?.end_time ??
+    formData?.endTime ??
+    formData?.clock_out ??
+    formData?.clockOut ??
+    null;
+
+  if (!startTime || !endTime) {
+    return "";
+  }
+
+  const startMinutes = parseTimeToMinutes(startTime);
+  const endMinutes = parseTimeToMinutes(endTime);
+
+  if (startMinutes == null || endMinutes == null) {
+    return "";
+  }
+
+  if (endMinutes <= startMinutes) {
+    return "End time must be after start time.";
+  }
+
+  return "";
+}
+
 export default function DynamicEntryForm({
   entryTypeCode,
   schema,
@@ -141,6 +213,12 @@ export default function DynamicEntryForm({
       setError(
         "Entry type is still loading or could not be resolved. Please wait a moment and try again."
       );
+      return;
+    }
+
+    const timeValidationError = validateChronologicalTimes(formData);
+    if (timeValidationError) {
+      setError(timeValidationError);
       return;
     }
 
