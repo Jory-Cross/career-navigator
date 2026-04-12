@@ -1,12 +1,34 @@
 /**
  * Centralized payload builder for all time entry saves.
  * Safe for both structured Voc Rehab forms and simple clock-in/clock-out forms.
+ *
+ * Phase 4 cleanup:
+ * - same behavior
+ * - cleaner helper grouping
+ * - easier to maintain
  */
 
 function getSchemaFields(schema) {
   if (Array.isArray(schema)) return schema;
   if (Array.isArray(schema?.fields)) return schema.fields;
   return [];
+}
+
+function numberFromAny(value) {
+  if (value == null) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const parsed = Number(String(value).trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asString(value) {
+  if (value == null) return "";
+  return String(value);
+}
+
+function emptyToNull(value) {
+  return value === "" || value === undefined ? null : value;
 }
 
 function parseTimeToMinutes(value) {
@@ -57,9 +79,8 @@ function parseTimeToMinutes(value) {
 function normalizeClockValue(value) {
   if (!value) return value;
 
-  const raw = String(value).trim();
-  const totalMinutes = parseTimeToMinutes(raw);
-  if (totalMinutes == null) return raw;
+  const totalMinutes = parseTimeToMinutes(value);
+  if (totalMinutes == null) return String(value).trim();
 
   const hour = Math.floor(totalMinutes / 60);
   const minute = totalMinutes % 60;
@@ -81,63 +102,66 @@ function calculateDurationMinutes(startTime, endTime) {
   return diff;
 }
 
-function numberFromAny(value) {
-  if (value == null) return 0;
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+function getClockTimeCandidates(formData) {
+  return {
+    startTime:
+      formData?.start_time ??
+      formData?.startTime ??
+      formData?.clock_in ??
+      formData?.clockIn ??
+      null,
 
-  const parsed = Number(String(value).trim());
-  return Number.isFinite(parsed) ? parsed : 0;
+    endTime:
+      formData?.end_time ??
+      formData?.endTime ??
+      formData?.clock_out ??
+      formData?.clockOut ??
+      null,
+  };
 }
 
-function normalizeDurationMinutes(formData, schema) {
-  if (!formData) return 0;
-
-  // 1. Prefer explicit clock-in/clock-out values
-  const startTime =
-    formData.start_time ??
-    formData.startTime ??
-    formData.clock_in ??
-    formData.clockIn ??
-    null;
-
-  const endTime =
-    formData.end_time ??
-    formData.endTime ??
-    formData.clock_out ??
-    formData.clockOut ??
-    null;
-
-  const calculatedFromClock = calculateDurationMinutes(startTime, endTime);
-  if (calculatedFromClock > 0) {
-    return calculatedFromClock;
-  }
-
-  // 2. Direct duration_minutes
-  const directDurationMinutes = numberFromAny(formData.duration_minutes);
-  if (directDurationMinutes > 0) {
-    return directDurationMinutes;
-  }
-
-  // 3. Generic duration field in minutes
-  const directDuration = numberFromAny(formData.duration);
-  if (directDuration > 0) {
-    return directDuration;
-  }
-
-  // 4. Schema-based duration field lookup (hours -> convert to minutes)
+function getDurationFieldFromSchema(schema) {
   const fields = getSchemaFields(schema);
 
-  const durationField =
+  return (
     fields.find((f) => f.isDuration === true) ||
     fields.find((f) => (f.key || "").toLowerCase().includes("duration")) ||
     fields.find((f) => (f.key || "").toLowerCase().includes("hour")) ||
     fields.find((f) => (f.label || "").toLowerCase().includes("hours spent")) ||
     fields.find((f) => (f.label || "").toLowerCase().includes("hours")) ||
-    fields.find((f) => (f.label || "").toLowerCase().includes("duration"));
+    fields.find((f) => (f.label || "").toLowerCase().includes("duration")) ||
+    null
+  );
+}
 
+function normalizeDurationMinutes(formData, schema) {
+  if (!formData) return 0;
+
+  // 1) Prefer explicit clock-in/clock-out values
+  const { startTime, endTime } = getClockTimeCandidates(formData);
+  const calculatedFromClock = calculateDurationMinutes(startTime, endTime);
+  if (calculatedFromClock > 0) {
+    return calculatedFromClock;
+  }
+
+  // 2) Direct duration_minutes
+  const directDurationMinutes = numberFromAny(formData.duration_minutes);
+  if (directDurationMinutes > 0) {
+    return directDurationMinutes;
+  }
+
+  // 3) Generic duration field in minutes
+  const directDuration = numberFromAny(formData.duration);
+  if (directDuration > 0) {
+    return directDuration;
+  }
+
+  // 4) Schema-based duration field lookup (hours -> convert to minutes)
+  const durationField = getDurationFieldFromSchema(schema);
   if (durationField) {
     const raw = formData[durationField.key];
     const value = numberFromAny(raw);
+
     if (value > 0) {
       const fieldKey = String(durationField.key || "").toLowerCase();
       const fieldLabel = String(durationField.label || "").toLowerCase();
@@ -151,7 +175,7 @@ function normalizeDurationMinutes(formData, schema) {
     }
   }
 
-  // 5. Legacy split hours/minutes fields
+  // 5) Legacy split hours/minutes fields
   if (formData.hours != null || formData.minutes != null) {
     const hours = numberFromAny(formData.hours);
     const minutes = numberFromAny(formData.minutes);
@@ -159,7 +183,7 @@ function normalizeDurationMinutes(formData, schema) {
     if (total > 0) return total;
   }
 
-  // 6. Legacy hours-like fields
+  // 6) Legacy hours-like fields
   const legacyHourCandidates = [
     formData.hours_spent,
     formData.billable_hours,
@@ -208,62 +232,22 @@ function normalizeDateValue(value) {
   return String(value);
 }
 
-function asString(value) {
-  if (value == null) return "";
-  return String(value);
+function getSchemaDateField(schema) {
+  const fields = getSchemaFields(schema);
+
+  return (
+    fields.find((f) => f.isDate === true) ||
+    fields.find((f) => (f.type || "").toLowerCase() === "date") ||
+    fields.find((f) => (f.key || "").toLowerCase().includes("date")) ||
+    fields.find((f) => (f.label || "").toLowerCase().includes("date")) ||
+    null
+  );
 }
 
-function emptyToNull(value) {
-  return value === "" || value === undefined ? null : value;
-}
+function getRawDateValue(formData, schema) {
+  const dateField = getSchemaDateField(schema);
 
-export function buildTimeEntryPayload({
-  entryType,
-  formData = {},
-  schema,
-}) {
-  if (!entryType?.id) {
-    throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
-  }
-
-  const normalizedSchema = Array.isArray(schema) ? { fields: schema } : schema;
-
-  const duration_minutes = normalizeDurationMinutes(formData, normalizedSchema);
-  if (duration_minutes <= 0) {
-    throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
-  }
-
-  const normalizedStartTime = normalizeClockValue(
-    formData.start_time ??
-      formData.startTime ??
-      formData.clock_in ??
-      formData.clockIn ??
-      null
-  );
-
-  const normalizedEndTime = normalizeClockValue(
-    formData.end_time ??
-      formData.endTime ??
-      formData.clock_out ??
-      formData.clockOut ??
-      null
-  );
-
-  const topLevel = {
-    entry_type_id: entryType.id,
-    duration_minutes,
-    notes: asString(formData.notes),
-    service_code_id: emptyToNull(formData.service_code_id),
-  };
-
-  const schemaFields = getSchemaFields(normalizedSchema);
-  const dateField =
-    schemaFields.find((f) => f.isDate === true) ||
-    schemaFields.find((f) => (f.type || "").toLowerCase() === "date") ||
-    schemaFields.find((f) => (f.key || "").toLowerCase().includes("date")) ||
-    schemaFields.find((f) => (f.label || "").toLowerCase().includes("date"));
-
-  const rawDate =
+  return (
     formData.date ??
     formData.entry_date ??
     formData.service_date ??
@@ -276,9 +260,43 @@ export function buildTimeEntryPayload({
     formData.admin_date ??
     formData.misc_date ??
     formData.eom_month ??
-    (dateField ? formData[dateField.key] : null);
+    (dateField ? formData[dateField.key] : null)
+  );
+}
 
-  const normalizedDate = normalizeDateValue(rawDate);
+function getDescriptionValue(formData) {
+  return (
+    formData.description ??
+    formData.activity_description ??
+    formData.admin_description ??
+    formData.misc_description ??
+    formData.preets_activity ??
+    formData.wsa_tasks_completed ??
+    formData.eom_services_provided ??
+    null
+  );
+}
+
+function buildTopLevelPayload(entryType, formData, schema) {
+  const normalizedSchema = Array.isArray(schema) ? { fields: schema } : schema;
+
+  const duration_minutes = normalizeDurationMinutes(formData, normalizedSchema);
+  if (duration_minutes <= 0) {
+    throw new Error(`❌ buildTimeEntryPayload: duration must be > 0, got ${duration_minutes}`);
+  }
+
+  const { startTime, endTime } = getClockTimeCandidates(formData);
+  const normalizedStartTime = normalizeClockValue(startTime);
+  const normalizedEndTime = normalizeClockValue(endTime);
+
+  const topLevel = {
+    entry_type_id: entryType.id,
+    duration_minutes,
+    notes: asString(formData.notes),
+    service_code_id: emptyToNull(formData.service_code_id),
+  };
+
+  const normalizedDate = normalizeDateValue(getRawDateValue(formData, normalizedSchema));
   if (normalizedDate) {
     topLevel.date = normalizedDate;
   }
@@ -295,31 +313,15 @@ export function buildTimeEntryPayload({
     topLevel.location = formData.location;
   }
 
-  if (formData.description) {
-    topLevel.description = formData.description;
-  } else if (formData.activity_description) {
-    topLevel.description = formData.activity_description;
-  } else if (formData.admin_description) {
-    topLevel.description = formData.admin_description;
-  } else if (formData.misc_description) {
-    topLevel.description = formData.misc_description;
-  } else if (formData.preets_activity) {
-    topLevel.description = formData.preets_activity;
-  } else if (formData.wsa_tasks_completed) {
-    topLevel.description = formData.wsa_tasks_completed;
-  } else if (formData.eom_services_provided) {
-    topLevel.description = formData.eom_services_provided;
+  const description = getDescriptionValue(formData);
+  if (description) {
+    topLevel.description = description;
   }
 
-  const form_data = mapTemplateFields(normalizedSchema, {
-    ...formData,
-    start_time: normalizedStartTime ?? formData.start_time,
-    end_time: normalizedEndTime ?? formData.end_time,
-  });
-
   return {
-    ...topLevel,
-    form_data,
+    topLevel,
+    normalizedStartTime,
+    normalizedEndTime,
   };
 }
 
@@ -342,13 +344,13 @@ function mapTemplateFields(schema, formData) {
     "eom_month",
   ]);
 
-  for (const f of fields) {
+  for (const field of fields) {
     if (
-      f.isDate === true ||
-      (f.type || "").toLowerCase() === "date" ||
-      (f.key || "").toLowerCase().includes("date")
+      field.isDate === true ||
+      (field.type || "").toLowerCase() === "date" ||
+      (field.key || "").toLowerCase().includes("date")
     ) {
-      TOP_LEVEL_DATE_KEYS.add(f.key);
+      TOP_LEVEL_DATE_KEYS.add(field.key);
     }
   }
 
@@ -365,6 +367,35 @@ function mapTemplateFields(schema, formData) {
   }
 
   return result;
+}
+
+export function buildTimeEntryPayload({
+  entryType,
+  formData = {},
+  schema,
+}) {
+  if (!entryType?.id) {
+    throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
+  }
+
+  const normalizedSchema = Array.isArray(schema) ? { fields: schema } : schema;
+
+  const {
+    topLevel,
+    normalizedStartTime,
+    normalizedEndTime,
+  } = buildTopLevelPayload(entryType, formData, normalizedSchema);
+
+  const form_data = mapTemplateFields(normalizedSchema, {
+    ...formData,
+    start_time: normalizedStartTime ?? formData.start_time,
+    end_time: normalizedEndTime ?? formData.end_time,
+  });
+
+  return {
+    ...topLevel,
+    form_data,
+  };
 }
 
 export { normalizeDurationMinutes, mapTemplateFields };
