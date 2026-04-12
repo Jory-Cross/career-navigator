@@ -574,8 +574,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
               ) : (
                 <div className="space-y-3">
                   {/* Appointments */}
-                  {meetings.map(meeting => (
-                    <div key={`meeting-${meeting.id}`} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+{clientVisibleMeetings.map(meeting => (                    <div key={`meeting-${meeting.id}`} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-start gap-3">
                         <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                         <div className="flex-1">
