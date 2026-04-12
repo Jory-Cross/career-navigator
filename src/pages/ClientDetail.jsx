@@ -405,14 +405,14 @@ export default function ClientDetail() {
       </div>
 
       {showEmailComposer && (
-        <EmailComposer
-          open={showEmailComposer}
-          onOpenChange={setShowEmailComposer}
-          clientId={clientId}
-          clientEmail={client.email}
-          clientName={`${client.first_name} ${client.last_name}`}
-        />
-      )}
+  <EmailComposer
+    open={showEmailComposer}
+    onClose={() => setShowEmailComposer(false)}
+    clientId={clientId}
+    clientEmail={client.email}
+    clientName={`${client.first_name} ${client.last_name}`}
+  />
+)}
     </div>
   );
 }
