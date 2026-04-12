@@ -276,11 +276,12 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
   }, [timeEntries]);
 
   const scopedTimeEntries = useMemo(() => {
-    if (!effectiveUser) return timeEntries;
-    if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
-    return timeEntries.filter((e) => !e.client_id || clientIds.includes(e.client_id));
-  }, [timeEntries, clientIds, effectiveUser?.id, viewAsUser?.id]);
+  if (!effectiveUser) return timeEntries;
+  if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
 
+  const clientIdSet = new Set(clientIds);
+  return timeEntries.filter((e) => !e.client_id || clientIdSet.has(e.client_id));
+}, [timeEntries, clientIds, effectiveUser?.role, !!viewAsUser]);
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
   };
