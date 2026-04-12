@@ -211,49 +211,20 @@ export default function TimeLogDashboard({
     }
   };
 
-  const getEntryTypeDisplay = (entry) => {
-    const directLabel =
-      entry.entry_type_name ||
-      entry.entry_type_label ||
-      entry.type_name ||
-      entry.type_label ||
-      "";
+ const getEntryTypeDisplay = (entry) => {
+  const directLabel =
+    entry.entry_type_name ||
+    entry.entry_type_label ||
+    entry.type_name ||
+    entry.type_label ||
+    "";
 
-    if (directLabel) {
-      return directLabel;
-    }
+  if (directLabel) {
+    return directLabel;
+  }
 
-    const resolvedCode =
-      resolvedEntryTypeCodes[entry.id] ||
-      entry.entry_type_code ||
-      entry.entry_type ||
-      entry.entry_type_key ||
-      entry.type ||
-      entry.category ||
-      "";
-
-    const code = String(resolvedCode).toLowerCase();
-
-    const match = entryTypes.find(
-      (type) =>
-        String(type.value || "").toLowerCase() === code ||
-        String(type.code || "").toLowerCase() === code
-    );
-
-    if (match?.label) return match.label;
-    if (match?.name) return match.name;
-
-    if (ENTRY_TYPE_LABEL_ALIASES[code]) {
-      return ENTRY_TYPE_LABEL_ALIASES[code];
-    }
-
-    if (code) {
-      return code
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-    }
-
-    return "Unknown Type";
+  return getEntryTypeLabel(entry, resolvedEntryTypeCodes);
+};
   };
 
   return (
