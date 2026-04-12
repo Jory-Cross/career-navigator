@@ -725,19 +725,19 @@ export default function TimeTracking() {
           )}
 
           {selectedEntryTypeCode && (
-            <FormEngine
-              mode="create"
-              entryTypeCode={selectedEntryTypeCode}
-              onSuccess={async () => {
-                await handleRefresh();
-                setShowNewEntry(false);
-                setSelectedEntryTypeCode("");
-              }}
-              onCancel={() => {
-                setShowNewEntry(false);
-                setSelectedEntryTypeCode("");
-              }}
-            />
+           <FormEngine
+  mode="create"
+  entryTypeCode={selectedEntryTypeCode}
+  onSave={async () => {
+    await handleRefresh();
+    setShowNewEntry(false);
+    setSelectedEntryTypeCode("");
+  }}
+  onCancel={() => {
+    setShowNewEntry(false);
+    setSelectedEntryTypeCode("");
+  }}
+/>
           )}
         </DialogContent>
       </Dialog>
