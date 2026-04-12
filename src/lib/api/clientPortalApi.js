@@ -45,7 +45,6 @@ export const getTasks = async (clientId) => {
       client_ids: clientId,
     });
   } catch {
-    // fallback (Base44 inconsistency fix)
     const all = await base44.entities.Task.list();
     return all.filter((t) => t.client_ids?.includes(clientId));
   }
@@ -98,10 +97,37 @@ export const createActivity = async (payload) => {
 };
 
 /**
- * 🔹 OPTIONAL (future-ready)
- * Add more here as needed:
- * - assessments
- * - meetings
- * - time entries
- * - interviews
+ * 🔹 ASSESSMENTS
  */
+export const getAssessments = async (clientId) => {
+  return await base44.entities.Assessment.filter({
+    client_id: clientId,
+  });
+};
+
+/**
+ * 🔹 INTERVIEWS
+ */
+export const getInterviews = async (clientId) => {
+  return await base44.entities.InterviewSession.filter({
+    client_id: clientId,
+  });
+};
+
+/**
+ * 🔹 TIME ENTRIES
+ */
+export const getTimeEntries = async (clientId) => {
+  return await base44.entities.TimeEntry.filter({
+    client_id: clientId,
+  });
+};
+
+/**
+ * 🔹 MEETINGS
+ */
+export const getMeetings = async (clientId) => {
+  return await base44.entities.Meeting.filter({
+    client_id: clientId,
+  });
+};
