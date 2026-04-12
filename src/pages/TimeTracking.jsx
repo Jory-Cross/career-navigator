@@ -136,7 +136,21 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     },
     enabled: !!effectiveUser,
   });
+const clientById = useMemo(() => {
+  const map = {};
+  for (const client of allClients) {
+    map[client.id] = client;
+  }
+  return map;
+}, [allClients]);
 
+const employeeById = useMemo(() => {
+  const map = {};
+  for (const employee of filterableEmployees) {
+    map[employee.id] = employee;
+  }
+  return map;
+}, [filterableEmployees]);
   const clients =
     (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
     employeeFilter !== "all"
