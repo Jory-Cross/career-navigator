@@ -69,8 +69,9 @@ function formatLongEntryDate(dateString) {
   return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
 }
 
-function getEntryTypeLabel(entry) {
+function getEntryTypeLabel(entry, resolvedEntryTypeCodes) {
   const rawCode =
+    resolvedEntryTypeCodes?.[entry?.id] ||
     entry?.entry_type_code ||
     entry?.entry_type ||
     entry?.entry_type_key ||
@@ -91,7 +92,7 @@ function getEntryTypeLabel(entry) {
       .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
-  return "Time Entry";
+  return "Unknown Type";
 }
 
 export default function TimeTracking() {
