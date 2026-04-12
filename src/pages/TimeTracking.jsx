@@ -21,7 +21,11 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
+import {
+  getEntryTypeOptions,
+  getEntryTypeConfig,
+  normalizeEntryTypeCode,
+} from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 
 function parseDateOnly(dateString) {
