@@ -602,8 +602,7 @@ Always address them by their first name (${client?.first_name}) and tailor all a
                   ))}
                   
                   {/* Activities */}
-                  {activities.map(activity => (
-                    <div key={`activity-${activity.id}`} className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+{clientVisibleActivities.map(activity => (                    <div key={`activity-${activity.id}`} className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
                       <div className="flex items-start gap-3">
                         <div className="w-5 h-5 rounded-full bg-slate-300 mt-0.5 shrink-0" />
                         <div className="flex-1">
