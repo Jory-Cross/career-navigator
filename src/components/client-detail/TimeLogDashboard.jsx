@@ -225,7 +225,6 @@ export default function TimeLogDashboard({
 
   return getEntryTypeLabel(entry, resolvedEntryTypeCodes);
 };
-  };
 
   return (
     <div className="space-y-4">
