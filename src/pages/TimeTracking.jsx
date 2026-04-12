@@ -498,14 +498,19 @@ export default function TimeTracking() {
                       <div className="w-px h-10 bg-slate-100" />
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-slate-700">
-                            {entry.description || "Session"}
-                          </p>
-                          {isDuplicate && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          )}
-                        </div>
+                       <div className="flex items-center gap-2 flex-wrap">
+  <p className="text-sm font-medium text-slate-700">
+    {entry.description || "Session"}
+  </p>
+
+  <Badge variant="outline" className="text-[11px]">
+    {getEntryTypeLabel(entry)}
+  </Badge>
+
+  {isDuplicate && (
+    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+  )}
+</div>
 
                         <div className="flex items-center gap-2 mt-1">
                           {entry.client_id ? (
