@@ -537,8 +537,8 @@ export default function TimeTracking() {
     {entry.description || "Session"}
   </p>
 
-  <Badge variant="outline" className="text-[11px]">
-    {getEntryTypeLabel(entry)}
+   <Badge variant="outline" className="text-[11px]">
+    {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
   </Badge>
 
   {isDuplicate && (
