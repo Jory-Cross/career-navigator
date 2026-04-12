@@ -296,17 +296,14 @@ const entryTypes = useMemo(() => getEntryTypeOptions(), []);
     setSelectedEntry(null);
   };
 
-  const handleOpenEntry = async (entry) => {
-    if (!entry?.id) {
-      toast.error("Invalid entry");
-      return;
-    }
+  const handleOpenEntry = useCallback((entry) => {
+  if (!entry?.id) {
+    toast.error("Invalid entry");
+    return;
+  }
 
-    try {
-      const fresh = await base44.entities.TimeEntry.get(entry.id);
-      if (!fresh) {
-        toast.error("This entry no longer exists");
-        handleRefresh();
+  setSelectedEntry(entry);
+}, []);
         return;
       }
       setSelectedEntry(fresh);
