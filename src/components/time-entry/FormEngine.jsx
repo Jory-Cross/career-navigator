@@ -5,6 +5,8 @@ import { getEntryTypeConfig, normalizeEntryTypeCode } from "@/lib/entryTypeRegis
 import { getSchemaForEntryType } from "@/lib/formHelpers";
 import { loadVocRehabSchema } from "@/lib/formSchemas";
 
+const schemaCache = new Map();
+
 async function resolveSchema(entryTypeCode) {
   const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
   const config = getEntryTypeConfig(normalizedCode);
@@ -13,11 +15,25 @@ async function resolveSchema(entryTypeCode) {
     throw new Error(`Could not resolve entry type. Code "${entryTypeCode}" not found in registry`);
   }
 
-  if (config.schemaKey === "voc_rehab") {
-    return await loadVocRehabSchema(normalizedCode);
+  const cacheKey = `${normalizedCode}::${config.schemaKey || "default"}`;
+  if (schemaCache.has(cacheKey)) {
+    return schemaCache.get(cacheKey);
   }
 
-  return getSchemaForEntryType(normalizedCode);
+  let resolvedSchema = [];
+
+  if (config.schemaKey === "voc_rehab") {
+    resolvedSchema = await loadVocRehabSchema(normalizedCode);
+  } else {
+    resolvedSchema = getSchemaForEntryType(normalizedCode);
+  }
+
+  schemaCache.set(cacheKey, resolvedSchema || []);
+  return resolvedSchema;
+}
+
+export function clearFormEngineSchemaCache() {
+  schemaCache.clear();
 }
 
 export default function FormEngine({
