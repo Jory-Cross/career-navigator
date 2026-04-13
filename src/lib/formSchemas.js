@@ -1,116 +1,187 @@
-export const FORM_SCHEMAS = {
-  simple_time: [
-    { key: "date", label: "Date", type: "date", required: true },
-    { key: "start_time", label: "Start Time", type: "time", required: true, defaultValue: "07:00" },
-    { key: "end_time", label: "End Time", type: "time", required: true, defaultValue: "07:15" },
-    { key: "description", label: "Description", type: "textarea", required: true },
-  ],
+/**
+ * Shared schema registry for time-entry forms.
+ *
+ * Phase 4 cleanup goals:
+ * - keep schema lookup predictable
+ * - preserve current working behavior
+ * - make callers independent from ad-hoc schema branching
+ * - centralize simple schema definitions here
+ */
 
-  life_skills: [
-    { key: "billable_service_date", label: "Billable Service Date", type: "date", required: true },
-    { key: "billable_hours", label: "Billable Hours", type: "number", required: true },
-    {
-      key: "life_skills_area",
-      label: "Life Skills Area",
-      type: "select",
-      required: true,
-      options: [
-        "Personal Hygiene & Grooming",
-        "Money Management",
-        "Transportation & Mobility",
-        "Meal Planning & Food Preparation",
-        "Home Management & Cleaning",
-        "Health & Wellness",
-        "Social & Interpersonal Skills",
-        "Communication Skills",
-        "Time Management & Organization",
-        "Job Readiness & Work Habits",
-        "Educational Support",
-        "Leisure & Recreation",
-        "Community Integration",
-        "Safety & Emergency Preparedness",
-        "Other",
-      ],
-    },
-    { key: "specific_skill_taught", label: "Specific Skill Taught", type: "text", required: true },
-    { key: "client_progress_mastery_level", label: "Client Progress/Mastery Level", type: "text", required: true },
-    { key: "practice_homework_assigned", label: "Practice/Homework Assigned", type: "textarea", required: false },
-    { key: "activity_description", label: "Activity Description", type: "textarea", required: true },
-    { key: "observations_comments", label: "Observations & Comments", type: "textarea", required: false },
-  ],
+import { normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
 
-  voc_rehab: [],
+const SIMPLE_TIME_SCHEMA = [
+  {
+    key: "date",
+    label: "Date",
+    type: "date",
+    required: true,
+    isDate: true,
+    saveToTopLevel: true,
+  },
+  {
+    key: "start_time",
+    label: "Clock In",
+    type: "time",
+    required: true,
+    saveToTopLevel: true,
+  },
+  {
+    key: "end_time",
+    label: "Clock Out",
+    type: "time",
+    required: true,
+    saveToTopLevel: true,
+  },
+  {
+    key: "description",
+    label: "Description",
+    type: "textarea",
+    required: false,
+    placeholder: "Enter details...",
+    saveToTopLevel: true,
+  },
+];
+
+const LIFE_SKILLS_AREAS = [
+  { value: "communication", label: "Communication" },
+  { value: "social_skills", label: "Social Skills" },
+  { value: "problem_solving", label: "Problem Solving" },
+  { value: "time_management", label: "Time Management" },
+  { value: "money_management", label: "Money Management" },
+  { value: "transportation", label: "Transportation" },
+  { value: "health_safety", label: "Health & Safety" },
+  { value: "community_access", label: "Community Access" },
+  { value: "self_advocacy", label: "Self-Advocacy" },
+  { value: "job_readiness", label: "Job Readiness" },
+  { value: "independent_living", label: "Independent Living" },
+  { value: "other", label: "Other" },
+];
+
+const LIFE_SKILLS_SCHEMA = [
+  {
+    key: "billable_service_date",
+    label: "Date",
+    type: "date",
+    required: true,
+    isDate: true,
+    saveToTopLevel: false,
+  },
+  {
+    key: "hours_spent",
+    label: "Hours Spent",
+    type: "number",
+    required: true,
+    placeholder: "e.g. 1.5",
+    isDuration: true,
+  },
+  {
+    key: "life_skills_area",
+    label: "Life Skills Area",
+    type: "select",
+    required: false,
+    options: LIFE_SKILLS_AREAS,
+  },
+  {
+    key: "activity",
+    label: "Activity",
+    type: "textarea",
+    required: true,
+    placeholder: "What was worked on?",
+  },
+  {
+    key: "observations",
+    label: "Observations",
+    type: "textarea",
+    required: false,
+    placeholder: "Observations or progress notes",
+  },
+  {
+    key: "comments",
+    label: "Comments",
+    type: "textarea",
+    required: false,
+    placeholder: "Additional comments",
+  },
+];
+
+const EMPTY_SCHEMA = [];
+
+const SCHEMA_REGISTRY = {
+  simple_time: SIMPLE_TIME_SCHEMA,
+  life_skills: LIFE_SKILLS_SCHEMA,
+
+  // voc_rehab is loaded dynamically elsewhere through loadVocRehabSchema()
+  voc_rehab: EMPTY_SCHEMA,
 };
 
-export function getSchema(schemaKey) {
-  return FORM_SCHEMAS[schemaKey] || [];
+const ENTRY_TYPE_TO_SCHEMA_KEY = {
+  job_coaching: "voc_rehab",
+  job_development: "voc_rehab",
+  usor96: "voc_rehab",
+
+  life_skills: "life_skills",
+  csb_hours: "life_skills",
+
+  admin_time: "simple_time",
+  miscellaneous: "simple_time",
+  pre_ets_training: "simple_time",
+  wsa: "simple_time",
+  end_of_month_reporting: "simple_time",
+  work_based_learning: "simple_time",
+};
+
+function cloneSchema(schema) {
+  return Array.isArray(schema) ? schema.map((field) => ({ ...field })) : [];
 }
 
+export function getSchema(schemaKeyOrEntryType) {
+  if (!schemaKeyOrEntryType) return [];
+
+  const normalized = normalizeEntryTypeCode(schemaKeyOrEntryType);
+  const resolvedKey =
+    SCHEMA_REGISTRY[normalized] !== undefined
+      ? normalized
+      : ENTRY_TYPE_TO_SCHEMA_KEY[normalized] || normalized;
+
+  return cloneSchema(SCHEMA_REGISTRY[resolvedKey] || []);
+}
+
+/**
+ * Dynamic Voc Rehab schema loader.
+ * Callers already use this for job coaching / job development style forms.
+ * For non-voc-rehab entry types, it safely falls back to static schema lookup.
+ */
 export async function loadVocRehabSchema(entryTypeCode) {
-  try {
-    const { base44 } = await import("@/api/base44Client");
+  const normalized = normalizeEntryTypeCode(entryTypeCode);
 
-    const templates = await base44.entities.ReportFieldTemplate.filter({
-      entry_type_code: entryTypeCode,
-      is_active: true,
-      pdf_context: "row",
-      is_internal_only: false,
-    });
-
-    if (!templates.length) {
-      console.warn(`No ReportFieldTemplate found for ${entryTypeCode}`);
+  if (
+    normalized === "job_coaching" ||
+    normalized === "job_development" ||
+    normalized === "usor96"
+  ) {
+    try {
+      const mod = await import("@/lib/loadVocRehabSchema");
+      if (typeof mod.loadVocRehabSchema === "function") {
+        return await mod.loadVocRehabSchema(normalized);
+      }
+    } catch (error) {
+      console.error("[formSchemas] Failed to load dynamic voc rehab schema:", error);
       return [];
     }
-
-    let serviceCodes = [];
-    try {
-      serviceCodes = await base44.entities.ServiceCode.filter({
-        is_active: true,
-        program_type: "vr",
-      });
-    } catch (err) {
-      console.error("Failed to load service codes:", err);
-    }
-
-    const primaryCodes = serviceCodes
-      .filter((c) => c.is_primary)
-      .map((c) => ({
-        value: c.code,
-        label: c.display_label || c.code,
-      }));
-
-    const secondaryCodes = serviceCodes
-      .filter((c) => c.is_secondary)
-      .map((c) => ({
-        value: c.code,
-        label: c.display_label || c.code,
-      }));
-
-    return templates
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map((t) => {
-        const field = {
-          key: t.field_key,
-          label: t.label,
-          type: t.field_type,
-          required: t.is_required || false,
-          placeholder: t.placeholder,
-          help_text: t.help_text,
-          options: t.options || [],
-        };
-
-        const fieldKeyLower = t.field_key.toLowerCase();
-
-        if (fieldKeyLower.includes("primary_service_code") && primaryCodes.length > 0) {
-          field.options = primaryCodes;
-        } else if (fieldKeyLower.includes("secondary_service_code") && secondaryCodes.length > 0) {
-          field.options = secondaryCodes;
-        }
-
-        return field;
-      });
-  } catch (err) {
-    console.error("Failed to load voc_rehab schema:", err);
-    return [];
   }
+
+  return getSchema(normalized);
 }
+
+export function getSchemaKeyForEntryType(entryTypeCode) {
+  const normalized = normalizeEntryTypeCode(entryTypeCode);
+  return ENTRY_TYPE_TO_SCHEMA_KEY[normalized] || normalized || "";
+}
+
+export function hasStaticSchema(schemaKeyOrEntryType) {
+  return getSchema(schemaKeyOrEntryType).length > 0;
+}
+
+export const SIMPLE_TIME_FIELDS = cloneSchema(SIMPLE_TIME_SCHEMA);
+export const LIFE_SKILLS_FIELDS = cloneSchema(LIFE_SKILLS_SCHEMA);
