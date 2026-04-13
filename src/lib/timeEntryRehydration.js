@@ -6,6 +6,7 @@
  * - keeps current behavior
  * - makes edit hydration more predictable
  * - always maps top-level date/time fields back into schema fields
+ * - avoids overwriting already-present nested values
  */
 
 const KNOWN_DATE_KEYS = [
@@ -36,74 +37,6 @@ const KNOWN_DESCRIPTION_KEYS = [
   "wsa_tasks_completed",
   "eom_services_provided",
 ];
-
-export function buildFormDataFromEntry(entry, schema) {
-  const result = {};
-  const fields = getSchemaFields(schema);
-  const nestedData = getNestedEntryData(entry);
-
-  // 1) Load schema fields from nested data first
-  for (const field of fields) {
-    const key = field?.key;
-    if (!key) continue;
-
-    if (field.saveToTopLevel) {
-      result[key] = getTopLevelFieldValue(entry, key);
-      continue;
-    }
-
-    if (nestedData[key] !== undefined) {
-      result[key] = nestedData[key];
-    }
-  }
-
-  // 2) Restore common top-level values
-  result.notes = entry?.notes ?? "";
-  result.service_code_id = entry?.service_code_id ?? null;
-  result.duration_minutes = normalizeExistingDuration(entry?.duration_minutes);
-
-  // 3) Restore date into matching schema field(s)
-  hydrateDateFields(result, entry, fields);
-
-  // 4) Restore top-level time values into matching schema fields
-  hydrateTimeFields(result, entry, fields);
-
-  // 5) Restore description-like values when not present in nested data
-  hydrateDescriptionFields(result, entry, fields);
-
-  // 6) Restore location if used by schema
-  if (entry?.location && hasField(fields, "location") && isEmpty(result.location)) {
-    result.location = entry.location;
-  }
-
-  return result;
-}
-
-/**
- * If form uses split hours/minutes inputs, derive them from duration_minutes
- */
-export function attachSplitDurationFields(formData) {
-  const total = Number(formData?.duration_minutes || 0);
-
-  return {
-    ...formData,
-    hours: Math.floor(total / 60),
-    minutes: total % 60,
-  };
-}
-
-/**
- * Warn if required schema fields are still missing after rehydration
- */
-export function validateRehydratedFormData(formData, schema) {
-  const fields = getSchemaFields(schema);
-  const requiredFields = fields.filter((field) => field.required).map((field) => field.key);
-  const missing = requiredFields.filter((key) => !formData[key]);
-
-  if (missing.length > 0) {
-    console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
-  }
-}
 
 function getSchemaFields(schema) {
   if (Array.isArray(schema?.fields)) return schema.fields;
@@ -171,17 +104,14 @@ function normalizeTimeForInput(value) {
 
   const raw = String(value).trim();
 
-  // already HH:mm
   if (/^\d{2}:\d{2}$/.test(raw)) {
     return raw;
   }
 
-  // HH:mm:ss -> HH:mm
   if (/^\d{2}:\d{2}:\d{2}$/.test(raw)) {
     return raw.slice(0, 5);
   }
 
-  // h:mm AM/PM -> HH:mm
   const ampmMatch = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (ampmMatch) {
     let hour = Number(ampmMatch[1]);
@@ -190,8 +120,8 @@ function normalizeTimeForInput(value) {
 
     if (ampm === "AM") {
       if (hour === 12) hour = 0;
-    } else {
-      if (hour !== 12) hour += 12;
+    } else if (hour !== 12) {
+      hour += 12;
     }
 
     return `${String(hour).padStart(2, "0")}:${minute}`;
@@ -226,6 +156,18 @@ function looksLikeDescriptionField(field) {
   );
 }
 
+function looksLikeHoursField(field) {
+  const key = String(field?.key || "").toLowerCase();
+  const label = String(field?.label || "").toLowerCase();
+
+  return (
+    key.includes("hours") ||
+    key.includes("hour") ||
+    label.includes("hours") ||
+    label.includes("hour")
+  );
+}
+
 function hydrateDateFields(result, entry, fields) {
   if (!entry?.date || !fields.length) return;
 
@@ -250,21 +192,13 @@ function hydrateDateFields(result, entry, fields) {
 
 function hydrateTimeFields(result, entry, fields) {
   const startValue =
-    entry?.start_time ??
-    entry?.startTime ??
-    entry?.clock_in ??
-    entry?.clockIn ??
-    null;
-
+    entry?.start_time ?? entry?.startTime ?? entry?.clock_in ?? entry?.clockIn ?? null;
   const endValue =
-    entry?.end_time ??
-    entry?.endTime ??
-    entry?.clock_out ??
-    entry?.clockOut ??
-    null;
+    entry?.end_time ?? entry?.endTime ?? entry?.clock_out ?? entry?.clockOut ?? null;
 
   if (startValue) {
     const normalizedStart = normalizeTimeForInput(startValue);
+
     for (const key of KNOWN_TIME_KEYS.start) {
       if (hasField(fields, key) && isEmpty(result[key])) {
         result[key] = normalizedStart;
@@ -274,6 +208,7 @@ function hydrateTimeFields(result, entry, fields) {
 
   if (endValue) {
     const normalizedEnd = normalizeTimeForInput(endValue);
+
     for (const key of KNOWN_TIME_KEYS.end) {
       if (hasField(fields, key) && isEmpty(result[key])) {
         result[key] = normalizedEnd;
@@ -298,5 +233,91 @@ function hydrateDescriptionFields(result, entry, fields) {
     if (looksLikeDescriptionField(field) && isEmpty(result[key])) {
       result[key] = entry.description;
     }
+  }
+}
+
+function hydrateSplitDurationFields(result, fields) {
+  const total = Number(result?.duration_minutes || 0);
+  if (!total) return;
+
+  if (hasField(fields, "hours") && isEmpty(result.hours)) {
+    result.hours = Math.floor(total / 60);
+  }
+
+  if (hasField(fields, "minutes") && isEmpty(result.minutes)) {
+    result.minutes = total % 60;
+  }
+
+  for (const field of fields) {
+    const key = field?.key;
+    if (!key) continue;
+
+    if (looksLikeHoursField(field) && isEmpty(result[key])) {
+      result[key] = total / 60;
+    }
+  }
+}
+
+export function buildFormDataFromEntry(entry, schema) {
+  const result = {};
+  const fields = getSchemaFields(schema);
+  const nestedData = getNestedEntryData(entry);
+
+  for (const field of fields) {
+    const key = field?.key;
+    if (!key) continue;
+
+    if (field.saveToTopLevel) {
+      result[key] = getTopLevelFieldValue(entry, key);
+      continue;
+    }
+
+    if (nestedData[key] !== undefined) {
+      result[key] = nestedData[key];
+    }
+  }
+
+  result.notes = entry?.notes ?? "";
+  result.service_code_id = entry?.service_code_id ?? null;
+  result.duration_minutes = normalizeExistingDuration(entry?.duration_minutes);
+
+  hydrateDateFields(result, entry, fields);
+  hydrateTimeFields(result, entry, fields);
+  hydrateDescriptionFields(result, entry, fields);
+  hydrateSplitDurationFields(result, fields);
+
+  if (entry?.location && hasField(fields, "location") && isEmpty(result.location)) {
+    result.location = entry.location;
+  }
+
+  return result;
+}
+
+/**
+ * If form uses split hours/minutes inputs, derive them from duration_minutes
+ */
+export function attachSplitDurationFields(formData) {
+  const total = Number(formData?.duration_minutes || 0);
+
+  return {
+    ...formData,
+    hours: Math.floor(total / 60),
+    minutes: total % 60,
+  };
+}
+
+/**
+ * Warn if required schema fields are still missing after rehydration
+ */
+export function validateRehydratedFormData(formData, schema) {
+  const fields = getSchemaFields(schema);
+
+  const missing = fields
+    .filter((field) => field.required)
+    .map((field) => field.key)
+    .filter((key) => !formData[key]);
+
+  if (missing.length > 0) {
+    console.warn("[timeEntryRehydration] Missing required fields on edit:", missing);
   }
 }
