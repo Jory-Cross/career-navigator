@@ -1,133 +1,297 @@
 import { base44 } from "@/api/base44Client";
 
 /**
- * 🔹 AUTH
+ * Small normalizers
  */
-export const getCurrentUser = async () => {
-  return await base44.auth.me();
-};
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
 
-/**
- * 🔹 CLIENT
- */
-export const getClientById = async (id) => {
-  return await base44.entities.Client.get(id);
-};
+function asString(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
 
-export const getClientByEmail = async (email) => {
-  const clients = await base44.entities.Client.list();
-  return clients.find((c) => c.email === email) || null;
-};
+function asNullableString(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
 
-/**
- * 🔹 APPLICATIONS
- */
-export const getApplications = async (clientId) => {
-  return await base44.entities.JobApplication.filter({
-    client_id: clientId,
+function sortByNewest(items) {
+  return [...asArray(items)].sort((a, b) => {
+    const aTime = new Date(a?.updated_date || a?.created_date || 0).getTime();
+    const bTime = new Date(b?.updated_date || b?.created_date || 0).getTime();
+    return bTime - aTime;
   });
-};
-
-export const createApplication = async (payload) => {
-  return await base44.entities.JobApplication.create(payload);
-};
-
-export const updateApplication = async (id, payload) => {
-  return await base44.entities.JobApplication.update(id, payload);
-};
+}
 
 /**
- * 🔹 TASKS
+ * Mapping layer
+ * Keeps page code less dependent on raw Base44 field shapes.
  */
-export const getTasks = async (clientId) => {
+function mapClient(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    first_name: asString(raw.first_name),
+    last_name: asString(raw.last_name),
+    full_name:
+      [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" ") ||
+      asString(raw.full_name),
+    email: asString(raw.email),
+    phone: asString(raw.phone),
+    status: asString(raw.status, "active"),
+    assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
+    raw,
+  };
+}
+
+function mapApplication(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    company: asString(raw.company),
+    position: asString(raw.position),
+    status: asString(raw.status, "active"),
+    notes: asString(raw.notes),
+    running_notes: asString(raw.running_notes),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapTask(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    title: asString(raw.title),
+    description: asString(raw.description),
+    notes: asString(raw.notes),
+    status: asString(raw.status, "open"),
+    due_date: raw.due_date ?? null,
+    client_ids: asArray(raw.client_ids),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapDocument(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    title: asString(raw.title),
+    description: asString(raw.description),
+    file_url: asNullableString(raw.file_url),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapActivity(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    type: asString(raw.type),
+    title: asString(raw.title),
+    notes: asString(raw.notes),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+/**
+ * Payload builders
+ */
+function buildApplicationPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    company: asString(payload.company),
+    position: asString(payload.position),
+    status: asString(payload.status, "active"),
+    notes: asString(payload.notes),
+    running_notes: asString(payload.running_notes),
+  };
+}
+
+function buildTaskPayload(payload = {}) {
+  return {
+    title: asString(payload.title),
+    description: asString(payload.description),
+    notes: asString(payload.notes),
+    status: asString(payload.status, "open"),
+    due_date: payload.due_date ?? null,
+    client_ids: asArray(payload.client_ids),
+  };
+}
+
+function buildDocumentPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    title: asString(payload.title),
+    description: asString(payload.description),
+    file_url: asNullableString(payload.file_url),
+  };
+}
+
+function buildActivityPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    type: asString(payload.type),
+    title: asString(payload.title),
+    notes: asString(payload.notes),
+  };
+}
+
+/**
+ * AUTH
+ */
+export async function getCurrentUser() {
+  return await base44.auth.me();
+}
+
+/**
+ * CLIENT
+ */
+export async function getClientById(id) {
+  if (!id) return null;
+  const raw = await base44.entities.Client.get(id);
+  return mapClient(raw);
+}
+
+export async function getClientByEmail(email) {
+  if (!email) return null;
+  const clients = await base44.entities.Client.list();
+  const match = asArray(clients).find((c) => c.email === email);
+  return mapClient(match || null);
+}
+
+/**
+ * APPLICATIONS
+ */
+export async function getApplications(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.JobApplication.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapApplication).filter(Boolean));
+}
+
+export async function createApplication(payload) {
+  const raw = await base44.entities.JobApplication.create(buildApplicationPayload(payload));
+  return mapApplication(raw);
+}
+
+export async function updateApplication(id, payload) {
+  const raw = await base44.entities.JobApplication.update(id, buildApplicationPayload(payload));
+  return mapApplication(raw);
+}
+
+/**
+ * TASKS
+ */
+export async function getTasks(clientId) {
+  if (!clientId) return [];
+
   try {
-    return await base44.entities.Task.filter({
-      client_ids: clientId,
-    });
+    const rows = await base44.entities.Task.filter({ client_ids: clientId });
+    return sortByNewest(asArray(rows).map(mapTask).filter(Boolean));
   } catch {
     const all = await base44.entities.Task.list();
-    return all.filter((t) => t.client_ids?.includes(clientId));
+    return sortByNewest(
+      asArray(all)
+        .filter((t) => asArray(t.client_ids).includes(clientId))
+        .map(mapTask)
+        .filter(Boolean)
+    );
   }
-};
+}
 
-export const createTask = async (payload) => {
-  return await base44.entities.Task.create(payload);
-};
+export async function createTask(payload) {
+  const raw = await base44.entities.Task.create(buildTaskPayload(payload));
+  return mapTask(raw);
+}
 
-export const updateTask = async (id, payload) => {
-  return await base44.entities.Task.update(id, payload);
-};
+export async function updateTask(id, payload) {
+  const raw = await base44.entities.Task.update(id, buildTaskPayload(payload));
+  return mapTask(raw);
+}
 
-export const deleteTask = async (id) => {
+export async function deleteTask(id) {
   return await base44.entities.Task.delete(id);
-};
+}
 
 /**
- * 🔹 DOCUMENTS
+ * DOCUMENTS
  */
-export const getDocuments = async (clientId) => {
-  return await base44.entities.Document.filter({
-    client_id: clientId,
-  });
-};
+export async function getDocuments(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Document.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapDocument).filter(Boolean));
+}
 
-export const createDocument = async (payload) => {
-  return await base44.entities.Document.create(payload);
-};
+export async function createDocument(payload) {
+  const raw = await base44.entities.Document.create(buildDocumentPayload(payload));
+  return mapDocument(raw);
+}
 
 /**
- * 🔹 FILE UPLOAD
+ * FILE UPLOAD
  */
-export const uploadFile = async (file) => {
+export async function uploadFile(file) {
   const res = await base44.integrations.Core.UploadFile({ file });
-  return res.file_url;
-};
+  return res?.file_url || null;
+}
 
 /**
- * 🔹 ACTIVITY
+ * ACTIVITY
  */
-export const getActivities = async (clientId) => {
-  return await base44.entities.Activity.filter({
-    client_id: clientId,
-  });
-};
+export async function getActivities(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Activity.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapActivity).filter(Boolean));
+}
 
-export const createActivity = async (payload) => {
-  return await base44.entities.Activity.create(payload);
-};
-
-/**
- * 🔹 ASSESSMENTS
- */
-export const getAssessments = async (clientId) => {
-  return await base44.entities.Assessment.filter({
-    client_id: clientId,
-  });
-};
+export async function createActivity(payload) {
+  const raw = await base44.entities.Activity.create(buildActivityPayload(payload));
+  return mapActivity(raw);
+}
 
 /**
- * 🔹 INTERVIEWS
+ * ASSESSMENTS
  */
-export const getInterviews = async (clientId) => {
-  return await base44.entities.InterviewSession.filter({
-    client_id: clientId,
-  });
-};
+export async function getAssessments(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.Assessment.filter({ client_id: clientId });
+}
 
 /**
- * 🔹 TIME ENTRIES
+ * INTERVIEWS
  */
-export const getTimeEntries = async (clientId) => {
-  return await base44.entities.TimeEntry.filter({
-    client_id: clientId,
-  });
-};
+export async function getInterviews(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.InterviewSession.filter({ client_id: clientId });
+}
 
 /**
- * 🔹 MEETINGS
+ * TIME ENTRIES
  */
-export const getMeetings = async (clientId) => {
-  return await base44.entities.Meeting.filter({
-    client_id: clientId,
-  });
-};
+export async function getTimeEntries(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.TimeEntry.filter({ client_id: clientId });
+}
+
+/**
+ * MEETINGS
+ */
+export async function getMeetings(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.Meeting.filter({ client_id: clientId });
+}
