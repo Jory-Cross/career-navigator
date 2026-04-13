@@ -20,6 +20,7 @@ import {
 import { Plus, Pencil, Copy, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
 import FormEngine from "@/components/time-entry/FormEngine";
 import { base44 } from "@/api/base44Client";
 import {
@@ -29,11 +30,6 @@ import {
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
-/**
- * Temporary local data layer.
- * This keeps Base44 calls out of the render logic so this file is easier
- * to migrate later to a real adapter file without changing the UI again.
- */
 const timeLogDashboardApi = {
   async listEmployees() {
     try {
@@ -56,6 +52,7 @@ const timeLogDashboardApi = {
 
 function formatDurationMinutes(minutes) {
   const total = Number(minutes || 0);
+
   if (!total) return "0 min";
   if (total < 60) return `${total} min`;
 
@@ -179,6 +176,7 @@ export default function TimeLogDashboard({
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
     };
@@ -214,6 +212,7 @@ export default function TimeLogDashboard({
 
     for (const entry of timeEntries) {
       const directCode = getImmediateEntryTypeCode(entry);
+
       if (directCode) {
         directMap[entry.id] = directCode;
       } else if (entry?.id) {
