@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useViewAs } from "@/lib/ViewAsContext";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,9 +32,27 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getEntryTypeOptions } from "@/lib/entryTypeRegistry";
+import { getEntryTypeOptions, normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
+
+const timeTrackingApi = {
+  async getCurrentUser() {
+    return await base44.auth.me();
+  },
+
+  async listUsers() {
+    return await base44.entities.User.list();
+  },
+
+  async listClients() {
+    return await base44.entities.Client.list();
+  },
+
+  async listTimeEntries() {
+    return await base44.entities.TimeEntry.list("-created_date");
+  },
+};
 
 function parseDateOnly(dateString) {
   if (!dateString || typeof dateString !== "string") return null;
@@ -64,100 +82,122 @@ function parseDateOnly(dateString) {
 function formatShortEntryDate(dateString) {
   const parsed = parseDateOnly(dateString);
   if (!parsed) return "";
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return `${months[parsed.getMonth()]} ${parsed.getDate()}`;
+  return format(parsed, "MMM d");
 }
 
 function formatLongEntryDate(dateString) {
   const parsed = parseDateOnly(dateString);
   if (!parsed) return "—";
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return `${months[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`;
+  return format(parsed, "MMM d, yyyy");
+}
+
+function formatDurationMinutes(minutes) {
+  const total = Number(minutes || 0);
+  if (!total) return "0m";
+  if (total < 60) return `${total}m`;
+
+  const hours = Math.floor(total / 60);
+  const remainder = total % 60;
+
+  if (!remainder) return `${hours}h`;
+  return `${hours}h ${remainder}m`;
+}
+
+function getImmediateEntryTypeCode(entry) {
+  return normalizeEntryTypeCode(
+    entry?.entry_type_code ||
+      entry?.entry_type ||
+      entry?.entry_type_key ||
+      entry?.type ||
+      entry?.category ||
+      ""
+  );
 }
 
 export default function TimeTracking() {
   const { viewAsUser } = useViewAs();
-  const [periodFilter, setPeriodFilter] = useState("all");
-  const [clientFilter, setClientFilter] = useState("all");
-  const [employeeFilter, setEmployeeFilter] = useState("all");
-  const [user, setUser] = useState(null);
-  const [selectedEntry, setSelectedEntry] = useState(null);
-  const [editingEntry, setEditingEntry] = useState(null);
-  const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
-  const [showNewEntry, setShowNewEntry] = useState(false);
-  const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
-  const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
-
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const mountedRef = useRef(true);
+  const resolveRunIdRef = useRef(0);
+
+  const [periodFilter, setPeriodFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState("all");
+
+  const [user, setUser] = useState(null);
+
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
+
+  const [showNewEntry, setShowNewEntry] = useState(false);
+  const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+
+  const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
+
+  const entryTypes = useMemo(() => getEntryTypeOptions(), []);
+
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    mountedRef.current = true;
+
+    timeTrackingApi
+      .getCurrentUser()
+      .then((result) => {
+        if (mountedRef.current) {
+          setUser(result);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
-  const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => timeTrackingApi.listUsers(),
     enabled: !!user && (user.role === "admin" || user.role === "management"),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const filterableEmployees = useMemo(() => {
     return allUsers.filter((u) => {
-      if (!u.is_archived) {
-        if (effectiveUser?.role === "management") {
-          return u.role === "employee" && u.manager_id === effectiveUser.id;
-        }
-        if (user?.role === "admin" && !viewAsUser) {
-          return u.role === "employee" || u.role === "management";
-        }
+      if (u.is_archived) return false;
+
+      if (effectiveUser?.role === "management") {
+        return u.role === "employee" && u.manager_id === effectiveUser.id;
       }
+
+      if (user?.role === "admin" && !viewAsUser) {
+        return u.role === "employee" || u.role === "management";
+      }
+
       return false;
     });
   }, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
 
   const { data: allClients = [] } = useQuery({
-    queryKey: ["clients", effectiveUser?.id, effectiveUser?.role],
+    queryKey: ["clients", effectiveUser?.id, effectiveUser?.role, allUsers.length],
     queryFn: async () => {
-      const all = await base44.entities.Client.list();
+      const all = await timeTrackingApi.listClients();
 
       if (!effectiveUser) return all;
+
       if (effectiveUser.role === "admin") return all;
 
       if (effectiveUser.role === "management") {
-        const empIds = allUsers
+        const employeeIds = allUsers
           .filter((u) => u.manager_id === effectiveUser.id)
           .map((u) => u.id);
 
-        return all.filter((c) => empIds.includes(c.assigned_employee_id));
+        return all.filter((c) => employeeIds.includes(c.assigned_employee_id));
       }
 
       if (effectiveUser.role === "employee") {
@@ -171,15 +211,85 @@ export default function TimeTracking() {
       return all;
     },
     enabled: !!effectiveUser,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const clientById = useMemo(() => {
-    const map = {};
-    for (const client of allClients) {
-      map[client.id] = client;
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeEntries"],
+    queryFn: () => timeTrackingApi.listTimeEntries(),
+    enabled: !!effectiveUser,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    const directMap = {};
+    const needsAsync = [];
+
+    for (const entry of timeEntries) {
+      const directCode = getImmediateEntryTypeCode(entry);
+
+      if (directCode) {
+        directMap[entry.id] = directCode;
+      } else if (entry?.id) {
+        needsAsync.push(entry);
+      }
     }
-    return map;
-  }, [allClients]);
+
+    setResolvedEntryTypeCodes((prev) => {
+      const next = { ...directMap };
+      const sameSize = Object.keys(prev).length === Object.keys(next).length;
+      const sameValues =
+        sameSize && Object.keys(next).every((key) => prev[key] === next[key]);
+      return sameValues ? prev : next;
+    });
+
+    if (!needsAsync.length) return;
+
+    const runId = ++resolveRunIdRef.current;
+    let cancelled = false;
+
+    async function resolveMissingCodes() {
+      const asyncPairs = await Promise.all(
+        needsAsync.map(async (entry) => {
+          try {
+            const resolvedCode = await resolveEntryTypeCode(entry);
+            return [entry.id, normalizeEntryTypeCode(resolvedCode) || ""];
+          } catch (error) {
+            console.error("[TimeTracking] Failed to resolve entry type code:", error);
+            return [entry.id, ""];
+          }
+        })
+      );
+
+      if (cancelled || !mountedRef.current || resolveRunIdRef.current !== runId) {
+        return;
+      }
+
+      setResolvedEntryTypeCodes((prev) => {
+        const merged = { ...prev };
+        let changed = false;
+
+        for (const [id, code] of asyncPairs) {
+          if ((merged[id] || "") !== (code || "")) {
+            merged[id] = code || "";
+            changed = true;
+          }
+        }
+
+        return changed ? merged : prev;
+      });
+    }
+
+    resolveMissingCodes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [timeEntries]);
 
   const employeeById = useMemo(() => {
     const map = {};
@@ -189,16 +299,26 @@ export default function TimeTracking() {
     return map;
   }, [filterableEmployees]);
 
+  const clientById = useMemo(() => {
+    const map = {};
+    for (const client of allClients) {
+      map[client.id] = client;
+    }
+    return map;
+  }, [allClients]);
+
   const clients = useMemo(() => {
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
       employeeFilter !== "all"
     ) {
-      const emp = employeeById[employeeFilter];
-      return allClients.filter((c) => {
+      const employee = employeeById[employeeFilter];
+
+      return allClients.filter((client) => {
         return (
-          emp &&
-          (c.assigned_employee_id === emp.id || c.created_by === emp.email)
+          employee &&
+          (client.assigned_employee_id === employee.id ||
+            client.created_by === employee.email)
         );
       });
     }
@@ -206,142 +326,42 @@ export default function TimeTracking() {
     return allClients;
   }, [allClients, effectiveUser?.role, employeeFilter, employeeById]);
 
-  const clientIds = useMemo(() => allClients.map((c) => c.id), [allClients]);
-
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => base44.entities.TimeEntry.list("-created_date"),
-    enabled: !!effectiveUser,
-  });
-
-  useEffect(() => {
-    let active = true;
-
-    async function resolveAllEntryTypeCodes() {
-      if (!timeEntries?.length) {
-        setResolvedEntryTypeCodes({});
-        return;
-      }
-
-      const immediatePairs = [];
-      const needsAsync = [];
-
-      for (const entry of timeEntries) {
-        if (entry?.entry_type_code) {
-          immediatePairs.push([entry.id, entry.entry_type_code]);
-        } else if (
-          entry?.entry_type ||
-          entry?.entry_type_key ||
-          entry?.type ||
-          entry?.category
-        ) {
-          immediatePairs.push([
-            entry.id,
-            entry.entry_type ||
-              entry.entry_type_key ||
-              entry.type ||
-              entry.category ||
-              "",
-          ]);
-        } else if (!resolvedEntryTypeCodes[entry.id]) {
-          needsAsync.push(entry);
-        }
-      }
-
-      const baseMap = Object.fromEntries(immediatePairs);
-
-      if (!needsAsync.length) {
-        if (active) {
-          setResolvedEntryTypeCodes((prev) => ({ ...prev, ...baseMap }));
-        }
-        return;
-      }
-
-      const asyncPairs = await Promise.all(
-        needsAsync.map(async (entry) => {
-          try {
-            const resolvedCode = await resolveEntryTypeCode(entry);
-            return [entry.id, resolvedCode || ""];
-          } catch (error) {
-            console.error(
-              "[TimeTracking] Failed to resolve entry type code for row:",
-              error
-            );
-            return [entry.id, ""];
-          }
-        })
-      );
-
-      if (!active) return;
-
-      setResolvedEntryTypeCodes((prev) => ({
-        ...prev,
-        ...baseMap,
-        ...Object.fromEntries(asyncPairs),
-      }));
-    }
-
-    resolveAllEntryTypeCodes();
-
-    return () => {
-      active = false;
-    };
-  }, [timeEntries, resolvedEntryTypeCodes]);
+  const clientIds = useMemo(() => allClients.map((client) => client.id), [allClients]);
 
   const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return timeEntries;
     if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
 
     const clientIdSet = new Set(clientIds);
-    return timeEntries.filter((e) => !e.client_id || clientIdSet.has(e.client_id));
-  }, [timeEntries, clientIds, effectiveUser?.role, !!viewAsUser]);
 
-  const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-  }, [queryClient]);
+    return timeEntries.filter((entry) => !entry.client_id || clientIdSet.has(entry.client_id));
+  }, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
 
-  const handleEditEntry = async (entry) => {
-    const code =
-      resolvedEntryTypeCodes[entry.id] || (await resolveEntryTypeCode(entry));
-    setEditingEntry(entry);
-    setEditingEntryTypeCode(code);
-    setSelectedEntry(null);
-  };
+  const now = useMemo(() => new Date(), []);
+  const payrollRanges = useMemo(() => {
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth();
 
-  const handleOpenEntry = useCallback((entry) => {
-    if (!entry?.id) {
-      toast.error("Invalid entry");
-      return;
-    }
-    setSelectedEntry(entry);
-  }, []);
+    return {
+      payroll1Start: new Date(nowYear, nowMonth, 1),
+      payroll1End: new Date(nowYear, nowMonth, 15, 23, 59, 59),
+      payroll2Start: new Date(nowYear, nowMonth, 16),
+      payroll2End: new Date(nowYear, nowMonth + 1, 0, 23, 59, 59),
+      weekStart: startOfWeek(now),
+      weekEnd: endOfWeek(now),
+      monthStart: startOfMonth(now),
+      monthEnd: endOfMonth(now),
+    };
+  }, [now]);
 
-  const getClientName = useCallback(
-    (id) => {
-      if (!id) return "Myself";
-      const client = clientById[id];
-      return client ? `${client.first_name} ${client.last_name}` : "Unknown";
-    },
-    [clientById]
-  );
-
-  const now = new Date();
-  const nowYear = now.getFullYear();
-  const nowMonth = now.getMonth();
-  const payroll1Start = new Date(nowYear, nowMonth, 1);
-  const payroll1End = new Date(nowYear, nowMonth, 15, 23, 59, 59);
-  const payroll2Start = new Date(nowYear, nowMonth, 16);
-  const payroll2End = new Date(nowYear, nowMonth + 1, 0, 23, 59, 59);
-
-  const filteredClientIds = useMemo(() => clients.map((c) => c.id), [clients]);
+  const filteredClientIds = useMemo(() => clients.map((client) => client.id), [clients]);
 
   const filtered = useMemo(() => {
     const filteredClientIdSet = new Set(filteredClientIds);
 
     return scopedTimeEntries.filter((entry) => {
       if (
-        (effectiveUser?.role === "admin" ||
-          effectiveUser?.role === "management") &&
+        (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
         employeeFilter !== "all" &&
         entry.client_id &&
         !filteredClientIdSet.has(entry.client_id)
@@ -358,29 +378,33 @@ export default function TimeTracking() {
       }
 
       const parsedDate = parseDateOnly(entry.date);
-      if (!parsedDate) {
-        return false;
-      }
+      if (!parsedDate) return false;
 
       if (periodFilter === "payroll1") {
-        return parsedDate >= payroll1Start && parsedDate <= payroll1End;
+        return (
+          parsedDate >= payrollRanges.payroll1Start &&
+          parsedDate <= payrollRanges.payroll1End
+        );
       }
 
       if (periodFilter === "payroll2") {
-        return parsedDate >= payroll2Start && parsedDate <= payroll2End;
+        return (
+          parsedDate >= payrollRanges.payroll2Start &&
+          parsedDate <= payrollRanges.payroll2End
+        );
       }
 
       if (periodFilter === "week") {
         return isWithinInterval(parsedDate, {
-          start: startOfWeek(now),
-          end: endOfWeek(now),
+          start: payrollRanges.weekStart,
+          end: payrollRanges.weekEnd,
         });
       }
 
       if (periodFilter === "month") {
         return isWithinInterval(parsedDate, {
-          start: startOfMonth(now),
-          end: endOfMonth(now),
+          start: payrollRanges.monthStart,
+          end: payrollRanges.monthEnd,
         });
       }
 
@@ -393,158 +417,211 @@ export default function TimeTracking() {
     filteredClientIds,
     clientFilter,
     periodFilter,
-    payroll1Start,
-    payroll1End,
-    payroll2Start,
-    payroll2End,
-    now,
+    payrollRanges,
   ]);
 
   const duplicateIds = useMemo(() => {
     const ids = new Set();
     const seen = {};
 
-    scopedTimeEntries.forEach((entry) => {
-      const key = `${entry.client_id}__${entry.date}__${entry.start_time || "notime"}`;
+    for (const entry of scopedTimeEntries) {
+      const key = `${entry.client_id || "__self__"}__${entry.date || ""}__${
+        entry.start_time || "notime"
+      }`;
+
       if (seen[key]) {
         ids.add(entry.id);
         ids.add(seen[key]);
       } else {
         seen[key] = entry.id;
       }
-    });
+    }
 
     return ids;
   }, [scopedTimeEntries]);
 
   const totalMinutes = useMemo(() => {
-    return filtered.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
+    return filtered.reduce((sum, entry) => sum + Number(entry.duration_minutes || 0), 0);
   }, [filtered]);
 
-  const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
+  const totalHours = useMemo(() => {
+    return Math.round((totalMinutes / 60) * 10) / 10;
+  }, [totalMinutes]);
 
   const legacyEntries = useMemo(() => {
-    return scopedTimeEntries.filter(
-      (entry) => entry.category && !entry.entry_type_code
-    );
+    return scopedTimeEntries.filter((entry) => entry.category && !entry.entry_type_code);
   }, [scopedTimeEntries]);
 
   const byClient = useMemo(() => {
     const grouped = {};
 
-    filtered.forEach((entry) => {
+    for (const entry of filtered) {
       const key = entry.client_id || "__self__";
+
       if (!grouped[key]) {
         grouped[key] = { minutes: 0, entries: 0 };
       }
-      grouped[key].minutes += entry.duration_minutes || 0;
+
+      grouped[key].minutes += Number(entry.duration_minutes || 0);
       grouped[key].entries += 1;
-    });
+    }
 
     return grouped;
   }, [filtered]);
 
+  const getClientName = useCallback(
+    (id) => {
+      if (!id) return "Myself";
+
+      const client = clientById[id];
+      if (!client) return "Unknown";
+
+      const fullName = `${client.first_name || ""} ${client.last_name || ""}`.trim();
+      return fullName || client.full_name || client.email || "Unknown";
+    },
+    [clientById]
+  );
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+  }, [queryClient]);
+
+  const handleEditEntry = useCallback(
+    async (entry) => {
+      const code =
+        resolvedEntryTypeCodes[entry.id] ||
+        getImmediateEntryTypeCode(entry) ||
+        normalizeEntryTypeCode(await resolveEntryTypeCode(entry)) ||
+        "";
+
+      setEditingEntry(entry);
+      setEditingEntryTypeCode(code);
+      setSelectedEntry(null);
+    },
+    [resolvedEntryTypeCodes]
+  );
+
+  const handleOpenEntry = useCallback((entry) => {
+    if (!entry?.id) {
+      toast.error("Invalid entry");
+      return;
+    }
+
+    setSelectedEntry(entry);
+  }, []);
+
+  const closeNewEntryDialog = useCallback(() => {
+    setShowNewEntry(false);
+    setSelectedEntryTypeCode("");
+  }, []);
+
+  const closeEditDialog = useCallback(() => {
+    setEditingEntry(null);
+    setEditingEntryTypeCode("");
+  }, []);
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Time Tracking</h1>
-          <p className="text-muted-foreground">
-            Log and review time spent with clients
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Time Tracking</h1>
+          <p className="text-sm text-slate-500">Log and review time spent with clients</p>
         </div>
 
         <Button onClick={() => setShowNewEntry(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           New Entry
         </Button>
       </div>
 
-      {legacyEntries.length > 0 && (
-        <LegacyDataWarning count={legacyEntries.length} />
-      )}
+      {legacyEntries.length > 0 ? <LegacyDataWarning count={legacyEntries.length} /> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Total Hours</div>
-          <div className="text-2xl font-bold">{totalHours}h</div>
+          <div className="text-sm text-slate-500">Total Hours</div>
+          <div className="mt-1 text-2xl font-semibold">{totalHours}h</div>
         </Card>
 
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Sessions</div>
-          <div className="text-2xl font-bold">{filtered.length}</div>
+          <div className="text-sm text-slate-500">Sessions</div>
+          <div className="mt-1 text-2xl font-semibold">{filtered.length}</div>
         </Card>
 
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Clients</div>
-          <div className="text-2xl font-bold">{Object.keys(byClient).length}</div>
+          <div className="text-sm text-slate-500">Clients</div>
+          <div className="mt-1 text-2xl font-semibold">{Object.keys(byClient).length}</div>
         </Card>
       </div>
 
-      {Object.keys(byClient).length > 0 && (
-        <Card className="p-4 space-y-4">
-          <h3 className="font-semibold">Hours by Client</h3>
+      {Object.keys(byClient).length > 0 ? (
+        <Card className="p-4">
+          <h2 className="mb-4 text-base font-semibold">Hours by Client</h2>
 
           <div className="space-y-3">
             {Object.entries(byClient)
               .sort(([, a], [, b]) => b.minutes - a.minutes)
               .map(([clientId, data]) => {
                 const pct = totalMinutes > 0 ? (data.minutes / totalMinutes) * 100 : 0;
-                const displayName =
-                  clientId === "__self__" ? "Myself" : getClientName(clientId);
+                const displayName = clientId === "__self__" ? "Myself" : getClientName(clientId);
 
                 return (
                   <button
                     key={clientId}
                     type="button"
-                    className="w-full text-left space-y-1"
                     onClick={() => {
                       if (clientId !== "__self__") {
                         navigate(`/ClientDetail?clientId=${clientId}`);
                       }
                     }}
+                    className={cn(
+                      "w-full rounded-lg border p-3 text-left transition hover:bg-slate-50",
+                      clientId === "__self__" && "cursor-default"
+                    )}
                   >
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <span className="font-medium">{displayName}</span>
-                      <span className="text-muted-foreground">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="font-medium">{displayName}</div>
+                      <div className="text-sm text-slate-500">
                         {Math.round((data.minutes / 60) * 10) / 10}h · {data.entries} sessions
-                      </span>
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
+
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-slate-700" style={{ width: `${pct}%` }} />
                     </div>
                   </button>
                 );
               })}
           </div>
         </Card>
-      )}
+      ) : null}
 
-      <Card className="p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4" />
-          <span className="font-medium">Filters</span>
+      <Card className="p-4">
+        <div className="mb-4 flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-500" />
+          <h2 className="text-base font-semibold">Filters</h2>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="payroll1">This Month 1–15</SelectItem>
-              <SelectItem value="payroll2">This Month 16–End</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Period</label>
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="payroll1">This Month 1–15</SelectItem>
+                <SelectItem value="payroll2">This Month 16–End</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-            filterableEmployees.length > 0 && (
+          filterableEmployees.length > 0 ? (
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Employee</label>
               <Select
                 value={employeeFilter}
                 onValueChange={(value) => {
@@ -553,7 +630,7 @@ export default function TimeTracking() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Employee" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Employees</SelectItem>
@@ -564,45 +641,50 @@ export default function TimeTracking() {
                   ))}
                 </SelectContent>
               </Select>
-            )}
+            </div>
+          ) : null}
 
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {clients
-                .filter((client) => !client.is_archived)
-                .map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.first_name} {client.last_name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center text-sm text-muted-foreground">
-            {format(now, "MMMM yyyy")}
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Client</label>
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {clients
+                  .filter((client) => !client.is_archived)
+                  .map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+                        client.full_name ||
+                        client.email ||
+                        "Unknown"}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="flex items-end text-sm text-slate-500">{format(now, "MMMM yyyy")}</div>
         </div>
       </Card>
 
-      {duplicateIds.size > 0 && (
-        <Card className="p-4 border-amber-300 bg-amber-50 dark:bg-amber-950/20">
-          <div className="flex items-start gap-2 text-amber-800 dark:text-amber-200">
-            <AlertTriangle className="w-4 h-4 mt-0.5" />
-            <p className="text-sm">
-              {duplicateIds.size} duplicate entries detected — entries with the same
-              client, date, and time are highlighted below.
-            </p>
+      {duplicateIds.size > 0 ? (
+        <Card className="border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-700" />
+            <div className="text-sm text-amber-800">
+              {duplicateIds.size} duplicate entries detected — entries with the same client,
+              date, and time are highlighted below.
+            </div>
           </div>
         </Card>
-      )}
+      ) : null}
 
       <Card className="p-4">
         {filtered.length === 0 ? (
-          <div className="py-10 text-center text-muted-foreground">
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
             No time entries found
           </div>
         ) : (
@@ -616,71 +698,76 @@ export default function TimeTracking() {
                   type="button"
                   onClick={() => handleOpenEntry(entry)}
                   className={cn(
-                    "w-full text-left rounded-lg border p-4 transition hover:bg-muted/40",
+                    "w-full rounded-lg border p-4 text-left transition hover:bg-muted/40",
                     isDuplicate && "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
                   )}
                 >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">
-                          {entry.duration_minutes}min
-                        </Badge>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{formatDurationMinutes(entry.duration_minutes)}</Badge>
 
-                        {entry.start_time && (
-                          <Badge variant="outline">
-                            {entry.start_time} - {entry.end_time}
-                          </Badge>
-                        )}
+                    {entry.start_time ? (
+                      <Badge variant="outline">
+                        {entry.start_time} {entry.end_time ? `- ${entry.end_time}` : ""}
+                      </Badge>
+                    ) : null}
 
-                        <Badge variant="outline">
-                          {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
-                        </Badge>
+                    <Badge variant="outline">
+                      {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
+                    </Badge>
 
-                        {isDuplicate && (
-                          <Badge className="bg-amber-500 hover:bg-amber-500">
-                            Duplicate
-                          </Badge>
-                        )}
-                      </div>
+                    {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
+                  </div>
 
-                      <div className="font-medium">
-                        {entry.description || "Session"}
-                      </div>
+                  <div className="mb-2 text-sm text-slate-900">
+                    {entry.description || "Session"}
+                  </div>
 
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        {entry.client_id ? (
-                          <button
-                            type="button"
-                            className="hover:underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/ClientDetail?clientId=${entry.client_id}`);
-                            }}
-                          >
-                            {getClientName(entry.client_id)}
-                          </button>
-                        ) : (
-                          <span>Myself</span>
-                        )}
-
-                        <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    {entry.client_id ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1 hover:text-slate-800"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEditEntry(entry);
+                          navigate(`/ClientDetail?clientId=${entry.client_id}`);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/ClientDetail?clientId=${entry.client_id}`);
+                          }
                         }}
                       >
-                        <Pencil className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
+                        <User className="h-3.5 w-3.5" />
+                        {getClientName(entry.client_id)}
+                      </span>
+                    ) : (
+                      <span>Myself</span>
+                    )}
+
+                    <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
+
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="inline-flex items-center gap-1 hover:text-slate-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditEntry(entry);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleEditEntry(entry);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </span>
                   </div>
                 </button>
               );
@@ -692,24 +779,19 @@ export default function TimeTracking() {
       <Dialog
         open={showNewEntry}
         onOpenChange={(open) => {
-          if (!open) {
-            setShowNewEntry(false);
-            setSelectedEntryTypeCode("");
-          }
+          if (!open) closeNewEntryDialog();
+          else setShowNewEntry(true);
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Time Entry</DialogTitle>
           </DialogHeader>
 
-          {!selectedEntryTypeCode && (
-            <div className="space-y-2">
+          {!selectedEntryTypeCode ? (
+            <div className="space-y-3">
               <label className="text-sm font-medium">Entry Type</label>
-              <Select
-                value={selectedEntryTypeCode}
-                onValueChange={setSelectedEntryTypeCode}
-              >
+              <Select value={selectedEntryTypeCode} onValueChange={setSelectedEntryTypeCode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select entry type" />
                 </SelectTrigger>
@@ -722,22 +804,15 @@ export default function TimeTracking() {
                 </SelectContent>
               </Select>
             </div>
-          )}
-
-          {selectedEntryTypeCode && (
-           <FormEngine
-  mode="create"
-  entryTypeCode={selectedEntryTypeCode}
-  onSave={async () => {
-    await handleRefresh();
-    setShowNewEntry(false);
-    setSelectedEntryTypeCode("");
-  }}
-  onCancel={() => {
-    setShowNewEntry(false);
-    setSelectedEntryTypeCode("");
-  }}
-/>
+          ) : (
+            <FormEngine
+              entryTypeCode={selectedEntryTypeCode}
+              onSaved={async () => {
+                await handleRefresh();
+                closeNewEntryDialog();
+              }}
+              onCancel={closeNewEntryDialog}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -745,33 +820,25 @@ export default function TimeTracking() {
       <Dialog
         open={!!editingEntry}
         onOpenChange={(open) => {
-          if (!open) {
-            setEditingEntry(null);
-            setEditingEntryTypeCode("");
-          }
+          if (!open) closeEditDialog();
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Time Entry</DialogTitle>
           </DialogHeader>
 
-          {editingEntry && editingEntryTypeCode && (
-           <FormEngine
-  mode="edit"
-  entry={editingEntry}
-  entryTypeCode={editingEntryTypeCode}
-  onSave={async () => {
-    await handleRefresh();
-    setEditingEntry(null);
-    setEditingEntryTypeCode("");
-  }}
-  onCancel={() => {
-    setEditingEntry(null);
-    setEditingEntryTypeCode("");
-  }}
-/>
-          )}
+          {editingEntry && editingEntryTypeCode ? (
+            <FormEngine
+              entry={editingEntry}
+              entryTypeCode={editingEntryTypeCode}
+              onSaved={async () => {
+                await handleRefresh();
+                closeEditDialog();
+              }}
+              onCancel={closeEditDialog}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -781,75 +848,64 @@ export default function TimeTracking() {
           if (!open) setSelectedEntry(null);
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Time Entry Details</DialogTitle>
           </DialogHeader>
 
-          {selectedEntry && (
+          {selectedEntry ? (
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Card className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Client</div>
-                  <div className="font-medium">
-                    {selectedEntry.client_id
-                      ? getClientName(selectedEntry.client_id)
-                      : "Myself"}
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Date</div>
-                  <div className="font-medium">
-                    {formatLongEntryDate(selectedEntry.date)}
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Duration</div>
-                  <div className="font-medium">
-                    {selectedEntry.duration_minutes || 0} minutes
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Type</div>
-                  <div className="font-medium">
-                    {getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
-                  </div>
-                </Card>
+              <div>
+                <div className="mb-1 text-xs text-slate-500">Client</div>
+                <div className="text-sm">
+                  {selectedEntry.client_id ? getClientName(selectedEntry.client_id) : "Myself"}
+                </div>
               </div>
 
-              {(selectedEntry.start_time || selectedEntry.end_time) && (
-                <Card className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">Time</div>
-                  <div className="font-medium">
+              <div>
+                <div className="mb-1 text-xs text-slate-500">Date</div>
+                <div className="text-sm">{formatLongEntryDate(selectedEntry.date)}</div>
+              </div>
+
+              <div>
+                <div className="mb-1 text-xs text-slate-500">Duration</div>
+                <div className="text-sm">{selectedEntry.duration_minutes || 0} minutes</div>
+              </div>
+
+              <div>
+                <div className="mb-1 text-xs text-slate-500">Type</div>
+                <div className="text-sm">
+                  {getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
+                </div>
+              </div>
+
+              {selectedEntry.start_time || selectedEntry.end_time ? (
+                <div>
+                  <div className="mb-1 text-xs text-slate-500">Time</div>
+                  <div className="text-sm">
                     {selectedEntry.start_time || "—"} - {selectedEntry.end_time || "—"}
                   </div>
-                </Card>
-              )}
-
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">Description</div>
-                <div className="whitespace-pre-wrap">
-                  {selectedEntry.description || "—"}
                 </div>
-              </Card>
+              ) : null}
 
-              <div className="flex justify-end gap-2">
+              <div>
+                <div className="mb-1 text-xs text-slate-500">Description</div>
+                <div className="text-sm">{selectedEntry.description || "—"}</div>
+              </div>
+
+              <div className="flex justify-end">
                 <Button
-                  variant="outline"
                   onClick={() => {
+                    const entry = selectedEntry;
                     setSelectedEntry(null);
-                    handleEditEntry(selectedEntry);
+                    handleEditEntry(entry);
                   }}
                 >
-                  <Pencil className="w-4 h-4 mr-1" />
                   Edit
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>
