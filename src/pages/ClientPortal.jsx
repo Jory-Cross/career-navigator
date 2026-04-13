@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from '@/lib/queryKeys';
 import {
   getCurrentUser,
   getClientById,
@@ -20,13 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const STAFF_ROLES = ["admin", "management", "employee"];
-
-const queryKeys = {
-  client: (clientId) => ["clientPortal", "client", clientId],
-  applications: (clientId) => ["clientPortal", "applications", clientId],
-  tasks: (clientId) => ["clientPortal", "tasks", clientId],
-  documents: (clientId) => ["clientPortal", "documents", clientId],
-};
 
 function getClientIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
