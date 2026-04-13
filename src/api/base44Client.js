@@ -1,16 +1,11 @@
 import { createClient } from '@base44/sdk';
 import { appParams } from '@/lib/app-params';
 
-const {
-  appId,
-  token,
-  functionsVersion,
-  appBaseUrl,
-} = appParams;
+const { appId, token, functionsVersion, appBaseUrl } = appParams;
 
 /**
  * Raw SDK client
- * Keep this private to this module as much as possible.
+ * Keep this intact for backward compatibility.
  */
 const rawBase44 = createClient({
   appId,
@@ -79,19 +74,8 @@ async function safeCall(label, fn, context = {}) {
   }
 }
 
-/**
- * Auth wrapper
- */
-const auth = {
-  me: () => safeCall('auth.me', () => rawBase44.auth.me()),
-};
-
-/**
- * Entity wrapper factory
- * Gives us one place to standardize calls later.
- */
 function makeEntityApi(entityName) {
-  const entity = rawBase44.entities?.[entityName];
+  const entity = rawBase44?.entities?.[entityName];
 
   if (!entity) {
     return {
@@ -154,25 +138,19 @@ function makeEntityApi(entityName) {
 }
 
 /**
- * Integrations wrapper
- */
-const integrations = {
-  Core: {
-    UploadFile: (payload) =>
-      safeCall('Core.UploadFile', () => rawBase44.integrations.Core.UploadFile(payload), {
-        integration: 'Core',
-        action: 'UploadFile',
-      }),
-  },
-};
-
-/**
- * Stable client interface for the app.
- * This is what new API modules should use.
+ * New wrapper for new API modules.
+ * Important: do NOT replace raw auth with a reduced object.
+ * Spread the original auth/integrations so legacy methods like
+ * base44.auth.logUserInApp still exist.
  */
 export const base44Client = {
-  auth,
+  ...rawBase44,
+  auth: {
+    ...rawBase44.auth,
+    me: (...args) => safeCall('auth.me', () => rawBase44.auth.me(...args)),
+  },
   entities: {
+    ...rawBase44.entities,
     Client: makeEntityApi('Client'),
     JobApplication: makeEntityApi('JobApplication'),
     Task: makeEntityApi('Task'),
@@ -183,15 +161,24 @@ export const base44Client = {
     TimeEntry: makeEntityApi('TimeEntry'),
     Meeting: makeEntityApi('Meeting'),
   },
-  integrations,
+  integrations: {
+    ...rawBase44.integrations,
+    Core: {
+      ...rawBase44.integrations?.Core,
+      UploadFile: (payload) =>
+        safeCall('Core.UploadFile', () => rawBase44.integrations.Core.UploadFile(payload), {
+          integration: 'Core',
+          action: 'UploadFile',
+        }),
+    },
+  },
   raw: rawBase44,
 };
 
 /**
- * Backward-compatible export.
- * Leave this in place so old files do not break immediately.
- * New code should prefer base44Client.
+ * Backward-compatible export:
+ * keep `base44` as the raw SDK client so old code does not break.
  */
-export const base44 = base44Client;
+export const base44 = rawBase44;
 
 export default base44Client;
