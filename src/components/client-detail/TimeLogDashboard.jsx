@@ -30,7 +30,7 @@ import {
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
-const timeLogDashboardApi = {
+const timeLogApi = {
   async listEmployees() {
     try {
       const result = await base44.entities.User.filter({ role: "employee" });
@@ -52,7 +52,6 @@ const timeLogDashboardApi = {
 
 function formatDurationMinutes(minutes) {
   const total = Number(minutes || 0);
-
   if (!total) return "0 min";
   if (total < 60) return `${total} min`;
 
@@ -97,7 +96,6 @@ function addOneDayDateOnly(dateString) {
 
   const next = new Date(parsed);
   next.setDate(next.getDate() + 1);
-
   return format(next, "yyyy-MM-dd");
 }
 
@@ -136,8 +134,8 @@ function buildDuplicatePayload(entry) {
 
 function EmptyState({ message }) {
   return (
-    <Card className="border-dashed">
-      <div className="p-6 text-center text-sm text-slate-500">{message}</div>
+    <Card className="p-8 text-center text-sm text-muted-foreground">
+      {message}
     </Card>
   );
 }
@@ -176,7 +174,6 @@ export default function TimeLogDashboard({
 
   useEffect(() => {
     mountedRef.current = true;
-
     return () => {
       mountedRef.current = false;
     };
@@ -186,7 +183,7 @@ export default function TimeLogDashboard({
     let cancelled = false;
 
     async function loadEmployees() {
-      const nextEmployees = await timeLogDashboardApi.listEmployees();
+      const nextEmployees = await timeLogApi.listEmployees();
       if (cancelled || !mountedRef.current) return;
       setEmployees(nextEmployees);
     }
@@ -212,7 +209,6 @@ export default function TimeLogDashboard({
 
     for (const entry of timeEntries) {
       const directCode = getImmediateEntryTypeCode(entry);
-
       if (directCode) {
         directMap[entry.id] = directCode;
       } else if (entry?.id) {
@@ -246,20 +242,13 @@ export default function TimeLogDashboard({
             const resolvedCode = await resolveEntryTypeCode(entry);
             return [entry.id, normalizeEntryTypeCode(resolvedCode) || ""];
           } catch (error) {
-            console.error(
-              "[TimeLogDashboard] Failed to resolve entry type code:",
-              error
-            );
+            console.error("[TimeLogDashboard] Failed to resolve entry type code:", error);
             return [entry.id, ""];
           }
         })
       );
 
-      if (
-        cancelled ||
-        !mountedRef.current ||
-        resolveRunIdRef.current !== runId
-      ) {
+      if (cancelled || !mountedRef.current || resolveRunIdRef.current !== runId) {
         return;
       }
 
@@ -318,12 +307,11 @@ export default function TimeLogDashboard({
 
       result = result.filter((entry) => {
         const resolvedCode =
-          resolvedEntryTypeCodes[entry.id] || getImmediateEntryTypeCode(entry) || "";
+          resolvedEntryTypeCodes[entry.id] ||
+          getImmediateEntryTypeCode(entry) ||
+          "";
 
-        return (
-          String(resolvedCode).toLowerCase() ===
-          String(normalizedFilter).toLowerCase()
-        );
+        return String(resolvedCode).toLowerCase() === String(normalizedFilter).toLowerCase();
       });
     }
 
@@ -347,9 +335,7 @@ export default function TimeLogDashboard({
 
     if (filters.payrollEligible !== "all") {
       const val = filters.payrollEligible === "true";
-      result = result.filter(
-        (entry) => Boolean(entry.is_payroll_eligible) === val
-      );
+      result = result.filter((entry) => Boolean(entry.is_payroll_eligible) === val);
     }
 
     result.sort((a, b) => {
@@ -367,10 +353,7 @@ export default function TimeLogDashboard({
   }, [timeEntries, filters, resolvedEntryTypeCodes]);
 
   const totalMinutes = useMemo(() => {
-    return filtered.reduce(
-      (sum, entry) => sum + Number(entry.duration_minutes || 0),
-      0
-    );
+    return filtered.reduce((sum, entry) => sum + Number(entry.duration_minutes || 0), 0);
   }, [filtered]);
 
   const totalHours = useMemo(() => {
@@ -443,7 +426,7 @@ export default function TimeLogDashboard({
       try {
         setIsDuplicatingId(entry.id);
         const payload = buildDuplicatePayload(entry);
-        await timeLogDashboardApi.createTimeEntry(payload);
+        await timeLogApi.createTimeEntry(payload);
         toast.success("Entry duplicated");
         await onRefresh?.();
       } catch (error) {
@@ -464,7 +447,7 @@ export default function TimeLogDashboard({
 
       try {
         setIsDeletingId(entry.id);
-        await timeLogDashboardApi.deleteTimeEntry(entry.id);
+        await timeLogApi.deleteTimeEntry(entry.id);
         toast.success("Entry deleted");
         await onRefresh?.();
       } catch (error) {
@@ -480,76 +463,71 @@ export default function TimeLogDashboard({
   );
 
   const activeEntryTypeCode =
-    selectedEntryTypeCode ||
-    getImmediateEntryTypeCode(editingEntry) ||
-    "";
+    selectedEntryTypeCode || getImmediateEntryTypeCode(editingEntry) || "";
 
   return (
     <>
-      <Card className="overflow-hidden">
-        <div className="border-b p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">
-                Time Log Dashboard
-              </h3>
-              <p className="text-sm text-slate-500">
-                {filtered.length} entries • {totalHours}h total
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters((prev) => !prev)}
-                className="gap-1.5"
-              >
-                <Filter className="h-4 w-4" />
-                Filters
-                {hasActiveFilters(filters)
-                  ? ` (${activeFilterCount(filters)})`
-                  : ""}
-              </Button>
-
-              <Button size="sm" onClick={handleAddEntry} className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                Add Entry
-              </Button>
-            </div>
+      <Card className="p-4 space-y-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Time Log Dashboard</h3>
+            <p className="text-sm text-muted-foreground">
+              {filtered.length} entries • {totalHours}h total
+            </p>
           </div>
 
-          {showFilters ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Client</Label>
-                <Select
-                  value={filters.clientId || "all_clients"}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      clientId: value === "all_clients" ? "" : value,
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="All clients" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all_clients">All clients</SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.first_name || client.last_name
-                          ? `${client.first_name || ""} ${client.last_name || ""}`.trim()
-                          : client.full_name || client.email || "Unknown client"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => setShowFilters((prev) => !prev)}
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              {hasActiveFilters(filters) ? ` (${activeFilterCount(filters)})` : ""}
+            </Button>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Employee</Label>
+            <Button className="gap-1.5" onClick={handleAddEntry}>
+              <Plus className="h-4 w-4" />
+              Add Entry
+            </Button>
+          </div>
+        </div>
+
+        {showFilters ? (
+          <Card className="p-4">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {!clientId ? (
+                <div className="space-y-1.5">
+                  <Label>Client</Label>
+                  <Select
+                    value={filters.clientId || "all_clients"}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        clientId: value === "all_clients" ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All clients" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all_clients">All clients</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.first_name || client.last_name
+                            ? `${client.first_name || ""} ${client.last_name || ""}`.trim()
+                            : client.full_name || client.email || "Unknown client"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+
+              <div className="space-y-1.5">
+                <Label>Employee</Label>
                 <Select
                   value={filters.employeeId || "all_employees"}
                   onValueChange={(value) =>
@@ -559,7 +537,7 @@ export default function TimeLogDashboard({
                     }))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger>
                     <SelectValue placeholder="All employees" />
                   </SelectTrigger>
                   <SelectContent>
@@ -573,8 +551,8 @@ export default function TimeLogDashboard({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Entry Type</Label>
+              <div className="space-y-1.5">
+                <Label>Entry Type</Label>
                 <Select
                   value={filters.entryTypeCode || "all_types"}
                   onValueChange={(value) =>
@@ -584,7 +562,7 @@ export default function TimeLogDashboard({
                     }))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger>
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -598,16 +576,16 @@ export default function TimeLogDashboard({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Reportable</Label>
+              <div className="space-y-1.5">
+                <Label>Reportable</Label>
                 <Select
                   value={filters.reportable}
                   onValueChange={(value) =>
                     setFilters((prev) => ({ ...prev, reportable: value }))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
@@ -617,16 +595,16 @@ export default function TimeLogDashboard({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Billable</Label>
+              <div className="space-y-1.5">
+                <Label>Billable</Label>
                 <Select
                   value={filters.billable}
                   onValueChange={(value) =>
                     setFilters((prev) => ({ ...prev, billable: value }))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
@@ -636,19 +614,16 @@ export default function TimeLogDashboard({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Payroll Eligible</Label>
+              <div className="space-y-1.5">
+                <Label>Payroll Eligible</Label>
                 <Select
                   value={filters.payrollEligible}
                   onValueChange={(value) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      payrollEligible: value,
-                    }))
+                    setFilters((prev) => ({ ...prev, payrollEligible: value }))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
@@ -658,171 +633,131 @@ export default function TimeLogDashboard({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">From</Label>
+              <div className="space-y-1.5">
+                <Label>From</Label>
                 <Input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(event) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      dateFrom: event.target.value,
-                    }))
+                    setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
                   }
-                  className="h-8 text-xs"
                 />
               </div>
 
-              <div className="flex items-end">
-                <div className="w-full space-y-1">
-                  <Label className="text-xs text-slate-500">To</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={filters.dateTo}
-                      onChange={(event) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          dateTo: event.target.value,
-                        }))
-                      }
-                      className="h-8 text-xs"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetFilters}
-                      className="shrink-0"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <Label>To</Label>
+                <Input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, dateTo: event.target.value }))
+                  }
+                />
               </div>
             </div>
-          ) : null}
-        </div>
 
-        <div className="p-4">
-          {filtered.length === 0 ? (
-            <EmptyState
-              message={
-                timeEntries.length === 0
-                  ? "No time entries yet"
-                  : "No entries match the current filters"
-              }
-            />
-          ) : (
-            <div className="space-y-3">
-              {filtered.map((entry) => {
-                const employee = employeeById[entry.employee_id];
-                const client = clientById[entry.client_id];
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" onClick={resetFilters}>
+                Clear
+              </Button>
+            </div>
+          </Card>
+        ) : null}
 
-                return (
-                  <Card key={entry.id} className="border bg-white shadow-sm">
-                    <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium text-slate-900">
-                            {entry.date
-                              ? format(
-                                  new Date(`${entry.date}T00:00:00`),
-                                  "MMM d, yyyy"
-                                )
-                              : "No date"}
-                          </span>
+        {filtered.length === 0 ? (
+          <EmptyState message="No time entries match the current filters." />
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((entry) => {
+              const employee = employeeById[entry.employee_id];
+              const client = clientById[entry.client_id];
 
-                          <Badge variant="outline">
-                            {getEntryTypeDisplay(entry)}
-                          </Badge>
+              return (
+                <Card key={entry.id} className="p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">
+                          {entry.date
+                            ? format(new Date(`${entry.date}T00:00:00`), "MMM d, yyyy")
+                            : "No date"}
+                        </span>
 
-                          <Badge variant="secondary">
-                            {formatDurationMinutes(entry.duration_minutes)}
-                          </Badge>
+                        <Badge variant="secondary">{getEntryTypeDisplay(entry)}</Badge>
+                        <Badge variant="outline">
+                          {formatDurationMinutes(entry.duration_minutes)}
+                        </Badge>
 
-                          {entry.is_reportable ? (
-                            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                              Reportable
-                            </Badge>
-                          ) : null}
-
-                          {entry.is_billable ? (
-                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                              Billable
-                            </Badge>
-                          ) : null}
-
-                          {entry.is_payroll_eligible ? (
-                            <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">
-                              Payroll
-                            </Badge>
-                          ) : null}
-                        </div>
-
-                        <p className="text-sm text-slate-700">
-                          {entry.description || "No description"}
-                        </p>
-
-                        <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
-                          {client && !clientId ? (
-                            <span>
-                              Client:{" "}
-                              {client.first_name || client.last_name
-                                ? `${client.first_name || ""} ${client.last_name || ""}`.trim()
-                                : client.full_name || client.email || "Unknown client"}
-                            </span>
-                          ) : null}
-
-                          {employee?.full_name ? (
-                            <span>Employee: {employee.full_name}</span>
-                          ) : null}
-
-                          {entry.start_time && entry.end_time ? (
-                            <span>
-                              {entry.start_time} - {entry.end_time}
-                            </span>
-                          ) : null}
-                        </div>
+                        {entry.is_reportable ? <Badge>Reportable</Badge> : null}
+                        {entry.is_billable ? <Badge>Billable</Badge> : null}
+                        {entry.is_payroll_eligible ? <Badge>Payroll</Badge> : null}
                       </div>
 
-                      <div className="flex flex-wrap gap-2 lg:justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditEntry(entry)}
-                        >
-                          <Pencil className="mr-1.5 h-4 w-4" />
-                          Edit
-                        </Button>
+                      <div className="text-sm text-muted-foreground">
+                        {entry.description || "No description"}
+                      </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDuplicate(entry)}
-                          disabled={isDuplicatingId === entry.id}
-                        >
-                          <Copy className="mr-1.5 h-4 w-4" />
-                          {isDuplicatingId === entry.id ? "Duplicating..." : "Duplicate"}
-                        </Button>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        {client && !clientId ? (
+                          <span>
+                            Client:{" "}
+                            {client.first_name || client.last_name
+                              ? `${client.first_name || ""} ${client.last_name || ""}`.trim()
+                              : client.full_name || client.email || "Unknown client"}
+                          </span>
+                        ) : null}
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(entry)}
-                          disabled={isDeletingId === entry.id}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="mr-1.5 h-4 w-4" />
-                          {isDeletingId === entry.id ? "Deleting..." : "Delete"}
-                        </Button>
+                        {employee?.full_name ? (
+                          <span>Employee: {employee.full_name}</span>
+                        ) : null}
+
+                        {entry.start_time && entry.end_time ? (
+                          <span>
+                            {entry.start_time} - {entry.end_time}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleEditEntry(entry)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleDuplicate(entry)}
+                        disabled={isDuplicatingId === entry.id}
+                      >
+                        <Copy className="h-4 w-4" />
+                        {isDuplicatingId === entry.id ? "Duplicating..." : "Duplicate"}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(entry)}
+                        disabled={isDeletingId === entry.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {isDeletingId === entry.id ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       <Dialog
@@ -835,7 +770,7 @@ export default function TimeLogDashboard({
           }
         }}
       >
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {editingEntry ? "Edit Time Entry" : "Add Time Entry"}
@@ -846,11 +781,11 @@ export default function TimeLogDashboard({
             <div className="space-y-2">
               <Label>Entry Type</Label>
               <Select
-                value={selectedEntryTypeCode || undefined}
+                value={selectedEntryTypeCode}
                 onValueChange={(value) => setSelectedEntryTypeCode(value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose entry type" />
+                  <SelectValue placeholder="Select entry type" />
                 </SelectTrigger>
                 <SelectContent>
                   {entryTypes.map((option) => (
@@ -865,9 +800,10 @@ export default function TimeLogDashboard({
 
           {editingEntry ? (
             <FormEngine
+              key={`edit-${editingEntry.id}-${activeEntryTypeCode}`}
               entry={editingEntry}
-              entryTypeCode={activeEntryTypeCode}
               clientId={editingEntry.client_id || clientId}
+              entryTypeCode={activeEntryTypeCode}
               onSaved={async () => {
                 await onRefresh?.();
                 resetFormState();
@@ -876,8 +812,9 @@ export default function TimeLogDashboard({
             />
           ) : selectedEntryTypeCode ? (
             <FormEngine
+              key={`create-${clientId || "none"}-${selectedEntryTypeCode}`}
+              clientId={clientId || filters.clientId || ""}
               entryTypeCode={selectedEntryTypeCode}
-              clientId={clientId}
               onSaved={async () => {
                 await onRefresh?.();
                 resetFormState();
@@ -885,7 +822,7 @@ export default function TimeLogDashboard({
               onCancel={resetFormState}
             />
           ) : (
-            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               Select an entry type above to begin
             </div>
           )}
