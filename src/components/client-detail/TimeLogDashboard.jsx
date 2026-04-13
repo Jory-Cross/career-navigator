@@ -28,9 +28,8 @@ import {
   normalizeEntryTypeCode,
 } from "@/lib/entryTypeRegistry";
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
-import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
-const timeLogApi = {
+const timeLogDashboardApi = {
   async listEmployees() {
     try {
       const result = await base44.entities.User.filter({ role: "employee" });
@@ -114,6 +113,7 @@ function getImmediateEntryTypeCode(entry) {
       entry?.entry_type_key ||
       entry?.type ||
       entry?.category ||
+      entry?.entryTypeCode ||
       ""
   );
 }
@@ -172,6 +172,57 @@ export default function TimeLogDashboard({
 
   const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
+  const entryTypeLabelByCode = useMemo(() => {
+    const map = {};
+    for (const type of entryTypes) {
+      const normalizedCode = normalizeEntryTypeCode(type?.code || "");
+      if (normalizedCode) {
+        map[normalizedCode] = type.label || normalizedCode;
+      }
+    }
+    return map;
+  }, [entryTypes]);
+
+  const getResolvedEntryTypeCode = useCallback(
+    (entry) => {
+      return (
+        normalizeEntryTypeCode(resolvedEntryTypeCodes[entry?.id]) ||
+        getImmediateEntryTypeCode(entry) ||
+        ""
+      );
+    },
+    [resolvedEntryTypeCodes]
+  );
+
+  const getResolvedEntryTypeLabel = useCallback(
+    (entry) => {
+      const directLabel =
+        entry?.entry_type_name ||
+        entry?.entry_type_label ||
+        entry?.type_name ||
+        entry?.type_label ||
+        entry?.service_type_name ||
+        "";
+
+      if (directLabel) return directLabel;
+
+      const resolvedCode = getResolvedEntryTypeCode(entry);
+      if (resolvedCode && entryTypeLabelByCode[resolvedCode]) {
+        return entryTypeLabelByCode[resolvedCode];
+      }
+
+      if (resolvedCode) {
+        return resolvedCode
+          .split("_")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+
+      return "Unknown Type";
+    },
+    [entryTypeLabelByCode, getResolvedEntryTypeCode]
+  );
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -183,7 +234,7 @@ export default function TimeLogDashboard({
     let cancelled = false;
 
     async function loadEmployees() {
-      const nextEmployees = await timeLogApi.listEmployees();
+      const nextEmployees = await timeLogDashboardApi.listEmployees();
       if (cancelled || !mountedRef.current) return;
       setEmployees(nextEmployees);
     }
@@ -217,17 +268,25 @@ export default function TimeLogDashboard({
     }
 
     setResolvedEntryTypeCodes((prev) => {
-      const prevKeys = Object.keys(prev);
-      const nextKeys = Object.keys(directMap);
+      const merged = { ...prev };
+      let changed = false;
 
-      if (
-        prevKeys.length === nextKeys.length &&
-        nextKeys.every((key) => prev[key] === directMap[key])
-      ) {
-        return prev;
+      for (const [id, code] of Object.entries(directMap)) {
+        if ((merged[id] || "") !== code) {
+          merged[id] = code;
+          changed = true;
+        }
       }
 
-      return directMap;
+      for (const existingId of Object.keys(merged)) {
+        const stillExists = timeEntries.some((entry) => entry?.id === existingId);
+        if (!stillExists) {
+          delete merged[existingId];
+          changed = true;
+        }
+      }
+
+      return changed ? merged : prev;
     });
 
     if (!needsAsync.length) return;
@@ -257,8 +316,8 @@ export default function TimeLogDashboard({
         let changed = false;
 
         for (const [id, code] of asyncPairs) {
-          if ((merged[id] || "") !== (code || "")) {
-            merged[id] = code || "";
+          if (code && (merged[id] || "") !== code) {
+            merged[id] = code;
             changed = true;
           }
         }
@@ -306,12 +365,10 @@ export default function TimeLogDashboard({
         normalizeEntryTypeCode(filters.entryTypeCode) || filters.entryTypeCode;
 
       result = result.filter((entry) => {
-        const resolvedCode =
-          resolvedEntryTypeCodes[entry.id] ||
-          getImmediateEntryTypeCode(entry) ||
-          "";
-
-        return String(resolvedCode).toLowerCase() === String(normalizedFilter).toLowerCase();
+        const resolvedCode = getResolvedEntryTypeCode(entry);
+        return (
+          String(resolvedCode).toLowerCase() === String(normalizedFilter).toLowerCase()
+        );
       });
     }
 
@@ -350,7 +407,7 @@ export default function TimeLogDashboard({
     });
 
     return result;
-  }, [timeEntries, filters, resolvedEntryTypeCodes]);
+  }, [timeEntries, filters, getResolvedEntryTypeCode]);
 
   const totalMinutes = useMemo(() => {
     return filtered.reduce((sum, entry) => sum + Number(entry.duration_minutes || 0), 0);
@@ -379,22 +436,6 @@ export default function TimeLogDashboard({
     });
   }, [clientId]);
 
-  const getEntryTypeDisplay = useCallback(
-    (entry) => {
-      const directLabel =
-        entry.entry_type_name ||
-        entry.entry_type_label ||
-        entry.type_name ||
-        entry.type_label ||
-        "";
-
-      if (directLabel) return directLabel;
-
-      return getEntryTypeLabel(entry, resolvedEntryTypeCodes);
-    },
-    [resolvedEntryTypeCodes]
-  );
-
   const handleAddEntry = useCallback(() => {
     setEditingEntry(null);
     setSelectedEntryTypeCode("");
@@ -408,17 +449,13 @@ export default function TimeLogDashboard({
         return;
       }
 
-      const resolvedCode =
-        resolvedEntryTypeCodes[entry.id] ||
-        getImmediateEntryTypeCode(entry) ||
-        normalizeEntryTypeCode(await resolveEntryTypeCode(entry)) ||
-        "";
+      const resolvedCode = getResolvedEntryTypeCode(entry);
 
       setEditingEntry(entry);
       setSelectedEntryTypeCode(resolvedCode);
       setShowForm(true);
     },
-    [onEditEntry, resolvedEntryTypeCodes]
+    [onEditEntry, getResolvedEntryTypeCode]
   );
 
   const handleDuplicate = useCallback(
@@ -426,7 +463,7 @@ export default function TimeLogDashboard({
       try {
         setIsDuplicatingId(entry.id);
         const payload = buildDuplicatePayload(entry);
-        await timeLogApi.createTimeEntry(payload);
+        await timeLogDashboardApi.createTimeEntry(payload);
         toast.success("Entry duplicated");
         await onRefresh?.();
       } catch (error) {
@@ -447,7 +484,7 @@ export default function TimeLogDashboard({
 
       try {
         setIsDeletingId(entry.id);
-        await timeLogApi.deleteTimeEntry(entry.id);
+        await timeLogDashboardApi.deleteTimeEntry(entry.id);
         toast.success("Entry deleted");
         await onRefresh?.();
       } catch (error) {
@@ -463,7 +500,7 @@ export default function TimeLogDashboard({
   );
 
   const activeEntryTypeCode =
-    selectedEntryTypeCode || getImmediateEntryTypeCode(editingEntry) || "";
+    selectedEntryTypeCode || getResolvedEntryTypeCode(editingEntry) || "";
 
   return (
     <>
@@ -683,7 +720,10 @@ export default function TimeLogDashboard({
                             : "No date"}
                         </span>
 
-                        <Badge variant="secondary">{getEntryTypeDisplay(entry)}</Badge>
+                        <Badge variant="secondary">
+                          {getResolvedEntryTypeLabel(entry)}
+                        </Badge>
+
                         <Badge variant="outline">
                           {formatDurationMinutes(entry.duration_minutes)}
                         </Badge>
