@@ -446,13 +446,18 @@ export default function ClientDetail() {
         )}
       </Tabs>
 
-      {showEmailComposer && (
-        <EmailComposer
-          isOpen={showEmailComposer}
-          onClose={() => setShowEmailComposer(false)}
-          client={client}
-        />
-      )}
+     {showEmailComposer && (
+  <EmailComposer
+    open={showEmailComposer}
+    onClose={() => setShowEmailComposer(false)}
+    clientId={client.id}
+    clientEmail={client.email}
+    clientName={
+      client.full_name ||
+      [client.first_name, client.last_name].filter(Boolean).join(" ")
+    }
+  />
+)}
     </div>
   );
 }
