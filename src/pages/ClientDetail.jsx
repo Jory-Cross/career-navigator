@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
+
 import ClientHeader from "@/components/client-detail/ClientHeader";
 import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
 import TasksSection from "@/components/client-detail/TasksSection";
@@ -42,59 +43,114 @@ function getDefaultTab(client, userRole) {
   return "applications";
 }
 
+const clientDetailApi = {
+  async getCurrentUser() {
+    return await base44.auth.me();
+  },
+
+  async getClientById(id) {
+    try {
+      return await base44.entities.Client.get(id);
+    } catch (error) {
+      const allClients = await base44.entities.Client.list();
+      return allClients.find((c) => c.id === id) || null;
+    }
+  },
+
+  async getApplications(clientId) {
+    return await base44.entities.JobApplication.filter({ client_id: clientId });
+  },
+
+  async getTasks(clientId) {
+    try {
+      return await base44.entities.Task.filter({ client_ids: clientId });
+    } catch (error) {
+      const allTasks = await base44.entities.Task.list();
+      return allTasks.filter((t) => t.client_ids?.includes(clientId));
+    }
+  },
+
+  async getResumes(clientId) {
+    return await base44.entities.Resume.filter({ client_id: clientId });
+  },
+
+  async getTimeEntries(clientId) {
+    return await base44.entities.TimeEntry.filter({ client_id: clientId });
+  },
+
+  async getActivities(clientId) {
+    return await base44.entities.Activity.filter({ client_id: clientId });
+  },
+};
+
+function canAccessClient(client, user, clientId) {
+  if (!client || !user) return false;
+
+  if (user.role === "admin") return true;
+  if (user.role === "management") return true;
+
+  if (
+    user.role === "employee" &&
+    (client.assigned_employee_id === user.id || client.created_by === user.email)
+  ) {
+    return true;
+  }
+
+  if (user.role === "client" && client.id === clientId) {
+    return true;
+  }
+
+  return false;
+}
+
 export default function ClientDetail() {
-  const clientId = React.useMemo(() => getClientIdFromUrl(), []);
+  const clientId = useMemo(() => getClientIdFromUrl(), []);
   const queryClient = useQueryClient();
 
-  const [showEmailComposer, setShowEmailComposer] = React.useState(false);
-  const [user, setUser] = React.useState(null);
-  const [activeTab, setActiveTab] = React.useState(null);
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState(null);
 
-  React.useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+  useEffect(() => {
+    let cancelled = false;
+
+    clientDetailApi
+      .getCurrentUser()
+      .then((result) => {
+        if (!cancelled) setUser(result);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const { data: client, isLoading } = useQuery({
-    queryKey: ["client", clientId, user?.role, user?.id],
+  const {
+    data: client,
+    isLoading,
+  } = useQuery({
+    queryKey: ["client", clientId, user?.role, user?.id, user?.email],
     queryFn: async () => {
       if (!clientId) return null;
 
-      let clientData = null;
-
-      try {
-        clientData = await base44.entities.Client.get(clientId);
-      } catch (error) {
-        const allClients = await base44.entities.Client.list();
-        clientData = allClients.find((c) => c.id === clientId) || null;
-      }
-
+      const clientData = await clientDetailApi.getClientById(clientId);
       if (!clientData) return null;
-      if (!user) return clientData;
-      if (user.role === "admin") return clientData;
-      if (user.role === "management") return clientData;
+      if (!user) return null;
 
-      if (
-        user.role === "employee" &&
-        (clientData.assigned_employee_id === user.id ||
-          clientData.created_by === user.email)
-      ) {
-        return clientData;
-      }
-
-      if (user.role === "client" && clientData.id === clientId) {
-        return clientData;
-      }
-
-      return null;
+      return canAccessClient(clientData, user, clientId) ? clientData : null;
     },
     enabled: !!clientId && !!user,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const defaultTab = React.useMemo(() => {
+  const defaultTab = useMemo(() => {
     return client ? getDefaultTab(client, user?.role) : null;
   }, [client, user?.role]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (defaultTab && !activeTab) {
       setActiveTab(defaultTab);
     }
@@ -107,74 +163,79 @@ export default function ClientDetail() {
   const shouldLoadApplications = !!clientId && activeTab === "applications";
   const shouldLoadTasks = !!clientId && activeTab === "tasks";
   const shouldLoadResumes = !!clientId && activeTab === "resumes";
-  const shouldLoadTime =
-    !!clientId && (activeTab === "time" || activeTab === "job_supports");
+  const shouldLoadTime = !!clientId && (activeTab === "time" || activeTab === "job_supports");
   const shouldLoadActivity = !!clientId && activeTab === "activity";
 
   const { data: applications = [] } = useQuery({
     queryKey: ["applications", clientId],
-    queryFn: () => base44.entities.JobApplication.filter({ client_id: clientId }),
+    queryFn: () => clientDetailApi.getApplications(clientId),
     enabled: shouldLoadApplications,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks", clientId],
-    queryFn: async () => {
-      try {
-        return await base44.entities.Task.filter({ client_ids: clientId });
-      } catch (error) {
-        const allTasks = await base44.entities.Task.list();
-        return allTasks.filter((t) => t.client_ids?.includes(clientId));
-      }
-    },
+    queryFn: () => clientDetailApi.getTasks(clientId),
     enabled: shouldLoadTasks,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: resumes = [] } = useQuery({
     queryKey: ["resumes", clientId],
-    queryFn: () => base44.entities.Resume.filter({ client_id: clientId }),
+    queryFn: () => clientDetailApi.getResumes(clientId),
     enabled: shouldLoadResumes,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", clientId],
-    queryFn: () => base44.entities.TimeEntry.filter({ client_id: clientId }),
+    queryFn: () => clientDetailApi.getTimeEntries(clientId),
     enabled: shouldLoadTime,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", clientId],
-    queryFn: () => base44.entities.Activity.filter({ client_id: clientId }),
+    queryFn: () => clientDetailApi.getActivities(clientId),
     enabled: shouldLoadActivity,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const refreshClient = React.useCallback(() => {
+  const refreshClient = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["client", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshApplications = React.useCallback(() => {
+  const refreshApplications = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["applications", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshTasks = React.useCallback(() => {
+  const refreshTasks = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["tasks", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshResumes = React.useCallback(() => {
+  const refreshResumes = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["resumes", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshTimeEntries = React.useCallback(() => {
+  const refreshTimeEntries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["timeEntries", clientId] });
   }, [queryClient, clientId]);
 
-  const refreshActivities = React.useCallback(() => {
+  const refreshActivities = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["activities", clientId] });
   }, [queryClient, clientId]);
 
-  const portalUrl = React.useMemo(() => {
-    return `/ClientPortal?id=${clientId}`;
-  }, [clientId]);
+  const portalUrl = useMemo(() => `/ClientPortal?id=${clientId}`, [clientId]);
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
@@ -182,11 +243,11 @@ export default function ClientDetail() {
 
   if (!client) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="text-lg font-semibold">Client not found</div>
+      <div className="p-6">
+        <div className="mb-4 text-lg font-semibold">Client not found</div>
         <Link to={createPageUrl("Clients")}>
           <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Clients
           </Button>
         </Link>
@@ -195,11 +256,11 @@ export default function ClientDetail() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link to={createPageUrl("Clients")}>
           <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Clients
           </Button>
         </Link>
@@ -210,7 +271,7 @@ export default function ClientDetail() {
               variant="outline"
               onClick={() => window.open(portalUrl, "_blank")}
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ExternalLink className="mr-2 h-4 w-4" />
               Client Portal
             </Button>
           )}
@@ -223,196 +284,193 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <ClientHeader client={client} onUpdate={refreshClient} />
+      <ClientHeader client={client} onRefresh={refreshClient} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6">
-          <Tabs
-            value={activeTab || defaultTab || "applications"}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <TabsList className="flex flex-wrap h-auto">
-              {!isClientUser && !isEmployed && (
-                <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
-              )}
+      {!isDspd && !isEmployed && !isClientUser && (
+        <VocationalProfileCard client={client} onRefresh={refreshClient} />
+      )}
 
-              {!isDspd && !isEmployed && (
-                <TabsTrigger value="applications">
-                  Applications {activeTab === "applications" ? `(${applications.length})` : ""}
-                </TabsTrigger>
-              )}
-
-              {!isDspd && !isEmployed && !isClientUser && (
-                <TabsTrigger value="ai_jobs">AI Job Search</TabsTrigger>
-              )}
-
-              {!isDspd && !isEmployed && (
-                <TabsTrigger value="interview_prep">Interview Prep</TabsTrigger>
-              )}
-
-              {!isDspd && !isEmployed && !isClientUser && (
-                <TabsTrigger value="assessments">Assessments</TabsTrigger>
-              )}
-
-              {client.client_type === "pre_ets" && !isClientUser && (
-                <TabsTrigger value="wble_forms">WBLE Forms</TabsTrigger>
-              )}
-
-              {!isClientUser && (
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-              )}
-
-              {!isEmployed && (
-                <TabsTrigger value="tasks">
-                  Tasks {activeTab === "tasks" ? `(${tasks.length})` : ""}
-                </TabsTrigger>
-              )}
-
-              {!isDspd && !isEmployed && (
-                <TabsTrigger value="resumes">
-                  Resumes {activeTab === "resumes" ? `(${resumes.length})` : ""}
-                </TabsTrigger>
-              )}
-
-              {!isClientUser && isEmployed && (
-                <TabsTrigger value="job_supports">
-                  Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
-                </TabsTrigger>
-              )}
-
-              {!isClientUser && !isEmployed && (
-                <TabsTrigger value="time">
-                  Time {activeTab === "time" ? `(${timeEntries.length})` : ""}
-                </TabsTrigger>
-              )}
-
-              <TabsTrigger value="activity">
-                Activity {activeTab === "activity" ? `(${activities.length})` : ""}
-              </TabsTrigger>
-            </TabsList>
-
+      <Tabs value={activeTab || defaultTab || "applications"} onValueChange={setActiveTab}>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex h-auto min-w-max flex-wrap">
             {!isClientUser && !isEmployed && (
-              <TabsContent value="onboarding">
-                <OnboardingSection client={client} onRefresh={refreshClient} />
-              </TabsContent>
+              <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
             )}
 
             {!isDspd && !isEmployed && (
-              <TabsContent value="applications">
-                <JobApplicationsSection
-                  client={client}
-                  applications={applications}
-                  onRefresh={refreshApplications}
-                />
-              </TabsContent>
+              <TabsTrigger value="applications">
+                Applications {activeTab === "applications" ? `(${applications.length})` : ""}
+              </TabsTrigger>
             )}
 
             {!isDspd && !isEmployed && !isClientUser && (
-              <TabsContent value="ai_jobs">
-                <AIJobSearchPanel client={client} />
-              </TabsContent>
+              <TabsTrigger value="ai_jobs">AI Job Search</TabsTrigger>
             )}
 
             {!isDspd && !isEmployed && (
-              <TabsContent value="interview_prep">
-                <InterviewPrepSection
-                  client={client}
-                  onRefresh={refreshApplications}
-                />
-              </TabsContent>
+              <TabsTrigger value="interview_prep">Interview Prep</TabsTrigger>
             )}
 
             {!isDspd && !isEmployed && !isClientUser && (
-              <TabsContent value="assessments">
-                <AssessmentSection client={client} onRefresh={refreshClient} />
-              </TabsContent>
+              <TabsTrigger value="assessments">Assessments</TabsTrigger>
             )}
 
             {client.client_type === "pre_ets" && !isClientUser && (
-              <TabsContent value="wble_forms">
-                <WBLEFormSection client={client} onRefresh={refreshClient} />
-              </TabsContent>
+              <TabsTrigger value="wble_forms">WBLE Forms</TabsTrigger>
             )}
 
-            {!isClientUser && (
-              <TabsContent value="documents">
-                <DocumentsSection client={client} onRefresh={refreshClient} />
-              </TabsContent>
-            )}
+            {!isClientUser && <TabsTrigger value="documents">Documents</TabsTrigger>}
 
             {!isEmployed && (
-              <TabsContent value="tasks">
-                <TasksSection
-                  client={client}
-                  tasks={tasks}
-                  onRefresh={refreshTasks}
-                />
-              </TabsContent>
+              <TabsTrigger value="tasks">
+                Tasks {activeTab === "tasks" ? `(${tasks.length})` : ""}
+              </TabsTrigger>
             )}
 
             {!isDspd && !isEmployed && (
-              <TabsContent value="resumes">
-                <ResumeSection
-                  client={client}
-                  resumes={resumes}
-                  onRefresh={refreshResumes}
-                />
-              </TabsContent>
+              <TabsTrigger value="resumes">
+                Resumes {activeTab === "resumes" ? `(${resumes.length})` : ""}
+              </TabsTrigger>
             )}
 
             {!isClientUser && isEmployed && (
-              <TabsContent value="job_supports">
-                <TimeLogDashboard
-                  clientId={clientId}
-                  clients={[client]}
-                  timeEntries={timeEntries}
-                  onRefresh={refreshTimeEntries}
-                />
-              </TabsContent>
+              <TabsTrigger value="job_supports">
+                Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
+              </TabsTrigger>
             )}
 
             {!isClientUser && !isEmployed && (
-              <TabsContent value="time">
-                <TimeLogDashboard
-                  clientId={clientId}
-                  clients={[client]}
-                  timeEntries={timeEntries}
-                  onRefresh={refreshTimeEntries}
-                />
-              </TabsContent>
+              <TabsTrigger value="time">
+                Time {activeTab === "time" ? `(${timeEntries.length})` : ""}
+              </TabsTrigger>
             )}
 
-            <TabsContent value="activity">
-              <ActivitySection
-                client={client}
-                activities={activities}
-                onRefresh={refreshActivities}
-              />
-            </TabsContent>
-          </Tabs>
+            <TabsTrigger value="activity">
+              Activity {activeTab === "activity" ? `(${activities.length})` : ""}
+            </TabsTrigger>
+
+            {!isClientUser && !isEmployed && (
+              <TabsTrigger value="assistant">Assistant</TabsTrigger>
+            )}
+          </TabsList>
         </div>
 
-        <div className="space-y-6">
-          <VocationalProfileCard client={client} onRefresh={refreshClient} />
+        {!isClientUser && !isEmployed && (
+          <TabsContent value="onboarding">
+            <OnboardingSection client={client} onRefresh={refreshClient} />
+          </TabsContent>
+        )}
 
-          <AIAssistantPanel
+        {!isDspd && !isEmployed && (
+          <TabsContent value="applications">
+            <JobApplicationsSection
+              client={client}
+              applications={applications}
+              onRefresh={refreshApplications}
+            />
+          </TabsContent>
+        )}
+
+        {!isDspd && !isEmployed && !isClientUser && (
+          <TabsContent value="ai_jobs">
+            <AIJobSearchPanel client={client} />
+          </TabsContent>
+        )}
+
+        {!isDspd && !isEmployed && (
+          <TabsContent value="interview_prep">
+            <InterviewPrepSection client={client} />
+          </TabsContent>
+        )}
+
+        {!isDspd && !isEmployed && !isClientUser && (
+          <TabsContent value="assessments">
+            <AssessmentSection client={client} />
+          </TabsContent>
+        )}
+
+        {client.client_type === "pre_ets" && !isClientUser && (
+          <TabsContent value="wble_forms">
+            <WBLEFormSection client={client} />
+          </TabsContent>
+        )}
+
+        {!isClientUser && (
+          <TabsContent value="documents">
+            <DocumentsSection client={client} />
+          </TabsContent>
+        )}
+
+        {!isEmployed && (
+          <TabsContent value="tasks">
+            <TasksSection
+              client={client}
+              tasks={tasks}
+              onRefresh={refreshTasks}
+            />
+          </TabsContent>
+        )}
+
+        {!isDspd && !isEmployed && (
+          <TabsContent value="resumes">
+            <ResumeSection
+              client={client}
+              resumes={resumes}
+              onRefresh={refreshResumes}
+            />
+          </TabsContent>
+        )}
+
+        {!isClientUser && isEmployed && (
+          <TabsContent value="job_supports">
+            <TimeLogDashboard
+              clientId={clientId}
+              timeEntries={timeEntries}
+              clients={[client]}
+              onRefresh={refreshTimeEntries}
+            />
+          </TabsContent>
+        )}
+
+        {!isClientUser && !isEmployed && (
+          <TabsContent value="time">
+            <TimeLogDashboard
+              clientId={clientId}
+              timeEntries={timeEntries}
+              clients={[client]}
+              onRefresh={refreshTimeEntries}
+            />
+          </TabsContent>
+        )}
+
+        <TabsContent value="activity">
+          <ActivitySection
             client={client}
-            onOpenJobSearch={() => setActiveTab("ai_jobs")}
-            onOpenAssistant={() => {}}
+            activities={activities}
+            onRefresh={refreshActivities}
           />
-        </div>
-      </div>
+        </TabsContent>
+
+        {!isClientUser && !isEmployed && (
+          <TabsContent value="assistant">
+            <AIAssistantPanel
+              client={client}
+              activeTab={activeTab}
+              onOpenAssistant={() => {}}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
 
       {showEmailComposer && (
-  <EmailComposer
-    open={showEmailComposer}
-    onClose={() => setShowEmailComposer(false)}
-    clientId={clientId}
-    clientEmail={client.email}
-    clientName={`${client.first_name} ${client.last_name}`}
-  />
-)}
+        <EmailComposer
+          open={showEmailComposer}
+          onOpenChange={setShowEmailComposer}
+          clientId={clientId}
+          clientEmail={client.email}
+          clientName={`${client.first_name || ""} ${client.last_name || ""}`.trim()}
+        />
+      )}
     </div>
   );
 }
