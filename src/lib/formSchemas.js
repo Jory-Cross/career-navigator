@@ -110,8 +110,6 @@ const EMPTY_SCHEMA = [];
 const SCHEMA_REGISTRY = {
   simple_time: SIMPLE_TIME_SCHEMA,
   life_skills: LIFE_SKILLS_SCHEMA,
-
-  // voc_rehab is loaded dynamically elsewhere through loadVocRehabSchema()
   voc_rehab: EMPTY_SCHEMA,
 };
 
@@ -119,10 +117,8 @@ const ENTRY_TYPE_TO_SCHEMA_KEY = {
   job_coaching: "voc_rehab",
   job_development: "voc_rehab",
   usor96: "voc_rehab",
-
   life_skills: "life_skills",
   csb_hours: "life_skills",
-
   admin_time: "simple_time",
   miscellaneous: "simple_time",
   pre_ets_training: "simple_time",
@@ -147,11 +143,6 @@ export function getSchema(schemaKeyOrEntryType) {
   return cloneSchema(SCHEMA_REGISTRY[resolvedKey] || []);
 }
 
-/**
- * Dynamic Voc Rehab schema loader.
- * Callers already use this for job coaching / job development style forms.
- * For non-voc-rehab entry types, it safely falls back to static schema lookup.
- */
 export async function loadVocRehabSchema(entryTypeCode) {
   const normalized = normalizeEntryTypeCode(entryTypeCode);
 
@@ -160,15 +151,7 @@ export async function loadVocRehabSchema(entryTypeCode) {
     normalized === "job_development" ||
     normalized === "usor96"
   ) {
-    try {
-      const mod = await import("@/lib/loadVocRehabSchema");
-      if (typeof mod.loadVocRehabSchema === "function") {
-        return await mod.loadVocRehabSchema(normalized);
-      }
-    } catch (error) {
-      console.error("[formSchemas] Failed to load dynamic voc rehab schema:", error);
-      return [];
-    }
+    return [];
   }
 
   return getSchema(normalized);
