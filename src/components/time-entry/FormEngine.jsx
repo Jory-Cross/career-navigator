@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import DynamicEntryForm from "./DynamicEntryForm";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { getEntryTypeConfig, normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
+import {
+  getEntryTypeConfig,
+  normalizeEntryTypeCode,
+} from "@/lib/entryTypeRegistry";
 import { getSchemaForEntryType } from "@/lib/formHelpers";
 import { loadVocRehabSchema } from "@/lib/formSchemas";
 
@@ -12,10 +15,13 @@ async function resolveSchema(entryTypeCode) {
   const config = getEntryTypeConfig(normalizedCode);
 
   if (!config) {
-    throw new Error(`Could not resolve entry type. Code "${entryTypeCode}" not found in registry`);
+    throw new Error(
+      `Could not resolve entry type. Code "${entryTypeCode}" not found in registry`
+    );
   }
 
   const cacheKey = `${normalizedCode}::${config.schemaKey || "default"}`;
+
   if (schemaCache.has(cacheKey)) {
     return schemaCache.get(cacheKey);
   }
@@ -28,8 +34,10 @@ async function resolveSchema(entryTypeCode) {
     resolvedSchema = getSchemaForEntryType(normalizedCode);
   }
 
-  schemaCache.set(cacheKey, resolvedSchema || []);
-  return resolvedSchema;
+  const normalizedSchema = Array.isArray(resolvedSchema) ? resolvedSchema : [];
+  schemaCache.set(cacheKey, normalizedSchema);
+
+  return normalizedSchema;
 }
 
 export function clearFormEngineSchemaCache() {
@@ -40,10 +48,13 @@ export default function FormEngine({
   entryTypeCode,
   entry = null,
   clientId = null,
-  mode = "create",
+  mode,
   onSave,
+  onSaved,
   onCancel,
 }) {
+  const loadRunIdRef = useRef(0);
+
   const normalizedEntryTypeCode = useMemo(
     () => normalizeEntryTypeCode(entryTypeCode),
     [entryTypeCode]
@@ -54,8 +65,21 @@ export default function FormEngine({
     [normalizedEntryTypeCode]
   );
 
-  const [schema, setSchema] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const effectiveMode = useMemo(() => {
+    if (mode) return mode;
+    return entry?.id ? "edit" : "create";
+  }, [mode, entry?.id]);
+
+  const [schema, setSchema] = useState(() => {
+    if (!normalizedEntryTypeCode || !config) return [];
+    const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+    return schemaCache.get(cacheKey) || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (!normalizedEntryTypeCode || !config) return false;
+    const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+    return !schemaCache.has(cacheKey);
+  });
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -65,8 +89,37 @@ export default function FormEngine({
       if (!normalizedEntryTypeCode) {
         setSchema([]);
         setError("No entry type selected.");
+        setLoading(false);
         return;
       }
+
+      if (!config) {
+        setSchema([]);
+        setError(
+          `Could not resolve entry type. Code "${normalizedEntryTypeCode}" not found in registry`
+        );
+        setLoading(false);
+        return;
+      }
+
+      const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+      const cachedSchema = schemaCache.get(cacheKey);
+
+      if (cachedSchema) {
+        setSchema(cachedSchema);
+        setError("");
+
+        if (!cachedSchema.length) {
+          setError(
+            `No schema configured for entry type: ${config.label || normalizedEntryTypeCode}`
+          );
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      const runId = ++loadRunIdRef.current;
 
       setLoading(true);
       setError("");
@@ -75,55 +128,59 @@ export default function FormEngine({
       try {
         const resolvedSchema = await resolveSchema(normalizedEntryTypeCode);
 
-        if (!active) return;
+        if (!active || loadRunIdRef.current !== runId) return;
 
-        if (!resolvedSchema || !Array.isArray(resolvedSchema) || resolvedSchema.length === 0) {
+        if (!Array.isArray(resolvedSchema) || resolvedSchema.length === 0) {
           setSchema([]);
-          setError(`No schema configured for entry type: ${config?.label || normalizedEntryTypeCode}`);
+          setError(
+            `No schema configured for entry type: ${config.label || normalizedEntryTypeCode}`
+          );
           return;
         }
 
         setSchema(resolvedSchema);
       } catch (err) {
         console.error("[FormEngine] Failed to load schema:", err);
-        if (active) {
-          setSchema([]);
-          setError(err?.message || `Failed to load schema for ${normalizedEntryTypeCode}`);
-        }
+
+        if (!active || loadRunIdRef.current !== runId) return;
+
+        setSchema([]);
+        setError(err?.message || `Failed to load schema for ${normalizedEntryTypeCode}`);
       } finally {
-        if (active) {
+        if (active && loadRunIdRef.current === runId) {
           setLoading(false);
         }
       }
     }
 
-    if (config) {
-      loadSchema();
-    } else {
-      setSchema([]);
-      setError(
-        normalizedEntryTypeCode
-          ? `Could not resolve entry type. Code "${normalizedEntryTypeCode}" not found in registry`
-          : "No entry type selected."
-      );
-    }
+    loadSchema();
 
     return () => {
       active = false;
     };
-  }, [normalizedEntryTypeCode, config?.label]);
+  }, [normalizedEntryTypeCode, config]);
+
+  const handleSaved = async () => {
+    if (typeof onSave === "function") {
+      await onSave();
+    }
+
+    if (typeof onSaved === "function") {
+      await onSaved();
+    }
+  };
 
   if (!config) {
     return (
-      <div className="flex gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-amber-800">Could not resolve entry type</p>
-          <p className="text-xs text-amber-700 mt-1">
-            {normalizedEntryTypeCode
-              ? `Code "${normalizedEntryTypeCode}" not found in registry`
-              : "No entry type selected."}
-          </p>
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <div className="mb-1 flex items-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          Could not resolve entry type
+        </div>
+        <div className="text-sm">
+          {normalizedEntryTypeCode
+            ? `Code "${normalizedEntryTypeCode}" not found in registry`
+            : "No entry type selected."}
         </div>
       </div>
     );
@@ -131,23 +188,25 @@ export default function FormEngine({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-10 text-slate-500">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-        Loading form...
+      <div className="flex min-h-[160px] items-center justify-center rounded-lg border border-dashed">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading form...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-amber-800">{error}</p>
-          {config?.label && (
-            <p className="text-xs text-amber-700 mt-1">Entry type: {config.label}</p>
-          )}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+        <div className="mb-1 flex items-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          {error}
         </div>
+        {config?.label ? (
+          <div className="text-sm text-amber-700">Entry type: {config.label}</div>
+        ) : null}
       </div>
     );
   }
@@ -158,10 +217,10 @@ export default function FormEngine({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-800">{config.label}</h3>
-        <p className="text-xs text-slate-500 mt-0.5">
-          {mode === "create" ? "Create new entry" : "Edit entry"}
+      <div className="border-b pb-3">
+        <h3 className="text-lg font-semibold text-slate-900">{config.label}</h3>
+        <p className="text-sm text-slate-500">
+          {effectiveMode === "edit" ? "Edit entry" : "Create new entry"}
         </p>
       </div>
 
@@ -170,8 +229,8 @@ export default function FormEngine({
         schema={schema}
         entry={entry}
         clientId={clientId}
-        mode={mode}
-        onSave={onSave}
+        mode={effectiveMode}
+        onSave={handleSaved}
         onCancel={onCancel}
       />
     </div>
