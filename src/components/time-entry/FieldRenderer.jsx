@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,7 @@ import {
 function generateQuarterHourOptions() {
   const options = [];
 
-  for (let hour = 0; hour < 24; hour++) {
+  for (let hour = 0; hour < 24; hour += 1) {
     for (let minute = 0; minute < 60; minute += 15) {
       const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
       const displayHour = hour % 12 || 12;
@@ -30,11 +30,22 @@ function generateQuarterHourOptions() {
   return options;
 }
 
+const TIME_OPTIONS = generateQuarterHourOptions();
+
 function calculateDurationMinutes(startTime, endTime) {
   if (!startTime || !endTime) return 0;
 
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
+  const [startHour, startMinute] = String(startTime).split(":").map(Number);
+  const [endHour, endMinute] = String(endTime).split(":").map(Number);
+
+  if (
+    Number.isNaN(startHour) ||
+    Number.isNaN(startMinute) ||
+    Number.isNaN(endHour) ||
+    Number.isNaN(endMinute)
+  ) {
+    return 0;
+  }
 
   const startTotal = startHour * 60 + startMinute;
   const endTotal = endHour * 60 + endMinute;
@@ -44,24 +55,63 @@ function calculateDurationMinutes(startTime, endTime) {
   return diff;
 }
 
-const TIME_OPTIONS = generateQuarterHourOptions();
+function normalizeOptions(options) {
+  if (!Array.isArray(options)) return [];
 
-export default function FieldRenderer({ field, value, onChange, formData = {} }) {
-  const durationFromClock =
-    formData?.start_time && formData?.end_time
-      ? calculateDurationMinutes(formData.start_time, formData.end_time)
-      : 0;
+  return options
+    .map((opt) => {
+      if (typeof opt === "string" || typeof opt === "number") {
+        const value = String(opt);
+        return { value, label: value };
+      }
 
-  // Hide editable duration field when clock-in/clock-out fields are present
-  if (
+      if (!opt || typeof opt !== "object") {
+        return null;
+      }
+
+      const value = opt.value ?? opt.code ?? opt.id ?? opt.label;
+      const label = opt.label ?? opt.name ?? opt.title ?? value;
+
+      if (value == null || label == null) {
+        return null;
+      }
+
+      return {
+        value: String(value),
+        label: String(label),
+      };
+    })
+    .filter(Boolean);
+}
+
+function FieldRendererComponent({ field, value, onChange, formData = {} }) {
+  const durationFromClock = useMemo(() => {
+    if (!formData?.start_time || !formData?.end_time) return 0;
+    return calculateDurationMinutes(formData.start_time, formData.end_time);
+  }, [formData?.start_time, formData?.end_time]);
+
+  const shouldHideDurationInput =
     (field.key === "duration" || field.key === "duration_minutes") &&
     formData?.start_time !== undefined &&
-    formData?.end_time !== undefined
-  ) {
+    formData?.end_time !== undefined;
+
+  const normalizedOptions = useMemo(() => {
+    if (field.type !== "select") return [];
+    return normalizeOptions(field.options || []);
+  }, [field.type, field.options]);
+
+  const label = field.label || field.key || "Field";
+  const required = Boolean(field.required);
+  const placeholder = field.placeholder || "";
+
+  if (shouldHideDurationInput) {
     return (
-      <div className="space-y-1">
-        <Label className="text-xs font-medium">Duration</Label>
-        <div className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 flex items-center text-sm text-slate-600">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">
+          Duration
+          {required ? " *" : ""}
+        </Label>
+        <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
           {durationFromClock > 0
             ? `${durationFromClock} minutes`
             : "Select start and end time"}
@@ -71,40 +121,41 @@ export default function FieldRenderer({ field, value, onChange, formData = {} })
   }
 
   return (
-    <div className="space-y-1">
-      <Label className="text-xs font-medium">
-        {field.label}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">
+        {label}
+        {required ? " *" : ""}
       </Label>
 
-      {field.type === "text" && (
+      {field.type === "text" ? (
         <Input
-          type="text"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
           className="text-sm"
         />
-      )}
+      ) : null}
 
-      {field.type === "number" && (
+      {field.type === "number" ? (
         <Input
           type="number"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
           className="text-sm"
         />
-      )}
+      ) : null}
 
-      {field.type === "date" && (
+      {field.type === "date" ? (
         <Input
           type="date"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           className="text-sm"
         />
-      )}
+      ) : null}
 
-      {field.type === "time" && (
+      {field.type === "time" ? (
         <Select value={value ?? ""} onValueChange={onChange}>
           <SelectTrigger className="text-sm">
             <SelectValue placeholder="Select time..." />
@@ -117,34 +168,44 @@ export default function FieldRenderer({ field, value, onChange, formData = {} })
             ))}
           </SelectContent>
         </Select>
-      )}
+      ) : null}
 
-      {field.type === "textarea" && (
+      {field.type === "textarea" ? (
         <Textarea
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
-          className="text-sm min-h-20"
+          placeholder={placeholder}
+          className="min-h-20 text-sm"
         />
-      )}
+      ) : null}
 
-      {field.type === "select" && (
+      {field.type === "select" ? (
         <Select value={value ?? ""} onValueChange={onChange}>
           <SelectTrigger className="text-sm">
-            <SelectValue placeholder="Select..." />
+            <SelectValue placeholder={placeholder || "Select..."} />
           </SelectTrigger>
           <SelectContent>
-            {(field.options || []).map((opt) => {
-              const optValue = typeof opt === "string" ? opt : opt.value;
-              const optLabel = typeof opt === "string" ? opt : opt.label;
-              return (
-                <SelectItem key={optValue} value={optValue}>
-                  {optLabel}
-                </SelectItem>
-              );
-            })}
+            {normalizedOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-      )}
+      ) : null}
+
+      {!["text", "number", "date", "time", "textarea", "select"].includes(field.type) ? (
+        <Input
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+      ) : null}
     </div>
   );
 }
+
+const FieldRenderer = memo(FieldRendererComponent);
+
+export default FieldRenderer;
