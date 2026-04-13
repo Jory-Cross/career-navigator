@@ -1,13 +1,3 @@
-/**
- * Shared schema registry for time-entry forms.
- *
- * Phase 4 cleanup goals:
- * - keep schema lookup predictable
- * - preserve current working behavior
- * - make callers independent from ad-hoc schema branching
- * - centralize simple schema definitions here
- */
-
 import { normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
 
 const SIMPLE_TIME_SCHEMA = [
@@ -24,6 +14,7 @@ const SIMPLE_TIME_SCHEMA = [
     label: "Clock In",
     type: "time",
     required: true,
+    defaultValue: "07:00",
     saveToTopLevel: true,
   },
   {
@@ -31,6 +22,7 @@ const SIMPLE_TIME_SCHEMA = [
     label: "Clock Out",
     type: "time",
     required: true,
+    defaultValue: "07:15",
     saveToTopLevel: true,
   },
   {
@@ -43,74 +35,81 @@ const SIMPLE_TIME_SCHEMA = [
   },
 ];
 
-const LIFE_SKILLS_AREAS = [
-  { value: "communication", label: "Communication" },
-  { value: "social_skills", label: "Social Skills" },
-  { value: "problem_solving", label: "Problem Solving" },
-  { value: "time_management", label: "Time Management" },
-  { value: "money_management", label: "Money Management" },
-  { value: "transportation", label: "Transportation" },
-  { value: "health_safety", label: "Health & Safety" },
-  { value: "community_access", label: "Community Access" },
-  { value: "self_advocacy", label: "Self-Advocacy" },
-  { value: "job_readiness", label: "Job Readiness" },
-  { value: "independent_living", label: "Independent Living" },
-  { value: "other", label: "Other" },
-];
-
 const LIFE_SKILLS_SCHEMA = [
   {
     key: "billable_service_date",
-    label: "Date",
+    label: "Billable Service Date",
     type: "date",
     required: true,
     isDate: true,
     saveToTopLevel: false,
   },
   {
-    key: "hours_spent",
-    label: "Hours Spent",
+    key: "billable_hours",
+    label: "Billable Hours",
     type: "number",
     required: true,
-    placeholder: "e.g. 1.5",
     isDuration: true,
   },
   {
     key: "life_skills_area",
     label: "Life Skills Area",
     type: "select",
-    required: false,
-    options: LIFE_SKILLS_AREAS,
+    required: true,
+    options: [
+      "Personal Hygiene & Grooming",
+      "Money Management",
+      "Transportation & Mobility",
+      "Meal Planning & Food Preparation",
+      "Home Management & Cleaning",
+      "Health & Wellness",
+      "Social & Interpersonal Skills",
+      "Communication Skills",
+      "Time Management & Organization",
+      "Job Readiness & Work Habits",
+      "Educational Support",
+      "Leisure & Recreation",
+      "Community Integration",
+      "Safety & Emergency Preparedness",
+      "Other",
+    ],
   },
   {
-    key: "activity",
-    label: "Activity",
+    key: "specific_skill_taught",
+    label: "Specific Skill Taught",
+    type: "text",
+    required: true,
+  },
+  {
+    key: "client_progress_mastery_level",
+    label: "Client Progress/Mastery Level",
+    type: "text",
+    required: true,
+  },
+  {
+    key: "practice_homework_assigned",
+    label: "Practice/Homework Assigned",
+    type: "textarea",
+    required: false,
+  },
+  {
+    key: "activity_description",
+    label: "Activity Description",
     type: "textarea",
     required: true,
-    placeholder: "What was worked on?",
   },
   {
-    key: "observations",
-    label: "Observations",
+    key: "observations_comments",
+    label: "Observations & Comments",
     type: "textarea",
     required: false,
-    placeholder: "Observations or progress notes",
-  },
-  {
-    key: "comments",
-    label: "Comments",
-    type: "textarea",
-    required: false,
-    placeholder: "Additional comments",
   },
 ];
-
-const EMPTY_SCHEMA = [];
 
 const SCHEMA_REGISTRY = {
   simple_time: SIMPLE_TIME_SCHEMA,
   life_skills: LIFE_SKILLS_SCHEMA,
-  voc_rehab: EMPTY_SCHEMA,
+  voc_rehab: [],
 };
 
 const ENTRY_TYPE_TO_SCHEMA_KEY = {
@@ -131,6 +130,19 @@ function cloneSchema(schema) {
   return Array.isArray(schema) ? schema.map((field) => ({ ...field })) : [];
 }
 
+function toOptionObjects(items) {
+  return items.map((item) => {
+    if (typeof item === "string") {
+      return { value: item, label: item };
+    }
+
+    return {
+      value: item.value ?? item.code ?? item.id ?? item.label,
+      label: item.label ?? item.display_label ?? item.name ?? item.value,
+    };
+  });
+}
+
 export function getSchema(schemaKeyOrEntryType) {
   if (!schemaKeyOrEntryType) return [];
 
@@ -144,17 +156,84 @@ export function getSchema(schemaKeyOrEntryType) {
 }
 
 export async function loadVocRehabSchema(entryTypeCode) {
-  const normalized = normalizeEntryTypeCode(entryTypeCode);
+  try {
+    const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
+    const { base44 } = await import("@/api/base44Client");
 
-  if (
-    normalized === "job_coaching" ||
-    normalized === "job_development" ||
-    normalized === "usor96"
-  ) {
+    const templates = await base44.entities.ReportFieldTemplate.filter({
+      entry_type_code: normalizedCode,
+      is_active: true,
+      pdf_context: "row",
+      is_internal_only: false,
+    });
+
+    if (!Array.isArray(templates) || templates.length === 0) {
+      console.warn(`[formSchemas] No ReportFieldTemplate found for ${normalizedCode}`);
+      return [];
+    }
+
+    let serviceCodes = [];
+    try {
+      serviceCodes = await base44.entities.ServiceCode.filter({
+        is_active: true,
+        program_type: "vr",
+      });
+    } catch (error) {
+      console.error("[formSchemas] Failed to load service codes:", error);
+    }
+
+    const primaryCodes = toOptionObjects(
+      (serviceCodes || [])
+        .filter((code) => code.is_primary)
+        .map((code) => ({
+          value: code.code,
+          label: code.display_label || code.code,
+        }))
+    );
+
+    const secondaryCodes = toOptionObjects(
+      (serviceCodes || [])
+        .filter((code) => code.is_secondary)
+        .map((code) => ({
+          value: code.code,
+          label: code.display_label || code.code,
+        }))
+    );
+
+    return templates
+      .slice()
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((template) => {
+        const fieldKey = template.field_key || "";
+        const fieldKeyLower = String(fieldKey).toLowerCase();
+
+        let options = Array.isArray(template.options)
+          ? toOptionObjects(template.options)
+          : [];
+
+        if (fieldKeyLower.includes("primary_service_code") && primaryCodes.length > 0) {
+          options = primaryCodes;
+        } else if (
+          fieldKeyLower.includes("secondary_service_code") &&
+          secondaryCodes.length > 0
+        ) {
+          options = secondaryCodes;
+        }
+
+        return {
+          key: fieldKey,
+          label: template.label,
+          type: template.field_type,
+          required: Boolean(template.is_required),
+          placeholder: template.placeholder || "",
+          help_text: template.help_text || "",
+          options,
+        };
+      });
+  } catch (error) {
+    console.error("[formSchemas] Failed to load voc rehab schema:", error);
     return [];
   }
-
-  return getSchema(normalized);
 }
 
 export function getSchemaKeyForEntryType(entryTypeCode) {
@@ -165,6 +244,12 @@ export function getSchemaKeyForEntryType(entryTypeCode) {
 export function hasStaticSchema(schemaKeyOrEntryType) {
   return getSchema(schemaKeyOrEntryType).length > 0;
 }
+
+export const FORM_SCHEMAS = {
+  simple_time: cloneSchema(SIMPLE_TIME_SCHEMA),
+  life_skills: cloneSchema(LIFE_SKILLS_SCHEMA),
+  voc_rehab: [],
+};
 
 export const SIMPLE_TIME_FIELDS = cloneSchema(SIMPLE_TIME_SCHEMA);
 export const LIFE_SKILLS_FIELDS = cloneSchema(LIFE_SKILLS_SCHEMA);
