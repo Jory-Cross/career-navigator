@@ -2,10 +2,11 @@
  * Centralized payload builder for all time entry saves.
  * Safe for both structured Voc Rehab forms and simple clock-in/clock-out forms.
  *
- * Phase 4 cleanup:
- * - same behavior
- * - cleaner helper grouping
- * - easier to maintain
+ * Phase 4 cleanup goals:
+ * - preserve current working behavior
+ * - normalize date/time consistently
+ * - keep top-level vs form_data mapping predictable
+ * - reduce repeated ad-hoc parsing across callers
  */
 
 function getSchemaFields(schema) {
@@ -31,6 +32,14 @@ function emptyToNull(value) {
   return value === "" || value === undefined ? null : value;
 }
 
+function isBlank(value) {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && value.trim() === "")
+  );
+}
+
 function parseTimeToMinutes(value) {
   if (!value) return null;
 
@@ -54,8 +63,8 @@ function parseTimeToMinutes(value) {
 
     if (ampm === "AM") {
       if (hour === 12) hour = 0;
-    } else {
-      if (hour !== 12) hour += 12;
+    } else if (hour !== 12) {
+      hour += 12;
     }
 
     return hour * 60 + minute;
@@ -110,7 +119,6 @@ function getClockTimeCandidates(formData) {
       formData?.clock_in ??
       formData?.clockIn ??
       null,
-
     endTime:
       formData?.end_time ??
       formData?.endTime ??
@@ -180,6 +188,7 @@ function normalizeDurationMinutes(formData, schema) {
     const hours = numberFromAny(formData.hours);
     const minutes = numberFromAny(formData.minutes);
     const total = hours * 60 + minutes;
+
     if (total > 0) return total;
   }
 
@@ -277,6 +286,42 @@ function getDescriptionValue(formData) {
   );
 }
 
+function getNotesValue(formData) {
+  return (
+    formData.notes ??
+    formData.note ??
+    formData.comments ??
+    formData.comment ??
+    formData.observations ??
+    null
+  );
+}
+
+function getFlags(formData) {
+  return {
+    is_reportable:
+      formData.is_reportable === undefined ? true : Boolean(formData.is_reportable),
+    is_billable:
+      formData.is_billable === undefined ? false : Boolean(formData.is_billable),
+    is_payroll_eligible:
+      formData.is_payroll_eligible === undefined
+        ? true
+        : Boolean(formData.is_payroll_eligible),
+  };
+}
+
+function getReportingPeriodKey(normalizedDate) {
+  if (
+    normalizedDate &&
+    typeof normalizedDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)
+  ) {
+    return normalizedDate.slice(0, 7);
+  }
+
+  return null;
+}
+
 function buildTopLevelPayload(entryType, formData, schema) {
   const normalizedSchema = Array.isArray(schema) ? { fields: schema } : schema;
 
@@ -289,14 +334,20 @@ function buildTopLevelPayload(entryType, formData, schema) {
   const normalizedStartTime = normalizeClockValue(startTime);
   const normalizedEndTime = normalizeClockValue(endTime);
 
+  const normalizedDate = normalizeDateValue(getRawDateValue(formData, normalizedSchema));
+  const description = getDescriptionValue(formData);
+  const notes = getNotesValue(formData);
+  const flags = getFlags(formData);
+
   const topLevel = {
     entry_type_id: entryType.id,
     duration_minutes,
-    notes: asString(formData.notes),
+    notes: asString(notes),
     service_code_id: emptyToNull(formData.service_code_id),
+    reporting_period_key: getReportingPeriodKey(normalizedDate),
+    ...flags,
   };
 
-  const normalizedDate = normalizeDateValue(getRawDateValue(formData, normalizedSchema));
   if (normalizedDate) {
     topLevel.date = normalizedDate;
   }
@@ -309,27 +360,30 @@ function buildTopLevelPayload(entryType, formData, schema) {
     topLevel.end_time = normalizedEndTime;
   }
 
-  if (formData.location) {
+  if (!isBlank(formData.location)) {
     topLevel.location = formData.location;
   }
 
-  const description = getDescriptionValue(formData);
-  if (description) {
+  if (!isBlank(description)) {
     topLevel.description = description;
+  }
+
+  if (!isBlank(entryType.code)) {
+    topLevel.entry_type_code = entryType.code;
   }
 
   return {
     topLevel,
     normalizedStartTime,
     normalizedEndTime,
+    normalizedDate,
   };
 }
 
-function mapTemplateFields(schema, formData) {
-  const result = {};
+function getTopLevelDateKeys(schema) {
   const fields = getSchemaFields(schema);
 
-  const TOP_LEVEL_DATE_KEYS = new Set([
+  const topLevelDateKeys = new Set([
     "date",
     "entry_date",
     "service_date",
@@ -350,17 +404,23 @@ function mapTemplateFields(schema, formData) {
       (field.type || "").toLowerCase() === "date" ||
       (field.key || "").toLowerCase().includes("date")
     ) {
-      TOP_LEVEL_DATE_KEYS.add(field.key);
+      topLevelDateKeys.add(field.key);
     }
   }
+
+  return topLevelDateKeys;
+}
+
+function mapTemplateFields(schema, formData) {
+  const result = {};
+  const fields = getSchemaFields(schema);
+  const topLevelDateKeys = getTopLevelDateKeys(schema);
 
   for (const field of fields) {
     const key = field.key;
     if (!key) continue;
-
     if (field.saveToTopLevel) continue;
-    if (TOP_LEVEL_DATE_KEYS.has(key)) continue;
-
+    if (topLevelDateKeys.has(key)) continue;
     if (formData[key] !== undefined) {
       result[key] = formData[key];
     }
