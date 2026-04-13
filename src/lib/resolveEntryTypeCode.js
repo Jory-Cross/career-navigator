@@ -87,8 +87,25 @@ function fromDescriptionHeuristics(entry) {
 
 /**
  * Resolve the best canonical entry type code for a time entry.
- * Supports direct fields, nested legacy structures, category fallbacks, and
- * light description heuristics for older records.
+ * Supports direct fields, nested legacy structures, category fallbacks,
+ * and light description heuristics for older records.
  */
 export async function resolveEntryTypeCode(entry) {
-  const candidates
+  const candidates = [
+    fromDirectFields(entry),
+    fromNestedData(entry),
+    fromKnownLegacyCategory(entry),
+    fromDescriptionHeuristics(entry),
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeEntryTypeCode(candidate);
+    if (!normalized) continue;
+
+    if (getEntryTypeConfig(normalized)) {
+      return normalized;
+    }
+  }
+
+  return "";
+}
