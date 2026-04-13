@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
 import FieldRenderer from "./FieldRenderer";
@@ -13,6 +13,46 @@ import {
   ENTRY_TYPE_ALIASES,
 } from "@/lib/entryTypeRegistry";
 
+const entryTypeCache = new Map();
+
+const dynamicEntryFormApi = {
+  async getEntryTypeByCode(entryTypeCode) {
+    const candidateCodes = getCandidateCodes(entryTypeCode);
+
+    for (const code of candidateCodes) {
+      if (entryTypeCache.has(code)) {
+        const cached = entryTypeCache.get(code);
+        if (cached) return cached;
+      }
+
+      try {
+        const results = await base44.entities.EntryType.filter({ code });
+
+        if (results?.length) {
+          const resolved = results[0];
+
+          for (const candidate of candidateCodes) {
+            entryTypeCache.set(candidate, resolved);
+          }
+
+          return resolved;
+        }
+      } catch (err) {
+        console.error(
+          `[DynamicEntryForm] Failed entry type lookup for code "${code}":`,
+          err
+        );
+      }
+    }
+
+    for (const candidate of candidateCodes) {
+      entryTypeCache.set(candidate, null);
+    }
+
+    return null;
+  },
+};
+
 function getCandidateCodes(entryTypeCode) {
   if (!entryTypeCode) return [];
 
@@ -24,29 +64,6 @@ function getCandidateCodes(entryTypeCode) {
     .map(([alias]) => alias);
 
   return [...new Set([originalCode, normalizedCode, ...reverseAliases])].filter(Boolean);
-}
-
-async function resolveEntryTypeByCode(entryTypeCode) {
-  const candidateCodes = getCandidateCodes(entryTypeCode);
-
-  for (const code of candidateCodes) {
-    try {
-      const results = await base44.entities.EntryType.filter({
-        code,
-      });
-
-      if (results?.length) {
-        return results[0];
-      }
-    } catch (err) {
-      console.error(
-        `[DynamicEntryForm] Failed entry type lookup for code "${code}":`,
-        err
-      );
-    }
-  }
-
-  return null;
 }
 
 function parseTimeToMinutes(value) {
@@ -66,8 +83,8 @@ function parseTimeToMinutes(value) {
 
     if (ampm === "AM") {
       if (hour === 12) hour = 0;
-    } else {
-      if (hour !== 12) hour += 12;
+    } else if (hour !== 12) {
+      hour += 12;
     }
 
     return hour * 60 + minute;
@@ -121,6 +138,10 @@ function validateChronologicalTimes(formData) {
   return "";
 }
 
+export function clearDynamicEntryFormEntryTypeCache() {
+  entryTypeCache.clear();
+}
+
 export default function DynamicEntryForm({
   entryTypeCode,
   schema,
@@ -130,13 +151,26 @@ export default function DynamicEntryForm({
   onSave,
   onCancel,
 }) {
-  const normalizedSchema = Array.isArray(schema) ? schema : [];
-  const normalizedEntryTypeCode = normalizeEntryTypeCode(entryTypeCode);
+  const mountedRef = useRef(true);
+  const lookupRunIdRef = useRef(0);
+
+  const normalizedSchema = useMemo(() => {
+    return Array.isArray(schema) ? schema : [];
+  }, [schema]);
+
+  const normalizedEntryTypeCode = useMemo(() => {
+    return normalizeEntryTypeCode(entryTypeCode);
+  }, [entryTypeCode]);
+
+  const config = useMemo(() => {
+    return getEntryTypeConfig(normalizedEntryTypeCode);
+  }, [normalizedEntryTypeCode]);
 
   const initialData = useMemo(() => {
     if (entry?.id) {
       return buildFormDataFromEntry(entry, { fields: normalizedSchema });
     }
+
     return buildInitialFormData(normalizedSchema, null);
   }, [normalizedSchema, entry]);
 
@@ -147,32 +181,46 @@ export default function DynamicEntryForm({
   const [entryTypeLoading, setEntryTypeLoading] = useState(false);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     setFormData(initialData);
   }, [initialData]);
 
   useEffect(() => {
-    let active = true;
+    let cancelled = false;
 
     async function loadEntryType() {
       if (!normalizedEntryTypeCode) {
         setEntryTypeObj(null);
+        setEntryTypeLoading(false);
+        setError("No entry type selected.");
         return;
       }
 
-      const config = getEntryTypeConfig(normalizedEntryTypeCode);
       if (!config) {
         setEntryTypeObj(null);
+        setEntryTypeLoading(false);
         setError(`Could not resolve entry type for code "${normalizedEntryTypeCode}".`);
         return;
       }
 
+      const runId = ++lookupRunIdRef.current;
       setEntryTypeLoading(true);
       setError("");
 
       try {
-        const resolved = await resolveEntryTypeByCode(entryTypeCode || normalizedEntryTypeCode);
+        const resolved = await dynamicEntryFormApi.getEntryTypeByCode(
+          entryTypeCode || normalizedEntryTypeCode
+        );
 
-        if (!active) return;
+        if (cancelled || !mountedRef.current || lookupRunIdRef.current !== runId) {
+          return;
+        }
 
         if (!resolved) {
           setEntryTypeObj(null);
@@ -183,12 +231,15 @@ export default function DynamicEntryForm({
         setEntryTypeObj(resolved);
       } catch (err) {
         console.error("[DynamicEntryForm] Failed to load entry type:", err);
-        if (active) {
-          setEntryTypeObj(null);
-          setError("Failed to load entry type.");
+
+        if (cancelled || !mountedRef.current || lookupRunIdRef.current !== runId) {
+          return;
         }
+
+        setEntryTypeObj(null);
+        setError("Failed to load entry type.");
       } finally {
-        if (active) {
+        if (!cancelled && mountedRef.current && lookupRunIdRef.current === runId) {
           setEntryTypeLoading(false);
         }
       }
@@ -197,58 +248,77 @@ export default function DynamicEntryForm({
     loadEntryType();
 
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [entryTypeCode, normalizedEntryTypeCode]);
+  }, [entryTypeCode, normalizedEntryTypeCode, config]);
 
-  function handleChange(key, value) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  }
+  const handleChange = useCallback((key, value) => {
+    setFormData((prev) => {
+      if (prev[key] === value) return prev;
+      return { ...prev, [key]: value };
+    });
+  }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError("");
 
-    if (!entryTypeObj?.id) {
-      setError(
-        "Entry type is still loading or could not be resolved. Please wait a moment and try again."
-      );
-      return;
-    }
-
-    const timeValidationError = validateChronologicalTimes(formData);
-    if (timeValidationError) {
-      setError(timeValidationError);
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      await handleDynamicEntrySave({
-        entryType: {
-          id: entryTypeObj.id,
-          code: normalizeEntryTypeCode(entryTypeObj.code || normalizedEntryTypeCode),
-          name: entryTypeObj?.name,
-        },
-        formData,
-        schema: normalizedSchema,
-        existingEntry: entry,
-        mode,
-        saveEntry: (payload) =>
-          persistTimeEntry(payload, entry?.id ?? null, clientId),
-      });
-
-      if (onSave) {
-        await onSave();
+      if (!entryTypeObj?.id) {
+        setError(
+          "Entry type is still loading or could not be resolved. Please wait a moment and try again."
+        );
+        return;
       }
-    } catch (err) {
-      console.error("[DynamicEntryForm] Save failed:", err);
-      setError(err?.message || "Failed to save entry");
-    } finally {
-      setSaving(false);
-    }
-  }
+
+      const timeValidationError = validateChronologicalTimes(formData);
+      if (timeValidationError) {
+        setError(timeValidationError);
+        return;
+      }
+
+      setSaving(true);
+
+      try {
+        await handleDynamicEntrySave({
+          entryType: {
+            id: entryTypeObj.id,
+            code: normalizeEntryTypeCode(
+              entryTypeObj.code || normalizedEntryTypeCode
+            ),
+            name: entryTypeObj?.name,
+          },
+          formData,
+          schema: normalizedSchema,
+          existingEntry: entry,
+          mode,
+          saveEntry: (payload) =>
+            persistTimeEntry(payload, entry?.id ?? null, clientId),
+        });
+
+        if (typeof onSave === "function") {
+          await onSave();
+        }
+      } catch (err) {
+        console.error("[DynamicEntryForm] Save failed:", err);
+        setError(err?.message || "Failed to save entry");
+      } finally {
+        if (mountedRef.current) {
+          setSaving(false);
+        }
+      }
+    },
+    [
+      entryTypeObj,
+      formData,
+      normalizedEntryTypeCode,
+      normalizedSchema,
+      entry,
+      mode,
+      clientId,
+      onSave,
+    ]
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -262,28 +332,21 @@ export default function DynamicEntryForm({
         />
       ))}
 
-      {error && (
-        <div className="flex gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+      {error ? (
+        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
-      )}
+      ) : null}
 
-      <div className="flex gap-2 pt-4 border-t border-slate-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={saving}
-        >
+      <div className="flex justify-end gap-2 border-t pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={saving || entryTypeLoading || !entryTypeObj?.id}
-        >
+
+        <Button type="submit" disabled={saving || entryTypeLoading}>
           {(saving || entryTypeLoading) && (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           {mode === "edit" ? "Save Changes" : "Save Entry"}
         </Button>
