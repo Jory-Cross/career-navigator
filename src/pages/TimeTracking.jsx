@@ -169,38 +169,18 @@ export default function TimeTracking() {
     });
   }, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
 
-  const { data: allClients = [] } = useQuery({
-    queryKey: ["clients", effectiveUser?.id, effectiveUser?.role, allUsers.length],
-    queryFn: async () => {
-      const all = await timeTrackingApi.listClients();
+  const { data: rawClients = [] } = useQuery({
+  queryKey: ["timeTracking", "clients"],
+  queryFn: getAllClients,
+  enabled: !!effectiveUser,
+  staleTime: 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
 
-      if (!effectiveUser) return all;
-
-      if (effectiveUser.role === "admin") return all;
-
-      if (effectiveUser.role === "management") {
-        const employeeIds = allUsers
-          .filter((u) => u.manager_id === effectiveUser.id)
-          .map((u) => u.id);
-
-        return all.filter((c) => employeeIds.includes(c.assigned_employee_id));
-      }
-
-      if (effectiveUser.role === "employee") {
-        return all.filter(
-          (c) =>
-            c.assigned_employee_id === effectiveUser.id ||
-            c.created_by === effectiveUser.email
-        );
-      }
-
-      return all;
-    },
-    enabled: !!effectiveUser,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+const allClients = useMemo(() => {
+  return getScopedClients(rawClients, effectiveUser, allUsers);
+}, [rawClients, effectiveUser, allUsers]);
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries"],
