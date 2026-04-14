@@ -13,7 +13,6 @@ import {
   getClientById,
   getApplications,
   getTasks,
-  getDocuments,
   getActivities,
   getTimeEntries,
 } from "@/lib/api/clientPortalApi";
