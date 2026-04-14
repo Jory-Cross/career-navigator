@@ -41,10 +41,19 @@ function mapClient(raw) {
     phone: asString(raw.phone),
     status: asString(raw.status, "active"),
     assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
+    contacts: asArray(raw.contacts).map(mapContact).filter(Boolean),
     raw,
   };
 }
+export async function updateClientContacts(id, contacts) {
+  if (!id) throw new Error("Client id is required");
 
+  const raw = await base44.entities.Client.update(id, {
+    contacts: buildClientContactsPayload(contacts),
+  });
+
+  return mapClient(raw);
+}
 function mapApplication(raw) {
   if (!raw) return null;
 
