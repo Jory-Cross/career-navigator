@@ -92,14 +92,20 @@ function formatDurationMinutes(minutes) {
   return `${hours}h ${remainder}m`;
 }
 function entryTypeRequiresClient(entryTypeCode) {
-  const code = normalizeEntryTypeCode(entryTypeCode);
+  const normalized = normalizeEntryTypeCode(entryTypeCode);
+  const raw = String(entryTypeCode || "").trim().toLowerCase();
+  const code = normalized || raw;
 
   const noClientRequired = new Set([
     "admin_time",
     "misc",
+    "eom_reporting",
+    "wsa",
   ]);
 
-  return code ? !noClientRequired.has(code) : false;
+  if (!code) return false;
+
+  return !noClientRequired.has(code);
 }
 function getImmediateEntryTypeCode(entry) {
   return normalizeEntryTypeCode(
