@@ -117,7 +117,7 @@ export default function TimeTracking() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const mountedRef = useRef(true);
+  const mountedRef = useRef(false);
   const resolveRunIdRef = useRef(0);
 
   const [periodFilter, setPeriodFilter] = useState("all");
