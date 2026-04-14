@@ -183,13 +183,13 @@ const allClients = useMemo(() => {
 }, [rawClients, effectiveUser, allUsers]);
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => timeTrackingApi.listTimeEntries(),
-    enabled: !!effectiveUser,
-    staleTime: 30 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  queryKey: ["timeTracking", "entries"],
+  queryFn: getAllTimeEntries,
+  enabled: !!effectiveUser,
+  staleTime: 30 * 1000,
+  gcTime: 10 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
 
   useEffect(() => {
     const directMap = {};
