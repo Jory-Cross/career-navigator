@@ -100,6 +100,71 @@ function buildChecklistPayload(items = []) {
 }
 
 /**
+ * Interview helpers
+ */
+function mapInterviewQuestion(raw) {
+  if (!raw) return null;
+
+  return {
+    question: asString(raw.question),
+    category: asString(raw.category, "General"),
+    answer: asString(raw.answer),
+    feedback: asString(raw.feedback),
+    score: typeof raw.score === "number" ? raw.score : Number(raw.score) || null,
+  };
+}
+
+function mapInterviewSession(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    job_application_id: raw.job_application_id ?? null,
+    target_role: asString(raw.target_role),
+    industry: asString(raw.industry),
+    company: asString(raw.company),
+    session_date: raw.session_date ?? null,
+    session_type: asString(raw.session_type, "practice"),
+    questions: asArray(raw.questions).map(mapInterviewQuestion).filter(Boolean),
+    overall_feedback: asString(raw.overall_feedback),
+    improvement_tips: asArray(raw.improvement_tips).filter(Boolean),
+    notes: asString(raw.notes),
+    tags: asArray(raw.tags).filter(Boolean),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function buildInterviewQuestionPayload(questions = []) {
+  return asArray(questions).map((q) => ({
+    question: asString(q?.question),
+    category: asString(q?.category, "General"),
+    answer: asString(q?.answer),
+    feedback: asString(q?.feedback),
+    score: typeof q?.score === "number" ? q.score : Number(q?.score) || null,
+  }));
+}
+
+function buildInterviewSessionPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    job_application_id: payload.job_application_id ?? null,
+    target_role: asString(payload.target_role),
+    industry: asString(payload.industry),
+    company: asString(payload.company),
+    session_date: payload.session_date ?? null,
+    session_type: asString(payload.session_type, "practice"),
+    questions: buildInterviewQuestionPayload(payload.questions),
+    overall_feedback: asString(payload.overall_feedback),
+    improvement_tips: asArray(payload.improvement_tips).filter(Boolean),
+    notes: asString(payload.notes),
+    tags: asArray(payload.tags).filter(Boolean),
+  };
+}
+
+/**
  * Onboarding helpers
  */
 function mapOnboardingStep(raw) {
@@ -504,6 +569,146 @@ export async function sendOnboardingEmail(clientId, emailType) {
     client_id: clientId,
     email_type: emailType,
   });
+}
+
+/**
+ * INTERVIEW PREP
+ */
+export async function getInterviewSessions(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.InterviewSession.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapInterviewSession).filter(Boolean));
+}
+
+export async function createInterviewSession(payload) {
+  const raw = await base44.entities.InterviewSession.create(
+    buildInterviewSessionPayload(payload)
+  );
+  return mapInterviewSession(raw);
+}
+
+export async function updateInterviewSession(id, payload) {
+  const raw = await base44.entities.InterviewSession.update(
+    id,
+    buildInterviewSessionPayload(payload)
+  );
+  return mapInterviewSession(raw);
+}
+
+export async function deleteInterviewSession(id) {
+  return await base44.entities.InterviewSession.delete(id);
+}
+
+export async function generateInterviewQuestions({ client, jobApplication }) {
+  const prompt = jobApplication
+    ? `Generate 5 tailored interview questions for someone applying for a ${jobApplication.position} position at ${jobApplication.company}.
+Company role: ${client.target_role} ${jobApplication.ai_fit_analysis ? `Context: ${jobApplication.ai_fit_analysis}` : ""}
+Focus on:
+1. Role-specific challenges at this company
+2. Why they want to work there
+3. Relevant experience and skills
+4. Problem-solving for company's context
+5. Cultural fit
+
+For each question, categorize it appropriately.`
+    : `Generate 5 common interview questions for someone applying for a ${client.target_role} position in the ${client.industry || "general"} industry.
+Include a mix of:
+1. Behavioral questions (STAR method)
+2. Technical/role-specific questions
+3. Situational questions
+4. Questions about experience and skills
+
+For each question, categorize it (e.g., Behavioral, Technical, Situational).`;
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: "object",
+      properties: {
+        questions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              question: { type: "string" },
+              category: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return asArray(result?.questions);
+}
+
+export async function analyzeInterviewAnswer({ question, category, answer }) {
+  const prompt = `You are an interview coach.
+
+Evaluate this candidate's answer to the interview question.
+
+Question: ${question}
+Category: ${category}
+Answer: ${answer}
+
+Provide:
+1. A score from 0-100
+2. Detailed feedback on:
+- Clarity and structure
+- Relevance to the question
+- Use of specific examples and keywords
+- Areas for improvement
+
+Be constructive and specific.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: "object",
+      properties: {
+        score: { type: "number" },
+        feedback: { type: "string" },
+      },
+    },
+  });
+
+  return {
+    score: typeof result?.score === "number" ? result.score : 0,
+    feedback: asString(result?.feedback),
+  };
+}
+
+export async function generateInterviewOverallFeedback(questions = []) {
+  const prompt = `Based on these interview practice responses, provide:
+1. Overall performance summary
+2. Top 3 personalized improvement tips
+
+Questions and Scores:
+${asArray(questions)
+  .map(
+    (q, i) =>
+      `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedback: ${q.feedback}`
+  )
+  .join("\n\n")}`;
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: "object",
+      properties: {
+        overall_feedback: { type: "string" },
+        improvement_tips: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    },
+  });
+
+  return {
+    overall_feedback: asString(result?.overall_feedback),
+    improvement_tips: asArray(result?.improvement_tips).filter(Boolean),
+  };
 }
 
 /**
