@@ -458,11 +458,6 @@ export async function getAllClients() {
   return asArray(rows).map(mapClient).filter(Boolean);
 }
 
-export async function getAllTimeEntries() {
-  const rows = await base44.entities.TimeEntry.list("-created_date");
-  return asArray(rows).map(mapTimeEntry).filter(Boolean);
-}
-
 export async function getTimeEntryById(id) {
   if (!id) return null;
   const raw = await base44.entities.TimeEntry.get(id);
