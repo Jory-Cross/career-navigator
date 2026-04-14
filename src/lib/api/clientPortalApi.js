@@ -232,6 +232,35 @@ function mapClient(raw) {
     raw,
   };
 }
+function mapApplication(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    company: asString(raw.company),
+    position: asString(raw.position),
+    status: asString(raw.status, "active"),
+    notes: asString(raw.notes),
+    running_notes: asString(raw.running_notes),
+    applied_date: raw.applied_date ?? null,
+    follow_up_date: raw.follow_up_date ?? null,
+    job_url: asString(raw.job_url),
+    salary_range: asString(raw.salary_range),
+    location: asString(raw.location),
+    work_type: asString(raw.work_type),
+    contact_name: asString(raw.contact_name),
+    contact_title: asString(raw.contact_title),
+    contact_email: asString(raw.contact_email),
+    contact_phone: asString(raw.contact_phone),
+    note_entries: asArray(raw.note_entries).map(mapApplicationNoteEntry).filter(Boolean),
+    next_step: asString(raw.next_step),
+    next_step_date: raw.next_step_date ?? null,
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
 function mapTask(raw) {
   if (!raw) return null;
 
