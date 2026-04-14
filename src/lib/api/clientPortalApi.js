@@ -917,11 +917,6 @@ export async function getTimeEntries(clientId) {
   return sortByNewest(asArray(rows).map(mapTimeEntry).filter(Boolean));
 }
 
-export async function getAllTimeEntries() {
-  const rows = await base44.entities.TimeEntry.list("-created_date");
-  return asArray(rows).map(mapTimeEntry).filter(Boolean);
-}
-
 /**
  * MEETINGS
  */
