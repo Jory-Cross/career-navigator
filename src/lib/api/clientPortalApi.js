@@ -206,10 +206,6 @@ function buildOnboardingStepPayload(payload = {}) {
 }
 
 /**
- * Time tracking helpers
- */
-
-/**
  * Mapping layer
  * Keeps page code less dependent on raw Base44 field shapes.
  */
