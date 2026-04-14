@@ -67,11 +67,6 @@ function canAccessClient(client, user, clientId) {
   return false;
 }
 
-async function getResumes(clientId) {
-  if (!clientId) return [];
-  return await base44.entities.Resume.filter({ client_id: clientId });
-}
-
 export default function ClientDetail() {
   const clientId = useMemo(() => getClientIdFromUrl(), []);
   const queryClient = useQueryClient();
