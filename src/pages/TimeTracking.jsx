@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useViewAs } from "@/lib/ViewAsContext";
-import { base44 } from "@/api/base44Client";
+import {
+  getCurrentUser,
+  getAllUsers,
+  getAllClients,
+  getAllTimeEntries,
+  getScopedUsers,
+  getScopedClients,
+} from "@/lib/api/clientPortalApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
