@@ -551,13 +551,6 @@ export async function getActiveClients() {
 /**
  * USERS
  */
-export async function getAllUsers() {
-  const users = await base44.entities.User.list();
-  return asArray(users)
-    .map(mapUser)
-    .filter(Boolean)
-    .filter((user) => user.status !== "archived");
-}
 
 export function getScopedUsers(users = [], effectiveUser = null) {
   const allUsers = asArray(users);
