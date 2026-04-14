@@ -771,32 +771,82 @@ const newEntryRequiresClient = useMemo(() => {
             <DialogTitle>Add Time Entry</DialogTitle>
           </DialogHeader>
 
-          {!selectedEntryTypeCode ? (
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Entry Type</label>
-              <Select value={selectedEntryTypeCode} onValueChange={setSelectedEntryTypeCode}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select entry type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {entryTypes.map((opt) => (
-                    <SelectItem key={opt.code} value={opt.code}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <FormEngine
-              entryTypeCode={selectedEntryTypeCode}
-              onSaved={async () => {
-                await handleRefresh();
-                closeNewEntryDialog();
-              }}
-              onCancel={closeNewEntryDialog}
-            />
-          )}
+         {!selectedEntryTypeCode ? (
+  <div className="space-y-3">
+    <label className="text-sm font-medium">Entry Type</label>
+    <Select
+      value={selectedEntryTypeCode}
+      onValueChange={(value) => {
+        setSelectedEntryTypeCode(value);
+        setSelectedNewEntryClientId("");
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Select entry type" />
+      </SelectTrigger>
+      <SelectContent>
+        {entryTypes.map((opt) => (
+          <SelectItem key={opt.code} value={opt.code}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+) : (
+  <div className="space-y-4">
+    <div className="space-y-3">
+      <label className="text-sm font-medium">Entry Type</label>
+      <div className="rounded-md border px-3 py-2 text-sm bg-slate-50">
+        {entryTypes.find((opt) => opt.code === selectedEntryTypeCode)?.label || selectedEntryTypeCode}
+      </div>
+    </div>
+
+    {newEntryRequiresClient ? (
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Client</label>
+        <Select
+          value={selectedNewEntryClientId}
+          onValueChange={setSelectedNewEntryClientId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select client" />
+          </SelectTrigger>
+          <SelectContent>
+            {clients
+              .filter((client) => !client.is_archived)
+              .map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+                    client.full_name ||
+                    client.email ||
+                    "Unknown"}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+
+        {!selectedNewEntryClientId ? (
+          <p className="text-xs text-amber-600">
+            A client is required for this entry type.
+          </p>
+        ) : null}
+      </div>
+    ) : null}
+
+    {!newEntryRequiresClient || selectedNewEntryClientId ? (
+      <FormEngine
+        entryTypeCode={selectedEntryTypeCode}
+        clientId={selectedNewEntryClientId || null}
+        onSaved={async () => {
+          await handleRefresh();
+          closeNewEntryDialog();
+        }}
+        onCancel={closeNewEntryDialog}
+      />
+    ) : null}
+  </div>
+)}
         </DialogContent>
       </Dialog>
 
