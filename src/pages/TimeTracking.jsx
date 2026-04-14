@@ -92,9 +92,8 @@ function formatDurationMinutes(minutes) {
   return `${hours}h ${remainder}m`;
 }
 function entryTypeRequiresClient(entryTypeCode) {
-  const normalized = normalizeEntryTypeCode(entryTypeCode);
   const raw = String(entryTypeCode || "").trim().toLowerCase();
-  const code = normalized || raw;
+  const normalized = normalizeEntryTypeCode(raw);
 
   const noClientRequired = new Set([
     "admin_time",
@@ -103,6 +102,23 @@ function entryTypeRequiresClient(entryTypeCode) {
     "wsa",
   ]);
 
+  const explicitlyRequiresClient = new Set([
+    "job_coaching",
+    "job_development",
+    "life_skills",
+    "csb",
+    "pre_ets",
+    "usor96",
+  ]);
+
+  if (explicitlyRequiresClient.has(raw)) return true;
+  if (explicitlyRequiresClient.has(normalized)) return true;
+
+  if (noClientRequired.has(raw)) return false;
+  if (noClientRequired.has(normalized)) return false;
+
+  return true;
+}
   if (!code) return false;
 
   return !noClientRequired.has(code);
