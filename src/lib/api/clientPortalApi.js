@@ -167,7 +167,28 @@ export async function getClientById(id) {
   const raw = await base44.entities.Client.get(id);
   return mapClient(raw);
 }
+function mapContact(raw) {
+  if (!raw) return null;
+  return {
+    type: asString(raw.type, "other"),
+    label: asString(raw.label),
+    name: asString(raw.name),
+    phone: asString(raw.phone),
+    email: asString(raw.email),
+    notes: asString(raw.notes),
+  };
+}
 
+function buildClientContactsPayload(contacts = []) {
+  return asArray(contacts).map((contact) => ({
+    type: asString(contact?.type, "other"),
+    label: asString(contact?.label),
+    name: asString(contact?.name),
+    phone: asString(contact?.phone),
+    email: asString(contact?.email),
+    notes: asString(contact?.notes),
+  }));
+}
 export async function getClientByEmail(email) {
   if (!email) return null;
   const clients = await base44.entities.Client.list();
