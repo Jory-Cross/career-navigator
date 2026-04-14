@@ -1,10 +1,25 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronDown, ChevronUp, Phone, Mail, Users } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Phone,
+  Mail,
+  Users,
+} from "lucide-react";
+
+import { updateClientContacts } from "@/lib/api/clientPortalApi";
 
 const CONTACT_TYPES = [
   { value: "parent", label: "Parent" },
@@ -13,120 +28,258 @@ const CONTACT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const typeLabel = (c) => {
-  if (c.type === "other") return c.label || "Other";
-  return CONTACT_TYPES.find(t => t.value === c.type)?.label || c.type;
+const getTypeLabel = (contact) => {
+  if (contact.type === "other") return contact.label || "Other";
+  return CONTACT_TYPES.find((t) => t.value === contact.type)?.label || contact.type;
 };
 
-const emptyContact = () => ({ type: "parent", label: "", name: "", phone: "", email: "", notes: "" });
+const emptyContact = () => ({
+  type: "parent",
+  label: "",
+  name: "",
+  phone: "",
+  email: "",
+  notes: "",
+});
 
 export default function ContactsSection({ client, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [newContact, setNewContact] = useState(emptyContact());
   const [saving, setSaving] = useState(false);
+  const [removingIndex, setRemovingIndex] = useState(null);
+  const [newContact, setNewContact] = useState(emptyContact());
 
-  const contacts = client.contacts || [];
+  const contacts = useMemo(() => {
+    return Array.isArray(client?.contacts) ? client.contacts : [];
+  }, [client?.contacts]);
 
-  const u = (f, v) => setNewContact(p => ({ ...p, [f]: v }));
+  const updateNewContact = (field, value) => {
+    setNewContact((prev) => ({ ...prev, [field]: value }));
+  };
 
-  const addContact = async () => {
-    if (!newContact.name) { toast.error("Name is required"); return; }
-    setSaving(true);
-    await base44.entities.Client.update(client.id, {
-      contacts: [...contacts, newContact]
-    });
-    toast.success("Contact added");
+  const resetAddState = () => {
     setNewContact(emptyContact());
     setAdding(false);
-    setSaving(false);
-    onUpdate();
+  };
+
+  const buildContactPayload = (contact) => ({
+    type: contact.type || "other",
+    label: contact.type === "other" ? (contact.label || "").trim() : "",
+    name: (contact.name || "").trim(),
+    phone: (contact.phone || "").trim(),
+    email: (contact.email || "").trim(),
+    notes: (contact.notes || "").trim(),
+  });
+
+  const addContact = async () => {
+    const payload = buildContactPayload(newContact);
+
+    if (!payload.name) {
+      toast.error("Name is required");
+      return;
+    }
+
+    if (payload.type === "other" && !payload.label) {
+      toast.error("Label is required for Other contacts");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await updateClientContacts(client.id, [...contacts, payload]);
+      toast.success("Contact added");
+      resetAddState();
+      onUpdate?.();
+    } catch (error) {
+      console.error("Failed to add contact:", error);
+      toast.error("Failed to add contact");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const removeContact = async (index) => {
-    const updated = contacts.filter((_, i) => i !== index);
-    await base44.entities.Client.update(client.id, { contacts: updated });
-    toast.success("Contact removed");
-    onUpdate();
+    setRemovingIndex(index);
+
+    try {
+      const updatedContacts = contacts.filter((_, i) => i !== index);
+      await updateClientContacts(client.id, updatedContacts);
+      toast.success("Contact removed");
+      onUpdate?.();
+    } catch (error) {
+      console.error("Failed to remove contact:", error);
+      toast.error("Failed to remove contact");
+    } finally {
+      setRemovingIndex(null);
+    }
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100">
+    <div className="rounded-xl border border-slate-200 bg-white">
       <button
-        onClick={() => setExpanded(e => !e)}
-        className="flex items-center justify-between w-full text-left"
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-700">
-            Additional Contacts {contacts.length > 0 && <span className="text-slate-400 font-normal">({contacts.length})</span>}
+          <Users className="h-4 w-4 text-slate-500" />
+          <span className="font-medium text-slate-900">
+            Additional Contacts {contacts.length > 0 ? `(${contacts.length})` : ""}
           </span>
         </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+
+        {expanded ? (
+          <ChevronUp className="h-4 w-4 text-slate-500" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-slate-500" />
+        )}
       </button>
 
       {expanded && (
-        <div className="mt-3 space-y-3">
-          {contacts.map((c, i) => (
-            <div key={i} className="bg-slate-50 rounded-lg p-3 flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{typeLabel(c)}</span>
-                <button onClick={() => removeContact(i)} className="text-slate-300 hover:text-red-400 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <p className="text-sm font-medium text-slate-800">{c.name}</p>
-              <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>}
-                {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
-              </div>
-              {c.notes && <p className="text-xs text-slate-400 mt-1">{c.notes}</p>}
-            </div>
-          ))}
+        <div className="border-t border-slate-100 px-4 py-4">
+          <div className="space-y-3">
+            {contacts.map((contact, index) => (
+              <div
+                key={`${contact.name || "contact"}-${index}`}
+                className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      {getTypeLabel(contact)}
+                    </div>
 
-          {adding ? (
-            <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-              <div className="flex gap-2">
-                <Select value={newContact.type} onValueChange={v => u("type", v)}>
-                  <SelectTrigger className="w-36 h-8 text-xs bg-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTACT_TYPES.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {newContact.type === "other" && (
+                    <div className="mt-1 text-sm font-medium text-slate-900">
+                      {contact.name || "Unnamed contact"}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                      {contact.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5" />
+                          <span>{contact.phone}</span>
+                        </div>
+                      ) : null}
+
+                      {contact.email ? (
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>{contact.email}</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {contact.notes ? (
+                      <div className="mt-2 text-sm text-slate-600">
+                        {contact.notes}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-red-500"
+                    disabled={removingIndex === index}
+                    onClick={() => removeContact(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            {adding ? (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-3">
+                <div className="flex gap-2">
+                  <Select
+                    value={newContact.type}
+                    onValueChange={(value) => updateNewContact("type", value)}
+                  >
+                    <SelectTrigger className="h-9 bg-white text-sm">
+                      <SelectValue placeholder="Contact type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTACT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {newContact.type === "other" && (
+                    <Input
+                      value={newContact.label}
+                      onChange={(e) => updateNewContact("label", e.target.value)}
+                      placeholder="Custom label"
+                      className="h-9 bg-white text-sm"
+                    />
+                  )}
+                </div>
+
+                <Input
+                  value={newContact.name}
+                  onChange={(e) => updateNewContact("name", e.target.value)}
+                  placeholder="Name"
+                  className="h-9 bg-white text-sm"
+                />
+
+                <div className="grid gap-2 md:grid-cols-2">
                   <Input
-                    placeholder="Label (e.g. Case Manager)"
-                    value={newContact.label}
-                    onChange={e => u("label", e.target.value)}
-                    className="h-8 text-xs bg-white flex-1"
+                    value={newContact.phone}
+                    onChange={(e) => updateNewContact("phone", e.target.value)}
+                    placeholder="Phone"
+                    className="h-9 bg-white text-sm"
                   />
-                )}
+                  <Input
+                    value={newContact.email}
+                    onChange={(e) => updateNewContact("email", e.target.value)}
+                    placeholder="Email"
+                    className="h-9 bg-white text-sm"
+                  />
+                </div>
+
+                <Input
+                  value={newContact.notes}
+                  onChange={(e) => updateNewContact("notes", e.target.value)}
+                  placeholder="Notes"
+                  className="h-9 bg-white text-sm"
+                />
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={resetAddState}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="h-8 text-xs"
+                    onClick={addContact}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving..." : "Add Contact"}
+                  </Button>
+                </div>
               </div>
-              <Input placeholder="Full Name *" value={newContact.name} onChange={e => u("name", e.target.value)} className="h-8 text-xs bg-white" />
-              <div className="flex gap-2">
-                <Input placeholder="Phone" value={newContact.phone} onChange={e => u("phone", e.target.value)} className="h-8 text-xs bg-white flex-1" />
-                <Input placeholder="Email" value={newContact.email} onChange={e => u("email", e.target.value)} className="h-8 text-xs bg-white flex-1" />
-              </div>
-              <Input placeholder="Notes (optional)" value={newContact.notes} onChange={e => u("notes", e.target.value)} className="h-8 text-xs bg-white" />
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => { setAdding(false); setNewContact(emptyContact()); }} className="h-7 text-xs">Cancel</Button>
-                <Button size="sm" onClick={addContact} disabled={saving} className="h-7 text-xs">
-                  {saving ? "Saving..." : "Add Contact"}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setAdding(true)}
-              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add Contact
-            </button>
-          )}
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add Contact
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
