@@ -218,7 +218,7 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <ClientHeader client={client} onRefresh={refreshClient} />
+     <ClientHeader client={client} onUpdate={refreshClient} />
 
       {!isDspd && !isEmployed && !isClientUser && (
         <VocationalProfileCard client={client} onRefresh={refreshClient} />
