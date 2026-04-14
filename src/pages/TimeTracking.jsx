@@ -153,21 +153,25 @@ export default function TimeTracking() {
   refetchOnWindowFocus: false,
 });
 
-  const filterableEmployees = useMemo(() => {
-    return allUsers.filter((u) => {
-      if (u.is_archived) return false;
+  const scopedUsers = useMemo(() => {
+  return getScopedUsers(allUsers, effectiveUser);
+}, [allUsers, effectiveUser]);
 
-      if (effectiveUser?.role === "management") {
-        return u.role === "employee" && u.manager_id === effectiveUser.id;
-      }
+const filterableEmployees = useMemo(() => {
+  return scopedUsers.filter((u) => {
+    if (u.is_archived) return false;
 
-      if (user?.role === "admin" && !viewAsUser) {
-        return u.role === "employee" || u.role === "management";
-      }
+    if (effectiveUser?.role === "management") {
+      return u.role === "employee" && u.manager_id === effectiveUser.id;
+    }
 
-      return false;
-    });
-  }, [allUsers, effectiveUser?.role, effectiveUser?.id, user?.role, viewAsUser]);
+    if (user?.role === "admin" && !viewAsUser) {
+      return u.role === "employee" || u.role === "management";
+    }
+
+    return false;
+  });
+}, [scopedUsers, effectiveUser, user, viewAsUser]);
 
   const { data: rawClients = [] } = useQuery({
   queryKey: ["timeTracking", "clients"],
