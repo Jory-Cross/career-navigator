@@ -452,9 +452,9 @@ const allClients = useMemo(() => {
     [clientById]
   );
 
-  const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-  }, [queryClient]);
+ const handleRefresh = useCallback(async () => {
+  await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"] });
+}, [queryClient]);
 
   const handleEditEntry = useCallback(
     async (entry) => {
