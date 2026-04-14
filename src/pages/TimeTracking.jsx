@@ -286,7 +286,9 @@ const allClients = useMemo(() => {
     }
     return map;
   }, [allClients]);
-
+const newEntryRequiresClient = useMemo(() => {
+  return entryTypeRequiresClient(selectedEntryTypeCode);
+}, [selectedEntryTypeCode]);
   const clients = useMemo(() => {
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
