@@ -20,6 +20,14 @@ function asBoolean(value, fallback = false) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function asNumber(value, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : Number.isFinite(Number(value))
+    ? Number(value)
+    : fallback;
+}
+
 function sortByNewest(items) {
   return [...asArray(items)].sort((a, b) => {
     const aTime = new Date(a?.updated_date || a?.created_date || 0).getTime();
@@ -194,6 +202,53 @@ function buildOnboardingStepPayload(payload = {}) {
     order: typeof payload.order === "number" ? payload.order : Number(payload.order) || 0,
     notes: asString(payload.notes),
     completed_date: payload.completed_date ?? null,
+  };
+}
+
+/**
+ * Time tracking helpers
+ */
+function mapUser(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    email: asString(raw.email),
+    full_name:
+      asString(raw.full_name) ||
+      [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" "),
+    first_name: asString(raw.first_name),
+    last_name: asString(raw.last_name),
+    role: asString(raw.role),
+    manager_id: raw.manager_id ?? null,
+    organization_id: raw.organization_id ?? null,
+    status: asString(raw.status, "active"),
+    raw,
+  };
+}
+
+function mapTimeEntry(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    user_id: raw.user_id ?? raw.employee_id ?? null,
+    employee_id: raw.employee_id ?? raw.user_id ?? null,
+    entry_type_id: raw.entry_type_id ?? null,
+    entry_type_code: asString(raw.entry_type_code),
+    category: asString(raw.category),
+    title: asString(raw.title),
+    description: asString(raw.description),
+    notes: asString(raw.notes),
+    date: raw.date ?? null,
+    start_time: raw.start_time ?? null,
+    end_time: raw.end_time ?? null,
+    duration_minutes: asNumber(raw.duration_minutes, 0),
+    status: asString(raw.status),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
   };
 }
 
@@ -405,6 +460,60 @@ export async function getActiveClients() {
     .map(mapClient)
     .filter(Boolean)
     .filter((client) => client.status !== "archived");
+}
+
+export async function getAllClients() {
+  const clients = await base44.entities.Client.list();
+  return asArray(clients).map(mapClient).filter(Boolean);
+}
+
+/**
+ * USERS
+ */
+export async function getAllUsers() {
+  const users = await base44.entities.User.list();
+  return asArray(users)
+    .map(mapUser)
+    .filter(Boolean)
+    .filter((user) => user.status !== "archived");
+}
+
+export function getScopedUsers(users = [], effectiveUser = null) {
+  const allUsers = asArray(users);
+
+  if (!effectiveUser) return allUsers;
+  if (effectiveUser.role === "admin" || effectiveUser.role === "management") return allUsers;
+
+  return allUsers.filter(
+    (user) =>
+      user.id === effectiveUser.id ||
+      user.manager_id === effectiveUser.id ||
+      user.email === effectiveUser.email
+  );
+}
+
+export function getScopedClients(clients = [], effectiveUser = null, users = []) {
+  const allClients = asArray(clients);
+  const allUsers = asArray(users);
+
+  if (!effectiveUser) return allClients;
+  if (effectiveUser.role === "admin" || effectiveUser.role === "management") return allClients;
+
+  if (effectiveUser.role === "employee") {
+    const subordinateIds = allUsers
+      .filter((user) => user.manager_id === effectiveUser.id)
+      .map((user) => user.id);
+
+    const allowedIds = new Set([effectiveUser.id, ...subordinateIds]);
+
+    return allClients.filter((client) => allowedIds.has(client.assigned_employee_id));
+  }
+
+  if (effectiveUser.role === "client") {
+    return allClients.filter((client) => client.id === effectiveUser.id);
+  }
+
+  return allClients;
 }
 
 /**
@@ -732,7 +841,13 @@ export async function getInterviews(clientId) {
  */
 export async function getTimeEntries(clientId) {
   if (!clientId) return [];
-  return await base44.entities.TimeEntry.filter({ client_id: clientId });
+  const rows = await base44.entities.TimeEntry.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapTimeEntry).filter(Boolean));
+}
+
+export async function getAllTimeEntries() {
+  const rows = await base44.entities.TimeEntry.list("-created_date");
+  return asArray(rows).map(mapTimeEntry).filter(Boolean);
 }
 
 /**
