@@ -1,21 +1,22 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Mail, 
-  CheckSquare, 
-  FileText, 
-  Calendar, 
-  Clock, 
-  LogIn, 
+import {
+  Mail,
+  CheckSquare,
+  FileText,
+  Calendar,
+  Clock,
+  LogIn,
   StickyNote,
   TrendingUp,
-  Plus
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
+
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryKeys";
+import { getActivities } from "@/lib/api/clientPortalApi";
 
 const activityIcons = {
   email_sent: { icon: Mail, color: "text-blue-600 bg-blue-50" },
@@ -30,24 +31,52 @@ const activityIcons = {
   client_login: { icon: LogIn, color: "text-emerald-600 bg-emerald-50" },
   note_added: { icon: StickyNote, color: "text-amber-600 bg-amber-50" },
   status_changed: { icon: TrendingUp, color: "text-blue-600 bg-blue-50" },
-  onboarding_step: { icon: CheckSquare, color: "text-green-600 bg-green-50" }
+  onboarding_step: { icon: CheckSquare, color: "text-green-600 bg-green-50" },
 };
 
-export default function ActivitySection({ clientId }) {
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["activities", clientId],
-    queryFn: () => base44.entities.Activity.filter({ client_id: clientId }, "-created_date"),
-    enabled: !!clientId
+function formatActivityDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return format(date, "MMM d, h:mm a");
+}
+
+export default function ActivitySection({
+  clientId,
+  activities: activitiesProp,
+  isLoading: isLoadingProp = false,
+}) {
+  const shouldQuery = !Array.isArray(activitiesProp);
+
+  const {
+    data: queriedActivities = [],
+    isLoading: queriedLoading,
+  } = useQuery({
+    queryKey: queryKeys.activities(clientId),
+    queryFn: () => getActivities(clientId),
+    enabled: shouldQuery && !!clientId,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
+  const activities = Array.isArray(activitiesProp) ? activitiesProp : queriedActivities;
+  const isLoading = shouldQuery ? queriedLoading : isLoadingProp;
+
   if (isLoading) {
-    return <div className="text-center py-8 text-slate-400">Loading activities...</div>;
+    return (
+      <div className="py-8 text-center text-sm text-slate-400">
+        Loading activities...
+      </div>
+    );
   }
 
-  if (activities.length === 0) {
+  if (!activities.length) {
     return (
-      <Card className="p-8 text-center border-slate-100">
-        <p className="text-slate-400 text-sm">No activities yet</p>
+      <Card className="border-slate-100 p-8 text-center">
+        <p className="text-sm text-slate-400">No activities yet</p>
       </Card>
     );
   }
@@ -55,37 +84,60 @@ export default function ActivitySection({ clientId }) {
   return (
     <Card className="border-slate-100">
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-6">Activity Timeline</h3>
+        <h3 className="mb-6 text-lg font-semibold text-slate-900">
+          Activity Timeline
+        </h3>
+
         <div className="space-y-4">
           {activities.map((activity, index) => {
-            const config = activityIcons[activity.activity_type] || activityIcons.note_added;
+            const config =
+              activityIcons[activity.activity_type] || activityIcons.note_added;
             const Icon = config.icon;
             const isLast = index === activities.length - 1;
+            const createdAt = formatActivityDate(activity.created_date);
 
             return (
-              <div key={activity.id} className="relative">
+              <div key={activity.id || `${activity.activity_type}-${index}`} className="relative">
                 {!isLast && (
-                  <div className="absolute left-5 top-12 bottom-0 w-px bg-slate-100" />
+                  <div className="absolute bottom-0 left-5 top-12 w-px bg-slate-100" />
                 )}
+
                 <div className="flex gap-4">
-                  <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", config.color)}>
-                    <Icon className="w-5 h-5" />
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                      config.color
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <div className="flex-1 min-w-0">
+
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <p className="font-medium text-slate-900 text-sm">{activity.title}</p>
-                        {activity.description && (
-                          <p className="text-sm text-slate-500 mt-1">{activity.description}</p>
-                        )}
+                        <p className="text-sm font-medium text-slate-900">
+                          {activity.title || "Activity"}
+                        </p>
+
+                        {activity.description ? (
+                          <p className="mt-1 text-sm text-slate-500">
+                            {activity.description}
+                          </p>
+                        ) : null}
                       </div>
-                      <span className="text-xs text-slate-400 shrink-0">
-                        {format(new Date(activity.created_date), "MMM d, h:mm a")}
-                      </span>
+
+                      {createdAt ? (
+                        <span className="shrink-0 text-xs text-slate-400">
+                          {createdAt}
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
-                      by {activity.created_by}
-                    </p>
+
+                    {activity.created_by ? (
+                      <p className="mt-1 text-xs text-slate-400">
+                        by {activity.created_by}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>
