@@ -150,15 +150,6 @@ export default function ClientDetail() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: resumes = [] } = useQuery({
-    queryKey: ["clientDetail", "resumes", clientId],
-    queryFn: () => getResumes(clientId),
-    enabled: shouldLoadResumes,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   const { data: timeEntries = [] } = useQuery({
     queryKey: queryKeys.timeEntries(clientId),
     queryFn: () => getTimeEntries(clientId),
