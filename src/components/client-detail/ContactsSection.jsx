@@ -18,7 +18,6 @@ import {
   Mail,
   Users,
 } from "lucide-react";
-
 import { updateClientContacts } from "@/lib/api/clientPortalApi";
 
 const CONTACT_TYPES = [
@@ -28,23 +27,25 @@ const CONTACT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-function getTypeLabel(contact) {
+const getTypeLabel = (contact) => {
   if (contact?.type === "other") return contact?.label || "Other";
-  return CONTACT_TYPES.find((t) => t.value === contact?.type)?.label || contact?.type || "Other";
-}
+  return (
+    CONTACT_TYPES.find((t) => t.value === contact?.type)?.label ||
+    contact?.type ||
+    "Other"
+  );
+};
 
-function emptyContact() {
-  return {
-    type: "parent",
-    label: "",
-    name: "",
-    phone: "",
-    email: "",
-    notes: "",
-  };
-}
+const emptyContact = () => ({
+  type: "parent",
+  label: "",
+  name: "",
+  phone: "",
+  email: "",
+  notes: "",
+});
 
-export default function ContactsSection({ client, onUpdate }) {
+export default function ContactsSection({ client, onUpdate, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,11 +56,22 @@ export default function ContactsSection({ client, onUpdate }) {
     return Array.isArray(client?.contacts) ? client.contacts : [];
   }, [client?.contacts]);
 
+  const notifyUpdated = () => {
+    if (typeof onUpdate === "function") {
+      onUpdate();
+      return;
+    }
+
+    if (typeof onRefresh === "function") {
+      onRefresh();
+    }
+  };
+
   const updateNewContact = (field, value) => {
     setNewContact((prev) => ({ ...prev, [field]: value }));
   };
 
-  const resetAddForm = () => {
+  const resetAddState = () => {
     setNewContact(emptyContact());
     setAdding(false);
   };
@@ -76,6 +88,11 @@ export default function ContactsSection({ client, onUpdate }) {
   const addContact = async () => {
     const payload = buildContactPayload(newContact);
 
+    if (!client?.id) {
+      toast.error("Client id is required");
+      return;
+    }
+
     if (!payload.name) {
       toast.error("Name is required");
       return;
@@ -91,8 +108,8 @@ export default function ContactsSection({ client, onUpdate }) {
     try {
       await updateClientContacts(client.id, [...contacts, payload]);
       toast.success("Contact added");
-      resetAddForm();
-      onUpdate?.();
+      resetAddState();
+      notifyUpdated();
     } catch (error) {
       console.error("Failed to add contact:", error);
       toast.error("Failed to add contact");
@@ -102,13 +119,18 @@ export default function ContactsSection({ client, onUpdate }) {
   };
 
   const removeContact = async (index) => {
+    if (!client?.id) {
+      toast.error("Client id is required");
+      return;
+    }
+
     setRemovingIndex(index);
 
     try {
       const updatedContacts = contacts.filter((_, i) => i !== index);
       await updateClientContacts(client.id, updatedContacts);
       toast.success("Contact removed");
-      onUpdate?.();
+      notifyUpdated();
     } catch (error) {
       console.error("Failed to remove contact:", error);
       toast.error("Failed to remove contact");
@@ -173,7 +195,9 @@ export default function ContactsSection({ client, onUpdate }) {
                     </div>
 
                     {contact?.notes ? (
-                      <div className="mt-2 text-sm text-slate-600">{contact.notes}</div>
+                      <div className="mt-2 text-sm text-slate-600">
+                        {contact.notes}
+                      </div>
                     ) : null}
                   </div>
 
@@ -254,7 +278,7 @@ export default function ContactsSection({ client, onUpdate }) {
                     type="button"
                     variant="outline"
                     className="h-8 text-xs"
-                    onClick={resetAddForm}
+                    onClick={resetAddState}
                     disabled={saving}
                   >
                     Cancel
