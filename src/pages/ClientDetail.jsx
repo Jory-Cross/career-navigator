@@ -16,7 +16,6 @@ import {
   getActivities,
   getTimeEntries,
 } from "@/lib/api/clientPortalApi";
-import { base44 } from "@/api/base44Client";
 
 import ClientHeader from "@/components/client-detail/ClientHeader";
 import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
