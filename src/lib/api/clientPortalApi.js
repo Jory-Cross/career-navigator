@@ -20,7 +20,6 @@ function asBoolean(value, fallback = false) {
   return typeof value === "boolean" ? value : fallback;
 }
 
-function asNumber(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : Number.isFinite(Number(value))
