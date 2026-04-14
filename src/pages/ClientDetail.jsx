@@ -278,12 +278,6 @@ export default function ClientDetail() {
             </TabsTrigger>
           )}
 
-          {!isDspd && !isEmployed && (
-            <TabsTrigger value="resumes">
-              Resumes {activeTab === "resumes" ? `(${resumes.length})` : ""}
-            </TabsTrigger>
-          )}
-
           {!isClientUser && isEmployed && (
             <TabsTrigger value="job_supports">
               Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
