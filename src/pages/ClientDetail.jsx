@@ -379,14 +379,13 @@ export default function ClientDetail() {
         )}
 
         {!isClientUser && (
-          <TabsContent value="documents">
-            <DocumentsSection
-              client={client}
-              documents={documents}
-              onRefresh={refreshDocuments}
-            />
-          </TabsContent>
-        )}
+  <TabsContent value="documents">
+    <DocumentsSection
+      clientId={client.id}
+      onRefresh={refreshDocuments}
+    />
+  </TabsContent>
+)}
 
         {!isEmployed && (
           <TabsContent value="tasks">
