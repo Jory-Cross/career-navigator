@@ -13,7 +13,6 @@ import {
   getClientById,
   getApplications,
   getTasks,
-  getActivities,
   getTimeEntries,
 } from "@/lib/api/clientPortalApi";
 
@@ -127,8 +126,8 @@ export default function ClientDetail() {
 
   const shouldLoadApplications = !!clientId && activeTab === "applications";
   const shouldLoadTasks = !!clientId && activeTab === "tasks";
-  const shouldLoadTime = !!clientId && (activeTab === "time" || activeTab === "job_supports");
-  const shouldLoadActivity = !!clientId && activeTab === "activity";
+  const shouldLoadTime =
+    !!clientId && (activeTab === "time" || activeTab === "job_supports");
 
   const { data: applications = [] } = useQuery({
     queryKey: queryKeys.applications(clientId),
@@ -157,15 +156,6 @@ export default function ClientDetail() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: activities = [] } = useQuery({
-    queryKey: queryKeys.activities(clientId),
-    queryFn: () => getActivities(clientId),
-    enabled: shouldLoadActivity,
-    staleTime: 30 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   const refreshClient = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.client(clientId) });
   }, [queryClient, clientId]);
@@ -180,10 +170,6 @@ export default function ClientDetail() {
 
   const refreshTimeEntries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries(clientId) });
-  }, [queryClient, clientId]);
-
-  const refreshActivities = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.activities(clientId) });
   }, [queryClient, clientId]);
 
   const portalUrl = useMemo(() => `/ClientPortal?id=${clientId}`, [clientId]);
@@ -275,11 +261,11 @@ export default function ClientDetail() {
               Tasks {activeTab === "tasks" ? `(${tasks.length})` : ""}
             </TabsTrigger>
           )}
-{!isDspd && !isEmployed && (
-  <TabsTrigger value="resumes">
-    Resumes
-  </TabsTrigger>
-)}
+
+          {!isDspd && !isEmployed && (
+            <TabsTrigger value="resumes">Resumes</TabsTrigger>
+          )}
+
           {!isClientUser && isEmployed && (
             <TabsTrigger value="job_supports">
               Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
@@ -292,9 +278,7 @@ export default function ClientDetail() {
             </TabsTrigger>
           )}
 
-          <TabsTrigger value="activity">
-            Activity {activeTab === "activity" ? `(${activities.length})` : ""}
-          </TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
 
           {!isClientUser && !isEmployed && (
             <TabsTrigger value="assistant">Assistant</TabsTrigger>
@@ -341,11 +325,11 @@ export default function ClientDetail() {
           </TabsContent>
         )}
 
-       {!isClientUser && (
-  <TabsContent value="documents">
-    <DocumentsSection clientId={client.id} />
-  </TabsContent>
-)}
+        {!isClientUser && (
+          <TabsContent value="documents">
+            <DocumentsSection clientId={client.id} />
+          </TabsContent>
+        )}
 
         {!isEmployed && (
           <TabsContent value="tasks">
@@ -357,14 +341,11 @@ export default function ClientDetail() {
           </TabsContent>
         )}
 
-       {!isDspd && !isEmployed && (
-  <TabsContent value="resumes">
-    <ResumeSection
-      clientId={client.id}
-      client={client}
-    />
-  </TabsContent>
-)}
+        {!isDspd && !isEmployed && (
+          <TabsContent value="resumes">
+            <ResumeSection clientId={client.id} client={client} />
+          </TabsContent>
+        )}
 
         {!isClientUser && isEmployed && (
           <TabsContent value="job_supports">
@@ -391,11 +372,7 @@ export default function ClientDetail() {
         )}
 
         <TabsContent value="activity">
-          <ActivitySection
-  clientId={clientId}
-  activities={activities}
-  isLoading={shouldLoadActivity && !activities.length}
-/>
+          <ActivitySection clientId={client.id} />
         </TabsContent>
 
         {!isClientUser && !isEmployed && (
