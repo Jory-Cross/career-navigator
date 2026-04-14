@@ -97,8 +97,6 @@ function entryTypeRequiresClient(entryTypeCode) {
   const noClientRequired = new Set([
     "admin_time",
     "misc",
-    "eom_reporting",
-    "wsa",
   ]);
 
   return code ? !noClientRequired.has(code) : false;
