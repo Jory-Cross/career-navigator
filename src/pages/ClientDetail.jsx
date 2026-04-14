@@ -359,15 +359,14 @@ export default function ClientDetail() {
           </TabsContent>
         )}
 
-        {!isDspd && !isEmployed && (
-          <TabsContent value="resumes">
-            <ResumeSection
-              client={client}
-              resumes={resumes}
-              onRefresh={refreshResumes}
-            />
-          </TabsContent>
-        )}
+       {!isDspd && !isEmployed && (
+  <TabsContent value="resumes">
+    <ResumeSection
+      clientId={client.id}
+      client={client}
+    />
+  </TabsContent>
+)}
 
         {!isClientUser && isEmployed && (
           <TabsContent value="job_supports">
