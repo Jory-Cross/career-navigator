@@ -552,7 +552,6 @@ export async function getActiveClients() {
  * USERS
  */
 
-export function getScopedUsers(users = [], effectiveUser = null) {
   const allUsers = asArray(users);
 
   if (!effectiveUser) return allUsers;
