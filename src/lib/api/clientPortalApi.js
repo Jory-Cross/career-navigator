@@ -436,7 +436,136 @@ export async function getClientById(id) {
   const raw = await base44.entities.Client.get(id);
   return mapClient(raw);
 }
+/**
+ * TIME TRACKING SHARED HELPERS
+ */
 
+function mapUser(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    full_name:
+      asString(raw.full_name) ||
+      [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" "),
+    first_name: asString(raw.first_name),
+    last_name: asString(raw.last_name),
+    email: asString(raw.email),
+    role: asString(raw.role),
+    manager_id: raw.manager_id ?? null,
+    organization_id: raw.organization_id ?? null,
+    is_archived: Boolean(raw.is_archived),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapTimeEntry(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    staff_id: raw.staff_id ?? raw.user_id ?? null,
+    created_by: asString(raw.created_by),
+    entry_type_id: raw.entry_type_id ?? null,
+    entry_type_code: asString(raw.entry_type_code),
+    entry_type: asString(raw.entry_type),
+    entry_type_key: asString(raw.entry_type_key),
+    type: asString(raw.type),
+    category: asString(raw.category),
+    status: asString(raw.status),
+    date: raw.date ?? null,
+    start_time: raw.start_time ?? null,
+    end_time: raw.end_time ?? null,
+    duration_minutes:
+      typeof raw.duration_minutes === "number"
+        ? raw.duration_minutes
+        : Number(raw.duration_minutes) || 0,
+    notes: asString(raw.notes),
+    description: asString(raw.description),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+export async function getAllUsers() {
+  const rows = await base44.entities.User.list();
+  return asArray(rows).map(mapUser).filter(Boolean);
+}
+
+export async function getAllClients() {
+  const rows = await base44.entities.Client.list();
+  return asArray(rows).map(mapClient).filter(Boolean);
+}
+
+export async function getAllTimeEntries() {
+  const rows = await base44.entities.TimeEntry.list("-created_date");
+  return asArray(rows).map(mapTimeEntry).filter(Boolean);
+}
+
+export async function getTimeEntryById(id) {
+  if (!id) return null;
+  const raw = await base44.entities.TimeEntry.get(id);
+  return mapTimeEntry(raw);
+}
+
+export async function updateTimeEntry(id, payload) {
+  if (!id) throw new Error("Time entry id is required");
+  const raw = await base44.entities.TimeEntry.update(id, payload);
+  return mapTimeEntry(raw);
+}
+
+export async function deleteTimeEntry(id) {
+  if (!id) throw new Error("Time entry id is required");
+  return await base44.entities.TimeEntry.delete(id);
+}
+
+export function getScopedUsers(allUsers = [], user) {
+  if (!user) return [];
+
+  if (user.role === "admin") {
+    return asArray(allUsers);
+  }
+
+  if (user.role === "management") {
+    return asArray(allUsers).filter(
+      (u) => u.id === user.id || u.manager_id === user.id
+    );
+  }
+
+  return asArray(allUsers).filter((u) => u.id === user.id);
+}
+
+export function getScopedClients(allClients = [], user, allUsers = []) {
+  if (!user) return [];
+
+  if (user.role === "admin") {
+    return asArray(allClients);
+  }
+
+  if (user.role === "management") {
+    const subordinateIds = new Set(
+      asArray(allUsers)
+        .filter((u) => u.manager_id === user.id)
+        .map((u) => u.id)
+    );
+
+    return asArray(allClients).filter(
+      (client) =>
+        client.assigned_employee_id === user.id ||
+        subordinateIds.has(client.assigned_employee_id)
+    );
+  }
+
+  return asArray(allClients).filter(
+    (client) =>
+      client.assigned_employee_id === user.id ||
+      client.created_by === user.email
+  );
+}
 export async function updateClientContacts(id, contacts) {
   if (!id) throw new Error("Client id is required");
 
