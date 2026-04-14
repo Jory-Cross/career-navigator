@@ -290,6 +290,7 @@ function mapDocument(raw) {
     title: asString(raw.title),
     description: asString(raw.description),
     file_url: asNullableString(raw.file_url),
+    visibility: asString(raw.visibility, "staff"),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
