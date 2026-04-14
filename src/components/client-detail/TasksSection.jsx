@@ -1,114 +1,241 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CheckCircle2, Users, X, Sparkles, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Plus,
+  CheckCircle2,
+  Users,
+  X,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
 import { cn } from "@/lib/utils";
+import {
+  createTask,
+  updateTask,
+  getActiveClients,
+  organizeTaskNotes,
+} from "@/lib/api/clientPortalApi";
 
 const priorityColors = {
   low: "bg-slate-100 text-slate-600",
   medium: "bg-blue-100 text-blue-700",
   high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700"
+  urgent: "bg-red-100 text-red-700",
 };
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
   in_progress: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
-  cancelled: "bg-slate-100 text-slate-500"
+  cancelled: "bg-slate-100 text-slate-500",
 };
 
-export default function TasksSection({ clientId, tasks, onRefresh }) {
+function emptyTaskForm(clientId) {
+  return {
+    title: "",
+    description: "",
+    status: "pending",
+    priority: "medium",
+    due_date: "",
+    category: "follow_up",
+    client_ids: clientId ? [clientId] : [],
+    checklist: [],
+  };
+}
+
+function safeDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState(() => emptyTaskForm(clientId));
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [organizingNotes, setOrganizingNotes] = useState(false);
 
   const { data: allClients = [] } = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => base44.entities.Client.list()
+    queryKey: ["active-clients"],
+    queryFn: getActiveClients,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
+  const pending = useMemo(
+    () => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
+    [tasks]
+  );
+
+  const completed = useMemo(
+    () => tasks.filter((t) => t.status === "completed"),
+    [tasks]
+  );
+
+  const u = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
   const openNew = () => {
-    setForm({ title: "", description: "", status: "pending", priority: "medium", due_date: "", category: "follow_up", client_ids: clientId ? [clientId] : [], checklist: [] });
+    setForm(emptyTaskForm(clientId));
     setEditId(null);
     setShowNew(true);
   };
 
   const openEdit = (task) => {
-    setForm({ ...task });
+    setForm({
+      id: task.id,
+      title: task.title || "",
+      description: task.description || "",
+      status: task.status || "pending",
+      priority: task.priority || "medium",
+      due_date: task.due_date || "",
+      category: task.category || "follow_up",
+      client_ids: Array.isArray(task.client_ids) ? task.client_ids : [],
+      checklist: Array.isArray(task.checklist) ? task.checklist : [],
+      notes: task.notes || "",
+    });
     setEditId(task.id);
     setShowNew(true);
   };
 
+  const closeDialog = () => {
+    if (saving || organizingNotes) return;
+    setShowNew(false);
+    setEditId(null);
+    setForm(emptyTaskForm(clientId));
+  };
+
   const handleSave = async () => {
+    if (!form.title?.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
     if (!form.client_ids || form.client_ids.length === 0) {
       toast.error("Please select at least one client");
       return;
     }
+
     setSaving(true);
-    if (editId) {
-      await base44.entities.Task.update(editId, form);
-      toast.success("Task updated");
-    } else {
-      await base44.entities.Task.create(form);
-      toast.success("Task created");
+
+    try {
+      const payload = {
+        title: form.title || "",
+        description: form.description || "",
+        notes: form.notes || "",
+        status: form.status || "pending",
+        priority: form.priority || "medium",
+        due_date: form.due_date || null,
+        category: form.category || "follow_up",
+        client_ids: Array.isArray(form.client_ids) ? form.client_ids : [],
+        checklist: Array.isArray(form.checklist) ? form.checklist : [],
+      };
+
+      if (editId) {
+        await updateTask(editId, payload);
+        toast.success("Task updated");
+      } else {
+        await createTask(payload);
+        toast.success("Task created");
+      }
+
+      closeDialog();
+      onRefresh?.();
+    } catch (error) {
+      console.error("Failed to save task:", error);
+      toast.error("Failed to save task");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setShowNew(false);
-    onRefresh();
   };
 
   const toggleComplete = async (task, e) => {
     e.stopPropagation();
-    const newStatus = task.status === "completed" ? "pending" : "completed";
-    await base44.entities.Task.update(task.id, { status: newStatus });
-    onRefresh();
-  };
 
-  const [organizingNotes, setOrganizingNotes] = useState(false);
-  const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+    try {
+      const newStatus = task.status === "completed" ? "pending" : "completed";
+      await updateTask(task.id, {
+        ...task,
+        status: newStatus,
+      });
+      onRefresh?.();
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      toast.error("Failed to update task");
+    }
+  };
 
   const organizeNotes = async () => {
     const raw = form.description?.trim();
-    if (!raw) { toast.error("Add some notes first"); return; }
+
+    if (!raw) {
+      toast.error("Add some notes first");
+      return;
+    }
+
     setOrganizingNotes(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a professional career coach assistant. Take the following raw notes and organize them into clear, actionable bullet points. Keep all the key information but make it concise and well-structured. Return only the organized notes, no extra commentary.\n\nRaw notes:\n${raw}`,
-    });
-    u("description", result);
-    setOrganizingNotes(false);
-    toast.success("Notes organized!");
+
+    try {
+      const result = await organizeTaskNotes(raw);
+      u("description", result || raw);
+      toast.success("Notes organized");
+    } catch (error) {
+      console.error("Failed to organize notes:", error);
+      toast.error("Failed to organize notes");
+    } finally {
+      setOrganizingNotes(false);
+    }
   };
 
-  const toggleClient = (cId) => {
-    const current = form.client_ids || [];
-    if (current.includes(cId)) {
-      u("client_ids", current.filter(id => id !== cId));
+  const toggleClient = (selectedClientId) => {
+    const current = Array.isArray(form.client_ids) ? form.client_ids : [];
+
+    if (current.includes(selectedClientId)) {
+      u(
+        "client_ids",
+        current.filter((id) => id !== selectedClientId)
+      );
     } else {
-      u("client_ids", [...current, cId]);
+      u("client_ids", [...current, selectedClientId]);
     }
   };
 
   const addChecklistItem = () => {
-    const current = form.checklist || [];
+    const current = Array.isArray(form.checklist) ? form.checklist : [];
     u("checklist", [...current, { text: "", completed: false }]);
   };
 
   const updateChecklistItem = (index, text) => {
     const current = [...(form.checklist || [])];
-    current[index].text = text;
+    current[index] = {
+      ...(current[index] || { completed: false }),
+      text,
+    };
     u("checklist", current);
   };
 
@@ -118,107 +245,199 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
     u("checklist", current);
   };
 
-  const pending = tasks.filter(t => t.status !== "completed" && t.status !== "cancelled");
-  const completed = tasks.filter(t => t.status === "completed");
-
   return (
     <>
-      <Card className="border-0 shadow-sm">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-800">Tasks ({pending.length} active)</h3>
-          <Button size="sm" variant="outline" onClick={openNew}><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
-        </div>
-        <div className="divide-y divide-slate-50">
-          {pending.length === 0 && completed.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400">No tasks yet</div>
-          ) : (
-            <>
-              {pending.map(task => (
-                <div key={task.id} className="p-4 flex items-start gap-3 hover:bg-slate-25 cursor-pointer" onClick={() => openEdit(task)}>
-                  <button onClick={(e) => toggleComplete(task, e)} className="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-200 hover:border-emerald-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{task.title}</p>
-                    {task.description && <p className="text-xs text-slate-500 mt-0.5 truncate">{task.description}</p>}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Badge className={cn("text-[10px] border-0", priorityColors[task.priority])}>{task.priority}</Badge>
-                      <Badge className={cn("text-[10px] border-0", statusColors[task.status])}>{task.status?.replace(/_/g, " ")}</Badge>
-                      {task.due_date && <span className="text-[10px] text-slate-400">{format(new Date(task.due_date), "MMM d")}</span>}
-                      {task.checklist?.length > 0 && (
-                        <span className="text-[10px] text-slate-400">
-                          {task.checklist.filter(c => c.completed).length}/{task.checklist.length} ✓
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-slate-900">
+          Tasks ({pending.length} active)
+        </h3>
+
+        <Button onClick={openNew}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add
+        </Button>
+      </div>
+
+      {pending.length === 0 && completed.length === 0 ? (
+        <Card className="border-slate-100 p-8 text-center text-sm text-slate-400">
+          No tasks yet
+        </Card>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {pending.map((task) => (
+              <Card
+                key={task.id}
+                className="cursor-pointer border-slate-100 p-4 transition-shadow hover:shadow-sm"
+                onClick={() => openEdit(task)}
+              >
+                <div className="flex items-start gap-3">
+                  <button
+                    type="button"
+                    onClick={(e) => toggleComplete(task, e)}
+                    className="mt-0.5 shrink-0"
+                  >
+                    <CheckCircle2 className="h-5 w-5 text-slate-300 transition-colors hover:text-emerald-500" />
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-semibold text-slate-900">
+                        {task.title}
+                      </h4>
+
+                      {task.priority ? (
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            priorityColors[task.priority] || "bg-slate-100 text-slate-600"
+                          )}
+                        >
+                          {task.priority}
+                        </Badge>
+                      ) : null}
+
+                      {task.status ? (
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            statusColors[task.status] || "bg-slate-100 text-slate-600"
+                          )}
+                        >
+                          {task.status.replace(/_/g, " ")}
+                        </Badge>
+                      ) : null}
+
+                      {task.due_date && safeDate(task.due_date) ? (
+                        <span className="text-xs text-slate-500">
+                          {format(safeDate(task.due_date), "MMM d")}
                         </span>
-                      )}
+                      ) : null}
+
+                      {Array.isArray(task.checklist) && task.checklist.length > 0 ? (
+                        <span className="text-xs text-slate-500">
+                          {task.checklist.filter((c) => c.completed).length}/
+                          {task.checklist.length} ✓
+                        </span>
+                      ) : null}
                     </div>
+
+                    {task.description ? (
+                      <p className="whitespace-pre-wrap text-sm text-slate-600">
+                        {task.description}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-              ))}
-              {completed.length > 0 && (
-                <div className="p-3 bg-slate-25">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-2 px-1">Completed ({completed.length})</p>
-                  {completed.slice(0, 5).map(task => (
-                    <div key={task.id} className="flex items-center gap-2 px-1 py-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-xs text-slate-400 line-through truncate">{task.title}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </Card>
+              </Card>
+            ))}
+          </div>
 
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editId ? "Edit Task" : "New Task"}</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-3">
-            <div className="space-y-1"><Label className="text-xs text-slate-500">Title *</Label><Input value={form.title || ""} onChange={e => u("title", e.target.value)} /></div>
-            <div className="space-y-1">
+          {completed.length > 0 && (
+            <div className="mt-6">
+              <h4 className="mb-3 text-sm font-semibold text-slate-500">
+                Completed ({completed.length})
+              </h4>
+
+              <div className="space-y-2">
+                {completed.slice(0, 5).map((task) => (
+                  <Card
+                    key={task.id}
+                    className="cursor-pointer border-slate-100 p-3 opacity-70"
+                    onClick={() => openEdit(task)}
+                  >
+                    <div className="text-sm text-slate-600">{task.title}</div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={showNew} onOpenChange={(open) => (!open ? closeDialog() : null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editId ? "Edit Task" : "New Task"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input
+                value={form.title || ""}
+                onChange={(e) => u("title", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-slate-500">Description / Notes</Label>
+                <Label>Description / Notes</Label>
                 <Button
                   type="button"
+                  variant="outline"
                   size="sm"
-                  variant="ghost"
                   onClick={organizeNotes}
                   disabled={organizingNotes}
-                  className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2"
                 >
-                  {organizingNotes ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                  {organizingNotes ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                  )}
                   AI Organize
                 </Button>
               </div>
-              <Textarea value={form.description || ""} onChange={e => u("description", e.target.value)} rows={3} placeholder="Jot down raw thoughts — AI can organize them for you..." />
+
+              <Textarea
+                value={form.description || ""}
+                onChange={(e) => u("description", e.target.value)}
+                rows={3}
+                placeholder="Jot down raw thoughts — AI can organize them for you..."
+              />
             </div>
-            
+
             <div className="space-y-2">
-              <Label className="text-xs text-slate-500 flex items-center gap-1">
-                <Users className="w-3 h-3" />
+              <Label className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
                 Assign to Clients *
               </Label>
-              <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                {allClients.filter(c => c.status === "active" && !c.is_archived).map(client => (
+
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
+                {allClients.map((client) => (
                   <div key={client.id} className="flex items-center gap-2">
                     <Checkbox
                       id={`client-${client.id}`}
                       checked={(form.client_ids || []).includes(client.id)}
                       onCheckedChange={() => toggleClient(client.id)}
                     />
-                    <label htmlFor={`client-${client.id}`} className="text-sm text-slate-700 cursor-pointer">
+                    <label
+                      htmlFor={`client-${client.id}`}
+                      className="cursor-pointer text-sm text-slate-700"
+                    >
                       {client.first_name} {client.last_name}
                     </label>
                   </div>
                 ))}
               </div>
-              {(form.client_ids || []).length > 0 && (
-                <p className="text-xs text-slate-500">{form.client_ids.length} client(s) selected</p>
-              )}
+
+              {(form.client_ids || []).length > 0 ? (
+                <p className="text-xs text-slate-500">
+                  {form.client_ids.length} client(s) selected
+                </p>
+              ) : null}
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Priority</Label>
-                <Select value={form.priority || "medium"} onValueChange={v => u("priority", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label>Priority</Label>
+                <Select
+                  value={form.priority || "medium"}
+                  onValueChange={(v) => u("priority", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -227,10 +446,16 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Category</Label>
-                <Select value={form.category || "follow_up"} onValueChange={v => u("category", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label>Category</Label>
+                <Select
+                  value={form.category || "follow_up"}
+                  onValueChange={(v) => u("category", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="follow_up">Follow Up</SelectItem>
                     <SelectItem value="resume">Resume</SelectItem>
@@ -242,10 +467,16 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Status</Label>
-                <Select value={form.status || "pending"} onValueChange={v => u("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label>Status</Label>
+                <Select
+                  value={form.status || "pending"}
+                  onValueChange={(v) => u("status", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
@@ -254,23 +485,33 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label className="text-xs text-slate-500">Due Date</Label><Input type="date" value={form.due_date || ""} onChange={e => u("due_date", e.target.value)} /></div>
+
+              <div className="space-y-1">
+                <Label>Due Date</Label>
+                <Input
+                  type="date"
+                  value={form.due_date || ""}
+                  onChange={(e) => u("due_date", e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-slate-500">Todo Checklist</Label>
-                <Button type="button" size="sm" variant="ghost" onClick={addChecklistItem} className="h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" /> Add Item
+                <Label>Todo Checklist</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={addChecklistItem}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  Add Item
                 </Button>
               </div>
-              {(form.checklist || []).length > 0 && (
-                <div className="space-y-2 border border-slate-200 rounded-lg p-3">
+
+              {(form.checklist || []).length > 0 ? (
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                   {form.checklist.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <Input
                         placeholder="Checklist item..."
-                        value={item.text}
+                        value={item.text || ""}
                         onChange={(e) => updateChecklistItem(idx, e.target.value)}
                         className="text-sm"
                       />
@@ -281,17 +522,22 @@ export default function TasksSection({ clientId, tasks, onRefresh }) {
                         onClick={() => removeChecklistItem(idx)}
                         className="h-8 w-8 shrink-0"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-white">{saving ? "Saving..." : "Save"}</Button>
+            <Button variant="outline" onClick={closeDialog}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
