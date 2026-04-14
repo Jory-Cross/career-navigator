@@ -212,29 +212,6 @@ function buildOnboardingStepPayload(payload = {}) {
 function mapClient(raw) {
   if (!raw) return null;
 
- return {
-  id: raw.id,
-  first_name: asString(raw.first_name),
-  last_name: asString(raw.last_name),
-  full_name:
-    [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" ") ||
-    asString(raw.full_name),
-  email: asString(raw.email),
-  phone: asString(raw.phone),
-  status: asString(raw.status, "active"),
-  assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
-  created_by: asString(raw.created_by),
-  is_archived: Boolean(raw.is_archived) || asString(raw.status) === "archived",
-  client_type: asString(raw.client_type),
-  onboarding_status: asString(raw.onboarding_status),
-  onboarding_started_date: raw.onboarding_started_date ?? null,
-  contacts: asArray(raw.contacts).map(mapContact).filter(Boolean),
-  raw,
-};
-
-function mapClient(raw) {
-  if (!raw) return null;
-
   return {
     id: raw.id,
     first_name: asString(raw.first_name),
@@ -255,7 +232,6 @@ function mapClient(raw) {
     raw,
   };
 }
-
 function mapTask(raw) {
   if (!raw) return null;
 
