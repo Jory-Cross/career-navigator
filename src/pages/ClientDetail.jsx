@@ -127,8 +127,6 @@ export default function ClientDetail() {
 
   const shouldLoadApplications = !!clientId && activeTab === "applications";
   const shouldLoadTasks = !!clientId && activeTab === "tasks";
-  const shouldLoadDocuments = !!clientId && activeTab === "documents";
-  const shouldLoadResumes = !!clientId && activeTab === "resumes";
   const shouldLoadTime = !!clientId && (activeTab === "time" || activeTab === "job_supports");
   const shouldLoadActivity = !!clientId && activeTab === "activity";
 
