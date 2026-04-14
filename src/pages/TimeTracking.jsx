@@ -129,21 +129,18 @@ export default function TimeTracking() {
   const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
   useEffect(() => {
-    mountedRef.current = true;
-
-    timeTrackingApi
-      .getCurrentUser()
-      .then((result) => {
-        if (mountedRef.current) {
-          setUser(result);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  mountedRef.current = true;
+  getCurrentUser()
+    .then((result) => {
+      if (mountedRef.current) {
+        setUser(result);
+      }
+    })
+    .catch(() => {});
+  return () => {
+    mountedRef.current = false;
+  };
+}, []);
 
   const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
 
