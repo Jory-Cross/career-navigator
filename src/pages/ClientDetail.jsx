@@ -364,12 +364,9 @@ export default function ClientDetail() {
           </TabsContent>
         )}
 
-        {!isClientUser && (
+       {!isClientUser && (
   <TabsContent value="documents">
-    <DocumentsSection
-      clientId={client.id}
-      onRefresh={refreshDocuments}
-    />
+    <DocumentsSection clientId={client.id} />
   </TabsContent>
 )}
 
