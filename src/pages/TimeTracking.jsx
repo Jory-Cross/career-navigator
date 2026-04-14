@@ -145,13 +145,13 @@ export default function TimeTracking() {
   const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
 
   const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => timeTrackingApi.listUsers(),
-    enabled: !!user && (user.role === "admin" || user.role === "management"),
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  queryKey: ["timeTracking", "users"],
+  queryFn: getAllUsers,
+  enabled: !!user && (user.role === "admin" || user.role === "management"),
+  staleTime: 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
 
   const filterableEmployees = useMemo(() => {
     return allUsers.filter((u) => {
