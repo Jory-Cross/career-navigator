@@ -412,6 +412,7 @@ export default function ClientDetail() {
           <TabsContent value="job_supports">
             <TimeLogDashboard
               client={client}
+              clientId={client.id}
               timeEntries={timeEntries}
               onRefresh={refreshTimeEntries}
               mode="job_supports"
@@ -423,6 +424,7 @@ export default function ClientDetail() {
           <TabsContent value="time">
             <TimeLogDashboard
               client={client}
+              clientId={client.id}
               timeEntries={timeEntries}
               onRefresh={refreshTimeEntries}
               mode="time"
@@ -446,18 +448,18 @@ export default function ClientDetail() {
         )}
       </Tabs>
 
-     {showEmailComposer && (
-  <EmailComposer
-    open={showEmailComposer}
-    onClose={() => setShowEmailComposer(false)}
-    clientId={client.id}
-    clientEmail={client.email}
-    clientName={
-      client.full_name ||
-      [client.first_name, client.last_name].filter(Boolean).join(" ")
-    }
-  />
-)}
+      {showEmailComposer && (
+        <EmailComposer
+          open={showEmailComposer}
+          onClose={() => setShowEmailComposer(false)}
+          clientId={client.id}
+          clientEmail={client.email}
+          clientName={
+            client.full_name ||
+            [client.first_name, client.last_name].filter(Boolean).join(" ")
+          }
+        />
+      )}
     </div>
   );
 }
