@@ -183,9 +183,9 @@ const filterableEmployees = useMemo(() => {
 });
 
 const allClients = useMemo(() => {
-  return getScopedClients(rawClients, effectiveUser, allUsers);
-}, [rawClients, effectiveUser, allUsers]);
-
+  return getScopedClients(rawClients, effectiveUser, scopedUsers);
+}, [rawClients, effectiveUser, scopedUsers]);
+  
   const { data: timeEntries = [] } = useQuery({
   queryKey: ["timeTracking", "entries"],
   queryFn: getAllTimeEntries,
