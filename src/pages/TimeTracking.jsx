@@ -121,8 +121,9 @@ export default function TimeTracking() {
   const [editingEntry, setEditingEntry] = useState(null);
   const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
 
-  const [showNewEntry, setShowNewEntry] = useState(false);
-  const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+const [showNewEntry, setShowNewEntry] = useState(false);
+const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+const [selectedNewEntryClientId, setSelectedNewEntryClientId] = useState("");
 
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
 
