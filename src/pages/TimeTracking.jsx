@@ -490,10 +490,11 @@ const allClients = useMemo(() => {
     setSelectedEntry(entry);
   }, []);
 
-  const closeNewEntryDialog = useCallback(() => {
-    setShowNewEntry(false);
-    setSelectedEntryTypeCode("");
-  }, []);
+ const closeNewEntryDialog = useCallback(() => {
+  setShowNewEntry(false);
+  setSelectedEntryTypeCode("");
+  setSelectedNewEntryClientId("");
+}, []);
 
   const closeEditDialog = useCallback(() => {
     setEditingEntry(null);
