@@ -43,24 +43,6 @@ import { getEntryTypeOptions, normalizeEntryTypeCode } from "@/lib/entryTypeRegi
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
-const timeTrackingApi = {
-  async getCurrentUser() {
-    return await base44.auth.me();
-  },
-
-  async listUsers() {
-    return await base44.entities.User.list();
-  },
-
-  async listClients() {
-    return await base44.entities.Client.list();
-  },
-
-  async listTimeEntries() {
-    return await base44.entities.TimeEntry.list("-created_date");
-  },
-};
-
 function parseDateOnly(dateString) {
   if (!dateString || typeof dateString !== "string") return null;
 
