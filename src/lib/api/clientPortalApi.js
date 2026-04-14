@@ -622,7 +622,29 @@ export async function getDocuments(clientId) {
   const rows = await base44.entities.Document.filter({ client_id: clientId });
   return sortByNewest(asArray(rows).map(mapDocument).filter(Boolean));
 }
+export async function getClientVisibleDocuments(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Document.filter({ client_id: clientId });
 
+  return sortByNewest(
+    asArray(rows)
+      .map(mapDocument)
+      .filter(Boolean)
+      .filter((doc) => doc.visibility === "client" || doc.visibility === "both")
+  );
+}
+
+export async function getStaffVisibleDocuments(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Document.filter({ client_id: clientId });
+
+  return sortByNewest(
+    asArray(rows)
+      .map(mapDocument)
+      .filter(Boolean)
+      .filter((doc) => doc.visibility === "staff" || doc.visibility === "both")
+  );
+}
 export async function createDocument(payload) {
   const raw = await base44.entities.Document.create(buildDocumentPayload(payload));
   return mapDocument(raw);
