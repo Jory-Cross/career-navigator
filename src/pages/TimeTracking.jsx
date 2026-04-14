@@ -311,6 +311,11 @@ const allClients = useMemo(() => {
 const newEntryRequiresClient = useMemo(() => {
   return entryTypeRequiresClient(selectedEntryTypeCode);
 }, [selectedEntryTypeCode]);
+
+useEffect(() => {
+  console.log("[TimeTracking] selectedEntryTypeCode:", selectedEntryTypeCode);
+  console.log("[TimeTracking] newEntryRequiresClient:", newEntryRequiresClient);
+}, [selectedEntryTypeCode, newEntryRequiresClient]);
   const clients = useMemo(() => {
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
