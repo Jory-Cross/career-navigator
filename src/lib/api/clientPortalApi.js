@@ -543,49 +543,6 @@ export async function getActiveClients() {
     .filter((client) => client.status !== "archived");
 }
 
-/**
- * USERS
- */
-
-  const allUsers = asArray(users);
-
-  if (!effectiveUser) return allUsers;
-  if (effectiveUser.role === "admin" || effectiveUser.role === "management") return allUsers;
-
-  return allUsers.filter(
-    (user) =>
-      user.id === effectiveUser.id ||
-      user.manager_id === effectiveUser.id ||
-      user.email === effectiveUser.email
-  );
-}
-
-  const allClients = asArray(clients);
-  const allUsers = asArray(users);
-
-  if (!effectiveUser) return allClients;
-  if (effectiveUser.role === "admin" || effectiveUser.role === "management") return allClients;
-
-  if (effectiveUser.role === "employee") {
-    const subordinateIds = allUsers
-      .filter((user) => user.manager_id === effectiveUser.id)
-      .map((user) => user.id);
-
-    const allowedIds = new Set([effectiveUser.id, ...subordinateIds]);
-
-    return allClients.filter((client) => allowedIds.has(client.assigned_employee_id));
-  }
-
-  if (effectiveUser.role === "client") {
-    return allClients.filter((client) => client.id === effectiveUser.id);
-  }
-
-  return allClients;
-}
-
-/**
- * APPLICATIONS
- */
 export async function getApplications(clientId) {
   if (!clientId) return [];
   const rows = await base44.entities.JobApplication.filter({ client_id: clientId });
