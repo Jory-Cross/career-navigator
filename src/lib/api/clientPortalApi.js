@@ -448,9 +448,9 @@ export async function getAllUsers() {
   return asArray(rows).map(mapUser).filter(Boolean);
 }
 
-export async function getAllClients() {
-  const rows = await base44.entities.Client.list();
-  return asArray(rows).map(mapClient).filter(Boolean);
+export async function getAllTimeEntries() {
+  const rows = await base44.entities.TimeEntry.list("-created_date");
+  return asArray(rows).map(mapTimeEntry).filter(Boolean);
 }
 
 export async function getTimeEntryById(id) {
