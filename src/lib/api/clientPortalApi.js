@@ -548,11 +548,6 @@ export async function getActiveClients() {
     .filter((client) => client.status !== "archived");
 }
 
-export async function getAllClients() {
-  const clients = await base44.entities.Client.list();
-  return asArray(clients).map(mapClient).filter(Boolean);
-}
-
 /**
  * USERS
  */
