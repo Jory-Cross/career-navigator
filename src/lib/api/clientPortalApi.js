@@ -209,31 +209,6 @@ function buildOnboardingStepPayload(payload = {}) {
  * Time tracking helpers
  */
 
-function mapTimeEntry(raw) {
-  if (!raw) return null;
-
-  return {
-    id: raw.id,
-    client_id: raw.client_id ?? null,
-    user_id: raw.user_id ?? raw.employee_id ?? null,
-    employee_id: raw.employee_id ?? raw.user_id ?? null,
-    entry_type_id: raw.entry_type_id ?? null,
-    entry_type_code: asString(raw.entry_type_code),
-    category: asString(raw.category),
-    title: asString(raw.title),
-    description: asString(raw.description),
-    notes: asString(raw.notes),
-    date: raw.date ?? null,
-    start_time: raw.start_time ?? null,
-    end_time: raw.end_time ?? null,
-    duration_minutes: asNumber(raw.duration_minutes, 0),
-    status: asString(raw.status),
-    created_date: raw.created_date ?? null,
-    updated_date: raw.updated_date ?? null,
-    raw,
-  };
-}
-
 /**
  * Mapping layer
  * Keeps page code less dependent on raw Base44 field shapes.
