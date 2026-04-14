@@ -208,24 +208,6 @@ function buildOnboardingStepPayload(payload = {}) {
 /**
  * Time tracking helpers
  */
-function mapUser(raw) {
-  if (!raw) return null;
-
-  return {
-    id: raw.id,
-    email: asString(raw.email),
-    full_name:
-      asString(raw.full_name) ||
-      [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" "),
-    first_name: asString(raw.first_name),
-    last_name: asString(raw.last_name),
-    role: asString(raw.role),
-    manager_id: raw.manager_id ?? null,
-    organization_id: raw.organization_id ?? null,
-    status: asString(raw.status, "active"),
-    raw,
-  };
-}
 
 function mapTimeEntry(raw) {
   if (!raw) return null;
