@@ -12,7 +12,11 @@ function asString(value, fallback = "") {
 }
 
 function asNullableString(value) {
-  return typeof value === "string" && value.trim() ? value : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function asBoolean(value, fallback = false) {
+  return typeof value === "boolean" ? value : fallback;
 }
 
 function sortByNewest(items) {
@@ -21,6 +25,77 @@ function sortByNewest(items) {
     const bTime = new Date(b?.updated_date || b?.created_date || 0).getTime();
     return bTime - aTime;
   });
+}
+
+/**
+ * Contact helpers
+ */
+function mapContact(raw) {
+  if (!raw) return null;
+
+  return {
+    type: asString(raw.type, "other"),
+    label: asString(raw.label),
+    name: asString(raw.name),
+    phone: asString(raw.phone),
+    email: asString(raw.email),
+    notes: asString(raw.notes),
+  };
+}
+
+function buildClientContactsPayload(contacts = []) {
+  return asArray(contacts).map((contact) => ({
+    type: asString(contact?.type, "other"),
+    label: asString(contact?.label),
+    name: asString(contact?.name),
+    phone: asString(contact?.phone),
+    email: asString(contact?.email),
+    notes: asString(contact?.notes),
+  }));
+}
+
+/**
+ * Application helpers
+ */
+function mapApplicationNoteEntry(raw) {
+  if (!raw) return null;
+
+  return {
+    text: asString(raw.text),
+    created_at: raw.created_at ?? null,
+    created_by: asString(raw.created_by),
+  };
+}
+
+function buildApplicationNoteEntries(entries = []) {
+  return asArray(entries)
+    .map((entry) => ({
+      text: asString(entry?.text),
+      created_at: entry?.created_at ?? null,
+      created_by: asString(entry?.created_by),
+    }))
+    .filter((entry) => entry.text);
+}
+
+/**
+ * Task helpers
+ */
+function mapChecklistItem(raw) {
+  if (!raw) return null;
+
+  return {
+    text: asString(raw.text),
+    completed: asBoolean(raw.completed, false),
+  };
+}
+
+function buildChecklistPayload(items = []) {
+  return asArray(items)
+    .map((item) => ({
+      text: asString(item?.text),
+      completed: asBoolean(item?.completed, false),
+    }))
+    .filter((item) => item.text);
 }
 
 /**
@@ -41,19 +116,12 @@ function mapClient(raw) {
     phone: asString(raw.phone),
     status: asString(raw.status, "active"),
     assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
+    client_type: asString(raw.client_type),
     contacts: asArray(raw.contacts).map(mapContact).filter(Boolean),
     raw,
   };
 }
-export async function updateClientContacts(id, contacts) {
-  if (!id) throw new Error("Client id is required");
 
-  const raw = await base44.entities.Client.update(id, {
-    contacts: buildClientContactsPayload(contacts),
-  });
-
-  return mapClient(raw);
-}
 function mapApplication(raw) {
   if (!raw) return null;
 
@@ -65,6 +133,19 @@ function mapApplication(raw) {
     status: asString(raw.status, "active"),
     notes: asString(raw.notes),
     running_notes: asString(raw.running_notes),
+    applied_date: raw.applied_date ?? null,
+    follow_up_date: raw.follow_up_date ?? null,
+    job_url: asString(raw.job_url),
+    salary_range: asString(raw.salary_range),
+    location: asString(raw.location),
+    work_type: asString(raw.work_type),
+    contact_name: asString(raw.contact_name),
+    contact_title: asString(raw.contact_title),
+    contact_email: asString(raw.contact_email),
+    contact_phone: asString(raw.contact_phone),
+    note_entries: asArray(raw.note_entries).map(mapApplicationNoteEntry).filter(Boolean),
+    next_step: asString(raw.next_step),
+    next_step_date: raw.next_step_date ?? null,
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
@@ -80,8 +161,11 @@ function mapTask(raw) {
     description: asString(raw.description),
     notes: asString(raw.notes),
     status: asString(raw.status, "open"),
+    priority: asString(raw.priority, "medium"),
+    category: asString(raw.category),
     due_date: raw.due_date ?? null,
     client_ids: asArray(raw.client_ids),
+    checklist: asArray(raw.checklist).map(mapChecklistItem).filter(Boolean),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
@@ -109,9 +193,11 @@ function mapActivity(raw) {
   return {
     id: raw.id,
     client_id: raw.client_id ?? null,
-    type: asString(raw.type),
+    activity_type: asString(raw.type),
     title: asString(raw.title),
     notes: asString(raw.notes),
+    description: asString(raw.description || raw.notes),
+    created_by: asString(raw.created_by),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
@@ -129,6 +215,19 @@ function buildApplicationPayload(payload = {}) {
     status: asString(payload.status, "active"),
     notes: asString(payload.notes),
     running_notes: asString(payload.running_notes),
+    applied_date: payload.applied_date ?? null,
+    follow_up_date: payload.follow_up_date ?? null,
+    job_url: asString(payload.job_url),
+    salary_range: asString(payload.salary_range),
+    location: asString(payload.location),
+    work_type: asString(payload.work_type),
+    contact_name: asString(payload.contact_name),
+    contact_title: asString(payload.contact_title),
+    contact_email: asString(payload.contact_email),
+    contact_phone: asString(payload.contact_phone),
+    note_entries: buildApplicationNoteEntries(payload.note_entries),
+    next_step: asString(payload.next_step),
+    next_step_date: payload.next_step_date ?? null,
   };
 }
 
@@ -138,8 +237,11 @@ function buildTaskPayload(payload = {}) {
     description: asString(payload.description),
     notes: asString(payload.notes),
     status: asString(payload.status, "open"),
+    priority: asString(payload.priority, "medium"),
+    category: asString(payload.category),
     due_date: payload.due_date ?? null,
     client_ids: asArray(payload.client_ids),
+    checklist: buildChecklistPayload(payload.checklist),
   };
 }
 
@@ -155,9 +257,11 @@ function buildDocumentPayload(payload = {}) {
 function buildActivityPayload(payload = {}) {
   return {
     client_id: payload.client_id ?? null,
-    type: asString(payload.type),
+    type: asString(payload.type || payload.activity_type),
     title: asString(payload.title),
     notes: asString(payload.notes),
+    description: asString(payload.description),
+    created_by: asString(payload.created_by),
   };
 }
 
@@ -176,33 +280,30 @@ export async function getClientById(id) {
   const raw = await base44.entities.Client.get(id);
   return mapClient(raw);
 }
-function mapContact(raw) {
-  if (!raw) return null;
-  return {
-    type: asString(raw.type, "other"),
-    label: asString(raw.label),
-    name: asString(raw.name),
-    phone: asString(raw.phone),
-    email: asString(raw.email),
-    notes: asString(raw.notes),
-  };
+
+export async function updateClientContacts(id, contacts) {
+  if (!id) throw new Error("Client id is required");
+
+  const raw = await base44.entities.Client.update(id, {
+    contacts: buildClientContactsPayload(contacts),
+  });
+
+  return mapClient(raw);
 }
 
-function buildClientContactsPayload(contacts = []) {
-  return asArray(contacts).map((contact) => ({
-    type: asString(contact?.type, "other"),
-    label: asString(contact?.label),
-    name: asString(contact?.name),
-    phone: asString(contact?.phone),
-    email: asString(contact?.email),
-    notes: asString(contact?.notes),
-  }));
-}
 export async function getClientByEmail(email) {
   if (!email) return null;
   const clients = await base44.entities.Client.list();
   const match = asArray(clients).find((c) => c.email === email);
   return mapClient(match || null);
+}
+
+export async function getActiveClients() {
+  const clients = await base44.entities.Client.list();
+  return asArray(clients)
+    .map(mapClient)
+    .filter(Boolean)
+    .filter((client) => client.status !== "archived");
 }
 
 /**
@@ -256,6 +357,26 @@ export async function updateTask(id, payload) {
 
 export async function deleteTask(id) {
   return await base44.entities.Task.delete(id);
+}
+
+export async function organizeTaskNotes(rawNotes) {
+  const prompt = `
+Organize the following case-management task notes into a clean, concise task description.
+Keep it practical and readable. Do not invent details.
+
+Notes:
+${rawNotes}
+`.trim();
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+  });
+
+  if (typeof result === "string") return result.trim();
+  if (typeof result?.text === "string") return result.text.trim();
+  if (typeof result?.output === "string") return result.output.trim();
+
+  return rawNotes;
 }
 
 /**
