@@ -1,19 +1,66 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Lightbulb, Sparkles, Loader2, MessageSquare, Target, CheckCircle2, Tag, FileText, Trash2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import {
+  Lightbulb,
+  Sparkles,
+  Loader2,
+  MessageSquare,
+  Target,
+  CheckCircle2,
+  Tag,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RealTimeCoach from "@/components/interview/RealTimeCoach";
 import SkillTracker from "@/components/interview/SkillTracker";
 import JobApplicationQuestions from "@/components/interview/JobApplicationQuestions";
+import {
+  getApplications,
+  getInterviewSessions,
+  deleteInterviewSession,
+  createInterviewSession,
+  updateInterviewSession,
+  generateInterviewQuestions,
+  analyzeInterviewAnswer,
+  generateInterviewOverallFeedback,
+  createActivity,
+} from "@/lib/api/clientPortalApi";
+
+const WSA_QUESTIONS = [
+  { question: "Tell me about yourself", category: "Background" },
+  { question: "What are your greatest strengths?", category: "Strengths" },
+  { question: "What is your greatest weakness?", category: "Weakness" },
+  { question: "Why are you interested in this role/our company?", category: "Motivation" },
+  {
+    question: "Describe a challenging situation you've faced and how you dealt with it.",
+    category: "Problem Solving",
+  },
+  { question: "Where do you see yourself in 5 years?", category: "Career Goals" },
+  { question: "How do you handle conflict in the workplace?", category: "Conflict Resolution" },
+  { question: "How do you prioritize your work?", category: "Time Management" },
+  { question: "Give an example of a goal you set and how you achieved it.", category: "Achievement" },
+  { question: "Do you have any questions for us?", category: "Engagement" },
+];
+
+function buildQuestionState(question) {
+  return {
+    question: question.question || "",
+    category: question.category || "General",
+    answer: question.answer || "",
+    feedback: question.feedback || "",
+    score: typeof question.score === "number" ? question.score : null,
+  };
+}
 
 export default function InterviewPrepSection({ client }) {
   const [sessions, setSessions] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSession, setShowSession] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -25,64 +72,80 @@ export default function InterviewPrepSection({ client }) {
   const [isWSA, setIsWSA] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
   const [showSessionNotes, setShowSessionNotes] = useState(false);
-  const [applications, setApplications] = useState([]);
   const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
+
   const jobDropdownRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (jobDropdownRef.current && !jobDropdownRef.current.contains(e.target)) {
         setJobDropdownOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const WSA_QUESTIONS = [
-    { question: "Tell me about yourself", category: "Background" },
-    { question: "What are your greatest strengths?", category: "Strengths" },
-    { question: "What is your greatest weakness?", category: "Weakness" },
-    { question: "Why are you interested in this role/our company?", category: "Motivation" },
-    { question: "Describe a challenging situation you've faced and how you dealt with it.", category: "Problem Solving" },
-    { question: "Where do you see yourself in 5 years?", category: "Career Goals" },
-    { question: "How do you handle conflict in the workplace?", category: "Conflict Resolution" },
-    { question: "How do you prioritize your work?", category: "Time Management" },
-    { question: "Give an example of a goal you set and how you achieved it.", category: "Achievement" },
-    { question: "Do you have any questions for us?", category: "Engagement" }
-  ];
-
-  useEffect(() => {
-    loadSessions();
-    loadApplications();
-  }, [client.id]);
-
-  const loadApplications = async () => {
-    try {
-      const apps = await base44.entities.JobApplication.filter({ client_id: client.id });
-      setApplications(apps.filter(a => a.status !== 'rejected' && a.status !== 'withdrawn'));
-    } catch (error) {
-      // Silent fail
+  const loadData = async () => {
+    if (!client?.id) {
+      setSessions([]);
+      setApplications([]);
+      setLoading(false);
+      return;
     }
-  };
 
-  const loadSessions = async () => {
     setLoading(true);
     try {
-      const data = await base44.entities.InterviewSession.filter({ client_id: client.id });
-      setSessions(data.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
+      const [loadedSessions, loadedApps] = await Promise.all([
+        getInterviewSessions(client.id),
+        getApplications(client.id),
+      ]);
+
+      setSessions(Array.isArray(loadedSessions) ? loadedSessions : []);
+      setApplications(
+        (Array.isArray(loadedApps) ? loadedApps : []).filter(
+          (a) => a.status !== "rejected" && a.status !== "withdrawn"
+        )
+      );
     } catch (error) {
-      toast.error("Failed to load sessions");
+      console.error("Failed to load interview prep data:", error);
+      toast.error("Failed to load interview prep data");
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteSession = async (e, sessionId) => {
-    e.stopPropagation();
-    await base44.entities.InterviewSession.delete(sessionId);
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    toast.success("Session deleted");
+  useEffect(() => {
+    loadData();
+  }, [client?.id]);
+
+  const currentQuestion = currentSession?.questions?.[currentQuestionIdx];
+
+  const avgScore = useMemo(() => {
+    if (!sessions.length) return 0;
+
+    const total = sessions.reduce((sum, session) => {
+      const questions = Array.isArray(session.questions) ? session.questions : [];
+      const sessionAvg = questions.length
+        ? questions.reduce((qSum, q) => qSum + (q.score || 0), 0) / questions.length
+        : 0;
+      return sum + sessionAvg;
+    }, 0);
+
+    return Math.round(total / sessions.length);
+  }, [sessions]);
+
+  const closeSessionDialog = () => {
+    setShowSession(false);
+    setGenerating(false);
+    setReviewMode(false);
+    setCurrentSession(null);
+    setCurrentQuestionIdx(0);
+    setAnswer("");
+    setAnalyzingAnswer(false);
+    setSessionNotes("");
+    setShowSessionNotes(false);
   };
 
   const reviewSession = (session) => {
@@ -90,10 +153,25 @@ export default function InterviewPrepSection({ client }) {
     setCurrentQuestionIdx(0);
     setReviewMode(true);
     setShowSession(true);
+    setIsWSA(session.session_type === "WSA");
+    setSessionNotes(session.notes || "");
+  };
+
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+
+    try {
+      await deleteInterviewSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      toast.success("Session deleted");
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      toast.error("Failed to delete session");
+    }
   };
 
   const startNewSession = async (useWSA = false, jobApplicationId = null) => {
-    if (!client.target_role) {
+    if (!client?.target_role) {
       toast.error("Please set a target role for the client first");
       return;
     }
@@ -102,123 +180,78 @@ export default function InterviewPrepSection({ client }) {
     setShowSession(true);
     setReviewMode(false);
     setIsWSA(useWSA);
+    setCurrentQuestionIdx(0);
+    setAnswer("");
+    setSessionNotes("");
+    setShowSessionNotes(false);
 
     try {
+      const jobApp = jobApplicationId
+        ? applications.find((a) => a.id === jobApplicationId)
+        : null;
+
       let questions;
-      let jobApp = null;
 
-      // If job application is provided, fetch it for context
-      if (jobApplicationId) {
-        jobApp = applications.find(a => a.id === jobApplicationId);
-      }
-      
       if (useWSA) {
-        questions = WSA_QUESTIONS.map(q => ({
-          question: q.question,
-          category: q.category,
-          answer: "",
-          feedback: "",
-          score: null
-        }));
-      } else if (jobApp) {
-        const prompt = `Generate 5 tailored interview questions for someone applying for a ${jobApp.position} position at ${jobApp.company}.
-
-Company role: ${client.target_role}
-${jobApp.ai_fit_analysis ? `Context: ${jobApp.ai_fit_analysis}` : ""}
-
-Focus on:
-1. Role-specific challenges at this company
-2. Why they want to work there
-3. Relevant experience and skills
-4. Problem-solving for company's context
-5. Cultural fit
-
-For each question, categorize it appropriately.`;
-
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              questions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    question: { type: "string" },
-                    category: { type: "string" }
-                  }
-                }
-              }
-            }
-          }
-        });
-
-        questions = result.questions.map(q => ({
-          question: q.question,
-          category: q.category,
-          answer: "",
-          feedback: "",
-          score: null
-        }));
+        questions = WSA_QUESTIONS.map(buildQuestionState);
       } else {
-        const prompt = `Generate 5 common interview questions for someone applying for a ${client.target_role} position in the ${client.industry || "general"} industry.
-
-Include a mix of:
-1. Behavioral questions (STAR method)
-2. Technical/role-specific questions
-3. Situational questions
-4. Questions about experience and skills
-
-For each question, categorize it (e.g., "Behavioral", "Technical", "Situational").`;
-
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              questions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    question: { type: "string" },
-                    category: { type: "string" }
-                  }
-                }
-              }
-            }
-          }
+        const generated = await generateInterviewQuestions({
+          client,
+          jobApplication: jobApp || null,
         });
-
-        questions = result.questions.map(q => ({
-          question: q.question,
-          category: q.category,
-          answer: "",
-          feedback: "",
-          score: null
-        }));
+        questions = (Array.isArray(generated) ? generated : []).map(buildQuestionState);
       }
 
-      const session = await base44.entities.InterviewSession.create({
+      const session = await createInterviewSession({
         client_id: client.id,
-        job_application_id: jobApplicationId || undefined,
+        job_application_id: jobApplicationId || null,
         target_role: jobApp?.position || client.target_role,
         industry: jobApp?.location || client.industry || "",
-        company: jobApp?.company,
+        company: jobApp?.company || "",
         questions,
-        session_date: new Date().toISOString().split('T')[0],
-        session_type: useWSA ? "WSA" : "practice"
+        session_date: new Date().toISOString().split("T")[0],
+        session_type: useWSA ? "WSA" : "practice",
+        notes: "",
       });
 
       setCurrentSession(session);
-      setCurrentQuestionIdx(0);
-      setAnswer("");
     } catch (error) {
+      console.error("Failed to start session:", error);
       toast.error("Failed to start session");
       setShowSession(false);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateOverallFeedback = async (questionsToScore) => {
+    try {
+      const result = await generateInterviewOverallFeedback(questionsToScore);
+
+      const updatedSession = await updateInterviewSession(currentSession.id, {
+        overall_feedback: result.overall_feedback,
+        improvement_tips: result.improvement_tips,
+        notes: sessionNotes,
+      });
+
+      const avg = Math.round(
+        questionsToScore.reduce((sum, q) => sum + (q.score || 0), 0) /
+          Math.max(questionsToScore.length, 1)
+      );
+
+      await createActivity({
+        client_id: client.id,
+        activity_type: "interview_prep",
+        title: `${isWSA ? "WSA" : "Practice"} Interview Completed`,
+        description: `Completed interview session with ${questionsToScore.length} questions. Average score: ${avg}%`,
+      });
+
+      setCurrentSession(updatedSession);
+      toast.success("Session completed!");
+      await loadData();
+    } catch (error) {
+      console.error("Failed to generate overall feedback:", error);
+      toast.error("Failed to generate feedback");
     }
   };
 
@@ -232,441 +265,414 @@ For each question, categorize it (e.g., "Behavioral", "Technical", "Situational"
 
     try {
       const question = currentSession.questions[currentQuestionIdx];
-      
-      const prompt = `You are an interview coach. Evaluate this candidate's answer to the interview question.
-
-Question: ${question.question}
-Category: ${question.category}
-Answer: ${answer}
-
-Provide:
-1. A score from 0-100 (where 100 is excellent)
-2. Detailed feedback on:
-   - Clarity and structure
-   - Relevance to the question
-   - Use of specific examples and keywords
-   - Areas for improvement
-   
-Be constructive and specific.`;
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            score: { type: "number" },
-            feedback: { type: "string" }
-          }
-        }
+      const result = await analyzeInterviewAnswer({
+        question: question.question,
+        category: question.category,
+        answer,
       });
 
-      // Update the session with the answer and feedback
       const updatedQuestions = [...currentSession.questions];
       updatedQuestions[currentQuestionIdx] = {
         ...updatedQuestions[currentQuestionIdx],
         answer,
         feedback: result.feedback,
-        score: result.score
+        score: result.score,
       };
 
-      await base44.entities.InterviewSession.update(currentSession.id, {
-        questions: updatedQuestions
+      const updatedSession = await updateInterviewSession(currentSession.id, {
+        questions: updatedQuestions,
       });
 
-      setCurrentSession(prev => ({
-        ...prev,
-        questions: updatedQuestions
-      }));
+      setCurrentSession(updatedSession);
 
-      // Move to next question or finish
-      if (currentQuestionIdx < currentSession.questions.length - 1) {
-        setCurrentQuestionIdx(currentQuestionIdx + 1);
+      if (currentQuestionIdx < updatedQuestions.length - 1) {
+        setCurrentQuestionIdx((prev) => prev + 1);
         setAnswer("");
         toast.success("Answer submitted!");
       } else {
-        // Generate overall feedback
         await generateOverallFeedback(updatedQuestions);
       }
-
     } catch (error) {
+      console.error("Failed to analyze answer:", error);
       toast.error("Failed to analyze answer");
     } finally {
       setAnalyzingAnswer(false);
     }
   };
 
-  const generateOverallFeedback = async (questions) => {
-    try {
-      const prompt = `Based on these interview practice responses, provide:
-1. Overall performance summary
-2. Top 3 personalized improvement tips
-
-Questions and Scores:
-${questions.map((q, i) => `${i + 1}. ${q.question}\nScore: ${q.score}/100\nFeedback: ${q.feedback}`).join('\n\n')}`;
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            overall_feedback: { type: "string" },
-            improvement_tips: {
-              type: "array",
-              items: { type: "string" }
-            }
-          }
-        }
-      });
-
-      await base44.entities.InterviewSession.update(currentSession.id, {
-        overall_feedback: result.overall_feedback,
-        improvement_tips: result.improvement_tips,
-        notes: sessionNotes
-      });
-
-      // Create activity log entry
-      const avgScore = Math.round(questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length);
-      await base44.entities.Activity.create({
-        client_id: client.id,
-        activity_type: "interview_prep",
-        title: `${isWSA ? "WSA" : "Practice"} Interview Completed`,
-        description: `Completed interview session with ${questions.length} questions. Average score: ${avgScore}%`,
-        metadata: {
-          session_id: currentSession.id,
-          session_type: isWSA ? "WSA" : "practice",
-          average_score: avgScore,
-          questions_count: questions.length
-        }
-      });
-
-      setCurrentSession(prev => ({
-        ...prev,
-        overall_feedback: result.overall_feedback,
-        improvement_tips: result.improvement_tips
-      }));
-
-      toast.success("Session completed!");
-      loadSessions();
-    } catch (error) {
-      toast.error("Failed to generate feedback");
-    }
-  };
-
-  const currentQuestion = currentSession?.questions?.[currentQuestionIdx];
-  const avgScore = sessions.length > 0 
-    ? Math.round(sessions.reduce((sum, s) => {
-        const sessionAvg = s.questions?.reduce((qSum, q) => qSum + (q.score || 0), 0) / (s.questions?.length || 1);
-        return sum + sessionAvg;
-      }, 0) / sessions.length)
-    : 0;
-
   return (
     <>
-      <Card className="border-0 shadow-sm">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-violet-600" />
-            <h3 className="text-sm font-semibold text-slate-800">Interview Preparation</h3>
-          </div>
-          <div className="flex gap-2">
-            {applications.length > 0 && (
-              <div className="relative" ref={jobDropdownRef}>
-                <Button size="sm" variant="outline" onClick={() => setJobDropdownOpen(o => !o)}>
-                  <FileText className="w-3.5 h-3.5 mr-1" /> Job-Specific
-                </Button>
-                {jobDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 z-20 min-w-max">
-                    {applications.map(app => (
-                      <button
-                        key={app.id}
-                        onClick={() => { startNewSession(false, app.id); setJobDropdownOpen(false); }}
-                        className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-b-0"
-                      >
-                        {app.company} - {app.position}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <Button size="sm" onClick={() => startNewSession(true)}>
-              <Sparkles className="w-3.5 h-3.5 mr-1" /> WSA Interview
-            </Button>
-
-          </div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Interview Preparation</h3>
+          <p className="text-sm text-slate-500">
+            Practice interview questions and track improvement over time
+          </p>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Skill Tracker */}
-          {sessions.length > 0 && <SkillTracker clientId={client.id} />}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => startNewSession(false)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            General Practice
+          </Button>
 
-          {sessions.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-              <p className="text-sm text-slate-500 mb-1">No practice sessions yet</p>
-              <p className="text-xs text-slate-400">Generate AI questions and practice your answers</p>
+          {applications.length > 0 && (
+            <div className="relative" ref={jobDropdownRef}>
+              <Button variant="outline" onClick={() => setJobDropdownOpen((o) => !o)}>
+                <Target className="mr-2 h-4 w-4" />
+                Job-Specific
+              </Button>
+
+              {jobDropdownOpen && (
+                <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-slate-200 bg-white shadow-lg">
+                  {applications.map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => {
+                        startNewSession(false, app.id);
+                        setJobDropdownOpen(false);
+                      }}
+                      className="block w-full border-b px-3 py-2 text-left text-xs hover:bg-slate-50 last:border-b-0"
+                    >
+                      {app.company} - {app.position}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-violet-50 rounded-lg">
-                <span className="text-sm text-violet-700">Average Score</span>
-                <span className="text-lg font-bold text-violet-700">{avgScore}%</span>
+          )}
+
+          <Button variant="secondary" onClick={() => startNewSession(true)}>
+            <Lightbulb className="mr-2 h-4 w-4" />
+            WSA Interview
+          </Button>
+        </div>
+      </div>
+
+      {sessions.length > 0 && <SkillTracker sessions={sessions} />}
+
+      <Card className="border-slate-100 p-6">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-slate-400">Loading sessions...</div>
+        ) : sessions.length === 0 ? (
+          <div className="py-10 text-center">
+            <MessageSquare className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="text-base font-medium text-slate-700">No practice sessions yet</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Generate AI questions and practice your answers
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm text-slate-500">
+                Average Score <span className="font-semibold text-slate-900">{avgScore}%</span>
               </div>
-              
-              {sessions.slice(0, 3).map(session => {
-                const sessionAvg = session.questions 
-                  ? Math.round(session.questions.reduce((sum, q) => sum + (q.score || 0), 0) / session.questions.length)
+            </div>
+
+            <div className="space-y-3">
+              {sessions.slice(0, 3).map((session) => {
+                const sessionQuestions = Array.isArray(session.questions) ? session.questions : [];
+                const sessionAvg = sessionQuestions.length
+                  ? Math.round(
+                      sessionQuestions.reduce((sum, q) => sum + (q.score || 0), 0) /
+                        sessionQuestions.length
+                    )
                   : 0;
 
                 return (
-                  <div 
-                    key={session.id} 
+                  <div
+                    key={session.id}
                     onClick={() => reviewSession(session)}
-                    className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                    className="cursor-pointer rounded-lg border border-slate-200 p-3 transition-colors hover:bg-slate-50"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800">{session.target_role}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-slate-500">{session.questions?.length || 0} questions</p>
-                          {session.company && <Badge variant="outline" className="text-xs">{session.company}</Badge>}
-                          {session.tags && session.tags.length > 0 && (
-                            <div className="flex gap-1">
-                              {session.tags.map((tag, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">{tag}</Badge>
-                              ))}
-                            </div>
-                          )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-medium text-slate-900">{session.target_role}</div>
+                          <Badge variant="outline">{sessionQuestions.length} questions</Badge>
+                          {session.company ? <Badge variant="secondary">{session.company}</Badge> : null}
+                          {Array.isArray(session.tags) && session.tags.length > 0
+                            ? session.tags.map((tag, idx) => (
+                                <Badge key={`${tag}-${idx}`} variant="outline">
+                                  <Tag className="mr-1 h-3 w-3" />
+                                  {tag}
+                                </Badge>
+                              ))
+                            : null}
                         </div>
+
+                        {Array.isArray(session.improvement_tips) &&
+                        session.improvement_tips.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {session.improvement_tips.slice(0, 2).map((tip, idx) => (
+                              <span
+                                key={`${tip}-${idx}`}
+                                className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                              >
+                                {tip}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
+
                       <div className="flex items-center gap-2">
-                        <Badge className={cn(
-                          "text-xs",
-                          sessionAvg >= 80 ? "bg-green-100 text-green-700" :
-                          sessionAvg >= 60 ? "bg-blue-100 text-blue-700" :
-                          "bg-amber-100 text-amber-700"
-                        )}>
+                        <Badge
+                          className={cn(
+                            sessionAvg >= 80
+                              ? "bg-green-100 text-green-700"
+                              : sessionAvg >= 60
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-amber-100 text-amber-700"
+                          )}
+                        >
                           {sessionAvg}%
                         </Badge>
+
                         <button
-                          onClick={(e) => deleteSession(e, session.id)}
-                          className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                          type="button"
+                          onClick={(e) => handleDeleteSession(e, session.id)}
+                          className="rounded p-1 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                    {session.improvement_tips && session.improvement_tips.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {session.improvement_tips.slice(0, 2).map((tip, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                            <Lightbulb className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
-                            <span>{tip}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </Card>
 
-      <Dialog open={showSession} onOpenChange={setShowSession}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+      <Dialog open={showSession} onOpenChange={(open) => (!open ? closeSessionDialog() : null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-violet-600" />
-              {isWSA ? "WSA Interview" : "Interview Practice Session"}
-            </DialogTitle>
+            <DialogTitle>{isWSA ? "WSA Interview" : "Interview Practice Session"}</DialogTitle>
           </DialogHeader>
 
           {generating ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
-              <p className="text-sm text-slate-500">{isWSA ? "Loading WSA Interview..." : "Generating interview questions..."}</p>
+            <div className="py-12 text-center">
+              <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-slate-400" />
+              <p className="text-sm text-slate-500">
+                {isWSA ? "Loading WSA Interview..." : "Generating interview questions..."}
+              </p>
             </div>
           ) : reviewMode ? (
-            <div className="py-4">
-              <div className="flex items-center justify-between mb-4">
-                <Badge variant="outline">
-                  Question {currentQuestionIdx + 1} of {currentSession.questions.length}
-                </Badge>
-                <Badge className="bg-violet-100 text-violet-700">
-                  {currentQuestion?.category}
-                </Badge>
-              </div>
-
-              <div className="bg-slate-50 rounded-lg p-4 mb-4">
-                <p className="text-sm font-medium text-slate-800">{currentQuestion?.question}</p>
-              </div>
-
-              {currentQuestion?.answer && (
-                <div className="space-y-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-medium text-slate-800">Your Answer</span>
-                    <Badge className="bg-blue-100 text-blue-700">
-                      <Target className="w-3 h-3 mr-1" />
-                      {currentQuestion.score}%
-                    </Badge>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{currentQuestion.answer}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-slate-600 mb-2">Feedback:</p>
-                    <div className="bg-amber-50 rounded-lg p-3">
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{currentQuestion.feedback}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {currentQuestionIdx > 0 && (
-                      <Button variant="outline" onClick={() => setCurrentQuestionIdx(currentQuestionIdx - 1)}>
-                        Previous
-                      </Button>
-                    )}
-                    {currentQuestionIdx < currentSession.questions.length - 1 && (
-                      <Button onClick={() => setCurrentQuestionIdx(currentQuestionIdx + 1)}>
-                        Next
-                      </Button>
-                    )}
-                  </div>
+            currentSession && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline">
+                    Question {currentQuestionIdx + 1} of {currentSession.questions.length}
+                  </Badge>
+                  <Badge>{currentQuestion?.category}</Badge>
                 </div>
-              )}
-            </div>
+
+                <Card className="border-slate-100 p-4">
+                  <p className="font-medium text-slate-900">{currentQuestion?.question}</p>
+                </Card>
+
+                {currentQuestion?.answer ? (
+                  <Card className="border-slate-100 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="font-medium text-slate-900">Your Answer</div>
+                      <Badge className="bg-blue-100 text-blue-700">{currentQuestion.score}%</Badge>
+                    </div>
+                    <p className="mb-4 whitespace-pre-wrap text-sm text-slate-700">
+                      {currentQuestion.answer}
+                    </p>
+                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                      <strong>Feedback:</strong> {currentQuestion.feedback}
+                    </div>
+                  </Card>
+                ) : (
+                  <Card className="border-slate-100 p-4 text-sm text-slate-400">
+                    No answer recorded for this question
+                  </Card>
+                )}
+
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentQuestionIdx((prev) => Math.max(prev - 1, 0))}
+                    disabled={currentQuestionIdx === 0}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setCurrentQuestionIdx((prev) =>
+                        Math.min(prev + 1, currentSession.questions.length - 1)
+                      )
+                    }
+                    disabled={currentQuestionIdx >= currentSession.questions.length - 1}
+                  >
+                    Next
+                  </Button>
+                </div>
+
+                {currentSession.overall_feedback ? (
+                  <Card className="border-slate-100 p-4">
+                    <div className="mb-2 flex items-center gap-2 font-medium text-slate-900">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      Overall Feedback
+                    </div>
+                    <p className="text-sm text-slate-700">{currentSession.overall_feedback}</p>
+                    {Array.isArray(currentSession.improvement_tips) &&
+                    currentSession.improvement_tips.length > 0 ? (
+                      <div className="mt-4">
+                        <div className="mb-2 text-sm font-medium text-slate-900">
+                          Improvement Tips
+                        </div>
+                        <ul className="space-y-2 text-sm text-slate-700">
+                          {currentSession.improvement_tips.map((tip, idx) => (
+                            <li key={`${tip}-${idx}`} className="rounded bg-slate-50 p-2">
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </Card>
+                ) : null}
+              </div>
+            )
           ) : currentSession && !currentSession.overall_feedback ? (
-            <div className="py-4">
-              <div className="flex items-center justify-between mb-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <Badge variant="outline">
                   Question {currentQuestionIdx + 1} of {currentSession.questions.length}
                 </Badge>
-                <Badge className="bg-violet-100 text-violet-700">
-                  {currentQuestion?.category}
-                </Badge>
+                <Badge>{currentQuestion?.category}</Badge>
               </div>
 
-              <div className="bg-slate-50 rounded-lg p-4 mb-4">
-                <p className="text-sm font-medium text-slate-800">{currentQuestion?.question}</p>
-              </div>
+              <Card className="border-slate-100 p-4">
+                <p className="font-medium text-slate-900">{currentQuestion?.question}</p>
+              </Card>
 
               {currentQuestion?.feedback ? (
-                <div className="space-y-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-medium text-slate-800">Answer Submitted</span>
-                    <Badge className="bg-blue-100 text-blue-700">
-                      <Target className="w-3 h-3 mr-1" />
-                      {currentQuestion.score}%
-                    </Badge>
+                <Card className="border-slate-100 p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="font-medium text-slate-900">Answer Submitted</div>
+                    <Badge className="bg-blue-100 text-blue-700">{currentQuestion.score}%</Badge>
                   </div>
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{currentQuestion.feedback}</p>
+
+                  <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                    {currentQuestion.feedback}
                   </div>
-                  {currentQuestionIdx < currentSession.questions.length - 1 ? (
-                    <Button onClick={() => { setCurrentQuestionIdx(currentQuestionIdx + 1); setAnswer(""); }}>
-                      Next Question
-                    </Button>
-                  ) : (
-                    <Button onClick={() => generateOverallFeedback(currentSession.questions)}>
-                      Finish Session
-                    </Button>
-                  )}
-                </div>
+
+                  <div className="mt-4 flex justify-end">
+                    {currentQuestionIdx < currentSession.questions.length - 1 ? (
+                      <Button
+                        onClick={() => {
+                          setCurrentQuestionIdx((prev) => prev + 1);
+                          setAnswer("");
+                        }}
+                      >
+                        Next Question
+                      </Button>
+                    ) : (
+                      <Button onClick={() => generateOverallFeedback(currentSession.questions)}>
+                        Finish Session
+                      </Button>
+                    )}
+                  </div>
+                </Card>
               ) : (
-                <div className="space-y-4">
-                   <div>
-                    <label className="text-sm font-medium text-slate-700 mb-2 block">Your Answer:</label>
+                <>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Your Answer:
+                    </label>
                     <Textarea
                       value={answer}
-                      onChange={e => setAnswer(e.target.value)}
+                      onChange={(e) => setAnswer(e.target.value)}
                       placeholder="Type your answer here..."
                       rows={6}
                       className="resize-none"
                     />
-                    {/* Real-time Coach Feedback */}
-                    <RealTimeCoach 
-                      answer={answer}
-                      question={currentQuestion?.question}
-                      isAnalyzing={analyzingAnswer}
-                    />
                   </div>
-                  <Button 
-                    onClick={submitAnswer} 
-                    disabled={analyzingAnswer || !answer.trim()}
-                    className="w-full"
-                  >
-                    {analyzingAnswer ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      "Submit Answer"
-                    )}
-                  </Button>
-                </div>
+
+                  <RealTimeCoach
+                    answer={answer}
+                    question={currentQuestion?.question}
+                    isAnalyzing={analyzingAnswer}
+                  />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSessionNotes((prev) => !prev)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Session Notes
+                    </Button>
+
+                    <Button
+                      onClick={submitAnswer}
+                      disabled={analyzingAnswer || !answer.trim()}
+                      className="w-full max-w-xs"
+                    >
+                      {analyzingAnswer ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        "Submit Answer"
+                      )}
+                    </Button>
+                  </div>
+
+                  {showSessionNotes ? (
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Session Notes
+                      </label>
+                      <Textarea
+                        value={sessionNotes}
+                        onChange={(e) => setSessionNotes(e.target.value)}
+                        rows={4}
+                        placeholder="Add any notes from this practice session..."
+                      />
+                    </div>
+                  ) : null}
+                </>
               )}
+
+              <JobApplicationQuestions client={client} currentSession={currentSession} />
             </div>
           ) : currentSession?.overall_feedback ? (
-            <div className="py-4 space-y-4">
-              <div className="text-center">
-                <CheckCircle2 className="w-12 h-12 mx-auto text-green-600 mb-3" />
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">Session Complete!</h3>
-              </div>
-
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-slate-800 mb-2">Overall Performance:</h4>
-                <p className="text-sm text-slate-600 whitespace-pre-wrap">{currentSession.overall_feedback}</p>
-              </div>
-
-              <div className="bg-amber-50 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-amber-600" />
-                  Improvement Tips:
-                </h4>
-                <ul className="space-y-2">
-                  {currentSession.improvement_tips?.map((tip, idx) => (
-                    <li key={idx} className="text-sm text-slate-600 flex items-start gap-2">
-                      <span className="text-amber-600 font-bold">{idx + 1}.</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {!showSessionNotes ? (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowSessionNotes(true)}
-                  className="w-full"
-                >
-                  <FileText className="w-4 h-4 mr-2" /> Add Session Notes
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <Textarea
-                    value={sessionNotes}
-                    onChange={(e) => setSessionNotes(e.target.value)}
-                    placeholder="Add notes about this session, areas to focus on, etc..."
-                    rows={3}
-                    className="resize-none text-xs"
-                  />
-                  <Button 
-                    onClick={() => setShowSessionNotes(false)}
-                    size="sm"
-                    className="w-full"
-                  >
-                    Done
-                  </Button>
+            <div className="space-y-4">
+              <Card className="border-slate-100 p-4">
+                <div className="mb-2 flex items-center gap-2 font-medium text-slate-900">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  Session Complete
                 </div>
-              )}
+                <p className="text-sm text-slate-700">{currentSession.overall_feedback}</p>
+              </Card>
 
-              <Button onClick={() => { setShowSession(false); setCurrentSession(null); setReviewMode(false); setSessionNotes(""); }} className="w-full">
-                Close
-              </Button>
+              {Array.isArray(currentSession.improvement_tips) &&
+              currentSession.improvement_tips.length > 0 ? (
+                <Card className="border-slate-100 p-4">
+                  <div className="mb-2 font-medium text-slate-900">Improvement Tips</div>
+                  <ul className="space-y-2 text-sm text-slate-700">
+                    {currentSession.improvement_tips.map((tip, idx) => (
+                      <li key={`${tip}-${idx}`} className="rounded bg-slate-50 p-2">
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              <div className="flex justify-end">
+                <Button onClick={closeSessionDialog}>Close</Button>
+              </div>
             </div>
           ) : null}
         </DialogContent>
