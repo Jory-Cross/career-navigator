@@ -1,126 +1,335 @@
-import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Users, UserCheck, Building2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { base44 } from "@/api/base44Client";
 
-function Section({ icon: Icon, title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="border border-slate-100 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-      >
-        <Icon className="w-4 h-4 text-slate-500" />
-        <span className="text-sm font-medium text-slate-700 flex-1">{title}</span>
-        {open ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-      </button>
-      {open && <div className="px-4 py-3">{children}</div>}
-    </div>
-  );
+/**
+ * Small normalizers
+ */
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
-function InfoRow({ label, value }) {
-  if (!value) return null;
-  return (
-    <div className="flex gap-2 text-sm">
-      <span className="text-slate-500 w-28 shrink-0">{label}:</span>
-      <span className="text-slate-800">{value}</span>
-    </div>
-  );
+function asString(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
 }
 
-// Read-only view
-export function ClientContactSectionsView({ client }) {
-  const hasGuardian = client.guardian_name || client.guardian_phone || client.guardian_email;
-  const hasSupportStaff = client.support_staff_name || client.support_staff_phone || client.support_staff_email;
-  const hasEmployment = client.workplace_name || client.supervisor_name || client.employment_start_date;
-  const isEmployed = client.client_type === "employed";
-
-  if (!hasGuardian && !hasSupportStaff && !hasEmployment) return null;
-
-  return (
-    <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
-      {hasGuardian && (
-        <Section icon={Users} title="Parent / Guardian">
-          <div className="space-y-1.5">
-            <InfoRow label="Name" value={client.guardian_name} />
-            <InfoRow label="Phone" value={client.guardian_phone} />
-            <InfoRow label="Email" value={client.guardian_email} />
-          </div>
-        </Section>
-      )}
-      {hasSupportStaff && (
-        <Section icon={UserCheck} title="Support Staff">
-          <div className="space-y-1.5">
-            <InfoRow label="Name" value={client.support_staff_name} />
-            <InfoRow label="Phone" value={client.support_staff_phone} />
-            <InfoRow label="Email" value={client.support_staff_email} />
-          </div>
-        </Section>
-      )}
-      {isEmployed && hasEmployment && (
-        <Section icon={Building2} title="Employment Details">
-          <div className="space-y-1.5">
-            <InfoRow label="Employer" value={client.workplace_name} />
-            <InfoRow label="Address" value={client.workplace_address} />
-            <InfoRow label="Start Date" value={client.employment_start_date} />
-            <InfoRow label="Supervisor" value={client.supervisor_name} />
-            <InfoRow label="Sup. Phone" value={client.supervisor_phone} />
-            <InfoRow label="Sup. Email" value={client.supervisor_email} />
-          </div>
-        </Section>
-      )}
-    </div>
-  );
+function asNullableString(value) {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
-// Edit form fields
-export function ClientContactSectionsEdit({ form, onChange, clientType }) {
-  const u = (f, v) => onChange(f, v);
+function sortByNewest(items) {
+  return [...asArray(items)].sort((a, b) => {
+    const aTime = new Date(a?.updated_date || a?.created_date || 0).getTime();
+    const bTime = new Date(b?.updated_date || b?.created_date || 0).getTime();
+    return bTime - aTime;
+  });
+}
 
-  return (
-    <div className="space-y-4 pt-2">
-      {/* Parent / Guardian */}
-      <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1">
-          <Users className="w-3.5 h-3.5" /> Parent / Guardian
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <Input value={form.guardian_name || ""} onChange={e => u("guardian_name", e.target.value)} placeholder="Full Name" />
-          <Input value={form.guardian_phone || ""} onChange={e => u("guardian_phone", e.target.value)} placeholder="Phone" />
-          <Input value={form.guardian_email || ""} onChange={e => u("guardian_email", e.target.value)} placeholder="Email" className="col-span-2" />
-        </div>
-      </div>
+/**
+ * Contact helpers
+ */
+function mapContact(raw) {
+  if (!raw) return null;
 
-      {/* Support Staff */}
-      <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1">
-          <UserCheck className="w-3.5 h-3.5" /> Support Staff
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <Input value={form.support_staff_name || ""} onChange={e => u("support_staff_name", e.target.value)} placeholder="Full Name" />
-          <Input value={form.support_staff_phone || ""} onChange={e => u("support_staff_phone", e.target.value)} placeholder="Phone" />
-          <Input value={form.support_staff_email || ""} onChange={e => u("support_staff_email", e.target.value)} placeholder="Email" className="col-span-2" />
-        </div>
-      </div>
+  return {
+    type: asString(raw.type, "other"),
+    label: asString(raw.label),
+    name: asString(raw.name),
+    phone: asString(raw.phone),
+    email: asString(raw.email),
+    notes: asString(raw.notes),
+  };
+}
 
-      {/* Employment Details - employed only */}
-      {clientType === "employed" && (
-        <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1">
-            <Building2 className="w-3.5 h-3.5" /> Employment Details
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <Input value={form.workplace_name || ""} onChange={e => u("workplace_name", e.target.value)} placeholder="Employer Name" />
-            <Input value={form.employment_start_date || ""} onChange={e => u("employment_start_date", e.target.value)} placeholder="Start Date (YYYY-MM-DD)" type="date" />
-            <Input value={form.workplace_address || ""} onChange={e => u("workplace_address", e.target.value)} placeholder="Workplace Address" className="col-span-2" />
-            <Input value={form.supervisor_name || ""} onChange={e => u("supervisor_name", e.target.value)} placeholder="Supervisor Name" />
-            <Input value={form.supervisor_phone || ""} onChange={e => u("supervisor_phone", e.target.value)} placeholder="Supervisor Phone" />
-            <Input value={form.supervisor_email || ""} onChange={e => u("supervisor_email", e.target.value)} placeholder="Supervisor Email" className="col-span-2" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function buildClientContactsPayload(contacts = []) {
+  return asArray(contacts).map((contact) => ({
+    type: asString(contact?.type, "other"),
+    label: asString(contact?.label),
+    name: asString(contact?.name),
+    phone: asString(contact?.phone),
+    email: asString(contact?.email),
+    notes: asString(contact?.notes),
+  }));
+}
+
+/**
+ * Mapping layer
+ * Keeps page code less dependent on raw Base44 field shapes.
+ */
+function mapClient(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    first_name: asString(raw.first_name),
+    last_name: asString(raw.last_name),
+    full_name:
+      [asString(raw.first_name), asString(raw.last_name)].filter(Boolean).join(" ") ||
+      asString(raw.full_name),
+    email: asString(raw.email),
+    phone: asString(raw.phone),
+    status: asString(raw.status, "active"),
+    assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
+    contacts: asArray(raw.contacts).map(mapContact).filter(Boolean),
+    raw,
+  };
+}
+
+function mapApplication(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    company: asString(raw.company),
+    position: asString(raw.position),
+    status: asString(raw.status, "active"),
+    notes: asString(raw.notes),
+    running_notes: asString(raw.running_notes),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapTask(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    title: asString(raw.title),
+    description: asString(raw.description),
+    notes: asString(raw.notes),
+    status: asString(raw.status, "open"),
+    due_date: raw.due_date ?? null,
+    client_ids: asArray(raw.client_ids),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapDocument(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    title: asString(raw.title),
+    description: asString(raw.description),
+    file_url: asNullableString(raw.file_url),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+function mapActivity(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    activity_type: asString(raw.type),
+    title: asString(raw.title),
+    notes: asString(raw.notes),
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+    raw,
+  };
+}
+
+/**
+ * Payload builders
+ */
+function buildApplicationPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    company: asString(payload.company),
+    position: asString(payload.position),
+    status: asString(payload.status, "active"),
+    notes: asString(payload.notes),
+    running_notes: asString(payload.running_notes),
+  };
+}
+
+function buildTaskPayload(payload = {}) {
+  return {
+    title: asString(payload.title),
+    description: asString(payload.description),
+    notes: asString(payload.notes),
+    status: asString(payload.status, "open"),
+    due_date: payload.due_date ?? null,
+    client_ids: asArray(payload.client_ids),
+  };
+}
+
+function buildDocumentPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    title: asString(payload.title),
+    description: asString(payload.description),
+    file_url: asNullableString(payload.file_url),
+  };
+}
+
+function buildActivityPayload(payload = {}) {
+  return {
+    client_id: payload.client_id ?? null,
+    type: asString(payload.type),
+    title: asString(payload.title),
+    notes: asString(payload.notes),
+  };
+}
+
+/**
+ * AUTH
+ */
+export async function getCurrentUser() {
+  return await base44.auth.me();
+}
+
+/**
+ * CLIENT
+ */
+export async function getClientById(id) {
+  if (!id) return null;
+  const raw = await base44.entities.Client.get(id);
+  return mapClient(raw);
+}
+
+export async function updateClientContacts(id, contacts) {
+  if (!id) throw new Error("Client id is required");
+
+  const raw = await base44.entities.Client.update(id, {
+    contacts: buildClientContactsPayload(contacts),
+  });
+
+  return mapClient(raw);
+}
+
+export async function getClientByEmail(email) {
+  if (!email) return null;
+  const clients = await base44.entities.Client.list();
+  const match = asArray(clients).find((c) => c.email === email);
+  return mapClient(match || null);
+}
+
+/**
+ * APPLICATIONS
+ */
+export async function getApplications(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.JobApplication.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapApplication).filter(Boolean));
+}
+
+export async function createApplication(payload) {
+  const raw = await base44.entities.JobApplication.create(buildApplicationPayload(payload));
+  return mapApplication(raw);
+}
+
+export async function updateApplication(id, payload) {
+  const raw = await base44.entities.JobApplication.update(id, buildApplicationPayload(payload));
+  return mapApplication(raw);
+}
+
+/**
+ * TASKS
+ */
+export async function getTasks(clientId) {
+  if (!clientId) return [];
+
+  try {
+    const rows = await base44.entities.Task.filter({ client_ids: clientId });
+    return sortByNewest(asArray(rows).map(mapTask).filter(Boolean));
+  } catch {
+    const all = await base44.entities.Task.list();
+    return sortByNewest(
+      asArray(all)
+        .filter((t) => asArray(t.client_ids).includes(clientId))
+        .map(mapTask)
+        .filter(Boolean)
+    );
+  }
+}
+
+export async function createTask(payload) {
+  const raw = await base44.entities.Task.create(buildTaskPayload(payload));
+  return mapTask(raw);
+}
+
+export async function updateTask(id, payload) {
+  const raw = await base44.entities.Task.update(id, buildTaskPayload(payload));
+  return mapTask(raw);
+}
+
+export async function deleteTask(id) {
+  return await base44.entities.Task.delete(id);
+}
+
+/**
+ * DOCUMENTS
+ */
+export async function getDocuments(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Document.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapDocument).filter(Boolean));
+}
+
+export async function createDocument(payload) {
+  const raw = await base44.entities.Document.create(buildDocumentPayload(payload));
+  return mapDocument(raw);
+}
+
+/**
+ * FILE UPLOAD
+ */
+export async function uploadFile(file) {
+  const res = await base44.integrations.Core.UploadFile({ file });
+  return res?.file_url || null;
+}
+
+/**
+ * ACTIVITY
+ */
+export async function getActivities(clientId) {
+  if (!clientId) return [];
+  const rows = await base44.entities.Activity.filter({ client_id: clientId });
+  return sortByNewest(asArray(rows).map(mapActivity).filter(Boolean));
+}
+
+export async function createActivity(payload) {
+  const raw = await base44.entities.Activity.create(buildActivityPayload(payload));
+  return mapActivity(raw);
+}
+
+/**
+ * ASSESSMENTS
+ */
+export async function getAssessments(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.Assessment.filter({ client_id: clientId });
+}
+
+/**
+ * INTERVIEWS
+ */
+export async function getInterviews(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.InterviewSession.filter({ client_id: clientId });
+}
+
+/**
+ * TIME ENTRIES
+ */
+export async function getTimeEntries(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.TimeEntry.filter({ client_id: clientId });
+}
+
+/**
+ * MEETINGS
+ */
+export async function getMeetings(clientId) {
+  if (!clientId) return [];
+  return await base44.entities.Meeting.filter({ client_id: clientId });
 }
