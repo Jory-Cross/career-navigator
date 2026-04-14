@@ -28,19 +28,21 @@ const CONTACT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const getTypeLabel = (contact) => {
-  if (contact.type === "other") return contact.label || "Other";
-  return CONTACT_TYPES.find((t) => t.value === contact.type)?.label || contact.type;
-};
+function getTypeLabel(contact) {
+  if (contact?.type === "other") return contact?.label || "Other";
+  return CONTACT_TYPES.find((t) => t.value === contact?.type)?.label || contact?.type || "Other";
+}
 
-const emptyContact = () => ({
-  type: "parent",
-  label: "",
-  name: "",
-  phone: "",
-  email: "",
-  notes: "",
-});
+function emptyContact() {
+  return {
+    type: "parent",
+    label: "",
+    name: "",
+    phone: "",
+    email: "",
+    notes: "",
+  };
+}
 
 export default function ContactsSection({ client, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
@@ -57,18 +59,18 @@ export default function ContactsSection({ client, onUpdate }) {
     setNewContact((prev) => ({ ...prev, [field]: value }));
   };
 
-  const resetAddState = () => {
+  const resetAddForm = () => {
     setNewContact(emptyContact());
     setAdding(false);
   };
 
   const buildContactPayload = (contact) => ({
-    type: contact.type || "other",
-    label: contact.type === "other" ? (contact.label || "").trim() : "",
-    name: (contact.name || "").trim(),
-    phone: (contact.phone || "").trim(),
-    email: (contact.email || "").trim(),
-    notes: (contact.notes || "").trim(),
+    type: contact?.type || "other",
+    label: contact?.type === "other" ? (contact?.label || "").trim() : "",
+    name: (contact?.name || "").trim(),
+    phone: (contact?.phone || "").trim(),
+    email: (contact?.email || "").trim(),
+    notes: (contact?.notes || "").trim(),
   });
 
   const addContact = async () => {
@@ -89,7 +91,7 @@ export default function ContactsSection({ client, onUpdate }) {
     try {
       await updateClientContacts(client.id, [...contacts, payload]);
       toast.success("Contact added");
-      resetAddState();
+      resetAddForm();
       onUpdate?.();
     } catch (error) {
       console.error("Failed to add contact:", error);
@@ -141,7 +143,7 @@ export default function ContactsSection({ client, onUpdate }) {
           <div className="space-y-3">
             {contacts.map((contact, index) => (
               <div
-                key={`${contact.name || "contact"}-${index}`}
+                key={`${contact?.name || "contact"}-${index}`}
                 className="rounded-lg border border-slate-200 bg-slate-50 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -151,18 +153,18 @@ export default function ContactsSection({ client, onUpdate }) {
                     </div>
 
                     <div className="mt-1 text-sm font-medium text-slate-900">
-                      {contact.name || "Unnamed contact"}
+                      {contact?.name || "Unnamed contact"}
                     </div>
 
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
-                      {contact.phone ? (
+                      {contact?.phone ? (
                         <div className="flex items-center gap-1.5">
                           <Phone className="h-3.5 w-3.5" />
                           <span>{contact.phone}</span>
                         </div>
                       ) : null}
 
-                      {contact.email ? (
+                      {contact?.email ? (
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-3.5 w-3.5" />
                           <span>{contact.email}</span>
@@ -170,10 +172,8 @@ export default function ContactsSection({ client, onUpdate }) {
                       ) : null}
                     </div>
 
-                    {contact.notes ? (
-                      <div className="mt-2 text-sm text-slate-600">
-                        {contact.notes}
-                      </div>
+                    {contact?.notes ? (
+                      <div className="mt-2 text-sm text-slate-600">{contact.notes}</div>
                     ) : null}
                   </div>
 
@@ -192,7 +192,7 @@ export default function ContactsSection({ client, onUpdate }) {
             ))}
 
             {adding ? (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-3">
+              <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
                 <div className="flex gap-2">
                   <Select
                     value={newContact.type}
@@ -254,7 +254,7 @@ export default function ContactsSection({ client, onUpdate }) {
                     type="button"
                     variant="outline"
                     className="h-8 text-xs"
-                    onClick={resetAddState}
+                    onClick={resetAddForm}
                     disabled={saving}
                   >
                     Cancel
