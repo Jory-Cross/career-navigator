@@ -392,11 +392,10 @@ export default function ClientDetail() {
 
         <TabsContent value="activity">
           <ActivitySection
-            client={client}
-            activities={activities}
-            onRefresh={refreshActivities}
-            isClientUser={isClientUser}
-          />
+  clientId={clientId}
+  activities={activities}
+  isLoading={shouldLoadActivity && !activities.length}
+/>
         </TabsContent>
 
         {!isClientUser && !isEmployed && (
