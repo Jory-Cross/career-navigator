@@ -195,10 +195,6 @@ export default function ClientDetail() {
     queryClient.invalidateQueries({ queryKey: queryKeys.tasks(clientId) });
   }, [queryClient, clientId]);
 
-  const refreshDocuments = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.documents(clientId) });
-  }, [queryClient, clientId]);
-
   const refreshResumes = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["clientDetail", "resumes", clientId] });
   }, [queryClient, clientId]);
