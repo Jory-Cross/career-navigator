@@ -33,7 +33,7 @@ const filterOptions = [
   { value: "other", label: "Other Uploads" }
 ];
 
-export default function DocumentsSection({ clientId, onRefresh }) {
+export default function DocumentsSection({ clientId, refreshKey }) {
   const [documents, setDocuments] = useState([]);
   const [filteredDocs, setFilteredDocs] = useState([]);
   const [loading, setLoading] = useState(true);
