@@ -373,9 +373,15 @@ function buildDocumentPayload(payload = {}) {
     visibility: asString(payload.visibility, "staff"),
     source: asString(payload.source, "staff_upload"),
     category: asString(payload.category),
+    file_name: asString(payload.file_name),
+    file_size: asNumber(payload.file_size, 0),
+    file_type: asString(payload.file_type),
+    tags: asArray(payload.tags),
+    notes: asString(payload.notes),
+    version: asNumber(payload.version, 1),
+    parent_document_id: payload.parent_document_id ?? null,
   };
 }
-
 function buildActivityPayload(payload = {}) {
   return {
     client_id: payload.client_id ?? null,
