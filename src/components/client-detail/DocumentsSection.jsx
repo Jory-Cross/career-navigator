@@ -153,17 +153,18 @@ export default function DocumentsSection({ clientId, onRefresh }) {
         category: ['resume', 'cover_letter']
       });
 
-      let newDoc = {
-        client_id: clientId,
-        title: form.title,
-        file_url,
-        file_name: selectedFile.name,
-        file_size: selectedFile.size,
-        file_type: selectedFile.type,
-        category: form.category,
-        tags,
-        notes: form.notes
-      };
+     let newDoc = {
+  client_id: clientId,
+  title: form.title,
+  file_url,
+  file_name: selectedFile.name,
+  file_size: selectedFile.size,
+  file_type: selectedFile.type,
+  category: form.category,
+  tags,
+  notes: form.notes,
+  visibility: form.visibility || "staff"
+};
 
       if (existingDocs.length > 0 && ['resume', 'cover_letter'].includes(form.category)) {
         const latestVersion = Math.max(...existingDocs.map(d => d.version || 1));
