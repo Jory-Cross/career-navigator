@@ -322,6 +322,11 @@ export default function DocumentsSection({ clientId, refreshKey }) {
     {doc.visibility}
   </Badge>
 )}
+{doc.source && (
+  <Badge variant="outline" className="text-xs">
+    {doc.source.replace("_", " ")}
+  </Badge>
+)}                     
                         {isGenerated && <Badge className="text-xs bg-emerald-100 text-emerald-700">Generated</Badge>}
                         {doc.report_version && <Badge variant="outline" className="text-xs">Report v{doc.report_version}</Badge>}
                       </div>
