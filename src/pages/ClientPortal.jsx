@@ -159,7 +159,7 @@ export default function ClientPortal() {
     error: documentsError,
   } = useQuery({
     queryKey: queryKeys.documents(client?.id),
-    queryFn: () => getDocuments(client.id),
+    queryFn: () => getClientVisibleDocuments(client.id),
     enabled: !!client?.id && activeTab === "documents",
     staleTime: 60 * 1000,
   });
