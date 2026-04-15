@@ -179,7 +179,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
         newDoc.version = 1;
       }
       
-      await base44.entities.Document.create(newDoc);
+      await createDocument(newDoc);
 
       toast.success("Document uploaded");
       setShowUpload(false);
