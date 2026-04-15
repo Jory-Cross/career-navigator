@@ -70,9 +70,14 @@ export default function ClientDetail() {
   const clientId = useMemo(() => getClientIdFromUrl(), []);
   const queryClient = useQueryClient();
 
-  const [showEmailComposer, setShowEmailComposer] = useState(false);
-  const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState(null);
+ const [showEmailComposer, setShowEmailComposer] = useState(false);
+const [user, setUser] = useState(null);
+const [activeTab, setActiveTab] = useState(null);
+const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
+
+const handleDocumentsChanged = useCallback(() => {
+  setDocumentsRefreshKey((prev) => prev + 1);
+}, []);
 
   useEffect(() => {
     let cancelled = false;
