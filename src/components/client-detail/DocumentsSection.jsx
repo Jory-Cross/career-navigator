@@ -276,7 +276,10 @@ setDocuments(
               </SelectContent>
             </Select>
             {allTags.length > 0 && (
-              <Select value={filterTag} onValueChange={setFilterTag}>
+              <Select
+  value={filterTag || "all_tags"}
+  onValueChange={(value) => setFilterTag(value === "all_tags" ? "" : value)}
+>
                 <SelectTrigger className="w-[130px] h-9">
                   <SelectValue placeholder="Filter by tag" />
                 </SelectTrigger>
