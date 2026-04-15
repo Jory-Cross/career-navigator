@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, Download, Search, Archive, Upload, Loader2, Tag, Trash2 } from "lucide-react";
 import { getDocuments, createDocument, uploadFile, archiveDocument as archiveClientDocument, deleteDocument as deleteClientDocument } from "@/lib/api/clientPortalApi";
-import { base44 } from "@/api/base44Client";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
