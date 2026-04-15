@@ -651,7 +651,12 @@ export async function getStaffVisibleDocuments(clientId) {
   );
 }
 export async function createDocument(payload) {
-  const raw = await base44.entities.Document.create(buildDocumentPayload(payload));
+ const raw = await base44.entities.Document.create(
+  buildDocumentPayload({
+    ...payload,
+    source: payload.source || (payload.category === "generated_report" ? "generated" : "staff_upload"),
+  })
+);
   return mapDocument(raw);
 }
 
