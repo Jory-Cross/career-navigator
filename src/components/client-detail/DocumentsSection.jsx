@@ -151,12 +151,10 @@ export default function DocumentsSection({ clientId, refreshKey }) {
       const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t) : [];
       
       // Check if this is a new version of an existing document
-      const existingDocs = await base44.entities.Document.filter({
-        client_id: clientId,
-        title: form.title,
-        category: ['resume', 'cover_letter']
-      });
-
+     const existingDocs = documents.filter(d =>
+  d.title === form.title &&
+  ['resume', 'cover_letter'].includes(d.category)
+);
      let newDoc = {
   client_id: clientId,
   title: form.title,
