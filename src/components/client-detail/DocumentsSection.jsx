@@ -200,7 +200,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
 
   const archiveDocument = async (docId) => {
     try {
-      await base44.entities.Document.update(docId, { is_archived: true });
+      await archiveClientDocument(docId);
       toast.success("Document archived");
       loadDocuments();
     } catch (error) {
