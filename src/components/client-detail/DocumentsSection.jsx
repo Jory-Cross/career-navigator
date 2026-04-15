@@ -302,7 +302,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
           ) : (
             <div className="space-y-2">
               {filteredDocs.map(doc => {
-                const isGenerated = doc.is_generated || doc.category === 'generated_report';
+                const isGenerated = doc.source === "generated" || doc.category === 'generated_report';
                 
                 return (
                   <div key={doc.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors border-l-4" style={{borderLeftColor: isGenerated ? '#10b981' : '#cbd5e1'}}>
