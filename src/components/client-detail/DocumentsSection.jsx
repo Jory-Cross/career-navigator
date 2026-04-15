@@ -174,6 +174,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   tags,
   notes: form.notes,
   visibility: form.visibility || "staff"
+  source: "staff_upload",     
 };
 
       if (existingDocs.length > 0 && ['resume', 'cover_letter'].includes(form.category)) {
