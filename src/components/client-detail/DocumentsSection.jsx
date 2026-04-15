@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, Download, Search, Archive, Upload, Loader2, Tag, Trash2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { getDocuments, createDocument, uploadFile } from "@/lib/api/clientPortalApi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
