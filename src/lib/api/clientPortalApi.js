@@ -293,12 +293,19 @@ function mapDocument(raw) {
     visibility: asString(raw.visibility, "staff"),
     source: asString(raw.source, "staff_upload"),
     category: asString(raw.category),
+    file_name: asString(raw.file_name),
+    file_size: asNumber(raw.file_size, 0),
+    file_type: asString(raw.file_type),
+    tags: asArray(raw.tags),
+    notes: asString(raw.notes),
+    version: asNumber(raw.version, 1),
+    parent_document_id: raw.parent_document_id ?? null,
+    created_by: asString(raw.created_by),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
   };
 }
-
 function mapActivity(raw) {
   if (!raw) return null;
 
