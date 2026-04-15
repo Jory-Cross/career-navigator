@@ -387,8 +387,14 @@ export default function ClientPortal() {
           ) : (
             <div className="space-y-2">
               {documents.map((doc) => (
-                <div key={doc.id} className="rounded border p-3">
-                  <div className="font-medium">{doc.title || "Untitled Document"}</div>
+               <div key={doc.id} className="rounded border p-3">
+  <div className="font-medium">{doc.title || "Untitled Document"}</div>
+
+  {doc.source && (
+    <div className="text-xs text-muted-foreground">
+      {doc.source.replace("_", " ")}
+    </div>
+  )}
                   {doc.description ? (
                     <div className="text-sm text-muted-foreground">
                       {doc.description}
