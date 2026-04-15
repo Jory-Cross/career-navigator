@@ -67,7 +67,20 @@ export default function DocumentsSection({ clientId, onRefresh }) {
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      const docs = await base44.entities.Document.filter({ client_id: clientId, is_archived: showArchived });
+      const docs = await base44.entities.Document.filter({
+  client_id: clientId,
+  is_archived: showArchived
+});
+
+const filtered = docs.filter(doc =>
+  doc.visibility === "staff" ||
+  doc.visibility === "both" ||
+  !doc.visibility // fallback for old records
+);
+
+setDocuments(
+  filtered.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+);
       setDocuments(docs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
     } catch (error) {
       toast.error("Failed to load documents");
