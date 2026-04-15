@@ -64,25 +64,28 @@ export default function DocumentsSection({ clientId, onRefresh }) {
     filterDocuments();
   }, [documents, searchTerm, filterCategory, filterTag]);
 
-  const loadDocuments = async () => {
-    setLoading(true);
-    try {
-     const docs = await base44.entities.Document.filter({
-  client_id: clientId,
-  is_archived: showArchived
-});
+ const loadDocuments = async () => {
+  setLoading(true);
+  try {
+    const docs = await base44.entities.Document.filter({
+      client_id: clientId,
+      is_archived: false
+    });
 
-setDocuments(
-  docs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
-);
-     
-    } catch (error) {
-      toast.error("Failed to load documents");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const visibleDocs = docs.filter(doc =>
+      doc.visibility === "client" ||
+      doc.visibility === "both"
+    );
 
+    setDocuments(
+      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    );
+  } catch (error) {
+    toast.error("Failed to load documents");
+  } finally {
+    setLoading(false);
+  }
+};
   const filterDocuments = () => {
     let filtered = [...documents];
     
