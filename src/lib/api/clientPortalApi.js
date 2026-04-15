@@ -363,6 +363,7 @@ function buildDocumentPayload(payload = {}) {
     description: asString(payload.description),
     file_url: asNullableString(payload.file_url),
     visibility: asString(payload.visibility, "staff"),
+    source: asString(payload.source, "staff_upload"),
   };
 }
 
