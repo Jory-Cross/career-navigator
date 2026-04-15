@@ -57,8 +57,8 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
 
   useEffect(() => {
-    loadDocuments();
-  }, [clientId, showArchived]);
+  loadDocuments();
+}, [clientId, showArchived, refreshKey]);
 
   useEffect(() => {
     filterDocuments();
