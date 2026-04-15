@@ -426,6 +426,22 @@ export default function DocumentsSection({ clientId, onRefresh }) {
                 placeholder="Additional notes..."
               />
             </div>
+            <div>
+  <Label className="text-xs">Visibility</Label>
+  <Select
+    value={form.visibility}
+    onValueChange={v => setForm(p => ({ ...p, visibility: v }))}
+  >
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="staff">Staff Only</SelectItem>
+      <SelectItem value="client">Client Can View</SelectItem>
+      <SelectItem value="both">Both Staff and Client</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUpload(false)}>Cancel</Button>
