@@ -146,7 +146,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
 
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: selectedFile });
+      const file_url = await uploadFile(selectedFile);
       
       const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t) : [];
       
