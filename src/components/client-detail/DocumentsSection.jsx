@@ -313,13 +313,14 @@ setDocuments(
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <p className="text-sm font-medium text-slate-800">{doc.title}</p>
                         <Badge className={cn("text-xs", categoryColors[doc.category] || categoryColors.other)}>
-                          {doc.visibility && (
+  {doc.category.replace(/_/g, ' ')}
+</Badge>
+
+{doc.visibility && (
   <Badge variant="outline" className="text-xs">
     {doc.visibility}
   </Badge>
 )}
-                          {doc.category.replace(/_/g, ' ')}
-                        </Badge>
                         {isGenerated && <Badge className="text-xs bg-emerald-100 text-emerald-700">Generated</Badge>}
                         {doc.report_version && <Badge variant="outline" className="text-xs">Report v{doc.report_version}</Badge>}
                       </div>
