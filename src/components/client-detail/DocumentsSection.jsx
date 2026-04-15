@@ -173,7 +173,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   category: form.category,
   tags,
   notes: form.notes,
-  visibility: form.visibility || "staff"
+  visibility: form.visibility || "staff",
   source: "staff_upload",     
 };
 
