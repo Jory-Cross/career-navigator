@@ -67,10 +67,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
  const loadDocuments = async () => {
   setLoading(true);
   try {
-    const docs = await base44.entities.Document.filter({
-      client_id: clientId,
-      is_archived: false
-    });
+    const docs = await getDocuments(clientId);
 
     const visibleDocs = docs;
 
