@@ -660,6 +660,16 @@ export async function getStaffVisibleDocuments(clientId) {
   );
 }
 export async function createDocument(payload) {
+  export async function archiveDocument(id) {
+  if (!id) throw new Error("Document id is required");
+  const raw = await base44.entities.Document.update(id, { is_archived: true });
+  return mapDocument(raw);
+}
+
+export async function deleteDocument(id) {
+  if (!id) throw new Error("Document id is required");
+  return await base44.entities.Document.delete(id);
+}
  const raw = await base44.entities.Document.create(
   buildDocumentPayload({
     ...payload,
