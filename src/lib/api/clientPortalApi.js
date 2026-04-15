@@ -364,6 +364,7 @@ function buildDocumentPayload(payload = {}) {
     file_url: asNullableString(payload.file_url),
     visibility: asString(payload.visibility, "staff"),
     source: asString(payload.source, "staff_upload"),
+    category: asString(payload.category),
   };
 }
 
