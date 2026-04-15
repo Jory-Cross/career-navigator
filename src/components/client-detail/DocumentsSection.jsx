@@ -81,7 +81,7 @@ const filtered = docs.filter(doc =>
 setDocuments(
   filtered.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
 );
-      setDocuments(docs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
+     
     } catch (error) {
       toast.error("Failed to load documents");
     } finally {
