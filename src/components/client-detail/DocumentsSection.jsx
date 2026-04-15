@@ -211,7 +211,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const deleteDocument = async (docId) => {
     if (!confirm("Permanently delete this document? This cannot be undone.")) return;
     try {
-      await base44.entities.Document.delete(docId);
+      await deleteClientDocument(docId);
       toast.success("Document deleted");
       loadDocuments();
     } catch (error) {
