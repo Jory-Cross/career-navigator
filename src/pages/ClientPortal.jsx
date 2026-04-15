@@ -7,12 +7,20 @@ import {
   getClientByEmail,
   getApplications,
   getTasks,
-  getDocuments,
+  getClientVisibleDocuments,
+  getAssessments,
+  getInterviews,
+  getTimeEntries,
+  getActivities,
+  getMeetings,
   createApplication,
   updateApplication,
   createTask,
   updateTask,
   deleteTask,
+  uploadFile,
+  createDocument,
+  createActivity,
 } from "@/lib/api/clientPortalApi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
