@@ -292,6 +292,7 @@ function mapDocument(raw) {
     file_url: asNullableString(raw.file_url),
     visibility: asString(raw.visibility, "staff"),
     source: asString(raw.source, "staff_upload"),
+    category: asString(raw.category),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
     raw,
