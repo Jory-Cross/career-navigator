@@ -178,7 +178,13 @@ export default function DocumentsSection({ clientId, onRefresh }) {
 
       toast.success("Document uploaded");
       setShowUpload(false);
-      setForm({ title: "", category: "other", tags: "", notes: "" });
+     setForm({
+  title: "",
+  category: "other",
+  tags: "",
+  notes: "",
+  visibility: "staff"
+});
       setSelectedFile(null);
       loadDocuments();
     } catch (error) {
