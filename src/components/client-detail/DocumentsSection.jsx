@@ -281,7 +281,7 @@ setDocuments(
                   <SelectValue placeholder="Filter by tag" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>All Tags</SelectItem>
+                  <SelectItem value="all_tags">All Tags</SelectItem>
                   {allTags.map(tag => (
                     <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                   ))}
