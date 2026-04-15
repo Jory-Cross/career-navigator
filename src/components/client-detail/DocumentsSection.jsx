@@ -179,7 +179,8 @@ export default function DocumentsSection({ clientId, refreshKey }) {
       }
       
       await createDocument(newDoc);
-
+await loadDocuments();
+      
       toast.success("Document uploaded");
       setShowUpload(false);
      setForm({
