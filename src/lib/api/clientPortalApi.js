@@ -624,7 +624,10 @@ export async function getDocuments(clientId) {
 }
 export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
-  const rows = await base44.entities.Document.filter({ client_id: clientId });
+  const rows = await base44.entities.Document.filter({
+    client_id: clientId,
+    is_archived: false,
+  });
 
   return sortByNewest(
     asArray(rows)
