@@ -72,10 +72,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
       is_archived: false
     });
 
-    const visibleDocs = docs.filter(doc =>
-      doc.visibility === "client" ||
-      doc.visibility === "both"
-    );
+    const visibleDocs = docs;
 
     setDocuments(
       visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
