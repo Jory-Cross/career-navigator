@@ -41,12 +41,13 @@ export default function DocumentsSection({ clientId, onRefresh }) {
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
-  const [form, setForm] = useState({
-    title: "",
-    category: "other",
-    tags: "",
-    notes: ""
-  });
+ const [form, setForm] = useState({
+  title: "",
+  category: "other",
+  tags: "",
+  notes: "",
+  visibility: "staff"
+});
   const [selectedFile, setSelectedFile] = useState(null);
   const [aiTagging, setAiTagging] = useState(false);
   const [showVersions, setShowVersions] = useState(null);
