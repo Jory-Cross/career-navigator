@@ -350,9 +350,7 @@ const handleDocumentsChanged = useCallback(() => {
         )}
 
         {!isDspd && !isEmployed && (
-          <TabsContent value="resumes">
-            <ResumeSection clientId={client.id} client={client} />
-          </TabsContent>
+         
         )}
 
         {!isClientUser && isEmployed && (
