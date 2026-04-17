@@ -233,16 +233,61 @@ await loadDocuments();
               <h3 className="text-sm font-semibold text-slate-800">Documents</h3>
               <Badge variant="outline" className="text-xs">{documents.length} files • {totalSizeMB} MB</Badge>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant={showArchived ? "default" : "outline"} onClick={() => setShowArchived(!showArchived)}>
-                <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Active" : "Archived"}
-              </Button>
-              {!showArchived && (
-                <Button size="sm" onClick={() => setShowUpload(true)}>
-                  <Upload className="w-3.5 h-3.5 mr-1" /> Upload
-                </Button>
-              )}
-            </div>
+           <div className="flex gap-2 flex-wrap">
+  <Button
+    size="sm"
+    variant={showArchived ? "default" : "outline"}
+    onClick={() => setShowArchived(!showArchived)}
+  >
+    <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Active" : "Archived"}
+  </Button>
+
+  {!showArchived && (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setForm((prev) => ({
+            ...prev,
+            title: "",
+            category: "resume",
+            tags: "",
+            notes: "",
+            visibility: "staff",
+          }));
+          setShowUpload(true);
+        }}
+      >
+        <Upload className="w-3.5 h-3.5 mr-1" />
+        Upload Resume
+      </Button>
+
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setForm((prev) => ({
+            ...prev,
+            title: "",
+            category: "cover_letter",
+            tags: "",
+            notes: "",
+            visibility: "staff",
+          }));
+          setShowUpload(true);
+        }}
+      >
+        <Upload className="w-3.5 h-3.5 mr-1" />
+        Upload Cover Letter
+      </Button>
+
+      <Button size="sm" onClick={() => setShowUpload(true)}>
+        <Upload className="w-3.5 h-3.5 mr-1" /> Upload
+      </Button>
+    </>
+  )}
+</div>
           </div>
 
           <div className="flex gap-2 flex-wrap">
