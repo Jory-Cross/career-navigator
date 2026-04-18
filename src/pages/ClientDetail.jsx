@@ -267,10 +267,6 @@ const handleDocumentsChanged = useCallback(() => {
             </TabsTrigger>
           )}
 
-          {!isDspd && !isEmployed && (
-          
-          )}
-
           {!isClientUser && isEmployed && (
             <TabsTrigger value="job_supports">
               Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
