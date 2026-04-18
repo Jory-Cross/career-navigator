@@ -330,7 +330,7 @@ const handleDocumentsChanged = useCallback(() => {
           <TabsContent value="documents">
            <DocumentsSection
   clientId={client.id}
-  onRefresh={handleDocumentsChanged}
+  refreshKey={documentsRefreshKey}
 />
           </TabsContent>
         )}
