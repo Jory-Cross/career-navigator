@@ -364,7 +364,30 @@ await loadDocuments();
 </Badge>
 
 {doc.visibility && (
-  <Badge variant="outline" className="text-xs">
+  <Badge
+    variant="outline"
+    className="text-xs cursor-pointer hover:bg-slate-100"
+    onClick={async () => {
+      try {
+        const nextVisibility =
+          doc.visibility === "staff"
+            ? "both"
+            : doc.visibility === "both"
+            ? "client"
+            : "staff";
+
+        await updateDocument(doc.id, {
+          ...doc,
+          visibility: nextVisibility,
+        });
+
+        await loadDocuments();
+        toast.success("Visibility updated");
+      } catch (err) {
+        toast.error("Failed to update visibility");
+      }
+    }}
+  >
     {doc.visibility}
   </Badge>
 )}
