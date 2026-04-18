@@ -19,7 +19,7 @@ import {
 import ClientHeader from "@/components/client-detail/ClientHeader";
 import JobApplicationsSection from "@/components/client-detail/JobApplicationsSection";
 import TasksSection from "@/components/client-detail/TasksSection";
-import ResumeSection from "@/components/client-detail/ResumeSection";
+
 import TimeLogDashboard from "@/components/client-detail/TimeLogDashboard";
 import OnboardingSection from "@/components/client-detail/OnboardingSection";
 import InterviewPrepSection from "@/components/client-detail/InterviewPrepSection";
@@ -343,10 +343,6 @@ const handleDocumentsChanged = useCallback(() => {
               onRefresh={refreshTasks}
             />
           </TabsContent>
-        )}
-
-        {!isDspd && !isEmployed && (
-         
         )}
 
         {!isClientUser && isEmployed && (
