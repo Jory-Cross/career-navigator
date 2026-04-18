@@ -377,9 +377,8 @@ await loadDocuments();
             : "staff";
 
         await updateDocument(doc.id, {
-          ...doc,
-          visibility: nextVisibility,
-        });
+  visibility: nextVisibility,
+});
 
         await loadDocuments();
         toast.success("Visibility updated");
