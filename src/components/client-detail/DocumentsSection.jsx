@@ -67,10 +67,6 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   loadDocuments();
 }, [clientId, showArchived, refreshKey]);
 
-  useEffect(() => {
-    filterDocuments();
-  }, [documents, searchTerm, filterCategory, filterTag]);
-
  const loadDocuments = async () => {
   setLoading(true);
   try {
@@ -90,6 +86,30 @@ const visibleDocs = docs.filter(doc =>
   }
 };
 
+    const filteredDocs = useMemo(() => {
+    let filtered = [...documents];
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+
+      filtered = filtered.filter((doc) =>
+        doc.title?.toLowerCase().includes(term) ||
+        doc.file_name?.toLowerCase().includes(term) ||
+        doc.tags?.some((tag) => tag.toLowerCase().includes(term)) ||
+        doc.notes?.toLowerCase().includes(term)
+      );
+    }
+
+    if (filterCategory !== "all") {
+      filtered = filtered.filter((doc) => doc.category === filterCategory);
+    }
+
+    if (filterTag) {
+      filtered = filtered.filter((doc) => doc.tags?.includes(filterTag));
+    }
+
+    return filtered;
+  }, [documents, searchTerm, filterCategory, filterTag]);
   const loadVersions = async (docId) => {
   try {
     const rows = await getDocumentVersions(docId);
