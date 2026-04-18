@@ -202,16 +202,21 @@ useEffect(() => {
     }
   };
 
-  const archiveDocument = async (docId) => {
-    try {
-      await archiveClientDocument(docId);
-      toast.success("Document archived");
-      loadDocuments();
-    } catch (error) {
-      toast.error("Failed to archive");
-    }
-  };
+const archiveDocument = async (docId) => {
+  try {
+    await archiveClientDocument(docId);
 
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === docId ? { ...doc, is_archived: true } : doc
+      )
+    );
+
+    toast.success("Document archived");
+  } catch (error) {
+    toast.error("Failed to archive");
+  }
+};
   const deleteDocument = async (docId) => {
     if (!confirm("Permanently delete this document? This cannot be undone.")) return;
     try {
