@@ -674,7 +674,11 @@ export async function createDocument(payload) {
   );
   return mapDocument(raw);
 }
-
+export async function updateDocument(id, payload) {
+  if (!id) throw new Error("Document id is required");
+  const raw = await base44.entities.Document.update(id, buildDocumentPayload(payload));
+  return mapDocument(raw);
+}
 export async function archiveDocument(id) {
   if (!id) throw new Error("Document id is required");
   const raw = await base44.entities.Document.update(id, { is_archived: true });
