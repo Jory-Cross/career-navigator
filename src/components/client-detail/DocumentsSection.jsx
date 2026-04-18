@@ -89,28 +89,6 @@ const visibleDocs = docs.filter(doc =>
     setLoading(false);
   }
 };
-  const filterDocuments = () => {
-    let filtered = [...documents];
-    
-    if (searchTerm) {
-      filtered = filtered.filter(doc => 
-        doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        doc.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (filterCategory !== "all") {
-      filtered = filtered.filter(doc => doc.category === filterCategory);
-    }
-
-    if (filterTag) {
-      filtered = filtered.filter(doc => doc.tags?.includes(filterTag));
-    }
-    
-    setFilteredDocs(filtered);
-  };
 
   const loadVersions = async (docId) => {
   try {
