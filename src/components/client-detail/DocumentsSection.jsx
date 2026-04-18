@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, Download, Search, Archive, Upload, Loader2, Tag, Trash2 } from "lucide-react";
 import {
   getDocuments,
+  getDocumentVersions,
   createDocument,
   updateDocument,
   uploadFile,
