@@ -72,15 +72,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
       showArchived ? doc.is_archived : !doc.is_archived
     );
 
-    setDocuments(
-      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
-    );
-  } catch (error) {
-    toast.error("Failed to load documents");
-  } finally {
-    setLoading(false);
-  }
-}, [clientId, showArchived]);
+     [clientId, showArchived]);
 
 useEffect(() => {
   loadDocuments();
