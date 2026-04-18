@@ -63,10 +63,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [showArchived, setShowArchived] = useState(false);
   const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
 
-  useEffect(() => {
-  loadDocuments();
-}, [loadDocuments, refreshKey]);
-const loadDocuments = useCallback(async () => {
+ const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
     const docs = await getDocuments(clientId);
@@ -85,6 +82,9 @@ const loadDocuments = useCallback(async () => {
   }
 }, [clientId, showArchived]);
 
+useEffect(() => {
+  loadDocuments();
+}, [loadDocuments, refreshKey]);
     setDocuments(
       visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
     );
