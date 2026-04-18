@@ -183,7 +183,14 @@ useEffect(() => {
       }
       
            await createDocument(newDoc);
-      await loadDocuments();
+setDocuments((prev) => [
+  {
+    ...newDoc,
+    id: Math.random().toString(36), // temp id
+    created_date: new Date().toISOString(),
+  },
+  ...prev,
+]);
 
       toast.success("Document uploaded");
       setShowUpload(false);
