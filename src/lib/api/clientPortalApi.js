@@ -687,7 +687,14 @@ export async function archiveDocument(id) {
 
 export async function deleteDocument(id) {
   if (!id) throw new Error("Document id is required");
-  return await base44.entities.Document.delete(id);
+
+  console.log("DELETE DOCUMENT ID", id);
+
+  const result = await base44.entities.Document.delete(id);
+
+  console.log("DELETE DOCUMENT RESULT", result);
+
+  return result;
 }
 /**
  * FILE UPLOAD
