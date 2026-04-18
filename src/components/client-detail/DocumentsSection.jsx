@@ -431,13 +431,13 @@ await loadDocuments();
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Document</<DialogTitle>
+            <DialogTitle>
   {form.category === "resume"
     ? "Upload Resume"
     : form.category === "cover_letter"
     ? "Upload Cover Letter"
     : "Upload Document"}
-</DialogTitle>DialogTitle>
+</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div>
