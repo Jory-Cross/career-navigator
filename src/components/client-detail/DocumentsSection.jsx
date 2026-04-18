@@ -388,7 +388,7 @@ await loadDocuments();
       }
     }}
   >
-    {doc.visibility}
+   {doc.visibility} ↻
   </Badge>
 )}
 {doc.source && (
