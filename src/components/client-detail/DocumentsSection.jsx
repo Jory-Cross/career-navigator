@@ -377,24 +377,35 @@ const archiveDocument = async (docId) => {
 </Badge>
 
 {doc.visibility && (
-  <Badge
-    variant="outline"
-    className="text-xs cursor-pointer hover:bg-slate-100"
-    onClick={async () => {
-      try {
-        const nextVisibility =
-          doc.visibility === "staff"
-            ? "both"
-            : doc.visibility === "both"
-            ? "client"
-            : "staff";
+ <Badge
+  variant="outline"
+  className="text-xs cursor-pointer hover:bg-slate-100"
+  onClick={async () => {
+    try {
+      const nextVisibility =
+        doc.visibility === "staff"
+          ? "both"
+          : doc.visibility === "both"
+          ? "client"
+          : "staff";
 
-        console.log("UPDATING", doc.id, nextVisibility);
+      await updateDocument(doc.id, {
+        ...doc.raw,
+        visibility: nextVisibility,
+      });
 
-       const updated = await updateDocument(doc.id, {
-  ...doc.raw,
-  visibility: nextVisibility,
-});
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === doc.id ? { ...d, visibility: nextVisibility } : d
+        )
+      );
+
+      toast.success("Visibility updated");
+    } catch (err) {
+      toast.error("Failed to update visibility");
+    }
+  }}
+>
 
         console.log("RESULT", updated);
 
