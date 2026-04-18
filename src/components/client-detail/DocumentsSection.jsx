@@ -115,15 +115,14 @@ const visibleDocs = docs.filter(doc =>
   };
 
   const loadVersions = async (docId) => {
-    try {
-      const docVersions = await base44.entities.Document.filter({ parent_document_id: docId });
-      const mainDoc = await base44.entities.Document.filter({ id: docId });
-      setVersions([...(mainDoc.length ? mainDoc : []), ...docVersions].sort((a, b) => b.version - a.version));
-      setShowVersions(docId);
-    } catch (error) {
-      toast.error("Failed to load versions");
-    }
-  };
+  try {
+    const rows = await getDocumentVersions(docId);
+    setVersions(rows);
+    setShowVersions(docId);
+  } catch (error) {
+    toast.error("Failed to load versions");
+  }
+};
 
   const autoTagDocument = async () => {
     if (!selectedFile || !form.category) return;
