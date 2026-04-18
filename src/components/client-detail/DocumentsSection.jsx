@@ -379,8 +379,9 @@ await loadDocuments();
         console.log("UPDATING", doc.id, nextVisibility);
 
         const updated = await updateDocument(doc.id, {
-          visibility: nextVisibility,
-        });
+  ...doc,
+  visibility: nextVisibility,
+});
 
         console.log("RESULT", updated);
 
