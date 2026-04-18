@@ -681,7 +681,20 @@ export async function updateDocument(id, payload) {
 }
 export async function archiveDocument(id) {
   if (!id) throw new Error("Document id is required");
-  const raw = await base44.entities.Document.update(id, { is_archived: true });
+
+  console.log("ARCHIVE DOCUMENT ID", id);
+
+  const existing = await base44.entities.Document.get(id);
+
+  console.log("ARCHIVE EXISTING", existing);
+
+  const raw = await base44.entities.Document.update(id, {
+    ...existing,
+    is_archived: true,
+  });
+
+  console.log("ARCHIVE RESULT", raw);
+
   return mapDocument(raw);
 }
 
