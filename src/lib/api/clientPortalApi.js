@@ -665,6 +665,19 @@ export async function getStaffVisibleDocuments(clientId) {
       .filter((doc) => doc.visibility === "staff" || doc.visibility === "both")
   );
 }
+export async function getDocumentVersions(docId) {
+  if (!docId) return [];
+
+  const [mainDoc, versionRows] = await Promise.all([
+    base44.entities.Document.get(docId).catch(() => null),
+    base44.entities.Document.filter({ parent_document_id: docId }),
+  ]);
+
+  return [mainDoc, ...asArray(versionRows)]
+    .map(mapDocument)
+    .filter(Boolean)
+    .sort((a, b) => (b.version || 0) - (a.version || 0));
+}
 export async function createDocument(payload) {
   const raw = await base44.entities.Document.create(
     buildDocumentPayload({
