@@ -183,20 +183,19 @@ const visibleDocs = docs.filter(doc =>
         newDoc.version = 1;
       }
       
-      await createDocument(newDoc);
-await loadDocuments();
-      
+           await createDocument(newDoc);
+      await loadDocuments();
+
       toast.success("Document uploaded");
       setShowUpload(false);
-     setForm({
-  title: "",
-  category: "other",
-  tags: "",
-  notes: "",
-  visibility: "staff"
-});
+      setForm({
+        title: "",
+        category: "other",
+        tags: "",
+        notes: "",
+        visibility: "staff"
+      });
       setSelectedFile(null);
-      loadDocuments();
     } catch (error) {
       toast.error("Upload failed");
     } finally {
