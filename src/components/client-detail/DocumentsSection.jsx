@@ -218,15 +218,20 @@ const archiveDocument = async (docId) => {
   }
 };
   const deleteDocument = async (docId) => {
-    if (!confirm("Permanently delete this document? This cannot be undone.")) return;
-    try {
-      await deleteClientDocument(docId);
-      toast.success("Document deleted");
-      loadDocuments();
-    } catch (error) {
-      toast.error("Failed to delete");
-    }
-  };
+  if (!confirm("Permanently delete this document? This cannot be undone.")) return;
+
+  try {
+    await deleteClientDocument(docId);
+
+    setDocuments((prev) =>
+      prev.filter((doc) => doc.id !== docId)
+    );
+
+    toast.success("Document deleted");
+  } catch (error) {
+    toast.error("Failed to delete");
+  }
+};
 
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
