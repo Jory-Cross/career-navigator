@@ -65,8 +65,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
 
   useEffect(() => {
   loadDocuments();
-}, [clientId, showArchived, refreshKey]);
-
+}, [loadDocuments, refreshKey]);
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
