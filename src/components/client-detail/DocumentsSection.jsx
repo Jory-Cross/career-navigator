@@ -71,11 +71,19 @@ const loadDocuments = useCallback(async () => {
   try {
     const docs = await getDocuments(clientId);
 
-    const visibleDocs = docs.filter(doc =>
+    const visibleDocs = docs.filter((doc) =>
       showArchived ? doc.is_archived : !doc.is_archived
     );
 
-    [clientId, showArchived]);
+    setDocuments(
+      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    );
+  } catch (error) {
+    toast.error("Failed to load documents");
+  } finally {
+    setLoading(false);
+  }
+}, [clientId, showArchived]);
 
     setDocuments(
       visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
