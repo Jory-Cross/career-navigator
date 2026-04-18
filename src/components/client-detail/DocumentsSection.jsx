@@ -63,29 +63,6 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [showArchived, setShowArchived] = useState(false);
   const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
 
- const loadDocuments = useCallback(async () => {
-  setLoading(true);
-  try {
-    const docs = await getDocuments(clientId);
-
-    const visibleDocs = docs.filter((doc) =>
-      showArchived ? doc.is_archived : !doc.is_archived
-    );
-
-     [clientId, showArchived]);
-
-useEffect(() => {
-  loadDocuments();
-}, [loadDocuments, refreshKey]);
-    setDocuments(
-      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
-    );
-  } catch (error) {
-    toast.error("Failed to load documents");
-  } finally {
-    setLoading(false);
-  }
-};
 
     const filteredDocs = useMemo(() => {
     let filtered = [...documents];
