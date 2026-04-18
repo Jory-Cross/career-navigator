@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +42,7 @@ const filterOptions = [
 ];
 
 export default function DocumentsSection({ clientId, refreshKey }) {
-  const [documents, setDocuments] = useState([]);
-  const [filteredDocs, setFilteredDocs] = useState([]);
+    const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
