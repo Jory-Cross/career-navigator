@@ -376,21 +376,25 @@ await loadDocuments();
             ? "client"
             : "staff";
 
-        await updateDocument(doc.id, {
-  visibility: nextVisibility,
-});
+        console.log("UPDATING", doc.id, nextVisibility);
+
+        const updated = await updateDocument(doc.id, {
+          visibility: nextVisibility,
+        });
+
+        console.log("RESULT", updated);
 
         await loadDocuments();
         toast.success("Visibility updated");
       } catch (err) {
+        console.error("VISIBILITY UPDATE ERROR", err);
         toast.error("Failed to update visibility");
       }
     }}
   >
-   {doc.visibility} ↻
+    {doc.visibility} ↻
   </Badge>
-)}
-{doc.source && (
+)}{doc.source && (
   <Badge variant="outline" className="text-xs">
     {doc.source.replace("_", " ")}
   </Badge>
