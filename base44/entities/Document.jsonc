@@ -3,7 +3,20 @@
   "type": "object",
   "description": "Stored file attached to a client, including uploaded docs and generated reports.",
   "properties": {
-    "org_id": {
+   "description": {
+  "type": "string"
+},
+"visibility": {
+  "type": "string",
+  "enum": ["staff", "client", "both"],
+  "default": "staff"
+},
+"source": {
+  "type": "string",
+  "enum": ["staff_upload", "client_upload", "generated", "assessment"],
+  "default": "staff_upload"
+}
+"org_id": {
       "type": "string"
     },
     "client_id": {
