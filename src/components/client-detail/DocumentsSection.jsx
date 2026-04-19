@@ -64,13 +64,6 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [filterTag, setFilterTag] = useState("");
   const [showArchived, setShowArchived] = useState(false);
  const allTags = Array.from(
-   const resumeSkills = Array.from(
-  new Set(
-    documents
-      .filter(doc => doc.category === "resume")
-      .flatMap(doc => doc.ai_tags || [])
-  )
-);
   new Set(
     documents.flatMap(doc => [
       ...(doc.tags || []),
@@ -79,6 +72,13 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   )
 );
 
+const resumeSkills = Array.from(
+  new Set(
+    documents
+      .filter(doc => doc.category === "resume")
+      .flatMap(doc => doc.ai_tags || [])
+  )
+);
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
