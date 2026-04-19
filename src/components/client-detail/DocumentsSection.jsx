@@ -249,10 +249,20 @@ try {
   };
 }
 
- await updateDocument(createdDoc.id, {
+await updateDocument(createdDoc.id, {
   ai_summary: parsed.summary || "",
   ai_tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-  ai_insights: parsed.insights || "",
+  ai_insights: [
+    parsed.insights || "",
+    Array.isArray(parsed.recommendations) && parsed.recommendations.length
+      ? `Recommendations: ${parsed.recommendations.join("; ")}`
+      : "",
+    Array.isArray(parsed.flags) && parsed.flags.length
+      ? `Flags: ${parsed.flags.join("; ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n"),
   ai_last_processed: new Date().toISOString(),
 });
 } catch (err) {
