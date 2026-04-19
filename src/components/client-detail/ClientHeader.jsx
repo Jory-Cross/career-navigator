@@ -147,7 +147,7 @@ if (editing || formOnly) {
   </SelectContent>
 </Select>
           <Select value={form.client_type || "job_seeker"} onValueChange={v => u("client_type", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+           <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="job_seeker">Job Seeker</SelectItem>
               <SelectItem value="employed">Employed</SelectItem>
