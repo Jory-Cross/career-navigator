@@ -487,9 +487,8 @@ const handleDocumentsChanged = useCallback(() => {
        <>
   {!isClientUser && !isEmployed && (
    <TabsContent value="client_details">
- <div className="space-y-6">
-  <div className="bg-white rounded-2xl border p-4">
-    <ClientHeader client={client} onUpdate={refreshClient} formOnly />
+<div className="space-y-6">
+  <ClientHeader client={client} onUpdate={refreshClient} formOnly />
   </div>
 
     {!isDspd && !isEmployed && !isClientUser && (
