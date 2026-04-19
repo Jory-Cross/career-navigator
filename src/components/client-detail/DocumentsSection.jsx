@@ -217,9 +217,7 @@ const archiveDocument = async (docId) => {
   try {
     await archiveClientDocument(docId);
 
-    setDocuments((prev) =>
-      prev.filter((doc) => doc.id !== docId)
-    );
+   await loadDocuments();
 
     toast.success("Document archived");
   } catch (error) {
