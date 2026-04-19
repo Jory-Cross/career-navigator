@@ -19,8 +19,8 @@ const statusColors = {
 };
 
 export default function ClientHeader({ client, onUpdate, showDetails = true, allowEdit = true, formOnly = false }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({});
+  const [editing, setEditing] = useState(formOnly);
+const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
   const [uploading, setUploading] = useState(false);
   const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
   const [employers, setEmployers] = useState([]);
