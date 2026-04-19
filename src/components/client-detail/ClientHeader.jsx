@@ -18,7 +18,7 @@ const statusColors = {
   completed: "bg-blue-100 text-blue-700"
 };
 
-export default function ClientHeader({ client, onUpdate }) {
+export default function ClientHeader({ client, onUpdate, showDetails = true }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
