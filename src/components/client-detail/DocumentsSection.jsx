@@ -62,7 +62,14 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [versions, setVersions] = useState([]);
   const [filterTag, setFilterTag] = useState("");
   const [showArchived, setShowArchived] = useState(false);
-  const allTags = Array.from(new Set(documents.flatMap(doc => doc.tags || [])));
+ const allTags = Array.from(
+  new Set(
+    documents.flatMap(doc => [
+      ...(doc.tags || []),
+      ...(doc.ai_tags || []),
+    ])
+  )
+);
 
 const loadDocuments = useCallback(async () => {
   setLoading(true);
