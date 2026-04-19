@@ -215,9 +215,7 @@ const archiveDocument = async (docId) => {
     await archiveClientDocument(docId);
 
     setDocuments((prev) =>
-      prev.map((doc) =>
-        doc.id === docId ? { ...doc, is_archived: true } : doc
-      )
+      prev.filter((doc) => doc.id !== docId)
     );
 
     toast.success("Document archived");
