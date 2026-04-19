@@ -32,18 +32,48 @@ Respond in this exact JSON format:
 }`;
 
 try {
-  const { data: analysisResult } = await base44.integrations.Core.InvokeLLM({
-    prompt,
-    response_json_schema: {
-      type: 'object',
-      properties: {
-        suggested_category: { type: 'string' },
-        tags: { type: 'array', items: { type: 'string' } },
-        confidence: { type: 'number' }
+const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_OPENAI_API_KEY",
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: "Analyze documents for a vocational rehab CRM. Return JSON: {suggested_category, tags, confidence}"
       },
-      required: ['suggested_category', 'tags', 'confidence']
-    }
-  });
+      {
+        role: "user",
+        content: `
+Document name: ${file_name}
+Category: ${current_category}
+Notes: ${notes || "None"}
+
+Return 5–7 relevant tags and a category.
+`
+      }
+    ]
+  })
+});
+
+const data = await response.json();
+const content = data.choices?.[0]?.message?.content || "{}";
+
+let parsed;
+try {
+  parsed = JSON.parse(content);
+} catch {
+  parsed = {
+    suggested_category: current_category,
+    tags: ["parse-error"],
+    confidence: 0
+  };
+}
+
+return Response.json(parsed);
 
   return Response.json(analysisResult);
 } catch (llmError) {
