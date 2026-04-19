@@ -236,7 +236,7 @@ const handleDocumentsChanged = useCallback(() => {
           )}
         </div>
       </div>
-
+<ClientHeader client={client} onUpdate={refreshClient} />
   <ClientHeader client={client} onUpdate={refreshClient} />
 
       {!isDspd && !isEmployed && !isClientUser && (
