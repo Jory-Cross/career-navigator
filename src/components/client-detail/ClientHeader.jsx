@@ -109,13 +109,23 @@ const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
 if (editing || formOnly) {
     return (
      <Card className="rounded-2xl border bg-slate-50/60 shadow-sm p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="font-semibold text-slate-800">Edit Client</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing(false)}><X className="w-4 h-4" /></Button>
-            <Button size="sm" onClick={save} className="bg-slate-900 hover:bg-slate-800 text-white"><Save className="w-4 h-4 mr-1" /> Save</Button>
-          </div>
-        </div>
+       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+  <div>
+    <h2 className="text-lg font-semibold text-slate-900">Client Details</h2>
+    <p className="text-sm text-slate-500">Update client information below.</p>
+  </div>
+
+  <div className="flex gap-2">
+    <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+      <X className="w-4 h-4 mr-1" />
+      Cancel
+    </Button>
+    <Button size="sm" onClick={save} className="bg-slate-900 hover:bg-slate-800 text-white">
+      <Save className="w-4 h-4 mr-1" />
+      Save
+    </Button>
+  </div>
+</div>
         <div className="grid grid-cols-2 gap-3">
           <Input value={form.first_name || ""} onChange={e => u("first_name", e.target.value)} placeholder="First Name" />
           <Input value={form.last_name || ""} onChange={e => u("last_name", e.target.value)} placeholder="Last Name" />
