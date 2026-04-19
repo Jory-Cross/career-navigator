@@ -134,7 +134,30 @@ useEffect(() => {
 };
 
  const autoTagDocument = async () => {
-  toast.error("AI Tag is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
+  if (!selectedFile || !form.category) return;
+
+  setAiTagging(true);
+
+  try {
+    const { data } = await base44.functions.invoke('analyzeDocumentContent', {
+      file_name: selectedFile.name,
+      category: form.category,
+      notes: form.notes || ""
+    });
+
+    setForm(p => ({
+      ...p,
+      category: data.category || p.category,
+      tags: (data.tags || []).join(", ")
+    }));
+
+    toast.success("AI tags applied");
+  } catch (error) {
+    console.error(error);
+    toast.error("AI tagging failed");
+  } finally {
+    setAiTagging(false);
+  }
 };
   const handleUpload = async () => {
     if (!selectedFile || !form.title) {
