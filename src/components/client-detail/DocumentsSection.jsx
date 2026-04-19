@@ -467,31 +467,36 @@ const archiveDocument = async (docId) => {
                           <Download className="w-3.5 h-3.5" />
                         </Button>
                       </a>
-                    <>
+<>
   {!showArchived && (
     <Button
       size="sm"
       variant="ghost"
-      onClick={() => archiveDocument(doc.id)}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        archiveDocument(doc.id);
+      }}
       className="h-7 px-2"
     >
       <Archive className="w-3.5 h-3.5" />
     </Button>
   )}
-<Button
-  size="sm"
-  variant="ghost"
-  type="button"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    archiveDocument(doc.id);
-  }}
-  className="h-7 px-2"
->
-  <Archive className="w-3.5 h-3.5" />
-</Button>
- 
+
+  <Button
+    size="sm"
+    variant="ghost"
+    type="button"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      deleteDocument(doc.id);
+    }}
+    className="h-7 px-2 text-red-500 hover:text-red-700"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+  </Button>
 </>
                     </div>
                   </div>
