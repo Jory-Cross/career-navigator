@@ -374,7 +374,8 @@ useEffect(() => {
   const filtered = useMemo(() => {
     const filteredClientIdSet = new Set(filteredClientIds);
 
-    return scopedTimeEntries.filter((entry) => {
+   const result = [];
+for (const entry of scopedTimeEntries) {
       if (
         (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
         employeeFilter !== "all" &&
