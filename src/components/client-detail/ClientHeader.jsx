@@ -136,8 +136,7 @@ if (editing || formOnly) {
          <Input className="h-10" value={form.industry || ""} onChange={e => u("industry", e.target.value)} placeholder="Industry" />
          <Input className="h-10" value={form.location || ""} onChange={e => u("location", e.target.value)} placeholder="Location" />
         <Input className="h-10" value={form.linkedin_url || ""} onChange={e => u("linkedin_url", e.target.value)} placeholder="LinkedIn URL" />
-          <Select value={form.status || "active"} onValueChange={v => u("status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+         <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
