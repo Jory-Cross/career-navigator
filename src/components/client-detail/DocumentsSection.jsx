@@ -226,7 +226,12 @@ const archiveDocument = async (docId) => {
   }
 };
   const deleteDocument = async (docId) => {
-  if (!confirm("Permanently delete this document? This cannot be undone.")) return;
+  toast("Delete clicked");
+
+  if (!confirm("Permanently delete this document? This cannot be undone.")) {
+    toast("Delete cancelled");
+    return;
+  }
 
   try {
     await deleteClientDocument(docId);
@@ -237,6 +242,7 @@ const archiveDocument = async (docId) => {
 
     toast.success("Document deleted");
   } catch (error) {
+    console.error("DELETE BUTTON ERROR", error);
     toast.error("Failed to delete");
   }
 };
