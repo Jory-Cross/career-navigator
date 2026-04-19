@@ -731,7 +731,7 @@ export async function deleteDocument(docId) {
 
   try {
     const doc = await base44.entities.Document.get(docId);
-
+console.log("DOC FILE URL:", doc?.file_url);
     await deleteFileByUrl(doc?.file_url);
 
     return await base44.entities.Document.delete(docId);
