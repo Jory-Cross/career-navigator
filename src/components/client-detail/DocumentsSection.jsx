@@ -478,22 +478,20 @@ const archiveDocument = async (docId) => {
       <Archive className="w-3.5 h-3.5" />
     </Button>
   )}
-
-  <Button
+<Button
   size="sm"
   variant="ghost"
   type="button"
   onClick={(e) => {
     e.preventDefault();
     e.stopPropagation();
-    deleteDocument(doc.id);
+    archiveDocument(doc.id);
   }}
-  className="h-7 px-2 text-red-500 hover:text-red-700"
+  className="h-7 px-2"
 >
-  <Trash2 className="w-3.5 h-3.5" />
+  <Archive className="w-3.5 h-3.5" />
 </Button>
-    <Trash2 className="w-3.5 h-3.5" />
-  </Button>
+ 
 </>
                     </div>
                   </div>
