@@ -300,6 +300,7 @@ function mapDocument(raw) {
     notes: asString(raw.notes),
     version: asNumber(raw.version, 1),
     parent_document_id: raw.parent_document_id ?? null,
+    is_archived: asBoolean(raw.is_archived, false),
     created_by: asString(raw.created_by),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
