@@ -212,7 +212,7 @@ setDocuments((prev) => [
     }
   };
 const archiveDocument = async (docId) => {
-  toast("Archive clicked");
+ 
 
   try {
     await archiveClientDocument(docId);
