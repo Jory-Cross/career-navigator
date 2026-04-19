@@ -68,7 +68,7 @@ const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
     const docs = await getDocuments(clientId);
-console.log("RAW DOCUMENTS FROM API:", docs);
+
  const visibleDocs = docs.filter((doc) => {
   const archived = doc.is_archived === true;
 
