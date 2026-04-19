@@ -140,12 +140,7 @@ useEffect(() => {
   setAiTagging(true);
 
   try {
-   const result = await base44.functions.invoke('analyzeDocumentContent', {
-  document_id: null,
-  file_url: "",
-  file_name: selectedFile.name,
-  current_category: form.category
-});
+  import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
 
 console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
