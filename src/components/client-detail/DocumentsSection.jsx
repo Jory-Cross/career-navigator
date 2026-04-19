@@ -69,9 +69,11 @@ const loadDocuments = useCallback(async () => {
   try {
     const docs = await getDocuments(clientId);
 console.log("RAW DOCUMENTS FROM API:", docs);
-   const visibleDocs = docs.filter((doc) =>
-  showArchived ? true : !doc.is_archived
-);
+ const visibleDocs = docs.filter((doc) => {
+  const archived = doc.is_archived === true;
+
+  return showArchived ? archived : !archived;
+});
     setDocuments(
       visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
     );
