@@ -267,7 +267,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("applications")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "applications"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -288,7 +288,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("ai_job_search")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "ai_job_search"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -306,7 +306,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("interview_prep")}
         className={cn(
-         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "interview_prep"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -324,7 +324,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("assessments")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "assessments"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -342,7 +342,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("wble_forms")}
         className={cn(
-         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "wble_forms"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -360,7 +360,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("documents")}
         className={cn(
-       "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+       "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "documents"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -378,7 +378,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("tasks")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "tasks"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -399,7 +399,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("job_supports")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "job_supports"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -420,7 +420,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("time")}
         className={cn(
-         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "time"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -440,7 +440,7 @@ const handleDocumentsChanged = useCallback(() => {
       type="button"
       onClick={() => setActiveTab("activity")}
       className={cn(
-"rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+"rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
         activeTab === "activity"
           ? "border-slate-900 bg-slate-900 text-white shadow-sm"
           : "border-slate-200 bg-white hover:bg-slate-50"
@@ -457,7 +457,7 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("assistant")}
         className={cn(
-       "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white"
+       "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "assistant"
             ? "border-slate-900 bg-slate-900 text-white shadow-sm"
             : "border-slate-200 bg-white hover:bg-slate-50"
