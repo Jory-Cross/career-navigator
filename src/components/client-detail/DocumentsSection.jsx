@@ -612,7 +612,7 @@ const archiveDocument = async (docId) => {
                     <p className="text-sm font-medium">Version {v.version}</p>
                     <p className="text-xs text-slate-500">{format(new Date(v.created_date), 'MMM d, yyyy HH:mm')}</p>
                   </div>
-                  <Button
+                 <Button
   size="sm"
   variant="ghost"
   type="button"
