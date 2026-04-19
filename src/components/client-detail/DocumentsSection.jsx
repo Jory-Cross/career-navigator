@@ -226,7 +226,7 @@ setDocuments((prev) => [
   },
   ...prev,
 ]);
-toast("AI processing is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
+
       toast.success("Document uploaded");
       setShowUpload(false);
       setForm({
