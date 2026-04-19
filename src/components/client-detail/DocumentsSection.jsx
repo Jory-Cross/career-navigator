@@ -202,12 +202,31 @@ setDocuments((prev) => [
 ]);
 // 🔹 Trigger AI processing AFTER document is created
 try {
-  await base44.functions.invoke('processDocumentAI', {
-    document_id: createdDoc.id,
-    file_url: createdDoc.file_url,
-    file_name: createdDoc.file_name,
-    client_id: clientId,
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer YOUR_OPENAI_API_KEY",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Analyze documents for a vocational rehab CRM. Return summary, tags, and insights."
+        },
+        {
+          role: "user",
+          content: `File name: ${createdDoc.file_name}`
+        }
+      ]
+    })
   });
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  console.log("AI RESULT:", content);
 } catch (err) {
   console.error("AI processing failed", err);
 }
