@@ -150,7 +150,7 @@ useEffect(() => {
 console.log("analyzeDocumentContent result:", result);
 
 const payload = result?.data || result || {};
-toast(JSON.stringify(payload));
+toast(payload.debug_error || JSON.stringify(payload));
 
 setForm(p => ({
   ...p,
