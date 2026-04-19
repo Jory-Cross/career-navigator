@@ -432,88 +432,14 @@ const archiveDocument = async (docId) => {
 )}
                     </div>
                     <div className="flex gap-1">
-                      <Button
+                     <Button
   size="sm"
   variant="ghost"
   className="h-7 px-2"
-  onClick={async (e) => {
+  onClick={(e) => {
     e.preventDefault();
     e.stopPropagation();
-
-    try {
-      toast("Reprocessing with AI...");
-
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-      "Authorization": "Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxx",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\",\"recommendations\":[\"string\"],\"flags\":[\"string\"]}."
-            },
-            {
-              role: "user",
-              content: `
-Analyze this document for a vocational rehab CRM.
-
-File Name: ${doc.file_name}
-Category: ${doc.category}
-Notes: ${doc.notes || "None"}
-
-Provide:
-- summary
-- key tags
-- actionable staff insights
-`
-            }
-          ]
-        })
-      });
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
-
-      let parsed;
-
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        parsed = {
-          summary: content,
-          tags: [],
-          insights: ""
-        };
-      }
-
-      await updateDocument(doc.id, {
-        ai_summary: parsed.summary || "",
-        ai_tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-        ai_insights: [
-          parsed.insights || "",
-          Array.isArray(parsed.recommendations) && parsed.recommendations.length
-            ? `Recommendations: ${parsed.recommendations.join("; ")}`
-            : "",
-          Array.isArray(parsed.flags) && parsed.flags.length
-            ? `Flags: ${parsed.flags.join("; ")}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
-        ai_last_processed: new Date().toISOString(),
-      });
-
-      await loadDocuments();
-
-      toast.success("AI updated");
-    } catch (err) {
-      console.error(err);
-      toast.error("AI reprocess failed");
-    }
+    toast.error("AI Reprocess is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
   }}
 >
   <RefreshCw className="w-3.5 h-3.5" />
