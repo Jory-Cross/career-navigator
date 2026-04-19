@@ -142,7 +142,10 @@ useEffect(() => {
 
   try {
 
-
+const result = await analyzeDocumentContent({
+  file_name: selectedFile.name,
+  current_category: form.category
+});
 console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
 const payload = result?.data?.data || result?.data || result || {};
