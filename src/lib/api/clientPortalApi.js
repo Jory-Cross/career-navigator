@@ -712,19 +712,27 @@ export async function archiveDocument(id) {
 }
 
 export async function deleteDocument(docId) {
-  if (!docId) return;
+  if (!docId) throw new Error("Document id is required");
 
-  // get document first
-  const doc = await base44.entities.Document.get(docId);
+  try {
+    const doc = await base44.entities.Document.get(docId);
 
-  // delete file if it exists
-  if (doc?.file_url) {
-    try {
-      await base44.storage.delete(doc.file_url);
-    } catch (err) {
-      console.error("FILE DELETE FAILED", err);
+    if (doc?.file_url) {
+      try {
+        await base44.integrations.Core.DeleteFile({
+          file_url: doc.file_url,
+        });
+      } catch (fileErr) {
+        console.error("FILE DELETE FAILED", fileErr);
+      }
     }
+
+    return await base44.entities.Document.delete(docId);
+  } catch (err) {
+    console.error("DELETE DOCUMENT FAILED", err);
+    throw err;
   }
+}
 
   // delete database record
   return base44.entities.Document.delete(docId);
