@@ -61,7 +61,31 @@ Return 5–7 relevant tags and a category.
 
 const data = await response.json();
 
-  return Response.json(analysisResult);
+console.log("OPENAI RAW RESPONSE:", data);
+
+if (!response.ok) {
+  return Response.json({
+    suggested_category: current_category,
+    tags: ["openai-error"],
+    confidence: 0,
+    debug_error: JSON.stringify(data)
+  });
+}
+
+const content = data.choices?.[0]?.message?.content || "{}";
+
+let parsed;
+try {
+  parsed = JSON.parse(content);
+} catch {
+  parsed = {
+    suggested_category: current_category,
+    tags: ["parse-error"],
+    confidence: 0
+  };
+}
+
+return Response.json(parsed);
 } catch (llmError) {
   return Response.json({
     suggested_category: current_category || "other",
