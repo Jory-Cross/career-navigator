@@ -154,9 +154,7 @@ console.log("AI payload:", payload);
 setForm(p => ({
   ...p,
   category: payload.suggested_category || p.category,
-  tags: Array.isArray(payload.tags)
-    ? payload.tags.join(", ")
-    : ""
+ tags: Array.isArray(payload.tags) ? payload.tags.join(", ") : p.tags
 }));
 
 toast.success("AI tags applied");
