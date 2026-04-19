@@ -499,9 +499,10 @@ const archiveDocument = async (docId) => {
 )}
 
 {doc.ai_insights && (
-  <p className="text-xs text-slate-600 mt-1">
-    <strong>Insights:</strong> {doc.ai_insights}
-  </p>
+  <div className="text-xs text-slate-600 mt-1 whitespace-pre-line">
+    <strong>Insights:</strong>
+    <div className="mt-1">{doc.ai_insights}</div>
+  </div>
 )}
                     </div>
                     <div className="flex gap-1">
