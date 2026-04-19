@@ -178,9 +178,11 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
             </div>
             {client.target_role && <p className="text-sm text-slate-500 mt-0.5">{client.target_role}</p>}
           </div>
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
-          </Button>
+         {allowEdit && (
+  <Button variant="outline" size="sm" onClick={startEdit}>
+    <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+  </Button>
+)}
         </div>
         {showDetails && (
   <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-500">
