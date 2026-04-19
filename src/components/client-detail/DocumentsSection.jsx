@@ -340,7 +340,7 @@ const archiveDocument = async (docId) => {
                 <SelectTrigger className="w-[130px] h-9">
                   <SelectValue placeholder="Filter by tag" />
                 </SelectTrigger>
-                <SelectContent>
+               <SelectContent className="max-h-60 overflow-y-auto">
                   <SelectItem value="all_tags">All Tags</SelectItem>
                   {allTags.map(tag => (
                     <SelectItem key={tag} value={tag}>{tag}</SelectItem>
