@@ -140,10 +140,11 @@ useEffect(() => {
   setAiTagging(true);
 
   try {
-    const result = await base44.functions.invoke('analyzeDocumentContent', {
+   const result = await base44.functions.invoke('analyzeDocumentContent', {
+  document_id: null,
+  file_url: "",
   file_name: selectedFile.name,
-  category: form.category,
-  notes: form.notes || ""
+  current_category: form.category
 });
 
 console.log("analyzeDocumentContent result:", result);
