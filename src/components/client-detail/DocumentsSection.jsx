@@ -237,9 +237,7 @@ const archiveDocument = async (docId) => {
   try {
     await deleteClientDocument(docId);
 
-    setDocuments((prev) =>
-      prev.filter((doc) => doc.id !== docId)
-    );
+   await loadDocuments();
 
     toast.success("Document deleted");
   } catch (error) {
