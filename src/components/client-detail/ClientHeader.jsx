@@ -212,7 +212,7 @@ if (editing || formOnly) {
     )}
   </div>
 )}
-   {showDetails && client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
+   {showDetails && client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-xl p-3">{client.notes}</p>}
         
        
 {showDetails && <ClientContactSectionsView client={client} />}
