@@ -167,7 +167,7 @@ if (editing || formOnly) {
             </Select>
           </div>
         )}
-        <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} className="col-span-2" />
+       <Textarea value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} className="md:col-span-2" />
         <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
       </Card>
     );
