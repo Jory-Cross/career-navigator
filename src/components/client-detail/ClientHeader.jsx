@@ -170,7 +170,9 @@ if (editing || formOnly) {
           </div>
         )}
       <Textarea className="h-24 md:col-span-2" value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
-        <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
+    <div className="pt-4 border-t">
+  <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
+</div>
       </Card>
     );
   }
