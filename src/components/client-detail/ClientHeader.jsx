@@ -200,7 +200,7 @@ export default function ClientHeader({ client, onUpdate }) {
         
        
 {showDetails && <ClientContactSectionsView client={client} />}
-        <ContactsSection client={client} onUpdate={onUpdate} />
+       {showDetails && <ContactsSection client={client} onUpdate={onUpdate} />}
       </div>
     </Card>
   );
