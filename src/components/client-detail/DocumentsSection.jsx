@@ -471,6 +471,17 @@ const archiveDocument = async (docId) => {
                           ))}
                         </div>
                       )}
+                      {doc.ai_summary && (
+  <p className="text-xs text-slate-600 mt-2">
+    <strong>Summary:</strong> {doc.ai_summary}
+  </p>
+)}
+
+{doc.ai_insights && (
+  <p className="text-xs text-slate-600 mt-1">
+    <strong>Insights:</strong> {doc.ai_insights}
+  </p>
+)}
                     </div>
                     <div className="flex gap-1">
                       <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
