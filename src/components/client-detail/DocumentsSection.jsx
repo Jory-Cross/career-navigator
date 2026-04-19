@@ -206,12 +206,10 @@ toast.success("AI tags applied");
       
         const createdDoc = await createDocument({
   ...newDoc,
+  ai_tags: form.tags ? form.tags.split(",").map(t => t.trim()) : [],
   ai_summary: "",
-  ai_tags: [],
   ai_insights: "",
-  ai_last_processed: null,
 });
-
 setDocuments((prev) => [
   {
     ...createdDoc,
