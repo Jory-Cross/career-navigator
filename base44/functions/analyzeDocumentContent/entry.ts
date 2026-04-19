@@ -31,20 +31,29 @@ Respond in this exact JSON format:
   "confidence": 0.95
 }`;
 
-const { data: analysisResult } = await base44.integrations.Core.InvokeLLM({
-  prompt,
-  response_json_schema: {
-    type: 'object',
-    properties: {
-      suggested_category: { type: 'string' },
-      tags: { type: 'array', items: { type: 'string' } },
-      confidence: { type: 'number' }
-    },
-    required: ['suggested_category', 'tags', 'confidence']
-  }
-});
+try {
+  const { data: analysisResult } = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        suggested_category: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+        confidence: { type: 'number' }
+      },
+      required: ['suggested_category', 'tags', 'confidence']
+    }
+  });
 
-return Response.json(analysisResult);
+  return Response.json(analysisResult);
+} catch (llmError) {
+  return Response.json({
+    suggested_category: current_category || "other",
+    tags: ["llm-error"],
+    confidence: 0,
+    debug_error: String(llmError?.message || llmError || "InvokeLLM failed")
+  });
+}
   } catch (error) {
     console.error("analyzeDocumentContent fatal error:", error);
     return Response.json(
