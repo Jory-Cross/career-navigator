@@ -131,7 +131,7 @@ if (editing || formOnly) {
         <Input className="h-10" value={form.last_name || ""} onChange={e => u("last_name", e.target.value)} placeholder="Last Name" />
          <Input className="h-10" value={form.email || ""} onChange={e => u("email", e.target.value)} placeholder="Email" />
         <Input className="h-10" value={form.phone || ""} onChange={e => u("phone", e.target.value)} placeholder="Phone" />
-         <Input value={form.address || ""} onChange={e => u("address", e.target.value)} placeholder="Home Address" className="md:col-span-2" />
+        <Input className="h-10 md:col-span-2" value={form.address || ""} onChange={e => u("address", e.target.value)} placeholder="Home Address" />
           <Input className="h-10" value={form.target_role || ""} onChange={e => u("target_role", e.target.value)} placeholder="Target Role" />
          <Input className="h-10" value={form.industry || ""} onChange={e => u("industry", e.target.value)} placeholder="Industry" />
          <Input className="h-10" value={form.location || ""} onChange={e => u("location", e.target.value)} placeholder="Location" />
