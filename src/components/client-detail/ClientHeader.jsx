@@ -180,7 +180,7 @@ if (editing || formOnly) {
   return (
    <Card className="rounded-2xl border shadow-sm overflow-hidden">
      <div className="h-16 bg-gradient-to-r from-slate-800 to-slate-900 rounded-t-2xl" />
-      <div className="px-6 pb-6 -mt-8">
+     <div className="px-6 pb-6 -mt-6">
         <div className="flex items-end gap-4">
           <div className="w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center text-slate-800 font-bold text-xl border-4 border-white">
             {client.first_name?.[0]}{client.last_name?.[0]}
