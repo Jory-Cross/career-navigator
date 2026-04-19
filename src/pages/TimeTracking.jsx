@@ -175,13 +175,14 @@ const [selectedNewEntryClientId, setSelectedNewEntryClientId] = useState("");
 
   const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
 
-  const { data: allUsers = [] } = useQuery({
-  queryKey: ["timeTracking", "users"],
+const { data: allUsers = [] } = useQuery({
+  queryKey: ["timeTracking", "users", effectiveUser?.id],
   queryFn: getAllUsers,
   enabled: !!user && (user.role === "admin" || user.role === "management"),
-  staleTime: 60 * 1000,
-  gcTime: 10 * 60 * 1000,
+  staleTime: 5 * 60 * 1000,
+  gcTime: 15 * 60 * 1000,
   refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
 });
 
   const scopedUsers = useMemo(() => {
