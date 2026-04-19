@@ -337,13 +337,20 @@ useEffect(() => {
   const clientIds = useMemo(() => allClients.map((client) => client.id), [allClients]);
 
   const scopedTimeEntries = useMemo(() => {
-    if (!effectiveUser) return timeEntries;
-    if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
+  if (!effectiveUser) return timeEntries;
+  if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
 
-    const clientIdSet = new Set(clientIds);
+  const clientIdSet = new Set(clientIds);
 
-    return timeEntries.filter((entry) => !entry.client_id || clientIdSet.has(entry.client_id));
-  }, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
+  const result = [];
+  for (const entry of timeEntries) {
+    if (!entry.client_id || clientIdSet.has(entry.client_id)) {
+      result.push(entry);
+    }
+  }
+
+  return result;
+}, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
 
   const now = useMemo(() => new Date(), []);
   const payrollRanges = useMemo(() => {
