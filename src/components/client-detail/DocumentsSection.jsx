@@ -407,16 +407,7 @@ const archiveDocument = async (docId) => {
   }}
 >
 
-        console.log("RESULT", updated);
-
-        await loadDocuments();
-        toast.success("Visibility updated");
-      } catch (err) {
-        console.error("VISIBILITY UPDATE ERROR", err);
-        toast.error("Failed to update visibility");
-      }
-    }}
-  >
+        
     {doc.visibility} ↻
   </Badge>
 )}{doc.source && (
