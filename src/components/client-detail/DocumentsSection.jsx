@@ -142,7 +142,7 @@ useEffect(() => {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-       "Authorization": "Bearer YOUR_REAL_OPENAI_KEY",
+      "Authorization": "Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxx"
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -571,7 +571,7 @@ const archiveDocument = async (docId) => {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-       "Authorization": "Bearer YOUR_REAL_OPENAI_KEY",
+      "Authorization": "Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxx"
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
