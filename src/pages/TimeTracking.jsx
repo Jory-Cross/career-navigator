@@ -485,9 +485,16 @@ useEffect(() => {
   }, [totalMinutes]);
 
   const legacyEntries = useMemo(() => {
-    return scopedTimeEntries.filter((entry) => entry.category && !entry.entry_type_code);
-  }, [scopedTimeEntries]);
+  const result = [];
 
+  for (const entry of scopedTimeEntries) {
+    if (entry.category && !entry.entry_type_code) {
+      result.push(entry);
+    }
+  }
+
+  return result;
+}, [scopedTimeEntries]);
   const byClient = useMemo(() => {
     const grouped = {};
 
