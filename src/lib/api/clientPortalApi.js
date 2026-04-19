@@ -381,6 +381,10 @@ function buildDocumentPayload(payload = {}) {
     notes: asString(payload.notes),
     version: asNumber(payload.version, 1),
     parent_document_id: payload.parent_document_id ?? null,
+    ai_tags: asArray(payload.ai_tags),
+ai_summary: asString(payload.ai_summary),
+ai_insights: asString(payload.ai_insights),
+ai_last_processed: payload.ai_last_processed ?? null,
   };
 }
 function buildActivityPayload(payload = {}) {
