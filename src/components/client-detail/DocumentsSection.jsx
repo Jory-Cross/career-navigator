@@ -116,7 +116,9 @@ useEffect(() => {
     }
 
     if (filterTag) {
-      filtered = filtered.filter((doc) => doc.tags?.includes(filterTag));
+     filtered = filtered.filter((doc) =>
+  [...(doc.tags || []), ...(doc.ai_tags || [])].includes(filterTag)
+);
     }
 
     return filtered;
