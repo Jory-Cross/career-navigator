@@ -213,7 +213,7 @@ try {
       messages: [
         {
           role: "system",
-         content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\"}."
+        content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\",\"recommendations\":[\"string\"],\"flags\":[\"string\"]}. Recommendations should be actionable next steps for staff. Flags should identify missing info, risks, or issues."
         },
         {
   role: "user",
