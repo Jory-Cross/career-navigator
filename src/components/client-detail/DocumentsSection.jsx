@@ -148,7 +148,7 @@ const result = await analyzeDocumentContent({
 });
 
 
-const payload = result || {};
+const payload = result?.data?.data || result?.data || result || {};
 console.log("AI payload:", payload);
 
 setForm(p => ({
