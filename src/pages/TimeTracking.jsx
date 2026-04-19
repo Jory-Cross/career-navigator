@@ -374,7 +374,13 @@ useEffect(() => {
   };
 }, []);
 
-  const filteredClientIds = useMemo(() => clients.map((client) => client.id), [clients]);
+  const filteredClientIds = useMemo(() => {
+  const result = [];
+  for (const client of clients) {
+    result.push(client.id);
+  }
+  return result;
+}, [clients]);
 
   const filtered = useMemo(() => {
   const filteredClientIdSet = new Set(filteredClientIds);
