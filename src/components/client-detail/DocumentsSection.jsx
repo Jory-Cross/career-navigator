@@ -134,65 +134,7 @@ useEffect(() => {
 };
 
  const autoTagDocument = async () => {
-  if (!selectedFile || !form.category) return;
-
-  setAiTagging(true);
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-      "Authorization": "Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxx",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "Analyze document metadata and suggest category and tags. Return ONLY valid JSON: {\"category\":\"string\",\"tags\":[\"string\"]}"
-          },
-          {
-            role: "user",
-            content: `
-File Name: ${selectedFile.name}
-Current Category: ${form.category}
-Notes: ${form.notes || "None"}
-
-Suggest better category and tags.
-`
-          }
-        ]
-      })
-    });
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
-
-    let parsed;
-
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      parsed = {
-        category: form.category,
-        tags: []
-      };
-    }
-
-    setForm(p => ({
-      ...p,
-      category: parsed.category || p.category,
-      tags: (parsed.tags || []).join(", ")
-    }));
-
-    toast.success("AI tags applied");
-  } catch (error) {
-    console.error(error);
-    toast.error("AI tagging failed");
-  } finally {
-    setAiTagging(false);
-  }
+  toast.error("AI Tag is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
 };
   const handleUpload = async () => {
     if (!selectedFile || !form.title) {
