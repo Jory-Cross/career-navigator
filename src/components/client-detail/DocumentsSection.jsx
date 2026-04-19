@@ -18,7 +18,7 @@ import {
   deleteDocument as deleteClientDocument
 } from "@/lib/api/clientPortalApi";
 import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
-import { base44 } from "@/api/base44Client";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
