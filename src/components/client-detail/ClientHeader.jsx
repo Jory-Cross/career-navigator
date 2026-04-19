@@ -193,7 +193,7 @@ if (editing || formOnly) {
             {client.target_role && <p className="text-sm text-slate-500 mt-0.5">{client.target_role}</p>}
           </div>
          {allowEdit && (
-  <Button variant="outline" size="sm" onClick={startEdit}>
+<Button variant="outline" size="sm" className="rounded-lg" onClick={startEdit}>
     <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
   </Button>
 )}
