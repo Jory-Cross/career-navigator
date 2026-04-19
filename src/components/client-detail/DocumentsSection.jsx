@@ -97,7 +97,9 @@ useEffect(() => {
       filtered = filtered.filter((doc) =>
         doc.title?.toLowerCase().includes(term) ||
         doc.file_name?.toLowerCase().includes(term) ||
-        doc.tags?.some((tag) => tag.toLowerCase().includes(term)) ||
+      [...(doc.tags || []), ...(doc.ai_tags || [])].some((tag) =>
+  tag.toLowerCase().includes(term)
+) ||
         doc.notes?.toLowerCase().includes(term)
       );
     }
