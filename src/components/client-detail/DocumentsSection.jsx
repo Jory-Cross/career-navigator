@@ -183,12 +183,12 @@ useEffect(() => {
         newDoc.version = 1;
       }
       
-          await createDocument(newDoc);
+         const createdDoc = await createDocument(newDoc);
+
 setDocuments((prev) => [
   {
-    ...newDoc,
-    id: Math.random().toString(36), // temp id
-    created_date: new Date().toISOString(),
+    ...createdDoc,
+    is_archived: false,
   },
   ...prev,
 ]);
