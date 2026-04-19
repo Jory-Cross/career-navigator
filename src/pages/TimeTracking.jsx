@@ -356,7 +356,7 @@ useEffect(() => {
   return result;
 }, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
 
-  const now = useMemo(() => new Date(), []);
+ 
  const payrollRanges = useMemo(() => {
   const now = new Date();
   const nowYear = now.getFullYear();
