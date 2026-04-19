@@ -147,7 +147,7 @@ useEffect(() => {
   current_category: form.category
 });
 
-console.log("analyzeDocumentContent result:", result);
+console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
 const payload = result?.data?.data || result?.data || result || {};
 toast(payload.debug_error || JSON.stringify(payload));
