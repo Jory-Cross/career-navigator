@@ -151,11 +151,6 @@ console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 const payload = result || {};
 console.log("AI payload:", payload);
 
-if (payload.debug_error) {
-  toast.error(payload.debug_error);
-  return;
-}
-
 setForm(p => ({
   ...p,
   category: payload.suggested_category || p.category,
