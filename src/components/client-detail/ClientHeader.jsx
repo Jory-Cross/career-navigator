@@ -108,7 +108,7 @@ const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
 
 if (editing || formOnly) {
     return (
-      <Card className="border-0 shadow-sm p-6 space-y-4">
+     <Card className="rounded-2xl border bg-slate-50/60 shadow-sm p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="font-semibold text-slate-800">Edit Client</h2>
           <div className="flex gap-2">
