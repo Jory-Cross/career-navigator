@@ -243,7 +243,21 @@ const handleDocumentsChanged = useCallback(() => {
 
       <Tabs value={activeTab || ""} onValueChange={setActiveTab}>
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-  
+  <button
+  type="button"
+  onClick={() => setActiveTab("client_details")}
+  className={cn(
+    "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+    activeTab === "client_details"
+      ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+      : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+  )}
+>
+  <div className="flex items-center gap-2">
+    <User className="h-4 w-4" />
+    <span className="text-sm font-semibold">Client Details</span>
+  </div>
+</button>
     {!isClientUser && !isEmployed && (
       <button
         type="button"
