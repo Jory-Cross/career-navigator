@@ -148,7 +148,7 @@ const result = await analyzeDocumentContent({
 });
 console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
-const payload = result?.data?.data || result?.data || result || {};
+const payload = result || {};
 toast(payload.debug_error || JSON.stringify(payload));
 
 if (payload.debug_error) {
