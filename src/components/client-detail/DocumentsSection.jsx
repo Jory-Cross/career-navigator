@@ -271,49 +271,10 @@ const archiveDocument = async (docId) => {
   </Button>
 
   {!showArchived && (
-    <>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => {
-          setForm((prev) => ({
-            ...prev,
-            title: "",
-            category: "resume",
-            tags: "",
-            notes: "",
-            visibility: "staff",
-          }));
-          setShowUpload(true);
-        }}
-      >
-        <Upload className="w-3.5 h-3.5 mr-1" />
-        Upload Resume
-      </Button>
-
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => {
-          setForm((prev) => ({
-            ...prev,
-            title: "",
-            category: "cover_letter",
-            tags: "",
-            notes: "",
-            visibility: "staff",
-          }));
-          setShowUpload(true);
-        }}
-      >
-        <Upload className="w-3.5 h-3.5 mr-1" />
-        Upload Cover Letter
-      </Button>
-
-      <Button size="sm" onClick={() => setShowUpload(true)}>
-        <Upload className="w-3.5 h-3.5 mr-1" /> Upload
-      </Button>
-    </>
+    <Button size="sm" onClick={() => setShowUpload(true)}>
+      <Upload className="w-3.5 h-3.5 mr-1" />
+      Upload Document
+    </Button>
   )}
 </div>
           </div>
