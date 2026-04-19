@@ -182,18 +182,20 @@ export default function ClientHeader({ client, onUpdate }) {
             <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
           </Button>
         </div>
-        <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-500">
-          {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {client.email}</span>}
-          {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {client.phone}</span>}
-          {client.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {client.address}</span>}
-          {client.location && !client.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {client.location}</span>}
-          {client.industry && <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {client.industry}</span>}
-          {client.linkedin_url && (
-            <a href={client.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-              <Globe className="w-3 h-3" /> LinkedIn
-            </a>
-          )}
-        </div>
+        {showDetails && (
+  <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-500">
+    {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {client.email}</span>}
+    {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {client.phone}</span>}
+    {client.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {client.address}</span>}
+    {client.location && !client.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {client.location}</span>}
+    {client.industry && <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {client.industry}</span>}
+    {client.linkedin_url && (
+      <a href={client.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+        <Globe className="w-3 h-3" /> LinkedIn
+      </a>
+    )}
+  </div>
+)}
         {client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
         
        
