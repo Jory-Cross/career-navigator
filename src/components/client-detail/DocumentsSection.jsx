@@ -216,9 +216,20 @@ try {
          content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\"}."
         },
         {
-          role: "user",
-          content: `File name: ${createdDoc.file_name}`
-        }
+  role: "user",
+  content: `
+Analyze this document for a vocational rehab CRM.
+
+File Name: ${createdDoc.file_name}
+Category: ${createdDoc.category}
+Notes: ${createdDoc.notes || "None"}
+
+Provide:
+- summary
+- key tags
+- actionable staff insights
+`
+}
       ]
     })
   });
