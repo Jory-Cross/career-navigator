@@ -106,7 +106,7 @@ const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
     }
   };
 
-  if (editing) {
+if (editing || formOnly) {
     return (
       <Card className="border-0 shadow-sm p-6 space-y-4">
         <div className="flex justify-between items-center">
