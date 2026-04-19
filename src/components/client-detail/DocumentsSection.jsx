@@ -190,74 +190,7 @@ setDocuments((prev) => [
   },
   ...prev,
 ]);
-// 🔹 Trigger AI processing AFTER document is created
-try {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-    "Authorization": "Bearer sk-PASTE-YOUR-REAL-OPENAI-KEY-HERE",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-        content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\",\"recommendations\":[\"string\"],\"flags\":[\"string\"]}. Recommendations should be actionable next steps for staff. Flags should identify missing info, risks, or issues."
-        },
-        {
-  role: "user",
-  content: `
-Analyze this document for a vocational rehab CRM.
-
-File Name: ${createdDoc.file_name}
-Category: ${createdDoc.category}
-Notes: ${createdDoc.notes || "None"}
-
-Provide:
-- summary
-- key tags
-- actionable staff insights
-`
-}
-      ]
-    })
-  });
-
-  const data = await response.json();
-const content = data.choices?.[0]?.message?.content || "";
-
-let parsed;
-
-try {
-  parsed = JSON.parse(content);
-} catch {
-  parsed = {
-    summary: content,
-    tags: [],
-    insights: ""
-  };
-}
-
-await updateDocument(createdDoc.id, {
-  ai_summary: parsed.summary || "",
-  ai_tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-  ai_insights: [
-    parsed.insights || "",
-    Array.isArray(parsed.recommendations) && parsed.recommendations.length
-      ? `Recommendations: ${parsed.recommendations.join("; ")}`
-      : "",
-    Array.isArray(parsed.flags) && parsed.flags.length
-      ? `Flags: ${parsed.flags.join("; ")}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n"),
-  ai_last_processed: new Date().toISOString(),
-});
-} catch (err) {
-  console.error("AI processing failed", err);
-}
+toast("AI processing is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
       toast.success("Document uploaded");
       setShowUpload(false);
       setForm({
