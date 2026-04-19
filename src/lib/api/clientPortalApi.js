@@ -725,33 +725,7 @@ async function deleteFileByUrl(fileUrl) {
     console.error("DELETE FILE FAILED", err);
   }
 }
-export async function deleteDocument(docId) {
-  if (!docId) throw new Error("Document id is required");
 
-  try {
-    const doc = await base44.entities.Document.get(docId);
-
-    if (doc?.file_url) {
-      try {
-        console.log("FILE URL:", doc.file_url);
-        const filePath = doc.file_url?.split("/").slice(-1)[0];
-
-if (filePath) {
-  await base44.integrations.Core.DeleteFile({
-    path: filePath,
-  });
-}
-      } catch (fileErr) {
-        console.error("FILE DELETE FAILED", fileErr);
-      }
-    }
-
-    return await base44.entities.Document.delete(docId);
-  } catch (err) {
-    console.error("DELETE DOCUMENT FAILED", err);
-    throw err;
-  }
-}
 
 /**
  * FILE UPLOAD
