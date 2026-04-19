@@ -384,7 +384,10 @@ const handleDocumentsChanged = useCallback(() => {
             : "border-slate-200 bg-white hover:bg-slate-50"
         )}
       >
-        <div className="text-sm font-semibold">Tasks</div>
+       <div className="flex items-center gap-2">
+  <CheckSquare className="h-4 w-4" />
+  <span className="text-sm font-semibold">Tasks</span>
+</div>
         <div className={cn("mt-1 text-xs", activeTab === "tasks" ? "text-slate-200" : "text-slate-500")}>
           {tasks.length} items
         </div>
