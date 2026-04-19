@@ -348,7 +348,10 @@ const handleDocumentsChanged = useCallback(() => {
             : "border-slate-200 bg-white hover:bg-slate-50"
         )}
       >
-        <div className="text-sm font-semibold">WBLE Forms</div>
+        <div className="flex items-center gap-2">
+  <FileText className="h-4 w-4" />
+  <span className="text-sm font-semibold">WBLE Forms</span>
+</div>
       </button>
     )}
 
