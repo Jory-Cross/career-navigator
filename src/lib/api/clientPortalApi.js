@@ -749,6 +749,7 @@ console.log("DOC FILE URL:", doc?.file_url);
 /**
  * FILE UPLOAD
  */
+// AI Document Analysis (temporary Base44 bridge)
 export async function uploadFile(file) {
   const res = await base44.integrations.Core.UploadFile({ file });
   return res?.file_url || null;
