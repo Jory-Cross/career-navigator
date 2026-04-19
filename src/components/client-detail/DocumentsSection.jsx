@@ -224,7 +224,19 @@ try {
   });
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+const content = data.choices?.[0]?.message?.content || "";
+
+let parsed;
+
+try {
+  parsed = JSON.parse(content);
+} catch {
+  parsed = {
+    summary: content,
+    tags: [],
+    insights: ""
+  };
+}
 
   console.log("AI RESULT:", content);
 } catch (err) {
