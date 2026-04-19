@@ -640,6 +640,9 @@ export async function getDocuments(clientId) {
   const rows = await base44.entities.Document.filter({ client_id: clientId });
   return sortByNewest(asArray(rows).map(mapDocument).filter(Boolean));
 }
+export async function analyzeDocumentContent(payload) {
+  return await base44.functions.invoke("analyzeDocumentContent", payload);
+}
 export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
   const rows = await base44.entities.Document.filter({
