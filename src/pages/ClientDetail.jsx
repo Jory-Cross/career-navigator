@@ -486,7 +486,13 @@ const handleDocumentsChanged = useCallback(() => {
   </div>
   
         {!isClientUser && !isEmployed && (
-    
+    <TabsContent value="client_details">
+  <div className="space-y-6">
+    {!isDspd && !isEmployed && !isClientUser && (
+      <VocationalProfileCard client={client} onRefresh={refreshClient} />
+    )}
+  </div>
+</TabsContent>
           <TabsContent value="onboarding">
             <OnboardingSection client={client} onRefresh={refreshClient} />
           </TabsContent>
