@@ -472,9 +472,7 @@ const handleDocumentsChanged = useCallback(() => {
       </button>
     )}
   </div>
-  <TabsContent value="client_details">
-  <ClientHeader client={client} onUpdate={refreshClient} />
-</TabsContent>
+  
         {!isClientUser && !isEmployed && (
     
           <TabsContent value="onboarding">
