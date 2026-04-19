@@ -133,9 +133,9 @@ if (editing || formOnly) {
         <Input className="h-10" value={form.phone || ""} onChange={e => u("phone", e.target.value)} placeholder="Phone" />
          <Input value={form.address || ""} onChange={e => u("address", e.target.value)} placeholder="Home Address" className="md:col-span-2" />
           <Input className="h-10" value={form.target_role || ""} onChange={e => u("target_role", e.target.value)} placeholder="Target Role" />
-          <Input value={form.industry || ""} onChange={e => u("industry", e.target.value)} placeholder="Industry" />
-          <Input value={form.location || ""} onChange={e => u("location", e.target.value)} placeholder="Location" />
-          <Input value={form.linkedin_url || ""} onChange={e => u("linkedin_url", e.target.value)} placeholder="LinkedIn URL" />
+         <Input className="h-10" value={form.industry || ""} onChange={e => u("industry", e.target.value)} placeholder="Industry" />
+         <Input className="h-10" value={form.location || ""} onChange={e => u("location", e.target.value)} placeholder="Location" />
+        <Input className="h-10" value={form.linkedin_url || ""} onChange={e => u("linkedin_url", e.target.value)} placeholder="LinkedIn URL" />
           <Select value={form.status || "active"} onValueChange={v => u("status", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
