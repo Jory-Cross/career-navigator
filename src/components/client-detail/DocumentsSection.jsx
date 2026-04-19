@@ -133,30 +133,67 @@ useEffect(() => {
   }
 };
 
-  const autoTagDocument = async () => {
-    if (!selectedFile || !form.category) return;
-    
-    setAiTagging(true);
+ const autoTagDocument = async () => {
+  if (!selectedFile || !form.category) return;
+
+  setAiTagging(true);
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Analyze document metadata and suggest category and tags. Return ONLY valid JSON: {\"category\":\"string\",\"tags\":[\"string\"]}"
+          },
+          {
+            role: "user",
+            content: `
+File Name: ${selectedFile.name}
+Current Category: ${form.category}
+Notes: ${form.notes || "None"}
+
+Suggest better category and tags.
+`
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    let parsed;
+
     try {
-      const { data } = await base44.functions.invoke('analyzeDocumentContent', {
-        file_name: selectedFile.name,
-        current_category: form.category
-      });
-
-      setForm(p => ({
-        ...p,
-        category: data.suggested_category,
-        tags: data.tags.join(', ')
-      }));
-      
-      toast.success(`AI suggested: ${data.suggested_category.replace(/_/g, ' ')}`);
-    } catch (error) {
-      toast.error("AI analysis failed");
-    } finally {
-      setAiTagging(false);
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {
+        category: form.category,
+        tags: []
+      };
     }
-  };
 
+    setForm(p => ({
+      ...p,
+      category: parsed.category || p.category,
+      tags: (parsed.tags || []).join(", ")
+    }));
+
+    toast.success("AI tags applied");
+  } catch (error) {
+    console.error(error);
+    toast.error("AI tagging failed");
+  } finally {
+    setAiTagging(false);
+  }
+};
   const handleUpload = async () => {
     if (!selectedFile || !form.title) {
       toast.error("Please select a file and enter a title");
