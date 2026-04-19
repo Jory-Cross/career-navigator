@@ -149,7 +149,7 @@ useEffect(() => {
 
 console.log("analyzeDocumentContent result:", result);
 
-const payload = result?.data || result || {};
+const payload = result?.data?.data || result?.data || result || {};
 toast(payload.debug_error || JSON.stringify(payload));
 
 if (payload.debug_error) {
