@@ -468,7 +468,7 @@ const archiveDocument = async (docId) => {
   onClick={(e) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.error("AI Reprocess is temporarily disabled in Base44 browser preview because direct OpenAI calls are blocked there.");
+   toast("Reprocessing coming next");
   }}
 >
   <RefreshCw className="w-3.5 h-3.5" />
