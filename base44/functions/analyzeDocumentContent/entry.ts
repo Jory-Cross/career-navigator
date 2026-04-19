@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { file_name, current_category } = await req.json();
+    const { file_name, current_category, notes } = await req.json();
 
     return Response.json({
       suggested_category: current_category || "other",
