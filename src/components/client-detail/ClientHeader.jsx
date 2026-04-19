@@ -155,7 +155,7 @@ if (editing || formOnly) {
           </Select>
         </div>
         {form.client_type === 'pre_ets' && employers.length > 0 && (
-          <div className="col-span-2">
+       <div className="md:col-span-2">
             <Select value={form.assigned_employer_id || "none"} onValueChange={v => u("assigned_employer_id", v === "none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Assign Pre-ETS Employer..." /></SelectTrigger>
               <SelectContent>
