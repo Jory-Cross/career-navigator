@@ -248,12 +248,12 @@ const handleDocumentsChanged = useCallback(() => {
       <button
         type="button"
         onClick={() => setActiveTab("onboarding")}
-        className={cn(
-          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-md hover:-translate-y-0.5"
-          activeTab === "onboarding"
-            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-            : "border-slate-200 bg-white hover:bg-slate-50"
-        )}
+       className={cn(
+  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-md hover:-translate-y-0.5",
+  activeTab === "onboarding"
+    ? "border-slate-900 bg-slate-900 text-white shadow-md"
+    : "border-slate-200 bg-white hover:bg-slate-50"
+)}
       >
         <div className="flex items-center gap-2">
   <ClipboardList className="h-4 w-4" />
