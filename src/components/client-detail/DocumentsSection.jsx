@@ -175,7 +175,9 @@ toast.success("AI tags applied");
     try {
       const file_url = await uploadFile(selectedFile);
       
-      const tags = form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t) : [];
+    const tags = form.tags
+  ? Array.from(new Set(form.tags.split(",").map(t => t.trim()).filter(Boolean)))
+  : [];
       
       // Check if this is a new version of an existing document
      const existingDocs = documents.filter(d =>
