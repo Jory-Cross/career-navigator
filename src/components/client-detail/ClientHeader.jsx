@@ -126,7 +126,7 @@ if (editing || formOnly) {
     </Button>
   </div>
 </div>
-        <div className="grid grid-cols-2 gap-3">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input value={form.first_name || ""} onChange={e => u("first_name", e.target.value)} placeholder="First Name" />
           <Input value={form.last_name || ""} onChange={e => u("last_name", e.target.value)} placeholder="Last Name" />
           <Input value={form.email || ""} onChange={e => u("email", e.target.value)} placeholder="Email" />
