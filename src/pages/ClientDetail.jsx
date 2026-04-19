@@ -13,6 +13,7 @@ import {
   Clock,
   Activity,
   Bot,
+  User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
