@@ -60,20 +60,6 @@ Return 5–7 relevant tags and a category.
 });
 
 const data = await response.json();
-const content = data.choices?.[0]?.message?.content || "{}";
-
-let parsed;
-try {
-  parsed = JSON.parse(content);
-} catch {
-  parsed = {
-    suggested_category: current_category,
-    tags: ["parse-error"],
-    confidence: 0
-  };
-}
-
-return Response.json(parsed);
 
   return Response.json(analysisResult);
 } catch (llmError) {
