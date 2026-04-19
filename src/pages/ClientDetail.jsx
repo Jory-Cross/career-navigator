@@ -236,8 +236,7 @@ const handleDocumentsChanged = useCallback(() => {
           )}
         </div>
       </div>
-<ClientHeader client={client} onUpdate={refreshClient} showDetails={false} allowEdit={false} formOnly={false} />
- 
+<ClientHeader client={client} showDetails={false} allowEdit={false} />
 
       
 
