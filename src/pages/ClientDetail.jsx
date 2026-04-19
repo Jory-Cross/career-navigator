@@ -342,11 +342,11 @@ const handleDocumentsChanged = useCallback(() => {
         type="button"
         onClick={() => setActiveTab("wble_forms")}
         className={cn(
-         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-          activeTab === "wble_forms"
-            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-            : "border-slate-200 bg-white hover:bg-slate-50"
-        )}
+  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+  activeTab === "wble_forms"
+    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+)}
       >
         <div className="flex items-center gap-2">
   <FileText className="h-4 w-4" />
