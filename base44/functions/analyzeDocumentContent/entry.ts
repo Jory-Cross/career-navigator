@@ -39,7 +39,7 @@ const response = await fetch("https://api.openai.com/v1/chat/completions", {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    model: "gpt-4o-mini",
+   model: "gpt-5.4-mini",
     messages: [
       {
         role: "system",
