@@ -134,22 +134,31 @@ useEffect(() => {
 };
 
  const autoTagDocument = async () => {
+   toast("AI Tag clicked");
   if (!selectedFile || !form.category) return;
 
   setAiTagging(true);
 
   try {
-    const { data } = await base44.functions.invoke('analyzeDocumentContent', {
-      file_name: selectedFile.name,
-      category: form.category,
-      notes: form.notes || ""
-    });
+    const result = await base44.functions.invoke('analyzeDocumentContent', {
+  file_name: selectedFile.name,
+  category: form.category,
+  notes: form.notes || ""
+});
 
-    setForm(p => ({
-      ...p,
-      category: data.category || p.category,
-      tags: (data.tags || []).join(", ")
-    }));
+console.log("analyzeDocumentContent result:", result);
+
+const payload = result?.data || result || {};
+
+setForm(p => ({
+  ...p,
+  category: payload.category || payload.suggested_category || p.category,
+  tags: Array.isArray(payload.tags)
+    ? payload.tags.join(", ")
+    : typeof payload.tags === "string"
+    ? payload.tags
+    : ""
+}));
 
     toast.success("AI tags applied");
   } catch (error) {
