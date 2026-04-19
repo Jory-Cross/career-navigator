@@ -684,11 +684,15 @@ export async function getDocumentVersions(docId) {
 }
 export async function createDocument(payload) {
   const raw = await base44.entities.Document.create(
-    buildDocumentPayload({
-      ...payload,
-      source: payload.source || (payload.category === "generated_report" ? "generated" : "staff_upload"),
-    })
-  );
+  buildDocumentPayload({
+    ...payload,
+    ai_tags: payload.ai_tags || [],
+    ai_summary: payload.ai_summary || "",
+    ai_insights: payload.ai_insights || "",
+    ai_last_processed: new Date().toISOString(),
+    source: payload.source || (payload.category === "generated_report" ? "generated" : "staff_upload"),
+  })
+);
   return mapDocument(raw);
 }
 export async function updateDocument(id, payload) {
