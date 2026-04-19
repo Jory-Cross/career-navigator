@@ -200,7 +200,17 @@ setDocuments((prev) => [
   },
   ...prev,
 ]);
-
+// 🔹 Trigger AI processing AFTER document is created
+try {
+  await base44.functions.invoke('processDocumentAI', {
+    document_id: createdDoc.id,
+    file_url: createdDoc.file_url,
+    file_name: createdDoc.file_name,
+    client_id: clientId,
+  });
+} catch (err) {
+  console.error("AI processing failed", err);
+}
       toast.success("Document uploaded");
       setShowUpload(false);
       setForm({
