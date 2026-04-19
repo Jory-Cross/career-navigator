@@ -212,13 +212,21 @@ toast.success("AI tags applied");
   ai_summary: "",
   ai_insights: "",
 });
-setDocuments((prev) => [
-  {
-    ...createdDoc,
-    is_archived: false,
-  },
-  ...prev,
-]);
+setDocuments((prev) => {
+  const updated = [
+    {
+      ...createdDoc,
+      is_archived: false,
+    },
+    ...prev,
+  ];
+
+  if (createdDoc.ai_tags && createdDoc.ai_tags.length > 0) {
+    setFilterTag(createdDoc.ai_tags[0]);
+  }
+
+  return updated;
+});
 
       toast.success("Document uploaded");
       setShowUpload(false);
