@@ -153,7 +153,7 @@ console.log("AI payload:", payload);
 
 setForm(p => ({
   ...p,
-  category: payload.suggested_category || p.category,
+ category: payload.suggested_category ?? p.category,
  tags: Array.isArray(payload.tags) ? payload.tags.join(", ") : p.tags
 }));
 
