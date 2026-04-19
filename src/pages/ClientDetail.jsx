@@ -446,7 +446,10 @@ const handleDocumentsChanged = useCallback(() => {
           : "border-slate-200 bg-white hover:bg-slate-50"
       )}
     >
-      <div className="text-sm font-semibold">Activity</div>
+     <div className="flex items-center gap-2">
+  <Activity className="h-4 w-4" />
+  <span className="text-sm font-semibold">Activity</span>
+</div>
     </button>
 
     {!isClientUser && !isEmployed && (
