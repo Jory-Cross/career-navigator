@@ -199,7 +199,7 @@ if (editing || formOnly) {
 )}
         </div>
         {showDetails && (
-  <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-500">
+ <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
     {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {client.email}</span>}
     {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {client.phone}</span>}
     {client.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {client.address}</span>}
