@@ -154,14 +154,11 @@ toast(JSON.stringify(payload));
 
 setForm(p => ({
   ...p,
-  category: payload.category || payload.suggested_category || p.category,
+  category: payload.suggested_category || p.category,
   tags: Array.isArray(payload.tags)
     ? payload.tags.join(", ")
-    : typeof payload.tags === "string"
-    ? payload.tags
     : ""
 }));
-
     toast.success("AI tags applied");
   } catch (error) {
     console.error(error);
