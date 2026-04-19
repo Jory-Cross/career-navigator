@@ -185,7 +185,13 @@ useEffect(() => {
         newDoc.version = 1;
       }
       
-         const createdDoc = await createDocument(newDoc);
+        const createdDoc = await createDocument({
+  ...newDoc,
+  ai_summary: "",
+  ai_tags: [],
+  ai_insights: "",
+  ai_last_processed: null,
+});
 
 setDocuments((prev) => [
   {
