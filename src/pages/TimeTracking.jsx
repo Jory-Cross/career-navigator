@@ -205,12 +205,13 @@ const filterableEmployees = useMemo(() => {
 }, [scopedUsers, effectiveUser, user, viewAsUser]);
 
   const { data: rawClients = [] } = useQuery({
-  queryKey: ["timeTracking", "clients"],
+  queryKey: ["timeTracking", "clients", effectiveUser?.id],
   queryFn: getAllClients,
   enabled: !!effectiveUser,
-  staleTime: 60 * 1000,
-  gcTime: 10 * 60 * 1000,
+  staleTime: 5 * 60 * 1000,
+  gcTime: 15 * 60 * 1000,
   refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
 });
 
 const allClients = useMemo(() => {
