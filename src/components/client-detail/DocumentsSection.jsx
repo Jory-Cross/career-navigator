@@ -183,7 +183,7 @@ useEffect(() => {
         newDoc.version = 1;
       }
       
-           await createDocument(newDoc);
+          await createDocument(newDoc);
 setDocuments((prev) => [
   {
     ...newDoc,
