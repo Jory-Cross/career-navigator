@@ -77,7 +77,7 @@ const loadDocuments = useCallback(async () => {
     setDocuments(
       visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
     );
-    console.log("VISIBLE DOCUMENTS:", visibleDocs);
+
   } catch (error) {
     toast.error("Failed to load documents");
   } finally {
