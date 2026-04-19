@@ -187,7 +187,7 @@ if (editing || formOnly) {
           </div>
           <div className="flex-1 pt-10">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-900">{client.first_name} {client.last_name}</h1>
+           <h1 className="text-lg font-semibold text-slate-900">{client.first_name} {client.last_name}</h1>
               <Badge className={cn("text-xs border-0", statusColors[client.status])}>{client.status}</Badge>
             </div>
             {client.target_role && <p className="text-sm text-slate-500 mt-0.5">{client.target_role}</p>}
