@@ -239,9 +239,7 @@ const handleDocumentsChanged = useCallback(() => {
 <ClientHeader client={client} onUpdate={refreshClient} />
  
 
-      {!isDspd && !isEmployed && !isClientUser && (
-        <VocationalProfileCard client={client} onRefresh={refreshClient} />
-      )}
+      
 
       <Tabs value={activeTab || ""} onValueChange={setActiveTab}>
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
