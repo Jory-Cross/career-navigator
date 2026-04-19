@@ -149,7 +149,7 @@ const result = await analyzeDocumentContent({
 console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
 const payload = result || {};
-toast(payload.debug_error || JSON.stringify(payload));
+console.log("AI payload:", payload);
 
 if (payload.debug_error) {
   toast.error(payload.debug_error);
