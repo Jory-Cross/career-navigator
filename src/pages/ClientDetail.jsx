@@ -486,11 +486,11 @@ const handleDocumentsChanged = useCallback(() => {
       </button>
     )}
   </div>
-
-        {!isClientUser && !isEmployed && (
-      <TabsContent value="client_details">
+  <TabsContent value="client_details">
   <ClientHeader client={client} onUpdate={refreshClient} />
 </TabsContent>
+        {!isClientUser && !isEmployed && (
+    
           <TabsContent value="onboarding">
             <OnboardingSection client={client} onRefresh={refreshClient} />
           </TabsContent>
