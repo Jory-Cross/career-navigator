@@ -710,7 +710,21 @@ export async function archiveDocument(id) {
 
   return mapDocument(raw);
 }
+async function deleteFileByUrl(fileUrl) {
+  if (!fileUrl) return;
 
+  try {
+    const filePath = fileUrl.split(".com/")[1];
+
+    if (!filePath) return;
+
+    await base44.integrations.Core.DeleteFile({
+      file_path: filePath,
+    });
+  } catch (err) {
+    console.error("DELETE FILE FAILED", err);
+  }
+}
 export async function deleteDocument(docId) {
   if (!docId) throw new Error("Document id is required");
 
