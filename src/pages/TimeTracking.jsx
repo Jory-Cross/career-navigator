@@ -617,14 +617,13 @@ useEffect(() => {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="payroll1">This Month 1–15</SelectItem>
-                <SelectItem value="payroll2">This Month 16–End</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
+             <SelectContent>
+  <SelectItem value="payroll1">1st–15th</SelectItem>
+  <SelectItem value="payroll2">16th–End of Month</SelectItem>
+  <SelectItem value="week">This Week</SelectItem>
+  <SelectItem value="month">This Month</SelectItem>
+  <SelectItem value="all">All Time</SelectItem>
+</SelectContent>
           </div>
 
           {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
