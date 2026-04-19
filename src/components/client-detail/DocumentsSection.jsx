@@ -213,7 +213,7 @@ try {
       messages: [
         {
           role: "system",
-          content: "Analyze documents for a vocational rehab CRM. Return summary, tags, and insights."
+         content: "Analyze documents for a vocational rehab CRM. Return ONLY valid JSON with this exact shape: {\"summary\":\"string\",\"tags\":[\"string\"],\"insights\":\"string\"}."
         },
         {
           role: "user",
