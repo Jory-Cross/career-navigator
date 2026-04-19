@@ -230,61 +230,197 @@ const handleDocumentsChanged = useCallback(() => {
       )}
 
       <Tabs value={activeTab || ""} onValueChange={setActiveTab}>
-        <TabsList className="flex flex-wrap h-auto">
-          {!isClientUser && !isEmployed && (
-            <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
-          )}
+  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    {!isClientUser && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("onboarding")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "onboarding"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Onboarding</div>
+      </button>
+    )}
 
-          {!isDspd && !isEmployed && (
-            <TabsTrigger value="applications">
-              Applications {activeTab === "applications" ? `(${applications.length})` : ""}
-            </TabsTrigger>
-          )}
+    {!isDspd && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("applications")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "applications"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Applications</div>
+        <div className={cn("mt-1 text-xs", activeTab === "applications" ? "text-slate-200" : "text-slate-500")}>
+          {applications.length} items
+        </div>
+      </button>
+    )}
 
-          {!isDspd && !isEmployed && !isClientUser && (
-            <TabsTrigger value="ai_job_search">AI Job Search</TabsTrigger>
-          )}
+    {!isDspd && !isEmployed && !isClientUser && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("ai_job_search")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "ai_job_search"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">AI Job Search</div>
+      </button>
+    )}
 
-          {!isDspd && !isEmployed && (
-            <TabsTrigger value="interview_prep">Interview Prep</TabsTrigger>
-          )}
+    {!isDspd && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("interview_prep")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "interview_prep"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Interview Prep</div>
+      </button>
+    )}
 
-          {!isDspd && !isEmployed && !isClientUser && (
-            <TabsTrigger value="assessments">Assessments</TabsTrigger>
-          )}
+    {!isDspd && !isEmployed && !isClientUser && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("assessments")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "assessments"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Assessments</div>
+      </button>
+    )}
 
-          {client.client_type === "pre_ets" && !isClientUser && (
-            <TabsTrigger value="wble_forms">WBLE Forms</TabsTrigger>
-          )}
+    {client.client_type === "pre_ets" && !isClientUser && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("wble_forms")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "wble_forms"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">WBLE Forms</div>
+      </button>
+    )}
 
-          {!isClientUser && (
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-          )}
+    {!isClientUser && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("documents")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "documents"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Documents</div>
+      </button>
+    )}
 
-          {!isEmployed && (
-            <TabsTrigger value="tasks">
-              Tasks {activeTab === "tasks" ? `(${tasks.length})` : ""}
-            </TabsTrigger>
-          )}
+    {!isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("tasks")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "tasks"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Tasks</div>
+        <div className={cn("mt-1 text-xs", activeTab === "tasks" ? "text-slate-200" : "text-slate-500")}>
+          {tasks.length} items
+        </div>
+      </button>
+    )}
 
-          {!isClientUser && isEmployed && (
-            <TabsTrigger value="job_supports">
-              Job Supports {activeTab === "job_supports" ? `(${timeEntries.length})` : ""}
-            </TabsTrigger>
-          )}
+    {!isClientUser && isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("job_supports")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "job_supports"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Job Supports</div>
+        <div className={cn("mt-1 text-xs", activeTab === "job_supports" ? "text-slate-200" : "text-slate-500")}>
+          {timeEntries.length} entries
+        </div>
+      </button>
+    )}
 
-          {!isClientUser && !isEmployed && (
-            <TabsTrigger value="time">
-              Time {activeTab === "time" ? `(${timeEntries.length})` : ""}
-            </TabsTrigger>
-          )}
+    {!isClientUser && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("time")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "time"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Time</div>
+        <div className={cn("mt-1 text-xs", activeTab === "time" ? "text-slate-200" : "text-slate-500")}>
+          {timeEntries.length} entries
+        </div>
+      </button>
+    )}
 
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+    <button
+      type="button"
+      onClick={() => setActiveTab("activity")}
+      className={cn(
+        "rounded-2xl border p-4 text-left transition",
+        activeTab === "activity"
+          ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      )}
+    >
+      <div className="text-sm font-semibold">Activity</div>
+    </button>
 
-          {!isClientUser && !isEmployed && (
-            <TabsTrigger value="assistant">Assistant</TabsTrigger>
-          )}
-        </TabsList>
+    {!isClientUser && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => setActiveTab("assistant")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition",
+          activeTab === "assistant"
+            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+            : "border-slate-200 bg-white hover:bg-slate-50"
+        )}
+      >
+        <div className="text-sm font-semibold">Assistant</div>
+      </button>
+    )}
+  </div>
 
         {!isClientUser && !isEmployed && (
           <TabsContent value="onboarding">
