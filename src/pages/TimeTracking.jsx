@@ -614,16 +614,17 @@ useEffect(() => {
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
             <Select value={periodFilter} onValueChange={setPeriodFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-             <SelectContent>
-  <SelectItem value="payroll1">1st–15th</SelectItem>
-  <SelectItem value="payroll2">16th–End of Month</SelectItem>
-  <SelectItem value="week">This Week</SelectItem>
-  <SelectItem value="month">This Month</SelectItem>
-  <SelectItem value="all">All Time</SelectItem>
-</SelectContent>
+  <SelectTrigger>
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="payroll1">1st–15th</SelectItem>
+    <SelectItem value="payroll2">16th–End of Month</SelectItem>
+    <SelectItem value="week">This Week</SelectItem>
+    <SelectItem value="month">This Month</SelectItem>
+    <SelectItem value="all">All Time</SelectItem>
+  </SelectContent>
+</Select>
           </div>
 
           {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
