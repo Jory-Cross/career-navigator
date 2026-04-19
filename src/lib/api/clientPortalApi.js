@@ -711,16 +711,23 @@ export async function archiveDocument(id) {
   return mapDocument(raw);
 }
 
-export async function deleteDocument(id) {
-  if (!id) throw new Error("Document id is required");
+export async function deleteDocument(docId) {
+  if (!docId) return;
 
-  console.log("DELETE DOCUMENT ID", id);
+  // get document first
+  const doc = await base44.entities.Document.get(docId);
 
-  const result = await base44.entities.Document.delete(id);
+  // delete file if it exists
+  if (doc?.file_url) {
+    try {
+      await base44.storage.delete(doc.file_url);
+    } catch (err) {
+      console.error("FILE DELETE FAILED", err);
+    }
+  }
 
-  console.log("DELETE DOCUMENT RESULT", result);
-
-  return result;
+  // delete database record
+  return base44.entities.Document.delete(docId);
 }
 /**
  * FILE UPLOAD
