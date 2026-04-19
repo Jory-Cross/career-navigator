@@ -719,9 +719,13 @@ export async function deleteDocument(docId) {
 
     if (doc?.file_url) {
       try {
-        await base44.integrations.Core.DeleteFile({
-          file_url: doc.file_url,
-        });
+        const filePath = doc.file_url?.split("/").slice(-1)[0];
+
+if (filePath) {
+  await base44.integrations.Core.DeleteFile({
+    path: filePath,
+  });
+}
       } catch (fileErr) {
         console.error("FILE DELETE FAILED", fileErr);
       }
