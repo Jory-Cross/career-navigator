@@ -424,8 +424,12 @@ for (const entry of scopedTimeEntries) {
         });
       }
 
-      return true;
-    });
+      if (true) {
+  result.push(entry);
+}
+}
+
+return result;
   }, [
     scopedTimeEntries,
     effectiveUser?.role,
