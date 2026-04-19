@@ -734,9 +734,6 @@ export async function deleteDocument(docId) {
   }
 }
 
-  // delete database record
-  return base44.entities.Document.delete(docId);
-}
 /**
  * FILE UPLOAD
  */
