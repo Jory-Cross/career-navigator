@@ -178,7 +178,7 @@ if (editing || formOnly) {
   }
 
   return (
-    <Card className="border-0 shadow-sm overflow-hidden">
+   <Card className="rounded-2xl border shadow-sm overflow-hidden">
       <div className="h-20 bg-gradient-to-r from-slate-800 to-slate-900" />
       <div className="px-6 pb-6 -mt-8">
         <div className="flex items-end gap-4">
