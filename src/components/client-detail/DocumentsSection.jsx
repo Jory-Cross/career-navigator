@@ -17,6 +17,7 @@ import {
   archiveDocument as archiveClientDocument,
   deleteDocument as deleteClientDocument
 } from "@/lib/api/clientPortalApi";
+import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -140,7 +141,7 @@ useEffect(() => {
   setAiTagging(true);
 
   try {
-  import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
+
 
 console.log("analyzeDocumentContent FULL:", JSON.stringify(result, null, 2));
 
