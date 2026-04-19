@@ -357,21 +357,22 @@ useEffect(() => {
 }, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
 
   const now = useMemo(() => new Date(), []);
-  const payrollRanges = useMemo(() => {
-    const nowYear = now.getFullYear();
-    const nowMonth = now.getMonth();
+ const payrollRanges = useMemo(() => {
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth();
 
-    return {
-      payroll1Start: new Date(nowYear, nowMonth, 1),
-      payroll1End: new Date(nowYear, nowMonth, 15, 23, 59, 59),
-      payroll2Start: new Date(nowYear, nowMonth, 16),
-      payroll2End: new Date(nowYear, nowMonth + 1, 0, 23, 59, 59),
-      weekStart: startOfWeek(now),
-      weekEnd: endOfWeek(now),
-      monthStart: startOfMonth(now),
-      monthEnd: endOfMonth(now),
-    };
-  }, [now]);
+  return {
+    payroll1Start: new Date(nowYear, nowMonth, 1),
+    payroll1End: new Date(nowYear, nowMonth, 15, 23, 59, 59),
+    payroll2Start: new Date(nowYear, nowMonth, 16),
+    payroll2End: new Date(nowYear, nowMonth + 1, 0, 23, 59, 59),
+    weekStart: startOfWeek(now),
+    weekEnd: endOfWeek(now),
+    monthStart: startOfMonth(now),
+    monthEnd: endOfMonth(now),
+  };
+}, []);
 
   const filteredClientIds = useMemo(() => clients.map((client) => client.id), [clients]);
 
