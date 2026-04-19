@@ -152,6 +152,11 @@ console.log("analyzeDocumentContent result:", result);
 const payload = result?.data || result || {};
 toast(payload.debug_error || JSON.stringify(payload));
 
+if (payload.debug_error) {
+  toast.error(payload.debug_error);
+  return;
+}
+
 setForm(p => ({
   ...p,
   category: payload.suggested_category || p.category,
@@ -159,7 +164,8 @@ setForm(p => ({
     ? payload.tags.join(", ")
     : ""
 }));
-    toast.success("AI tags applied");
+
+toast.success("AI tags applied");
   } catch (error) {
     console.error(error);
     toast.error("AI tagging failed");
