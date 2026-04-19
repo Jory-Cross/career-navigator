@@ -218,12 +218,14 @@ const allClients = useMemo(() => {
 }, [rawClients, effectiveUser, scopedUsers]);
   
   const { data: timeEntries = [] } = useQuery({
-  queryKey: ["timeTracking", "entries"],
+  queryKey: ["timeTracking", "entries", effectiveUser?.id],
   queryFn: getAllTimeEntries,
   enabled: !!effectiveUser,
-  staleTime: 30 * 1000,
-  gcTime: 10 * 60 * 1000,
+  staleTime: 5 * 60 * 1000,
+  gcTime: 15 * 60 * 1000,
   refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchInterval: false,
 });
 
   useEffect(() => {
