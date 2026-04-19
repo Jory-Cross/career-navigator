@@ -484,14 +484,17 @@ const archiveDocument = async (docId) => {
                         </div>
                       )}
 
-                      {doc.tags && doc.tags.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1 flex-wrap">
-                          <Tag className="w-3 h-3 text-slate-400" />
-                          {doc.tags.map(tag => (
-                            <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-                          ))}
-                        </div>
-                      )}
+                    {(doc.tags?.length > 0 || doc.ai_tags?.length > 0) && (
+  <div className="flex items-center gap-1 mt-1 flex-wrap">
+    <Tag className="w-3 h-3 text-slate-400" />
+
+    {[...(doc.tags || []), ...(doc.ai_tags || [])].map((tag, i) => (
+      <Badge key={`${tag}-${i}`} variant="outline" className="text-xs">
+        {tag}
+      </Badge>
+    ))}
+  </div>
+)}
                       {doc.ai_summary && (
   <p className="text-xs text-slate-600 mt-2">
     <strong>Summary:</strong> {doc.ai_summary}
