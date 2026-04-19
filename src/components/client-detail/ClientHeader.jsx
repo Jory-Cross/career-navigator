@@ -196,7 +196,7 @@ export default function ClientHeader({ client, onUpdate }) {
     )}
   </div>
 )}
-        {client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
+   {showDetails && client.notes && <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{client.notes}</p>}
         
        
         <ClientContactSectionsView client={client} />
