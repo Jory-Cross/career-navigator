@@ -209,8 +209,9 @@ setDocuments((prev) => [
       setUploading(false);
     }
   };
-
 const archiveDocument = async (docId) => {
+  toast("Archive clicked");
+
   try {
     await archiveClientDocument(docId);
 
@@ -220,9 +221,11 @@ const archiveDocument = async (docId) => {
 
     toast.success("Document archived");
   } catch (error) {
+    console.error("ARCHIVE BUTTON ERROR", error);
     toast.error("Failed to archive");
   }
 };
+
   const deleteDocument = async (docId) => {
   toast("Delete clicked");
 
