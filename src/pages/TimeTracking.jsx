@@ -675,7 +675,29 @@ useEffect(() => {
             </Select>
           </div>
 
-          <div className="flex items-end text-sm text-slate-500">{format(now, "MMMM yyyy")}</div>
+         <div className="flex items-end text-sm text-slate-500">
+  {periodFilter === "payroll1"
+    ? `Current period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
+        payrollRanges.payroll1End,
+        "MMM d, yyyy"
+      )}`
+    : periodFilter === "payroll2"
+    ? `Current period: ${format(payrollRanges.payroll2Start, "MMM d")}–${format(
+        payrollRanges.payroll2End,
+        "MMM d, yyyy"
+      )}`
+    : periodFilter === "week"
+    ? `Viewing: ${format(payrollRanges.weekStart, "MMM d")}–${format(
+        payrollRanges.weekEnd,
+        "MMM d, yyyy"
+      )}`
+    : periodFilter === "month"
+    ? `Viewing: ${format(payrollRanges.monthStart, "MMM d")}–${format(
+        payrollRanges.monthEnd,
+        "MMM d, yyyy"
+      )}`
+    : `Viewing: All Time`}
+</div>
         </div>
       </Card>
 
