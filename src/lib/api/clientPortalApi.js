@@ -719,6 +719,7 @@ export async function deleteDocument(docId) {
 
     if (doc?.file_url) {
       try {
+        console.log("FILE URL:", doc.file_url);
         const filePath = doc.file_url?.split("/").slice(-1)[0];
 
 if (filePath) {
