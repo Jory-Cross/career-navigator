@@ -238,7 +238,12 @@ try {
   };
 }
 
-  console.log("AI RESULT:", content);
+ await updateDocument(createdDoc.id, {
+  ai_summary: parsed.summary || "",
+  ai_tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+  ai_insights: parsed.insights || "",
+  ai_last_processed: new Date().toISOString(),
+});
 } catch (err) {
   console.error("AI processing failed", err);
 }
