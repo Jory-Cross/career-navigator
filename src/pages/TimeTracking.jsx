@@ -372,73 +372,89 @@ useEffect(() => {
   const filteredClientIds = useMemo(() => clients.map((client) => client.id), [clients]);
 
   const filtered = useMemo(() => {
-    const filteredClientIdSet = new Set(filteredClientIds);
+  const filteredClientIdSet = new Set(filteredClientIds);
 
-   const result = [];
-for (const entry of scopedTimeEntries) {
+  const result = [];
+
+  for (const entry of scopedTimeEntries) {
+    if (
+      (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+      employeeFilter !== "all" &&
+      entry.client_id &&
+      !filteredClientIdSet.has(entry.client_id)
+    ) {
+      continue;
+    }
+
+    if (clientFilter !== "all" && entry.client_id !== clientFilter) {
+      continue;
+    }
+
+    if (!entry.date) {
+      if (periodFilter === "all") result.push(entry);
+      continue;
+    }
+
+    const parsedDate = parseDateOnly(entry.date);
+    if (!parsedDate) continue;
+
+    if (periodFilter === "payroll1") {
       if (
-        (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-        employeeFilter !== "all" &&
-        entry.client_id &&
-        !filteredClientIdSet.has(entry.client_id)
+        parsedDate >= payrollRanges.payroll1Start &&
+        parsedDate <= payrollRanges.payroll1End
       ) {
-        return false;
+        result.push(entry);
       }
+      continue;
+    }
 
-      if (clientFilter !== "all" && entry.client_id !== clientFilter) {
-        return false;
+    if (periodFilter === "payroll2") {
+      if (
+        parsedDate >= payrollRanges.payroll2Start &&
+        parsedDate <= payrollRanges.payroll2End
+      ) {
+        result.push(entry);
       }
+      continue;
+    }
 
-      if (!entry.date) {
-        return periodFilter === "all";
-      }
-
-      const parsedDate = parseDateOnly(entry.date);
-      if (!parsedDate) return false;
-
-      if (periodFilter === "payroll1") {
-        return (
-          parsedDate >= payrollRanges.payroll1Start &&
-          parsedDate <= payrollRanges.payroll1End
-        );
-      }
-
-      if (periodFilter === "payroll2") {
-        return (
-          parsedDate >= payrollRanges.payroll2Start &&
-          parsedDate <= payrollRanges.payroll2End
-        );
-      }
-
-      if (periodFilter === "week") {
-        return isWithinInterval(parsedDate, {
+    if (periodFilter === "week") {
+      if (
+        isWithinInterval(parsedDate, {
           start: payrollRanges.weekStart,
           end: payrollRanges.weekEnd,
-        });
+        })
+      ) {
+        result.push(entry);
       }
+      continue;
+    }
 
-      if (periodFilter === "month") {
-        return isWithinInterval(parsedDate, {
+    if (periodFilter === "month") {
+      if (
+        isWithinInterval(parsedDate, {
           start: payrollRanges.monthStart,
           end: payrollRanges.monthEnd,
-        });
+        })
+      ) {
+        result.push(entry);
       }
+      continue;
+    }
 
-      if (true) {
-  result.push(entry);
-}
-}
+    result.push(entry);
+  }
 
-return result;
-  }, [
-    scopedTimeEntries,
-    effectiveUser?.role,
-    employeeFilter,
-    filteredClientIds,
-    clientFilter,
-    periodFilter,
-    payrollRanges,
-  ]);
+  return result;
+}, [
+  scopedTimeEntries,
+  effectiveUser?.role,
+  employeeFilter,
+  filteredClientIds,
+  clientFilter,
+  periodFilter,
+  payrollRanges,
+]);
 
   const duplicateIds = useMemo(() => {
     const ids = new Set();
