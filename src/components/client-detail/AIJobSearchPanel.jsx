@@ -17,7 +17,123 @@ import VocationalFactsPanel from "./VocationalFactsPanel";
 import JobSearchFilters from "./JobSearchFilters";
 import RecommendationBatchReview from "./RecommendationBatchReview";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
+const safeArray = (value) => Array.isArray(value) ? value : [];
+const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
+const normalizeSkill = (skill) =>
+  safeString(skill).toLowerCase().replace(/\s+/g, " ").trim();
+
+const dedupeStrings = (items = []) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = normalizeSkill(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const extractResumeSkills = (resume) => {
+  if (!resume) return [];
+
+  const directSkills = safeArray(resume.skills);
+  const parsedSkills =
+    typeof resume.skills_json === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(resume.skills_json);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
+
+  return dedupeStrings([...directSkills, ...parsedSkills]);
+};
+
+const extractRiasecScores = (assessments = []) => {
+  const scores = {
+    realistic: 0,
+    investigative: 0,
+    artistic: 0,
+    social: 0,
+    enterprising: 0,
+    conventional: 0,
+  };
+
+  assessments.forEach((assessment) => {
+    const raw = assessment?.riasec_scores || assessment?.riasec_scores_json;
+
+    if (!raw) return;
+
+    let parsed = raw;
+    if (typeof raw === "string") {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = null;
+      }
+    }
+
+    if (!parsed || typeof parsed !== "object") return;
+
+    scores.realistic = Number(parsed.realistic || parsed.R || scores.realistic || 0);
+    scores.investigative = Number(parsed.investigative || parsed.I || scores.investigative || 0);
+    scores.artistic = Number(parsed.artistic || parsed.A || scores.artistic || 0);
+    scores.social = Number(parsed.social || parsed.S || scores.social || 0);
+    scores.enterprising = Number(parsed.enterprising || parsed.E || scores.enterprising || 0);
+    scores.conventional = Number(parsed.conventional || parsed.C || scores.conventional || 0);
+  });
+
+  return scores;
+};
+
+const extractWSAData = (assessments = []) => {
+  return assessments
+    .filter((assessment) => {
+      const name = safeString(assessment?.title || assessment?.name || assessment?.assessment_type);
+      return name.toLowerCase().includes("wsa") || name.toLowerCase().includes("work strategy");
+    })
+    .map((assessment) => ({
+      id: assessment.id,
+      title: assessment.title || assessment.name || "WSA",
+      summary: assessment.summary || assessment.notes || "",
+      strengths: safeArray(assessment.strengths),
+      barriers: safeArray(assessment.barriers),
+      support_needs: safeArray(assessment.support_needs),
+    }));
+};
+
+const buildCareerProfilePayload = ({ client, resume, assessments = [], documents = [] }) => {
+  const resumeSkills = extractResumeSkills(resume);
+  const riasecScores = extractRiasecScores(assessments);
+  const wsa = extractWSAData(assessments);
+
+  const topStrengths = dedupeStrings([
+    ...wsa.flatMap((item) => safeArray(item.strengths)),
+    ...resumeSkills.slice(0, 10),
+  ]);
+
+  const topBarriers = dedupeStrings(
+    wsa.flatMap((item) => safeArray(item.barriers))
+  );
+
+  return {
+    client_id: client?.id || "",
+    client_name: [client?.first_name, client?.last_name].filter(Boolean).join(" "),
+    target_role: safeString(client?.target_role),
+    target_industry: safeString(client?.industry),
+    location_preference: safeString(client?.location),
+    resume_skills: resumeSkills,
+    riasec_scores: riasecScores,
+    wsa,
+    top_strengths: topStrengths,
+    top_barriers: topBarriers,
+    assessment_ids: assessments.map((a) => a.id).filter(Boolean),
+    document_ids: documents.map((d) => d.id).filter(Boolean),
+  };
+};
 const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-600 border-slate-200",
   saved: "bg-blue-100 text-blue-700 border-blue-200",
