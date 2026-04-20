@@ -72,11 +72,23 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   )
 );
 
+const SKILL_BLACKLIST = [
+  "resume",
+  "job-seeking",
+  "job seeking",
+  "work history",
+  "education",
+  "professional summary",
+  "employment goals",
+  "contact information"
+];
+
 const resumeSkills = Array.from(
   new Set(
     documents
       .filter(doc => doc.category === "resume")
       .flatMap(doc => doc.ai_tags || [])
+      .filter(tag => !SKILL_BLACKLIST.includes(tag.toLowerCase()))
   )
 );
 const loadDocuments = useCallback(async () => {
