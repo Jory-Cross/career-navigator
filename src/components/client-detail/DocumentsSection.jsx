@@ -307,7 +307,15 @@ const archiveDocument = async (docId) => {
   >
     <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Active" : "Archived"}
   </Button>
-
+{resumeSkills.length > 0 && (
+  <div className="flex flex-wrap gap-1 mt-2 mb-3">
+    {resumeSkills.map((skill) => (
+      <Badge key={skill} className="text-xs bg-blue-50 text-blue-700 border border-blue-200">
+        {skill}
+      </Badge>
+    ))}
+  </div>
+)}
   {!showArchived && (
     <Button size="sm" onClick={() => setShowUpload(true)}>
       <Upload className="w-3.5 h-3.5 mr-1" />
