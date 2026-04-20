@@ -195,9 +195,17 @@ toast.success("AI tags applied");
     try {
       const file_url = await uploadFile(selectedFile);
       
-    const tags = form.tags
-  ? Array.from(new Set(form.tags.split(",").map(t => t.trim()).filter(Boolean)))
+   const RAW_TAGS = form.tags
+  ? form.tags.split(",").map(t => t.trim()).filter(Boolean)
   : [];
+
+const tags = Array.from(
+  new Set(
+    RAW_TAGS.filter(tag =>
+      !SKILL_BLACKLIST.includes(tag.toLowerCase())
+    )
+  )
+);
       
       // Check if this is a new version of an existing document
      const existingDocs = documents.filter(d =>
