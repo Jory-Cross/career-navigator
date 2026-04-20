@@ -99,7 +99,8 @@ if (!response.ok) {
   });
 }
 
-const content = data.choices?.[0]?.message?.content || "{}";
+const rawContent = data.choices?.[0]?.message?.content || "{}";
+const content = rawContent.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim();
 
 let parsed;
 try {
