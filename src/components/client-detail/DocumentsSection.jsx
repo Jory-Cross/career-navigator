@@ -315,15 +315,17 @@ const JOB_KEYWORDS = {
   "Construction Laborer": ["construction", "labor", "hand tools"],
 };
 
-const suggestedJobs = Object.entries(JOB_KEYWORDS).map(([title, keywords]) => {
-  const matches = keywords.filter(k => resumeSkills.includes(k)).length;
-  const match = Math.round((matches / keywords.length) * 100);
+const suggestedJobs = resumeSkills.length > 0
+  ? Object.entries(JOB_KEYWORDS).map(([title, keywords]) => {
+      const matches = keywords.filter(k => resumeSkills.includes(k)).length;
+      const match = Math.round((matches / keywords.length) * 100);
 
-  return {
-    title,
-    match: match || 50,
-  };
-}).sort((a, b) => b.match - a.match);
+      return {
+        title,
+        match: match || 50,
+      };
+    }).sort((a, b) => b.match - a.match)
+  : [];
   return (
     <>
       <Card className="border-0 shadow-sm">
