@@ -531,8 +531,8 @@ const suggestedJobs = resumeSkills.length > 0
           ? !SKILL_BLACKLIST.includes(tag)
           : true
       )
-  )
-.map((tag) => (
+    )
+).map((tag) => (
     <Badge
 key={tag}
       variant="outline"
