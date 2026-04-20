@@ -17,18 +17,47 @@ Deno.serve(async (req) => {
     const notes = body?.notes || "";
 
 const prompt = `Analyze this document and provide:
-1. A suggested category (choose from: resume, cover_letter, assessment, authorization, certification, portfolio, other)
-2. Auto-generated tags (5-7 relevant tags based on content and type)
 
-Document name: ${file_name}
-Current category: ${current_category}
-Notes: ${notes || "None"}
+1. A suggested category (choose from: resume, cover_letter, assessment, authorization, certification, portfolio, other)
+
+2. Extract ONLY real job-related skills, tools, certifications, software, equipment, or work abilities mentioned in the document.
+Examples of valid tags:
+- forklift
+- customer service
+- Microsoft Excel
+- welding
+- inventory management
+- cash handling
+- food preparation
+- CNA
+- CPR
+- bilingual Spanish
+
+DO NOT include:
+- resume
+- skills
+- education
+- work history
+- employment history
+- job history
+- professional summary
+- contact information
+- job seeking
+- employment goals
+- section titles
+- generic headings
+- document structure labels
+
+3. Extract job titles if clearly mentioned.
+
+4. Write a short summary in 1-2 sentences.
 
 Respond in this exact JSON format:
 {
-  "suggested_category": "category_name",
-  "tags": ["tag1", "tag2", "tag3"],
-  "confidence": 0.95
+  "suggested_category": "",
+  "tags": [],
+  "job_titles": [],
+  "summary": ""
 }`;
 
 try {
@@ -41,20 +70,18 @@ const response = await fetch("https://api.openai.com/v1/chat/completions", {
   body: JSON.stringify({
    model: "gpt-5.4-mini",
     messages: [
-      {
-        role: "system",
-        content: "Analyze documents for a vocational rehab CRM. Return JSON: {suggested_category, tags, confidence}"
-      },
-      {
-        role: "user",
-        content: `
-Document name: ${file_name}
-Category: ${current_category}
-Notes: ${notes || "None"}
+{
+  role: "system",
+  content: "You analyze documents for a vocational rehab CRM and must return valid JSON only."
+},
+{
+  role: "user",
+  content: `${prompt}
 
-Return 5–7 relevant tags and a category.
-`
-      }
+Document name: ${file_name}
+Current category: ${current_category}
+Notes: ${notes || "None"}`
+}
     ]
   })
 });
