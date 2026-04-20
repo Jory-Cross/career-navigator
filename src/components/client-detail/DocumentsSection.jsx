@@ -389,8 +389,7 @@ const suggestedJobs = resumeSkills.length > 0
     </div>
   )}
 
-  {suggestedJobs.length > 0 && (
-        {suggestedJobs.length > 0 && (
+ {suggestedJobs.length > 0 && (
   <div className="mt-2 mb-3">
     <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
     <div className="flex flex-wrap gap-2">
