@@ -74,6 +74,7 @@ export default function DocumentsSection({ clientId, refreshKey }) {
 
 const SKILL_BLACKLIST = [
   "resume",
+  "skills",
   "job-seeking",
   "job seeking",
   "work history",
