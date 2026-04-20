@@ -327,17 +327,18 @@ const JOB_PROFILES = [
     keywords: ["construction", "labor", "hand tools", "cleanup", "site safety"],
   },
 ];
-
 const suggestedJobs = resumeSkills.length > 0
-  ? Object.entries(JOB_KEYWORDS).map(([title, keywords]) => {
+  ? JOB_PROFILES.map(({ title, keywords }) => {
       const matches = keywords.filter(k => resumeSkills.includes(k)).length;
       const match = Math.round((matches / keywords.length) * 100);
 
       return {
         title,
-        match: match || 50,
+        match,
       };
-    }).sort((a, b) => b.match - a.match)
+    })
+      .filter((job) => job.match > 0)
+      .sort((a, b) => b.match - a.match)
   : [];
   return (
     <>
