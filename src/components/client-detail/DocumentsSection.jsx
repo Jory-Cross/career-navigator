@@ -532,9 +532,9 @@ const suggestedJobs = resumeSkills.length > 0
           : true
       )
   )
-).map((tag) => (
+.map((tag, i) => (
     <Badge
-      key={`${tag}-${i}`}
+key={tag}
       variant="outline"
       className={`text-xs ${
         doc.category === "resume" ? "border-blue-300 text-blue-700" : ""
