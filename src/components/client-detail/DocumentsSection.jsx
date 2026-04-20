@@ -88,8 +88,12 @@ const resumeSkills = Array.from(
   new Set(
     documents
       .filter(doc => doc.category === "resume")
-      .flatMap(doc => doc.ai_tags || [])
-      .filter(tag => !SKILL_BLACKLIST.includes(tag.toLowerCase()))
+      .flatMap(doc => [
+        ...(doc.tags || []),
+        ...(doc.ai_tags || [])
+      ])
+      .map(tag => tag.toLowerCase().trim())
+      .filter(tag => !SKILL_BLACKLIST.includes(tag))
   )
 );
 const loadDocuments = useCallback(async () => {
