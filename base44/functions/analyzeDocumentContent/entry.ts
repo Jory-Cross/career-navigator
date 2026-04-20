@@ -104,11 +104,16 @@ const content = data.choices?.[0]?.message?.content || "{}";
 let parsed;
 try {
   parsed = JSON.parse(content);
+
+  // Ensure tags always exists and is an array
+  if (!Array.isArray(parsed.tags)) {
+    parsed.tags = [];
+  }
+
 } catch {
   parsed = {
     suggested_category: current_category,
-    tags: ["parse-error"],
-    confidence: 0
+    tags: [],
   };
 }
 
