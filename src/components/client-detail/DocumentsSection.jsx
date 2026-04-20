@@ -313,11 +313,20 @@ const archiveDocument = async (docId) => {
 
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-const JOB_KEYWORDS = {
-  "Warehouse Associate": ["forklift", "inventory", "warehouse"],
-  "Customer Service Rep": ["customer service", "communication", "call center"],
-  "Construction Laborer": ["construction", "labor", "hand tools"],
-};
+const JOB_PROFILES = [
+  {
+    title: "Warehouse Associate",
+    keywords: ["forklift", "inventory", "warehouse", "shipping", "receiving", "stocking"],
+  },
+  {
+    title: "Customer Service Representative",
+    keywords: ["customer service", "communication", "phone", "support", "cashier"],
+  },
+  {
+    title: "Construction Laborer",
+    keywords: ["construction", "labor", "hand tools", "cleanup", "site safety"],
+  },
+];
 
 const suggestedJobs = resumeSkills.length > 0
   ? Object.entries(JOB_KEYWORDS).map(([title, keywords]) => {
