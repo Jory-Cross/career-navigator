@@ -532,7 +532,7 @@ const suggestedJobs = resumeSkills.length > 0
           : true
       )
   )
-.map((tag, i) => (
+.map((tag) => (
     <Badge
 key={tag}
       variant="outline"
