@@ -16,11 +16,13 @@ Deno.serve(async (req) => {
     const current_category = body?.current_category || "other";
     const notes = body?.notes || "";
 
-const prompt = `Analyze this document and provide:
+const prompt = `Analyze this document based ONLY on the file name and assume it is a typical resume if content is missing.
+
+Provide:
 
 1. A suggested category (choose from: resume, cover_letter, assessment, authorization, certification, portfolio, other)
 
-2. Extract ONLY real job-related skills, tools, certifications, software, equipment, or work abilities mentioned in the document.
+2. Extract real job-related skills. If no readable content is available, infer likely skills based on the document name. Always return at least 5 realistic skills.
 Examples of valid tags:
 - forklift
 - customer service
