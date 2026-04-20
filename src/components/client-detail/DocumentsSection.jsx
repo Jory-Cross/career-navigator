@@ -330,9 +330,6 @@ const suggestedJobs = resumeSkills.length > 0
     ))}
   </div>
 )}
-           <div className="mt-2 mb-3 text-sm text-red-600">
-  Suggested Jobs test
-</div> 
           </div>
 
           <div className="flex gap-2 flex-wrap">
