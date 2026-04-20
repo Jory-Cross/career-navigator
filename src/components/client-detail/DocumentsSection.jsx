@@ -309,13 +309,21 @@ const archiveDocument = async (docId) => {
 
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-const suggestedJobs = resumeSkills.length > 0
-  ? [
-      { title: "Warehouse Associate", match: resumeSkills.includes("forklift") ? 90 : 65 },
-      { title: "Customer Service Rep", match: resumeSkills.includes("customer service") ? 92 : 70 },
-      { title: "Construction Laborer", match: resumeSkills.includes("construction") ? 88 : 60 },
-    ]
-  : [];
+const JOB_KEYWORDS = {
+  "Warehouse Associate": ["forklift", "inventory", "warehouse"],
+  "Customer Service Rep": ["customer service", "communication", "call center"],
+  "Construction Laborer": ["construction", "labor", "hand tools"],
+};
+
+const suggestedJobs = Object.entries(JOB_KEYWORDS).map(([title, keywords]) => {
+  const matches = keywords.filter(k => resumeSkills.includes(k)).length;
+  const match = Math.round((matches / keywords.length) * 100);
+
+  return {
+    title,
+    match: match || 50,
+  };
+}).sort((a, b) => b.match - a.match);
   return (
     <>
       <Card className="border-0 shadow-sm">
