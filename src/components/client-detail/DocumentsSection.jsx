@@ -288,7 +288,13 @@ const archiveDocument = async (docId) => {
 
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-
+const suggestedJobs = resumeSkills.length > 0
+  ? [
+      { title: "Warehouse Associate", match: resumeSkills.includes("forklift") ? 90 : 65 },
+      { title: "Customer Service Rep", match: resumeSkills.includes("customer service") ? 92 : 70 },
+      { title: "Construction Laborer", match: resumeSkills.includes("construction") ? 88 : 60 },
+    ]
+  : [];
   return (
     <>
       <Card className="border-0 shadow-sm">
@@ -307,7 +313,15 @@ const archiveDocument = async (docId) => {
   >
     <Archive className="w-3.5 h-3.5 mr-1" /> {showArchived ? "Active" : "Archived"}
   </Button>
-{resumeSkills.length > 0 && (
+
+  {!showArchived && (
+    <Button size="sm" onClick={() => setShowUpload(true)}>
+      <Upload className="w-3.5 h-3.5 mr-1" />
+      Upload Document
+    </Button>
+  )}
+</div>
+            {resumeSkills.length > 0 && (
   <div className="flex flex-wrap gap-1 mt-2 mb-3">
     {resumeSkills.map((skill) => (
       <Badge key={skill} className="text-xs bg-blue-50 text-blue-700 border border-blue-200">
@@ -316,13 +330,6 @@ const archiveDocument = async (docId) => {
     ))}
   </div>
 )}
-  {!showArchived && (
-    <Button size="sm" onClick={() => setShowUpload(true)}>
-      <Upload className="w-3.5 h-3.5 mr-1" />
-      Upload Document
-    </Button>
-  )}
-</div>
           </div>
 
           <div className="flex gap-2 flex-wrap">
