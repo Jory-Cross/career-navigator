@@ -330,6 +330,21 @@ const suggestedJobs = resumeSkills.length > 0
     ))}
   </div>
 )}
+            {suggestedJobs.length > 0 && (
+  <div className="mt-2 mb-3">
+    <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
+    <div className="flex flex-wrap gap-2">
+      {suggestedJobs.map((job) => (
+        <Badge
+          key={job.title}
+          className="text-xs bg-green-50 text-green-700 border border-green-200"
+        >
+          {job.title} ({job.match}%)
+        </Badge>
+      ))}
+    </div>
+  </div>
+)}
           </div>
 
           <div className="flex gap-2 flex-wrap">
