@@ -518,13 +518,17 @@ const suggestedJobs = resumeSkills.length > 0
   <div className="flex items-center gap-1 mt-1 flex-wrap">
     <Tag className="w-3 h-3 text-slate-400" />
 
-   {[...(doc.tags || []), ...(doc.ai_tags || [])]
-  .filter((tag) =>
-    doc.category === "resume"
-      ? !SKILL_BLACKLIST.includes(tag.toLowerCase())
-      : true
+   {Array.from(
+  new Set(
+    [...(doc.tags || []), ...(doc.ai_tags || [])]
+      .map(tag => tag.toLowerCase().trim())
+      .filter((tag) =>
+        doc.category === "resume"
+          ? !SKILL_BLACKLIST.includes(tag)
+          : true
+      )
   )
-  .map((tag, i) => (
+).map((tag) => (
     <Badge
       key={`${tag}-${i}`}
       variant="outline"
@@ -532,7 +536,7 @@ const suggestedJobs = resumeSkills.length > 0
         doc.category === "resume" ? "border-blue-300 text-blue-700" : ""
       }`}
     >
-      {doc.category === "resume" ? `Skill: ${tag}` : tag}
+    {tag}
     </Badge>
   ))}
   </div>
