@@ -234,9 +234,9 @@ const tags = Array.from(
         newDoc.version = 1;
       }
       
-        const createdDoc = await createDocument({
+       const createdDoc = await createDocument({
   ...newDoc,
-  ai_tags: form.tags ? form.tags.split(",").map(t => t.trim()) : [],
+  ai_tags: tags,
   ai_summary: "",
   ai_insights: "",
 });
