@@ -69,7 +69,8 @@ const response = await fetch("https://api.openai.com/v1/chat/completions", {
   },
   body: JSON.stringify({
    model: "gpt-5.4-mini",
-    messages: [
+response_format: { type: "json_object" },
+messages: [
 {
   role: "system",
   content: "You analyze documents for a vocational rehab CRM and must return valid JSON only."
