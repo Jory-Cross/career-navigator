@@ -374,9 +374,7 @@ const suggestedJobs = resumeSkills.length > 0
         </div>
 
         <div className="p-5">
-          <div className="mt-2 mb-3 text-sm text-red-600">
-  Suggested Jobs test
-</div>
+        
           {loading ? (
             <div className="text-center py-8">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
