@@ -169,7 +169,7 @@ const result = await analyzeDocumentContent({
 
 
 const payload = result?.data?.data || result?.data || result || {};
-console.log("AI payload:", payload);
+console.log("AI payload FULL:", JSON.stringify(payload, null, 2));
 
 setForm(p => ({
   ...p,
