@@ -449,7 +449,7 @@ useEffect(() => {
       <div className="p-5">
  
 
- {suggestedJobs.length > 0 && (
+{false && suggestedJobs.length > 0 && (
   <div className="mt-2 mb-3">
     <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
     <div className="flex flex-wrap gap-2">
