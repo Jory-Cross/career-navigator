@@ -347,25 +347,6 @@ const fetchAiJobs = async () => {
   return;
 };
 
-  setLoadingJobs(true);
-
-  try {
-    const results = await getJobRecommendations(clientProfile);
-
-    if (Array.isArray(results)) {
-      setAiJobs(results);
-    } else {
-      setAiJobs([]);
-    }
-
-  } catch (err) {
-    console.error("AI job fetch error:", err);
-    setAiJobs([]);
-  }
-
-  setLoadingJobs(false);
-};
-
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
   [recommendationSkills]
