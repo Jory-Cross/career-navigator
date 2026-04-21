@@ -189,12 +189,15 @@ const result = await analyzeDocumentContent({
 
 
 const payload = result?.data?.data || result?.data || result || {};
+    const normalizedTags = Array.isArray(payload.tags)
+  ? payload.tags.map(tag => normalizeSkillTag(tag))
+  : [];
 console.log("AI payload FULL:", JSON.stringify(payload, null, 2));
 
 setForm(p => ({
   ...p,
 category: payload.suggested_category || p.category,
- tags: Array.isArray(payload.tags) ? payload.tags.join(", ") : p.tags
+tags: normalizedTags.length > 0 ? normalizedTags.join(", ") : p.tags
 }));
 
 toast.success("AI tags applied");
