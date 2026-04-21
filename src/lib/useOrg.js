@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { setOrgId } from "@/lib/orgContext";
 let _cachedOrg = null;
 let _cachedOrgId = null;
 let _orgLoadPromise = null;
