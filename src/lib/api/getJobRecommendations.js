@@ -1,16 +1,21 @@
 export async function getJobRecommendations(clientProfile) {
   try {
-    const response = await fetch("/api/get-job-recommendations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ clientProfile }),
+    const result = await analyzeDocumentContent({
+      file_name: "job_recommendation",
+      current_category: "assessment",
+      client_profile: clientProfile
     });
 
-    const data = await response.json();
+    const payload =
+      result?.data?.data ||
+      result?.data ||
+      result ||
+      [];
 
-    return data || [];
+    if (Array.isArray(payload)) return payload;
+
+    return [];
+
   } catch (err) {
     console.error("AI job fetch error:", err);
     return [];
