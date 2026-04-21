@@ -344,9 +344,8 @@ const clientProfile = {
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
 const fetchAiJobs = async () => {
- if (loading || !clientProfile?.skills?.length) {
   return;
-}
+};
 
   setLoadingJobs(true);
 
