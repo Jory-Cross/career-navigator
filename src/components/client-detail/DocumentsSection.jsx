@@ -508,7 +508,21 @@ const suggestedJobs = selectedBatch?.recommendations || [];
   </div>
 )}
   <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
-
+{selectedBatch?.status && (
+  <div className="mb-2">
+    <Badge
+      className={
+        selectedBatch.status === "approved"
+          ? "bg-green-100 text-green-700"
+          : selectedBatch.status === "rejected"
+          ? "bg-red-100 text-red-700"
+          : "bg-yellow-100 text-yellow-700"
+      }
+    >
+      {selectedBatch.status}
+    </Badge>
+  </div>
+)}
 <div className="flex gap-2 mb-2">
   <Button
     size="sm"
