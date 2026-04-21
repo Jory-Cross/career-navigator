@@ -366,6 +366,9 @@ const JOB_PROFILES = [
 const clientProfile = {
   skills: recommendationSkills,
   documentCount: documents.length,
+  resumeDocuments: documents.filter(doc => doc.category === "resume").length,
+  assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
+  generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
   const suggestedJobs = recommendationSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
