@@ -484,6 +484,25 @@ const suggestedJobs = selectedBatch?.recommendations || [];
 
 {suggestedJobs.length > 0 && (
   <div className="mt-2 mb-3">
+    {recommendationHistory.length > 1 && (
+  <div className="mb-2">
+    <Select
+      value={selectedRecommendationId || ""}
+      onValueChange={(value) => setSelectedRecommendationId(value)}
+    >
+      <SelectTrigger className="h-8 text-xs">
+        <SelectValue placeholder="Select recommendation run" />
+      </SelectTrigger>
+      <SelectContent>
+        {recommendationHistory.map((batch) => (
+          <SelectItem key={batch.id} value={batch.id}>
+            {new Date(batch.generated_at).toLocaleString()}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+)}
     <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
     <div className="flex flex-wrap gap-2">
      {suggestedJobs.map((job, index) => (
