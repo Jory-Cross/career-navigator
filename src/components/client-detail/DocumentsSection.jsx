@@ -136,21 +136,7 @@ const loadDocuments = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [clientId, showArchived]);
-  const archived = doc.is_archived === true;
 
-  return showArchived ? archived : !archived;
-});
-    setDocuments(
-      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
-    );
-
-  } catch (error) {
-    toast.error("Failed to load documents");
-  } finally {
-    setLoading(false);
-  }
-}, [clientId, showArchived]);
 
 useEffect(() => {
   loadDocuments();
