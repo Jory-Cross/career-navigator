@@ -381,10 +381,18 @@ useEffect(() => {
 
   if (newSignature === oldSignature) return;
 
-  createRecommendationBatch({
-      });
+ useEffect(() => {
+  if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
 
-}, [aiRecommendationResult, clientId, documents]);
+  const existing = getRecommendationBatchesForClient(clientId);
+  const latest = existing[0];
+
+  const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
+  const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
+
+  if (newSignature === oldSignature) return;
+
+  createRecommendationBatch({
     client_id: clientId,
     source_resume_ids: documents
       .filter(d => d.category === "resume")
@@ -399,6 +407,7 @@ useEffect(() => {
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
   });
+
 }, [aiRecommendationResult, clientId, documents]);
 
 const skillKey = useMemo(
