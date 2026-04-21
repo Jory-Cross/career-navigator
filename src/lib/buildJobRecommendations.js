@@ -17,6 +17,34 @@ function containsAny(text, keywords) {
   return keywords.some((keyword) => lower.includes(safeLower(keyword)));
 }
 
+const RIASEC_TEXT_HINTS = {
+  R: ["hands-on", "manual", "tools", "construction", "mechanical", "warehouse", "cleaning"],
+  I: ["analysis", "research", "data", "problem solving", "troubleshooting", "technical"],
+  A: ["design", "creative", "art", "writing"],
+  S: ["helping", "teaching", "support", "care", "customer service"],
+  E: ["sales", "leadership", "business", "persuasion"],
+  C: ["organization", "data entry", "admin", "structure", "filing", "scheduling"],
+};
+
+function getRiasecTextBoost(profile, combinedText, riasecScores = {}) {
+  const lowerText = safeLower(combinedText);
+  let boost = 0;
+
+  profile.riasec.forEach((code) => {
+    const scoreValue = Number(riasecScores[code] || 0);
+    const hints = RIASEC_TEXT_HINTS[code] || [];
+
+    const matchedHintCount = hints.filter((hint) =>
+      lowerText.includes(safeLower(hint))
+    ).length;
+
+    boost += scoreValue * 5;
+    boost += matchedHintCount * 2;
+  });
+
+  return boost;
+}
+
 const JOB_PROFILES = [
   {
     code: "office_support",
