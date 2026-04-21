@@ -22,7 +22,7 @@ import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-
+import { getJobRecommendations } from "@/lib/ai/getJobRecommendations";
 const categoryColors = {
   resume: "bg-blue-100 text-blue-700",
   cover_letter: "bg-green-100 text-green-700",
