@@ -121,6 +121,31 @@ const recommendationSkills = Array.from(
       .filter(tag => !SKILL_BLACKLIST.includes(tag))
   )
 );
+  function extractRiasecScores(documents) {
+  const scores = {
+    R: 0,
+    I: 0,
+    A: 0,
+    S: 0,
+    E: 0,
+    C: 0,
+  };
+
+  documents
+    .filter(doc => doc.category === "assessment")
+    .forEach(doc => {
+      const text = (doc.ai_summary || doc.notes || "").toLowerCase();
+
+      if (text.includes("realistic")) scores.R += 1;
+      if (text.includes("investigative")) scores.I += 1;
+      if (text.includes("artistic")) scores.A += 1;
+      if (text.includes("social")) scores.S += 1;
+      if (text.includes("enterprising")) scores.E += 1;
+      if (text.includes("conventional")) scores.C += 1;
+    });
+
+  return scores;
+}
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
