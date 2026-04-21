@@ -402,7 +402,7 @@ const fetchAiJobs = async () => {
 
 useEffect(() => {
   fetchAiJobs();
-}, [clientProfile]);
+}, [recommendationSkills.join("|"), documents.length]);
   
  const suggestedJobs = aiJobs || [];
   return (
