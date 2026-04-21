@@ -377,7 +377,7 @@ const clientProfile = {
   assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
-  const aiRecommendationResult = useMemo(() => {
+ const aiRecommendationResult = useMemo(() => {
   const resumeText = documents
     .filter(doc => doc.category === "resume")
     .map(doc => doc.ai_summary || doc.notes || "")
@@ -388,7 +388,13 @@ const clientProfile = {
     .map(doc => doc.ai_summary || doc.notes || "")
     .join(" ");
 
-  riasecScores: {},
+  return buildJobRecommendations({
+    resumeText,
+    wsaText: assessmentText,
+    assessmentText,
+    riasecScores: extractRiasecScores(documents),
+  });
+
 }, [documents]);
 
 
