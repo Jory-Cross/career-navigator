@@ -382,6 +382,9 @@ useEffect(() => {
   if (newSignature === oldSignature) return;
 
   createRecommendationBatch({
+      });
+
+}, [aiRecommendationResult, clientId, documents]);
     client_id: clientId,
     source_resume_ids: documents
       .filter(d => d.category === "resume")
