@@ -404,7 +404,11 @@ useEffect(() => {
 
 }, [clientId]);
   
- const suggestedJobs = aiRecommendationResult?.recommendations || [];
+const selectedBatch = recommendationHistory.find(
+  b => b.id === selectedRecommendationId
+);
+
+const suggestedJobs = selectedBatch?.recommendations || [];
   return (
     <>
       <Card className="border-0 shadow-sm">
