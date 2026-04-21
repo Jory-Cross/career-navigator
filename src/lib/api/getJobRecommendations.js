@@ -1,3 +1,4 @@
+import { analyzeDocumentContent } from "@/lib/api/clientPortalApi";
 export async function getJobRecommendations(clientProfile) {
   try {
     const result = await analyzeDocumentContent({
