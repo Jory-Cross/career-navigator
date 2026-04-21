@@ -24,7 +24,11 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getJobRecommendations } from "@/lib/api/getJobRecommendations";
 import { buildJobRecommendations } from "@/lib/buildJobRecommendations";
-import { createRecommendationBatch, getRecommendationBatchesForClient } from "@/lib/jobRecommendationsService";
+import { 
+  createRecommendationBatch, 
+  getRecommendationBatchesForClient,
+  setRecommendationReview
+} from "@/lib/jobRecommendationsService";
 const categoryColors = {
   resume: "bg-blue-100 text-blue-700",
   cover_letter: "bg-green-100 text-green-700",
