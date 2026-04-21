@@ -435,7 +435,7 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
   });
-
+setRunRecommendations(false);
 }, [aiRecommendationResult, clientId, documents]);
 
 const skillKey = useMemo(
