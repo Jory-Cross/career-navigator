@@ -376,6 +376,21 @@ const clientProfile = {
   assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
+  const fetchAiJobs = async () => {
+  if (!clientProfile?.skills?.length) return;
+
+  setLoadingJobs(true);
+
+  try {
+    const results = await getJobRecommendations(null, clientProfile);
+    setAiJobs(results || []);
+  } catch (err) {
+    console.error("AI job fetch error:", err);
+    setAiJobs([]);
+  }
+
+  setLoadingJobs(false);
+};
   const suggestedJobs = recommendationSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
     let score = 0;
