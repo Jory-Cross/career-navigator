@@ -385,7 +385,7 @@ const clientProfile = {
   setLoadingJobs(true);
 
   try {
-    const results = await getJobRecommendations(null, clientProfile);
+    const results = await getJobRecommendations(clientProfile);
     setAiJobs(results || []);
   } catch (err) {
     console.error("AI job fetch error:", err);
