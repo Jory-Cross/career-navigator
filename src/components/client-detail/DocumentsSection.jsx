@@ -363,7 +363,11 @@ const JOB_PROFILES = [
     keywords: ["driving", "delivery", "navigation", "time management", "customer service"],
   }
 ];
-const suggestedJobs = recommendationSkills.length > 0
+const clientProfile = {
+  skills: recommendationSkills,
+  documentCount: documents.length,
+};
+  const suggestedJobs = recommendationSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
     let score = 0;
 
