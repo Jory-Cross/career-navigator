@@ -44,10 +44,8 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
   const [allUsers, setAllUsers] = React.useState([]);
 
   React.useEffect(() => {
-    base44.entities.User.list().then(users => {
-      setAllUsers(users.filter(u => u.role === 'management' || u.role === 'employee'));
-    }).catch(() => {});
-  }, []);
+  setAllUsers([]);
+}, []);
 
   if (allUsers.length === 0) return null;
 
