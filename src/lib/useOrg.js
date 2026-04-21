@@ -62,6 +62,7 @@ export function useOrg() {
           if (orgs?.[0]) {
             _cachedOrg = orgs[0];
             _cachedOrgId = orgs[0].id;
+            setOrgId(_cachedOrgId);
             _orgResolved = true;
             return { org: _cachedOrg, orgId: _cachedOrgId };
           }
@@ -80,6 +81,7 @@ export function useOrg() {
 
         if (orgs?.[0]) {
           _cachedOrg = orgs[0];
+          setOrgId(_cachedOrgId);
           _cachedOrgId = orgs[0].id;
         }
       } catch (err) {
