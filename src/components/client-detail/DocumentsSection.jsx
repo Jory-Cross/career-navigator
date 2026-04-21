@@ -409,8 +409,9 @@ const clientProfile = {
 }, [documents]);
 
 
- if (!runRecommendations) return;
-if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
+useEffect(() => {
+  if (!runRecommendations) return;
+  if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
 
   const existing = getRecommendationBatchesForClient(clientId);
   const latest = existing[0];
@@ -435,8 +436,10 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
   });
-setRunRecommendations(false);
-}, [aiRecommendationResult, clientId, documents]);
+
+  setRunRecommendations(false);
+
+}, [runRecommendations, aiRecommendationResult, clientId, documents]);
 
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
