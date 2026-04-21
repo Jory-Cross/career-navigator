@@ -392,7 +392,16 @@ const skillKey = useMemo(
   [recommendationSkills]
 );
 useEffect(() => {
-  setAiJobs([]);
+  if (!clientId) return;
+
+  const batches = getRecommendationBatchesForClient(clientId);
+
+  setRecommendationHistory(batches);
+
+  if (batches.length > 0) {
+    setSelectedRecommendationId(batches[0].id);
+  }
+
 }, [clientId]);
   
  const suggestedJobs = aiRecommendationResult?.recommendations || [];
