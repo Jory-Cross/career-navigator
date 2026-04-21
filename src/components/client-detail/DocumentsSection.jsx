@@ -396,7 +396,7 @@ useEffect(() => {
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
   });
-
+}, [aiRecommendationResult, clientId, documents]);
 
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
