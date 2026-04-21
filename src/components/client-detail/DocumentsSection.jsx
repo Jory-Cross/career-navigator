@@ -363,9 +363,14 @@ const fetchAiJobs = async () => {
   setLoadingJobs(false);
 };
 
+const skillKey = useMemo(
+  () => recommendationSkills.join("|"),
+  [recommendationSkills]
+);
+
 useEffect(() => {
   fetchAiJobs();
-}, [recommendationSkills.join("|"), documents.length]);
+}, [skillKey]);
   
  const suggestedJobs = aiJobs || [];
   return (
