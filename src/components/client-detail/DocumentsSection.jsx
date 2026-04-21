@@ -117,9 +117,26 @@ const recommendationSkills = Array.from(
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
+    console.time("LOAD DOCS");
     const docs = await getDocuments(clientId);
+    console.timeEnd("LOAD DOCS");
 
- const visibleDocs = docs.filter((doc) => {
+    const visibleDocs = docs.filter((doc) => {
+      const archived = doc.is_archived === true;
+
+      return showArchived ? archived : !archived;
+    });
+
+    setDocuments(
+      visibleDocs.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    );
+
+  } catch (error) {
+    toast.error("Failed to load documents");
+  } finally {
+    setLoading(false);
+  }
+}, [clientId, showArchived]);
   const archived = doc.is_archived === true;
 
   return showArchived ? archived : !archived;
