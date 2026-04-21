@@ -507,8 +507,51 @@ const suggestedJobs = selectedBatch?.recommendations || [];
     </Select>
   </div>
 )}
-    <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
-    <div className="flex flex-wrap gap-2">
+  <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
+
+<div className="flex gap-2 mb-2">
+  <Button
+    size="sm"
+    className="h-7 text-xs"
+    onClick={() => {
+      if (!selectedRecommendationId) return;
+
+      setRecommendationReview({
+        batchId: selectedRecommendationId,
+        status: "approved",
+        reviewed_by: "staff",
+        staff_notes: staffReviewNotes,
+        approved_recommendation: suggestedJobs,
+      });
+
+      toast.success("Recommendations approved");
+    }}
+  >
+    Approve
+  </Button>
+
+  <Button
+    size="sm"
+    variant="outline"
+    className="h-7 text-xs"
+    onClick={() => {
+      if (!selectedRecommendationId) return;
+
+      setRecommendationReview({
+        batchId: selectedRecommendationId,
+        status: "rejected",
+        reviewed_by: "staff",
+        staff_notes: staffReviewNotes,
+      });
+
+      toast.success("Recommendations rejected");
+    }}
+  >
+    Reject
+  </Button>
+</div>
+
+<div className="flex flex-wrap gap-2">
      {suggestedJobs.map((job, index) => (
   <div
     key={index}
