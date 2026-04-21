@@ -188,7 +188,6 @@ useEffect(() => {
 const result = await analyzeDocumentContent({
   file_name: selectedFile.name,
   current_category: form.category,
-  client_profile: clientProfile
 });
 
 
