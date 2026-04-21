@@ -370,16 +370,7 @@ const clientProfile = {
     riasecScores: {}, // we will wire this later
   });
 }, [documents]);
-useEffect(() => {
-  if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
 
-  const existing = getRecommendationBatchesForClient(clientId);
-  const latest = existing[0];
-
-  const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
-  const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
-
-  if (newSignature === oldSignature) return;
 
  useEffect(() => {
   if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
