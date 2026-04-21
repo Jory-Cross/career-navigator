@@ -338,11 +338,14 @@ keywords.forEach(k => {
 });
 
 const match = Math.round((score / keywords.length) * 100);
+// bonus for total skill count
+const bonus = Math.min(resumeSkills.length * 2, 20);
 
-      return {
-        title,
-        match,
-      };
+const finalMatch = Math.min(match + bonus, 100);
+     return {
+  title,
+  match: finalMatch,
+};
     })
       .filter((job) => job.match > 0)
       .sort((a, b) => b.match - a.match)
