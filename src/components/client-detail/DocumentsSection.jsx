@@ -365,9 +365,7 @@ const clientProfile = {
     riasecScores: {}, // we will wire this later
   });
 }, [documents]);
-const fetchAiJobs = async () => {
-  return;
-};
+
 
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
@@ -377,7 +375,7 @@ useEffect(() => {
   setAiJobs([]);
 }, [clientId]);
   
- const suggestedJobs = aiJobs || [];
+ const suggestedJobs = aiRecommendationResult?.recommendations || [];
   return (
     <>
       <Card className="border-0 shadow-sm">
