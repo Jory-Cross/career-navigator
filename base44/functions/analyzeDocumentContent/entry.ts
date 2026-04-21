@@ -31,13 +31,15 @@ Client Profile:
 ${JSON.stringify(client_profile, null, 2)}
 
 Respond ONLY in JSON:
-[
-  {
-    "title": "",
-    "confidence": 0,
-    "reason": ""
-  }
-]`
+{
+  "jobs": [
+    {
+      "title": "",
+      "confidence": 0,
+      "reason": ""
+    }
+  ]
+}`
   : `Analyze this document based ONLY on the file name and assume it is a typical resume if content is missing.
 
 Provide:
@@ -122,16 +124,23 @@ let parsed;
 try {
   parsed = JSON.parse(content);
 
-  // Ensure tags always exists and is an array
-  if (!Array.isArray(parsed.tags)) {
-    parsed.tags = [];
-  }
+// ✅ If job recommendations, return jobs array
+if (client_profile) {
+  return Response.json(Array.isArray(parsed.jobs) ? parsed.jobs : []);
+}
+
+// ✅ Otherwise, ensure tags exist (document mode)
+if (!Array.isArray(parsed.tags)) {
+  parsed.tags = [];
+}
 
 } catch {
-  parsed = {
-    suggested_category: current_category,
-    tags: [],
-  };
+ parsed = client_profile
+  ? { jobs: [] }
+    : {
+        suggested_category: current_category,
+        tags: [],
+      };
 }
 
 return Response.json(parsed);
