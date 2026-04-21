@@ -224,9 +224,9 @@ toast.success("AI tags applied");
 
 const tags = Array.from(
   new Set(
-    RAW_TAGS.filter(tag =>
-      !SKILL_BLACKLIST.includes(tag.toLowerCase())
-    )
+    RAW_TAGS
+      .map(tag => normalizeSkillTag(tag))
+      .filter(tag => !SKILL_BLACKLIST.includes(tag))
   )
 );
       
