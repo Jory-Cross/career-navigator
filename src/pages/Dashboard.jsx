@@ -64,7 +64,7 @@ export default function Dashboard() {
      if (user.role === "management") {
   return allClients;
 }
-      }
+      
 
       if (user.role === "employee") {
         return allClients.filter((c) => c.assigned_employee_id === user.id);
@@ -72,7 +72,7 @@ export default function Dashboard() {
 
       return [];
     },
-    enabled: !!user && allUsers.length >= 0,
+enabled: !!user,
   });
 
   const clientIds = clients.map((c) => c.id);
