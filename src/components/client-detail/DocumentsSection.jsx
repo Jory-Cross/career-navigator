@@ -134,14 +134,24 @@ const recommendationSkills = Array.from(
   documents
     .filter(doc => doc.category === "assessment")
     .forEach(doc => {
-      const text = (doc.ai_summary || doc.notes || "").toLowerCase();
+      const text = (doc.ai_summary || doc.notes || "");
 
-      if (text.includes("realistic")) scores.R += 1;
-      if (text.includes("investigative")) scores.I += 1;
-      if (text.includes("artistic")) scores.A += 1;
-      if (text.includes("social")) scores.S += 1;
-      if (text.includes("enterprising")) scores.E += 1;
-      if (text.includes("conventional")) scores.C += 1;
+      // Match patterns like "R: 12", "Realistic 12", etc.
+      const patterns = {
+        R: /(?:realistic|R)[^\d]{0,5}(\d+)/i,
+        I: /(?:investigative|I)[^\d]{0,5}(\d+)/i,
+        A: /(?:artistic|A)[^\d]{0,5}(\d+)/i,
+        S: /(?:social|S)[^\d]{0,5}(\d+)/i,
+        E: /(?:enterprising|E)[^\d]{0,5}(\d+)/i,
+        C: /(?:conventional|C)[^\d]{0,5}(\d+)/i,
+      };
+
+      Object.entries(patterns).forEach(([code, regex]) => {
+        const match = text.match(regex);
+        if (match && match[1]) {
+          scores[code] += Number(match[1]);
+        }
+      });
     });
 
   return scores;
