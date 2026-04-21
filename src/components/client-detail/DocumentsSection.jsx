@@ -434,7 +434,7 @@ debugBonus: bonus,
           key={job.title}
           className="text-xs bg-green-50 text-green-700 border border-green-200"
         >
-         {job.title} ({job.match}% | {job.debugScore} | +{job.debugBonus})
+        {job.title} ({job.match}%)
         </Badge>
       ))}
     </div>
