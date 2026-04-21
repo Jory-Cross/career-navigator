@@ -368,7 +368,7 @@ const finalMatch = Math.min(match + bonus, 100);
 
 };
     })
-      .filter((job) => job.match > 0)
+    .filter((job) => job.match >= 30)
       .sort((a, b) => b.match - a.match)
   : [];
   return (
