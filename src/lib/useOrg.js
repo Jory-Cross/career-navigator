@@ -21,16 +21,20 @@ export function useOrg() {
         const user = await base44.auth.me();
         if (!user) return;
         // Check user's own org_id field first (set on registration)
-        if (user.org_id) {
-          const orgs = await base44.entities.Organization.filter({ id: user.org_id });
-          if (orgs[0]) {
-            _cachedOrg = orgs[0];
-            _cachedOrgId = orgs[0].id;
-            setOrg(orgs[0]);
-            setOrgId(orgs[0].id);
-            return;
-          }
-        }
+      if (user.org_id) {
+  try {
+    const orgs = await base44.entities.Organization.filter({ id: user.org_id });
+    if (orgs[0]) {
+      _cachedOrg = orgs[0];
+      _cachedOrgId = orgs[0].id;
+      setOrg(orgs[0]);
+      setOrgId(orgs[0].id);
+      return;
+    }
+  } catch (e) {
+    console.warn("Invalid user.org_id, falling back to owner_email:", user.org_id);
+  }
+}
         // Fallback: find org by owner_email
         const orgs = await base44.entities.Organization.filter({ owner_email: user.email });
         if (orgs[0]) {
