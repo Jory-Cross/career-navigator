@@ -46,11 +46,7 @@ export default function Clients() {
     setTypeFilter(typeParam || "all");
   }, [location.search]);
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
-    enabled: !!user
-  });
+ const allUsers = [];
 
   // Resolve effective perspective: viewAsUser from context (set globally by admin)
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
