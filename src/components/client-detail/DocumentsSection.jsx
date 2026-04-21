@@ -554,6 +554,13 @@ const suggestedJobs = selectedBatch?.recommendations || [];
     </Select>
   </div>
 )}
+    <Button
+  size="sm"
+  className="h-7 text-xs mb-2"
+  onClick={() => setRunRecommendations(true)}
+>
+  Generate Recommendations
+</Button>
   <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
 {selectedBatch?.status && (
   <div className="mb-2">
