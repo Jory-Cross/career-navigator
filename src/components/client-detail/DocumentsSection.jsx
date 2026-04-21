@@ -373,7 +373,31 @@ const clientProfile = {
 useEffect(() => {
   if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
 
+  const existing = getRecommendationBatchesForClient(clientId);
+  const latest = existing[0];
+
+  const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
+  const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
+
+  if (newSignature === oldSignature) return;
+
   createRecommendationBatch({
+    client_id: clientId,
+    source_resume_ids: documents
+      .filter(d => d.category === "resume")
+      .map(d => d.id),
+
+    source_assessment_ids: documents
+      .filter(d => d.category === "assessment")
+      .map(d => d.id),
+
+    riasec_summary: aiRecommendationResult.riasec_summary,
+    wsa_summary: aiRecommendationResult.wsa_summary,
+    combined_profile: aiRecommendationResult.combined_profile,
+    recommendations: aiRecommendationResult.recommendations,
+  });
+
+}, [aiRecommendationResult, clientId, documents]);
     client_id: clientId,
     source_resume_ids: documents
       .filter(d => d.category === "resume")
