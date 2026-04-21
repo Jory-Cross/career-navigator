@@ -339,8 +339,7 @@ const archiveDocument = async (docId) => {
 
 
 const fetchAiJobs = async () => {
-  if (!clientProfile?.skills?.length) {
-  setAiJobs([]);
+ if (loading || !clientProfile?.skills?.length) {
   return;
 }
 
