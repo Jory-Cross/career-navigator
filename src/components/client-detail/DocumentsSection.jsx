@@ -337,7 +337,13 @@ const archiveDocument = async (docId) => {
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
 
-
+const clientProfile = {
+  skills: recommendationSkills,
+  documentCount: documents.length,
+  resumeDocuments: documents.filter(doc => doc.category === "resume").length,
+  assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
+  generatedReports: documents.filter(doc => doc.category === "generated_report").length,
+};
 const fetchAiJobs = async () => {
  if (loading || !clientProfile?.skills?.length) {
   return;
