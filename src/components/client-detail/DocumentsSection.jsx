@@ -375,7 +375,7 @@ const skillKey = useMemo(
 
 useEffect(() => {
   fetchAiJobs();
-}, [skillKey]);
+}, [skillKey, loading]);
   
  const suggestedJobs = aiJobs || [];
   return (
