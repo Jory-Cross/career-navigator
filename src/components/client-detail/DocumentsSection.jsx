@@ -138,6 +138,9 @@ const loadDocuments = useCallback(async () => {
 useEffect(() => {
   loadDocuments();
 }, [loadDocuments, refreshKey]);
+  useEffect(() => {
+  fetchAiJobs();
+}, [clientProfile]);
     const filteredDocs = useMemo(() => {
     let filtered = [...documents];
 
