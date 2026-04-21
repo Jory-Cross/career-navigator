@@ -123,7 +123,6 @@ const loadDocuments = useCallback(async () => {
 
     const visibleDocs = docs.filter((doc) => {
       const archived = doc.is_archived === true;
-
       return showArchived ? archived : !archived;
     });
 
@@ -136,7 +135,7 @@ const loadDocuments = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-
+}, [clientId, showArchived]);
 
 useEffect(() => {
   loadDocuments();
