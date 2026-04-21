@@ -84,10 +84,10 @@ const SKILL_BLACKLIST = [
   "contact information"
 ];
 
-const resumeSkills = Array.from(
+const recommendationSkills = Array.from(
   new Set(
     documents
-      .filter(doc => doc.category === "resume")
+      .filter(doc => ["resume", "assessment"].includes(doc.category))
       .flatMap(doc => [
         ...(doc.tags || []),
         ...(doc.ai_tags || [])
