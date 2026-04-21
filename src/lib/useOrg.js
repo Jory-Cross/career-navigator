@@ -81,8 +81,8 @@ export function useOrg() {
 
         if (orgs?.[0]) {
           _cachedOrg = orgs[0];
-          setOrgId(_cachedOrgId);
           _cachedOrgId = orgs[0].id;
+            setOrgId(_cachedOrgId);
         }
       } catch (err) {
         console.warn("owner_email fallback failed");
@@ -97,7 +97,7 @@ export function useOrg() {
     if (!mounted) return;
 
     setOrg(result.org);
-    setOrgId(result.orgId);
+    setOrgIdState(result.orgId);
     setLoading(false);
 
     _orgLoadPromise = null;
