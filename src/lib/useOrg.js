@@ -19,7 +19,7 @@ function looksLikeRealOrgId(value) {
  */
 export function useOrg() {
   const [org, setOrg] = useState(_cachedOrg);
-  const [orgId, setOrgId] = useState(_cachedOrgId);
+  const [orgId, setOrgIdState] = useState(_cachedOrgId);
   const [loading, setLoading] = useState(!_cachedOrg);
 
  useEffect(() => {
@@ -28,7 +28,7 @@ export function useOrg() {
   async function loadOrg() {
     if (_orgResolved) {
       setOrg(_cachedOrg);
-      setOrgId(_cachedOrgId);
+      setOrgIdState(_cachedOrgId);
       setLoading(false);
       return;
     }
@@ -37,7 +37,7 @@ export function useOrg() {
       const result = await _orgLoadPromise;
       if (!mounted) return;
       setOrg(result.org);
-      setOrgId(result.orgId);
+     setOrgIdState(result.orgId);
       setLoading(false);
       return;
     }
