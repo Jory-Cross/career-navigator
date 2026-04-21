@@ -377,9 +377,7 @@ const clientProfile = {
   assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
-  useEffect(() => {
-  fetchAiJobs();
-}, [clientProfile]);
+
 const fetchAiJobs = async () => {
   if (!clientProfile?.skills?.length) return;
 
@@ -401,6 +399,11 @@ const fetchAiJobs = async () => {
 
   setLoadingJobs(false);
 };
+
+useEffect(() => {
+  fetchAiJobs();
+}, [clientProfile]);
+  
  const suggestedJobs = aiJobs || [];
   return (
     <>
