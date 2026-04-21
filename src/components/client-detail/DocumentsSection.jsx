@@ -380,26 +380,25 @@ const clientProfile = {
   useEffect(() => {
   fetchAiJobs();
 }, [clientProfile]);
- const fetchAiJobs = async () => {
+const fetchAiJobs = async () => {
   if (!clientProfile?.skills?.length) return;
 
   setLoadingJobs(true);
 
-  // TEMP mock (so UI works)
-  const mock = [
-    {
-      title: "Customer Service Representative",
-      confidence: 82,
-      reason: "Strong communication and customer-facing experience detected"
-    },
-    {
-      title: "Office Assistant",
-      confidence: 74,
-      reason: "Administrative and Microsoft Office skills identified"
-    }
-  ];
+  try {
+    const results = await getJobRecommendations(clientProfile);
 
-  setAiJobs(mock);
+    if (Array.isArray(results)) {
+      setAiJobs(results);
+    } else {
+      setAiJobs([]);
+    }
+
+  } catch (err) {
+    console.error("AI job fetch error:", err);
+    setAiJobs([]);
+  }
+
   setLoadingJobs(false);
 };
  const suggestedJobs = aiJobs || [];
