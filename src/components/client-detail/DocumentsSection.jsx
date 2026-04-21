@@ -363,12 +363,7 @@ const clientProfile = {
     .map(doc => doc.ai_summary || doc.notes || "")
     .join(" ");
 
-  return buildJobRecommendations({
-    resumeText,
-    wsaText: assessmentText,
-    assessmentText,
-    riasecScores: {}, // we will wire this later
-  });
+  riasecScores: {},
 }, [documents]);
 
 
