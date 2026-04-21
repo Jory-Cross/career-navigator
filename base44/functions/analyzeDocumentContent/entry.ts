@@ -17,24 +17,34 @@ Deno.serve(async (req) => {
     const current_category = body?.current_category || "other";
     const notes = body?.notes || "";
 
-const prompt = `Analyze this document based ONLY on the file name and assume it is a typical resume if content is missing.
+const prompt = client_profile
+  ? `You are an employment specialist AI.
+
+Based on this client profile, recommend 3–5 job matches.
+
+Return:
+- title
+- confidence (0–100)
+- reason (1 sentence)
+
+Client Profile:
+${JSON.stringify(client_profile, null, 2)}
+
+Respond ONLY in JSON:
+[
+  {
+    "title": "",
+    "confidence": 0,
+    "reason": ""
+  }
+]`
+  : `Analyze this document based ONLY on the file name and assume it is a typical resume if content is missing.
 
 Provide:
 
 1. A suggested category (choose from: resume, cover_letter, assessment, authorization, certification, portfolio, other)
 
 2. Extract real job-related skills. If no readable content is available, infer likely skills based on the document name. Always return at least 5 realistic skills.
-Examples of valid tags:
-- forklift
-- customer service
-- Microsoft Excel
-- welding
-- inventory management
-- cash handling
-- food preparation
-- CNA
-- CPR
-- bilingual Spanish
 
 DO NOT include:
 - resume
@@ -80,7 +90,9 @@ messages: [
 },
 {
   role: "user",
-  content: `${prompt}
+content: client_profile
+  ? prompt
+  : `${prompt}
 
 Document name: ${file_name}
 Current category: ${current_category}
