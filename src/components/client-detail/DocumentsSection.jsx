@@ -83,7 +83,23 @@ const SKILL_BLACKLIST = [
   "employment goals",
   "contact information"
 ];
+const SKILL_NORMALIZATION_MAP = {
+  "customer support": "customer service",
+  "client service": "customer service",
+  "communications": "communication",
+  "microsoft office suite": "microsoft office",
+  "ms office": "microsoft office",
+  "office suite": "microsoft office",
+  "data-entry": "data entry",
+  "typing": "data entry",
+  "time-management": "time management",
+  "team work": "teamwork",
+};
 
+function normalizeSkillTag(tag) {
+  const cleaned = String(tag || "").toLowerCase().trim();
+  return SKILL_NORMALIZATION_MAP[cleaned] || cleaned;
+}
 const recommendationSkills = Array.from(
   new Set(
     documents
