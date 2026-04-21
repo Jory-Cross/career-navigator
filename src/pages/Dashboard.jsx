@@ -294,9 +294,7 @@ export default function Dashboard() {
           <div className="space-y-6">
             <ActiveTimer clients={clients} onTimeSaved={handleRefresh} />
 
-            {widgets.quickLog && (
-              <QuickTimeLog clients={clients} onTimeSaved={handleRefresh} />
-            )}
+          
           </div>
         </div>
       </div>
