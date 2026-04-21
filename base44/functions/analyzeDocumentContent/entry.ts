@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
     console.log("analyzeDocumentContent body:", body);
 
     const file_name = body?.file_name || "";
+    const client_profile = body?.client_profile || null;
     const current_category = body?.current_category || "other";
     const notes = body?.notes || "";
 
