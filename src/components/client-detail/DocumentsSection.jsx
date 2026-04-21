@@ -344,7 +344,9 @@ const bonus = Math.min(resumeSkills.length * 2, 20);
 const finalMatch = Math.min(match + bonus, 100);
      return {
   title,
-  match: finalMatch,
+ match: finalMatch,
+debugScore: score,
+debugBonus: bonus,
 };
     })
       .filter((job) => job.match > 0)
