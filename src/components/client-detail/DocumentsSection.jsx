@@ -327,19 +327,19 @@ const JOB_PROFILES = [
     keywords: ["construction", "labor", "hand tools", "cleanup", "site safety"],
   },
 ];
-const suggestedJobs = resumeSkills.length > 0
+const suggestedJobs = recommendationSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
     let score = 0;
 
 keywords.forEach(k => {
-  if (resumeSkills.some(skill => skill.includes(k))) {
+  if (recommendationSkills.some(skill => skill.includes(k))) {
     score += 1;
   }
 });
 
 const match = Math.round((score / keywords.length) * 100);
 // bonus for total skill count
-const bonus = Math.min(resumeSkills.length * 2, 20);
+const bonus = Math.min(recommendationSkills.length * 2, 20);
 
 const finalMatch = Math.min(match + bonus, 100);
      return {
