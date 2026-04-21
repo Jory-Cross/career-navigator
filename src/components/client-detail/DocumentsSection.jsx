@@ -63,6 +63,8 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [versions, setVersions] = useState([]);
   const [filterTag, setFilterTag] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [aiJobs, setAiJobs] = useState([]);
+const [loadingJobs, setLoadingJobs] = useState(false);
  const allTags = Array.from(
   new Set(
     documents.flatMap(doc => [
