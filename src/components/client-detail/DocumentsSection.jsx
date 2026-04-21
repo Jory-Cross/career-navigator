@@ -336,47 +336,7 @@ const archiveDocument = async (docId) => {
 
   const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-const JOB_PROFILES = [
-  {
-    title: "Warehouse Associate",
-    keywords: ["forklift", "inventory", "warehouse", "shipping", "receiving", "stocking"],
-  },
-  {
-    title: "Customer Service Representative",
-    keywords: ["customer service", "communication", "phone", "support", "cashier"],
-  },
-  {
-    title: "Construction Laborer",
-    keywords: ["construction", "labor", "hand tools", "cleanup", "site safety"],
-  },
-  {
-    title: "Office Assistant",
-    keywords: ["data entry", "microsoft office", "filing", "administrative", "typing"],
-  },
-  {
-    title: "Retail Associate",
-    keywords: ["customer service", "cashier", "sales", "inventory", "stocking"],
-  },
-  {
-    title: "Food Service Worker",
-    keywords: ["food prep", "customer service", "cleaning", "kitchen", "teamwork"],
-  },
-  {
-    title: "Janitorial / Custodian",
-    keywords: ["cleaning", "maintenance", "sanitation", "janitorial", "safety"],
-  },
-  {
-    title: "Delivery Driver",
-    keywords: ["driving", "delivery", "navigation", "time management", "customer service"],
-  }
-];
-const clientProfile = {
-  skills: recommendationSkills,
-  documentCount: documents.length,
-  resumeDocuments: documents.filter(doc => doc.category === "resume").length,
-  assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
-  generatedReports: documents.filter(doc => doc.category === "generated_report").length,
-};
+
 
 const fetchAiJobs = async () => {
   if (!clientProfile?.skills?.length) {
