@@ -394,30 +394,7 @@ const clientProfile = {
 
   setLoadingJobs(false);
 };
-  const suggestedJobs = recommendationSkills.length > 0
-  ? JOB_PROFILES.map(({ title, keywords }) => {
-    let score = 0;
-
-keywords.forEach(k => {
-  if (recommendationSkills.some(skill => skill.includes(k))) {
-    score += 1;
-  }
-});
-
-const match = Math.round((score / keywords.length) * 100);
-// bonus for total skill count
-const bonus = Math.min(recommendationSkills.length * 2, 20);
-
-const finalMatch = Math.min(match + bonus, 100);
-     return {
-  title,
- match: finalMatch,
-
-};
-    })
-    .filter((job) => job.match >= 30)
-      .sort((a, b) => b.match - a.match)
-  : [];
+ const suggestedJobs = aiJobs || [];
   return (
     <>
       <Card className="border-0 shadow-sm">
