@@ -379,19 +379,26 @@ const clientProfile = {
   assessmentDocuments: documents.filter(doc => doc.category === "assessment").length,
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
-  const fetchAiJobs = async () => {
+ const fetchAiJobs = async () => {
   if (!clientProfile?.skills?.length) return;
 
   setLoadingJobs(true);
 
-  try {
-    const results = await getJobRecommendations(clientProfile);
-    setAiJobs(results || []);
-  } catch (err) {
-    console.error("AI job fetch error:", err);
-    setAiJobs([]);
-  }
+  // TEMP mock (so UI works)
+  const mock = [
+    {
+      title: "Customer Service Representative",
+      confidence: 82,
+      reason: "Strong communication and customer-facing experience detected"
+    },
+    {
+      title: "Office Assistant",
+      confidence: 74,
+      reason: "Administrative and Microsoft Office skills identified"
+    }
+  ];
 
+  setAiJobs(mock);
   setLoadingJobs(false);
 };
  const suggestedJobs = aiJobs || [];
