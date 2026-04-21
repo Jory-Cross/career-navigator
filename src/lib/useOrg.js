@@ -10,8 +10,7 @@ function looksLikeRealOrgId(value) {
   return typeof value === "string" && value.length >= 20;
 }
 // Cache org per session to avoid repeated fetches
-let _cachedOrg = null;
-let _cachedOrgId = null;
+
 
 /**
  * Hook that returns the current user's org and org_id.
