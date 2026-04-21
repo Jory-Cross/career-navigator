@@ -379,7 +379,10 @@ const clientProfile = {
 };
 
 const fetchAiJobs = async () => {
-  if (!clientProfile?.skills?.length) return;
+  if (!clientProfile?.skills?.length) {
+  setAiJobs([]);
+  return;
+}
 
   setLoadingJobs(true);
 
