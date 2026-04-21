@@ -61,14 +61,9 @@ export default function Dashboard() {
       if (!user) return [];
       if (user.role === "admin") return allClients;
 
-      if (user.role === "management") {
-        const myEmployeeIds = allUsers
-          .filter((u) => u.manager_id === user.id)
-          .map((u) => u.id);
-
-        return allClients.filter((c) =>
-          myEmployeeIds.includes(c.assigned_employee_id)
-        );
+     if (user.role === "management") {
+  return allClients;
+}
       }
 
       if (user.role === "employee") {
