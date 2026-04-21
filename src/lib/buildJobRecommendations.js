@@ -179,9 +179,12 @@ export function buildJobRecommendations({
       topRiasec.includes(code)
     );
 
-    const score =
-      matchedKeywords.length * 10 +
-      riasecMatches.length * 15;
+    const riasecTextBoost = getRiasecTextBoost(profile, combinedText, riasecScores);
+
+const score =
+  matchedKeywords.length * 10 +
+  riasecMatches.length * 15 +
+  riasecTextBoost;
 
     const reasons = [
       matchedKeywords.length
