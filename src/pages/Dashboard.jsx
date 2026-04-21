@@ -49,11 +49,7 @@ export default function Dashboard() {
     localStorage.setItem("dashboardWidgets", JSON.stringify(updated));
   };
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
-    enabled: !!user,
-  });
+
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients", user?.id, user?.role, orgId],
