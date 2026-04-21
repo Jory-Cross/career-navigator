@@ -459,10 +459,10 @@ useEffect(() => {
     className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-1"
   >
     <div className="font-medium">
-      {job.title} ({job.confidence}%)
+      {job.title} (Score: {job.score})
     </div>
     <div className="text-[10px] text-slate-600">
-      {job.reason}
+      {job.reasoning}
     </div>
   </div>
 ))}
