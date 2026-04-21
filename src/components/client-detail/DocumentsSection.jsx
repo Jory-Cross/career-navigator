@@ -64,9 +64,10 @@ export default function DocumentsSection({ clientId, refreshKey }) {
   const [showVersions, setShowVersions] = useState(null);
   const [versions, setVersions] = useState([]);
   const [filterTag, setFilterTag] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
-  const [aiJobs, setAiJobs] = useState([]);
-const [loadingJobs, setLoadingJobs] = useState(false);
+ const [showArchived, setShowArchived] = useState(false);
+const [recommendationHistory, setRecommendationHistory] = useState([]);
+const [selectedRecommendationId, setSelectedRecommendationId] = useState(null);
+const [staffReviewNotes, setStaffReviewNotes] = useState("");
  const allTags = Array.from(
   new Set(
     documents.flatMap(doc => [
