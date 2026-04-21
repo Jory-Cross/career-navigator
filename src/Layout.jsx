@@ -122,8 +122,7 @@ export default function Layout({ children, currentPageName }) {
     setProfileForm({ phone: user?.phone || "", title: user?.title || "", avatar_url: user?.avatar_url || "", manager_id: user?.manager_id || "", timezone: user?.timezone || "" });
     setShowProfile(true);
     try {
-      const allUsers = await base44.entities.User.list();
-      setManagers(allUsers.filter(u => u.role === 'admin' || u.role === 'management'));
+     setManagers([]);
     } catch {}
   };
 
