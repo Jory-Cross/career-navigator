@@ -108,7 +108,7 @@ const recommendationSkills = Array.from(
         ...(doc.tags || []),
         ...(doc.ai_tags || [])
       ])
-      .map(tag => tag.toLowerCase().trim())
+      .map(tag => normalizeSkillTag(tag))
       .filter(tag => !SKILL_BLACKLIST.includes(tag))
   )
 );
@@ -574,7 +574,7 @@ const finalMatch = Math.min(match + bonus, 100);
    {Array.from(
   new Set(
     [...(doc.tags || []), ...(doc.ai_tags || [])]
-      .map(tag => tag.toLowerCase().trim())
+      .map(tag => normalizeSkillTag(tag))
       .filter((tag) =>
         doc.category === "resume"
           ? !SKILL_BLACKLIST.includes(tag)
