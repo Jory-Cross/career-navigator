@@ -472,14 +472,19 @@ const clientProfile = {
   <div className="mt-2 mb-3">
     <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
     <div className="flex flex-wrap gap-2">
-      {suggestedJobs.map((job) => (
-        <Badge
-          key={job.title}
-          className="text-xs bg-green-50 text-green-700 border border-green-200"
-        >
-        {job.title} ({job.match}%)
-        </Badge>
-      ))}
+     {suggestedJobs.map((job, index) => (
+  <div
+    key={index}
+    className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-1"
+  >
+    <div className="font-medium">
+      {job.title} ({job.confidence}%)
+    </div>
+    <div className="text-[10px] text-slate-600">
+      {job.reason}
+    </div>
+  </div>
+))}
     </div>
   </div>
 )}
