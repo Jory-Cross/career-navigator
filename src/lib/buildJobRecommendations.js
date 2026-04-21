@@ -186,16 +186,19 @@ const score =
   riasecMatches.length * 15 +
   riasecTextBoost;
 
-    const reasons = [
-      matchedKeywords.length
-        ? `Matched skills/terms: ${matchedKeywords.join(", ")}`
-        : null,
-      riasecMatches.length
-        ? `RIASEC alignment: ${riasecMatches.join(", ")}`
-        : null,
-      wsaText ? "Used WSA content in scoring" : null,
-      assessmentText ? "Used assessment content in scoring" : null,
-    ].filter(Boolean);
+   const reasons = [
+  matchedKeywords.length
+    ? `Matched skills/terms: ${matchedKeywords.join(", ")}`
+    : null,
+  riasecMatches.length
+    ? `RIASEC alignment: ${riasecMatches.join(", ")}`
+    : null,
+  riasecTextBoost > 0
+    ? "RIASEC-based work style boost applied"
+    : null,
+  wsaText ? "Used WSA content in scoring" : null,
+  assessmentText ? "Used assessment content in scoring" : null,
+].filter(Boolean);
 
     return {
       code: profile.code,
