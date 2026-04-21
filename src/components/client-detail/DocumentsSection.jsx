@@ -409,8 +409,8 @@ const clientProfile = {
 }, [documents]);
 
 
- useEffect(() => {
-  if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
+ if (!runRecommendations) return;
+if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
 
   const existing = getRecommendationBatchesForClient(clientId);
   const latest = existing[0];
