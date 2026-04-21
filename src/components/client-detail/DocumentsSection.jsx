@@ -371,10 +371,9 @@ const skillKey = useMemo(
   () => recommendationSkills.join("|"),
   [recommendationSkills]
 );
-
 useEffect(() => {
-  fetchAiJobs();
-}, [skillKey, loading]);
+  setAiJobs([]);
+}, [clientId]);
   
  const suggestedJobs = aiJobs || [];
   return (
