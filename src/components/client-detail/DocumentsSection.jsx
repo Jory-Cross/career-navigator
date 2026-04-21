@@ -326,6 +326,26 @@ const JOB_PROFILES = [
     title: "Construction Laborer",
     keywords: ["construction", "labor", "hand tools", "cleanup", "site safety"],
   },
+  {
+    title: "Office Assistant",
+    keywords: ["data entry", "microsoft office", "filing", "administrative", "typing"],
+  },
+  {
+    title: "Retail Associate",
+    keywords: ["customer service", "cashier", "sales", "inventory", "stocking"],
+  },
+  {
+    title: "Food Service Worker",
+    keywords: ["food prep", "customer service", "cleaning", "kitchen", "teamwork"],
+  },
+  {
+    title: "Janitorial / Custodian",
+    keywords: ["cleaning", "maintenance", "sanitation", "janitorial", "safety"],
+  },
+  {
+    title: "Delivery Driver",
+    keywords: ["driving", "delivery", "navigation", "time management", "customer service"],
+  }
 ];
 const suggestedJobs = recommendationSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
