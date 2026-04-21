@@ -329,7 +329,9 @@ const JOB_PROFILES = [
 ];
 const suggestedJobs = resumeSkills.length > 0
   ? JOB_PROFILES.map(({ title, keywords }) => {
-      const matches = keywords.filter(k => resumeSkills.includes(k)).length;
+    const matches = keywords.filter(k =>
+  resumeSkills.some(skill => skill.includes(k))
+).length;
       const match = Math.round((matches / keywords.length) * 100);
 
       return {
