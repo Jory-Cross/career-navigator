@@ -422,24 +422,23 @@ useEffect(() => {
 
   if (newSignature === oldSignature) return;
 
-  createRecommendationBatch({
-    refreshRecommendationHistory();
-    client_id: clientId,
-    source_resume_ids: documents
-      .filter(d => d.category === "resume")
-      .map(d => d.id),
+ createRecommendationBatch({
+  client_id: clientId,
+  source_resume_ids: documents
+    .filter(d => d.category === "resume")
+    .map(d => d.id),
 
-    source_assessment_ids: documents
-      .filter(d => d.category === "assessment")
-      .map(d => d.id),
+  source_assessment_ids: documents
+    .filter(d => d.category === "assessment")
+    .map(d => d.id),
 
-    riasec_summary: aiRecommendationResult.riasec_summary,
-    wsa_summary: aiRecommendationResult.wsa_summary,
-    combined_profile: aiRecommendationResult.combined_profile,
-    recommendations: aiRecommendationResult.recommendations,
-  });
+  riasec_summary: aiRecommendationResult.riasec_summary,
+  wsa_summary: aiRecommendationResult.wsa_summary,
+  combined_profile: aiRecommendationResult.combined_profile,
+  recommendations: aiRecommendationResult.recommendations,
+});
 
-  setRunRecommendations(false);
+refreshRecommendationHistory();
 
 }, [runRecommendations, aiRecommendationResult, clientId, documents]);
 
