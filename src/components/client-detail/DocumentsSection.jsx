@@ -406,24 +406,38 @@ const clientProfile = {
   generatedReports: documents.filter(doc => doc.category === "generated_report").length,
 };
  const aiRecommendationResult = useMemo(() => {
-  const resumeText = documents
-    .filter(doc => doc.category === "resume")
-    .map(doc => doc.ai_summary || doc.notes || "")
-    .join(" ");
+  const includeResume = activeRecommendationSources.includes("resume");
+  const includeWSA = activeRecommendationSources.includes("wsa");
+  const includeRiasec = activeRecommendationSources.includes("riasec");
+  const includeOther = activeRecommendationSources.includes("other_assessments");
 
-  const assessmentText = documents
-    .filter(doc => doc.category === "assessment")
-    .map(doc => doc.ai_summary || doc.notes || "")
-    .join(" ");
+  const resumeText = includeResume
+    ? documents
+        .filter(doc => doc.category === "resume")
+        .map(doc => doc.ai_summary || doc.notes || "")
+        .join(" ")
+    : "";
+
+  const assessmentDocs = documents.filter(doc => doc.category === "assessment");
+
+  const assessmentText = (includeWSA || includeOther)
+    ? assessmentDocs
+        .map(doc => doc.ai_summary || doc.notes || "")
+        .join(" ")
+    : "";
+
+  const riasecScores = includeRiasec
+    ? extractRiasecScores(documents)
+    : { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
 
   return buildJobRecommendations({
     resumeText,
-    wsaText: assessmentText,
-    assessmentText,
-    riasecScores: extractRiasecScores(documents),
+    wsaText: includeWSA ? assessmentText : "",
+    assessmentText: includeOther ? assessmentText : "",
+    riasecScores,
   });
 
-}, [documents]);
+}, [documents, activeRecommendationSources]);
 
 const refreshRecommendationHistory = useCallback(() => {
   if (!clientId) return;
