@@ -595,19 +595,20 @@ const suggestedJobs = selectedBatch?.recommendations || [];
   <Button
     size="sm"
     className="h-7 text-xs"
-    onClick={() => {
-      if (!selectedRecommendationId) return;
+   onClick={() => {
+  if (!selectedRecommendationId) return;
 
-      setRecommendationReview({
-        batchId: selectedRecommendationId,
-        status: "approved",
-        reviewed_by: "staff",
-        staff_notes: staffReviewNotes,
-        approved_recommendation: suggestedJobs,
-      });
+  setRecommendationReview({
+    batchId: selectedRecommendationId,
+    status: "approved",
+    reviewed_by: "staff",
+    staff_notes: staffReviewNotes,
+    approved_recommendation: suggestedJobs,
+  });
 
-      toast.success("Recommendations approved");
-    }}
+  refreshRecommendationHistory();
+  toast.success("Recommendations approved");
+}}
   >
     Approve
   </Button>
