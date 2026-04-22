@@ -802,7 +802,7 @@ const jobDiff = suggestedJobs.map(job => {
 )}
 
 <div className="flex flex-wrap gap-2">
-     {suggestedJobs.map((job, index) => (
+    {jobDiff.map((job, index) => (
   <div
     key={index}
     className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-1"
