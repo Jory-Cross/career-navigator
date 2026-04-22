@@ -595,6 +595,29 @@ const suggestedJobs = selectedBatch?.recommendations || [];
 >
   Generate Recommendations
 </Button>
+  <div className="flex flex-wrap gap-2 mb-2">
+  {RECOMMENDATION_SOURCE_OPTIONS.map((source) => {
+    const isActive = activeRecommendationSources.includes(source.key);
+
+    return (
+      <Button
+        key={source.key}
+        size="sm"
+        variant={isActive ? "default" : "outline"}
+        className="h-6 text-xs px-2"
+        onClick={() => {
+          setActiveRecommendationSources((prev) =>
+            prev.includes(source.key)
+              ? prev.filter((s) => s !== source.key)
+              : [...prev, source.key]
+          );
+        }}
+      >
+        {source.label}
+      </Button>
+    );
+  })}
+</div>
   <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
 {selectedBatch?.status && (
   <div className="mb-2">
