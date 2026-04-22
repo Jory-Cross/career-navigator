@@ -559,6 +559,14 @@ const suggestedJobs = selectedBatch?.recommendations || [];
 )}
     <Button
   size="sm"
+  variant="outline"
+  className="h-7 text-xs mb-2"
+  onClick={() => setShowRecommendationReport(true)}
+>
+  View Full Report
+</Button>
+    <Button
+  size="sm"
   className="h-7 text-xs mb-2"
   onClick={() => setRunRecommendations(true)}
 >
