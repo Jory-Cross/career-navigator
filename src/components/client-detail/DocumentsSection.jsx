@@ -423,6 +423,7 @@ useEffect(() => {
   if (newSignature === oldSignature) return;
 
   createRecommendationBatch({
+    refreshRecommendationHistory();
     client_id: clientId,
     source_resume_ids: documents
       .filter(d => d.category === "resume")
