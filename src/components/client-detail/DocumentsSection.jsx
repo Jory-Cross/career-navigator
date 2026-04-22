@@ -484,10 +484,23 @@ createRecommendationBatch({
     ? documents.filter(d => d.category === "resume").map(d => d.id)
     : [],
 
-  source_assessment_ids: activeRecommendationSources.includes("wsa") ||
-    activeRecommendationSources.includes("other_assessments")
-    ? documents.filter(d => d.category === "assessment").map(d => d.id)
-    : [],
+  source_wsa_ids: activeRecommendationSources.includes("wsa")
+  ? documents
+      .filter(d =>
+        d.category === "assessment" &&
+        (d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+      )
+      .map(d => d.id)
+  : [],
+
+source_other_assessment_ids: activeRecommendationSources.includes("other_assessments")
+  ? documents
+      .filter(d =>
+        d.category === "assessment" &&
+        !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+      )
+      .map(d => d.id)
+  : [],
 
   riasec_summary: aiRecommendationResult.riasec_summary,
   wsa_summary: aiRecommendationResult.wsa_summary,
