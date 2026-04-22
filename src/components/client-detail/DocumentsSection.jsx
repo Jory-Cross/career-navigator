@@ -554,11 +554,11 @@ const suggestedJobs = selectedBatch?.recommendations || [];
         <SelectValue placeholder="Select recommendation run" />
       </SelectTrigger>
       <SelectContent>
-        {recommendationHistory.map((batch) => (
-          <SelectItem key={batch.id} value={batch.id}>
-            {new Date(batch.generated_at).toLocaleString()}
-          </SelectItem>
-        )}
+       {recommendationHistory.map((batch) => (
+  <SelectItem key={batch.id} value={batch.id}>
+    {new Date(batch.generated_at).toLocaleString()}
+  </SelectItem>
+))}
       </SelectContent>
     </Select>
   </div>
