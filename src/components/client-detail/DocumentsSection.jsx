@@ -617,18 +617,19 @@ const suggestedJobs = selectedBatch?.recommendations || [];
     size="sm"
     variant="outline"
     className="h-7 text-xs"
-    onClick={() => {
-      if (!selectedRecommendationId) return;
+   onClick={() => {
+  if (!selectedRecommendationId) return;
 
-      setRecommendationReview({
-        batchId: selectedRecommendationId,
-        status: "rejected",
-        reviewed_by: "staff",
-        staff_notes: staffReviewNotes,
-      });
+  setRecommendationReview({
+    batchId: selectedRecommendationId,
+    status: "rejected",
+    reviewed_by: "staff",
+    staff_notes: staffReviewNotes,
+  });
 
-      toast.success("Recommendations rejected");
-    }}
+  refreshRecommendationHistory();
+  toast.success("Recommendations rejected");
+}}
   >
     Reject
   </Button>
