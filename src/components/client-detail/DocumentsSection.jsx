@@ -636,7 +636,19 @@ const suggestedJobs = selectedBatch?.recommendations || [];
     );
   })}
 </div>
-  <p className="text-xs text-slate-500 mb-1">Suggested Jobs</p>
+<div className="mb-1">
+  <p className="text-xs text-slate-500">Suggested Jobs</p>
+
+  {selectedBatch?.active_sources?.length > 0 && (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {selectedBatch.active_sources.map((src) => (
+        <Badge key={src} variant="outline" className="text-[10px]">
+          {src.replace("_", " ")}
+        </Badge>
+      ))}
+    </div>
+  )}
+</div>
 {selectedBatch?.status && (
   <div className="mb-2">
     <Badge
