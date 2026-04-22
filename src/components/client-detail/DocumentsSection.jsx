@@ -481,7 +481,11 @@ const hasOther = activeRecommendationSources.includes("other_assessments") &&
     !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
   );
 
-const hasRiasec = activeRecommendationSources.includes("riasec");
+const hasRiasec = activeRecommendationSources.includes("riasec") &&
+  documents.some(d =>
+    d.category === "assessment" &&
+    (d.ai_summary || d.notes || "").toLowerCase().match(/realistic|investigative|artistic|social|enterprising|conventional/)
+  );
 
 if (!hasResume && !hasWSA && !hasOther && !hasRiasec) {
   toast.error("No valid data sources selected");
