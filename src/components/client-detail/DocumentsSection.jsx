@@ -783,6 +783,16 @@ const previousBatch = recommendationHistory.find(
   </Button>
 </div>
 
+{previousBatch && (
+  <div className="mb-2 text-[11px] text-slate-500">
+    Source change from previous run:
+    {" "}
+    {previousBatch.active_sources?.join(", ") || "none"}
+    {" → "}
+    {selectedBatch?.active_sources?.join(", ") || "none"}
+  </div>
+)}
+
 <div className="flex flex-wrap gap-2">
      {suggestedJobs.map((job, index) => (
   <div
