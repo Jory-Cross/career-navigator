@@ -664,11 +664,31 @@ const suggestedJobs = selectedBatch?.recommendations || [];
 
   {selectedBatch?.active_sources?.length > 0 && (
     <div className="flex flex-wrap gap-1 mt-1">
-      {selectedBatch.active_sources.map((src) => (
-        <Badge key={src} variant="outline" className="text-[10px]">
-          {src.replace("_", " ")}
-        </Badge>
-      ))}
+     {selectedBatch.active_sources.map((src) => {
+  let count = 0;
+
+  if (src === "resume") {
+    count = selectedBatch.source_resume_ids?.length || 0;
+  }
+
+  if (src === "wsa") {
+    count = selectedBatch.source_wsa_ids?.length || 0;
+  }
+
+  if (src === "other_assessments") {
+    count = selectedBatch.source_other_assessment_ids?.length || 0;
+  }
+
+  if (src === "riasec") {
+    count = "calc";
+  }
+
+  return (
+    <Badge key={src} variant="outline" className="text-[10px]">
+      {src.replace("_", " ")} ({count})
+    </Badge>
+  );
+})}
     </div>
   )}
 </div>
