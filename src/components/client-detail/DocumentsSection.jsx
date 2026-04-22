@@ -73,6 +73,7 @@ const [recommendationHistory, setRecommendationHistory] = useState([]);
 const [selectedRecommendationId, setSelectedRecommendationId] = useState(null);
 const [staffReviewNotes, setStaffReviewNotes] = useState("");
   const [runRecommendations, setRunRecommendations] = useState(false);
+  const [showRecommendationReport, setShowRecommendationReport] = useState(false);
  const allTags = Array.from(
   new Set(
     documents.flatMap(doc => [
