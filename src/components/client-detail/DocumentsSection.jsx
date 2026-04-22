@@ -964,7 +964,63 @@ key={tag}
             ))}
           </div>
         </DialogContent>
-      </Dialog>
-      </>
+     </Dialog>
+
+<Dialog open={showRecommendationReport} onOpenChange={setShowRecommendationReport}>
+  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Job Recommendation Report</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4 text-sm">
+      
+      <div>
+        <strong>RIASEC Summary:</strong>
+        <p className="text-slate-600">{selectedBatch?.riasec_summary || "N/A"}</p>
+      </div>
+
+      <div>
+        <strong>WSA Summary:</strong>
+        <p className="text-slate-600">{selectedBatch?.wsa_summary || "N/A"}</p>
+      </div>
+
+      <div>
+        <strong>Recommendations:</strong>
+        <div className="space-y-3 mt-2">
+          {suggestedJobs.map((job, i) => (
+            <div key={i} className="border p-3 rounded">
+              <div className="font-medium">
+                {job.title} (Score: {job.score})
+              </div>
+
+              <div className="text-xs text-slate-600 mt-1">
+                {job.reasoning}
+              </div>
+
+              {job.matched_keywords?.length > 0 && (
+                <div className="text-xs mt-1">
+                  <strong>Matched Skills:</strong> {job.matched_keywords.join(", ")}
+                </div>
+              )}
+
+              {job.riasec_matches?.length > 0 && (
+                <div className="text-xs mt-1">
+                  <strong>RIASEC Match:</strong> {job.riasec_matches.join(", ")}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+
+    <DialogFooter>
+      <Button onClick={() => setShowRecommendationReport(false)}>Close</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+</>
       );
       }
