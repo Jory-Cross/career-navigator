@@ -409,7 +409,20 @@ const clientProfile = {
 
 }, [documents]);
 
+const refreshRecommendationHistory = useCallback(() => {
+  if (!clientId) return;
 
+  const batches = getRecommendationBatchesForClient(clientId);
+
+  // 🔥 FORCE NEW ARRAY (this is the fix)
+  const cloned = batches.map(b => ({ ...b }));
+
+  setRecommendationHistory(cloned);
+
+  if (cloned.length > 0) {
+ setSelectedRecommendationId(cloned[0].id);
+  }
+}, [clientId]);
 useEffect(() => {
   if (!runRecommendations) return;
   if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
@@ -447,20 +460,7 @@ const skillKey = useMemo(
   () => recommendationSkills.join("|"),
   [recommendationSkills]
 );
-const refreshRecommendationHistory = useCallback(() => {
-  if (!clientId) return;
 
-  const batches = getRecommendationBatchesForClient(clientId);
-
-  // 🔥 FORCE NEW ARRAY (this is the fix)
-  const cloned = batches.map(b => ({ ...b }));
-
-  setRecommendationHistory(cloned);
-
-  if (cloned.length > 0) {
- setSelectedRecommendationId(cloned[0].id);
-  }
-}, [clientId]);
 
 useEffect(() => {
   refreshRecommendationHistory();
