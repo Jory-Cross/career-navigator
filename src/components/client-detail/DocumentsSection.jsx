@@ -808,7 +808,12 @@ const jobDiff = suggestedJobs.map(job => {
     className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-1"
   >
     <div className="font-medium">
-      {job.title} (Score: {job.score})
+   {job.title} (Score: {job.score})
+{previousBatch && (
+  <span className="ml-1 text-[10px] text-slate-500">
+    ({job.scoreChange >= 0 ? "+" : ""}{job.scoreChange})
+  </span>
+)}
     </div>
     <div className="text-[10px] text-slate-600">
       {job.reasoning}
