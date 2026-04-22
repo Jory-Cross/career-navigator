@@ -652,9 +652,8 @@ const suggestedJobs = selectedBatch?.recommendations || [];
     </div>
   </div>
 ))}
-    </div>
+       </div>
   </div>
-)}
           {loading ? (
             <div className="text-center py-8">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
