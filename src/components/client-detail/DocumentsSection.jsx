@@ -467,13 +467,17 @@ useEffect(() => {
 
 createRecommendationBatch({
   client_id: clientId,
-  source_resume_ids: documents
-    .filter(d => d.category === "resume")
-    .map(d => d.id),
 
-  source_assessment_ids: documents
-    .filter(d => d.category === "assessment")
-    .map(d => d.id),
+  active_sources: activeRecommendationSources,
+
+  source_resume_ids: activeRecommendationSources.includes("resume")
+    ? documents.filter(d => d.category === "resume").map(d => d.id)
+    : [],
+
+  source_assessment_ids: activeRecommendationSources.includes("wsa") ||
+    activeRecommendationSources.includes("other_assessments")
+    ? documents.filter(d => d.category === "assessment").map(d => d.id)
+    : [],
 
   riasec_summary: aiRecommendationResult.riasec_summary,
   wsa_summary: aiRecommendationResult.wsa_summary,
