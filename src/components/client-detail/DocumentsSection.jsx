@@ -556,6 +556,10 @@ const selectedBatch = recommendationHistory.find(
 );
 
 const suggestedJobs = selectedBatch?.recommendations || [];
+
+const previousBatch = recommendationHistory.find(
+  (b, i) => recommendationHistory[i + 1]?.id === selectedRecommendationId
+);
   return (
     <>
       <Card className="border-0 shadow-sm">
