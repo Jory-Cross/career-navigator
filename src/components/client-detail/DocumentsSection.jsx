@@ -557,6 +557,22 @@ const selectedBatch = recommendationHistory.find(
 
 const suggestedJobs = selectedBatch?.recommendations || [];
 
+const previousBatch = recommendationHistory.find(
+  (b, i) => recommendationHistory[i + 1]?.id === selectedRecommendationId
+);
+
+const previousJobs = previousBatch?.recommendations || [];
+
+const jobDiff = suggestedJobs.map(job => {
+  const prev = previousJobs.find(p => p.title === job.title);
+
+  return {
+    ...job,
+    previousScore: prev?.score || 0,
+    scoreChange: prev ? job.score - prev.score : job.score,
+  };
+});
+
 const previousJobs = previousBatch?.recommendations || [];
 
 const jobDiff = suggestedJobs.map(job => {
