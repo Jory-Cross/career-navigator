@@ -537,8 +537,7 @@ const suggestedJobs = selectedBatch?.recommendations || [];
       <div className="p-5">
  
 
-{suggestedJobs.length > 0 && (
-  <div className="mt-2 mb-3">
+<div className="mt-2 mb-3">
     {recommendationHistory.length > 1 && (
   <div className="mb-2">
     <Select
