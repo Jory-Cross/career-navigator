@@ -458,7 +458,7 @@ const refreshRecommendationHistory = useCallback(() => {
   setRecommendationHistory(cloned);
 
   if (cloned.length > 0) {
-    setSelectedRecommendationId((current) => current || cloned[0].id);
+ setSelectedRecommendationId(cloned[0].id);
   }
 }, [clientId]);
 
