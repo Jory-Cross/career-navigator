@@ -441,7 +441,7 @@ createRecommendationBatch({
 refreshRecommendationHistory();
 setRunRecommendations(false);
 
-}, [runRecommendations, aiRecommendationResult, clientId, documents]);
+}, [runRecommendations, aiRecommendationResult, clientId, documents, refreshRecommendationHistory]);
 
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
