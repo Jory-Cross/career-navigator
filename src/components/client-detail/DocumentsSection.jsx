@@ -573,17 +573,7 @@ const jobDiff = suggestedJobs.map(job => {
   };
 });
 
-const previousJobs = previousBatch?.recommendations || [];
 
-const jobDiff = suggestedJobs.map(job => {
-  const prev = previousJobs.find(p => p.title === job.title);
-
-  return {
-    ...job,
-    previousScore: prev?.score || 0,
-    scoreChange: prev ? job.score - prev.score : job.score,
-  };
-});
   return (
     <>
       <Card className="border-0 shadow-sm">
