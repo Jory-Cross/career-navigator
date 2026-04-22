@@ -440,12 +440,12 @@ const otherAssessmentText = includeOther
     ? extractRiasecScores(documents)
     : { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
 
-  return buildJobRecommendations({
-    resumeText,
-    wsaText: includeWSA ? assessmentText : "",
-    assessmentText: includeOther ? assessmentText : "",
-    riasecScores,
-  });
+ return buildJobRecommendations({
+  resumeText,
+  wsaText,
+  assessmentText: otherAssessmentText,
+  riasecScores,
+});
 
 }, [documents, activeRecommendationSources]);
 
