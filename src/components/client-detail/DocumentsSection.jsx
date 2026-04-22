@@ -418,13 +418,23 @@ const clientProfile = {
         .join(" ")
     : "";
 
-  const assessmentDocs = documents.filter(doc => doc.category === "assessment");
+ const wsaDocs = documents.filter(doc =>
+  doc.category === "assessment" &&
+  (doc.document_subtype === "wsa" || doc.title?.toLowerCase().includes("wsa"))
+);
 
-  const assessmentText = (includeWSA || includeOther)
-    ? assessmentDocs
-        .map(doc => doc.ai_summary || doc.notes || "")
-        .join(" ")
-    : "";
+const otherAssessmentDocs = documents.filter(doc =>
+  doc.category === "assessment" &&
+  !(doc.document_subtype === "wsa" || doc.title?.toLowerCase().includes("wsa"))
+);
+
+const wsaText = includeWSA
+  ? wsaDocs.map(doc => doc.ai_summary || doc.notes || "").join(" ")
+  : "";
+
+const otherAssessmentText = includeOther
+  ? otherAssessmentDocs.map(doc => doc.ai_summary || doc.notes || "").join(" ")
+  : "";
 
   const riasecScores = includeRiasec
     ? extractRiasecScores(documents)
