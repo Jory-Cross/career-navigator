@@ -446,7 +446,7 @@ const skillKey = useMemo(
   () => recommendationSkills.join("|"),
   [recommendationSkills]
 );
-useEffect(() => {
+const refreshRecommendationHistory = useCallback(() => {
   if (!clientId) return;
 
   const batches = getRecommendationBatchesForClient(clientId);
@@ -454,10 +454,13 @@ useEffect(() => {
   setRecommendationHistory(batches);
 
   if (batches.length > 0) {
-    setSelectedRecommendationId(batches[0].id);
+    setSelectedRecommendationId((current) => current || batches[0].id);
   }
-
 }, [clientId]);
+
+useEffect(() => {
+  refreshRecommendationHistory();
+}, [refreshRecommendationHistory]);
   
 const selectedBatch = recommendationHistory.find(
   b => b.id === selectedRecommendationId
