@@ -552,7 +552,7 @@ const suggestedJobs = selectedBatch?.recommendations || [];
           <SelectItem key={batch.id} value={batch.id}>
             {new Date(batch.generated_at).toLocaleString()}
           </SelectItem>
-        ))}
+        )}
       </SelectContent>
     </Select>
   </div>
