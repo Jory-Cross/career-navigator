@@ -422,7 +422,7 @@ useEffect(() => {
 
   if (newSignature === oldSignature) return;
 
- createRecommendationBatch({
+createRecommendationBatch({
   client_id: clientId,
   source_resume_ids: documents
     .filter(d => d.category === "resume")
@@ -439,6 +439,7 @@ useEffect(() => {
 });
 
 refreshRecommendationHistory();
+setRunRecommendations(false);
 
 }, [runRecommendations, aiRecommendationResult, clientId, documents]);
 
