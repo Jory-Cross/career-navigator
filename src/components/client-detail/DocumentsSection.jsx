@@ -451,10 +451,13 @@ const refreshRecommendationHistory = useCallback(() => {
 
   const batches = getRecommendationBatchesForClient(clientId);
 
-  setRecommendationHistory(batches);
+  // 🔥 FORCE NEW ARRAY (this is the fix)
+  const cloned = batches.map(b => ({ ...b }));
 
-  if (batches.length > 0) {
-    setSelectedRecommendationId((current) => current || batches[0].id);
+  setRecommendationHistory(cloned);
+
+  if (cloned.length > 0) {
+    setSelectedRecommendationId((current) => current || cloned[0].id);
   }
 }, [clientId]);
 
