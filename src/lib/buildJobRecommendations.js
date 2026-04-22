@@ -151,6 +151,85 @@ const JOB_PROFILES = [
     ],
     riasec: ["I", "C"],
   },
+  {
+  code: "retail",
+  title: "Retail Associate",
+  keywords: [
+    "retail",
+    "sales",
+    "cashier",
+    "customer service",
+    "store",
+    "inventory",
+    "merchandising"
+  ],
+  riasec: ["S", "E"]
+},
+{
+  code: "security",
+  title: "Security Guard",
+  keywords: [
+    "security",
+    "monitoring",
+    "patrol",
+    "safety",
+    "incident",
+    "reporting"
+  ],
+  riasec: ["R", "C"]
+},
+{
+  code: "delivery",
+  title: "Delivery Driver",
+  keywords: [
+    "delivery",
+    "driving",
+    "transport",
+    "route",
+    "packages",
+    "logistics"
+  ],
+  riasec: ["R"]
+},
+{
+  code: "landscaping",
+  title: "Landscaping / Groundskeeping",
+  keywords: [
+    "landscaping",
+    "groundskeeping",
+    "outdoor",
+    "yard",
+    "maintenance",
+    "gardening"
+  ],
+  riasec: ["R"]
+},
+{
+  code: "healthcare_support",
+  title: "Healthcare Support",
+  keywords: [
+    "healthcare",
+    "caregiving",
+    "patients",
+    "support",
+    "medical",
+    "assistant"
+  ],
+  riasec: ["S"]
+},
+{
+  code: "manufacturing",
+  title: "Manufacturing / Production",
+  keywords: [
+    "manufacturing",
+    "production",
+    "assembly",
+    "machine",
+    "factory",
+    "operations"
+  ],
+  riasec: ["R", "C"]
+}
 ];
 
 function getTopRiasecCodes(riasecScores = {}) {
