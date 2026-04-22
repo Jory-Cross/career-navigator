@@ -48,7 +48,19 @@ const filterOptions = [
   { value: "resume", label: "Resumes" },
   { value: "other", label: "Other Uploads" }
 ];
+const RECOMMENDATION_SOURCE_OPTIONS = [
+  { key: "resume", label: "Resume" },
+  { key: "wsa", label: "WSA" },
+  { key: "riasec", label: "RIASEC" },
+  { key: "other_assessments", label: "Other Assessments" },
+];
 
+const DEFAULT_RECOMMENDATION_SOURCES = [
+  "resume",
+  "wsa",
+  "riasec",
+  "other_assessments",
+];
 export default function DocumentsSection({ clientId, refreshKey }) {
     const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
