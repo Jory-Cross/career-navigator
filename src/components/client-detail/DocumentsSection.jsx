@@ -464,8 +464,36 @@ const refreshRecommendationHistory = useCallback(() => {
   }
 }, [clientId]);
 useEffect(() => {
-  if (!runRecommendations) return;
-  if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) return;
+ if (!runRecommendations) return;
+
+const hasResume = activeRecommendationSources.includes("resume") &&
+  documents.some(d => d.category === "resume");
+
+const hasWSA = activeRecommendationSources.includes("wsa") &&
+  documents.some(d =>
+    d.category === "assessment" &&
+    (d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+  );
+
+const hasOther = activeRecommendationSources.includes("other_assessments") &&
+  documents.some(d =>
+    d.category === "assessment" &&
+    !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+  );
+
+const hasRiasec = activeRecommendationSources.includes("riasec");
+
+if (!hasResume && !hasWSA && !hasOther && !hasRiasec) {
+  toast.error("No valid data sources selected");
+  setRunRecommendations(false);
+  return;
+}
+
+if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) {
+  toast.error("No recommendations generated");
+  setRunRecommendations(false);
+  return;
+}
 
   const existing = getRecommendationBatchesForClient(clientId);
   const latest = existing[0];
