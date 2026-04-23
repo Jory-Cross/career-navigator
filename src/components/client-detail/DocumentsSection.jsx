@@ -656,13 +656,14 @@ const jobDiff = suggestedJobs.map(job => {
 <div className="mt-2 mb-3">
  <div className="mb-4">
   <Dialog>
-    <DialogTrigger asChild>
-      <Button size="sm" variant="outline" className="h-8 text-xs">
-        Take Interest Profiler
-      </Button>
-    </DialogTrigger>
+   <Dialog open={showInterestProfiler} onOpenChange={setShowInterestProfiler}>
+  <DialogTrigger asChild>
+    <Button size="sm" variant="outline" className="h-8 text-xs">
+      Take Interest Profiler
+    </Button>
+  </DialogTrigger>
 
-    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>O*NET Interest Profiler</DialogTitle>
       </DialogHeader>
