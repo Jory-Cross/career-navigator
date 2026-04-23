@@ -1,65 +1,32 @@
-const ONET_BASE_URL = "https://services.onetcenter.org/ws/";
+import { base44 } from "@/api/base44Client";
 
-const ONET_USERNAME = "test";
-const ONET_PASSWORD = "test";
+/**
+ * O*NET Adapter
+ * All external calls must go through backend functions
+ */
 
-function getAuthHeader() {
-  return "Basic " + btoa(`${ONET_USERNAME}:${ONET_PASSWORD}`);
-}
-
-export async function getOnetRecommendations({
-  interests = null,
-  profile = null,
-}) {
+export async function searchOnetCareers({ query, limit = 10 }) {
   try {
-    const query = profile?.skills?.[0] || "general";
+    const res = await base44.functions.invoke("searchOnetCareers", {
+      query,
+      limit,
+    });
 
-    console.log("O*NET QUERY:", query);
-
-    const res = await fetch(
-      `${ONET_BASE_URL}online/search?keyword=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          Authorization: getAuthHeader(),
-        },
-      }
-    );
-
-    const data = await res.json();
-
-    console.log("O*NET RAW RESPONSE:", data);
-
-    const careers = (data?.occupation || []).slice(0, 10).map((job) => ({
-      title: job.title,
-      code: job.code,
-      description: job.description,
-      score: Math.floor(Math.random() * 40) + 60,
-    }));
-
-    console.log("O*NET CAREERS:", careers);
+    if (!res || res.error) {
+      throw new Error(res?.error || "O*NET function failed");
+    }
 
     return {
       source: "onet",
-      careers,
-      summary: "Top matches based on current profile and O*NET data.",
+      items: Array.isArray(res.items) ? res.items : [],
     };
-  } catch (err) {
-    console.error("O*NET fetch failed:", err);
+  } catch (error) {
+    console.error("searchOnetCareers adapter error:", error);
 
+    // fallback — DO NOT REMOVE (keeps system functional if API fails)
     return {
-      source: "onet",
-      careers: [],
-      summary: "",
+      source: "fallback",
+      items: [],
     };
   }
-}
-
-export function mapOnetCareersToRecommendations(careers = []) {
-  return careers.map((career) => ({
-    title: career.title || "Unknown",
-    score: career.score || 0,
-    reasoning: career.description || "",
-    matched_keywords: [],
-    source: "onet",
-  }));
 }
