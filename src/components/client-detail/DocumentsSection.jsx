@@ -522,13 +522,11 @@ const otherAssessmentText = includeOther
   : "";
 
 
-(async () => {
-  const jobCoachText = await generateJobCoachResponse({
-    resumeText,
-    wsaText,
-    riasecScores,
-    recommendations: aiRecommendationResult.recommendations,
-  });
+const jobCoachText = await generateJobCoachResponse({
+  resumeText,
+  wsaText,
+  recommendations: aiRecommendationResult.recommendations,
+});
 
   console.log("JOB COACH TEXT:", jobCoachText);
 
