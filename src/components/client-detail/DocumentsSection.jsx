@@ -1264,6 +1264,8 @@ key={tag}
   </div>
 </div>
 
+      </div>
+    
     <DialogFooter>
       <Button onClick={() => setShowRecommendationReport(false)}>Close</Button>
     </DialogFooter>
