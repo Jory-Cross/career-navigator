@@ -141,41 +141,7 @@ const recommendationSkills = Array.from(
       .filter(tag => !SKILL_BLACKLIST.includes(tag))
   )
 );
-  function extractRiasecScores(documents) {
-  const scores = {
-    R: 0,
-    I: 0,
-    A: 0,
-    S: 0,
-    E: 0,
-    C: 0,
-  };
-
-  documents
-    .filter(doc => doc.category === "assessment")
-    .forEach(doc => {
-      const text = (doc.ai_summary || doc.notes || "");
-
-      // Match patterns like "R: 12", "Realistic 12", etc.
-      const patterns = {
-        R: /(?:realistic|R)[^\d]{0,5}(\d+)/i,
-        I: /(?:investigative|I)[^\d]{0,5}(\d+)/i,
-        A: /(?:artistic|A)[^\d]{0,5}(\d+)/i,
-        S: /(?:social|S)[^\d]{0,5}(\d+)/i,
-        E: /(?:enterprising|E)[^\d]{0,5}(\d+)/i,
-        C: /(?:conventional|C)[^\d]{0,5}(\d+)/i,
-      };
-
-      Object.entries(patterns).forEach(([code, regex]) => {
-        const match = text.match(regex);
-        if (match && match[1]) {
-          scores[code] += Number(match[1]);
-        }
-      });
-    });
-
-  return scores;
-}
+ 
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
