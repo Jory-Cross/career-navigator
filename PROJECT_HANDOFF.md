@@ -1,13 +1,13 @@
-# Career Navigator — Project Handoff
+# Career Navigator — Project Handoff (UPDATED)
 
 ## Core Product Direction
 
 - This is a **Career Intelligence Platform**, not a basic job matcher
 - The system combines:
-  - O*NET data
-  - Client assessments
+  - O*NET data (primary source of truth)
+  - Client assessments (WSA, ADL, barriers, etc.)
   - Resume data
-  - AI reasoning
+  - AI reasoning (Job Coach)
 
 ---
 
@@ -22,35 +22,15 @@
 
 ---
 
-## Architecture Rules
+## Critical Architecture Decision (NEW)
 
-- Use **adapter pattern** for all external integrations
-- Never couple UI directly to external APIs
-- All external services must go through:
-  - `/src/lib/adapters/`
+### ❗ O*NET CANNOT be called from frontend
 
-Current adapters:
-- `onetAdapter.js`
-- `recommendationAdapter.js`
+- Browser blocks O*NET requests due to CORS + Authorization header
+- This is expected and correct behavior
 
----
+### ✅ Required pattern
 
-## Security Rules (Future)
-
-- O*NET credentials MUST move to backend (server-side)
-- Never expose credentials in frontend long-term
-- Current hardcoded credentials are TEMPORARY for Base44 testing
-
----
-
-## Assessment Strategy
-
-The system will support multiple assessments:
-
-- O*NET Interest Profiler (primary)
-- Picture Profiler (existing tool)
-- WSA
-- Other assessments (ADL, communication, barriers, etc.)
 
 All assessments feed into a **unified client profile**
 
