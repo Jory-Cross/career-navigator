@@ -52,10 +52,8 @@ const filterOptions = [
 const RECOMMENDATION_SOURCE_OPTIONS = [
   { key: "resume", label: "Resume" },
   { key: "wsa", label: "WSA" },
-  { key: "riasec", label: "RIASEC" },
   { key: "other_assessments", label: "Other Assessments" },
 ];
-
 const DEFAULT_RECOMMENDATION_SOURCES = [
   "resume",
   "wsa",
