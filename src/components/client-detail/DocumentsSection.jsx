@@ -543,8 +543,7 @@ const jobCoachText = await generateJobCoachResponse({
           )
           .map(d => d.id)
       : [],
-
-    riasec_summary: aiRecommendationResult.riasec_summary,
+    
     wsa_summary: aiRecommendationResult.wsa_summary,
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
