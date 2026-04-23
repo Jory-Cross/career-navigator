@@ -482,41 +482,52 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
 
   if (newSignature === oldSignature) return;
 
-createRecommendationBatch({
-  client_id: clientId,
+(async () => {
+  const jobCoachText = await generateJobCoachResponse({
+    resumeText,
+    wsaText,
+    riasecScores,
+    recommendations: aiRecommendationResult.recommendations,
+  });
 
-  active_sources: activeRecommendationSources,
+  createRecommendationBatch({
+    client_id: clientId,
 
-  source_resume_ids: activeRecommendationSources.includes("resume")
-    ? documents.filter(d => d.category === "resume").map(d => d.id)
-    : [],
+    active_sources: activeRecommendationSources,
 
-  source_wsa_ids: activeRecommendationSources.includes("wsa")
-  ? documents
-      .filter(d =>
-        d.category === "assessment" &&
-        (d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
-      )
-      .map(d => d.id)
-  : [],
+    source_resume_ids: activeRecommendationSources.includes("resume")
+      ? documents.filter(d => d.category === "resume").map(d => d.id)
+      : [],
 
-source_other_assessment_ids: activeRecommendationSources.includes("other_assessments")
-  ? documents
-      .filter(d =>
-        d.category === "assessment" &&
-        !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
-      )
-      .map(d => d.id)
-  : [],
+    source_wsa_ids: activeRecommendationSources.includes("wsa")
+      ? documents
+          .filter(d =>
+            d.category === "assessment" &&
+            (d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+          )
+          .map(d => d.id)
+      : [],
 
-  riasec_summary: aiRecommendationResult.riasec_summary,
-  wsa_summary: aiRecommendationResult.wsa_summary,
-  combined_profile: aiRecommendationResult.combined_profile,
-  recommendations: aiRecommendationResult.recommendations,
-});
+    source_other_assessment_ids: activeRecommendationSources.includes("other_assessments")
+      ? documents
+          .filter(d =>
+            d.category === "assessment" &&
+            !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
+          )
+          .map(d => d.id)
+      : [],
 
-refreshRecommendationHistory();
-setRunRecommendations(false);
+    riasec_summary: aiRecommendationResult.riasec_summary,
+    wsa_summary: aiRecommendationResult.wsa_summary,
+    combined_profile: aiRecommendationResult.combined_profile,
+    recommendations: aiRecommendationResult.recommendations,
+
+    ai_coach_summary: jobCoachText,
+  });
+
+  refreshRecommendationHistory();
+  setRunRecommendations(false);
+})();
 
 }, [runRecommendations, aiRecommendationResult, clientId, documents, refreshRecommendationHistory]);
 
