@@ -428,17 +428,21 @@ if (includeRiasec && riasecDoc?.notes) {
 }, [documents, activeRecommendationSources]);
 
 const refreshRecommendationHistory = useCallback(() => {
-  if (!clientId) return;
+  if (!clientId) {
+    setRecommendationHistory([]);
+    setSelectedRecommendationId(null);
+    return;
+  }
 
   const batches = getRecommendationBatchesForClient(clientId);
-
-  // 🔥 FORCE NEW ARRAY (this is the fix)
-  const cloned = batches.map(b => ({ ...b }));
+  const cloned = batches.map((b) => ({ ...b }));
 
   setRecommendationHistory(cloned);
 
   if (cloned.length > 0) {
- setSelectedRecommendationId(cloned[0].id);
+    setSelectedRecommendationId(cloned[0].id);
+  } else {
+    setSelectedRecommendationId(null);
   }
 }, [clientId]);
 useEffect(() => {
