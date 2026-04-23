@@ -127,3 +127,73 @@ All assessments feed into a **unified client profile**
 ## Recommendation System
 
 Current flow:
+
+## FUTURE FEATURE — Vocational Themes + Community Job Mapping
+
+### Objective
+Expand career intelligence beyond job titles by identifying **vocational themes** and mapping those themes to **real businesses in the client’s community**.
+
+---
+
+### Vocational Themes (Layer Above Jobs)
+
+**Definition:**
+Broad clusters of work interests derived from:
+- Resume skills (AI tags)
+- WSA results
+- O*NET data
+- Other assessments
+
+**Examples:**
+- Healthcare Support
+- Skilled Trades
+- Office / Administrative
+- Food Service
+- Retail / Customer Service
+- Transportation / Logistics
+- Technology / IT Support
+
+**Key Rules:**
+- NOT dependent on RIASEC
+- Derived from **combined_profile**
+- Multiple themes per client allowed
+- Themes are **directional**, not final recommendations
+
+---
+
+### Community Job Mapping
+
+**Definition:**
+Map vocational themes → real local businesses (NOT job postings)
+
+**Purpose:**
+- Show clients **where they could work locally**
+- Support job development and placement
+- Enable provider-driven outreach
+
+---
+
+### Data Model (Planned)
+
+#### Entity: `VocationalTheme`
+```json
+{
+  "name": "Healthcare Support",
+  "keywords": ["caregiver", "CNA", "medical", "patient", "support"],
+  "onet_codes": [],
+  "description": ""
+}
+
+{
+  "name": "Cache Valley Hospital",
+  "industry": "Healthcare",
+  "address": "",
+  "city": "",
+  "state": "",
+  "zip": "",
+  "phone": "",
+  "website": "",
+  "notes": "",
+  "tags": ["healthcare", "medical"],
+  "vocational_themes": ["Healthcare Support"]
+}
