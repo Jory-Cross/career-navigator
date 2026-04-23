@@ -4,25 +4,13 @@ export async function generateJobCoachResponse({
   riasecScores = {},
   recommendations = [],
 }) {
-  try {
-    const response = await fetch("/api/job-coach", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        resumeText,
-        wsaText,
-        riasecScores,
-        recommendations,
-      }),
-    });
+  return `
+Based on your assessments, here are recommended job fields:
 
-    const data = await response.json();
+${recommendations
+  .map((job) => `- ${job.title}: ${job.reasoning}`)
+  .join("\n")}
 
-    return data?.text || "No AI response generated.";
-  } catch (error) {
-    console.error("AI Job Coach error:", error);
-    return "Failed to generate AI job coach summary.";
-  }
+This recommendation is based on your RIASEC profile and assessment data.
+`;
 }
