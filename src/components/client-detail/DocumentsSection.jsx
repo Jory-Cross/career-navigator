@@ -474,13 +474,16 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
   return;
 }
 
-  const existing = getRecommendationBatchesForClient(clientId);
+    const existing = getRecommendationBatchesForClient(clientId);
   const latest = existing[0];
 
   const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
   const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
 
-  if (newSignature === oldSignature) return;
+  if (newSignature === oldSignature && latest?.ai_coach_summary) {
+    setRunRecommendations(false);
+    return;
+  }
 const includeResume = activeRecommendationSources.includes("resume");
 const includeWSA = activeRecommendationSources.includes("wsa");
 const includeRiasec = activeRecommendationSources.includes("riasec");
