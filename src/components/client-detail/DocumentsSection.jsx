@@ -1178,8 +1178,10 @@ key={tag}
     <div className="space-y-4 text-sm">
       
       <div>
-        <strong>RIASEC Summary:</strong>
-        <p className="text-slate-600">{selectedBatch?.riasec_summary || "N/A"}</p>
+       <strong>Assessment Summary:</strong>
+<p className="text-slate-600">
+  {selectedBatch?.combined_profile || "N/A"}
+</p>
       </div>
 
       <div>
