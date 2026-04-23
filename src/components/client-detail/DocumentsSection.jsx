@@ -1177,10 +1177,19 @@ key={tag}
     <div className="space-y-4 text-sm">
       
       <div>
-       <strong>Assessment Summary:</strong>
-<p className="text-slate-600">
-  {selectedBatch?.combined_profile || "N/A"}
-</p>
+       <div>
+  <strong>O*NET Summary:</strong>
+  <p className="text-slate-600">
+    {selectedBatch?.onet_summary || "No O*NET data available."}
+  </p>
+</div>
+
+<div>
+  <strong>Assessment Summary:</strong>
+  <p className="text-slate-600">
+    {selectedBatch?.combined_profile || "N/A"}
+  </p>
+</div>
       </div>
 
       <div>
