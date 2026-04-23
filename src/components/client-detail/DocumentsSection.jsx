@@ -509,11 +509,12 @@ const otherAssessmentText = includeOther
   : "";
 
 
-const jobCoachText = await generateJobCoachResponse({
-  resumeText,
-  wsaText,
-  recommendations: aiRecommendationResult.recommendations,
-});
+(async () => {
+  const jobCoachText = await generateJobCoachResponse({
+    resumeText,
+    wsaText,
+    recommendations: aiRecommendationResult.recommendations,
+  });
 
   console.log("JOB COACH TEXT:", jobCoachText);
 
@@ -543,11 +544,11 @@ const jobCoachText = await generateJobCoachResponse({
           )
           .map(d => d.id)
       : [],
-    
+
     wsa_summary: aiRecommendationResult.wsa_summary,
     combined_profile: aiRecommendationResult.combined_profile,
     recommendations: aiRecommendationResult.recommendations,
-onet_summary: aiRecommendationResult.onet_summary,
+    onet_summary: aiRecommendationResult.onet_summary,
     ai_coach_summary: jobCoachText,
   });
 
