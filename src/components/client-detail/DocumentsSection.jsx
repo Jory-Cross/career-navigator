@@ -1223,11 +1223,11 @@ key={tag}
           </div>
         )}
 
-        {job.riasec_matches?.length > 0 && (
-          <div className="text-xs mt-1">
-            <strong>RIASEC Match:</strong> {job.riasec_matches.join(", ")}
-          </div>
-        )}
+        {job.source === "onet" && (
+  <div className="text-xs mt-1 text-slate-500">
+    Source: O*NET
+  </div>
+)}
       </div>
     ))}
   </div>
