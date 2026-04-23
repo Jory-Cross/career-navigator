@@ -383,7 +383,6 @@ useEffect(() => {
   async function run() {
     const includeResume = activeRecommendationSources.includes("resume");
     const includeWSA = activeRecommendationSources.includes("wsa");
-    const includeRiasec = activeRecommendationSources.includes("riasec");
     const includeOther = activeRecommendationSources.includes("other_assessments");
 
     const resumeText = includeResume
@@ -499,7 +498,6 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
   }
 const includeResume = activeRecommendationSources.includes("resume");
 const includeWSA = activeRecommendationSources.includes("wsa");
-const includeRiasec = activeRecommendationSources.includes("riasec");
 const includeOther = activeRecommendationSources.includes("other_assessments");
 
 const resumeText = includeResume
