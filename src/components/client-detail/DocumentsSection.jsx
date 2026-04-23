@@ -470,10 +470,7 @@ const hasOther = activeRecommendationSources.includes("other_assessments") &&
     !(d.document_subtype === "wsa" || d.title?.toLowerCase().includes("wsa"))
   );
 
-const hasRiasec = activeRecommendationSources.includes("riasec") &&
-  documents.some(d => d.document_subtype === "interest_profiler");
-
-if (!hasResume && !hasWSA && !hasOther && !hasRiasec) {
+if (!hasResume && !hasWSA && !hasOther)
   toast.error("No valid data sources selected");
   setRunRecommendations(false);
   return;
