@@ -525,18 +525,7 @@ const otherAssessmentText = includeOther
   ? otherAssessmentDocs.map(doc => doc.ai_summary || doc.notes || "").join(" ")
   : "";
 
-const riasecDoc = documents.find(d => d.document_subtype === "interest_profiler");
 
-let riasecScores = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-
-if (includeRiasec && riasecDoc?.notes) {
-  try {
-    const parsed = JSON.parse(riasecDoc.notes);
-    riasecScores = parsed?.scores || riasecScores;
-  } catch (e) {
-    console.error("Failed to parse RIASEC data", e);
-  }
-}
 (async () => {
   const jobCoachText = await generateJobCoachResponse({
     resumeText,
