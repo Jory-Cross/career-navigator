@@ -570,7 +570,14 @@ if (includeRiasec && riasecDoc?.notes) {
   setRunRecommendations(false);
 })();
 
-}, [runRecommendations, aiRecommendationResult, clientId, documents, refreshRecommendationHistory]);
+}, [
+  runRecommendations,
+  aiRecommendationResult,
+  clientId,
+  documents,
+  refreshRecommendationHistory,
+  activeRecommendationSources
+]);
 
 const skillKey = useMemo(
   () => recommendationSkills.join("|"),
