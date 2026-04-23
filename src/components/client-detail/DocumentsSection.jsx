@@ -667,11 +667,14 @@ const jobDiff = suggestedJobs.map(job => {
         <DialogTitle>O*NET Interest Profiler</DialogTitle>
       </DialogHeader>
 
-     <InterestProfilerPanel
+    <InterestProfilerPanel
   clientId={clientId}
   onSaved={() => {
     loadDocuments();
     setShowInterestProfiler(false);
+
+    // trigger fresh recommendation run
+    setRunRecommendations(true);
   }}
 />
     </DialogContent>
