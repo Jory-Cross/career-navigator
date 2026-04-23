@@ -356,7 +356,10 @@ const archiveDocument = async (docId) => {
     await deleteClientDocument(docId);
 
    await loadDocuments();
-
+// CLEAR RECOMMENDATIONS WHEN DATA CHANGES
+setRecommendationHistory([]);
+setSelectedRecommendationId(null);
+    
     toast.success("Document deleted");
   } catch (error) {
     console.error("DELETE BUTTON ERROR", error);
