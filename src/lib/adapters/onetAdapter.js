@@ -1,7 +1,7 @@
 const ONET_BASE_URL = "https://services.onetcenter.org/ws/";
 
-const ONET_USERNAME = import.meta.env.VITE_ONET_USERNAME;
-const ONET_PASSWORD = import.meta.env.VITE_ONET_PASSWORD;
+const ONET_USERNAME = "test";
+const ONET_PASSWORD = "test";
 
 function getAuthHeader() {
   return "Basic " + btoa(`${ONET_USERNAME}:${ONET_PASSWORD}`);
