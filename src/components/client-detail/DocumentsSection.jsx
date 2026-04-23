@@ -313,6 +313,10 @@ setDocuments((prev) => {
   return updated;
 });
 
+// CLEAR RECOMMENDATIONS AFTER NEW DATA
+setRecommendationHistory([]);
+setSelectedRecommendationId(null);
+      
       toast.success("Document uploaded");
       setShowUpload(false);
       setForm({
