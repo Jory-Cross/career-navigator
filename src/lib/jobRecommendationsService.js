@@ -20,10 +20,10 @@ export function createRecommendationBatch({
   source_wsa_ids = [],
   source_other_assessment_ids = [],
   source_assessment_ids = [],
-  riasec_summary = "",
   wsa_summary = "",
   combined_profile = "",
   recommendations = [],
+  onet_summary = "",
   ai_coach_summary = "",
   staff_notes = "",
 }) {
