@@ -534,6 +534,8 @@ if (includeRiasec && riasecDoc?.notes) {
     recommendations: aiRecommendationResult.recommendations,
   });
 
+  console.log("JOB COACH TEXT:", jobCoachText);
+
   createRecommendationBatch({
     client_id: clientId,
 
