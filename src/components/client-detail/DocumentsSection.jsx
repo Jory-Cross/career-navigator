@@ -592,7 +592,7 @@ useEffect(() => {
 const selectedBatch = recommendationHistory.find(
   b => b.id === selectedRecommendationId
 );
-
+console.log("SELECTED BATCH:", selectedBatch);
 const suggestedJobs = selectedBatch?.recommendations || [];
 
 const previousBatch = recommendationHistory.find(
