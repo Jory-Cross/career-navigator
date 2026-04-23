@@ -17,6 +17,7 @@ export async function getOnetRecommendations({
 
     const res = await fetch(
       `${ONET_BASE_URL}online/search?keyword=${encodeURIComponent(query)}`,
+      console.log("O*NET QUERY:", query);
       {
         headers: {
           Authorization: getAuthHeader(),
@@ -26,6 +27,8 @@ export async function getOnetRecommendations({
 
     const data = await res.json();
 
+    console.log("O*NET RAW RESPONSE:", data);
+    
     const careers = (data?.occupation || []).slice(0, 10).map((job) => ({
       title: job.title,
       code: job.code,
@@ -33,11 +36,13 @@ export async function getOnetRecommendations({
       score: Math.floor(Math.random() * 40) + 60, // TEMP scoring
     }));
 
-    return {
-      source: "onet",
-      careers,
-      summary: `Top matches based on current profile and O*NET data.`,
-    };
+    console.log("O*NET CAREERS:", careers);
+
+return {
+  source: "onet",
+  careers,
+  summary: `Top matches based on current profile and O*NET data.`,
+};
 
   } catch (err) {
     console.error("O*NET fetch failed:", err);
