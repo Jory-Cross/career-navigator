@@ -653,6 +653,14 @@ const jobDiff = suggestedJobs.map(job => {
  
 
 <div className="mt-2 mb-3">
+  <div className="mb-4">
+  <InterestProfilerPanel
+    clientId={clientId}
+    onSaved={() => {
+      loadDocuments();
+    }}
+  />
+</div>
     {recommendationHistory.length > 1 && (
   <div className="mb-2">
     <Select
