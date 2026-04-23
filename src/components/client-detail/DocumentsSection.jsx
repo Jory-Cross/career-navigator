@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getJobRecommendations } from "@/lib/api/getJobRecommendations";
 import { getRecommendations } from "@/lib/adapters/recommendationAdapter";
-import InterestProfilerPanel from "@/components/assessments/InterestProfilerPanel";
 import { 
   createRecommendationBatch, 
   getRecommendationBatchesForClient,
