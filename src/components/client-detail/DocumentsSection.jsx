@@ -752,10 +752,6 @@ const jobDiff = suggestedJobs.map(job => {
     count = selectedBatch.source_other_assessment_ids?.length || 0;
   }
 
-  if (src === "riasec") {
-    count = "calc";
-  }
-
   return (
     <Badge key={src} variant="outline" className="text-[10px]">
       {src.replace("_", " ")} ({count})
