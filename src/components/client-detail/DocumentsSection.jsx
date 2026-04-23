@@ -424,11 +424,10 @@ useEffect(() => {
     }
 
     const result = await getRecommendations({
-      resumeText,
-      wsaText,
-      assessmentText: otherAssessmentText,
-      riasecScores,
-    });
+  resumeText,
+  wsaText,
+  assessmentText: otherAssessmentText,
+});
 
     setAiRecommendationResult(result);
   }
