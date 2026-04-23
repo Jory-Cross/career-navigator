@@ -57,7 +57,6 @@ const RECOMMENDATION_SOURCE_OPTIONS = [
 const DEFAULT_RECOMMENDATION_SOURCES = [
   "resume",
   "wsa",
-  "riasec",
   "other_assessments",
 ];
 export default function DocumentsSection({ clientId, refreshKey }) {
