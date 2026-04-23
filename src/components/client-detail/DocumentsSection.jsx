@@ -426,7 +426,7 @@ if (includeRiasec && riasecDoc?.notes) {
   }
 }
 
- return buildJobRecommendations({
+return getRecommendations({
   resumeText,
   wsaText,
   assessmentText: otherAssessmentText,
