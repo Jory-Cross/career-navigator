@@ -655,8 +655,7 @@ const jobDiff = suggestedJobs.map(job => {
 
 <div className="mt-2 mb-3">
  <div className="mb-4">
-  <Dialog>
-   <Dialog open={showInterestProfiler} onOpenChange={setShowInterestProfiler}>
+ <Dialog open={showInterestProfiler} onOpenChange={setShowInterestProfiler}>
   <DialogTrigger asChild>
     <Button size="sm" variant="outline" className="h-8 text-xs">
       Take Interest Profiler
