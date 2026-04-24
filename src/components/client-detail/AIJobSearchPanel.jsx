@@ -678,6 +678,22 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
           )}
 
           {/* Search results */}
+
+          {recommendationBatch?.recommendations?.length > 0 && (
+  <Card className="p-4">
+    <h4 className="text-sm font-semibold mb-2">AI Job Coach Recommendations</h4>
+
+    <div className="space-y-2">
+      {recommendationBatch.recommendations.map((rec, i) => (
+        <div key={i} className="border rounded p-2">
+          <div className="font-medium">{rec.title}</div>
+          <div className="text-xs text-slate-500">{rec.onet_code}</div>
+        </div>
+      ))}
+    </div>
+  </Card>
+)}
+          
           {jobs.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">
