@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Plus, Download, Loader2, Pencil, Upload, Trash2 } from "lucide-react";
 import RiasecRecommendations from "./RiasecRecommendations";
-import AssessmentRecommendations from "./AssessmentRecommendations";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 
