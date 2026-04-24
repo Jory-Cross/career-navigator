@@ -530,9 +530,8 @@ useEffect(() => {
   forceRegenerate: true,
 });
 
-      const latest = await loadLatestRecommendationBatch(clientId);
-      setRecommendationBatch(latest);
-
+     const latest = await loadLatestRecommendationBatch(resolvedClientId);
+setRecommendationBatch(latest);
       toast.success("Recommendations generated");
     } catch (err) {
       console.error(err);
