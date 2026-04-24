@@ -488,41 +488,78 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            AI Job Search Assistant
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5 ml-9">
-            Grounded recommendations for {client?.first_name} · Citations included
-          </p>
-        </div>
-        <div className="flex gap-1.5 flex-wrap justify-end">
-          <Button size="sm" variant={activeTab === 'facts' ? 'default' : 'outline'}
-            className="h-8 text-xs" onClick={() => setActiveTab('facts')}>
-            <FileText className="w-3.5 h-3.5 mr-1" /> Facts
-            {vfpConflicts > 0 && (
-              <span className="ml-1 bg-amber-500 text-white rounded-full px-1.5 text-[9px]">{vfpConflicts}</span>
-            )}
-          </Button>
-          <Button size="sm" variant={activeTab === 'search' ? 'default' : 'outline'}
-            className="h-8 text-xs" onClick={() => setActiveTab('search')}>
-            <Search className="w-3.5 h-3.5 mr-1" /> Search
-          </Button>
-          <Button size="sm" variant={activeTab === 'saved' ? 'default' : 'outline'}
-            className="h-8 text-xs" onClick={() => setActiveTab('saved')}>
-            <History className="w-3.5 h-3.5 mr-1" /> Saved
-            {savedRecs.length > 0 && (
-              <span className="ml-1 bg-white/20 rounded-full px-1.5 text-[10px]">{savedRecs.length}</span>
-            )}
-            {reviewNeeded > 0 && (
-              <span className="ml-1 bg-amber-400 text-white rounded-full px-1.5 text-[9px]">{reviewNeeded}</span>
-            )}
-          </Button>
-        </div>
+  <div>
+    <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center">
+        <Sparkles className="w-4 h-4 text-white" />
       </div>
+      AI Job Search Assistant
+    </h3>
+    <p className="text-xs text-slate-500 mt-0.5 ml-9">
+      Resume data, WSA data, other assessments, and O*NET recommendations
+    </p>
+  </div>
+
+  <div className="flex gap-2 flex-wrap justify-end">
+    <Button
+      size="sm"
+      className="h-8 text-xs"
+      onClick={async () => {
+        try {
+          const { runRecommendationEngine } = await import(
+            "@/lib/recommendations/runRecommendationEngine"
+          );
+
+          const docs = await base44.entities.Document.filter({ client_id: clientId });
+          const assessments = base44.entities.Assessment?.filter
+            ? await base44.entities.Assessment.filter({ client_id: clientId })
+            : [];
+
+          await runRecommendationEngine({
+            client,
+            documents: docs,
+            assessments,
+            forceRegenerate: true,
+          });
+
+          toast.success("Recommendations generated");
+        } catch (err) {
+          console.error(err);
+          toast.error("Failed to generate recommendations");
+        }
+      }}
+    >
+      Generate Recommendations
+    </Button>
+
+    <Button
+      size="sm"
+      variant={activeTab === 'facts' ? 'default' : 'outline'}
+      className="h-8 text-xs"
+      onClick={() => setActiveTab('facts')}
+    >
+      <FileText className="w-3.5 h-3.5 mr-1" /> Facts
+    </Button>
+
+    <Button
+      size="sm"
+      variant={activeTab === 'search' ? 'default' : 'outline'}
+      className="h-8 text-xs"
+      onClick={() => setActiveTab('search')}
+    >
+      <Search className="w-3.5 h-3.5 mr-1" /> Search
+    </Button>
+
+    <Button
+      size="sm"
+      variant={activeTab === 'saved' ? 'default' : 'outline'}
+      className="h-8 text-xs"
+      onClick={() => setActiveTab('saved')}
+    >
+      <History className="w-3.5 h-3.5 mr-1" /> Saved
+    </Button>
+  </div>
+</div>
 
       {/* FACTS TAB */}
       {activeTab === 'facts' && (
