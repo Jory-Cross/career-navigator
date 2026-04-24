@@ -303,8 +303,6 @@ return (
       e.target.value = "";
     }
   };
-              
-            </div>
 
             <div>
               <Label htmlFor="notes">Additional Notes (Optional)</Label>
