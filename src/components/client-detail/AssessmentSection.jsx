@@ -171,6 +171,50 @@ export default function AssessmentSection({ clientId }) {
     queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
   });
 
+const handleSubmit = async () => {
+  setSubmitting(true);
+
+  try {
+    const user = await base44.auth.me();
+
+    if (editingAssessment) {
+      await base44.entities.Assessment.update(editingAssessment.id, {
+        assessment_type: assessmentType,
+        responses,
+        notes
+      });
+
+      toast.success("Assessment updated");
+    } else {
+      await base44.entities.Assessment.create({
+        client_id: clientId,
+        assessment_type: assessmentType,
+        responses,
+        completed_by: user.email,
+        notes
+      });
+
+      if (assessmentType === "work_strategy_assessment") {
+        toast.success("WSA saved");
+      } else {
+        toast.success("Assessment saved");
+      }
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["client-assessments", clientId] });
+
+    setShowForm(false);
+    setEditingAssessment(null);
+    setResponses({});
+    setNotes("");
+  } catch (error) {
+    console.error("Assessment save failed:", error);
+    toast.error("Failed to save: " + (error?.message || "Unknown error"));
+  } finally {
+    setSubmitting(false);
+  }
+};
+  
   const handleWSAUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
