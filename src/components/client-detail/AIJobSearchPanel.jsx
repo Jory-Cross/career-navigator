@@ -667,20 +667,59 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
 
           {/* Search results */}
 
-          {recommendationBatch?.recommendations?.length > 0 && (
-  <Card className="p-4">
-    <h4 className="text-sm font-semibold mb-2">AI Job Coach Recommendations</h4>
+          {Array.isArray(recommendationBatch?.recommendations) &&
+  recommendationBatch.recommendations.length > 0 && (
+    <Card className="p-4 space-y-4">
+      <h4 className="text-sm font-semibold">AI Job Coach Recommendations</h4>
 
-    <div className="space-y-2">
-      {recommendationBatch.recommendations.map((rec, i) => (
-        <div key={i} className="border rounded p-2">
-          <div className="font-medium">{rec.title}</div>
-          <div className="text-xs text-slate-500">{rec.onet_code}</div>
-        </div>
-      ))}
-    </div>
-  </Card>
-)}
+      {recommendationBatch.ai_coach_summary &&
+        recommendationBatch.ai_coach_summary.narrative_explanation && (
+          <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded">
+            {recommendationBatch.ai_coach_summary.narrative_explanation}
+          </div>
+        )}
+
+      <div className="space-y-3">
+        {recommendationBatch.recommendations.map((rec, i) => {
+          const reasoningList =
+            (recommendationBatch.ai_coach_summary &&
+              recommendationBatch.ai_coach_summary.job_fit_reasoning) ||
+            [];
+
+          const reasoning = reasoningList.find(
+            (r) => r.onet_code === rec.onet_code
+          );
+
+          return (
+            <div key={i} className="border rounded p-3 space-y-1">
+              <div className="font-medium">{rec.title}</div>
+
+              <div className="text-xs text-slate-500">
+                {rec.onet_code}
+              </div>
+
+              {reasoning && reasoning.reasoning && (
+                <div className="text-xs text-slate-600 mt-1">
+                  {reasoning.reasoning}
+                </div>
+              )}
+
+              {rec.href && (
+                <a
+                  href={rec.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  View O*NET Details
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  )}
           
           {jobs.length > 0 && (
             <div className="space-y-3">
