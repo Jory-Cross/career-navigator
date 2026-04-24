@@ -683,46 +683,6 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
 )}
 
       <div className="space-y-3">
-        {recommendationBatch.recommendations.map((rec, i) => {
-          const reasoningList =
-            (recommendationBatch.ai_coach_summary &&
-              recommendationBatch.ai_coach_summary.job_fit_reasoning) ||
-            [];
-
-          const reasoning = reasoningList.find(
-            (r) => r.onet_code === rec.onet_code
-          );
-
-          return (
-            <div key={i} className="border rounded p-3 space-y-1">
-              <div className="font-medium">{rec.title}</div>
-
-              <div className="text-xs text-slate-500">
-                {rec.onet_code}
-              </div>
-
-              {reasoning && reasoning.reasoning && (
-                <div className="text-xs text-slate-600 mt-1">
-                  {reasoning.reasoning}
-                </div>
-              )}
-
-              {rec.href && (
-                <a
-                  href={rec.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  View O*NET Details
-                </a>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  )}
           
           {jobs.length > 0 && (
             <div className="space-y-3">
