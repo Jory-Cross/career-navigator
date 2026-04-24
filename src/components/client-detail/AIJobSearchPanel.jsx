@@ -339,12 +339,11 @@ useEffect(() => {
     setLoadingSaved(true);
     try {
       // Fetch all saved recommendations
-      const recs = await base44.entities.JobRecommendation.filter(
-        { client_id: clientId },
-        '-created_date',
-        100
-      );
-
+const recs = await base44.entities.JobRecommendation.filter(
+  { client_id: resolvedClientId },
+  '-created_date',
+  100
+);
       // Fetch all batches and group recs by batch
       const batchIds = [...new Set(recs.map(r => r.batch_id).filter(Boolean))];
       const batches = {};
