@@ -681,8 +681,6 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     </div>
   </Card>
 )}
-
-      <div className="space-y-3">
           
           {jobs.length > 0 && (
             <div className="space-y-3">
