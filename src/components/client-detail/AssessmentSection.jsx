@@ -296,21 +296,31 @@ Field mapping:
           notes
         });
 
-        if (assessmentType === 'work_strategy_assessment') {
-          toast.loading("Generating completed WSA PDF...", { id: "wsa-pdf" });
-          const { data: pdfData } = await base44.functions.invoke('generateWSAPDF', {
-            assessment_id: assessment.id
-          });
-          await base44.entities.Document.create({
-            client_id: clientId,
-            title: `Work Strategy Assessment`,
-            file_url: pdfData.pdf_url,
-            file_name: `WSA_${assessment.id}.pdf`,
-            file_type: 'application/pdf',
-            category: 'other'
-          });
-          toast.success("WSA PDF ready!", { id: "wsa-pdf" });
-        } else if (assessmentType !== 'riasec') {
+if (assessmentType === 'work_strategy_assessment') {
+  toast.success("WSA saved");
+
+  try {
+    const { data: pdfData } = await base44.functions.invoke('generateWSAPDF', {
+      assessment_id: assessment.id
+    });
+
+    if (pdfData?.pdf_url) {
+      await base44.entities.Document.create({
+        client_id: clientId,
+        title: `Work Strategy Assessment`,
+        file_url: pdfData.pdf_url,
+        file_name: `WSA_${assessment.id}.pdf`,
+        file_type: 'application/pdf',
+        category: 'assessment',
+        document_subtype: 'wsa'
+      });
+    }
+  } catch (err) {
+    console.warn("WSA saved, but PDF generation failed:", err);
+  }
+}
+        
+        else if (assessmentType !== 'riasec') {
           const { data: pdfData } = await base44.functions.invoke('generateAssessmentPDF', {
             assessment_id: assessment.id
           });
