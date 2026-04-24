@@ -576,7 +576,7 @@ setRecommendationBatch(latest);
   client={client}
   onFactsUpdated={refreshClient}
 />
-
+)}
       {/* SEARCH TAB */}
       {activeTab === 'search' && (
         <div className="space-y-4">
