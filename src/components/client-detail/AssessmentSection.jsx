@@ -480,6 +480,7 @@ Field mapping:
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
+       </Dialog>
   </Card>
-);
+  );
+}
