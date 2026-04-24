@@ -335,14 +335,18 @@ if (assessmentType === 'work_strategy_assessment') {
           });
         }
 
-        await base44.entities.Activity.create({
-          client_id: clientId,
-          activity_type: 'note_added',
-          title: 'Assessment completed',
-          description: `${assessmentType.replace(/_/g, ' ')} assessment completed by ${user.full_name || user.email}`
-        });
+try {
+  await base44.entities.Activity.create({
+    client_id: clientId,
+    activity_type: 'note_added',
+    title: 'Assessment completed',
+    description: `${assessmentType.replace(/_/g, ' ')} assessment completed by ${user.full_name || user.email}`
+  });
+} catch (err) {
+  console.warn("Activity log failed:", err);
+}
 
-        toast.success("Assessment saved!");
+       
       }
 
       queryClient.invalidateQueries({ queryKey: ['client-assessments'] });
