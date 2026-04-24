@@ -223,9 +223,4 @@ export async function buildRecommendationPayload({
     approved_recommendation: null,
   };
 }
-  return {
-    source: "local",
-    ...local,
-    onet_summary: "",
-  };
-}
+  
