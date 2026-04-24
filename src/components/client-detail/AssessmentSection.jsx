@@ -288,7 +288,7 @@ Field mapping:
           properties: schemaProperties
         }
       });
-
+return (
       // Merge extracted values (only non-empty) into current responses
       const merged = { ...responses };
       Object.entries(extracted).forEach(([key, val]) => {
