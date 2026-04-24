@@ -390,13 +390,12 @@ useEffect(() => {
       });
 
       setStep('searching');
-     const jobRes = await base44.functions.invoke('jobSearchAssistant', {
-  action: 'save_recommendations',
+ const jobRes = await base44.functions.invoke('jobSearchAssistant', {
+  action: 'find_jobs',
   clientId: resolvedClientId,
-  jobs: [job],
-  assessmentsUsed,
-  clientFieldsUsed,
-  searchTermsUsed,
+  profile: profileData,
+  customInstructions,
+  filters,
 });
       const jobData = jobRes?.data?.data;
       setJobs(jobData?.jobs || []);
