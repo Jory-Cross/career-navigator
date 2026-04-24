@@ -403,6 +403,47 @@ Field mapping:
             </Select>
           </div>
 
+                 {assessmentType === "work_strategy_assessment" && (
+            <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-blue-800">Upload existing WSA PDF</p>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    AI will extract the WSA details and pre-fill the fields below.
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={handleWSAUpload}
+                />
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={extracting}
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                      Upload WSA PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {currentQuestions.map((q) => (
             <div key={q.id}>
               {q.type === "section" ? (
