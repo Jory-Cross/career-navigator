@@ -571,12 +571,11 @@ setRecommendationBatch(latest);
 
       {/* FACTS TAB */}
       {activeTab === 'facts' && (
-        <VocationalFactsPanel
-          clientId={clientId}
-          client={client}
-          onFactsUpdated={refreshClient}
-        />
-      )}
+       <VocationalFactsPanel
+  clientId={resolvedClientId}
+  client={client}
+  onFactsUpdated={refreshClient}
+/>
 
       {/* SEARCH TAB */}
       {activeTab === 'search' && (
