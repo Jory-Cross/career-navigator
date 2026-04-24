@@ -390,13 +390,13 @@ useEffect(() => {
       });
 
       setStep('searching');
-      const jobRes = await base44.functions.invoke('jobSearchAssistant', {
-        action: 'find_jobs',
-        clientId,
-        profile: profileData,
-        customInstructions,
-        filters,
-      });
+     const jobRes = await base44.functions.invoke('jobSearchAssistant', {
+  action: 'find_jobs',
+  clientId: resolvedClientId,
+  profile: profileData,
+  customInstructions,
+  filters,
+});
       const jobData = jobRes?.data?.data;
       setJobs(jobData?.jobs || []);
       setSearchSummary(jobData?.search_summary || '');
