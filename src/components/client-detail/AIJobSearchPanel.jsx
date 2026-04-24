@@ -525,21 +525,7 @@ const assessments = base44.entities.Assessment?.filter
 
 if (!docs.length && !assessments.length) {
   toast.error(
-    "No data found. Upload a resume or assessment (WSA, RIASEC) to generate recommendations."
-  );
-  return;
-}
-
-if (!docs.length) {
-  toast.error(
-    "No resume or documents found. Upload a resume to improve recommendations."
-  );
-  return;
-}
-
-if (!assessments.length) {
-  toast.error(
-    "No assessments found. Add a WSA or RIASEC assessment to improve recommendations."
+    "No recommendation data found. Upload a resume, WSA, RIASEC, or other assessment before generating recommendations."
   );
   return;
 }
