@@ -303,7 +303,7 @@ Field mapping:
       e.target.value = "";
     }
   };
-                return (
+              
                   <div key={q.id}>
                     <Label htmlFor={q.id}>{q.label}</Label>
                     {q.type === 'textarea' ? (
