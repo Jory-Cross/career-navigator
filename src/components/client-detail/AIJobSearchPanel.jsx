@@ -317,10 +317,10 @@ useEffect(() => {
   // Refresh client data (e.g. after extraction)
   const refreshClient = useCallback(async () => {
     try {
-      const res = await base44.functions.invoke('processAssessmentDocuments', {
-        action: 'get_vocational_facts',
-        clientId,
-      });
+     const res = await base44.functions.invoke('processAssessmentDocuments', {
+  action: 'get_vocational_facts',
+  clientId: resolvedClientId,
+});
       const vfp = res?.data?.profile;
       setHasVFP(!!vfp);
       setClient(prev => ({
