@@ -523,11 +523,11 @@ useEffect(() => {
         : [];
 
       await runRecommendationEngine({
-        client,
-        documents: docs,
-        assessments,
-        forceRegenerate: true,
-      });
+  client: { ...(client || {}), id: clientId || client?.id },
+  documents: docs,
+  assessments,
+  forceRegenerate: true,
+});
 
       const latest = await loadLatestRecommendationBatch(clientId);
       setRecommendationBatch(latest);
