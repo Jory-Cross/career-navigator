@@ -481,5 +481,5 @@ Field mapping:
       </DialogContent>
        </Dialog>
   </Card>
-  );
+  )
 }
