@@ -305,16 +305,6 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
 
  useEffect(() => {
   loadSavedRecs();
-
-  if (!clientId) return;
-
-  loadLatestRecommendationBatch(clientId)
-    .then((latest) => {
-      setRecommendationBatch(latest);
-    })
-    .catch((err) => {
-      console.error("Failed to load recommendations", err);
-    });
 }, [clientId]);
 
   // Refresh client data (e.g. after extraction)
