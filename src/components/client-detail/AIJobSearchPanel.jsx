@@ -474,12 +474,12 @@ useEffect(() => {
       const rec = savedRecs.find(r =>
         r.job_title === job.job_title && r.employer === job.employer
       ) || job;
-      await base44.functions.invoke('jobSearchAssistant', {
-        action: 'update_recommendation_status',
-        clientId,
-        recommendationId: rec.id || job.id,
-        status,
-      });
+     await base44.functions.invoke('jobSearchAssistant', {
+  action: 'update_recommendation_status',
+  clientId: resolvedClientId,
+  recommendationId: rec.id || job.id,
+  status,
+});
       await loadSavedRecs();
       toast.success(`Marked as ${STATUS_LABELS[status]}`);
     } catch (e) {
