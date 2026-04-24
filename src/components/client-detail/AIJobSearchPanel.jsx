@@ -518,11 +518,10 @@ useEffect(() => {
         "@/lib/recommendations/runRecommendationEngine"
       );
 
-      const docs = await base44.entities.Document.filter({ client_id: clientId });
-      const assessments = base44.entities.Assessment?.filter
-        ? await base44.entities.Assessment.filter({ client_id: clientId })
-        : [];
-
+     const docs = await base44.entities.Document.filter({ client_id: resolvedClientId });
+const assessments = base44.entities.Assessment?.filter
+  ? await base44.entities.Assessment.filter({ client_id: resolvedClientId })
+  : [];
       await runRecommendationEngine({
   client: { ...(client || {}), id: clientId || client?.id },
   documents: docs,
