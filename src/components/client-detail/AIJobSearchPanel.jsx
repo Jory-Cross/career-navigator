@@ -503,51 +503,39 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
   </div>
 
   <div className="flex gap-2 flex-wrap justify-end">
-    <Button
-      size="sm"
-      className="h-8 text-xs"
-      onClick={async () => {
-        try {
-          const { runRecommendationEngine } = await import(
-            "@/lib/recommendations/runRecommendationEngine"
-          );
+   <Button
+  size="sm"
+  className="h-8 text-xs"
+  onClick={async () => {
+    try {
+      const { runRecommendationEngine } = await import(
+        "@/lib/recommendations/runRecommendationEngine"
+      );
 
-          const docs = await base44.entities.Document.filter({ client_id: clientId });
-          const assessments = base44.entities.Assessment?.filter
-            ? await base44.entities.Assessment.filter({ client_id: clientId })
-            : [];
+      const docs = await base44.entities.Document.filter({ client_id: clientId });
+      const assessments = base44.entities.Assessment?.filter
+        ? await base44.entities.Assessment.filter({ client_id: clientId })
+        : [];
 
-         onClick={async () => {
-  try {
-    const { runRecommendationEngine } = await import(
-      "@/lib/recommendations/runRecommendationEngine"
-    );
+      await runRecommendationEngine({
+        client,
+        documents: docs,
+        assessments,
+        forceRegenerate: true,
+      });
 
-    const docs = await base44.entities.Document.filter({ client_id: clientId });
-    const assessments = base44.entities.Assessment?.filter
-      ? await base44.entities.Assessment.filter({ client_id: clientId })
-      : [];
+      const latest = await loadLatestRecommendationBatch(clientId);
+      setRecommendationBatch(latest);
 
-    await runRecommendationEngine({
-      client,
-      documents: docs,
-      assessments,
-      forceRegenerate: true,
-    });
-
-    const latest = await loadLatestRecommendationBatch(clientId);
-    setRecommendationBatch(latest);
-
-    toast.success("Recommendations generated");
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to generate recommendations");
-  }
-}}
-    >
-      Generate Recommendations
-    </Button>
-
+      toast.success("Recommendations generated");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate recommendations");
+    }
+  }}
+>
+  Generate Recommendations
+</Button>
     <Button
       size="sm"
       variant={activeTab === 'facts' ? 'default' : 'outline'}
