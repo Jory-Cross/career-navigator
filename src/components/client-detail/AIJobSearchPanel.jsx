@@ -334,7 +334,7 @@ useEffect(() => {
     } catch (e) {
       // silently fail
     }
-  }, [clientId]);
+clientId: resolvedClientId
 
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
