@@ -517,19 +517,33 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
             ? await base44.entities.Assessment.filter({ client_id: clientId })
             : [];
 
-          await runRecommendationEngine({
-            client,
-            documents: docs,
-            assessments,
-            forceRegenerate: true,
-          });
+         onClick={async () => {
+  try {
+    const { runRecommendationEngine } = await import(
+      "@/lib/recommendations/runRecommendationEngine"
+    );
 
-          toast.success("Recommendations generated");
-        } catch (err) {
-          console.error(err);
-          toast.error("Failed to generate recommendations");
-        }
-      }}
+    const docs = await base44.entities.Document.filter({ client_id: clientId });
+    const assessments = base44.entities.Assessment?.filter
+      ? await base44.entities.Assessment.filter({ client_id: clientId })
+      : [];
+
+    await runRecommendationEngine({
+      client,
+      documents: docs,
+      assessments,
+      forceRegenerate: true,
+    });
+
+    const latest = await loadLatestRecommendationBatch(clientId);
+    setRecommendationBatch(latest);
+
+    toast.success("Recommendations generated");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to generate recommendations");
+  }
+}}
     >
       Generate Recommendations
     </Button>
