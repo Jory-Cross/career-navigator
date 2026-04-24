@@ -301,7 +301,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     dataQualityScore: null,
     conflictsCount: 0,
   });
-  const [filters, setFilters] = useState({});
+const [filters, setFilters] = useState({});
 
  useEffect(() => {
   loadSavedRecs();
