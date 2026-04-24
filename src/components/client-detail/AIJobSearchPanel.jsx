@@ -303,7 +303,12 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
   });
 const [filters, setFilters] = useState({});
 
- useEffect(() => {
+
+/* ================================
+   EFFECTS
+================================ */
+
+useEffect(() => {
   loadSavedRecs();
 }, [clientId]);
 
