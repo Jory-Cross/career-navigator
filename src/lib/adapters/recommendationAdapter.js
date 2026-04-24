@@ -223,4 +223,6 @@ export async function buildRecommendationPayload({
     approved_recommendation: null,
   };
 }
-  
+  export async function getRecommendations(args = {}) {
+  return buildRecommendationPayload(args);
+}
