@@ -276,7 +276,7 @@ function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore
 }
 
 export default function AIJobSearchPanel({ clientId, client: initialClient }) {
-  const resolvedClientId = clientId || initialClient?.id || null;
+ const resolvedClientId = clientId || initialClient?.id || "";
   const [activeTab, setActiveTab] = useState('search'); // 'search' | 'saved' | 'facts'
   const [step, setStep] = useState('idle');
   const [recommendationBatch, setRecommendationBatch] = useState(null);
