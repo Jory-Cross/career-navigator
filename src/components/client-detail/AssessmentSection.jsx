@@ -298,45 +298,188 @@ Field mapping:
       toast.success("WSA data extracted and pre-filled!", { id: "wsa-extract" });
     } catch (err) {
       toast.error("Failed to extract PDF: " + err.message, { id: "wsa-extract" });
-    } finally {
+      } finally {
       setExtracting(false);
       e.target.value = "";
     }
   };
 
-            <div>
-              <Label htmlFor="notes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                className="mt-1"
-                placeholder="Any additional observations or notes..."
-              />
+  const currentQuestions = assessmentQuestions[assessmentType] || [];
+
+ return (
+  <Card className="border-0 shadow-sm">
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <CardTitle className="text-base">Client Assessments</CardTitle>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> New Assessment
+        </Button>
+      </div>
+    </CardHeader>
+
+    <CardContent>
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+        </div>
+      ) : assessments.length === 0 ? (
+        <div className="text-center py-8 text-sm text-slate-400">
+          No assessments yet
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {assessments.map((assessment) => (
+            <div key={assessment.id} className="p-4 bg-slate-50 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <FileText className="w-4 h-4 text-slate-500 mt-1" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 capitalize">
+                      {assessment.assessment_type.replace(/_/g, " ")}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Completed{" "}
+                      {format(new Date(assessment.created_date), "MMM d, yyyy")}{" "}
+                      by {assessment.completed_by}
+                    </p>
+                    {assessment.notes && (
+                      <p className="text-xs text-slate-600 mt-2">
+                        {assessment.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(assessment)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+
+                  {assessment.pdf_url && (
+                    <a href={assessment.pdf_url} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="ghost">
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                    </a>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                    onClick={() => handleDelete(assessment)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
             </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+
+    <Dialog open={showForm} onOpenChange={setShowForm}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editingAssessment ? "Edit Assessment" : "Complete Assessment"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div>
+            <Label>Assessment Type</Label>
+            <Select value={assessmentType} onValueChange={setAssessmentType}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(assessmentQuestions).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowForm(false)} disabled={submitting || extracting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting || extracting}>
-              {submitting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
-              ) : editingAssessment ? (
-                "Save Changes"
-              ) : assessmentType === 'riasec' ? (
-                "Save RIASEC Scores"
-              ) : assessmentType === 'work_strategy_assessment' ? (
-                "Save WSA"
+          {currentQuestions.map((q) => (
+            <div key={q.id}>
+              {q.type === "section" ? (
+                <p className="text-xs font-semibold text-slate-400 mt-4">
+                  {q.label}
+                </p>
               ) : (
-                "Submit & Generate PDF"
+                <>
+                  <Label>{q.label}</Label>
+
+                  {q.type === "textarea" ? (
+                    <Textarea
+                      value={responses[q.id] || ""}
+                      onChange={(e) =>
+                        setResponses({ ...responses, [q.id]: e.target.value })
+                      }
+                      className="mt-1"
+                    />
+                  ) : q.type === "select" ? (
+                    <Select
+                      value={responses[q.id] || ""}
+                      onValueChange={(val) =>
+                        setResponses({ ...responses, [q.id]: val })
+                      }
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {q.options.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={responses[q.id] || ""}
+                      onChange={(e) =>
+                        setResponses({ ...responses, [q.id]: e.target.value })
+                      }
+                      className="mt-1"
+                    />
+                  )}
+                </>
               )}
-            </Button>
+            </div>
+          ))}
+
+          <div>
+            <Label>Additional Notes (Optional)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="mt-1"
+            />
           </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => setShowForm(false)}>
+            Cancel
+          </Button>
+
+          <Button onClick={handleSubmit} disabled={submitting || extracting}>
+            {submitting ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+            ) : assessmentType === "work_strategy_assessment" ? (
+              "Save WSA"
+            ) : (
+              "Save Assessment"
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </Card>
+);
