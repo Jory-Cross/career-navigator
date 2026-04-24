@@ -418,25 +418,25 @@ useEffect(() => {
     setSavingAll(true);
     try {
       const res = await base44.functions.invoke('jobSearchAssistant', {
-        action: 'save_recommendations',
-        clientId,
-        jobs,
-        assessmentsUsed,
-        clientFieldsUsed: clientFieldsUsed,
-        searchTermsUsed,
-        dataSourcesUsed: ['vocational_facts_profile', 'assessments', 'goals', 'support_notes', 'job_applications'].filter(s => {
-          if (s === 'vocational_facts_profile') return hasVFP;
-          if (s === 'assessments') return assessmentsUsed.length > 0;
-          return true;
-        }),
-        filters,
-        has_vocational_facts: hasVFP,
-        vocational_profile_version: 1,
-        search_summary: searchSummary,
-        grounding_note: groundingNote,
-        custom_instructions: customInstructions,
-        data_quality_score: profileMeta.dataQualityScore,
-      });
+  action: 'save_recommendations',
+  clientId: resolvedClientId,
+  jobs,
+  assessmentsUsed,
+  clientFieldsUsed: clientFieldsUsed,
+  searchTermsUsed,
+  dataSourcesUsed: ['vocational_facts_profile', 'assessments', 'goals', 'support_notes', 'job_applications'].filter(s => {
+    if (s === 'vocational_facts_profile') return hasVFP;
+    if (s === 'assessments') return assessmentsUsed.length > 0;
+    return true;
+  }),
+  filters,
+  has_vocational_facts: hasVFP,
+  vocational_profile_version: 1,
+  search_summary: searchSummary,
+  grounding_note: groundingNote,
+  custom_instructions: customInstructions,
+  data_quality_score: profileMeta.dataQualityScore,
+});
       setSavedBatchId(res?.data?.batch_id);
       // Store batch metadata for UI
       if (res?.data?.batch) {
