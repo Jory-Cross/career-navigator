@@ -478,8 +478,8 @@ Field mapping:
             )}
           </Button>
         </div>
-      </DialogContent>
-       </Dialog>
+            </DialogContent>
+    </Dialog>
   </Card>
-  )
+);
 }
