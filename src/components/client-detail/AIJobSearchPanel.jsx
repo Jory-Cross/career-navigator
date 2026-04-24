@@ -310,9 +310,10 @@ const [filters, setFilters] = useState({});
 ================================ */
 
 useEffect(() => {
+  if (!resolvedClientId) return;
   loadSavedRecs();
-}, [clientId]);
-
+}, [resolvedClientId]);
+  
   // Refresh client data (e.g. after extraction)
   const refreshClient = useCallback(async () => {
     try {
