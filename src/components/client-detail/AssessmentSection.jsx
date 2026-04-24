@@ -177,13 +177,14 @@ const handleSubmit = async () => {
 
       toast.success("Assessment updated");
     } else {
-      await base44.entities.Assessment.create({
-        client_id: clientId,
-        assessment_type: assessmentType,
-        responses,
-        completed_by: user.email,
-        notes
-      });
+   await base44.entities.Assessment.create({
+  client_id: clientId,
+  assessment_type: assessmentType,
+  responses,
+  completed_by: user.email,
+  notes,
+  pdf_url: responses._uploaded_pdf_url || ""
+});
 
       if (assessmentType === "work_strategy_assessment") {
         toast.success("WSA saved");
