@@ -522,8 +522,8 @@ useEffect(() => {
 const assessments = base44.entities.Assessment?.filter
   ? await base44.entities.Assessment.filter({ client_id: resolvedClientId })
   : [];
-      await runRecommendationEngine({
-  client: { ...(client || {}), id: clientId || client?.id },
+    await runRecommendationEngine({
+  client: { ...(client || {}), id: resolvedClientId },
   documents: docs,
   assessments,
   forceRegenerate: true,
