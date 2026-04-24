@@ -331,10 +331,10 @@ useEffect(() => {
         vocational_facts_document_count: res?.data?.document_count,
         vocational_facts_assessment_count: res?.data?.assessment_count,
       }));
-    } catch (e) {
+        } catch (e) {
       // silently fail
     }
-clientId: resolvedClientId
+  }, [resolvedClientId]);
 
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
