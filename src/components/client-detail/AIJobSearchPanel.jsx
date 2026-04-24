@@ -375,10 +375,10 @@ useEffect(() => {
     setStep('profiling');
 
     try {
-      const profileRes = await base44.functions.invoke('jobSearchAssistant', {
-        action: 'generate_vocational_profile',
-        clientId,
-      });
+     const profileRes = await base44.functions.invoke('jobSearchAssistant', {
+  action: 'generate_vocational_profile',
+  clientId: resolvedClientId,
+});
       const profileData = profileRes?.data?.data;
       setProfile(profileData);
       setAssessmentsUsed(profileRes?.data?.assessments_used || []);
