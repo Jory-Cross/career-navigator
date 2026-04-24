@@ -304,40 +304,6 @@ Field mapping:
     }
   };
               
-                  <div key={q.id}>
-                    <Label htmlFor={q.id}>{q.label}</Label>
-                    {q.type === 'textarea' ? (
-                      <Textarea
-                        id={q.id}
-                        value={responses[q.id] || ""}
-                        onChange={(e) => setResponses({...responses, [q.id]: e.target.value})}
-                        rows={3}
-                        className="mt-1"
-                        placeholder={q.placeholder || ""}
-                      />
-                    ) : q.type === 'select' ? (
-                      <Select value={responses[q.id] || ""} onValueChange={(val) => setResponses({...responses, [q.id]: val})}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {q.options.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        id={q.id}
-                        value={responses[q.id] || ""}
-                        onChange={(e) => setResponses({...responses, [q.id]: e.target.value})}
-                        className="mt-1"
-                        placeholder={q.placeholder || ""}
-                      />
-                    )}
-                  </div>
-                );
-              })}
             </div>
 
             <div>
