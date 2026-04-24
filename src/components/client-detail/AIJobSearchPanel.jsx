@@ -455,14 +455,14 @@ useEffect(() => {
   const handleStatusChange = async (job, status) => {
     if (status === 'save') {
       try {
-        await base44.functions.invoke('jobSearchAssistant', {
-          action: 'save_recommendations',
-          clientId,
-          jobs: [job],
-          assessmentsUsed,
-          clientFieldsUsed,
-          searchTermsUsed,
-        });
+       await base44.functions.invoke('jobSearchAssistant', {
+  action: 'save_recommendations',
+  clientId: resolvedClientId,
+  jobs: [job],
+  assessmentsUsed,
+  clientFieldsUsed,
+  searchTermsUsed,
+});
         toast.success('Job saved to client record');
         await loadSavedRecs();
       } catch (e) {
