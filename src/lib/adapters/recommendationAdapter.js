@@ -31,30 +31,6 @@ function pickResumeSkills(resumeDocs = []) {
   );
 }
 
-function buildWsaSummary(wsa = {}) {
-  const source = wsa?.responses || wsa || {};
-
-  const strengths = uniqueStrings([
-    ...toArray(source?.strengths),
-    ...toArray(source?.preferred_tasks),
-    ...toArray(source?.interests),
-  ]);
-
-  const supportNeeds = uniqueStrings([
-    ...toArray(source?.support_needs),
-    ...toArray(source?.barriers),
-  ]);
-
-  return {
-    strengths,
-    support_needs: supportNeeds,
-    narrative:
-      strengths.length > 0
-        ? `WSA strengths noted: ${strengths.join(", ")}.`
-        : "No WSA strengths were summarized yet.",
-  };
-}
-
 function buildOtherAssessmentSummary(otherAssessments = []) {
   const items = Array.isArray(otherAssessments) ? otherAssessments : [];
 
@@ -83,27 +59,46 @@ function buildCombinedProfile({
   otherAssessments = [],
 }) {
   const resume_skills = pickResumeSkills(resumes);
-  const wsa_summary = buildWsaSummary(wsa);
+
+  const wsa_strengths = uniqueStrings([
+    ...toArray(wsa?.strengths),
+  ]);
+
+  const wsa_themes = uniqueStrings([
+    ...toArray(wsa?.themes),
+  ]);
+
+  const wsa_barriers = uniqueStrings([
+    ...toArray(wsa?.barriers),
+  ]);
+
+  const wsa_job_goals = uniqueStrings([
+    ...toArray(wsa?.job_goals),
+  ]);
+
   const other_summary = buildOtherAssessmentSummary(otherAssessments);
 
   const assessment_keywords = uniqueStrings([
     ...other_summary.keywords,
-    ...wsa_summary.strengths,
-    ...wsa_summary.support_needs,
+    ...wsa_strengths,
+    ...wsa_themes,
+    ...wsa_job_goals,
   ]);
 
   const vocational_themes = uniqueStrings([
-    ...toArray(wsa?.vocational_themes),
-    ...toArray(wsa?.interest_areas),
+    ...wsa_themes,
   ]);
 
   const job_titles = uniqueStrings([
-    ...toArray(wsa?.job_titles),
+    ...wsa_job_goals,
   ]);
 
   return {
     resume_skills,
-    wsa_strengths: wsa_summary.strengths,
+    wsa_strengths,
+    wsa_themes,
+    wsa_barriers,
+    wsa_job_goals,
     assessment_keywords,
     vocational_themes,
     job_titles,
@@ -112,7 +107,16 @@ function buildCombinedProfile({
       other_assessments: Array.isArray(otherAssessments) ? otherAssessments.length : 0,
     },
     summaries: {
-      wsa_summary,
+      wsa_summary: {
+        strengths: wsa_strengths,
+        themes: wsa_themes,
+        barriers: wsa_barriers,
+        job_goals: wsa_job_goals,
+        narrative:
+          wsa_strengths.length > 0
+            ? `WSA strengths include ${wsa_strengths.slice(0, 6).join(", ")}.`
+            : "No WSA strengths were summarized yet.",
+      },
       other_summary,
     },
   };
@@ -132,6 +136,18 @@ function buildNarrativeExplanation({
 
   if (combinedProfile.summaries.wsa_summary.strengths.length > 0) {
     parts.push(combinedProfile.summaries.wsa_summary.narrative);
+  }
+
+  if (combinedProfile.summaries.wsa_summary.themes.length > 0) {
+    parts.push(
+      `WSA themes include ${combinedProfile.summaries.wsa_summary.themes.slice(0, 6).join(", ")}.`
+    );
+  }
+
+  if (combinedProfile.summaries.wsa_summary.job_goals.length > 0) {
+    parts.push(
+      `Client job goals include ${combinedProfile.summaries.wsa_summary.job_goals.slice(0, 6).join(", ")}.`
+    );
   }
 
   if (combinedProfile.summaries.other_summary.count > 0) {
@@ -155,7 +171,7 @@ function buildJobFitReasoning(onetHighlights = []) {
   return items.slice(0, 5).map((item) => ({
     onet_code: item?.onet_code || "",
     title: item?.title || "",
-    reasoning: `This occupation aligned with the combined client profile and surfaced through O*NET search results.`,
+    reasoning: "This occupation aligned with resume skills, WSA signals, assessment data, and O*NET results.",
     bright_outlook: Boolean(item?.bright_outlook),
     green: Boolean(item?.green),
     apprenticeship: Boolean(item?.apprenticeship),
@@ -225,6 +241,7 @@ export async function buildRecommendationPayload({
     approved_recommendation: null,
   };
 }
-  export async function getRecommendations(args = {}) {
+
+export async function getRecommendations(args = {}) {
   return buildRecommendationPayload(args);
 }
