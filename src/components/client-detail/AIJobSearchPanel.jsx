@@ -763,7 +763,9 @@ const recs = await base44.entities.JobRecommendation.filter(
 
            {rec.match_reason && (
   <div className="text-xs text-slate-600 space-y-1">
-    <div>{rec.match_reason}</div>
+    <div>
+      {rec.match_reason.replace(" (Assessment data also flagged possible fit concerns.)", "")}
+    </div>
 
     {rec.match_reason.includes("Assessment data also flagged possible fit concerns") && (
       <div className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
