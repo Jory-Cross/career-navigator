@@ -160,9 +160,18 @@ export async function getOnetRecommendations(profile = {}) {
       apprenticeship: false,
       score,
       matched_keywords: matches,
-      match_reason:
+            match_reason:
         matches.length > 0
-          ? `Matched based on: ${matches.join(", ")}`
+          ? `Matched based on: ${matches.join(", ")}${
+              score < (
+                resumeMatches.length * 2 +
+                wsaStrengthMatches.length * 4 +
+                wsaThemeMatches.length * 6 +
+                wsaGoalMatches.length * 10
+              )
+                ? " (Assessment data also flagged possible fit concerns.)"
+                : ""
+            }`
           : "General entry-level recommendation",
     };
   });
