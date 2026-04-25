@@ -699,55 +699,56 @@ const recs = await base44.entities.JobRecommendation.filter(
 
           {/* Search results */}
 
-         {recommendationBatch && recommendationBatch.recommendations && recommendationBatch.recommendations.length > 0 && (
-  <Card className="p-4">
-    <h4 className="text-sm font-semibold mb-2">AI Job Coach Recommendations</h4>
+{recommendationBatch &&
+  recommendationBatch.recommendations &&
+  recommendationBatch.recommendations.length > 0 && (
+    <Card className="p-4">
+      <h4 className="text-sm font-semibold mb-2">
+        AI Job Coach Recommendations
+      </h4>
 
-    <div className="space-y-2">
-      {recommendationBatch.recommendations.map((rec, i) => (
-  <div key={i} className="border rounded p-3 space-y-2">
-    
-    {/* Title */}
-    <div className="font-medium text-sm">
-      {rec.title || "Untitled Recommendation"}
-    </div>
+      <div className="space-y-2">
+        {recommendationBatch.recommendations.map((rec, i) => (
+          <div key={i} className="border rounded p-3 space-y-2">
 
-    {/* O*NET Code */}
-    <div className="text-xs text-slate-500">
-      {rec.onet_code || "No O*NET code"}
-    </div>
+            <div className="font-medium text-sm">
+              {rec.title || "Untitled Recommendation"}
+            </div>
 
-    {/* Score */}
-    {typeof rec.score === "number" && (
-      <div className="text-xs text-blue-600 font-medium">
-        Match Score: {rec.score}
-      </div>
-    )}
+            <div className="text-xs text-slate-500">
+              {rec.onet_code || "No O*NET code"}
+            </div>
 
-    {/* Matched Keywords */}
-    {rec.matched_keywords && rec.matched_keywords.length > 0 && (
-      <div className="flex flex-wrap gap-1">
-        {rec.matched_keywords.map((tag, idx) => (
-          <span
-            key={idx}
-            className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
-          >
-            {tag}
-          </span>
+            {typeof rec.score === "number" && (
+              <div className="text-xs text-blue-600 font-medium">
+                Match Score: {rec.score}
+              </div>
+            )}
+
+            {rec.matched_keywords?.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {rec.matched_keywords.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {rec.match_reason && (
+              <div className="text-xs text-slate-600">
+                {rec.match_reason}
+              </div>
+            )}
+
+          </div>
         ))}
       </div>
-    )}
-
-    {/* Match Reason */}
-    {rec.match_reason && (
-      <div className="text-xs text-slate-600">
-        {rec.match_reason}
-      </div>
-    )}
-
-  </div>
-))}
-        </div>  
+    </Card>
+)}
           {jobs.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">
