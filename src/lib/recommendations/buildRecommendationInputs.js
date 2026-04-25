@@ -145,8 +145,15 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
       ...doc,
       skills: getDocumentSkills(doc),
     })),
-    wsa: summarizedWsa,
+       wsa: summarizedWsa,
     otherAssessments,
+    assessments_summary: {
+      wsa_strengths: summarizedWsa?.strengths || [],
+      wsa_themes: summarizedWsa?.themes || [],
+      wsa_barriers: summarizedWsa?.barriers || [],
+      wsa_job_goals: summarizedWsa?.job_goals || [],
+      other_assessment_keywords: assessmentKeywords,
+    },
     interestProfile: null,
     combined_profile,
     active_sources: {
