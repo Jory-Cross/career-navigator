@@ -103,7 +103,12 @@ function buildMatchedRecommendations(profile = {}) {
   const assessmentKeywords = toArray(profile.assessment_keywords);
   const jobTitles = toArray(profile.job_titles);
   const vocationalThemes = toArray(profile.vocational_themes);
-
+const riasecScores = profile.riasec_scores || {};
+const topRiasecTypes = Object.entries(riasecScores)
+  .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+  .filter(([, score]) => Number(score || 0) > 0)
+  .slice(0, 2)
+  .map(([type]) => safeLower(type));
   const allSignals = [
     ...resumeSkills,
     ...wsaStrengths,
