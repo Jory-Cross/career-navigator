@@ -472,10 +472,7 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
     const existing = getRecommendationBatchesForClient(clientId);
   const latest = existing[0];
 
-  const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
-  const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
-
-  const newSignature = JSON.stringify({
+   const newSignature = JSON.stringify({
   jobs: aiRecommendationResult.recommendations,
   profile: aiRecommendationResult.combined_profile,
 });
