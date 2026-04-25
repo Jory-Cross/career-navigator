@@ -1,39 +1,36 @@
-import { getRecommendations } from "@/lib/adapters/recommendationAdapter";
+import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendations";
 
 export async function generateRecommendationBatch({
   client,
   resumes = [],
   wsa = null,
   otherAssessments = [],
-  interestProfile = null,
-  combined_profile = null,
-  active_sources = {},
-  source_resume_ids = [],
-  source_wsa_ids = [],
-  source_other_assessment_ids = [],
-  options = {},
 } = {}) {
-  const payload = await getRecommendations({
-    client,
-    resumes,
-    wsa,
-    otherAssessments,
-    interestProfile,
-    combined_profile,
-    active_sources,
-    source_resume_ids,
-    source_wsa_ids,
-    source_other_assessment_ids,
-    options,
-  });
+
+  // Build profile for scoring engine
+  const profile = {
+    resume_skills: resumes.flatMap(r => r.skills || []),
+
+    wsa_strengths: wsa?.strengths || [],
+
+    assessment_keywords: otherAssessments.flatMap(a => a.keywords || []),
+
+    job_titles: resumes.flatMap(r => r.job_titles || []),
+
+    vocational_themes: wsa?.themes || [],
+
+    riasec_scores: otherAssessments.find(a => a.riasec_scores)?.riasec_scores || {},
+  };
+
+  const result = await getOnetRecommendations(profile);
 
   return {
     batch: {
-      recommendations: payload?.recommendations || [],
-      summary: payload?.onet_summary || {},
-      source: payload?.source || payload?.onet_summary?.source || "fallback",
+      recommendations: result?.items || [],
+      summary: result?.onet_summary || {},
+      source: result?.source || "scored-fallback",
     },
-    payload,
+    payload: result,
   };
 }
 
