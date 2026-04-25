@@ -293,6 +293,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
   const [nextSteps, setNextSteps] = useState([]);
   const [unresolvedConflicts, setUnresolvedConflicts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [generatingRecommendations, setGeneratingRecommendations] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [savedBatchId, setSavedBatchId] = useState(null);
   const [loadingSaved, setLoadingSaved] = useState(false);
