@@ -1,3 +1,4 @@
+import { base44 } from "@/api/base44Client";
 import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendations";
 
 export async function generateRecommendationBatch({
