@@ -702,13 +702,7 @@ const jobDiff = suggestedJobs.map(job => {
 >
   View Full Report
 </Button>
-    <Button
-  size="sm"
-  className="h-7 text-xs mb-2"
-  onClick={() => setRunRecommendations(true)}
->
-  Generate Recommendations
-</Button>
+   
   <div className="flex flex-wrap gap-2 mb-2">
   {RECOMMENDATION_SOURCE_OPTIONS.map((source) => {
     const isActive = activeRecommendationSources.includes(source.key);
