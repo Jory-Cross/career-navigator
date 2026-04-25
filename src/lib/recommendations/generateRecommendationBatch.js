@@ -6,16 +6,35 @@ export async function generateRecommendationBatch({
   wsa = null,
   otherAssessments = [],
   interestProfile = null,
-  options = {}
+  combined_profile = null,
+  active_sources = {},
+  source_resume_ids = [],
+  source_wsa_ids = [],
+  source_other_assessment_ids = [],
+  options = {},
 } = {}) {
-  return getRecommendations({
+  const payload = await getRecommendations({
     client,
     resumes,
     wsa,
     otherAssessments,
     interestProfile,
-    options
+    combined_profile,
+    active_sources,
+    source_resume_ids,
+    source_wsa_ids,
+    source_other_assessment_ids,
+    options,
   });
+
+  return {
+    batch: {
+      recommendations: payload?.recommendations || [],
+      summary: payload?.onet_summary || {},
+      source: payload?.source || payload?.onet_summary?.source || "fallback",
+    },
+    payload,
+  };
 }
 
 export default generateRecommendationBatch;
