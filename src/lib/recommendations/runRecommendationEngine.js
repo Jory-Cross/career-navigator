@@ -1,5 +1,6 @@
 import { generateRecommendationBatch } from "@/lib/recommendations/generateRecommendationBatch";
 import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestRecommendationBatch";
+import { buildRecommendationInputs } from "./buildRecommendationInputs";
 
 export async function runRecommendationEngine({
   client,
