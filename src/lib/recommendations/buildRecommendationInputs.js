@@ -32,7 +32,10 @@ function isWsaAssessment(assessment) {
     assessment?.type ||
     "";
 
-  const type = String(rawType).toLowerCase().trim();
+  const type = String(rawType)
+  .toLowerCase()
+  .trim()
+  .replace(/_/g, " ");
 
   console.log("CHECKING ASSESSMENT TYPE:", rawType, "→", type);
 
