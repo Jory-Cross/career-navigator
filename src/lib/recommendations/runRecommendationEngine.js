@@ -33,8 +33,11 @@ const result = await generateRecommendationBatch({
 });
 
   return {
-    batch: result.batch,
-    payload: result.payload,
-    reused: false,
-  };
-}
+  batch: {
+    recommendations: result?.items || [],
+    summary: result?.onet_summary || {},
+    source: result?.source || "fallback",
+  },
+  payload: result,
+  reused: false,
+};
