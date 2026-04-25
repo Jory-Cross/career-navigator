@@ -16,6 +16,29 @@ function uniqueStrings(values = []) {
   );
 }
 
+function getConflictKeywords(profile = {}) {
+  const text = [
+    ...toArray(profile.wsa_strengths),
+    ...toArray(profile.vocational_themes),
+  ].join(" ").toLowerCase();
+
+  const conflicts = [];
+
+  if (text.includes("overwhelm") || text.includes("overstimulation")) {
+    conflicts.push("high social environments");
+  }
+
+  if (text.includes("prefers to work alone") || text.includes("independent")) {
+    conflicts.push("customer-facing roles");
+  }
+
+  if (text.includes("communication difficulty")) {
+    conflicts.push("high communication jobs");
+  }
+
+  return conflicts;
+}
+
 const JOB_PROFILES = [
   {
     title: "Office Assistant",
