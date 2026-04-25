@@ -410,6 +410,12 @@ useEffect(() => {
       ? otherAssessmentDocs.map(doc => doc.ai_summary || doc.notes || "").join(" ")
       : "";
 
+    console.log("RECOMMENDATION INPUT:", {
+  resumeText,
+  wsaText,
+  otherAssessmentText
+});
+    
     const result = await getRecommendations({
   resumeText,
   wsaText,
