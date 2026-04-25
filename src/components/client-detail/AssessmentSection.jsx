@@ -502,7 +502,7 @@ Field mapping:
             Cancel
           </Button>
 
-          <Button onClick={handleSubmit} disabled={submitting || extracting}>
+      <Button onClick={handleSubmit} disabled={submitting || extracting || (assessmentType === "work_strategy_assessment" && !responses._uploaded_pdf_url)}>
             {submitting ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
             ) : assessmentType === "work_strategy_assessment" ? (
