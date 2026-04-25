@@ -178,8 +178,8 @@ const handleSubmit = async () => {
 
       toast.success("Assessment updated");
     } else {
-   await base44.entities.Assessment.create({
-  client_id: clientId,
+  await base44.entities.Assessment.create({
+  client_id: resolvedClientId,
   assessment_type: assessmentType,
   responses,
   completed_by: user.email,
@@ -194,8 +194,7 @@ const handleSubmit = async () => {
       }
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["client-assessments", clientId] });
-
+await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
     setShowForm(false);
     setEditingAssessment(null);
     setResponses({});
