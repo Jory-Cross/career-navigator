@@ -123,7 +123,8 @@ const WSA_FIELD_IDS = [
   "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
 ];
 
-export default function AssessmentSection({ clientId }) {
+export default function AssessmentSection({ clientId, client }) {
+  const resolvedClientId = clientId || client?.id || "";
   const [showForm, setShowForm] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
   const [assessmentType, setAssessmentType] = useState("career_goals");
@@ -162,7 +163,7 @@ export default function AssessmentSection({ clientId }) {
     queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
   });
 
-const handle
+const handleSubmit = async () => {
   setSubmitting(true);
 
   try {
