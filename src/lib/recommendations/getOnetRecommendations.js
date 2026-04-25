@@ -44,14 +44,41 @@ function buildSearchTerms(profile = {}) {
 export async function getOnetRecommendations(profile = {}) {
   const searchTerms = buildSearchTerms(profile);
 
-  if (searchTerms.length === 0) {
-    return {
-      source: "onet",
-      query_terms: [],
-      items: [],
-      onet_summary: buildOnetSummary([]),
-    };
-  }
+ if (searchTerms.length === 0) {
+  const fallbackItems = [
+    {
+      onet_code: "TEMP-1",
+      title: "Entry-Level Customer Service",
+      href: null,
+      bright_outlook: false,
+      green: false,
+      apprenticeship: false,
+    },
+    {
+      onet_code: "TEMP-2",
+      title: "Office Assistant",
+      href: null,
+      bright_outlook: false,
+      green: false,
+      apprenticeship: false,
+    },
+    {
+      onet_code: "TEMP-3",
+      title: "Retail Associate",
+      href: null,
+      bright_outlook: false,
+      green: false,
+      apprenticeship: false,
+    },
+  ];
+
+  return {
+    source: "temporary-fallback",
+    query_terms: ["fallback"],
+    items: fallbackItems,
+    onet_summary: buildOnetSummary(fallbackItems),
+  };
+}
 
   let allItems = [];
 
