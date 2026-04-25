@@ -127,11 +127,29 @@ export async function getOnetRecommendations(profile = {}) {
     const wsaThemeMatches = countMatches(job.keywords, toArray(profile.wsa_themes));
     const wsaGoalMatches = countMatches(job.keywords, toArray(profile.wsa_job_goals));
 
-   const score =
-  resumeMatches.length * 2 +
-  wsaStrengthMatches.length * 4 +
-  wsaThemeMatches.length * 6 +
-  wsaGoalMatches.length * 10;
+    const conflicts = getConflictKeywords(profile);
+
+    let score =
+      resumeMatches.length * 2 +
+      wsaStrengthMatches.length * 4 +
+      wsaThemeMatches.length * 6 +
+      wsaGoalMatches.length * 10;
+
+    if (
+      conflicts.includes("customer-facing roles") &&
+      job.title.toLowerCase().includes("customer")
+    ) {
+      score -= 8;
+    }
+
+    if (
+      conflicts.includes("high social environments") &&
+      job.title.toLowerCase().includes("service")
+    ) {
+      score -= 6;
+    }
+
+    score = Math.max(score, 0);
 
     return {
       onet_code: `TEMP-${index + 1}`,
