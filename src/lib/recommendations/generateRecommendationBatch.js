@@ -25,14 +25,19 @@ export async function generateRecommendationBatch({
   console.log("RECOMMENDATION PROFILE:", profile);
   const result = await getOnetRecommendations(profile);
 
-  return {
-    batch: {
-      recommendations: result?.items || [],
-      summary: result?.onet_summary || {},
-      source: result?.source || "scored-fallback",
-    },
-    payload: result,
-  };
+  // Save batch to database
+const savedBatch = await base44.entities.JobRecommendationBatch.create({
+  client_id: client?.id,
+  recommendations: result?.items || [],
+  summary: result?.onet_summary || {},
+  source: result?.source || "scored-fallback",
+  created_date: new Date().toISOString(),
+});
+
+return {
+  batch: savedBatch,
+  payload: result,
+};
 }
 
 export default generateRecommendationBatch;
