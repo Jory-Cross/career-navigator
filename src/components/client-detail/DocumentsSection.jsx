@@ -475,10 +475,22 @@ if (!aiRecommendationResult || !aiRecommendationResult.recommendations?.length) 
   const newSignature = JSON.stringify(aiRecommendationResult.recommendations);
   const oldSignature = latest ? JSON.stringify(latest.recommendations) : null;
 
-  if (newSignature === oldSignature && latest?.ai_coach_summary) {
-    setRunRecommendations(false);
-    return;
-  }
+  const newSignature = JSON.stringify({
+  jobs: aiRecommendationResult.recommendations,
+  profile: aiRecommendationResult.combined_profile,
+});
+
+const oldSignature = latest
+  ? JSON.stringify({
+      jobs: latest.recommendations,
+      profile: latest.combined_profile,
+    })
+  : null;
+
+if (newSignature === oldSignature && latest?.ai_coach_summary) {
+  setRunRecommendations(false);
+  return;
+}
 const includeResume = activeRecommendationSources.includes("resume");
 const includeWSA = activeRecommendationSources.includes("wsa");
 const includeOther = activeRecommendationSources.includes("other_assessments");
