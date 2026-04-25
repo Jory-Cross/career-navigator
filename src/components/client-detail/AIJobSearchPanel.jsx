@@ -510,10 +510,7 @@ const recs = await base44.entities.JobRecommendation.filter(
   </div>
 
   <div className="flex gap-2 flex-wrap justify-end">
-   <Button
-  size="sm"
-  className="h-8 text-xs"
-  onClick={async () => {<Button
+  <Button
   size="sm"
   className="h-8 text-xs"
   disabled={generatingRecommendations}
@@ -525,32 +522,35 @@ const recs = await base44.entities.JobRecommendation.filter(
         "@/lib/recommendations/runRecommendationEngine"
       );
 
-      const docs = await base44.entities.Document.filter({ client_id: resolvedClientId });
+      const docs = await base44.entities.Document.filter({
+        client_id: resolvedClientId,
+      });
+
       const assessments = base44.entities.Assessment?.filter
-        ? await base44.entities.Assessment.filter({ client_id: resolvedClientId })
+        ? await base44.entities.Assessment.filter({
+            client_id: resolvedClientId,
+          })
         : [];
 
       if (!docs.length && !assessments.length) {
-        toast.error(
-          "No recommendation data found. Upload a resume or assessments first."
-        );
+        toast.error("Upload a resume or assessment first.");
         return;
       }
 
       const result = await runRecommendationEngine({
-  client: { ...(client || {}), id: resolvedClientId },
-  documents: docs,
-  assessments,
-  forceRegenerate: true,
-});
+        client: { ...(client || {}), id: resolvedClientId },
+        documents: docs,
+        assessments,
+        forceRegenerate: true,
+      });
 
-setRecommendationBatch(result?.batch || null);
+      setRecommendationBatch(result?.batch || null);
 
-if (result?.batch?.recommendations?.length > 0) {
-  toast.success("Recommendations generated");
-} else {
-  toast.error("No O*NET recommendations returned yet. Check O*NET API setup.");
-}
+      if (result?.batch?.recommendations?.length > 0) {
+        toast.success("Recommendations generated");
+      } else {
+        toast.error("No O*NET results yet (API issue)");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate recommendations");
