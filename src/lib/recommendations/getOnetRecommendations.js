@@ -104,11 +104,11 @@ export async function getOnetRecommendations(profile = {}) {
     const wsaThemeMatches = countMatches(job.keywords, toArray(profile.wsa_themes));
     const wsaGoalMatches = countMatches(job.keywords, toArray(profile.wsa_job_goals));
 
-    const score =
-      resumeMatches.length * 3 +
-      wsaStrengthMatches.length * 4 +
-      wsaThemeMatches.length * 5 +
-      wsaGoalMatches.length * 6;
+   const score =
+  resumeMatches.length * 2 +
+  wsaStrengthMatches.length * 4 +
+  wsaThemeMatches.length * 6 +
+  wsaGoalMatches.length * 10;
 
     return {
       onet_code: `TEMP-${index + 1}`,
