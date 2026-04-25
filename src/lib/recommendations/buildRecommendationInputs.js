@@ -99,6 +99,8 @@ export function buildRecommendationInputs({
 
   const wsa = wsaAssessments[0] || null;
   console.log("FULL WSA OBJECT:", wsa);
+  console.log("FULL WSA RESPONSES:", wsa?.responses);
+console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
 
   const assessmentKeywords = uniqueStrings(
     otherAssessments.flatMap(getAssessmentText)
