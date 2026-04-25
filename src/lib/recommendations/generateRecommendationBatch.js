@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendations";
+import { generateJobCoachResponse } from "@/lib/recommendations/generateJobCoachResponse";
 
 export async function generateRecommendationBatch({
   client,
@@ -20,6 +21,11 @@ export async function generateRecommendationBatch({
 
   const result = await getOnetRecommendations(profile);
 
+  const aiCoachText = await generateJobCoachResponse({
+  recommendations: result?.items || [],
+  profile,
+});
+  
   const localBatch = {
     client_id: client?.id,
     recommended_job_fields_json: JSON.stringify(result?.items || []),
@@ -29,6 +35,7 @@ export async function generateRecommendationBatch({
     job_count: (result?.items || []).length,
     generated_at: new Date().toISOString(),
     generated_by: "ai",
+    ai_coach_summary: aiCoachText,
   };
 
   try {
