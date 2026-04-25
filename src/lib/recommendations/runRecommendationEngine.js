@@ -22,11 +22,15 @@ export async function runRecommendationEngine({
     }
   }
 
-  const result = await generateRecommendationBatch({
-    client,
-    documents,
-    assessments,
-  });
+  const inputs = buildRecommendationInputs({
+  documents,
+  assessments,
+});
+
+const result = await generateRecommendationBatch({
+  client,
+  ...inputs,
+});
 
   return {
     batch: result.batch,
