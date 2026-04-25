@@ -25,8 +25,18 @@ function getDocumentSkills(doc) {
 }
 
 function isWsaAssessment(assessment) {
-  const type = cleanString(assessment?.assessment_type || assessment?.title || assessment?.name).toLowerCase();
-  return type === "wsa" || type.includes("wsa") || type.includes("work strategy");
+  const type = cleanString(
+    assessment?.assessment_type ||
+    assessment?.title ||
+    assessment?.name ||
+    assessment?.type
+  ).toLowerCase();
+
+  return (
+    type.includes("work strategy assessment") ||
+    type.includes("work strategy") ||
+    type.includes("wsa")
+  );
 }
 
 function getAssessmentText(assessment) {
