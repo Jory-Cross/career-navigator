@@ -41,3 +41,4 @@ const result = await generateRecommendationBatch({
   payload: result,
   reused: false,
 };
+}
