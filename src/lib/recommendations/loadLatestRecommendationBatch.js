@@ -13,9 +13,11 @@ function normalizeBatch(batch) {
 
   return {
     ...batch,
-    recommendations: Array.isArray(batch.recommendations)
-      ? batch.recommendations
-      : [],
+   recommendations: Array.isArray(batch.recommendations)
+  ? batch.recommendations
+  : Array.isArray(batch.recommendations_json)
+    ? batch.recommendations_json
+    : [],
     summary: batch.summary || {},
     source: batch.source || "saved",
   };
