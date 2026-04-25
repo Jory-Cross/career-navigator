@@ -55,19 +55,14 @@ export async function getOnetRecommendations(profile = {}) {
 
   let allItems = [];
 
-for (const term of searchTerms) {
-  try {
-    const result = await searchOnetCareers({
-      query: term,
-      limit: 5,
-    });
-
-    const items = Array.isArray(result?.items) ? result.items : [];
-    allItems = allItems.concat(items);
-  } catch (error) {
-    console.error("O*NET recommendation search failed:", error);
-  }
-}
+allItems = searchTerms.map((term, index) => ({
+  onet_code: `TEMP-${index + 1}`,
+  title: `${term} related job option`,
+  href: null,
+  bright_outlook: false,
+  green: false,
+  apprenticeship: false,
+}));
 
   const deduped = [];
   const seen = new Set();
