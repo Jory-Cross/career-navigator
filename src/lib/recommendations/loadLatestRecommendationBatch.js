@@ -8,16 +8,26 @@ function sortNewestFirst(items = []) {
   });
 }
 
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function normalizeBatch(batch) {
   if (!batch) return null;
 
   return {
     ...batch,
-   recommendations: Array.isArray(batch.recommendations)
-  ? batch.recommendations
-  : Array.isArray(batch.recommended_job_fields_json)
-    ? batch.recommended_job_fields_json
-    : [],
+    recommendations: Array.isArray(batch.recommendations)
+      ? batch.recommendations
+      : parseJsonArray(batch.recommended_job_fields_json),
     summary: batch.summary || {},
     source: batch.source || "saved",
   };
@@ -28,12 +38,12 @@ export async function loadLatestRecommendationBatch(clientId) {
     throw new Error("loadLatestRecommendationBatch requires clientId");
   }
 
- const results = await base44.entities.JobRecommendationBatch.filter({
-  client_id: clientId,
-});
+  const results = await base44.entities.JobRecommendationBatch.filter({
+    client_id: clientId,
+  });
 
   console.log("LOADED RECOMMENDATION BATCHES:", results);
-  
+
   const ordered = sortNewestFirst(Array.isArray(results) ? results : []);
   return normalizeBatch(ordered[0] || null);
 }
