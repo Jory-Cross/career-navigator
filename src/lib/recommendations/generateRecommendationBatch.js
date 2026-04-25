@@ -29,10 +29,17 @@ export async function generateRecommendationBatch({
   // Save batch to database
 const savedBatch = await base44.entities.JobRecommendationBatch.create({
   client_id: client?.id,
+
+  // REQUIRED FIELDS (fixing error)
+  search_summary: result?.onet_summary?.narrative || "Generated recommendations",
+  job_count: (result?.items || []).length,
+  generated_at: new Date().toISOString(),
+  generated_by: "ai",
+
+  // YOUR DATA
   recommendations: result?.items || [],
   summary: result?.onet_summary || {},
   source: result?.source || "scored-fallback",
-  created_date: new Date().toISOString(),
 });
 
 return {
