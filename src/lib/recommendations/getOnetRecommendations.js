@@ -65,9 +65,15 @@ export async function getOnetRecommendations(profile = {}) {
   }
 
   const results = JOB_PROFILES.map((job, index) => {
-    const matches = job.keywords.filter((k) =>
-      profileKeywords.some((p) => safeLower(p).includes(safeLower(k)))
-    );
+    const matches = job.keywords.filter((keyword) => {
+  const key = safeLower(keyword);
+
+  return profileKeywords.some((profileKeyword) => {
+    const value = safeLower(profileKeyword);
+
+    return value === key || value.includes(key);
+  });
+});
 
     const score = matches.length * 3;
 
