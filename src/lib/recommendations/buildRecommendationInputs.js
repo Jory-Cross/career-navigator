@@ -9,13 +9,7 @@ function cleanString(value) {
 }
 
 function uniqueStrings(values = []) {
-  return Array.from(
-    new Set(
-      values
-        .map(cleanString)
-        .filter(Boolean)
-    )
-  );
+  return Array.from(new Set(values.map(cleanString).filter(Boolean)));
 }
 
 function isResume(doc) {
@@ -26,12 +20,25 @@ function getDocumentSkills(doc) {
   return uniqueStrings([
     ...toArray(doc?.ai_tags),
     ...toArray(doc?.tags),
+    ...toArray(doc?.skills),
   ]);
 }
 
 function isWsaAssessment(assessment) {
-  const type = cleanString(assessment?.assessment_type).toLowerCase();
-  return type === "wsa" || type.includes("work strategy");
+  const type = cleanString(assessment?.assessment_type || assessment?.title || assessment?.name).toLowerCase();
+  return type === "wsa" || type.includes("wsa") || type.includes("work strategy");
+}
+
+function getAssessmentText(assessment) {
+  const responses = assessment?.responses || {};
+  return uniqueStrings([
+    assessment?.assessment_type,
+    assessment?.title,
+    assessment?.name,
+    assessment?.summary,
+    assessment?.notes,
+    ...Object.values(responses),
+  ]);
 }
 
 function summarizeWsa(wsa = null) {
@@ -42,6 +49,19 @@ function summarizeWsa(wsa = null) {
   return {
     assessment_id: wsa.id || "",
     notes: wsa.notes || "",
+    summary: wsa.summary || "",
+    strengths: uniqueStrings([
+      ...toArray(wsa.strengths),
+      ...toArray(responses.strengths),
+      ...toArray(responses.work_strengths),
+      ...toArray(responses.best_work_tasks),
+    ]),
+    themes: uniqueStrings([
+      ...toArray(wsa.themes),
+      ...toArray(responses.themes),
+      ...toArray(responses.work_preferences),
+      ...toArray(responses.preferred_tasks),
+    ]),
     responses,
     pdf_url: wsa.pdf_url || responses._uploaded_pdf_url || "",
   };
@@ -62,27 +82,25 @@ export function buildRecommendationInputs({
   const wsa = wsaAssessments[0] || null;
 
   const assessmentKeywords = uniqueStrings(
-    otherAssessments.flatMap((assessment) => {
-      const responses = assessment.responses || {};
-      return [
-        assessment.assessment_type,
-        assessment.notes,
-        ...Object.values(responses),
-      ];
-    })
+    otherAssessments.flatMap(getAssessmentText)
   );
+
+  const summarizedWsa = summarizeWsa(wsa);
 
   const combined_profile = {
     resume_skills: resumeSkills,
-    wsa_strengths: [],
+    wsa_strengths: summarizedWsa?.strengths || [],
     assessment_keywords: assessmentKeywords,
-    job_titles: [],
-    vocational_themes: [],
+    job_titles: uniqueStrings(resumes.flatMap((doc) => toArray(doc?.job_titles))),
+    vocational_themes: summarizedWsa?.themes || [],
   };
 
   return {
-    resumes,
-    wsa: summarizeWsa(wsa),
+    resumes: resumes.map((doc) => ({
+      ...doc,
+      skills: getDocumentSkills(doc),
+    })),
+    wsa: summarizedWsa,
     otherAssessments,
     interestProfile: null,
     combined_profile,
