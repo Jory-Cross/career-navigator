@@ -25,16 +25,20 @@ function getDocumentSkills(doc) {
 }
 
 function isWsaAssessment(assessment) {
-  const type = cleanString(
+  const rawType =
     assessment?.assessment_type ||
     assessment?.title ||
     assessment?.name ||
-    assessment?.type
-  ).toLowerCase();
+    assessment?.type ||
+    "";
+
+  const type = String(rawType).toLowerCase().trim();
+
+  console.log("CHECKING ASSESSMENT TYPE:", rawType, "→", type);
 
   return (
-    type.includes("work strategy assessment") ||
     type.includes("work strategy") ||
+    type.includes("strategy assessment") ||
     type.includes("wsa")
   );
 }
