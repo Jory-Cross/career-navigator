@@ -19,16 +19,18 @@ function uniqueStrings(values = []) {
 function getConflictKeywords(profile = {}) {
   const text = [
     ...toArray(profile.wsa_strengths),
+    ...toArray(profile.wsa_themes),
+    ...toArray(profile.wsa_barriers),
     ...toArray(profile.vocational_themes),
   ].join(" ").toLowerCase();
 
   const conflicts = [];
 
-  if (text.includes("overwhelm") || text.includes("overstimulation")) {
+  if (text.includes("overwhelm") || text.includes("overstimulation") || text.includes("overstimulated")) {
     conflicts.push("high social environments");
   }
 
-  if (text.includes("prefers to work alone") || text.includes("independent")) {
+  if (text.includes("prefers to work alone") || text.includes("work alone") || text.includes("independent")) {
     conflicts.push("customer-facing roles");
   }
 
@@ -37,6 +39,59 @@ function getConflictKeywords(profile = {}) {
   }
 
   return conflicts;
+}
+
+function getFitConcerns(job, conflicts = []) {
+  const title = safeLower(job?.title);
+  const concerns = [];
+
+  if (conflicts.includes("customer-facing roles") && title.includes("customer")) {
+    concerns.push("Customer-facing work may conflict with a preference for independent work.");
+  }
+
+  if (conflicts.includes("high social environments") && title.includes("service")) {
+    concerns.push("This role may involve higher social demand or overstimulating environments.");
+  }
+
+  if (conflicts.includes("high communication jobs") && (title.includes("customer") || title.includes("support"))) {
+    concerns.push("This role may require frequent communication that should be reviewed before pursuing.");
+  }
+
+  return concerns;
+}
+
+function getFitStrengths({
+  resumeMatches = [],
+  wsaStrengthMatches = [],
+  wsaThemeMatches = [],
+  wsaGoalMatches = [],
+}) {
+  const strengths = [];
+
+  if (resumeMatches.length > 0) {
+    strengths.push(`Resume skill match: ${resumeMatches.join(", ")}`);
+  }
+
+  if (wsaStrengthMatches.length > 0) {
+    strengths.push(`WSA strength match: ${wsaStrengthMatches.join(", ")}`);
+  }
+
+  if (wsaThemeMatches.length > 0) {
+    strengths.push(`WSA theme match: ${wsaThemeMatches.join(", ")}`);
+  }
+
+  if (wsaGoalMatches.length > 0) {
+    strengths.push(`WSA job goal match: ${wsaGoalMatches.join(", ")}`);
+  }
+
+  return strengths;
+}
+
+function getFitLevel(score, fitConcerns = []) {
+  if (fitConcerns.length > 0) return "caution";
+  if (score >= 12) return "strong";
+  if (score > 0) return "possible";
+  return "low";
 }
 
 const JOB_PROFILES = [
@@ -58,7 +113,7 @@ const JOB_PROFILES = [
   },
   {
     title: "Janitorial / Custodial Worker",
-    keywords: ["cleaning", "janitorial", "maintenance", "detail", "routine"],
+    keywords: ["cleaning", "janitorial", "custodial", "maintenance", "detail", "routine"],
   },
   {
     title: "Warehouse Associate",
@@ -71,10 +126,8 @@ function normalizeKeywords(values = []) {
     values.flatMap((v) => {
       const str = String(v || "").toLowerCase();
 
-      // remove long sentences
       if (str.length > 60) return [];
 
-      // split phrases into smaller chunks
       return str
         .split(/[,\-\/]/)
         .map((s) => s.trim())
@@ -119,6 +172,8 @@ export async function getOnetRecommendations(profile = {}) {
     };
   }
 
+  const conflicts = getConflictKeywords(profile);
+
   const results = JOB_PROFILES.map((job, index) => {
     const matches = countMatches(job.keywords, profileKeywords);
 
@@ -127,26 +182,24 @@ export async function getOnetRecommendations(profile = {}) {
     const wsaThemeMatches = countMatches(job.keywords, toArray(profile.wsa_themes));
     const wsaGoalMatches = countMatches(job.keywords, toArray(profile.wsa_job_goals));
 
-    const conflicts = getConflictKeywords(profile);
-
-    let score =
+    const baseScore =
       resumeMatches.length * 2 +
       wsaStrengthMatches.length * 4 +
       wsaThemeMatches.length * 6 +
       wsaGoalMatches.length * 10;
 
-    if (
-      conflicts.includes("customer-facing roles") &&
-      job.title.toLowerCase().includes("customer")
-    ) {
-      score -= 8;
-    }
+    const fit_concerns = getFitConcerns(job, conflicts);
+    const fit_strengths = getFitStrengths({
+      resumeMatches,
+      wsaStrengthMatches,
+      wsaThemeMatches,
+      wsaGoalMatches,
+    });
 
-    if (
-      conflicts.includes("high social environments") &&
-      job.title.toLowerCase().includes("service")
-    ) {
-      score -= 6;
+    let score = baseScore;
+
+    if (fit_concerns.length > 0) {
+      score -= fit_concerns.length * 6;
     }
 
     score = Math.max(score, 0);
@@ -159,25 +212,19 @@ export async function getOnetRecommendations(profile = {}) {
       green: false,
       apprenticeship: false,
       score,
+      fit_level: getFitLevel(score, fit_concerns),
+      fit_strengths,
+      fit_concerns,
       matched_keywords: matches,
-            match_reason:
+      match_reason:
         matches.length > 0
-          ? `Matched based on: ${matches.join(", ")}${
-              score < (
-                resumeMatches.length * 2 +
-                wsaStrengthMatches.length * 4 +
-                wsaThemeMatches.length * 6 +
-                wsaGoalMatches.length * 10
-              )
-                ? " (Assessment data also flagged possible fit concerns.)"
-                : ""
-            }`
+          ? `Matched based on: ${matches.join(", ")}`
           : "General entry-level recommendation",
     };
   });
 
   const filtered = results
-    .filter((r) => r.score > 0)
+    .filter((r) => r.score > 0 || r.fit_concerns.length > 0)
     .sort((a, b) => b.score - a.score);
 
   return {
