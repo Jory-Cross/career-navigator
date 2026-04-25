@@ -513,7 +513,58 @@ const recs = await base44.entities.JobRecommendation.filter(
    <Button
   size="sm"
   className="h-8 text-xs"
+  onClick={async () => {<Button
+  size="sm"
+  className="h-8 text-xs"
+  disabled={generatingRecommendations}
   onClick={async () => {
+    try {
+      setGeneratingRecommendations(true);
+
+      const { runRecommendationEngine } = await import(
+        "@/lib/recommendations/runRecommendationEngine"
+      );
+
+      const docs = await base44.entities.Document.filter({ client_id: resolvedClientId });
+      const assessments = base44.entities.Assessment?.filter
+        ? await base44.entities.Assessment.filter({ client_id: resolvedClientId })
+        : [];
+
+      if (!docs.length && !assessments.length) {
+        toast.error(
+          "No recommendation data found. Upload a resume or assessments first."
+        );
+        return;
+      }
+
+      await runRecommendationEngine({
+        client: { ...(client || {}), id: resolvedClientId },
+        documents: docs,
+        assessments,
+        forceRegenerate: true,
+      });
+
+      const latest = await loadLatestRecommendationBatch(resolvedClientId);
+      setRecommendationBatch(latest);
+
+      toast.success("Recommendations generated");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate recommendations");
+    } finally {
+      setGeneratingRecommendations(false);
+    }
+  }}
+>
+  {generatingRecommendations ? (
+    <>
+      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+      Generating...
+    </>
+  ) : (
+    "Generate Recommendations"
+  )}
+</Button>
     try {
       const { runRecommendationEngine } = await import(
         "@/lib/recommendations/runRecommendationEngine"
