@@ -124,12 +124,37 @@ const topRiasecTypes = Object.entries(riasecScores)
     const titleMatchCount = countMatches(jobTitles, job.keywords);
     const themeMatchCount = countMatches(vocationalThemes, job.keywords);
 
-    const score =
-      resumeMatchCount * 3 +
-      wsaMatchCount * 3 +
-      assessmentMatchCount * 2 +
-      titleMatchCount * 4 +
-      themeMatchCount * 2;
+   // RIASEC alignment boost
+let riasecBoost = 0;
+
+// Basic mapping (can expand later)
+const jobRiasecMap = {
+  "warehouse associate": ["realistic"],
+  "grounds maintenance worker": ["realistic"],
+  "production worker": ["realistic"],
+  "janitorial / custodial worker": ["realistic"],
+
+  "customer service representative": ["social", "enterprising"],
+  "direct support professional": ["social"],
+  "food service worker": ["social"],
+
+  "office assistant": ["conventional"],
+  "computer support assistant": ["investigative", "conventional"],
+
+  "retail sales associate": ["enterprising", "social"],
+};
+
+const jobTypes = jobRiasecMap[safeLower(job.title)] || [];
+
+riasecBoost = jobTypes.filter(type => topRiasecTypes.includes(type)).length * 4;
+
+const score =
+  resumeMatchCount * 3 +
+  wsaMatchCount * 3 +
+  assessmentMatchCount * 2 +
+  titleMatchCount * 4 +
+  themeMatchCount * 2 +
+  riasecBoost;
 
     const matched_keywords = job.keywords.filter((keyword) =>
       allSignals.some((signal) => safeLower(signal).includes(safeLower(keyword)))
