@@ -22,6 +22,7 @@ export async function generateRecommendationBatch({
     riasec_scores: otherAssessments.find(a => a.riasec_scores)?.riasec_scores || {},
   };
 
+  console.log("RECOMMENDATION PROFILE:", profile);
   const result = await getOnetRecommendations(profile);
 
   return {
