@@ -22,7 +22,7 @@ export async function generateRecommendationBatch({
 
   const localBatch = {
     client_id: client?.id,
-    recommendations: result?.items || [],
+    recommended_job_fields_json: result?.items || [],
     summary: result?.onet_summary || {},
     source: result?.source || "scored-fallback",
     search_summary: result?.onet_summary?.narrative || "Generated recommendations",
