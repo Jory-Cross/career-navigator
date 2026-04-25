@@ -55,7 +55,8 @@ export async function getOnetRecommendations(profile = {}) {
 
   let allItems = [];
 
-  for (const term of searchTerms) {
+for (const term of searchTerms) {
+  try {
     const result = await searchOnetCareers({
       query: term,
       limit: 5,
@@ -63,7 +64,10 @@ export async function getOnetRecommendations(profile = {}) {
 
     const items = Array.isArray(result?.items) ? result.items : [];
     allItems = allItems.concat(items);
+  } catch (error) {
+    console.error("O*NET recommendation search failed:", error);
   }
+}
 
   const deduped = [];
   const seen = new Set();
