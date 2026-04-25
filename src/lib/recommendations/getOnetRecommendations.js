@@ -1,4 +1,4 @@
-import { searchOnetCareers } from "@/lib/adapters/onetAdapter";
+// import { searchOnetCareers } from "@/lib/adapters/onetAdapter";
 import { buildOnetSummary } from "@/lib/recommendations/buildOnetSummary";
 
 function toArray(value) {
