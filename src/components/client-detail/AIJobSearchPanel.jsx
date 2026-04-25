@@ -718,9 +718,17 @@ const recs = await base44.entities.JobRecommendation.filter(
   recommendationBatch.recommendations &&
   recommendationBatch.recommendations.length > 0 && (
     <Card className="p-4">
-      <h4 className="text-sm font-semibold mb-2">
-        AI Job Coach Recommendations
-      </h4>
+     <h4 className="text-sm font-semibold mb-2">
+  AI Job Coach Guidance
+</h4>
+
+{recommendationBatch.ai_coach_summary && (
+  <div className="mb-4 rounded-lg border bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-line">
+    {typeof recommendationBatch.ai_coach_summary === "string"
+      ? recommendationBatch.ai_coach_summary
+      : recommendationBatch.ai_coach_summary?.narrative_explanation || ""}
+  </div>
+)}
 
       <div className="space-y-2">
         {recommendationBatch.recommendations.map((rec, i) => (
