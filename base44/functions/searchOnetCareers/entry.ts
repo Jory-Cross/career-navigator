@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const url =
-      `https://services.onetcenter.org/ws/mnm/search?keyword=${encodeURIComponent(query)}`;
+   const url =
+  `https://services.onetcenter.org/ws/online/search?keyword=${encodeURIComponent(query)}`;
 
     const onetResponse = await fetch(url, {
       method: "GET",
