@@ -38,7 +38,7 @@ function buildSearchTerms(profile = {}) {
 
   const unique = uniqueStrings(ordered);
 
- return unique.slice(0, 1);
+ return unique.slice(0, 5);
 }
 
 export async function getOnetRecommendations(profile = {}) {
