@@ -38,10 +38,13 @@ console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
     console.error("Failed to save recommendation batch", err);
   }
 
-  return {
-    batch: localBatch,
-    payload: result,
-  };
+ return {
+  batch: {
+    ...localBatch,
+    recommendations: result?.items || [],
+  },
+  payload: result,
+};
 }
 
 export default generateRecommendationBatch;
