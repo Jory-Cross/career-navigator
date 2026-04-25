@@ -33,14 +33,14 @@ function pickResumeSkills(resumeDocs = []) {
 
 function buildWsaSummary(wsa = {}) {
  const source = wsa?.responses || wsa || {};
-    ...toArray(wsa?.strengths),
-    ...toArray(wsa?.preferred_tasks),
-    ...toArray(wsa?.interests),
+...toArray(source?.strengths),
+...toArray(source?.preferred_tasks),
+...toArray(source?.interests),
   ]);
 
   const supportNeeds = uniqueStrings([
-    ...toArray(wsa?.support_needs),
-    ...toArray(wsa?.barriers),
+ ...toArray(source?.support_needs),
+...toArray(source?.barriers),
   ]);
 
   return {
