@@ -83,6 +83,7 @@ export function buildRecommendationInputs({
 } = {}) {
   const resumes = documents.filter(isResume);
   const wsaAssessments = assessments.filter(isWsaAssessment);
+  console.log("WSA ASSESSMENTS FOUND:", wsaAssessments);
   const otherAssessments = assessments.filter((assessment) => !isWsaAssessment(assessment));
 
   const resumeSkills = uniqueStrings(
