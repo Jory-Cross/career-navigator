@@ -14,54 +14,25 @@ type OnetCareerResult = {
   apprenticeship: boolean;
 };
 
-function toBoolean(value: string | null) {
+function toBoolean(value: unknown) {
   return String(value || "").toLowerCase() === "true";
 }
 
-function basicAuthHeader(username: string, password: string) {
-  const encoded = btoa(`${username}:${password}`);
-  return `Basic ${encoded}`;
+function toArray(value: unknown): any[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  return [value];
 }
 
-function parseCareerNodes(xmlText: string): OnetCareerResult[] {
-  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-
-  if (!doc) {
-    throw new Error("Unable to parse O*NET response.");
-  }
-
-  const parserError = doc.querySelector("parsererror");
-  if (parserError) {
-    throw new Error("Invalid XML returned from O*NET.");
-  }
-
-  const careerNodes = Array.from(doc.querySelectorAll("career"));
-
-  return careerNodes.map((career) => {
-    const code =
-      career.querySelector(":scope > code")?.textContent?.trim() ||
-      career.getAttribute("code") ||
-      "";
-
-    const title =
-      career.querySelector(":scope > title")?.textContent?.trim() || "";
-
-    const tagsNode = career.querySelector(":scope > tags");
-    const href =
-      career.getAttribute("href") ||
-      career.querySelector(":scope > links > link")?.getAttribute("href") ||
-      career.querySelector(":scope > resources > resource")?.getAttribute("href") ||
-      null;
-
-    return {
-      onet_code: code,
-      title,
-      href,
-      bright_outlook: toBoolean(tagsNode?.getAttribute("bright_outlook") || null),
-      green: toBoolean(tagsNode?.getAttribute("green") || null),
-      apprenticeship: toBoolean(tagsNode?.getAttribute("apprenticeship") || null),
-    };
-  });
+function normalizeCareer(item: any): OnetCareerResult {
+  return {
+    onet_code: item?.code || item?.onet_code || "",
+    title: item?.title || item?.occupation || "",
+    href: item?.href || item?.link || null,
+    bright_outlook: toBoolean(item?.tags?.bright_outlook || item?.bright_outlook),
+    green: toBoolean(item?.tags?.green || item?.green),
+    apprenticeship: toBoolean(item?.tags?.apprenticeship || item?.apprenticeship),
+  };
 }
 
 Deno.serve(async (req) => {
@@ -84,27 +55,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    const username = Deno.env.get("ONET_USERNAME") || "";
-    const password = Deno.env.get("ONET_PASSWORD") || "";
+    const apiKey = Deno.env.get("ONET_API_KEY") || "";
 
-    if (!username || !password) {
+    if (!apiKey) {
       return Response.json(
         {
-          error:
-            "Missing O*NET credentials. Set ONET_USERNAME and ONET_PASSWORD in Base44 secrets.",
+          error: "Missing O*NET API key. Set ONET_API_KEY in Base44 secrets.",
         },
         { status: 500 }
       );
     }
 
-   const url =
-  `https://services.onetcenter.org/ws/online/search?keyword=${encodeURIComponent(query)}`;
+    const url =
+      `https://services.onetcenter.org/ws/online/search?keyword=${encodeURIComponent(query)}`;
 
     const onetResponse = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: basicAuthHeader(username, password),
-        Accept: "application/xml",
+        "X-API-Key": apiKey,
+        Accept: "application/json",
       },
     });
 
@@ -121,7 +90,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const items = parseCareerNodes(responseText)
+    const data = JSON.parse(responseText);
+
+    const rawItems = [
+      ...toArray(data?.occupation),
+      ...toArray(data?.occupations),
+      ...toArray(data?.career),
+      ...toArray(data?.careers),
+      ...toArray(data?.results),
+    ];
+
+    const items = rawItems
+      .map(normalizeCareer)
       .filter((item) => item.onet_code && item.title)
       .slice(0, limit);
 
