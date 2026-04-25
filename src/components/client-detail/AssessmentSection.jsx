@@ -158,10 +158,11 @@ export default function AssessmentSection({ clientId, client }) {
     toast.success("Assessment deleted");
   };
 
-  const { data: assessments = [], isLoading } = useQuery({
-    queryKey: ['client-assessments', clientId],
-    queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
-  });
+const { data: assessments = [], isLoading } = useQuery({
+  queryKey: ['client-assessments', resolvedClientId],
+  queryFn: () => base44.entities.Assessment.filter({ client_id: resolvedClientId }),
+  enabled: !!resolvedClientId
+});
 
 const handleSubmit = async () => {
   setSubmitting(true);
