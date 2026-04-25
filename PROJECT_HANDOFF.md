@@ -1,289 +1,107 @@
-# ✅ CRM BUILD HANDOFF (UPDATED)
+# CRM Build Handoff — AI Job Search Recommendation Engine
+
+## Completed
 
----
-
-# 🔧 CURRENT SYSTEM STATUS
-
-## ✅ RECOMMENDATION ENGINE (NOW WORKING)
-
-### Core Flow (FIXED)
-
-* Button triggers successfully
-* No longer fails silently
-* Data pipeline now connected end-to-end:
-
-```
-Documents + Assessments
-→ buildRecommendationInputs
-→ generateRecommendationBatch
-→ recommendationAdapter
-→ (temporary fallback instead of O*NET)
-→ UI rendering
-```
-
-### Fixes Completed
-
-* ✅ Data shape mismatch resolved (`batch.recommendations`)
-* ✅ Engine return structure standardized
-* ✅ UI now receives valid recommendation data
-* ✅ Console logging added for debugging
-* ✅ Recommendation cards now render
-
----
-
-## ⚠️ O*NET STATUS (TEMPORARILY DISABLED)
-
-* ❌ O*NET API returning 502 errors
-* ❌ Blocking recommendation generation
-* ✅ Temporarily replaced with fallback generator
-
-### Current Behavior
-
-* Generates placeholder job recommendations
-* Uses:
-
-```js
-TEMP-1, TEMP-2, etc.
-```
-
-### Important
-
-O*NET architecture is still intact:
-
-* Adapter layer preserved
-* Backend function preserved
-* Will be re-enabled later
-
----
-
-## 📂 DOCUMENT SYSTEM (UPDATED ROLE)
-
-### ✅ Current Behavior
-
-* Upload works
-* AI tagging works
-* Resume skills extracted
-* Documents load correctly
-
-### 🔄 Architectural Change
-
-Documents are now:
-
-```
-DATA SOURCE ONLY
-```
-
-### ❌ Removed from Documents Tab
-
-* Generate Recommendations button
-* Recommendation UI (Suggested Jobs, Approve/Reject, etc.)
-* Source toggles
-
-### ✅ Result
-
-```
-Documents = storage + viewing only
-AI Job Search = recommendation engine
-```
-
----
-
-## 🧠 RECOMMENDATION LOCATION (STANDARDIZED)
-
-### ONLY location for generating recommendations:
-
-```
-AI Job Search Panel
-```
-
-Prevents:
-
-* duplicate logic
-* conflicting states
-* accidental overwrites
-
----
-
-## 🔁 RECOMMENDATION PERSISTENCE (PARTIALLY IMPLEMENTED)
-
-### Current Behavior
-
-* Stored using:
-
-```
-getRecommendationBatchesForClient(clientId)
-```
-
-### Fix Applied
-
-* ❌ Removed manual clearing of:
-
-```js
-setRecommendationHistory([]);
-setSelectedRecommendationId(null);
-```
-
-### Result
-
-* Recommendations persist correctly in memory/store
-* History system functional
-
-### 🚧 Still Needed
-
-* Persist across full refresh (if not already stored server-side)
-* Ensure reload always pulls latest batch
-
----
-
-# 📊 CURRENT LIMITATION
-
-### Recommendation Quality
-
-Currently:
-
-```
-"customer service related job option"
-```
-
-Reason:
-
-* Using fallback generator (not real logic yet)
-
----
-
-# 🎯 NEXT IMMEDIATE STEPS
-
-## 1. Improve Recommendation Quality (HIGH PRIORITY)
-
-Replace fallback logic with:
-
-```
-resume skills
-+ WSA strengths
-+ assessment data
-→ structured job matching
-```
-
-### Goal
-
-* Real job titles
-* Scoring system
-* Reasoning output
-* Skill matching
-
----
-
-## 2. Re-enable O*NET (AFTER STABILITY)
-
-Fix:
-
-* Base44 secrets (ONET_USERNAME / ONET_PASSWORD)
-* API reliability
-* Error handling
-
-Then:
-
-```
-fallback → real O*NET results
-```
-
----
-
-## 3. Recommendation Persistence (COMPLETE)
-
-Ensure:
-
-* Survives refresh
-* Survives navigation
-* Only updates on button click
-
----
-
-# 🧱 FUTURE BUILD NOTES (IMPORTANT)
-
-## 📂 DOCUMENT SYSTEM (MAJOR RULE)
-
-### New Requirement
-
-Documents tab must be:
-
-```
-UNIVERSAL DOCUMENT HUB
-```
-
-### Behavior
-
-* Any document created anywhere appears here:
-
-  * WSA uploads
-  * Assessments
-  * Generated reports
-  * Resume uploads
-
-### Examples
-
-* Create WSA → appears in Documents
-* Generate report → appears in Documents
-* Upload resume → appears in Documents
-
-### Purpose
-
-* Single source of truth
-* Easy access
-* No duplication across UI
-
----
-
-## 📄 DOCUMENT VIEWING (FUTURE)
-
-Documents should:
-
-* Be viewable directly
-* Open in preview/modal
-* Support version viewing
-* Maintain source metadata
-
----
-
-# 🧠 DEVELOPMENT RULES (RECONFIRMED)
-
-1. **Stability First**
-
-   * Do NOT break working systems
-
-2. **One Step at a Time**
-
-   * Exact file + exact changes
-
-3. **No Premature Fixes**
-
-   * Only fix when it's the best next step
-
-4. **Architecture Direction**
-
-   * O*NET = backend source of truth
-   * Use adapters
-   * No frontend direct calls
-
----
-
-# 🚀 NEXT CHAT START PROMPT
-
-Use this in the next chat:
-
-```
-Continue CRM build — improve recommendation engine quality (replace fallback logic with real scoring using resume, WSA, and assessments)
-```
-
----
-
-# ✅ END STATE OF THIS CHAT
-
-* Recommendation engine: WORKING
-* UI rendering: WORKING
-* Documents section: CLEANED + STABLE
-* Architecture: CORRECT DIRECTION
-* Persistence: PARTIALLY COMPLETE
-* O*NET: TEMPORARILY DISABLED
-
----
+### Recommendation generation
+- Generate Recommendations button works.
+- Recommendation engine runs from AI Job Search only.
+- Documents tab remains storage/viewing only.
+- Recommendations now generate structured job cards with:
+  - title
+  - O*NET/temp code
+  - score
+  - matched keywords
+  - match reason
+
+### Persistence
+- Recommendations now save to `JobRecommendationBatch`.
+- Saved recommendations reload after refresh.
+- Button regeneration updates the displayed recommendations.
+- Refresh reloads latest saved batch correctly.
+
+### Data flow fixed
+- Resume skills are being pulled into the recommendation engine.
+- Changing/deleting/uploading a resume changes `resume_skills`.
+- WSA assessment detection was fixed:
+  - actual stored type is `work_strategy_assessment`
+  - detection now normalizes underscores to spaces
+  - `WSA ASSESSMENTS FOUND` now returns the WSA record
+
+## Current Issue
+
+WSA is detected but its fields are not yet mapped into recommendation inputs.
+
+Current `summarizeWsa` only uses:
+- `strengths`
+- `work_strengths`
+- `best_work_tasks`
+- `themes`
+- `work_preferences`
+- `preferred_tasks`
+
+Those do not match the real WSA fields.
+
+## User-confirmed WSA fields AI should consider
+
+Use these for intelligent recommendations:
+
+- Current work skills
+- Work Skill Development Needs
+- Interpersonal/social skills
+- Identified assistive technology needs
+- Communication needs
+- Behavioral/self-regulation
+- Family issues/supports
+- Criminal Background
+- School Academic
+- Worksite simulation observations
+- Natural support assessment
+- Computer skill assessment
+- Other observations
+
+Do NOT use:
+- Recommended target occupations
+- Life skills needed
+- Worksite simulation location itself
+
+Important note:
+- Worksite simulation **observations/notes** matter.
+- Worksite simulation **location** does not.
+
+## Required direction
+
+AI recommendations should combine:
+
+- resume skills
+- WSA fields above
+- O*NET Interest Profiler / RIASEC
+- other saved assessments
+
+Each recommendation should include specific reasons tied back to the available data.
+
+## Current best next step
+
+Open:
+
+src/lib/recommendations/buildRecommendationInputs.js
+
+Update:
+
+summarizeWsa()
+
+Goal:
+Map real WSA response keys into:
+- strengths / positive fit signals
+- barriers / support needs
+- themes / work preferences
+- assessment keywords
+
+Do this one step at a time.
+
+## Development rules
+
+- Do not break working generation/persistence.
+- One file at a time.
+- Exact code only.
+- If a question/idea comes up, decide if it is the right time.
+- If not right time, add to backlog and keep build focused.
