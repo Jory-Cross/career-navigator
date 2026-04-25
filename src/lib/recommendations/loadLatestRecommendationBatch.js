@@ -30,6 +30,8 @@ export async function loadLatestRecommendationBatch(clientId) {
   client_id: clientId,
 });
 
+  console.log("LOADED RECOMMENDATION BATCHES:", results);
+  
   const ordered = sortNewestFirst(Array.isArray(results) ? results : []);
   return normalizeBatch(ordered[0] || null);
 }
