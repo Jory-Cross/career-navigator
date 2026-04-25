@@ -162,7 +162,7 @@ export default function AssessmentSection({ clientId }) {
     queryFn: () => base44.entities.Assessment.filter({ client_id: clientId })
   });
 
-const handleSubmit = async () => {
+const handle
   setSubmitting(true);
 
   try {
