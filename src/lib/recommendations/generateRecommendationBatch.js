@@ -32,7 +32,8 @@ export async function generateRecommendationBatch({
   };
 
   try {
-    await base44.entities.JobRecommendationBatch.create(localBatch);
+   const savedBatch = await base44.entities.JobRecommendationBatch.create(localBatch);
+console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
   } catch (err) {
     console.error("Failed to save recommendation batch", err);
   }
