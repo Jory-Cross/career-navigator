@@ -568,36 +568,7 @@ const recs = await base44.entities.JobRecommendation.filter(
     "Generate Recommendations"
   )}
 </Button>
-    try {
-      const { runRecommendationEngine } = await import(
-        "@/lib/recommendations/runRecommendationEngine"
-      );
-
-    const docs = await base44.entities.Document.filter({ client_id: resolvedClientId });
-const assessments = base44.entities.Assessment?.filter
-  ? await base44.entities.Assessment.filter({ client_id: resolvedClientId })
-  : [];
-
-if (!docs.length && !assessments.length) {
-  toast.error(
-    "No recommendation data found. Upload a resume, WSA, RIASEC, or other assessment before generating recommendations."
-  );
-  return;
-}
-    await runRecommendationEngine({
-  client: { ...(client || {}), id: resolvedClientId },
-  documents: docs,
-  assessments,
-  forceRegenerate: true,
-});
-
-     const latest = await loadLatestRecommendationBatch(resolvedClientId);
-setRecommendationBatch(latest);
-      toast.success("Recommendations generated");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to generate recommendations");
-    }
+   
   }}
 >
   Generate Recommendations
