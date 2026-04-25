@@ -43,15 +43,32 @@ const JOB_PROFILES = [
   },
 ];
 
+function normalizeKeywords(values = []) {
+  return uniqueStrings(
+    values.flatMap((v) => {
+      const str = String(v || "").toLowerCase();
+
+      // remove long sentences
+      if (str.length > 60) return [];
+
+      // split phrases into smaller chunks
+      return str
+        .split(/[,\-\/]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 2 && s.length < 40);
+    })
+  );
+}
+
 function buildProfileText(profile = {}) {
   return uniqueStrings([
-    ...toArray(profile.resume_skills),
-    ...toArray(profile.wsa_strengths),
-    ...toArray(profile.wsa_themes),
-    ...toArray(profile.wsa_job_goals),
-    ...toArray(profile.assessment_keywords),
-    ...toArray(profile.job_titles),
-    ...toArray(profile.vocational_themes),
+    ...normalizeKeywords(profile.resume_skills),
+    ...normalizeKeywords(profile.wsa_strengths),
+    ...normalizeKeywords(profile.wsa_themes),
+    ...normalizeKeywords(profile.wsa_job_goals),
+    ...normalizeKeywords(profile.assessment_keywords),
+    ...normalizeKeywords(profile.job_titles),
+    ...normalizeKeywords(profile.vocational_themes),
   ]);
 }
 
