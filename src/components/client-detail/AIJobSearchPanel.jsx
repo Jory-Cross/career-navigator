@@ -545,6 +545,8 @@ const recs = await base44.entities.JobRecommendation.filter(
           })
         : [];
 
+      console.log("ASSESSMENTS FETCHED FOR RECOMMENDATIONS:", assessments);
+      
       if (!docs.length && !assessments.length) {
         toast.error("Upload a resume or assessment first.");
         return;
