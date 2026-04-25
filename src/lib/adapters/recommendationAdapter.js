@@ -32,7 +32,7 @@ function pickResumeSkills(resumeDocs = []) {
 }
 
 function buildWsaSummary(wsa = {}) {
-  const strengths = uniqueStrings([
+ const source = wsa?.responses || wsa || {};
     ...toArray(wsa?.strengths),
     ...toArray(wsa?.preferred_tasks),
     ...toArray(wsa?.interests),
