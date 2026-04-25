@@ -1,199 +1,289 @@
-
-- `recommendationAdapter.js` controls orchestration
-- `onetAdapter.js` defines external data contract
-- Local recommendation logic = fallback only
+# ✅ CRM BUILD HANDOFF (UPDATED)
 
 ---
 
-## AI Job Coach
+# 🔧 CURRENT SYSTEM STATUS
 
-Reads:
-- Resume data
-- WSA data
-- Other assessments
-- O*NET recommendations
+## ✅ RECOMMENDATION ENGINE (NOW WORKING)
 
-Outputs:
-- Narrative explanation
-- Job fit reasoning
-- Suggested directions
-- Future: job application guidance
+### Core Flow (FIXED)
 
----
+* Button triggers successfully
+* No longer fails silently
+* Data pipeline now connected end-to-end:
 
-## Data Model (Recommendation Batch)
+```
+Documents + Assessments
+→ buildRecommendationInputs
+→ generateRecommendationBatch
+→ recommendationAdapter
+→ (temporary fallback instead of O*NET)
+→ UI rendering
+```
 
-Key fields:
+### Fixes Completed
 
-- `client_id`
-- `active_sources`
-- `source_resume_ids`
-- `source_wsa_ids`
-- `source_other_assessment_ids`
-- `wsa_summary`
-- `combined_profile`
-- `recommendations`
-- `onet_summary`
-- `ai_coach_summary`
-- `status`
-- `reviewed_by`
-- `approved_recommendation`
+* ✅ Data shape mismatch resolved (`batch.recommendations`)
+* ✅ Engine return structure standardized
+* ✅ UI now receives valid recommendation data
+* ✅ Console logging added for debugging
+* ✅ Recommendation cards now render
 
 ---
 
-## Assessments Strategy
+## ⚠️ O*NET STATUS (TEMPORARILY DISABLED)
 
-System supports multiple assessment types:
+* ❌ O*NET API returning 502 errors
+* ❌ Blocking recommendation generation
+* ✅ Temporarily replaced with fallback generator
 
-- O*NET Interest Profiler (future primary)
-- Picture Profiler (existing tool)
-- WSA
-- ADL / barriers / communication / travel
+### Current Behavior
 
-### Key rule:
+* Generates placeholder job recommendations
+* Uses:
 
-- NOT all assessments map to RIASEC
-- All assessments contribute to a **unified client profile**
+```js
+TEMP-1, TEMP-2, etc.
+```
 
----
+### Important
 
-## Current Completed Work
+O*NET architecture is still intact:
 
-- Removed custom RIASEC dependency from logic
-- Built recommendation adapter
-- Built O*NET adapter (frontend stub)
-- Wired AI Job Coach
-- Added recommendation batch system
-- Added review/approval workflow
-- Report modal shows:
-  - O*NET Summary
-  - Assessment Summary
-  - AI Job Coach Summary
-  - Recommendations
+* Adapter layer preserved
+* Backend function preserved
+* Will be re-enabled later
 
 ---
 
-## Current Limitation (IMPORTANT)
+## 📂 DOCUMENT SYSTEM (UPDATED ROLE)
 
-- O*NET API call fails in frontend due to CORS
-- This is NOT a bug
-- This is an architectural boundary
+### ✅ Current Behavior
 
----
+* Upload works
+* AI tagging works
+* Resume skills extracted
+* Documents load correctly
 
-## Next Phase (HIGH PRIORITY)
+### 🔄 Architectural Change
 
-1. Create Base44 backend function for O*NET
-2. Route adapter → backend function
-3. Enable real O*NET data
-4. Replace placeholder responses
+Documents are now:
 
----
+```
+DATA SOURCE ONLY
+```
 
-## Upcoming Features
+### ❌ Removed from Documents Tab
 
-- O*NET Interest Profiler integration
-- Job links (live job openings)
-- AI-assisted job application guidance
-- Unified client profile engine
-- Multi-source job intelligence (future)
+* Generate Recommendations button
+* Recommendation UI (Suggested Jobs, Approve/Reject, etc.)
+* Source toggles
 
----
+### ✅ Result
 
-## Long-Term Vision
-
-- AI-driven career intelligence platform
-- Disability-aware job matching
-- Multi-tenant system for providers
-- Full career lifecycle support (assessment → placement → retention)
+```
+Documents = storage + viewing only
+AI Job Search = recommendation engine
+```
 
 ---
 
-## Developer Instructions (ChatGPT)
+## 🧠 RECOMMENDATION LOCATION (STANDARDIZED)
 
-- Give ONE step at a time
-- Provide EXACT file paths
-- Provide FULL code blocks (no fragments)
-- Keep explanations minimal
-- Do NOT reintroduce RIASEC logic
-- Favor adapter + backend architecture
-- Do NOT suggest frontend API calls to O*NET
+### ONLY location for generating recommendations:
 
+```
+AI Job Search Panel
+```
 
-All assessments feed into a **unified client profile**
+Prevents:
 
----
-
-## Recommendation System
-
-Current flow:
-
-## FUTURE FEATURE — Vocational Themes + Community Job Mapping
-
-### Objective
-Expand career intelligence beyond job titles by identifying **vocational themes** and mapping those themes to **real businesses in the client’s community**.
+* duplicate logic
+* conflicting states
+* accidental overwrites
 
 ---
 
-### Vocational Themes (Layer Above Jobs)
+## 🔁 RECOMMENDATION PERSISTENCE (PARTIALLY IMPLEMENTED)
 
-**Definition:**
-Broad clusters of work interests derived from:
-- Resume skills (AI tags)
-- WSA results
-- O*NET data
-- Other assessments
+### Current Behavior
 
-**Examples:**
-- Healthcare Support
-- Skilled Trades
-- Office / Administrative
-- Food Service
-- Retail / Customer Service
-- Transportation / Logistics
-- Technology / IT Support
+* Stored using:
 
-**Key Rules:**
-- NOT dependent on RIASEC
-- Derived from **combined_profile**
-- Multiple themes per client allowed
-- Themes are **directional**, not final recommendations
+```
+getRecommendationBatchesForClient(clientId)
+```
 
----
+### Fix Applied
 
-### Community Job Mapping
+* ❌ Removed manual clearing of:
 
-**Definition:**
-Map vocational themes → real local businesses (NOT job postings)
+```js
+setRecommendationHistory([]);
+setSelectedRecommendationId(null);
+```
 
-**Purpose:**
-- Show clients **where they could work locally**
-- Support job development and placement
-- Enable provider-driven outreach
+### Result
+
+* Recommendations persist correctly in memory/store
+* History system functional
+
+### 🚧 Still Needed
+
+* Persist across full refresh (if not already stored server-side)
+* Ensure reload always pulls latest batch
 
 ---
 
-### Data Model (Planned)
+# 📊 CURRENT LIMITATION
 
-#### Entity: `VocationalTheme`
-```json
-{
-  "name": "Healthcare Support",
-  "keywords": ["caregiver", "CNA", "medical", "patient", "support"],
-  "onet_codes": [],
-  "description": ""
-}
+### Recommendation Quality
 
-{
-  "name": "Cache Valley Hospital",
-  "industry": "Healthcare",
-  "address": "",
-  "city": "",
-  "state": "",
-  "zip": "",
-  "phone": "",
-  "website": "",
-  "notes": "",
-  "tags": ["healthcare", "medical"],
-  "vocational_themes": ["Healthcare Support"]
-}
+Currently:
+
+```
+"customer service related job option"
+```
+
+Reason:
+
+* Using fallback generator (not real logic yet)
+
+---
+
+# 🎯 NEXT IMMEDIATE STEPS
+
+## 1. Improve Recommendation Quality (HIGH PRIORITY)
+
+Replace fallback logic with:
+
+```
+resume skills
++ WSA strengths
++ assessment data
+→ structured job matching
+```
+
+### Goal
+
+* Real job titles
+* Scoring system
+* Reasoning output
+* Skill matching
+
+---
+
+## 2. Re-enable O*NET (AFTER STABILITY)
+
+Fix:
+
+* Base44 secrets (ONET_USERNAME / ONET_PASSWORD)
+* API reliability
+* Error handling
+
+Then:
+
+```
+fallback → real O*NET results
+```
+
+---
+
+## 3. Recommendation Persistence (COMPLETE)
+
+Ensure:
+
+* Survives refresh
+* Survives navigation
+* Only updates on button click
+
+---
+
+# 🧱 FUTURE BUILD NOTES (IMPORTANT)
+
+## 📂 DOCUMENT SYSTEM (MAJOR RULE)
+
+### New Requirement
+
+Documents tab must be:
+
+```
+UNIVERSAL DOCUMENT HUB
+```
+
+### Behavior
+
+* Any document created anywhere appears here:
+
+  * WSA uploads
+  * Assessments
+  * Generated reports
+  * Resume uploads
+
+### Examples
+
+* Create WSA → appears in Documents
+* Generate report → appears in Documents
+* Upload resume → appears in Documents
+
+### Purpose
+
+* Single source of truth
+* Easy access
+* No duplication across UI
+
+---
+
+## 📄 DOCUMENT VIEWING (FUTURE)
+
+Documents should:
+
+* Be viewable directly
+* Open in preview/modal
+* Support version viewing
+* Maintain source metadata
+
+---
+
+# 🧠 DEVELOPMENT RULES (RECONFIRMED)
+
+1. **Stability First**
+
+   * Do NOT break working systems
+
+2. **One Step at a Time**
+
+   * Exact file + exact changes
+
+3. **No Premature Fixes**
+
+   * Only fix when it's the best next step
+
+4. **Architecture Direction**
+
+   * O*NET = backend source of truth
+   * Use adapters
+   * No frontend direct calls
+
+---
+
+# 🚀 NEXT CHAT START PROMPT
+
+Use this in the next chat:
+
+```
+Continue CRM build — improve recommendation engine quality (replace fallback logic with real scoring using resume, WSA, and assessments)
+```
+
+---
+
+# ✅ END STATE OF THIS CHAT
+
+* Recommendation engine: WORKING
+* UI rendering: WORKING
+* Documents section: CLEANED + STABLE
+* Architecture: CORRECT DIRECTION
+* Persistence: PARTIALLY COMPLETE
+* O*NET: TEMPORARILY DISABLED
+
+---
