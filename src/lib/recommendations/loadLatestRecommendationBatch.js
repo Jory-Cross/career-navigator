@@ -15,8 +15,8 @@ function normalizeBatch(batch) {
     ...batch,
    recommendations: Array.isArray(batch.recommendations)
   ? batch.recommendations
-  : Array.isArray(batch.recommendations_json)
-    ? batch.recommendations_json
+  : Array.isArray(batch.recommended_job_fields_json)
+    ? batch.recommended_job_fields_json
     : [],
     summary: batch.summary || {},
     source: batch.source || "saved",
