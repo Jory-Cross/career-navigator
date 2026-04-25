@@ -312,7 +312,20 @@ const [filters, setFilters] = useState({});
 
 useEffect(() => {
   if (!resolvedClientId) return;
+
   loadSavedRecs();
+
+  (async () => {
+    try {
+      const latest = await loadLatestRecommendationBatch(resolvedClientId);
+
+      if (latest && latest.recommendations?.length > 0) {
+        setRecommendationBatch(latest);
+      }
+    } catch (err) {
+      console.error("Failed to load latest recommendations", err);
+    }
+  })();
 }, [resolvedClientId]);
   
   // Refresh client data (e.g. after extraction)
