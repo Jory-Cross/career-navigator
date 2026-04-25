@@ -537,17 +537,20 @@ const recs = await base44.entities.JobRecommendation.filter(
         return;
       }
 
-      await runRecommendationEngine({
-        client: { ...(client || {}), id: resolvedClientId },
-        documents: docs,
-        assessments,
-        forceRegenerate: true,
-      });
+      const result = await runRecommendationEngine({
+  client: { ...(client || {}), id: resolvedClientId },
+  documents: docs,
+  assessments,
+  forceRegenerate: true,
+});
 
-      const latest = await loadLatestRecommendationBatch(resolvedClientId);
-      setRecommendationBatch(latest);
+setRecommendationBatch(result?.batch || null);
 
-      toast.success("Recommendations generated");
+if (result?.batch?.recommendations?.length > 0) {
+  toast.success("Recommendations generated");
+} else {
+  toast.error("No O*NET recommendations returned yet. Check O*NET API setup.");
+}
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate recommendations");
