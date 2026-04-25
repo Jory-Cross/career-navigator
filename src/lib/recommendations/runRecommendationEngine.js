@@ -32,13 +32,15 @@ const result = await generateRecommendationBatch({
   ...inputs,
 });
 
-  return {
-  batch: {
-    recommendations: result?.items || [],
+  console.log("RUN ENGINE RESULT:", result);
+
+return {
+  batch: result?.batch || {
+    recommendations: result?.recommendations || result?.items || [],
     summary: result?.onet_summary || {},
     source: result?.source || "fallback",
   },
-  payload: result,
+  payload: result?.payload || result,
   reused: false,
 };
 }
