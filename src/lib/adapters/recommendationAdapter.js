@@ -32,11 +32,28 @@ function pickResumeSkills(resumeDocs = []) {
 }
 
 function buildWsaSummary(wsa = {}) {
- const source = wsa?.responses || wsa || {};
-...toArray(source?.strengths),
-...toArray(source?.preferred_tasks),
-...toArray(source?.interests),
+  const source = wsa?.responses || wsa || {};
+
+  const strengths = uniqueStrings([
+    ...toArray(source?.strengths),
+    ...toArray(source?.preferred_tasks),
+    ...toArray(source?.interests),
   ]);
+
+  const supportNeeds = uniqueStrings([
+    ...toArray(source?.support_needs),
+    ...toArray(source?.barriers),
+  ]);
+
+  return {
+    strengths,
+    support_needs: supportNeeds,
+    narrative:
+      strengths.length > 0
+        ? `WSA strengths noted: ${strengths.join(", ")}.`
+        : "No WSA strengths were summarized yet.",
+  };
+}
 
   const supportNeeds = uniqueStrings([
  ...toArray(source?.support_needs),
