@@ -129,9 +129,12 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
 
   const summarizedWsa = summarizeWsa(wsa);
 
-  const combined_profile = {
+    const combined_profile = {
     resume_skills: resumeSkills,
     wsa_strengths: summarizedWsa?.strengths || [],
+    wsa_themes: summarizedWsa?.themes || [],
+    wsa_barriers: summarizedWsa?.barriers || [],
+    wsa_job_goals: summarizedWsa?.job_goals || [],
     assessment_keywords: assessmentKeywords,
     job_titles: uniqueStrings(resumes.flatMap((doc) => toArray(doc?.job_titles))),
     vocational_themes: summarizedWsa?.themes || [],
