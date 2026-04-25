@@ -282,8 +282,7 @@ Field mapping:
       });
       
       // Merge extracted values (only non-empty) into current responses
-      const merged = { ...responses };
-      Object.entries(extracted).forEach(([key, val]) => {
+const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entries(extracted).forEach(([key, val]) => {
         if (val && val.trim() !== "") merged[key] = val;
       });
       setResponses(merged);
