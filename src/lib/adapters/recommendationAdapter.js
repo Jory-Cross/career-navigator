@@ -55,21 +55,6 @@ function buildWsaSummary(wsa = {}) {
   };
 }
 
-  const supportNeeds = uniqueStrings([
- ...toArray(source?.support_needs),
-...toArray(source?.barriers),
-  ]);
-
-  return {
-    strengths,
-    support_needs: supportNeeds,
-    narrative:
-      strengths.length > 0
-        ? `WSA strengths noted: ${strengths.join(", ")}.`
-        : "No WSA strengths were summarized yet.",
-  };
-}
-
 function buildOtherAssessmentSummary(otherAssessments = []) {
   const items = Array.isArray(otherAssessments) ? otherAssessments : [];
 
