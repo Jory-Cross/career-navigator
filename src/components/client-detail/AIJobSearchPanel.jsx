@@ -569,10 +569,6 @@ const recs = await base44.entities.JobRecommendation.filter(
   )}
 </Button>
    
-  }}
->
-  Generate Recommendations
-</Button>
     <Button
       size="sm"
       variant={activeTab === 'facts' ? 'default' : 'outline'}
