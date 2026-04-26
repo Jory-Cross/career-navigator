@@ -313,9 +313,6 @@ const [filters, setFilters] = useState({});
 useEffect(() => {
   if (!resolvedClientId) return;
 
-  useEffect(() => {
-  if (!resolvedClientId) return;
-
   loadSavedRecs();
   loadLatestBatch();
 
