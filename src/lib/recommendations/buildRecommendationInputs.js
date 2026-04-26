@@ -44,6 +44,8 @@ function isWsaAssessment(assessment) {
 
   console.log("CHECKING ASSESSMENT TYPE:", rawType, "→", type);
 
+  console.log("FULL ASSESSMENT OBJECT:", assessment);
+  
   return (
     type.includes("work strategy") ||
     type.includes("strategy assessment") ||
