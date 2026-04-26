@@ -108,83 +108,97 @@ export async function generateRecommendationBatch({
     onet_answer_string,
   });
 
-  const recommendationsWithConstraints = (result?.items || []).map((job) => {
-    const constraintResult = applyConstraintRules(
-      job,
-      constraintProfile.constraints
-    );
+  const processed = (result?.items || []).map((job) => {
+  const constraintResult = applyConstraintRules(
+    job,
+    constraintProfile.constraints
+  );
 
-    const existingConcerns = Array.isArray(job.fit_concerns)
-      ? job.fit_concerns
-      : [];
+  const existingConcerns = Array.isArray(job.fit_concerns)
+    ? job.fit_concerns
+    : [];
 
-    const fitConcerns = Array.from(
-      new Set([...existingConcerns, ...constraintResult.fit_concerns])
-    );
+  const fitConcerns = Array.from(
+    new Set([...existingConcerns, ...constraintResult.fit_concerns])
+  );
 
-    let baseScore =
-      Number(job.match_score) ||
-      Number(job.score) ||
-      Number(job.fit_score) ||
-      0;
+  let baseScore =
+    Number(job.match_score) ||
+    Number(job.score) ||
+    Number(job.fit_score) ||
+    0;
 
-    let score = baseScore;
+  let score = baseScore;
 
-    if (constraintResult.fit_concerns.length > 0) {
-      score = Math.max(0, baseScore - 50);
-    }
+  if (constraintResult.fit_concerns.length > 0) {
+    score = Math.max(0, baseScore - 50);
+  }
 
-    const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
+  const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
 
+  if (
+    riskText.includes("customer") ||
+    riskText.includes("cashier") ||
+    riskText.includes("retail") ||
+    riskText.includes("restaurant") ||
+    riskText.includes("sales")
+  ) {
     if (
-      riskText.includes("customer") ||
-      riskText.includes("cashier") ||
-      riskText.includes("retail") ||
-      riskText.includes("restaurant") ||
-      riskText.includes("sales")
+      constraintProfile.preferredEnvironments.includes(
+        "limited_customer_contact"
+      )
     ) {
-      if (
-        constraintProfile.preferredEnvironments.includes(
-          "limited_customer_contact"
-        )
-      ) {
-        score = 0;
-      }
+      score = 0;
     }
+  }
 
-    const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+  const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
-    if (envText.includes("custodial") || envText.includes("janitor")) {
-      score += 20;
-    }
+  if (envText.includes("custodial") || envText.includes("janitor")) {
+    score += 20;
+  }
 
-    if (envText.includes("independent")) {
-      score += 10;
-    }
+  if (envText.includes("independent")) {
+    score += 10;
+  }
 
-    if (score > 100) score = 100;
-    if (score < 0) score = 0;
+  if (score > 100) score = 100;
+  if (score < 0) score = 0;
 
-    const confidence = resolveConfidenceLevel({
+  const confidence = resolveConfidenceLevel({
+    score,
+    fitConcerns,
+    profile,
+  });
+
+  return {
+    ...job,
+    match_score: score,
+    fit_concerns: fitConcerns,
+    recommended_environments:
+      constraintResult.recommended_environments || [],
+    fit_level: resolveFitLevel({
       score,
       fitConcerns,
-      profile,
-    });
+    }),
+    confidence_level: confidence.confidence_level,
+    confidence_reason: confidence.confidence_reason,
+    constraint_codes: constraintProfile.constraints.map((c) => c.code),
+  };
+});
 
-    return {
-      ...job,
-      match_score: score,
-      fit_concerns: fitConcerns,
-      recommended_environments:
-        constraintResult.recommended_environments || [],
-      fit_level: resolveFitLevel({
-        score,
-        fitConcerns,
-      }),
-      confidence_level: confidence.confidence_level,
-      confidence_reason: confidence.confidence_reason,
-      constraint_codes: constraintProfile.constraints.map((c) => c.code),
-    };
+const recommendationsWithConstraints = processed
+  .filter((job) => job.match_score > 0)
+  .sort((a, b) => {
+    const confidenceRank = { high: 3, medium: 2, low: 1 };
+
+    const confDiff =
+      (confidenceRank[b.confidence_level] || 0) -
+      (confidenceRank[a.confidence_level] || 0);
+
+    if (confDiff !== 0) return confDiff;
+
+    return (b.match_score || 0) - (a.match_score || 0);
   });
 
   const aiCoachText = await generateJobCoachResponse({
