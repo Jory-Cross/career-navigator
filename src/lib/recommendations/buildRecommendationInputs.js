@@ -299,10 +299,9 @@ console.log("ONET ANSWER STRING:", onetAnswerString);
     ...doc,
     skills: getDocumentSkills(doc),
   })),
-  vocationalProfile: summarizedVfp,
+    vocationalProfile: summarizedVfp,
   wsa: summarizedWsa,
-       wsa: summarizedWsa,
-    otherAssessments,
+  otherAssessments,
    assessments_summary: {
   wsa_strengths: summarizedWsa?.strengths || [],
   wsa_preferences: summarizedWsa?.preferences || [],
