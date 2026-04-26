@@ -13,6 +13,8 @@ export async function generateRecommendationBatch({
   resumes = [],
   wsa = null,
   otherAssessments = [],
+  interestProfile = null,
+  onet_answer_string = null,
 } = {}) {
   const profile = {
     resume_skills: resumes.flatMap((r) => r.skills || []),
