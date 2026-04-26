@@ -259,20 +259,39 @@ if (interestAssessment) {
 console.log("ONET ANSWER STRING:", onetAnswerString);
   
     const combined_profile = {
-  resume_skills: resumeSkills,
+  resume_skills: summarizedVfp?.strengths?.length
+    ? summarizedVfp.strengths
+    : resumeSkills,
 
-  wsa_strengths: summarizedWsa?.strengths || [],
-  wsa_preferences: summarizedWsa?.preferences || [],
-  wsa_environment_needs: summarizedWsa?.environment_needs || [],
-  wsa_barriers: summarizedWsa?.barriers || [],
-  wsa_schedule_constraints: summarizedWsa?.schedule_constraints || [],
-  wsa_transportation: summarizedWsa?.transportation || [],
+  wsa_strengths: summarizedVfp?.strengths?.length
+    ? summarizedVfp.strengths
+    : summarizedWsa?.strengths || [],
+
+  wsa_preferences: summarizedVfp?.preferences?.length
+    ? summarizedVfp.preferences
+    : summarizedWsa?.preferences || [],
+
+  wsa_environment_needs: summarizedVfp?.environment_needs?.length
+    ? summarizedVfp.environment_needs
+    : summarizedWsa?.environment_needs || [],
+
+  wsa_barriers: summarizedVfp?.barriers?.length
+    ? summarizedVfp.barriers
+    : summarizedWsa?.barriers || [],
+
+  wsa_schedule_constraints: summarizedVfp?.schedule_constraints?.length
+    ? summarizedVfp.schedule_constraints
+    : summarizedWsa?.schedule_constraints || [],
+
+  wsa_transportation: summarizedVfp?.transportation?.length
+    ? summarizedVfp.transportation
+    : summarizedWsa?.transportation || [],
 
   assessment_keywords: assessmentKeywords,
 
-  job_titles: uniqueStrings(
-    resumes.flatMap((doc) => toArray(doc?.job_titles))
-  ),
+  job_titles: summarizedVfp?.job_titles?.length
+    ? summarizedVfp.job_titles
+    : uniqueStrings(resumes.flatMap((doc) => toArray(doc?.job_titles))),
 };
 
   return {
