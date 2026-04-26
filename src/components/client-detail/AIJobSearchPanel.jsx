@@ -739,9 +739,9 @@ const recs = await base44.entities.JobRecommendation.filter(
 
       <div className="space-y-2">
         {(() => {
-          const recommended = recommendationBatch.recommendations.filter(
-            (r) => r.confidence_level !== "low"
-          );
+          const recommended = recommendationBatch.recommendations
+  .filter((r) => r.confidence_level !== "low")
+  .sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
 
           const notRecommended = recommendationBatch.recommendations.filter(
             (r) => r.confidence_level === "low"
