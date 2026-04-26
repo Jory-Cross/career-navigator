@@ -217,39 +217,31 @@ export function buildClientConstraints(profile = {}) {
 export function applyConstraintRules(job = {}, constraints = []) {
   const title = safeLower(job.title);
   const description = safeLower(job.description || job.match_reason || "");
-const combined = `${title} ${description}`;
-const titleOnly = title;
+  const combined = `${title} ${description}`;
+  const titleOnly = title;
 
-    const fitConcerns = [];
+  const fitConcerns = [];
   const notFitReasons = [];
   const environmentRecommendations = [];
 
   constraints.forEach((constraint) => {
- const matchesAvoid =
-  includesAny(combined, constraint.avoidKeywords) ||
-  includesAny(titleOnly, constraint.avoidKeywords) ||
-  constraint.avoidKeywords.some((kw) =>
-    combined.includes(kw) ||
-    titleOnly.includes(kw)
-  );
+    const matchesAvoid =
+      includesAny(combined, constraint.avoidKeywords) ||
+      includesAny(titleOnly, constraint.avoidKeywords) ||
+      constraint.avoidKeywords.some((kw) =>
+        combined.includes(kw) || titleOnly.includes(kw)
+      );
 
-if (matchesAvoid) {
-  fitConcerns.push(constraint.concern);
-
-  notFitReasons.push(
-    `${job.title || "This role"} may not be a good fit: ${constraint.concern}`
-  );
-} else {
-  // NEW: still explain constraint even if no direct keyword hit
-  notFitReasons.push(
-    `${job.title || "This role"} may present challenges: ${constraint.concern}`
-  );
-}
+    if (matchesAvoid) {
       fitConcerns.push(constraint.concern);
 
-notFitReasons.push(
-  `${job.title || "This role"} may not be a good fit: ${constraint.concern}`
-);
+      notFitReasons.push(
+        `${job.title || "This role"} may not be a good fit: ${constraint.concern}`
+      );
+    } else {
+      notFitReasons.push(
+        `${job.title || "This role"} may present challenges: ${constraint.concern}`
+      );
     }
 
     if (constraint.recommendEnvironment) {
@@ -257,13 +249,12 @@ notFitReasons.push(
     }
   });
 
-    return {
+  return {
     fit_concerns: Array.from(new Set(fitConcerns)),
     not_fit_reasons: Array.from(new Set(notFitReasons)),
     recommended_environments: Array.from(new Set(environmentRecommendations)),
   };
 }
-
 export function resolveFitLevel({ score = 0, fitConcerns = [] }) {
   if (fitConcerns.length >= 2) return "caution";
   if (fitConcerns.length === 1 && score < 70) return "caution";
