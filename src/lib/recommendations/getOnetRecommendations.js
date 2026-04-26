@@ -297,6 +297,7 @@ return {
     ? `Matched based on: ${matches.join(", ")}`
     : "General entry-level recommendation",
 };
+});
 
   const filtered = results
     .filter((r) => r.score > 0 || r.fit_concerns.length > 0)
