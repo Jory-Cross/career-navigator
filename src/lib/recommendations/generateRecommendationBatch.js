@@ -65,15 +65,50 @@ export async function generateRecommendationBatch({
   interestProfile = null,
   onet_answer_string = null,
 } = {}) {
-  const profile = {
-    resume_skills: resumes.flatMap((r) => r.skills || []),
-    wsa_strengths: wsa?.strengths || [],
+    const profile = {
+    resume_skills: vocationalProfile?.strengths?.length
+      ? vocationalProfile.strengths
+      : resumes.flatMap((r) => r.skills || []),
+
+    wsa_strengths: vocationalProfile?.strengths?.length
+      ? vocationalProfile.strengths
+      : wsa?.strengths || [],
+
+    wsa_preferences: vocationalProfile?.preferences?.length
+      ? vocationalProfile.preferences
+      : wsa?.preferences || [],
+
+    wsa_environment_needs: vocationalProfile?.environment_needs?.length
+      ? vocationalProfile.environment_needs
+      : wsa?.environment_needs || [],
+
+    wsa_barriers: vocationalProfile?.barriers?.length
+      ? vocationalProfile.barriers
+      : wsa?.barriers || [],
+
+    wsa_schedule_constraints: vocationalProfile?.schedule_constraints?.length
+      ? vocationalProfile.schedule_constraints
+      : wsa?.schedule_constraints || [],
+
+    wsa_transportation: vocationalProfile?.transportation?.length
+      ? vocationalProfile.transportation
+      : wsa?.transportation || [],
+
     assessment_keywords: otherAssessments.flatMap((a) => a.keywords || []),
-    job_titles: resumes.flatMap((r) => r.job_titles || []),
-    vocational_themes: wsa?.themes || [],
+
+    job_titles: vocationalProfile?.job_titles?.length
+      ? vocationalProfile.job_titles
+      : resumes.flatMap((r) => r.job_titles || []),
+
+    vocational_themes: vocationalProfile?.preferences?.length
+      ? vocationalProfile.preferences
+      : wsa?.themes || [],
+
     riasec_scores:
       otherAssessments.find((a) => a.riasec_scores)?.riasec_scores || {},
+
     interest_profile: interestProfile,
+    vocational_profile: vocationalProfile,
     wsa,
     other_assessments: otherAssessments,
   };
