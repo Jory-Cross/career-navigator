@@ -738,11 +738,7 @@ const recs = await base44.entities.JobRecommendation.filter(
 )}
 
       <div className="space-y-2">
-       <div className="text-xs text-red-500 mb-2">
-  DEBUG COUNT: {recommendationBatch.recommendations.length}
-</div>
-
-{console.log("RENDERING RECOMMENDATIONS:", recommendationBatch.recommendations)}
+      
         {recommendationBatch.recommendations.map((rec, i) => (
           <div key={i} className="border rounded p-3 space-y-2">
 
