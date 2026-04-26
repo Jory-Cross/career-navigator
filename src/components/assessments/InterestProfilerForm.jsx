@@ -29,7 +29,15 @@ export default function InterestProfilerForm({ onComplete }) {
   function handleSubmit() {
     if (answers.length !== INTEREST_PROFILER_QUESTIONS.length) return;
 
-    const scores = calculateRiasecScores(answers);
+   const scores = calculateRiasecScores(
+  answers.map(a => {
+    const question = INTEREST_PROFILER_QUESTIONS.find(q => q.id === a.questionId);
+    return {
+      ...a,
+      category: question?.category
+    };
+  })
+);
     const topCodes = getTopRiasecCodes(scores);
 
     onComplete({
