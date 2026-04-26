@@ -1,31 +1,148 @@
-## Phase Status: Recommendation Engine + AI Job Coach (COMPLETE BASELINE)
+🔹 Recommendation Engine (Baseline)
+Built end-to-end recommendation pipeline:
+Resume skills
+WSA data
+Other assessments
+Integrated O*NET-style recommendations via getOnetRecommendations
+Recommendations now return:
+fit_strengths
+fit_concerns
+fit_level
+match_score
+🔹 Constraint-Aware Logic (FIRST VERSION)
+Created constraint system:
+buildClientConstraints
+applyConstraintRules
+System now:
+detects conflicts (customer-facing, overstimulation, etc.)
+flags fit_concerns
+recommends environments
+Added scoring adjustments:
+penalties for conflicts
+boosts for safe environments (custodial, independent work)
+🔹 AI Job Coach
+Generates narrative guidance from recommendations
+Persists in:
+ai_coach_summary
+Displays in UI with recommendations
+🔹 Persistence (FIXED)
+Recommendations now:
+save to JobRecommendationBatch
+reload on refresh
+Fixed critical bug:
+nested useEffect
+Added:
+loadLatestRecommendationBatch
+loadLatestBatch() in UI
+🔹 UI Integration
+Recommendations render correctly:
+match score
+strengths
+concerns
+AI Job Coach displayed above results
+Persistence verified working after refresh
+🔹 O*NET FOUNDATION (CRITICAL DIRECTION)
+Created:
+onetRoadmap.js (source of truth)
+onetClient.js (adapter layer)
+Built:
+buildOnetRecommendationProfile
+Wired into recommendation engine (logging only for now)
+🚨 WHAT IS NOT COMPLETE (IMPORTANT)
+❗ O*NET IS NOT DRIVING RECOMMENDATIONS YET
 
-### Completed
-- Recommendation generation, saving, and persistence
-- WSA + assessment integration into recommendation inputs
-- Weighted scoring model (resume vs WSA vs goals)
-- Structured recommendation output (fit_strengths, fit_concerns, fit_level)
-- AI Job Coach guidance generation
-- AI guidance saved to JobRecommendationBatch.ai_coach_summary
-- UI rendering of strengths/concerns with highlighting
-- Recommendation persistence behavior (only updates on regenerate)
+Right now:
 
-### Current Capabilities
-- Uses resume + WSA + assessments to generate recommendations
-- Produces explainable reasoning for each job
-- Flags potential conflicts (basic keyword logic)
-- Generates AI coaching summary per recommendation batch
+O*NET is partially simulated
+Keyword matching + fallback still exists
+My Next Move / O*NET services NOT integrated yet
+❗ WSA IS NOT INTELLIGENTLY SUMMARIZED
 
-### Known Gaps / Next Phase
-- Constraint-aware reasoning (environment, social tolerance, pace)
-- RIASEC integration into scoring
-- Replace static JOB_PROFILES with O*NET or DB-driven roles
-- Improve explainability with source attribution
-- Activate staff review workflow (requires_staff_review, violations)
-- Ensure documents generated in assessments appear in Documents tab
+Currently:
 
-### Backlog
-- Tailwind production setup
-- React Router warnings
-- Debug log cleanup
-- Builder performance / latency
+WSA data is passed raw
+No AI extraction layer
+No structured constraints derived from narrative
+❗ RIASEC IS UNDERUTILIZED
+Scores may exist
+NOT driving:
+ranking
+filtering
+career matching
+🎯 NEXT BUILD PRIORITIES (IN ORDER)
+1️⃣ O*NET INTEREST PROFILER (CRITICAL)
+
+Build:
+
+Official Interest Profiler workflow
+Store normalized RIASEC scores
+Replace any custom RIASEC logic
+
+Outcome:
+👉 Real RIASEC → real career matching
+
+2️⃣ MY NEXT MOVE INTEGRATION
+
+Replace:
+
+getOnetRecommendations
+
+With:
+👉 O*NET / My Next Move career matches
+
+Outcome:
+👉 Recommendations come from O*NET, not fallback logic
+
+3️⃣ AI WSA SUMMARIZATION
+
+Build AI layer to extract:
+
+work preferences
+constraints
+barriers
+environment needs
+support needs
+physical limitations
+schedule constraints
+
+Outcome:
+👉 No more raw WSA text
+👉 Structured constraints for recommendations
+
+4️⃣ RECOMMENDATION ENGINE REFACTOR
+
+Final architecture:
+
+O*NET (primary)
+  ↓
+RIASEC + Career Matches
+  ↓
+Apply WSA constraints
+  ↓
+Apply resume skills
+  ↓
+Apply support needs / limitations
+  ↓
+Final ranked recommendations
+5️⃣ REMOVE FALLBACK LOGIC
+
+Eventually remove:
+
+keyword matching
+manual job scoring
+hardcoded penalties
+
+Replace with:
+👉 O*NET + constraint overlay
+
+🧠 CRITICAL PROJECT RULE (DO NOT LOSE)
+
+O*NET is the source of truth for:
+
+assessments
+career matching
+job recommendations
+career data
+
+CRM data is:
+👉 an overlay layer (constraints, supports, real-world adjustments)
