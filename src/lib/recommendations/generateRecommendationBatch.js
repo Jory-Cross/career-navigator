@@ -55,34 +55,7 @@ function resolveConfidenceLevel({
       "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
   };
 }
-  const hasRichData =
-    (profile.resume_skills || []).length > 0 ||
-    (profile.wsa_strengths || []).length > 0 ||
-    (profile.assessment_keywords || []).length > 0 ||
-    (profile.job_titles || []).length > 0 ||
-    profile.interest_profile;
-
-  if (score >= 75 && fitConcerns.length === 0 && hasRichData) {
-    return {
-      confidence_level: "high",
-      confidence_reason:
-        "Strong match score with no major fit concerns and enough client data to support the recommendation.",
-    };
-  }
-
-  if (score >= 50 && fitConcerns.length <= 1) {
-    return {
-      confidence_level: "medium",
-      confidence_reason:
-        "Moderate match score with limited concerns. Staff should review before using as a primary recommendation.",
-    };
-  }
-
-  return {
-    confidence_level: "low",
-    confidence_reason:
-      "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
-  };
+  
 }
 
 export async function generateRecommendationBatch({
