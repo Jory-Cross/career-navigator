@@ -220,7 +220,8 @@ export function applyConstraintRules(job = {}, constraints = []) {
 const combined = `${title} ${description}`;
 const titleOnly = title;
 
-  const fitConcerns = [];
+    const fitConcerns = [];
+  const notFitReasons = [];
   const environmentRecommendations = [];
 
   constraints.forEach((constraint) => {
