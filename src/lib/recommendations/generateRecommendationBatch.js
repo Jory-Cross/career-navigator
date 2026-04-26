@@ -8,6 +8,41 @@ import {
   resolveFitLevel,
 } from "@/lib/recommendations/constraintRules";
 
+function resolveConfidenceLevel({
+  score = 0,
+  fitConcerns = [],
+  profile = {},
+}) {
+  const hasRichData =
+    (profile.resume_skills || []).length > 0 ||
+    (profile.wsa_strengths || []).length > 0 ||
+    (profile.assessment_keywords || []).length > 0 ||
+    (profile.job_titles || []).length > 0 ||
+    profile.interest_profile;
+
+  if (score >= 75 && fitConcerns.length === 0 && hasRichData) {
+    return {
+      confidence_level: "high",
+      confidence_reason:
+        "Strong match score with no major fit concerns and enough client data to support the recommendation.",
+    };
+  }
+
+  if (score >= 50 && fitConcerns.length <= 1) {
+    return {
+      confidence_level: "medium",
+      confidence_reason:
+        "Moderate match score with limited concerns. Staff should review before using as a primary recommendation.",
+    };
+  }
+
+  return {
+    confidence_level: "low",
+    confidence_reason:
+      "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
+  };
+}
+
 export async function generateRecommendationBatch({
   client,
   resumes = [],
@@ -22,7 +57,9 @@ export async function generateRecommendationBatch({
     assessment_keywords: otherAssessments.flatMap((a) => a.keywords || []),
     job_titles: resumes.flatMap((r) => r.job_titles || []),
     vocational_themes: wsa?.themes || [],
-    riasec_scores: otherAssessments.find((a) => a.riasec_scores)?.riasec_scores || {},
+    riasec_scores:
+      otherAssessments.find((a) => a.riasec_scores)?.riasec_scores || {},
+    interest_profile: interestProfile,
     wsa,
     other_assessments: otherAssessments,
   };
@@ -30,34 +67,33 @@ export async function generateRecommendationBatch({
   const constraintProfile = buildClientConstraints(profile);
 
   const onetProfile = buildOnetRecommendationProfile({
-  riasecProfile: interestProfile,
-  onetAnswerString: onet_answer_string,
-});
+    riasecProfile: interestProfile,
+    onetAnswerString: onet_answer_string,
+  });
 
- console.log("RECOMMENDATION PROFILE:", profile);
-console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
-console.log("O*NET RECOMMENDATION PROFILE:", onetProfile);
+  console.log("RECOMMENDATION PROFILE:", profile);
+  console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
+  console.log("O*NET RECOMMENDATION PROFILE:", onetProfile);
 
-  // REMOVE conflicting keywords BEFORE sending to O*NET
-const cleanedProfile = {
-  ...profile,
-  resume_skills: profile.resume_skills.filter(
-    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
-  ),
-  assessment_keywords: profile.assessment_keywords.filter(
-    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
-  ),
-  vocational_themes: profile.vocational_themes.filter(
-    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
-  ),
-};
+  const cleanedProfile = {
+    ...profile,
+    resume_skills: profile.resume_skills.filter(
+      (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+    ),
+    assessment_keywords: profile.assessment_keywords.filter(
+      (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+    ),
+    vocational_themes: profile.vocational_themes.filter(
+      (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+    ),
+  };
 
-const result = await getOnetRecommendations({
-  ...cleanedProfile,
-  onet_profile: onetProfile,
-  interest_profile: interestProfile,
-  onet_answer_string,
-});
+  const result = await getOnetRecommendations({
+    ...cleanedProfile,
+    onet_profile: onetProfile,
+    interest_profile: interestProfile,
+    onet_answer_string,
+  });
 
   const recommendationsWithConstraints = (result?.items || []).map((job) => {
     const constraintResult = applyConstraintRules(
@@ -70,66 +106,70 @@ const result = await getOnetRecommendations({
       : [];
 
     const fitConcerns = Array.from(
-      new Set([
-        ...existingConcerns,
-        ...constraintResult.fit_concerns,
-      ])
+      new Set([...existingConcerns, ...constraintResult.fit_concerns])
     );
 
     let baseScore =
-  Number(job.match_score) ||
-  Number(job.score) ||
-  Number(job.fit_score) ||
-  0;
+      Number(job.match_score) ||
+      Number(job.score) ||
+      Number(job.fit_score) ||
+      0;
 
-// Start from base
-let score = baseScore;
+    let score = baseScore;
 
-// HARD PENALTY: if conflicts exist, crush the score
-if (constraintResult.fit_concerns.length > 0) {
-  score = Math.max(0, baseScore - 50);
-}
+    if (constraintResult.fit_concerns.length > 0) {
+      score = Math.max(0, baseScore - 50);
+    }
 
-// EXTRA HARD penalty for customer-facing roles
-const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
+    const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
 
-if (
-  riskText.includes("customer") ||
-  riskText.includes("cashier") ||
-  riskText.includes("retail") ||
-  riskText.includes("restaurant") ||
-  riskText.includes("sales")
-) {
-  if (constraintProfile.preferredEnvironments.includes("limited_customer_contact")) {
-    score = 0;
-  }
-}
+    if (
+      riskText.includes("customer") ||
+      riskText.includes("cashier") ||
+      riskText.includes("retail") ||
+      riskText.includes("restaurant") ||
+      riskText.includes("sales")
+    ) {
+      if (
+        constraintProfile.preferredEnvironments.includes(
+          "limited_customer_contact"
+        )
+      ) {
+        score = 0;
+      }
+    }
 
-// BOOST safe roles
-const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+    const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
-if (envText.includes("custodial") || envText.includes("janitor")) {
-  score += 20;
-}
+    if (envText.includes("custodial") || envText.includes("janitor")) {
+      score += 20;
+    }
 
-if (envText.includes("independent")) {
-  score += 10;
-}
+    if (envText.includes("independent")) {
+      score += 10;
+    }
 
-// Clamp
-if (score > 100) score = 100;
-if (score < 0) score = 0;
+    if (score > 100) score = 100;
+    if (score < 0) score = 0;
 
-   return {
-  ...job,
-  match_score: score,
-  fit_concerns: fitConcerns,
+    const confidence = resolveConfidenceLevel({
+      score,
+      fitConcerns,
+      profile,
+    });
+
+    return {
+      ...job,
+      match_score: score,
+      fit_concerns: fitConcerns,
       recommended_environments:
         constraintResult.recommended_environments || [],
       fit_level: resolveFitLevel({
         score,
         fitConcerns,
       }),
+      confidence_level: confidence.confidence_level,
+      confidence_reason: confidence.confidence_reason,
       constraint_codes: constraintProfile.constraints.map((c) => c.code),
     };
   });
@@ -152,7 +192,8 @@ if (score < 0) score = 0;
       preferred_environments: constraintProfile.preferredEnvironments,
     },
     source: result?.source || "scored-fallback",
-    search_summary: result?.onet_summary?.narrative || "Generated recommendations",
+    search_summary:
+      result?.onet_summary?.narrative || "Generated recommendations",
     job_count: recommendationsWithConstraints.length,
     generated_at: new Date().toISOString(),
     generated_by: "ai",
@@ -162,7 +203,8 @@ if (score < 0) score = 0;
   console.log("LOCAL BATCH BEFORE SAVE:", localBatch);
 
   try {
-    const savedBatch = await base44.entities.JobRecommendationBatch.create(localBatch);
+    const savedBatch =
+      await base44.entities.JobRecommendationBatch.create(localBatch);
     console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
   } catch (err) {
     console.error("Failed to save recommendation batch", err);
