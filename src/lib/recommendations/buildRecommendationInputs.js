@@ -143,6 +143,66 @@ function extractRiasecAssessment(assessments = []) {
   }) || null;
 }
 
+function getVfpField(vfp = null, keys = []) {
+  if (!vfp) return [];
+
+  return uniqueStrings(
+    keys.flatMap((key) => toArray(vfp?.[key]))
+  );
+}
+
+function summarizeVfp(vfp = null) {
+  if (!vfp) return null;
+
+  return {
+    profile_id: vfp.id || "",
+    strengths: getVfpField(vfp, [
+      "strengths",
+      "work_strengths",
+      "skills",
+      "resume_skills",
+    ]),
+    preferences: getVfpField(vfp, [
+      "preferences",
+      "work_preferences",
+      "job_preferences",
+      "career_interests",
+      "jobs_of_interest",
+      "target_occupations",
+    ]),
+    environment_needs: getVfpField(vfp, [
+      "environment_needs",
+      "work_environment_needs",
+      "support_needs",
+      "accommodations",
+    ]),
+    barriers: getVfpField(vfp, [
+      "barriers",
+      "work_barriers",
+      "limitations",
+      "support_barriers",
+    ]),
+    schedule_constraints: getVfpField(vfp, [
+      "schedule_constraints",
+      "availability",
+      "preferred_schedule",
+      "hours_available",
+    ]),
+    transportation: getVfpField(vfp, [
+      "transportation",
+      "transportation_needs",
+      "commute_limitations",
+    ]),
+    job_titles: getVfpField(vfp, [
+      "job_titles",
+      "preferred_job_titles",
+      "recommended_jobs",
+      "target_jobs",
+    ]),
+    raw: vfp,
+  };
+}
+
 export function buildRecommendationInputs({
   documents = [],
   assessments = [],
