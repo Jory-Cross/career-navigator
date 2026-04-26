@@ -13,6 +13,48 @@ function resolveConfidenceLevel({
   fitConcerns = [],
   profile = {},
 }) {
+  const hasResume = (profile.resume_skills || []).length > 0;
+  const hasWSA = (profile.wsa_strengths || []).length > 0;
+  const hasAssessments = (profile.assessment_keywords || []).length > 0;
+  const hasRiasec = profile.interest_profile && Object.keys(profile.interest_profile).length > 0;
+
+  const dataScore =
+    (hasResume ? 1 : 0) +
+    (hasWSA ? 2 : 0) +
+    (hasAssessments ? 1 : 0) +
+    (hasRiasec ? 2 : 0);
+
+  const hasConflicts = fitConcerns.length > 0;
+
+  // HIGH CONFIDENCE
+  if (score >= 70 && !hasConflicts && dataScore >= 3) {
+    return {
+      confidence_level: "high",
+      confidence_reason:
+        "Strong match with no conflicts and supported by multiple data sources (resume, WSA, or assessments).",
+    };
+  }
+
+  // MEDIUM CONFIDENCE (THIS IS THE KEY FIX)
+  if (
+    (score >= 40 && !hasConflicts) ||
+    (score >= 55 && hasConflicts) ||
+    (dataScore >= 3 && score >= 30)
+  ) {
+    return {
+      confidence_level: "medium",
+      confidence_reason:
+        "Reasonable match with some supporting data. May require staff review but is a viable option.",
+    };
+  }
+
+  // LOW CONFIDENCE
+  return {
+    confidence_level: "low",
+    confidence_reason:
+      "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
+  };
+}
   const hasRichData =
     (profile.resume_skills || []).length > 0 ||
     (profile.wsa_strengths || []).length > 0 ||
