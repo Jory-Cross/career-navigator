@@ -739,7 +739,18 @@ const recs = await base44.entities.JobRecommendation.filter(
 
       <div className="space-y-2">
       
-        {recommendationBatch.recommendations.map((rec, i) => (
+       {(() => {
+  const recommended = recommendationBatch.recommendations.filter(
+    (r) => r.confidence_level !== "low"
+  );
+
+  const notRecommended = recommendationBatch.recommendations.filter(
+    (r) => r.confidence_level === "low"
+  );
+
+  return (
+    <>
+      {recommended.map((rec, i) => (
           <div key={i} className="border rounded p-3 space-y-2">
 
             <div className="font-medium text-sm">
