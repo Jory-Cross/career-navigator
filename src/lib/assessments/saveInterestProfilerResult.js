@@ -8,18 +8,20 @@ export async function saveInterestProfilerResult({
 }) {
   const user = await base44.auth.me();
 
+  const riasecCode = Array.isArray(topCodes)
+    ? topCodes.join("")
+    : String(topCodes || "");
+
   return base44.entities.Assessment.create({
     client_id: clientId,
     assessment_type: "interest_profiler",
     responses: {
       answers,
       riasec_scores: scores,
-      riasec_code: Array.isArray(topCodes) ? topCodes.join("") : String(topCodes || ""),
+      riasec_code: riasecCode,
       source: "O*NET Interest Profiler",
     },
     completed_by: user?.email || "",
-    notes: `O*NET Interest Profiler / RIASEC assessment completed. RIASEC: ${
-      Array.isArray(topCodes) ? topCodes.join("") : String(topCodes || "")
-    }`,
+    notes: `O*NET Interest Profiler / RIASEC assessment completed. RIASEC: ${riasecCode}`,
   });
 }
