@@ -86,19 +86,19 @@ const wsa_transportation = uniqueStrings([
   const other_summary = buildOtherAssessmentSummary(otherAssessments);
 
   const assessment_keywords = uniqueStrings([
-    ...other_summary.keywords,
-    ...wsa_strengths,
-    ...wsa_themes,
-    ...wsa_job_goals,
-  ]);
+  ...other_summary.keywords,
+  ...wsa_strengths,
+  ...wsa_preferences,
+  ...wsa_environment_needs,
+]);
 
-  const vocational_themes = uniqueStrings([
-    ...wsa_themes,
-  ]);
+const vocational_themes = uniqueStrings([
+  ...wsa_preferences,
+]);
 
-  const job_titles = uniqueStrings([
-    ...wsa_job_goals,
-  ]);
+const job_titles = uniqueStrings([
+  ...wsa_preferences,
+]);
 
   return {
     resume_skills,
