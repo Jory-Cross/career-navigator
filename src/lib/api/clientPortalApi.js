@@ -653,8 +653,10 @@ export async function getDocuments(clientId) {
 
   const documents = asArray(documentRows).map(mapDocument).filter(Boolean);
 
-  const assessmentDocs = asArray(assessmentRows).map((a) => ({
+    const assessmentDocs = asArray(assessmentRows).map((a) => ({
     id: `assessment-${a.id}`,
+    assessment_id: a.id,
+    is_assessment: true,
     client_id: a.client_id,
     title: a.assessment_type || "Assessment",
     description: a.notes || "",
@@ -670,7 +672,7 @@ export async function getDocuments(clientId) {
     notes: a.notes || "",
     version: 1,
     parent_document_id: null,
-    is_archived: false,
+    is_archived: asBoolean(a.is_archived, false),
     created_by: a.created_by || "",
     created_date: a.created_date || null,
     updated_date: a.updated_date || null,
