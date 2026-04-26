@@ -245,8 +245,9 @@ notFitReasons.push(
     }
   });
 
-  return {
+    return {
     fit_concerns: Array.from(new Set(fitConcerns)),
+    not_fit_reasons: Array.from(new Set(notFitReasons)),
     recommended_environments: Array.from(new Set(environmentRecommendations)),
   };
 }
