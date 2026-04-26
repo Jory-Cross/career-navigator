@@ -157,10 +157,14 @@ const titleOnly = title;
   const environmentRecommendations = [];
 
   constraints.forEach((constraint) => {
-   if (
-  includesAny(combined, constraint.avoidKeywords) ||
-  constraint.avoidKeywords.some((kw) => combined.includes(kw.split(" ")[0]))
-) {
+  if (
+    includesAny(combined, constraint.avoidKeywords) ||
+    includesAny(titleOnly, constraint.avoidKeywords) ||
+    constraint.avoidKeywords.some((kw) =>
+      combined.includes(kw) ||
+      titleOnly.includes(kw)
+    )
+  ) {
       fitConcerns.push(constraint.concern);
     }
 
