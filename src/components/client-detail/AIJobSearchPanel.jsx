@@ -872,7 +872,22 @@ const recs = await base44.entities.JobRecommendation.filter(
       renderRecommendationCard(rec, `recommended-${i}`)
     )}
 </div>
-              {notRecommended.length > 0 && (
+
+{recommended.length > 3 && (
+  <div className="mt-4">
+    <div className="text-xs font-semibold text-slate-600 mb-2">
+      Other Matches
+    </div>
+
+    <div className="space-y-3">
+      {recommended.slice(3).map((rec, i) =>
+        renderRecommendationCard(rec, `recommended-other-${i}`)
+      )}
+    </div>
+  </div>
+)}
+
+{notRecommended.length > 0 && (
                 <div className="mt-4">
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 mb-3">
   ⚠️ Not Recommended (Review Only)
