@@ -227,6 +227,7 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
   );
 
   const summarizedWsa = summarizeWsa(wsa);
+const summarizedVfp = summarizeVfp(vocationalProfile);
 
 const interestAssessment = extractRiasecAssessment(assessments);
 
