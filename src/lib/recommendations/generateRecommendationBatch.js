@@ -29,7 +29,21 @@ export async function generateRecommendationBatch({
   console.log("RECOMMENDATION PROFILE:", profile);
   console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
 
-  const result = await getOnetRecommendations(profile);
+  // REMOVE conflicting keywords BEFORE sending to O*NET
+const cleanedProfile = {
+  ...profile,
+  resume_skills: profile.resume_skills.filter(
+    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+  ),
+  assessment_keywords: profile.assessment_keywords.filter(
+    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+  ),
+  vocational_themes: profile.vocational_themes.filter(
+    (s) => !["customer service", "retail", "sales"].includes(s.toLowerCase())
+  ),
+};
+
+const result = await getOnetRecommendations(cleanedProfile);
 
   const recommendationsWithConstraints = (result?.items || []).map((job) => {
     const constraintResult = applyConstraintRules(
