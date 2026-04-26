@@ -1,3 +1,13 @@
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  return [value];
+}
+
+function joinList(items = []) {
+  return toArray(items).filter(Boolean).join(", ");
+}
+
 export async function generateJobCoachResponse({
   recommendations = [],
   profile = {},
@@ -6,23 +16,24 @@ export async function generateJobCoachResponse({
     return "No strong job matches were found based on the available data.";
   }
 
-  const strongMatches = recommendations.slice(0, 5);
+  const strongMatches = recommendations.filter((job) => job.fit_level !== "caution").slice(0, 5);
+  const cautionRoles = recommendations.filter((job) => job.fit_level === "caution");
 
-  const cautionRoles = recommendations.filter(
-    (job) =>
-      job.match_reason &&
-      job.match_reason.toLowerCase().includes("concern")
-  );
+  const strengths = joinList(profile.wsa_strengths);
+  const themes = joinList(profile.vocational_themes);
 
   return `
-Based on your assessments, here’s a breakdown of job fit:
+Based on the available resume, WSA, and assessment data, here’s the current job-fit guidance:
 
 Strong Matches:
 ${strongMatches
-  .map(
-    (job) =>
-      `- ${job.title}: ${job.match_reason || "Aligns with your strengths and preferences."}`
-  )
+  .map((job) => {
+    const reasons = job.fit_strengths?.length
+      ? job.fit_strengths.join("; ")
+      : job.match_reason || "Aligns with available skills and preferences.";
+
+    return `- ${job.title}: ${reasons}`;
+  })
   .join("\n")}
 
 ${
@@ -30,19 +41,26 @@ ${
     ? `
 Roles to Approach with Caution:
 ${cautionRoles
-  .map(
-    (job) =>
-      `- ${job.title}: may conflict with your assessment data or work preferences.`
-  )
+  .map((job) => {
+    const concerns = job.fit_concerns?.length
+      ? job.fit_concerns.join("; ")
+      : "May conflict with work preferences or support needs.";
+
+    return `- ${job.title}: ${concerns}`;
+  })
   .join("\n")}
 `
     : ""
 }
 
+Assessment Themes Noted:
+${strengths ? `- Strengths: ${strengths}` : "- Strengths: Not enough structured data yet."}
+${themes ? `- Work themes/preferences: ${themes}` : "- Work themes/preferences: Not enough structured data yet."}
+
 Key Insight:
-Some roles may appear to match your skills but conflict with your work preferences or support needs. These should be carefully evaluated before pursuing.
+Some roles may match skills on paper but still need review if the work environment, social demands, pace, or support needs do not fit the client.
 
 Recommended Focus:
-Prioritize roles that align with your strengths, independence level, and comfort in the work environment.
+Prioritize roles with strong skill alignment, predictable expectations, and work environments that match the client’s documented preferences and supports.
 `;
 }
