@@ -295,10 +295,12 @@ console.log("ONET ANSWER STRING:", onetAnswerString);
 };
 
   return {
-    resumes: resumes.map((doc) => ({
-      ...doc,
-      skills: getDocumentSkills(doc),
-    })),
+  resumes: resumes.map((doc) => ({
+    ...doc,
+    skills: getDocumentSkills(doc),
+  })),
+  vocationalProfile: summarizedVfp,
+  wsa: summarizedWsa,
        wsa: summarizedWsa,
     otherAssessments,
    assessments_summary: {
