@@ -888,7 +888,7 @@ key={tag}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          deleteDocument(doc.id);
+         deleteDocument(doc);
         }}
         className="h-7 px-2 text-red-500 hover:text-red-700"
       >
