@@ -840,7 +840,7 @@ const recs = await base44.entities.JobRecommendation.filter(
                             {rec.not_fit_reasons?.length > 0 && (
                 <div className="space-y-1">
                   <div className="text-[11px] font-semibold text-amber-900">
-                    Why this may NOT fit:
+                  Client considerations:
                   </div>
 
                   {rec.not_fit_reasons.map((item, idx) => (
