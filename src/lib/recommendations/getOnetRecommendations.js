@@ -198,13 +198,17 @@ export async function getOnetRecommendations(profile = {}) {
 
   console.log("O*NET PROFILE KEYWORDS:", profileKeywords);
 
-  if (profileKeywords.length === 0) {
-    return {
-      source: "empty-profile",
-      items: [],
-      onet_summary: buildOnetSummary([]),
-    };
-  }
+  if (
+  profileKeywords.length === 0 &&
+  !profile?.onet_profile?.answers &&
+  !profile?.onet_answer_string
+) {
+  return {
+    source: "empty-profile",
+    items: [],
+    onet_summary: buildOnetSummary([]),
+  };
+}
 
 if (profile?.onet_profile?.answers || profile?.onet_answer_string) {
   const onetCareers = await getInterestProfilerCareers({
