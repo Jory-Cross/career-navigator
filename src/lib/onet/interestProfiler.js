@@ -39,7 +39,6 @@ export function normalizeRiasecScores(scores = []) {
 
 export function buildRiasecScoreString(scores = {}) {
   const normalized = normalizeRiasecScores(scores);
-
   return RIASEC_ORDER.map((name) => normalized[name]).join("-");
 }
 
@@ -70,26 +69,6 @@ export function buildRiasecProfile({ scores = [], answers = [] } = {}) {
     riasec_scores: normalizedScores,
     riasec_score_string: scoreString,
     riasec_code: riasecCode,
-    answers,
-    completed_at: new Date().toISOString(),
-  };
-}
-export function buildInterestProfilerAnswerString(answers = []) {
-  return answers
-    .map((answer) => Number(answer))
-    .filter((answer) => answer >= 1 && answer <= 5)
-    .join("");
-}
-
-export function buildRiasecProfile({ scores = [], answers = [] } = {}) {
-  const normalizedScores = normalizeRiasecScores(scores);
-  const topCode = getTopRiasecCodes(normalizedScores);
-
-  return {
-    source: "O*NET Interest Profiler",
-    version: ONET_INTEREST_PROFILER_VERSION,
-    riasec_scores: normalizedScores,
-    riasec_code: topCode,
     answers,
     completed_at: new Date().toISOString(),
   };
