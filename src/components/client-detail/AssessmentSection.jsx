@@ -517,7 +517,7 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             Cancel
           </Button>
 
-      {assessmentType !== "riasec" && (
+      {assessmentType !== "interest_profiler" && (
   <Button
     onClick={handleSubmit}
     disabled={
