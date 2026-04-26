@@ -237,7 +237,7 @@ const recommendationsWithConstraints = processed
     return (b.match_score || 0) - (a.match_score || 0);
   });
 
-  const aiCoachText = await generateJobCoachResponse({
+   const aiCoachText = await generateJobCoachResponse({
     recommendations: recommendationsWithConstraints,
     profile: {
       ...profile,
