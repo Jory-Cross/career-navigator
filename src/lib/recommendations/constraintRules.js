@@ -72,6 +72,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "LOW_SOCIAL_TOLERANCE",
       label: "Low social tolerance",
+      severity: "moderate",
       concern:
         "This client may struggle in roles with frequent customer interaction or constant teamwork.",
       avoidKeywords: ["cashier", "customer service", "sales", "front desk", "reception"],
