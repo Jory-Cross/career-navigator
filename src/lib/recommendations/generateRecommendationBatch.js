@@ -1,3 +1,4 @@
+import { buildOnetRecommendationProfile } from "@/lib/onet/onetClient";
 import { base44 } from "@/api/base44Client";
 import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendations";
 import { generateJobCoachResponse } from "@/lib/recommendations/generateJobCoachResponse";
@@ -26,8 +27,15 @@ export async function generateRecommendationBatch({
 
   const constraintProfile = buildClientConstraints(profile);
 
-  console.log("RECOMMENDATION PROFILE:", profile);
-  console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
+  const onetProfile = buildOnetRecommendationProfile({
+  riasec_scores: profile.riasec_scores,
+  resume_skills: profile.resume_skills,
+  wsa_constraints: constraintProfile.constraints,
+});
+
+ console.log("RECOMMENDATION PROFILE:", profile);
+console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
+console.log("O*NET RECOMMENDATION PROFILE:", onetProfile);
 
   // REMOVE conflicting keywords BEFORE sending to O*NET
 const cleanedProfile = {
