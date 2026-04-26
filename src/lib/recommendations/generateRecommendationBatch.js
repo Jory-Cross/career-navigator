@@ -94,55 +94,7 @@ if (score < 0) score = 0;
 
 // BOOST score if job aligns with preferred environments
 const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
-
-const preferred = constraintProfile.preferredEnvironments || [];
-
-if (preferred.includes("independent_work") && envText.includes("custodial")) {
-  score += 10;
-}
-
-if (preferred.includes("low_stimulation") && envText.includes("clean")) {
-  score += 5;
-}
-
-if (preferred.includes("structured_routine") && envText.includes("routine")) {
-  score += 5;
-}
-
-// PENALIZE score if conflicts exist
-if (constraintResult.fit_concerns.length > 0) {
-  score -= constraintResult.fit_concerns.length * 15;
-}
-
-// EXTRA penalty for high-risk roles (customer-facing, fast-paced)
-const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
-
-if (
-  riskText.includes("customer") ||
-  riskText.includes("cashier") ||
-  riskText.includes("retail") ||
-  riskText.includes("restaurant") ||
-  riskText.includes("sales")
-) {
-  if (constraintProfile.preferredEnvironments.includes("limited_customer_contact")) {
-    score -= 20;
-  }
-}
-
-if (
-  riskText.includes("fast paced") ||
-  riskText.includes("busy") ||
-  riskText.includes("high volume")
-) {
-  if (constraintProfile.preferredEnvironments.includes("low_stimulation")) {
-    score -= 15;
-  }
-}
-
-// Clamp score
-if (score > 100) score = 100;
-if (score < 0) score = 0;
-
+    
    return {
   ...job,
   match_score: score,
