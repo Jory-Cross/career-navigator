@@ -790,7 +790,38 @@ const recs = await base44.entities.JobRecommendation.filter(
                   >
                     {tag}
                   </span>
-                ))}
+                      ))}
+
+      {notRecommended.length > 0 && (
+        <div className="mt-4">
+          <div className="text-xs font-semibold text-amber-700 mb-2">
+            Not Recommended (Review Only)
+          </div>
+
+          <div className="space-y-2 opacity-70">
+            {notRecommended.map((rec, i) => (
+              <div key={`not-${i}`} className="border rounded p-3 space-y-2">
+                <div className="font-medium text-sm">
+                  {rec.title || "Untitled Recommendation"}
+                </div>
+
+                <div className="text-xs text-amber-600 font-medium">
+                  Confidence: {rec.confidence_level}
+                </div>
+
+                {rec.confidence_reason && (
+                  <div className="text-[11px] text-amber-700">
+                    {rec.confidence_reason}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+})()}
               </div>
             )}
 
