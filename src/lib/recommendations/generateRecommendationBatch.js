@@ -30,9 +30,8 @@ export async function generateRecommendationBatch({
   const constraintProfile = buildClientConstraints(profile);
 
   const onetProfile = buildOnetRecommendationProfile({
-  riasec_scores: profile.riasec_scores,
-  resume_skills: profile.resume_skills,
-  wsa_constraints: constraintProfile.constraints,
+  riasecProfile: interestProfile,
+  onetAnswerString: onet_answer_string,
 });
 
  console.log("RECOMMENDATION PROFILE:", profile);
@@ -53,7 +52,12 @@ const cleanedProfile = {
   ),
 };
 
-const result = await getOnetRecommendations(cleanedProfile);
+const result = await getOnetRecommendations({
+  ...cleanedProfile,
+  onet_profile: onetProfile,
+  interest_profile: interestProfile,
+  onet_answer_string,
+});
 
   const recommendationsWithConstraints = (result?.items || []).map((job) => {
     const constraintResult = applyConstraintRules(
