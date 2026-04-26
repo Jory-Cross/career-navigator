@@ -914,7 +914,7 @@ const recs = await base44.entities.JobRecommendation.filter(
 
                   <div className="space-y-3 opacity-70 border-t border-amber-200 pt-3">
                     {notRecommended.map((rec, i) =>
-                      renderRecommendationCard(rec, `not-${i}`)
+                      renderRecommendationCard(rec, `not-${i}`, "notRecommended")
                     )}
                   </div>
                 </div>
