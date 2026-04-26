@@ -1108,13 +1108,33 @@ key={tag}
         </div>
 
         {selectedAssessmentDoc.raw?.responses && (
-          <div>
-            <strong>Responses:</strong>
-            <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64">
-              {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
-            </pre>
-          </div>
-        )}
+  <div>
+    <strong>Assessment Details:</strong>
+
+    {selectedAssessmentDoc.title === "interest_profiler" ? (
+      <div className="mt-2 space-y-2 text-sm">
+        <p>
+          <strong>RIASEC Code:</strong>{" "}
+          {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
+        </p>
+
+        <p>
+          <strong>RIASEC Scores:</strong>{" "}
+          {selectedAssessmentDoc.raw.responses.riasec_score_string || "Not available"}
+        </p>
+
+        <p>
+          <strong>Answers Completed:</strong>{" "}
+          {selectedAssessmentDoc.raw.responses.answers?.length || 0}
+        </p>
+      </div>
+    ) : (
+      <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64 mt-2">
+        {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
+      </pre>
+    )}
+  </div>
+)}
       </div>
     </DialogContent>
   </Dialog>
