@@ -444,11 +444,12 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
   <InterestProfilerPanel
     clientId={resolvedClientId}
     onSaved={() => {
-      setShowForm(false);
-      loadAssessments();
-    }}
-  />
-)}
+      onSaved={async () => {
+  await queryClient.invalidateQueries({
+    queryKey: ["client-assessments", resolvedClientId],
+  });
+  setShowForm(false);
+}}
           
           {currentQuestions.map((q) => (
             <div key={q.id}>
