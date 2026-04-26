@@ -440,7 +440,7 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             </div>
           )}
 
-{assessmentType === "riasec" && (
+{assessmentType === "interest_profiler" && (
   <InterestProfilerPanel
     clientId={resolvedClientId}
     onSaved={async () => {
