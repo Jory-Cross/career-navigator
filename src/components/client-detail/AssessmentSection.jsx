@@ -445,15 +445,14 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 {assessmentType === "interest_profiler" && (
   <InterestProfilerPanel
     clientId={resolvedClientId}
-    onSaved={async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["client-assessments", resolvedClientId],
-      });
+    existingAssessment={editingAssessment}
+    onSaved={() => {
+      queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
       setShowForm(false);
+      setEditingAssessment(null);
     }}
   />
-)}
-          
+)}          
           {currentQuestions.map((q) => (
             <div key={q.id}>
               {q.type === "section" ? (
