@@ -288,7 +288,7 @@ return {
   fit_level: isBlocked ? "low" : getFitLevel(score, fit_concerns),
   fit_strengths,
   fit_concerns: isBlocked
-  ? ["This role conflicts with critical work preferences."]
+  ? [...fit_concerns, "This role conflicts with critical work preferences."]
     : fit_concerns,
   matched_keywords: matches,
   match_reason: isBlocked
