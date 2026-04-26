@@ -392,8 +392,10 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
               <SelectContent>
                 {Object.keys(assessmentQuestions).map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type.replace(/_/g, " ")}
-                  </SelectItem>
+  {type === "interest_profiler"
+    ? "Interest Profiler"
+    : type.replace(/_/g, " ")}
+</SelectItem>
                 ))}
               </SelectContent>
             </Select>
