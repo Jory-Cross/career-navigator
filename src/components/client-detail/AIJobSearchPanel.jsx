@@ -748,7 +748,16 @@ const recs = await base44.entities.JobRecommendation.filter(
           );
 
           const renderRecommendationCard = (rec, key) => (
-            <div key={key} className="border rounded p-3 space-y-2">
+            <div
+  key={key}
+  className={`border rounded p-3 space-y-2 ${
+    rec.confidence_level === "high"
+      ? "border-green-400 bg-green-50"
+      : rec.confidence_level === "medium"
+      ? "border-blue-300 bg-blue-50"
+      : ""
+  }`}
+>
               <div className="font-medium text-sm">
                 {rec.title || "Untitled Recommendation"}
               </div>
