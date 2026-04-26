@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,18 +6,24 @@ import { Label } from "@/components/ui/label";
 import {
   INTEREST_PROFILER_QUESTIONS,
   calculateRiasecScores,
-  getTopRiasecCodes
+  getTopRiasecCodes,
 } from "@/lib/assessments/interestProfilerModel";
 
-export default function InterestProfilerForm({ onComplete }) {
+export default function InterestProfilerForm({ onComplete, initialAnswers = [] }) {
   const [answers, setAnswers] = useState([]);
+
+  useEffect(() => {
+    if (Array.isArray(initialAnswers) && initialAnswers.length > 0) {
+      setAnswers(initialAnswers);
+    }
+  }, [initialAnswers]);
 
   function handleAnswer(questionId, value) {
     setAnswers((prev) => {
-      const existing = prev.find(a => a.questionId === questionId);
+      const existing = prev.find((a) => a.questionId === questionId);
 
       if (existing) {
-        return prev.map(a =>
+        return prev.map((a) =>
           a.questionId === questionId ? { ...a, value } : a
         );
       }
@@ -29,15 +35,19 @@ export default function InterestProfilerForm({ onComplete }) {
   function handleSubmit() {
     if (answers.length !== INTEREST_PROFILER_QUESTIONS.length) return;
 
-   const scores = calculateRiasecScores(
-  answers.map(a => {
-    const question = INTEREST_PROFILER_QUESTIONS.find(q => q.id === a.questionId);
-    return {
-      ...a,
-      category: question?.category
-    };
-  })
-);
+    const scores = calculateRiasecScores(
+      answers.map((a) => {
+        const question = INTEREST_PROFILER_QUESTIONS.find(
+          (q) => q.id === a.questionId
+        );
+
+        return {
+          ...a,
+          category: question?.category,
+        };
+      })
+    );
+
     const topCodes = getTopRiasecCodes(scores);
 
     onComplete({
@@ -61,7 +71,7 @@ export default function InterestProfilerForm({ onComplete }) {
                 key={val}
                 size="sm"
                 variant={
-                  answers.find(a => a.questionId === q.id)?.value === val
+                  answers.find((a) => a.questionId === q.id)?.value === val
                     ? "default"
                     : "outline"
                 }
