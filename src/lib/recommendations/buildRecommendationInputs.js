@@ -1,3 +1,8 @@
+import {
+  buildInterestProfilerAnswerString,
+  buildRiasecProfile,
+} from "@/lib/onet/interestProfiler";
+
 function toArray(value) {
   if (Array.isArray(value)) return value;
   if (!value) return [];
