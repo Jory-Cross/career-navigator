@@ -1118,15 +1118,15 @@ key={tag}
       {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
     </p>
 
-    <div>
+   <div>
   <strong>RIASEC Scores:</strong>
   <div className="mt-1 space-y-1">
-    <div>Realistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Realistic ?? "Not available"}</div>
-    <div>Investigative = {selectedAssessmentDoc.raw.responses.riasec_scores?.Investigative ?? "Not available"}</div>
-    <div>Artistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Artistic ?? "Not available"}</div>
-    <div>Social = {selectedAssessmentDoc.raw.responses.riasec_scores?.Social ?? "Not available"}</div>
-    <div>Enterprising = {selectedAssessmentDoc.raw.responses.riasec_scores?.Enterprising ?? "Not available"}</div>
-    <div>Conventional = {selectedAssessmentDoc.raw.responses.riasec_scores?.Conventional ?? "Not available"}</div>
+    <div>Realistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Realistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.realistic ?? "Not available"}</div>
+    <div>Investigative = {selectedAssessmentDoc.raw.responses.riasec_scores?.Investigative ?? selectedAssessmentDoc.raw.responses.riasec_scores?.investigative ?? "Not available"}</div>
+    <div>Artistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Artistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.artistic ?? "Not available"}</div>
+    <div>Social = {selectedAssessmentDoc.raw.responses.riasec_scores?.Social ?? selectedAssessmentDoc.raw.responses.riasec_scores?.social ?? "Not available"}</div>
+    <div>Enterprising = {selectedAssessmentDoc.raw.responses.riasec_scores?.Enterprising ?? selectedAssessmentDoc.raw.responses.riasec_scores?.enterprising ?? "Not available"}</div>
+    <div>Conventional = {selectedAssessmentDoc.raw.responses.riasec_scores?.Conventional ?? selectedAssessmentDoc.raw.responses.riasec_scores?.conventional ?? "Not available"}</div>
   </div>
 </div>
 
