@@ -3,7 +3,7 @@ import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendat
 import { generateJobCoachResponse } from "@/lib/recommendations/generateJobCoachResponse";
 import {
   buildClientConstraints,
-  applyConstraintRules,
+  applyConstraintRules,F
   resolveFitLevel,
 } from "@/lib/recommendations/constraintRules";
 
@@ -48,11 +48,37 @@ export async function generateRecommendationBatch({
       ])
     );
 
-    const score =
-      Number(job.match_score) ||
-      Number(job.score) ||
-      Number(job.fit_score) ||
-      0;
+    let score =
+  Number(job.match_score) ||
+  Number(job.score) ||
+  Number(job.fit_score) ||
+  0;
+
+// BOOST score if job aligns with preferred environments
+const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+
+const preferred = constraintProfile.preferredEnvironments || [];
+
+if (preferred.includes("independent_work") && envText.includes("custodial")) {
+  score += 10;
+}
+
+if (preferred.includes("low_stimulation") && envText.includes("clean")) {
+  score += 5;
+}
+
+if (preferred.includes("structured_routine") && envText.includes("routine")) {
+  score += 5;
+}
+
+// PENALIZE score if conflicts exist
+if (constraintResult.fit_concerns.length > 0) {
+  score -= constraintResult.fit_concerns.length * 10;
+}
+
+// Clamp score
+if (score > 100) score = 100;
+if (score < 0) score = 0;
 
     return {
       ...job,
