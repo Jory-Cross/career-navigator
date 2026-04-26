@@ -910,7 +910,7 @@ const recs = await base44.entities.JobRecommendation.filter(
 
 {notRecommended.length > 0 && (
                 <div className="mt-4">
-                  <div className="rounded-lg border border-amber-200 bg-red-50 px-3 py-2 text-sm font-semibold text-amber-800 mb-3">
+                  <div className="rounded-lg border border-amber-200 bg-dark red-50 px-3 py-2 text-sm font-semibold text-amber-800 mb-3">
   ⚠️ Not Recommended (Review Only)
 </div>
 
