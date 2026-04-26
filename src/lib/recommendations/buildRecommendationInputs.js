@@ -146,6 +146,7 @@ function extractRiasecAssessment(assessments = []) {
 export function buildRecommendationInputs({
   documents = [],
   assessments = [],
+  vocationalProfile = null, // ✅ NEW (VFP)
 } = {}) {
   const resumes = documents.filter(isResume);
   const wsaAssessments = assessments.filter(isWsaAssessment);
