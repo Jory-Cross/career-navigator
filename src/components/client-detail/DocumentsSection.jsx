@@ -143,6 +143,8 @@ const loadDocuments = useCallback(async () => {
   try {
     console.time("LOAD DOCS");
     const docs = await getDocuments(clientId);
+
+console.log("DOCUMENTS LOADED FOR CLIENT:", docs);
     console.timeEnd("LOAD DOCS");
 
     const visibleDocs = docs.filter((doc) => {
