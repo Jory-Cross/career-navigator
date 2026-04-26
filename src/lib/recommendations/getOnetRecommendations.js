@@ -141,11 +141,11 @@ function buildProfileText(profile = {}) {
   return uniqueStrings([
     ...normalizeKeywords(profile.resume_skills),
     ...normalizeKeywords(profile.wsa_strengths),
-    ...normalizeKeywords(profile.wsa_themes),
-    ...normalizeKeywords(profile.wsa_job_goals),
+    ...normalizeKeywords(profile.wsa_preferences),
+    ...normalizeKeywords(profile.wsa_environment_needs),
+    ...normalizeKeywords(profile.wsa_barriers),
     ...normalizeKeywords(profile.assessment_keywords),
     ...normalizeKeywords(profile.job_titles),
-    ...normalizeKeywords(profile.vocational_themes),
   ]);
 }
 
