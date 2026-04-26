@@ -59,6 +59,7 @@ function resolveConfidenceLevel({
 export async function generateRecommendationBatch({
   client,
   resumes = [],
+  vocationalProfile = null,
   wsa = null,
   otherAssessments = [],
   interestProfile = null,
