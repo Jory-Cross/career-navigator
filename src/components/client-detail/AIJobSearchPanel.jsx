@@ -747,7 +747,7 @@ const recs = await base44.entities.JobRecommendation.filter(
             (r) => r.confidence_level === "low"
           );
 
-          const renderRecommendationCard = (rec, key) => (
+          const renderRecommendationCard = (rec, key, sectionType = "recommended") => (
             <div
   key={key}
   className={`border rounded p-3 space-y-2 ${
