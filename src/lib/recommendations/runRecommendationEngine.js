@@ -6,6 +6,7 @@ export async function runRecommendationEngine({
   client,
   documents = [],
   assessments = [],
+  vocationalProfile = null,
   forceRegenerate = true,
 }) {
   if (!client?.id) {
