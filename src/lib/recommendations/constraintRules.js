@@ -146,7 +146,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "PHYSICAL_LIMITATION",
       label: "Physical limitation",
-      severity: "moderate",
+      severity: "hard",
       concern:
         "This client may need work that limits prolonged standing, heavy lifting, or physically demanding tasks.",
       avoidKeywords: ["laborer", "construction", "stocking", "warehouse", "dishwasher"],
