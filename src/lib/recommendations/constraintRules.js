@@ -156,7 +156,10 @@ export function applyConstraintRules(job = {}, constraints = []) {
   const environmentRecommendations = [];
 
   constraints.forEach((constraint) => {
-    if (includesAny(combined, constraint.avoidKeywords)) {
+   if (
+  includesAny(combined, constraint.avoidKeywords) ||
+  constraint.avoidKeywords.some((kw) => combined.includes(kw.split(" ")[0]))
+) {
       fitConcerns.push(constraint.concern);
     }
 
