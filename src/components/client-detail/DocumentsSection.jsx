@@ -1129,7 +1129,7 @@ key={tag}
   <div>
     <strong>Assessment Details:</strong>
 
-   {selectedAssessmentDoc.title === "interest_profiler" ? (
+   selectedAssessmentDoc.raw?.assessment_type === "interest_profiler"
   <div className="mt-2 space-y-2 text-sm">
     <p>
       <strong>RIASEC Code:</strong>{" "}
