@@ -208,19 +208,20 @@ export async function generateRecommendationBatch({
   });
 
   return {
-    ...job,
-    match_score: score,
-    fit_concerns: fitConcerns,
-    recommended_environments:
-      constraintResult.recommended_environments || [],
-    fit_level: resolveFitLevel({
-      score,
-      fitConcerns,
-    }),
-    confidence_level: confidence.confidence_level,
-    confidence_reason: confidence.confidence_reason,
-    constraint_codes: constraintProfile.constraints.map((c) => c.code),
-  };
+  ...job,
+  match_score: score,
+  fit_concerns: fitConcerns,
+  not_fit_reasons: constraintResult.not_fit_reasons || [],
+  recommended_environments:
+    constraintResult.recommended_environments || [],
+  fit_level: resolveFitLevel({
+    score,
+    fitConcerns,
+  }),
+  confidence_level: confidence.confidence_level,
+  confidence_reason: confidence.confidence_reason,
+  constraint_codes: constraintProfile.constraints.map((c) => c.code),
+};
 });
 
 const recommendationsWithConstraints = processed
