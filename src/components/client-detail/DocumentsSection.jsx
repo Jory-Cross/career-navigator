@@ -1,4 +1,5 @@
 import { generateJobCoachResponse } from "@/lib/ai/generateJobCoachResponse";
+import { base44 } from "@/api/base44Client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -355,14 +356,19 @@ const archiveDocument = async (docId) => {
   }
 
   try {
-    await deleteClientDocument(docId);
+    if (String(docId).startsWith("assessment-")) {
+      const assessmentId = String(docId).replace("assessment-", "");
+      await base44.entities.Assessment.delete(assessmentId);
+    } else {
+      await deleteClientDocument(docId);
+    }
 
-   await loadDocuments();
-    
-// CLEAR RECOMMENDATIONS WHEN DATA CHANGES
-setRecommendationHistory([]);
-setSelectedRecommendationId(null);
-    
+    await loadDocuments();
+
+    // CLEAR RECOMMENDATIONS WHEN DATA CHANGES
+    setRecommendationHistory([]);
+    setSelectedRecommendationId(null);
+
     toast.success("Document deleted");
   } catch (error) {
     console.error("DELETE BUTTON ERROR", error);
