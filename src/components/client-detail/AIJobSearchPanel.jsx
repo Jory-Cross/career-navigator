@@ -725,142 +725,130 @@ const recs = await base44.entities.JobRecommendation.filter(
   recommendationBatch.recommendations &&
   recommendationBatch.recommendations.length > 0 && (
     <Card className="p-4">
-     <h4 className="text-sm font-semibold mb-2">
-  AI Job Coach Guidance
-</h4>
+      <h4 className="text-sm font-semibold mb-2">
+        AI Job Coach Guidance
+      </h4>
 
-{recommendationBatch.ai_coach_summary && (
-  <div className="mb-4 rounded-lg border bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-line">
-    {typeof recommendationBatch.ai_coach_summary === "string"
-      ? recommendationBatch.ai_coach_summary
-      : recommendationBatch.ai_coach_summary?.narrative_explanation || ""}
-  </div>
-)}
-
-      <div className="space-y-2">
-      
-       {(() => {
-  const recommended = recommendationBatch.recommendations.filter(
-    (r) => r.confidence_level !== "low"
-  );
-
-  const notRecommended = recommendationBatch.recommendations.filter(
-    (r) => r.confidence_level === "low"
-  );
-
-  return (
-    <>
-      {recommended.map((rec, i) => (
-          <div key={i} className="border rounded p-3 space-y-2">
-
-            <div className="font-medium text-sm">
-              {rec.title || "Untitled Recommendation"}
-            </div>
-
-            <div className="text-xs text-slate-500">
-              {rec.onet_code || "No O*NET code"}
-            </div>
-
-           {(rec.match_score ?? rec.score ?? rec.fit_score) != null && (
-  <div className="flex flex-wrap gap-2">
-    <div className="text-xs text-blue-600 font-medium">
-      Match Score: {rec.match_score ?? rec.score ?? rec.fit_score}
-    </div>
-
-    {rec.confidence_level && (
-      <div className="text-xs font-medium text-purple-700">
-        Confidence: {rec.confidence_level}
-      </div>
-    )}
-  </div>
-)}
-
-{rec.confidence_reason && (
-  <div className="rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800">
-    {rec.confidence_reason}
-  </div>
-)}
-
-            {rec.matched_keywords?.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {rec.matched_keywords.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                      ))}
-
-      {notRecommended.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs font-semibold text-amber-700 mb-2">
-            Not Recommended (Review Only)
-          </div>
-
-          <div className="space-y-2 opacity-70">
-            {notRecommended.map((rec, i) => (
-              <div key={`not-${i}`} className="border rounded p-3 space-y-2">
-                <div className="font-medium text-sm">
-                  {rec.title || "Untitled Recommendation"}
-                </div>
-
-                <div className="text-xs text-amber-600 font-medium">
-                  Confidence: {rec.confidence_level}
-                </div>
-
-                {rec.confidence_reason && (
-                  <div className="text-[11px] text-amber-700">
-                    {rec.confidence_reason}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      {recommendationBatch.ai_coach_summary && (
+        <div className="mb-4 rounded-lg border bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-line">
+          {typeof recommendationBatch.ai_coach_summary === "string"
+            ? recommendationBatch.ai_coach_summary
+            : recommendationBatch.ai_coach_summary?.narrative_explanation || ""}
         </div>
       )}
-    </>
-  );
-})()}
+
+      <div className="space-y-2">
+        {(() => {
+          const recommended = recommendationBatch.recommendations.filter(
+            (r) => r.confidence_level !== "low"
+          );
+
+          const notRecommended = recommendationBatch.recommendations.filter(
+            (r) => r.confidence_level === "low"
+          );
+
+          const renderRecommendationCard = (rec, key) => (
+            <div key={key} className="border rounded p-3 space-y-2">
+              <div className="font-medium text-sm">
+                {rec.title || "Untitled Recommendation"}
               </div>
-            )}
 
- {rec.match_reason && (
-  <div className="text-xs text-slate-600">
-    {rec.match_reason}
-  </div>
-)}
+              <div className="text-xs text-slate-500">
+                {rec.onet_code || "No O*NET code"}
+              </div>
 
-{rec.fit_strengths?.length > 0 && (
-  <div className="space-y-1">
-    {rec.fit_strengths.map((item, idx) => (
-      <div
-        key={idx}
-        className="rounded-md border border-green-200 bg-green-50 px-2 py-1 text-[11px] text-green-800"
-      >
-        ✅ {item}
-      </div>
-    ))}
-  </div>
-)}
+              {(rec.match_score ?? rec.score ?? rec.fit_score) != null && (
+                <div className="flex flex-wrap gap-2">
+                  <div className="text-xs text-blue-600 font-medium">
+                    Match Score: {rec.match_score ?? rec.score ?? rec.fit_score}
+                  </div>
 
-{rec.fit_concerns?.length > 0 && (
-  <div className="space-y-1">
-    {rec.fit_concerns.map((item, idx) => (
-      <div
-        key={idx}
-        className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
-      >
-        ⚠️ {item}
-      </div>
-    ))}
-  </div>
-)}
-          </div>
-        ))}
+                  {rec.confidence_level && (
+                    <div className="text-xs font-medium text-purple-700">
+                      Confidence: {rec.confidence_level}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {rec.confidence_reason && (
+                <div className="rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800">
+                  {rec.confidence_reason}
+                </div>
+              )}
+
+              {rec.matched_keywords?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {rec.matched_keywords.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {rec.match_reason && (
+                <div className="text-xs text-slate-600">
+                  {rec.match_reason}
+                </div>
+              )}
+
+              {rec.fit_strengths?.length > 0 && (
+                <div className="space-y-1">
+                  {rec.fit_strengths.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-green-200 bg-green-50 px-2 py-1 text-[11px] text-green-800"
+                    >
+                      ✅ {item}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {rec.fit_concerns?.length > 0 && (
+                <div className="space-y-1">
+                  {rec.fit_concerns.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+                    >
+                      ⚠️ {item}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+
+          return (
+            <>
+              {recommended.map((rec, i) =>
+                renderRecommendationCard(rec, `recommended-${i}`)
+              )}
+
+              {notRecommended.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-xs font-semibold text-amber-700 mb-2">
+                    Not Recommended (Review Only)
+                  </div>
+
+                  <div className="space-y-2 opacity-70">
+                    {notRecommended.map((rec, i) =>
+                      renderRecommendationCard(rec, `not-${i}`)
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </Card>
-)}
+  )}
           {jobs.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">
