@@ -1,6 +1,11 @@
 import { base44 } from "@/api/base44Client";
 import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendations";
 import { generateJobCoachResponse } from "@/lib/recommendations/generateJobCoachResponse";
+import {
+  buildClientConstraints,
+  applyConstraintRules,
+  resolveFitLevel,
+} from "@/lib/recommendations/constraintRules";
 
 export async function generateRecommendationBatch({
   client,
@@ -15,45 +20,97 @@ export async function generateRecommendationBatch({
     job_titles: resumes.flatMap((r) => r.job_titles || []),
     vocational_themes: wsa?.themes || [],
     riasec_scores: otherAssessments.find((a) => a.riasec_scores)?.riasec_scores || {},
+    wsa,
+    other_assessments: otherAssessments,
   };
 
+  const constraintProfile = buildClientConstraints(profile);
+
   console.log("RECOMMENDATION PROFILE:", profile);
+  console.log("CLIENT CONSTRAINT PROFILE:", constraintProfile);
 
   const result = await getOnetRecommendations(profile);
 
+  const recommendationsWithConstraints = (result?.items || []).map((job) => {
+    const constraintResult = applyConstraintRules(
+      job,
+      constraintProfile.constraints
+    );
+
+    const existingConcerns = Array.isArray(job.fit_concerns)
+      ? job.fit_concerns
+      : [];
+
+    const fitConcerns = Array.from(
+      new Set([
+        ...existingConcerns,
+        ...constraintResult.fit_concerns,
+      ])
+    );
+
+    const score =
+      Number(job.match_score) ||
+      Number(job.score) ||
+      Number(job.fit_score) ||
+      0;
+
+    return {
+      ...job,
+      fit_concerns: fitConcerns,
+      recommended_environments:
+        constraintResult.recommended_environments || [],
+      fit_level: resolveFitLevel({
+        score,
+        fitConcerns,
+      }),
+      constraint_codes: constraintProfile.constraints.map((c) => c.code),
+    };
+  });
+
   const aiCoachText = await generateJobCoachResponse({
-  recommendations: result?.items || [],
-  profile,
-});
-  
+    recommendations: recommendationsWithConstraints,
+    profile: {
+      ...profile,
+      constraints: constraintProfile.constraints,
+      preferred_environments: constraintProfile.preferredEnvironments,
+    },
+  });
+
   const localBatch = {
     client_id: client?.id,
-    recommended_job_fields_json: JSON.stringify(result?.items || []),
-    summary: result?.onet_summary || {},
+    recommended_job_fields_json: JSON.stringify(recommendationsWithConstraints),
+    summary: {
+      ...(result?.onet_summary || {}),
+      constraints: constraintProfile.constraints,
+      preferred_environments: constraintProfile.preferredEnvironments,
+    },
     source: result?.source || "scored-fallback",
     search_summary: result?.onet_summary?.narrative || "Generated recommendations",
-    job_count: (result?.items || []).length,
+    job_count: recommendationsWithConstraints.length,
     generated_at: new Date().toISOString(),
     generated_by: "ai",
     ai_coach_summary: aiCoachText,
   };
 
   console.log("LOCAL BATCH BEFORE SAVE:", localBatch);
-  
+
   try {
-   const savedBatch = await base44.entities.JobRecommendationBatch.create(localBatch);
-console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
+    const savedBatch = await base44.entities.JobRecommendationBatch.create(localBatch);
+    console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
   } catch (err) {
     console.error("Failed to save recommendation batch", err);
   }
 
- return {
-  batch: {
-    ...localBatch,
-    recommendations: result?.items || [],
-  },
-  payload: result,
-};
+  return {
+    batch: {
+      ...localBatch,
+      recommendations: recommendationsWithConstraints,
+    },
+    payload: {
+      ...result,
+      items: recommendationsWithConstraints,
+    },
+  };
 }
 
 export default generateRecommendationBatch;
