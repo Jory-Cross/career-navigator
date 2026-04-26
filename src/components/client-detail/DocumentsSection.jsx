@@ -866,7 +866,7 @@ key={tag}
   </Button>
 )}
 <>
-  {!String(doc.id).startsWith("assessment-") && (
+  {!doc.is_assessment && (
     <>
       {!showArchived && (
         <Button
