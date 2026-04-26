@@ -48,11 +48,49 @@ export async function generateRecommendationBatch({
       ])
     );
 
-    let score =
+    let baseScore =
   Number(job.match_score) ||
   Number(job.score) ||
   Number(job.fit_score) ||
   0;
+
+// Start from base
+let score = baseScore;
+
+// HARD PENALTY: if conflicts exist, crush the score
+if (constraintResult.fit_concerns.length > 0) {
+  score = Math.max(0, baseScore - 50);
+}
+
+// EXTRA HARD penalty for customer-facing roles
+const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
+
+if (
+  riskText.includes("customer") ||
+  riskText.includes("cashier") ||
+  riskText.includes("retail") ||
+  riskText.includes("restaurant") ||
+  riskText.includes("sales")
+) {
+  if (constraintProfile.preferredEnvironments.includes("limited_customer_contact")) {
+    score = 0;
+  }
+}
+
+// BOOST safe roles
+const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+
+if (envText.includes("custodial") || envText.includes("janitor")) {
+  score += 20;
+}
+
+if (envText.includes("independent")) {
+  score += 10;
+}
+
+// Clamp
+if (score > 100) score = 100;
+if (score < 0) score = 0;
 
 // BOOST score if job aligns with preferred environments
 const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
