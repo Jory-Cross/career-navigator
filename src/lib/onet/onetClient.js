@@ -66,3 +66,9 @@ export async function getInterestProfilerCareers({ answers, scores, jobZone } = 
 
   return onetRequest("/ip/careers", params);
 }
+
+export async function getOnetOccupationDetails(code) {
+  if (!code) return null;
+
+  return onetRequest(`/careers/${code}/report`);
+}
