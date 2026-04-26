@@ -645,8 +645,39 @@ ${rawNotes}
  */
 export async function getDocuments(clientId) {
   if (!clientId) return [];
-  const rows = await base44.entities.Document.filter({ client_id: clientId });
-  return sortByNewest(asArray(rows).map(mapDocument).filter(Boolean));
+
+  const [documentRows, assessmentRows] = await Promise.all([
+    base44.entities.Document.filter({ client_id: clientId }),
+    base44.entities.Assessment.filter({ client_id: clientId }),
+  ]);
+
+  const documents = asArray(documentRows).map(mapDocument).filter(Boolean);
+
+  const assessmentDocs = asArray(assessmentRows).map((a) => ({
+    id: `assessment-${a.id}`,
+    client_id: a.client_id,
+    title: a.assessment_type || "Assessment",
+    description: a.notes || "",
+    file_url: a.pdf_url || null,
+    visibility: "staff",
+    source: "assessment",
+    category: "assessment",
+    file_name: `${a.assessment_type || "assessment"}.pdf`,
+    file_size: 0,
+    file_type: "pdf",
+    tags: [],
+    ai_tags: [],
+    notes: a.notes || "",
+    version: 1,
+    parent_document_id: null,
+    is_archived: false,
+    created_by: a.created_by || "",
+    created_date: a.created_date || null,
+    updated_date: a.updated_date || null,
+    raw: a,
+  }));
+
+  return sortByNewest([...documents, ...assessmentDocs]);
 }
 export async function analyzeDocumentContent(payload) {
   return await base44.functions.invoke("analyzeDocumentContent", payload);
