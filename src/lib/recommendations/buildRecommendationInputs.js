@@ -175,14 +175,24 @@ let interestProfile = null;
 let onetAnswerString = null;
 
 if (interestAssessment) {
+  const responses = interestAssessment.responses || {};
+
+  const answers =
+    interestAssessment.answers ||
+    responses.answers ||
+    [];
+
+  const scores =
+    interestAssessment.riasec_scores ||
+    responses.riasec_scores ||
+    {};
+
   interestProfile = buildRiasecProfile({
-    scores: interestAssessment.riasec_scores || {},
-    answers: interestAssessment.answers || [],
+    scores,
+    answers,
   });
 
-  onetAnswerString = buildInterestProfilerAnswerString(
-    interestAssessment.answers || []
-  );
+  onetAnswerString = buildInterestProfilerAnswerString(answers);
 }
 
   console.log("RIASEC PROFILE:", interestProfile);
