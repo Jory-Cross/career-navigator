@@ -52,17 +52,9 @@ export async function getInterestProfilerResults(answers) {
 export async function getInterestProfilerCareers({ answers, scores, jobZone } = {}) {
   const params = {};
 
-  if (answers) {
-    params.answers = answers;
-  }
-
-  if (scores) {
-    params.scores = scores;
-  }
-
-  if (jobZone) {
-    params.job_zone = jobZone;
-  }
+  if (answers) params.answers = answers;
+  if (scores) params.scores = scores;
+  if (jobZone) params.job_zone = jobZone;
 
   return onetRequest("/ip/careers", params);
 }
@@ -72,8 +64,24 @@ export async function getOnetOccupationDetails(code) {
 
   return onetRequest(`/careers/${code}/report`);
 }
-export async function getOnetOccupationDetails(code) {
-  if (!code) return null;
 
-  return onetRequest(`/careers/${code}/report`);
+export function buildOnetRecommendationProfile({
+  riasecProfile = null,
+  onetAnswerString = null,
+} = {}) {
+  if (onetAnswerString) {
+    return {
+      type: "answers",
+      answers: onetAnswerString,
+    };
+  }
+
+  if (riasecProfile?.riasec_score_string) {
+    return {
+      type: "scores",
+      scores: riasecProfile.riasec_score_string,
+    };
+  }
+
+  return null;
 }
