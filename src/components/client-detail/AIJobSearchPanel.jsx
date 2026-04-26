@@ -751,8 +751,22 @@ const recs = await base44.entities.JobRecommendation.filter(
             </div>
 
            {(rec.match_score ?? rec.score ?? rec.fit_score) != null && (
-  <div className="text-xs text-blue-600 font-medium">
-    Match Score: {rec.match_score ?? rec.score ?? rec.fit_score}
+  <div className="flex flex-wrap gap-2">
+    <div className="text-xs text-blue-600 font-medium">
+      Match Score: {rec.match_score ?? rec.score ?? rec.fit_score}
+    </div>
+
+    {rec.confidence_level && (
+      <div className="text-xs font-medium text-purple-700">
+        Confidence: {rec.confidence_level}
+      </div>
+    )}
+  </div>
+)}
+
+{rec.confidence_reason && (
+  <div className="rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800">
+    {rec.confidence_reason}
   </div>
 )}
 
