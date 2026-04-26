@@ -374,6 +374,23 @@ const recs = await base44.entities.JobRecommendation.filter(
     }
   };
 
+  const loadLatestBatch = async () => {
+  try {
+    const batch = await loadLatestRecommendationBatch(resolvedClientId);
+
+    if (!batch) return;
+
+    console.log("LOADED SAVED BATCH:", batch);
+
+    setRecommendationBatch({
+      ...batch,
+      recommendations: JSON.parse(batch.recommended_job_fields_json || "[]"),
+    });
+  } catch (e) {
+    console.error("Failed to load saved batch", e);
+  }
+};
+  
   const runSearch = async () => {
     setLoading(true);
     setJobs([]);
