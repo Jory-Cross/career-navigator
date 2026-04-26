@@ -115,19 +115,22 @@ const job_titles = uniqueStrings([
       resumes: Array.isArray(resumes) ? resumes.length : 0,
       other_assessments: Array.isArray(otherAssessments) ? otherAssessments.length : 0,
     },
-    summaries: {
-      wsa_summary: {
-        strengths: wsa_strengths,
-        themes: wsa_themes,
-        barriers: wsa_barriers,
-        job_goals: wsa_job_goals,
-        narrative:
-          wsa_strengths.length > 0
-            ? `WSA strengths include ${wsa_strengths.slice(0, 6).join(", ")}.`
-            : "No WSA strengths were summarized yet.",
-      },
-      other_summary,
-    },
+   summaries: {
+  wsa_summary: {
+    strengths: wsa_strengths,
+    preferences: wsa_preferences,
+    environment_needs: wsa_environment_needs,
+    barriers: wsa_barriers,
+    schedule_constraints: wsa_schedule_constraints,
+    transportation: wsa_transportation,
+
+    narrative:
+      wsa_strengths.length > 0
+        ? `WSA strengths include ${wsa_strengths.slice(0, 6).join(", ")}.`
+        : "No WSA strengths were summarized yet.",
+  },
+  other_summary,
+},
   };
 }
 
