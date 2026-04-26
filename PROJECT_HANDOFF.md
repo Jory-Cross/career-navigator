@@ -1,148 +1,57 @@
-🔹 Recommendation Engine (Baseline)
-Built end-to-end recommendation pipeline:
-Resume skills
-WSA data
-Other assessments
-Integrated O*NET-style recommendations via getOnetRecommendations
-Recommendations now return:
-fit_strengths
-fit_concerns
-fit_level
-match_score
-🔹 Constraint-Aware Logic (FIRST VERSION)
-Created constraint system:
-buildClientConstraints
-applyConstraintRules
-System now:
-detects conflicts (customer-facing, overstimulation, etc.)
-flags fit_concerns
-recommends environments
-Added scoring adjustments:
-penalties for conflicts
-boosts for safe environments (custodial, independent work)
-🔹 AI Job Coach
-Generates narrative guidance from recommendations
-Persists in:
-ai_coach_summary
-Displays in UI with recommendations
-🔹 Persistence (FIXED)
-Recommendations now:
-save to JobRecommendationBatch
-reload on refresh
-Fixed critical bug:
-nested useEffect
-Added:
-loadLatestRecommendationBatch
-loadLatestBatch() in UI
-🔹 UI Integration
-Recommendations render correctly:
-match score
-strengths
-concerns
-AI Job Coach displayed above results
-Persistence verified working after refresh
-🔹 O*NET FOUNDATION (CRITICAL DIRECTION)
-Created:
-onetRoadmap.js (source of truth)
-onetClient.js (adapter layer)
-Built:
-buildOnetRecommendationProfile
-Wired into recommendation engine (logging only for now)
-🚨 WHAT IS NOT COMPLETE (IMPORTANT)
-❗ O*NET IS NOT DRIVING RECOMMENDATIONS YET
+## 2026-04-26 — O*NET / RIASEC / Documents Integration Update
 
-Right now:
+### Completed
+- Continued Phase 4 O*NET/RIASEC integration.
+- Confirmed RIASEC must come from the official O*NET Interest Profiler.
+- O*NET remains the source of truth for:
+  - Interest Profiler / RIASEC
+  - Job recommendations
+  - Job exploration
+  - Career details
+  - Occupation data
 
-O*NET is partially simulated
-Keyword matching + fallback still exists
-My Next Move / O*NET services NOT integrated yet
-❗ WSA IS NOT INTELLIGENTLY SUMMARIZED
+### Files Updated
+- `src/lib/onet/interestProfiler.js`
+- `src/lib/onet/onetClient.js`
+- `src/lib/recommendations/buildRecommendationInputs.js`
+- `src/components/client-detail/AssessmentSection.jsx`
+- `src/components/client-detail/DocumentsSection.jsx`
+- `src/lib/api/clientPortalApi.js`
 
-Currently:
+### Working Now
+- O*NET Interest Profiler appears inside the existing Assessments tab.
+- Interest Profiler saves to the `Assessment` entity.
+- RIASEC profile is now detected by recommendations.
+- O*NET answer string is now generated from saved answers.
+- Documents tab now includes both:
+  - real `Document` records
+  - mapped `Assessment` records
+- Existing WSA and Interest Profiler records now appear in Documents.
+- Assessment records without files open in an in-app viewer instead of broken download.
+- Interest Profiler viewer displays:
+  - RIASEC Code
+  - RIASEC Scores by category
+  - Answers Completed
 
-WSA data is passed raw
-No AI extraction layer
-No structured constraints derived from narrative
-❗ RIASEC IS UNDERUTILIZED
-Scores may exist
-NOT driving:
-ranking
-filtering
-career matching
-🎯 NEXT BUILD PRIORITIES (IN ORDER)
-1️⃣ O*NET INTEREST PROFILER (CRITICAL)
+### Blocked
+- Real O*NET API recommendation fetch is blocked until a Base44 serverless function can be created.
+- Browser code cannot access Base44 secrets directly.
+- Need Base44 function later using:
+  - `ONET_USERNAME`
+  - `ONET_PASSWORD`
+  - possibly `ONET_API_KEY`
 
-Build:
+### Next Priority
+Create server-side O*NET function when builder credits are available.
 
-Official Interest Profiler workflow
-Store normalized RIASEC scores
-Replace any custom RIASEC logic
+Goal:
+- Call O*NET Interest Profiler careers endpoint server-side.
+- Use real O*NET/My Next Move recommendations.
+- Layer resume skills, WSA constraints, accommodations, transportation, schedule, and staff notes on top.
 
-Outcome:
-👉 Real RIASEC → real career matching
-
-2️⃣ MY NEXT MOVE INTEGRATION
-
-Replace:
-
-getOnetRecommendations
-
-With:
-👉 O*NET / My Next Move career matches
-
-Outcome:
-👉 Recommendations come from O*NET, not fallback logic
-
-3️⃣ AI WSA SUMMARIZATION
-
-Build AI layer to extract:
-
-work preferences
-constraints
-barriers
-environment needs
-support needs
-physical limitations
-schedule constraints
-
-Outcome:
-👉 No more raw WSA text
-👉 Structured constraints for recommendations
-
-4️⃣ RECOMMENDATION ENGINE REFACTOR
-
-Final architecture:
-
-O*NET (primary)
-  ↓
-RIASEC + Career Matches
-  ↓
-Apply WSA constraints
-  ↓
-Apply resume skills
-  ↓
-Apply support needs / limitations
-  ↓
-Final ranked recommendations
-5️⃣ REMOVE FALLBACK LOGIC
-
-Eventually remove:
-
-keyword matching
-manual job scoring
-hardcoded penalties
-
-Replace with:
-👉 O*NET + constraint overlay
-
-🧠 CRITICAL PROJECT RULE (DO NOT LOSE)
-
-O*NET is the source of truth for:
-
-assessments
-career matching
-job recommendations
-career data
-
-CRM data is:
-👉 an overlay layer (constraints, supports, real-world adjustments)
+### Backlog / Later Cleanup
+- Clean up Documents refresh/reprocess button or remove it if unnecessary.
+- Add DialogDescription/accessibility cleanup for shadcn/Radix warnings.
+- Improve assessment viewer formatting beyond raw JSON for WSA.
+- Generate real PDFs later for assessments where needed.
+- Remove debug console logs after pipeline is stable.
