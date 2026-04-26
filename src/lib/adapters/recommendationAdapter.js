@@ -101,14 +101,16 @@ const job_titles = uniqueStrings([
 ]);
 
   return {
-    resume_skills,
-    wsa_strengths,
-    wsa_themes,
-    wsa_barriers,
-    wsa_job_goals,
-    assessment_keywords,
-    vocational_themes,
-    job_titles,
+  resume_skills,
+  wsa_strengths,
+  wsa_preferences,
+  wsa_environment_needs,
+  wsa_barriers,
+  wsa_schedule_constraints,
+  wsa_transportation,
+  assessment_keywords,
+  vocational_themes,
+  job_titles,
     source_counts: {
       resumes: Array.isArray(resumes) ? resumes.length : 0,
       other_assessments: Array.isArray(otherAssessments) ? otherAssessments.length : 0,
