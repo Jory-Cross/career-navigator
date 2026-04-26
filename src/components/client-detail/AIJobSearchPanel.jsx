@@ -723,6 +723,7 @@ const recs = await base44.entities.JobRecommendation.filter(
 )}
 
       <div className="space-y-2">
+        console.log("RENDERING RECOMMENDATIONS:", recommendationBatch.recommendations);
         {recommendationBatch.recommendations.map((rec, i) => (
           <div key={i} className="border rounded p-3 space-y-2">
 
