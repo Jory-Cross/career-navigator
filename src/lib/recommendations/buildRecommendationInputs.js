@@ -220,13 +220,16 @@ console.log("ONET ANSWER STRING:", onetAnswerString);
     })),
        wsa: summarizedWsa,
     otherAssessments,
-    assessments_summary: {
-      wsa_strengths: summarizedWsa?.strengths || [],
-      wsa_themes: summarizedWsa?.themes || [],
-      wsa_barriers: summarizedWsa?.barriers || [],
-      wsa_job_goals: summarizedWsa?.job_goals || [],
-      other_assessment_keywords: assessmentKeywords,
-    },
+   assessments_summary: {
+  wsa_strengths: summarizedWsa?.strengths || [],
+  wsa_preferences: summarizedWsa?.preferences || [],
+  wsa_environment_needs: summarizedWsa?.environment_needs || [],
+  wsa_barriers: summarizedWsa?.barriers || [],
+  wsa_schedule_constraints: summarizedWsa?.schedule_constraints || [],
+  wsa_transportation: summarizedWsa?.transportation || [],
+
+  other_assessment_keywords: assessmentKeywords,
+},
     interestProfile,
 onet_answer_string: onetAnswerString,
     combined_profile,
