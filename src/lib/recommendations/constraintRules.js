@@ -150,7 +150,8 @@ export function buildClientConstraints(profile = {}) {
 export function applyConstraintRules(job = {}, constraints = []) {
   const title = safeLower(job.title);
   const description = safeLower(job.description || job.match_reason || "");
-  const combined = `${title} ${description}`;
+const combined = `${title} ${description}`;
+const titleOnly = title;
 
   const fitConcerns = [];
   const environmentRecommendations = [];
