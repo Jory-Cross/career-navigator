@@ -721,41 +721,46 @@ const jobDiff = suggestedJobs.map(job => {
   {doc.category.replace(/_/g, ' ')}
 </Badge>
 
-{doc.visibility && (
- <Badge
-  variant="outline"
-  className="text-xs cursor-pointer hover:bg-slate-100"
-  onClick={async () => {
-    try {
-      const nextVisibility =
-        doc.visibility === "staff"
-          ? "both"
-          : doc.visibility === "both"
-          ? "client"
-          : "staff";
+{doc.visibility && !doc.is_assessment && (
+  <Badge
+    variant="outline"
+    className="text-xs cursor-pointer hover:bg-slate-100"
+    onClick={async () => {
+      try {
+        const nextVisibility =
+          doc.visibility === "staff"
+            ? "both"
+            : doc.visibility === "both"
+            ? "client"
+            : "staff";
 
-      await updateDocument(doc.id, {
-        ...doc.raw,
-        visibility: nextVisibility,
-      });
+        await updateDocument(doc.id, {
+          ...doc.raw,
+          visibility: nextVisibility,
+        });
 
-      setDocuments((prev) =>
-        prev.map((d) =>
-          d.id === doc.id ? { ...d, visibility: nextVisibility } : d
-        )
-      );
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === doc.id ? { ...d, visibility: nextVisibility } : d
+          )
+        );
 
-      toast.success("Visibility updated");
-    } catch (err) {
-      toast.error("Failed to update visibility");
-    }
-  }}
->
-
-        
+        toast.success("Visibility updated");
+      } catch (err) {
+        toast.error("Failed to update visibility");
+      }
+    }}
+  >
     {doc.visibility} ↻
   </Badge>
-)}{doc.source && (
+)}
+
+{doc.visibility && doc.is_assessment && (
+  <Badge variant="outline" className="text-xs">
+    {doc.visibility}
+  </Badge>
+)}
+                        {doc.source && (
   <Badge variant="outline" className="text-xs">
     {doc.source.replace("_", " ")}
   </Badge>
