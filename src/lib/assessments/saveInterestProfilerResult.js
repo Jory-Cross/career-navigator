@@ -18,12 +18,12 @@ export async function saveInterestProfilerResult({
     responses: {
       answers,
      riasec_scores: {
-  Realistic: scores.Realistic ?? scores.realistic ?? 0,
-  Investigative: scores.Investigative ?? scores.investigative ?? 0,
-  Artistic: scores.Artistic ?? scores.artistic ?? 0,
-  Social: scores.Social ?? scores.social ?? 0,
-  Enterprising: scores.Enterprising ?? scores.enterprising ?? 0,
-  Conventional: scores.Conventional ?? scores.conventional ?? 0,
+  Realistic: scores.Realistic ?? scores.realistic ?? scores.R ?? 0,
+  Investigative: scores.Investigative ?? scores.investigative ?? scores.I ?? 0,
+  Artistic: scores.Artistic ?? scores.artistic ?? scores.A ?? 0,
+  Social: scores.Social ?? scores.social ?? scores.S ?? 0,
+  Enterprising: scores.Enterprising ?? scores.enterprising ?? scores.E ?? 0,
+  Conventional: scores.Conventional ?? scores.conventional ?? scores.C ?? 0,
 },
       riasec_code: riasecCode,
       source: "O*NET Interest Profiler",
