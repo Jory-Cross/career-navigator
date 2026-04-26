@@ -443,13 +443,14 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 {assessmentType === "riasec" && (
   <InterestProfilerPanel
     clientId={resolvedClientId}
-    onSaved={() => {
-      onSaved={async () => {
-  await queryClient.invalidateQueries({
-    queryKey: ["client-assessments", resolvedClientId],
-  });
-  setShowForm(false);
-}}
+    onSaved={async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["client-assessments", resolvedClientId],
+      });
+      setShowForm(false);
+    }}
+  />
+)}
           
           {currentQuestions.map((q) => (
             <div key={q.id}>
