@@ -761,11 +761,37 @@ const recs = await base44.entities.JobRecommendation.filter(
               </div>
             )}
 
-           {rec.match_reason && (
-  <div className="text-xs text-slate-600 space-y-1">
-    <div>
-      {rec.match_reason.replace(" (Assessment data also flagged possible fit concerns.)", "")}
-    </div>
+ {rec.match_reason && (
+  <div className="text-xs text-slate-600">
+    {rec.match_reason}
+  </div>
+)}
+
+{rec.fit_strengths?.length > 0 && (
+  <div className="space-y-1">
+    {rec.fit_strengths.map((item, idx) => (
+      <div
+        key={idx}
+        className="rounded-md border border-green-200 bg-green-50 px-2 py-1 text-[11px] text-green-800"
+      >
+        ✅ {item}
+      </div>
+    ))}
+  </div>
+)}
+
+{rec.fit_concerns?.length > 0 && (
+  <div className="space-y-1">
+    {rec.fit_concerns.map((item, idx) => (
+      <div
+        key={idx}
+        className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+      >
+        ⚠️ {item}
+      </div>
+    ))}
+  </div>
+)}
 
     {rec.match_reason.includes("Assessment data also flagged possible fit concerns") && (
       <div className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
