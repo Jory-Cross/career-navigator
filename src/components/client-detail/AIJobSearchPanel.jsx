@@ -315,17 +315,9 @@ useEffect(() => {
 
   loadSavedRecs();
 
-  (async () => {
-    try {
-      const latest = await loadLatestRecommendationBatch(resolvedClientId);
+  // 🔴 TEMP: disable auto-loading old recommendation batch
+  // We ONLY want fresh generated results
 
-      if (latest && latest.recommendations?.length > 0) {
-        setRecommendationBatch(latest);
-      }
-    } catch (err) {
-      console.error("Failed to load latest recommendations", err);
-    }
-  })();
 }, [resolvedClientId]);
   
   // Refresh client data (e.g. after extraction)
