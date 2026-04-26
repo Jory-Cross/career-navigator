@@ -847,7 +847,7 @@ key={tag}
     onClick={(e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log("OPEN ASSESSMENT:", doc);
+      setSelectedAssessmentDoc(doc);
     }}
   >
     <Download className="w-3.5 h-3.5" />
