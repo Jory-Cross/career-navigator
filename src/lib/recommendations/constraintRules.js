@@ -225,14 +225,26 @@ const titleOnly = title;
   const environmentRecommendations = [];
 
   constraints.forEach((constraint) => {
-  if (
-    includesAny(combined, constraint.avoidKeywords) ||
-    includesAny(titleOnly, constraint.avoidKeywords) ||
-    constraint.avoidKeywords.some((kw) =>
-      combined.includes(kw) ||
-      titleOnly.includes(kw)
-    )
-  ) {
+ const matchesAvoid =
+  includesAny(combined, constraint.avoidKeywords) ||
+  includesAny(titleOnly, constraint.avoidKeywords) ||
+  constraint.avoidKeywords.some((kw) =>
+    combined.includes(kw) ||
+    titleOnly.includes(kw)
+  );
+
+if (matchesAvoid) {
+  fitConcerns.push(constraint.concern);
+
+  notFitReasons.push(
+    `${job.title || "This role"} may not be a good fit: ${constraint.concern}`
+  );
+} else {
+  // NEW: still explain constraint even if no direct keyword hit
+  notFitReasons.push(
+    `${job.title || "This role"} may present challenges: ${constraint.concern}`
+  );
+}
       fitConcerns.push(constraint.concern);
 
 notFitReasons.push(
