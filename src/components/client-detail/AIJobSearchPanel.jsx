@@ -742,11 +742,11 @@ const recs = await base44.entities.JobRecommendation.filter(
               {rec.onet_code || "No O*NET code"}
             </div>
 
-            {typeof rec.score === "number" && (
-              <div className="text-xs text-blue-600 font-medium">
-                Match Score: {rec.score}
-              </div>
-            )}
+           {(rec.match_score ?? rec.score ?? rec.fit_score) != null && (
+  <div className="text-xs text-blue-600 font-medium">
+    Match Score: {rec.match_score ?? rec.score ?? rec.fit_score}
+  </div>
+)}
 
             {rec.matched_keywords?.length > 0 && (
               <div className="flex flex-wrap gap-1">
