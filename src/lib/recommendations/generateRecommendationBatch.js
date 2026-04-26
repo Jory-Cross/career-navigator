@@ -237,15 +237,20 @@ const recommendationsWithConstraints = processed
     return (b.match_score || 0) - (a.match_score || 0);
   });
 
-   const aiCoachText = await generateJobCoachResponse({
+     const aiCoachText = await generateJobCoachResponse({
     recommendations: recommendationsWithConstraints,
     profile: {
       ...profile,
       constraints: constraintProfile.constraints,
       preferred_environments: constraintProfile.preferredEnvironments,
+      active_sources: {
+        vocational_profile: vocationalProfile ? 1 : 0,
+        resumes: resumes.length,
+        wsa: wsa ? 1 : 0,
+        other_assessments: otherAssessments.length,
+      },
     },
   });
-
   const localBatch = {
     client_id: client?.id,
     recommended_job_fields_json: JSON.stringify(recommendationsWithConstraints),
