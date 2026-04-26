@@ -234,6 +234,10 @@ const titleOnly = title;
     )
   ) {
       fitConcerns.push(constraint.concern);
+
+notFitReasons.push(
+  `${job.title || "This role"} may not be a good fit: ${constraint.concern}`
+);
     }
 
     if (constraint.recommendEnvironment) {
