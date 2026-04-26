@@ -1,8 +1,8 @@
 const ONET_BASE_URL = "https://services.onetcenter.org/ws/mnm";
 
 function getOnetAuthHeader() {
-  const username = import.meta.env.VITE_ONET_USERNAME;
-  const password = import.meta.env.VITE_ONET_PASSWORD;
+  const username = import.meta.env.ONET_USERNAME;
+  const password = import.meta.env.ONET_PASSWORD;
 
   if (!username || !password) {
     console.warn("Missing O*NET credentials.");
