@@ -1120,7 +1120,7 @@ key={tag}
 
         <p>
           <strong>RIASEC Scores:</strong>{" "}
-          {selectedAssessmentDoc.raw.responses.riasec_score_string || "Not available"}
+          {selectedAssessmentDoc.raw.riasec_score_string || "Not available"}
         </p>
 
         <p>
