@@ -73,3 +73,23 @@ export function buildRiasecProfile({ scores = [], answers = [] } = {}) {
     completed_at: new Date().toISOString(),
   };
 }
+export function buildOnetRecommendationProfile({
+  riasecProfile = null,
+  onetAnswerString = null,
+} = {}) {
+  if (onetAnswerString) {
+    return {
+      type: "answers",
+      answers: onetAnswerString,
+    };
+  }
+
+  if (riasecProfile?.riasec_score_string) {
+    return {
+      type: "scores",
+      scores: riasecProfile.riasec_score_string,
+    };
+  }
+
+  return null;
+}
