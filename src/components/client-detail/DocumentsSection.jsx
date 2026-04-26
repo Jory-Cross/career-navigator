@@ -351,7 +351,7 @@ const archiveDocument = async (doc) => {
   }
 };
 
-  const deleteDocument = async (docId) => {
+  const deleteDocument = async (doc) => {
   toast("Delete clicked");
 
   if (!confirm("Permanently delete this document? This cannot be undone.")) {
@@ -360,11 +360,10 @@ const archiveDocument = async (doc) => {
   }
 
   try {
-    if (String(docId).startsWith("assessment-")) {
-      const assessmentId = String(docId).replace("assessment-", "");
-      await base44.entities.Assessment.delete(assessmentId);
+    if (doc.is_assessment) {
+      await base44.entities.Assessment.delete(doc.assessment_id);
     } else {
-      await deleteClientDocument(docId);
+      await deleteClientDocument(doc.id);
     }
 
     await loadDocuments();
