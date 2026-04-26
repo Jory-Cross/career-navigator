@@ -39,7 +39,7 @@ function resolveConfidenceLevel({
   if (
     (score >= 40 && !hasConflicts) ||
     (score >= 55 && hasConflicts) ||
-    (dataScore >= 3 && score >= 30)
+    (dataScore >= 3 && score >= 25)
   ) {
     return {
       confidence_level: "medium",
