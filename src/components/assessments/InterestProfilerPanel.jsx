@@ -6,12 +6,11 @@ export default function InterestProfilerPanel({ clientId, onSaved }) {
   async function handleComplete(result) {
     try {
       await saveInterestProfilerResult({
-  clientId,
-  assessmentId: existingAssessment?.id || null, // <-- ADD THIS
-  answers: result.answers,
-  scores: result.scores,
-  topCodes: result.topCodes,
-});
+        clientId,
+        answers: result.answers,
+        scores: result.scores,
+        topCodes: result.topCodes,
+      });
 
       toast.success("Interest Profiler saved");
 
