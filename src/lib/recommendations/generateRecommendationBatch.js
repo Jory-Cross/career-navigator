@@ -55,8 +55,6 @@ function resolveConfidenceLevel({
       "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
   };
 }
-  
-}
 
 export async function generateRecommendationBatch({
   client,
