@@ -832,11 +832,26 @@ key={tag}
 >
   <RefreshCw className="w-3.5 h-3.5" />
 </Button>
-                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="ghost" className="h-7 px-2">
-                          <Download className="w-3.5 h-3.5" />
-                        </Button>
-                      </a>
+                     {doc.file_url ? (
+  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+    <Button size="sm" variant="ghost" className="h-7 px-2">
+      <Download className="w-3.5 h-3.5" />
+    </Button>
+  </a>
+) : (
+  <Button
+    size="sm"
+    variant="ghost"
+    className="h-7 px-2"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("OPEN ASSESSMENT:", doc);
+    }}
+  >
+    <Download className="w-3.5 h-3.5" />
+  </Button>
+)}
 <>
   {!showArchived && (
     <Button
