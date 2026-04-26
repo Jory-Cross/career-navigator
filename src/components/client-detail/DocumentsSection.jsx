@@ -332,16 +332,14 @@ setSelectedRecommendationId(null);
       setUploading(false);
     }
   };
-const archiveDocument = async (docId) => {
+const archiveDocument = async (doc) => {
   try {
-    if (String(docId).startsWith("assessment-")) {
-      const assessmentId = String(docId).replace("assessment-", "");
-
-      await base44.entities.Assessment.update(assessmentId, {
+    if (doc.is_assessment) {
+      await base44.entities.Assessment.update(doc.assessment_id, {
         is_archived: true,
       });
     } else {
-      await archiveClientDocument(docId);
+      await archiveClientDocument(doc.id);
     }
 
     await loadDocuments();
