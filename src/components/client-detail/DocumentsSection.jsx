@@ -1111,32 +1111,31 @@ key={tag}
   <div>
     <strong>Assessment Details:</strong>
 
-    {selectedAssessmentDoc.title === "interest_profiler" ? (
-      <div className="mt-2 space-y-2 text-sm">
-        <p>
-          <strong>RIASEC Code:</strong>{" "}
-          {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
-        </p>
+   {selectedAssessmentDoc.title === "interest_profiler" ? (
+  <div className="mt-2 space-y-2 text-sm">
+    <p>
+      <strong>RIASEC Code:</strong>{" "}
+      {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
+    </p>
 
-        <div>
-  <strong>RIASEC Scores:</strong>
-  <div className="mt-1 space-y-1">
-    <div>Realistic: {selectedAssessmentDoc.raw.riasec_scores?.Realistic ?? "Not available"}</div>
-    <div>Investigative: {selectedAssessmentDoc.raw.riasec_scores?.Investigative ?? "Not available"}</div>
-    <div>Artistic: {selectedAssessmentDoc.raw.riasec_scores?.Artistic ?? "Not available"}</div>
-    <div>Social: {selectedAssessmentDoc.raw.riasec_scores?.Social ?? "Not available"}</div>
-    <div>Enterprising: {selectedAssessmentDoc.raw.riasec_scores?.Enterprising ?? "Not available"}</div>
-    <div>Conventional: {selectedAssessmentDoc.raw.riasec_scores?.Conventional ?? "Not available"}</div>
-  </div>
-</div>
-</div>
-
-        <p>
-          <strong>Answers Completed:</strong>{" "}
-          {selectedAssessmentDoc.raw.responses.answers?.length || 0}
-        </p>
+    <div>
+      <strong>RIASEC Scores:</strong>
+      <div className="mt-1 space-y-1">
+        <div>Realistic: {selectedAssessmentDoc.raw.riasec_scores?.Realistic ?? "Not available"}</div>
+        <div>Investigative: {selectedAssessmentDoc.raw.riasec_scores?.Investigative ?? "Not available"}</div>
+        <div>Artistic: {selectedAssessmentDoc.raw.riasec_scores?.Artistic ?? "Not available"}</div>
+        <div>Social: {selectedAssessmentDoc.raw.riasec_scores?.Social ?? "Not available"}</div>
+        <div>Enterprising: {selectedAssessmentDoc.raw.riasec_scores?.Enterprising ?? "Not available"}</div>
+        <div>Conventional: {selectedAssessmentDoc.raw.riasec_scores?.Conventional ?? "Not available"}</div>
       </div>
-    ) : (
+    </div>
+
+    <p>
+      <strong>Answers Completed:</strong>{" "}
+      {selectedAssessmentDoc.raw.responses.answers?.length || 0}
+    </p>
+  </div>
+) : (
       <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64 mt-2">
         {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
       </pre>
