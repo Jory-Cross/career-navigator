@@ -150,15 +150,15 @@ function buildNarrativeExplanation({
     parts.push(combinedProfile.summaries.wsa_summary.narrative);
   }
 
-  if (combinedProfile.wsa_preferences.length > 0)
+    if (combinedProfile.wsa_preferences.length > 0) {
     parts.push(
-      `WSA themes include ${combinedProfile.summaries.wsa_summary.themes.slice(0, 6).join(", ")}.`
+      `WSA preferences include ${combinedProfile.wsa_preferences.slice(0, 6).join(", ")}.`
     );
   }
 
- if (combinedProfile.wsa_environment_needs.length > 0)
+  if (combinedProfile.wsa_environment_needs.length > 0) {
     parts.push(
-      `Client job goals include ${combinedProfile.summaries.wsa_summary.job_goals.slice(0, 6).join(", ")}.`
+      `WSA environment needs include ${combinedProfile.wsa_environment_needs.slice(0, 6).join(", ")}.`
     );
   }
 
