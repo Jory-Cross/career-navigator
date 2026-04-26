@@ -837,18 +837,35 @@ const recs = await base44.entities.JobRecommendation.filter(
                 </div>
               )}
 
+                            {rec.not_fit_reasons?.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-[11px] font-semibold text-amber-900">
+                    Why this may NOT fit:
+                  </div>
+
+                  {rec.not_fit_reasons.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900"
+                    >
+                      ⚠️ {item}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {rec.fit_concerns?.length > 0 && (
-  <div className="space-y-1">
-    {rec.fit_concerns.map((item, idx) => (
-      <div
-        key={idx}
-        className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
-      >
-        ⚠️ {item}
-      </div>
-    ))}
-  </div>
-)}
+                <div className="space-y-1">
+                  {rec.fit_concerns.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+                    >
+                      ⚠️ {item}
+                    </div>
+                  ))}
+                </div>
+              )}
 
 {rec.constraint_codes?.length > 0 && (
   <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
