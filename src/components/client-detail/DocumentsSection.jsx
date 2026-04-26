@@ -1121,13 +1121,14 @@ key={tag}
         <div>
   <strong>RIASEC Scores:</strong>
   <div className="mt-1 space-y-1">
-    <div>Realistic: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Realistic ?? "Not available"}</div>
-    <div>Investigative: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Investigative ?? "Not available"}</div>
-    <div>Artistic: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Artistic ?? "Not available"}</div>
-    <div>Social: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Social ?? "Not available"}</div>
-    <div>Enterprising: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Enterprising ?? "Not available"}</div>
-    <div>Conventional: {selectedAssessmentDoc.raw.responses?.riasec_scores?.Conventional ?? "Not available"}</div>
+    <div>Realistic: {selectedAssessmentDoc.raw.riasec_scores?.Realistic ?? "Not available"}</div>
+    <div>Investigative: {selectedAssessmentDoc.raw.riasec_scores?.Investigative ?? "Not available"}</div>
+    <div>Artistic: {selectedAssessmentDoc.raw.riasec_scores?.Artistic ?? "Not available"}</div>
+    <div>Social: {selectedAssessmentDoc.raw.riasec_scores?.Social ?? "Not available"}</div>
+    <div>Enterprising: {selectedAssessmentDoc.raw.riasec_scores?.Enterprising ?? "Not available"}</div>
+    <div>Conventional: {selectedAssessmentDoc.raw.riasec_scores?.Conventional ?? "Not available"}</div>
   </div>
+</div>
 </div>
 
         <p>
