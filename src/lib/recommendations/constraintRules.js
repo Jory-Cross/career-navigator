@@ -59,8 +59,14 @@ export function buildClientConstraints(profile = {}) {
       "difficulty with people",
       "limited social",
       "does not like crowds",
-      "avoid customers",
+           "avoid customers",
+      "avoid customer",
+      "limited customer contact",
+      "minimal customer contact",
+      "no customer service",
       "customer service is difficult",
+      "prefers independent work",
+      "independent work",
     ])
   ) {
     constraints.push({
