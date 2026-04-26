@@ -838,17 +838,23 @@ const recs = await base44.entities.JobRecommendation.filter(
               )}
 
               {rec.fit_concerns?.length > 0 && (
-                <div className="space-y-1">
-                  {rec.fit_concerns.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
-                    >
-                      ⚠️ {item}
-                    </div>
-                  ))}
-                </div>
-              )}
+  <div className="space-y-1">
+    {rec.fit_concerns.map((item, idx) => (
+      <div
+        key={idx}
+        className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+      >
+        ⚠️ {item}
+      </div>
+    ))}
+  </div>
+)}
+
+{rec.constraint_codes?.length > 0 && (
+  <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
+    Client considerations: {rec.constraint_codes.join(", ")}
+  </div>
+)}
             </div>
           );
 
