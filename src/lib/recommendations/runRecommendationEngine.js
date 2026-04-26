@@ -25,6 +25,7 @@ if (existing && !forceRegenerate) {
   const inputs = buildRecommendationInputs({
   documents,
   assessments,
+  vocationalProfile,
 });
 
 const result = await generateRecommendationBatch({
