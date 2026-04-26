@@ -149,6 +149,39 @@ function buildProfileText(profile = {}) {
   ]);
 }
 
+function normalizeOnetCareerItem(item = {}, index = 0) {
+  const title =
+    item.title ||
+    item.career_title ||
+    item.name ||
+    item.occupation_title ||
+    "O*NET Career Match";
+
+  const code =
+    item.code ||
+    item.onet_code ||
+    item.soc_code ||
+    item.occupation_code ||
+    `ONET-${index + 1}`;
+
+  return {
+    onet_code: code,
+    title,
+    href: item.href || item.url || null,
+    bright_outlook: Boolean(item.bright_outlook),
+    green: Boolean(item.green),
+    apprenticeship: Boolean(item.apprenticeship),
+    score: Number(item.score || item.fit_score || item.match_score || 80),
+    match_score: Number(item.score || item.fit_score || item.match_score || 80),
+    fit_level: "possible",
+    fit_strengths: ["Matched from O*NET Interest Profiler career results."],
+    fit_concerns: [],
+    matched_keywords: [],
+    match_reason: "Matched from O*NET Interest Profiler RIASEC career results.",
+    source: "onet-interest-profiler",
+  };
+}
+
 function countMatches(keywords = [], profileKeywords = []) {
   return keywords.filter((keyword) => {
     const key = safeLower(keyword);
