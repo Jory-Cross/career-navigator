@@ -70,61 +70,59 @@ function summarizeWsa(wsa = null) {
 
   const responses = wsa.responses || {};
 
+  const strengths = uniqueStrings([
+    ...toArray(responses.current_work_skills),
+    ...toArray(responses.work_skill_observations),
+    ...toArray(responses.interpersonal_social_skills),
+  ]);
+
+  const preferences = uniqueStrings([
+    ...toArray(responses.jobs_of_interest),
+    ...toArray(responses.recommended_target_occupations),
+  ]);
+
+  const environmentNeeds = uniqueStrings([
+    ...toArray(responses.recommended_supports_on_job),
+    ...toArray(responses.assistive_technology_needs),
+    ...toArray(responses.communication_needs),
+  ]);
+
+  const barriers = uniqueStrings([
+    ...toArray(responses.work_skill_development_needs),
+    ...toArray(responses.life_skills_needed),
+    ...toArray(responses.family_issues_supports),
+    ...toArray(responses.criminal_background),
+  ]);
+
+  const scheduleConstraints = uniqueStrings([
+    ...toArray(responses.hours_available_to_work),
+    ...toArray(responses.planned_job_search_hours_week),
+  ]);
+
+  const transportation = uniqueStrings([
+    ...toArray(responses.transportation_public),
+    ...toArray(responses.transportation_private),
+  ]);
+
   return {
     assessment_id: wsa.id || "",
-    assessment_type: wsa.assessment_type || wsa.type || "wsa",
-    notes: wsa.notes || "",
-    summary: wsa.summary || responses.summary || "",
+    assessment_type: "wsa",
 
-    strengths: uniqueStrings([
-      ...toArray(wsa.strengths),
-      ...toArray(responses.strengths),
-      ...toArray(responses.current_work_skills),
-      ...toArray(responses.work_skill_observations),
-      ...toArray(responses.interpersonal_social_skills),
-      ...toArray(responses.assistive_technology_needs),
-      ...toArray(responses.communication_needs),
-      ...toArray(responses.activities_of_daily_living),
-      ...toArray(responses.life_skills_observations),
-      ...toArray(responses.computer_skills_other),
-      ...toArray(responses.computer_skill_observations),
-      ...toArray(responses.other_observations),
-    ]),
+    strengths,
+    preferences,
+    environment_needs: environmentNeeds,
+    barriers,
+    schedule_constraints: scheduleConstraints,
+    transportation,
 
-    themes: uniqueStrings([
-      ...toArray(wsa.themes),
-      ...toArray(responses.themes),
-      ...toArray(responses.jobs_of_interest),
-      ...toArray(responses.recommended_target_occupations),
-      ...toArray(responses.recommended_supports_on_job),
-      ...toArray(responses.transportation_public),
-      ...toArray(responses.transportation_private),
-      ...toArray(responses.planned_job_search_hours_week),
-      ...toArray(responses.hours_available_to_work),
-    ]),
+    summary_text: [
+      ...strengths,
+      ...preferences,
+      ...environmentNeeds,
+      ...barriers,
+    ].join(" | "),
 
-    barriers: uniqueStrings([
-      ...toArray(wsa.barriers),
-      ...toArray(responses.barriers),
-      ...toArray(responses.work_skill_development_needs),
-      ...toArray(responses.health_insurance),
-      ...toArray(responses.benefits_planning),
-      ...toArray(responses.school_academic),
-      ...toArray(responses.criminal_background),
-      ...toArray(responses.family_issues_supports),
-      ...toArray(responses.life_skills_needed),
-      ...toArray(responses.life_skills_hours_requested),
-    ]),
-
-    job_goals: uniqueStrings([
-      ...toArray(wsa.job_goals),
-      ...toArray(responses.job_goals),
-      ...toArray(responses.jobs_of_interest),
-      ...toArray(responses.recommended_target_occupations),
-    ]),
-
-    responses,
-    pdf_url: wsa.pdf_url || responses._uploaded_pdf_url || "",
+    raw: responses,
   };
 }
 
