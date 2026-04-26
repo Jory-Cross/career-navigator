@@ -50,7 +50,7 @@ const assessmentQuestions = {
     { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea", placeholder: "e.g. 'What does a typical day look like?', 'What are growth opportunities?'" }
   ],
 
-riasec: [],
+interest_profiler: [],
   
   work_strategy_assessment: [
     { id: "_section_referral", label: "── COUNSELOR REFERRAL PAGE ──", type: "section" },
