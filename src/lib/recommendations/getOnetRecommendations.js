@@ -19,12 +19,11 @@ function uniqueStrings(values = []) {
 
 function getConflictKeywords(profile = {}) {
   const text = [
-    ...toArray(profile.wsa_strengths),
-    ...toArray(profile.wsa_themes),
-    ...toArray(profile.wsa_barriers),
-    ...toArray(profile.vocational_themes),
-  ].join(" ").toLowerCase();
-
+  ...toArray(profile.wsa_strengths),
+  ...toArray(profile.wsa_preferences),
+  ...toArray(profile.wsa_environment_needs),
+  ...toArray(profile.wsa_barriers),
+].join(" ").toLowerCase();
   const conflicts = [];
 
   if (text.includes("overwhelm") || text.includes("overstimulation") || text.includes("overstimulated")) {
