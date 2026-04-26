@@ -72,3 +72,8 @@ export async function getOnetOccupationDetails(code) {
 
   return onetRequest(`/careers/${code}/report`);
 }
+export async function getOnetOccupationDetails(code) {
+  if (!code) return null;
+
+  return onetRequest(`/careers/${code}/report`);
+}
