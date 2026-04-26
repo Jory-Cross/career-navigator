@@ -61,21 +61,28 @@ function buildCombinedProfile({
   const resume_skills = pickResumeSkills(resumes);
 
   const wsa_strengths = uniqueStrings([
-    ...toArray(wsa?.strengths),
-  ]);
+  ...toArray(wsa?.strengths),
+]);
 
-  const wsa_themes = uniqueStrings([
-    ...toArray(wsa?.themes),
-  ]);
+const wsa_preferences = uniqueStrings([
+  ...toArray(wsa?.preferences),
+]);
 
-  const wsa_barriers = uniqueStrings([
-    ...toArray(wsa?.barriers),
-  ]);
+const wsa_environment_needs = uniqueStrings([
+  ...toArray(wsa?.environment_needs),
+]);
 
-  const wsa_job_goals = uniqueStrings([
-    ...toArray(wsa?.job_goals),
-  ]);
+const wsa_barriers = uniqueStrings([
+  ...toArray(wsa?.barriers),
+]);
 
+const wsa_schedule_constraints = uniqueStrings([
+  ...toArray(wsa?.schedule_constraints),
+]);
+
+const wsa_transportation = uniqueStrings([
+  ...toArray(wsa?.transportation),
+]);
   const other_summary = buildOtherAssessmentSummary(otherAssessments);
 
   const assessment_keywords = uniqueStrings([
