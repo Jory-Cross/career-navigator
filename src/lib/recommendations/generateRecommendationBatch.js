@@ -38,6 +38,8 @@ export async function generateRecommendationBatch({
     ai_coach_summary: aiCoachText,
   };
 
+  console.log("LOCAL BATCH BEFORE SAVE:", localBatch);
+  
   try {
    const savedBatch = await base44.entities.JobRecommendationBatch.create(localBatch);
 console.log("SAVED RECOMMENDATION BATCH:", savedBatch);
