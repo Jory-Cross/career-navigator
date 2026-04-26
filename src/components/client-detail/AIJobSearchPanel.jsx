@@ -795,9 +795,11 @@ const recs = await base44.entities.JobRecommendation.filter(
               {rec.confidence_reason && (
   <div
     className={
-      rec.confidence_level === "low"
-        ? "rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
-        : "rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800"
+      rec.confidence_level === "high"
+        ? "rounded-md border border-green-300 bg-green-50 px-2 py-1 text-[11px] font-medium text-green-800"
+        : rec.confidence_level === "medium"
+        ? "rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+        : "rounded-md border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800"
     }
   >
     {rec.confidence_level === "low" ? "⚠️ " : ""}
