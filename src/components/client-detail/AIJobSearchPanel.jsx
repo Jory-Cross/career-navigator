@@ -792,15 +792,6 @@ const recs = await base44.entities.JobRecommendation.filter(
     ))}
   </div>
 )}
-
-    {rec.match_reason.includes("Assessment data also flagged possible fit concerns") && (
-      <div className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
-        ⚠️ May conflict with client’s work preferences or support needs.
-      </div>
-    )}
-  </div>
-)}
-
           </div>
         ))}
       </div>
