@@ -97,6 +97,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "LOW_STIMULATION_NEEDED",
       label: "Low stimulation environment needed",
+      severity: "moderate",
       concern:
         "This client may perform better in calm, predictable environments with limited noise and crowding.",
       avoidKeywords: ["restaurant", "retail", "fast paced", "warehouse rush", "cashier"],
@@ -120,6 +121,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "STRUCTURE_NEEDED",
       label: "Needs structure and routine",
+      severity: "moderate",
       concern:
         "This client may need clearly defined tasks, predictable expectations, and consistent routines.",
       avoidKeywords: ["multi-task", "unpredictable", "fast paced", "manager", "supervisor"],
@@ -144,6 +146,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "PHYSICAL_LIMITATION",
       label: "Physical limitation",
+      severity: "moderate",
       concern:
         "This client may need work that limits prolonged standing, heavy lifting, or physically demanding tasks.",
       avoidKeywords: ["laborer", "construction", "stocking", "warehouse", "dishwasher"],
@@ -170,6 +173,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "TRANSPORTATION_LIMITATION",
       label: "Transportation limitation",
+      severity: "moderate",
       concern:
         "This client may need jobs with reliable transportation access, predictable commute expectations, or support getting to and from work.",
       avoidKeywords: ["remote location", "multiple sites", "travel required", "delivery", "driver"],
@@ -199,6 +203,7 @@ export function buildClientConstraints(profile = {}) {
     constraints.push({
       code: "SCHEDULE_CONSTRAINT",
       label: "Schedule constraint",
+      severity: "moderate",
       concern:
         "This client may need jobs with predictable scheduling, consistent hours, or scheduling flexibility.",
       avoidKeywords: ["rotating schedule", "on call", "night shift", "weekends required", "variable schedule"],
