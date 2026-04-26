@@ -825,10 +825,16 @@ const recs = await base44.entities.JobRecommendation.filter(
           );
 
           return (
-            <>
-              {recommended.map((rec, i) =>
-                renderRecommendationCard(rec, `recommended-${i}`)
-              )}
+  <>
+    {recommended.length > 0 && (
+      <div className="text-xs font-semibold text-green-700 mb-2">
+        Recommended Jobs
+      </div>
+    )}
+
+    {recommended.map((rec, i) =>
+      renderRecommendationCard(rec, `recommended-${i}`)
+    )}
 
               {notRecommended.length > 0 && (
                 <div className="mt-4">
