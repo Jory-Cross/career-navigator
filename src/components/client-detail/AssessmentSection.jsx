@@ -532,7 +532,8 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             ) : (
               "Save Assessment"
             )}
-          </Button>
+                  </Button>
+        )}
         </div>
             </DialogContent>
     </Dialog>
