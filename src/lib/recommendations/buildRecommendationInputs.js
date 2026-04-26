@@ -167,9 +167,6 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
 
   const summarizedWsa = summarizeWsa(wsa);
 
-  console.log("RIASEC PROFILE:", interestProfile);
-console.log("ONET ANSWER STRING:", onetAnswerString);
-
 const interestAssessment = extractRiasecAssessment(assessments);
 
 let interestProfile = null;
@@ -185,6 +182,9 @@ if (interestAssessment) {
     interestAssessment.answers || []
   );
 }
+
+  console.log("RIASEC PROFILE:", interestProfile);
+console.log("ONET ANSWER STRING:", onetAnswerString);
   
     const combined_profile = {
     resume_skills: resumeSkills,
