@@ -80,9 +80,10 @@ if (constraintResult.fit_concerns.length > 0) {
 if (score > 100) score = 100;
 if (score < 0) score = 0;
 
-    return {
-      ...job,
-      fit_concerns: fitConcerns,
+   return {
+  ...job,
+  match_score: score,
+  fit_concerns: fitConcerns,
       recommended_environments:
         constraintResult.recommended_environments || [],
       fit_level: resolveFitLevel({
