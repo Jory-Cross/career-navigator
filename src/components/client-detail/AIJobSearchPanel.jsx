@@ -762,6 +762,18 @@ const recs = await base44.entities.JobRecommendation.filter(
                 {rec.title || "Untitled Recommendation"}
               </div>
 
+{rec.confidence_level === "high" && (
+  <div className="text-[10px] font-semibold text-green-700">
+    ⭐ Top Match
+  </div>
+)}
+
+{rec.confidence_level === "medium" && (
+  <div className="text-[10px] font-semibold text-blue-700">
+    👍 Good Fit
+  </div>
+)}
+              
               <div className="text-xs text-slate-500">
                 {rec.onet_code || "No O*NET code"}
               </div>
