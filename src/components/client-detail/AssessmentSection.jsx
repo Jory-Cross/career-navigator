@@ -438,6 +438,16 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             </div>
           )}
 
+{assessmentType === "riasec" && (
+  <InterestProfilerPanel
+    clientId={resolvedClientId}
+    onSaved={() => {
+      setShowForm(false);
+      loadAssessments();
+    }}
+  />
+)}
+          
           {currentQuestions.map((q) => (
             <div key={q.id}>
               {q.type === "section" ? (
