@@ -126,21 +126,21 @@ function summarizeWsa(wsa = null) {
   };
 }
 
-// 🔹 O*NET RIASEC EXTRACTION
-const interestAssessment = extractRiasecAssessment(assessments);
+function extractRiasecAssessment(assessments = []) {
+  return assessments.find((assessment) => {
+    const type = String(
+      assessment?.assessment_type ||
+        assessment?.type ||
+        assessment?.title ||
+        assessment?.name ||
+        ""
+    )
+      .toLowerCase()
+      .trim()
+      .replace(/_/g, " ");
 
-let interestProfile = null;
-let onetAnswerString = null;
-
-if (interestAssessment) {
-  interestProfile = buildRiasecProfile({
-    scores: interestAssessment.riasec_scores || {},
-    answers: interestAssessment.answers || [],
-  });
-
-  onetAnswerString = buildInterestProfilerAnswerString(
-    interestAssessment.answers || []
-  );
+    return type.includes("interest") || type.includes("riasec");
+  }) || null;
 }
 
 export function buildRecommendationInputs({
@@ -167,6 +167,22 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
 
   const summarizedWsa = summarizeWsa(wsa);
 
+const interestAssessment = extractRiasecAssessment(assessments);
+
+let interestProfile = null;
+let onetAnswerString = null;
+
+if (interestAssessment) {
+  interestProfile = buildRiasecProfile({
+    scores: interestAssessment.riasec_scores || {},
+    answers: interestAssessment.answers || [],
+  });
+
+  onetAnswerString = buildInterestProfilerAnswerString(
+    interestAssessment.answers || []
+  );
+}
+  
     const combined_profile = {
     resume_skills: resumeSkills,
     wsa_strengths: summarizedWsa?.strengths || [],
@@ -192,7 +208,8 @@ console.log("FULL WSA RESPONSE KEYS:", Object.keys(wsa?.responses || {}));
       wsa_job_goals: summarizedWsa?.job_goals || [],
       other_assessment_keywords: assessmentKeywords,
     },
-    interestProfile: null,
+    interestProfile,
+onet_answer_string: onetAnswerString,
     combined_profile,
     active_sources: {
       resumes: resumes.length,
