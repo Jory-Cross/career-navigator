@@ -49,7 +49,9 @@ const assessmentQuestions = {
     { id: "common_weaknesses", label: "Common Interview Weaknesses", type: "textarea", placeholder: "e.g. Tends to give very short answers, gets nervous..." },
     { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea", placeholder: "e.g. 'What does a typical day look like?', 'What are growth opportunities?'" }
   ],
- 
+
+riasec: [],
+  
   work_strategy_assessment: [
     { id: "_section_referral", label: "── COUNSELOR REFERRAL PAGE ──", type: "section" },
     { id: "crp_referring_to", label: "CRP Referring To", type: "text", placeholder: "e.g. Community Options" },
