@@ -1,57 +1,50 @@
-## 2026-04-26 — O*NET / RIASEC / Documents Integration Update
+## 2026-04-26 — Interest Profiler / Documents Follow-up
 
 ### Completed
-- Continued Phase 4 O*NET/RIASEC integration.
-- Confirmed RIASEC must come from the official O*NET Interest Profiler.
-- O*NET remains the source of truth for:
-  - Interest Profiler / RIASEC
-  - Job recommendations
-  - Job exploration
-  - Career details
-  - Occupation data
+- Renamed assessment dropdown display from `riasec` to `Interest Profiler`.
+- Replaced old `riasec` assessment key with `interest_profiler`.
+- Interest Profiler now opens correctly from Assessments.
+- Interest Profiler saves to the Assessment entity.
+- New Interest Profiler records now appear in Documents.
+- Fixed RIASEC score saving:
+  - Scoring model outputs `R`, `I`, `A`, `S`, `E`, `C`
+  - `saveInterestProfilerResult.js` now maps those into:
+    - Realistic
+    - Investigative
+    - Artistic
+    - Social
+    - Enterprising
+    - Conventional
+- Documents viewer now shows structured Interest Profiler results.
 
-### Files Updated
-- `src/lib/onet/interestProfiler.js`
-- `src/lib/onet/onetClient.js`
-- `src/lib/recommendations/buildRecommendationInputs.js`
-- `src/components/client-detail/AssessmentSection.jsx`
-- `src/components/client-detail/DocumentsSection.jsx`
-- `src/lib/api/clientPortalApi.js`
+### Still Open
+- Documents delete/archive still fails for mapped Assessment records.
+- Error happens because mapped assessment document IDs are prefixed with `assessment-`, but delete/archive calls still go through Document API.
+- Need DocumentsSection to detect `assessment-*` IDs and delete from Assessment entity instead.
 
-### Working Now
-- O*NET Interest Profiler appears inside the existing Assessments tab.
-- Interest Profiler saves to the `Assessment` entity.
-- RIASEC profile is now detected by recommendations.
-- O*NET answer string is now generated from saved answers.
-- Documents tab now includes both:
-  - real `Document` records
-  - mapped `Assessment` records
-- Existing WSA and Interest Profiler records now appear in Documents.
-- Assessment records without files open in an in-app viewer instead of broken download.
-- Interest Profiler viewer displays:
-  - RIASEC Code
-  - RIASEC Scores by category
-  - Answers Completed
+### Next Exact Task
+File:
+`src/components/client-detail/DocumentsSection.jsx`
 
-### Blocked
-- Real O*NET API recommendation fetch is blocked until a Base44 serverless function can be created.
-- Browser code cannot access Base44 secrets directly.
-- Need Base44 function later using:
-  - `ONET_USERNAME`
-  - `ONET_PASSWORD`
-  - possibly `ONET_API_KEY`
+1. Add:
+`import { base44 } from "@/api/base44Client";`
 
-### Next Priority
-Create server-side O*NET function when builder credits are available.
+2. Replace the full local `deleteDocument` function so:
+- if `docId` starts with `assessment-`, remove prefix and call:
+  `base44.entities.Assessment.delete(assessmentId)`
+- otherwise call:
+  `deleteClientDocument(docId)`
 
-Goal:
-- Call O*NET Interest Profiler careers endpoint server-side.
-- Use real O*NET/My Next Move recommendations.
-- Layer resume skills, WSA constraints, accommodations, transportation, schedule, and staff notes on top.
+3. Test:
+- Delete Interest Profiler from Documents
+- Confirm it disappears from Documents
+- Confirm it disappears from Assessments
+- Confirm no console 404 error
 
-### Backlog / Later Cleanup
-- Clean up Documents refresh/reprocess button or remove it if unnecessary.
-- Add DialogDescription/accessibility cleanup for shadcn/Radix warnings.
-- Improve assessment viewer formatting beyond raw JSON for WSA.
-- Generate real PDFs later for assessments where needed.
-- Remove debug console logs after pipeline is stable.
+### Important Chat Instruction Learned
+Do not guess code shape.
+Do not say “look for something like.”
+If the exact code is not known, ask for the current file.
+Use the latest pasted file as source of truth.
+Do not revert to old zip state after the user has already made changes.
+Give exact file path, exact block, and exact replacement only.
