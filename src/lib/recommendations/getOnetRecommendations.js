@@ -252,30 +252,51 @@ const wsaEnvironmentMatches = countMatches(job.keywords, toArray(profile.wsa_env
 
     let score = baseScore;
 
-    if (fit_concerns.length > 0) {
-      score -= fit_concerns.length * 6;
-    }
+// 🔥 HARD FILTERS
+let isBlocked = false;
 
-    score = Math.max(score, 0);
+if (
+  conflicts.includes("customer-facing roles") &&
+  safeLower(job.title).includes("customer")
+) {
+  isBlocked = true;
+}
 
-    return {
-      onet_code: `TEMP-${index + 1}`,
-      title: job.title,
-      href: null,
-      bright_outlook: false,
-      green: false,
-      apprenticeship: false,
-      score,
-      fit_level: getFitLevel(score, fit_concerns),
-      fit_strengths,
-      fit_concerns,
-      matched_keywords: matches,
-      match_reason:
-        matches.length > 0
-          ? `Matched based on: ${matches.join(", ")}`
-          : "General entry-level recommendation",
-    };
-  });
+if (
+  conflicts.includes("high social environments") &&
+  (safeLower(job.title).includes("service") ||
+    safeLower(job.title).includes("support"))
+) {
+  isBlocked = true;
+}
+
+// apply penalties if not blocked
+if (!isBlocked && fit_concerns.length > 0) {
+  score -= fit_concerns.length * 6;
+}
+
+score = Math.max(score, 0);
+
+return {
+  onet_code: `TEMP-${index + 1}`,
+  title: job.title,
+  href: null,
+  bright_outlook: false,
+  green: false,
+  apprenticeship: false,
+  score: isBlocked ? 0 : score,
+  fit_level: isBlocked ? "low" : getFitLevel(score, fit_concerns),
+  fit_strengths,
+  fit_concerns: isBlocked
+    ? [...fit_concerns, "This role conflicts with critical work preferences."]
+    : fit_concerns,
+  matched_keywords: matches,
+  match_reason: isBlocked
+    ? "Filtered due to conflict with WSA constraints."
+    : matches.length > 0
+    ? `Matched based on: ${matches.join(", ")}`
+    : "General entry-level recommendation",
+};
 
   const filtered = results
     .filter((r) => r.score > 0 || r.fit_concerns.length > 0)
