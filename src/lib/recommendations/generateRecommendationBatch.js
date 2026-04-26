@@ -92,9 +92,6 @@ if (envText.includes("independent")) {
 if (score > 100) score = 100;
 if (score < 0) score = 0;
 
-// BOOST score if job aligns with preferred environments
-const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
-    
    return {
   ...job,
   match_score: score,
