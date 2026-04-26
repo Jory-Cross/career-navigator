@@ -125,6 +125,24 @@ function summarizeWsa(wsa = null) {
     pdf_url: wsa.pdf_url || responses._uploaded_pdf_url || "",
   };
 }
+
+// 🔹 O*NET RIASEC EXTRACTION
+const interestAssessment = extractRiasecAssessment(assessments);
+
+let interestProfile = null;
+let onetAnswerString = null;
+
+if (interestAssessment) {
+  interestProfile = buildRiasecProfile({
+    scores: interestAssessment.riasec_scores || {},
+    answers: interestAssessment.answers || [],
+  });
+
+  onetAnswerString = buildInterestProfilerAnswerString(
+    interestAssessment.answers || []
+  );
+}
+
 export function buildRecommendationInputs({
   documents = [],
   assessments = [],
