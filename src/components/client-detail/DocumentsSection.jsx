@@ -1094,6 +1094,38 @@ key={tag}
   </DialogContent>
 </Dialog>
 
+</Dialog>
+
+{selectedAssessmentDoc && (
+  <Dialog open={true} onOpenChange={() => setSelectedAssessmentDoc(null)}>
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>{selectedAssessmentDoc.title}</DialogTitle>
+      </DialogHeader>
+
+      <div className="space-y-3 text-sm">
+        <div>
+          <strong>Description:</strong>
+          <div>{selectedAssessmentDoc.description}</div>
+        </div>
+
+        {selectedAssessmentDoc.raw?.responses && (
+          <div>
+            <strong>Responses:</strong>
+            <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64">
+              {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
+</>
+);
+}
+      
 </>
       );
       }
