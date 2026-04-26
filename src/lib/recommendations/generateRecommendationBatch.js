@@ -3,7 +3,7 @@ import { getOnetRecommendations } from "@/lib/recommendations/getOnetRecommendat
 import { generateJobCoachResponse } from "@/lib/recommendations/generateJobCoachResponse";
 import {
   buildClientConstraints,
-  applyConstraintRules,F
+  applyConstraintRules,
   resolveFitLevel,
 } from "@/lib/recommendations/constraintRules";
 
