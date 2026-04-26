@@ -152,6 +152,32 @@ export function buildClientConstraints(profile = {}) {
     preferredEnvironments.push(WORK_ENVIRONMENT_TAGS.SITTING_ALLOWED);
   }
 
+  if (
+    includesAny(rawText, [
+      "transportation",
+      "no transportation",
+      "limited transportation",
+      "paratransit",
+      "bus",
+      "public transportation",
+      "cannot drive",
+      "does not drive",
+      "needs ride",
+      "ride support",
+    ])
+  ) {
+    constraints.push({
+      code: "TRANSPORTATION_LIMITATION",
+      label: "Transportation limitation",
+      concern:
+        "This client may need jobs with reliable transportation access, predictable commute expectations, or support getting to and from work.",
+      avoidKeywords: ["remote location", "multiple sites", "travel required", "delivery", "driver"],
+      recommendEnvironment: WORK_ENVIRONMENT_TAGS.STRUCTURED_ROUTINE,
+    });
+
+    preferredEnvironments.push(WORK_ENVIRONMENT_TAGS.STRUCTURED_ROUTINE);
+  }
+  
   return {
     constraints,
     preferredEnvironments: Array.from(new Set(preferredEnvironments)),
