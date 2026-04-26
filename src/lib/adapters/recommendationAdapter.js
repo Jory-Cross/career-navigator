@@ -156,7 +156,7 @@ function buildNarrativeExplanation({
     );
   }
 
-  if (combinedProfile.summaries.wsa_summary.job_goals.length > 0) {
+ if (combinedProfile.wsa_environment_needs.length > 0)
     parts.push(
       `Client job goals include ${combinedProfile.summaries.wsa_summary.job_goals.slice(0, 6).join(", ")}.`
     );
