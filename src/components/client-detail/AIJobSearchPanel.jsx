@@ -313,10 +313,11 @@ const [filters, setFilters] = useState({});
 useEffect(() => {
   if (!resolvedClientId) return;
 
-  loadSavedRecs();
+  useEffect(() => {
+  if (!resolvedClientId) return;
 
-  // 🔴 TEMP: disable auto-loading old recommendation batch
-  // We ONLY want fresh generated results
+  loadSavedRecs();
+  loadLatestBatch();
 
 }, [resolvedClientId]);
   
