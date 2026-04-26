@@ -1094,8 +1094,6 @@ key={tag}
   </DialogContent>
 </Dialog>
 
-</Dialog>
-
 {selectedAssessmentDoc && (
   <Dialog open={true} onOpenChange={() => setSelectedAssessmentDoc(null)}>
     <DialogContent className="max-w-2xl">
