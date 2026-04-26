@@ -177,6 +177,36 @@ export function buildClientConstraints(profile = {}) {
 
     preferredEnvironments.push(WORK_ENVIRONMENT_TAGS.STRUCTURED_ROUTINE);
   }
+
+  if (
+    includesAny(rawText, [
+      "schedule",
+      "routine",
+      "consistent schedule",
+      "predictable schedule",
+      "flexible schedule",
+      "morning",
+      "afternoon",
+      "evening",
+      "late start",
+      "cannot work nights",
+      "cannot work weekends",
+      "school schedule",
+      "appointment schedule",
+    ])
+  ) {
+    constraints.push({
+      code: "SCHEDULE_CONSTRAINT",
+      label: "Schedule constraint",
+      concern:
+        "This client may need jobs with predictable scheduling, consistent hours, or scheduling flexibility.",
+      avoidKeywords: ["rotating schedule", "on call", "night shift", "weekends required", "variable schedule"],
+      recommendEnvironment: WORK_ENVIRONMENT_TAGS.STRUCTURED_ROUTINE,
+    });
+
+    preferredEnvironments.push(WORK_ENVIRONMENT_TAGS.STRUCTURED_ROUTINE);
+    preferredEnvironments.push(WORK_ENVIRONMENT_TAGS.CLEAR_TASKS);
+  }
   
   return {
     constraints,
