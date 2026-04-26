@@ -188,7 +188,7 @@ export async function generateRecommendationBatch({
 });
 
 const recommendationsWithConstraints = processed
- .filter((job) => job.match_score > 0 && job.confidence_level !== "low")
+.filter((job) => job.match_score > 0)
   .sort((a, b) => {
     const confidenceRank = { high: 3, medium: 2, low: 1 };
 
