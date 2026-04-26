@@ -234,22 +234,22 @@ if (profile?.onet_profile?.answers || profile?.onet_answer_string) {
 
     const resumeMatches = countMatches(job.keywords, toArray(profile.resume_skills));
     const wsaStrengthMatches = countMatches(job.keywords, toArray(profile.wsa_strengths));
-    const wsaThemeMatches = countMatches(job.keywords, toArray(profile.wsa_themes));
-    const wsaGoalMatches = countMatches(job.keywords, toArray(profile.wsa_job_goals));
+    const wsaPreferenceMatches = countMatches(job.keywords, toArray(profile.wsa_preferences));
+const wsaEnvironmentMatches = countMatches(job.keywords, toArray(profile.wsa_environment_needs));
 
     const baseScore =
-      resumeMatches.length * 2 +
-      wsaStrengthMatches.length * 4 +
-      wsaThemeMatches.length * 6 +
-      wsaGoalMatches.length * 10;
+  resumeMatches.length * 2 +
+  wsaStrengthMatches.length * 4 +
+  wsaPreferenceMatches.length * 8 +
+  wsaEnvironmentMatches.length * 6;
 
     const fit_concerns = getFitConcerns(job, conflicts);
     const fit_strengths = getFitStrengths({
-      resumeMatches,
-      wsaStrengthMatches,
-      wsaThemeMatches,
-      wsaGoalMatches,
-    });
+  resumeMatches,
+  wsaStrengthMatches,
+  wsaThemeMatches: wsaPreferenceMatches,
+  wsaGoalMatches: wsaEnvironmentMatches,
+});
 
     let score = baseScore;
 
