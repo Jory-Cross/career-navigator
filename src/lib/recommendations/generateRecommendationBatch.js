@@ -73,7 +73,32 @@ if (preferred.includes("structured_routine") && envText.includes("routine")) {
 
 // PENALIZE score if conflicts exist
 if (constraintResult.fit_concerns.length > 0) {
-  score -= constraintResult.fit_concerns.length * 10;
+  score -= constraintResult.fit_concerns.length * 15;
+}
+
+// EXTRA penalty for high-risk roles (customer-facing, fast-paced)
+const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
+
+if (
+  riskText.includes("customer") ||
+  riskText.includes("cashier") ||
+  riskText.includes("retail") ||
+  riskText.includes("restaurant") ||
+  riskText.includes("sales")
+) {
+  if (constraintProfile.preferredEnvironments.includes("limited_customer_contact")) {
+    score -= 20;
+  }
+}
+
+if (
+  riskText.includes("fast paced") ||
+  riskText.includes("busy") ||
+  riskText.includes("high volume")
+) {
+  if (constraintProfile.preferredEnvironments.includes("low_stimulation")) {
+    score -= 15;
+  }
 }
 
 // Clamp score
