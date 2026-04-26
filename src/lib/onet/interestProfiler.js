@@ -53,7 +53,13 @@ export function getTopRiasecCodes(scores = {}) {
 
 export function buildInterestProfilerAnswerString(answers = []) {
   return answers
-    .map((answer) => Number(answer))
+    .map((answer) => {
+      if (typeof answer === "object" && answer !== null) {
+        return Number(answer.value ?? answer.answer ?? answer.score);
+      }
+
+      return Number(answer);
+    })
     .filter((answer) => answer >= 1 && answer <= 5)
     .join("");
 }
