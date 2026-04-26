@@ -150,7 +150,7 @@ function buildNarrativeExplanation({
     parts.push(combinedProfile.summaries.wsa_summary.narrative);
   }
 
-  if (combinedProfile.summaries.wsa_summary.themes.length > 0) {
+  if (combinedProfile.wsa_preferences.length > 0)
     parts.push(
       `WSA themes include ${combinedProfile.summaries.wsa_summary.themes.slice(0, 6).join(", ")}.`
     );
