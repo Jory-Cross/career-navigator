@@ -874,7 +874,7 @@ key={tag}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            archiveDocument(doc.id);
+            archiveDocument(doc);
           }}
           className="h-7 px-2"
         >
