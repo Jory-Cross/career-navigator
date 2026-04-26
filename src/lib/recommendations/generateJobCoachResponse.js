@@ -1,58 +1,38 @@
-function hasConflict(job, profile = {}) {
-  const text = [
-    ...(profile.wsa_strengths || []),
-    ...(profile.vocational_themes || []),
-  ].join(" ").toLowerCase();
-
-  if (
-    job.title.toLowerCase().includes("customer") &&
-    (text.includes("overwhelm") ||
-      text.includes("overstimulated") ||
-      text.includes("work alone"))
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
 export async function generateJobCoachResponse({
-  resumeText = "",
-  wsaText = "",
-  riasecScores = {},
   recommendations = [],
   profile = {},
 }) {
-  const strongFits = [];
-  const cautionFits = [];
+  if (!recommendations.length) {
+    return "No strong job matches were found based on the available data.";
+  }
 
-  recommendations.forEach((job) => {
-    if (hasConflict(job, profile)) {
-      cautionFits.push(job);
-    } else {
-      strongFits.push(job);
-    }
-  });
+  const strongMatches = recommendations.slice(0, 5);
+
+  const cautionRoles = recommendations.filter(
+    (job) =>
+      job.match_reason &&
+      job.match_reason.toLowerCase().includes("concern")
+  );
 
   return `
 Based on your assessments, here’s a breakdown of job fit:
 
 Strong Matches:
-${strongFits
+${strongMatches
   .map(
     (job) =>
-      `- ${job.title}: aligns with your strengths and preferred work style.`
+      `- ${job.title}: ${job.match_reason || "Aligns with your strengths and preferences."}`
   )
   .join("\n")}
 
 ${
-  cautionFits.length > 0
+  cautionRoles.length > 0
     ? `
 Roles to Approach with Caution:
-${cautionFits
+${cautionRoles
   .map(
     (job) =>
-      `- ${job.title}: may conflict with your assessment data (for example, social demands or overstimulation).`
+      `- ${job.title}: may conflict with your assessment data or work preferences.`
   )
   .join("\n")}
 `
