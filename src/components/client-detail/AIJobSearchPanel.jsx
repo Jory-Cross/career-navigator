@@ -772,10 +772,17 @@ const recs = await base44.entities.JobRecommendation.filter(
               )}
 
               {rec.confidence_reason && (
-                <div className="rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800">
-                  {rec.confidence_reason}
-                </div>
-              )}
+  <div
+    className={
+      rec.confidence_level === "low"
+        ? "rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+        : "rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] text-purple-800"
+    }
+  >
+    {rec.confidence_level === "low" ? "⚠️ " : ""}
+    {rec.confidence_reason}
+  </div>
+)}
 
               {rec.matched_keywords?.length > 0 && (
                 <div className="flex flex-wrap gap-1">
