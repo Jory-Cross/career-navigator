@@ -206,6 +206,23 @@ export async function getOnetRecommendations(profile = {}) {
     };
   }
 
+if (profile?.onet_profile?.answers || profile?.onet_answer_string) {
+  const onetCareers = await getInterestProfilerCareers({
+    answers: profile?.onet_profile?.answers || profile?.onet_answer_string,
+  });
+
+  const careers = toArray(onetCareers?.career || onetCareers?.careers || onetCareers?.items)
+    .map((item, index) => normalizeOnetCareerItem(item, index));
+
+  if (careers.length > 0) {
+    return {
+      source: "onet-interest-profiler",
+      items: careers,
+      onet_summary: buildOnetSummary(careers),
+    };
+  }
+}
+  
   const conflicts = getConflictKeywords(profile);
 
   const results = JOB_PROFILES.map((job, index) => {
