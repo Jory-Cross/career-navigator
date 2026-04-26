@@ -197,15 +197,21 @@ if (interestAssessment) {
 console.log("ONET ANSWER STRING:", onetAnswerString);
   
     const combined_profile = {
-    resume_skills: resumeSkills,
-    wsa_strengths: summarizedWsa?.strengths || [],
-    wsa_themes: summarizedWsa?.themes || [],
-    wsa_barriers: summarizedWsa?.barriers || [],
-    wsa_job_goals: summarizedWsa?.job_goals || [],
-    assessment_keywords: assessmentKeywords,
-    job_titles: uniqueStrings(resumes.flatMap((doc) => toArray(doc?.job_titles))),
-    vocational_themes: summarizedWsa?.themes || [],
-  };
+  resume_skills: resumeSkills,
+
+  wsa_strengths: summarizedWsa?.strengths || [],
+  wsa_preferences: summarizedWsa?.preferences || [],
+  wsa_environment_needs: summarizedWsa?.environment_needs || [],
+  wsa_barriers: summarizedWsa?.barriers || [],
+  wsa_schedule_constraints: summarizedWsa?.schedule_constraints || [],
+  wsa_transportation: summarizedWsa?.transportation || [],
+
+  assessment_keywords: assessmentKeywords,
+
+  job_titles: uniqueStrings(
+    resumes.flatMap((doc) => toArray(doc?.job_titles))
+  ),
+};
 
   return {
     resumes: resumes.map((doc) => ({
