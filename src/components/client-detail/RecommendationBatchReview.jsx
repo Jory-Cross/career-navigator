@@ -15,12 +15,12 @@ import RecommendationReviewCard from "./RecommendationReviewCard";
 const STATUS_LABELS = {
   suggested: "Suggested",
   staff_reviewed: "Staff Reviewed",
-  shared_with_client: "Shared",
-  applied: "Applied",
-  interview: "Interview",
-  closed_not_fit: "Not a Fit",
-  closed_declined: "Declined",
-  hired: "Hired"
+  shared_with_client: "Shared with Client",
+  client_interested: "Client Interested",
+  client_not_interested: "Client Not Interested",
+  job_search_target: "Job Search Target",
+  not_a_fit: "Not a Good Fit",
+  archived: "Archived"
 };
 
 const STATUS_COLORS = {
