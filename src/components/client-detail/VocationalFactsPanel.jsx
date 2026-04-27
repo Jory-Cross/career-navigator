@@ -146,6 +146,28 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
   const [extracting, setExtracting] = useState(false);
   const [expandAll, setExpandAll] = useState(false);
 
+useEffect(() => {
+  if (!clientId) return;
+
+  async function loadSavedFacts() {
+    try {
+      const res = await base44.functions.invoke("processAssessmentDocuments", {
+        action: "get_vocational_facts",
+        clientId,
+      });
+
+      if (res?.data?.profile) {
+        setLocalProfile(res.data.profile);
+        setLocalMetadata(res.data.metadata || {});
+      }
+    } catch (err) {
+      console.error("Failed to load saved VFP:", err);
+    }
+  }
+
+  loadSavedFacts();
+}, [clientId]);
+  
   const vfp = localProfile || client?.vocational_facts_profile || null;
   const metadata = localMetadata || client?.vocational_facts_metadata || {};
   const extractedAt =
