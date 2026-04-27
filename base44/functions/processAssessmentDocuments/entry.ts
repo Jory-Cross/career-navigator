@@ -27,11 +27,19 @@ Deno.serve(async (req) => {
       const { documentIds } = body;
 
       // Fetch client + all documents + assessments
-      const [allClients, allDocs, assessments] = await Promise.all([
-        base44.asServiceRole.entities.Client.list(),
-        base44.asServiceRole.entities.Document.filter({ client_id: clientId }),
-        base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }),
-      ]);
+      const [allClients, allDocsRaw, assessmentsRaw] = await Promise.all([
+  base44.asServiceRole.entities.Client.list(),
+  base44.asServiceRole.entities.Document.list(),
+  base44.asServiceRole.entities.Assessment.list(),
+]);
+
+const allDocs = (allDocsRaw || []).filter(
+  (d) => d.client_id === clientId || d.clientId === clientId
+);
+
+const assessments = (assessmentsRaw || []).filter(
+  (a) => a.client_id === clientId || a.clientId === clientId
+);
 
       const client = allClients.find(c => c.id === clientId);
       if (!client) {
