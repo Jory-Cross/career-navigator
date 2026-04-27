@@ -166,9 +166,25 @@ export async function generateRecommendationBatch({
 
   let score = baseScore;
 
-  if (constraintResult.fit_concerns.length > 0) {
-    score = Math.max(0, baseScore - 50);
+ // Severity-based scoring
+constraintProfile.constraints.forEach((constraint) => {
+  const applies =
+    constraintResult.fit_concerns.includes(constraint.concern);
+
+  if (!applies) return;
+
+  if (constraint.severity === "hard") {
+    score = 0;
   }
+
+  if (constraint.severity === "moderate") {
+    score = Math.max(0, score - 30);
+  }
+
+  if (constraint.severity === "soft") {
+    score = Math.max(0, score - 10);
+  }
+});
 
   const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
 
