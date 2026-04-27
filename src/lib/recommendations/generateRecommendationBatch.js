@@ -206,13 +206,54 @@ constraintProfile.constraints.forEach((constraint) => {
 
   const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
-  if (envText.includes("custodial") || envText.includes("janitor")) {
-    score += 20;
-  }
+ // 🔥 Insight-based scoring
+const insights = profile?.wsa?.insights || [];
 
-  if (envText.includes("independent")) {
-    score += 10;
-  }
+const jobText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+
+// Prefer independent work
+if (
+  insights.includes("prefers independent work") &&
+  jobText.includes("independent")
+) {
+  score += 15;
+}
+
+// Avoid customer-facing roles
+if (
+  insights.includes("avoid customer-facing roles") &&
+  (
+    jobText.includes("customer") ||
+    jobText.includes("cashier") ||
+    jobText.includes("retail") ||
+    jobText.includes("sales")
+  )
+) {
+  score = Math.max(0, score - 40);
+}
+
+// Needs structure
+if (
+  insights.includes("needs structured and predictable work") &&
+  (
+    jobText.includes("routine") ||
+    jobText.includes("structured")
+  )
+) {
+  score += 10;
+}
+
+// Physical limitation penalty
+if (
+  insights.includes("limited tolerance for prolonged standing or physical work") &&
+  (
+    jobText.includes("labor") ||
+    jobText.includes("warehouse") ||
+    jobText.includes("construction")
+  )
+) {
+  score = Math.max(0, score - 50);
+}
 
   if (score > 100) score = 100;
   if (score < 0) score = 0;
