@@ -1172,7 +1172,7 @@ const normalizedBatch = {
                   id: `${recommendationBatch.id || "batch"}-${index}`,
                   batch_id: recommendationBatch.id || "latest",
                   client_id: resolvedClientId,
-                  status: "suggested",
+                  status: job.confidence_level === "low" ? "review_only" : "suggested",
                   job_title: job.title || job.job_title || "Untitled Recommendation",
                   employer: job.employer || "",
                   location: job.location || "",
