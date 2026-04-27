@@ -735,11 +735,11 @@ const recs = await base44.entities.JobRecommendation.filter(
   )}
 </Button>
    
-    <Button
+        <Button
       size="sm"
       variant={activeTab === 'facts' ? 'default' : 'outline'}
       className="h-8 text-xs"
-      onClick={() => setActiveTab('facts')}
+      onClick={() => setActiveTab(activeTab === 'facts' ? 'search' : 'facts')}
     >
       <FileText className="w-3.5 h-3.5 mr-1" /> Facts
     </Button>
