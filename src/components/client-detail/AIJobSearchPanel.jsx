@@ -722,9 +722,24 @@ const recs = await base44.entities.JobRecommendation.filter(
   onFactsUpdated={refreshClient}
 />
 )}
-      {/* SEARCH TAB */}
+            {/* SEARCH TAB */}
       {activeTab === 'search' && (
         <div className="space-y-4">
+          {recommendationFreshness.isOutdated && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-900">
+                  Recommendations may be outdated
+                </p>
+                <p className="mt-0.5 text-xs text-amber-800">
+                  New client data was added after these recommendations were generated.
+                  Click <strong>Generate Recommendations</strong> to refresh them.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* VFP status notice */}
           {needsFactExtraction && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
