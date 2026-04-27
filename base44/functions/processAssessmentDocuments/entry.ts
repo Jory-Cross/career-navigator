@@ -137,7 +137,6 @@ console.log("VFP SENDING TO LLM:", {
       
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: extractionPrompt,
-        file_urls: docFileUrls.length > 0 ? docFileUrls : undefined,
         add_context_from_internet: false,
         model: 'claude_sonnet_4_6',
         response_json_schema: {
