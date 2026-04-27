@@ -313,8 +313,11 @@ console.log("ONET ANSWER STRING:", onetAnswerString);
     : resumeSkills,
 
   wsa_strengths: summarizedVfp?.strengths?.length
-    ? summarizedVfp.strengths
-    : summarizedWsa?.strengths || [],
+  ? summarizedVfp.strengths
+  : uniqueStrings([
+      ...(summarizedWsa?.strengths || []),
+      ...(summarizedWsa?.insights || []),
+    ]),
 
   wsa_preferences: summarizedVfp?.preferences?.length
     ? summarizedVfp.preferences
