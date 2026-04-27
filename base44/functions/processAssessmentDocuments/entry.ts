@@ -197,6 +197,8 @@ if (!result || typeof result !== "object") {
 console.log("VFP FINAL RESULT:", result);
 
       console.log("VFP NORMALIZED LLM RESULT:", result);
+
+      console.log("VFP RAW LLM RESPONSE:", llmResponse);
       
       // Build structured extraction metadata
       const extractionMetadata = {
