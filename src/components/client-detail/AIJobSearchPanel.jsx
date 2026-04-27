@@ -304,6 +304,12 @@ export default function AIJobSearchPanel({ clientId, client: initialClient }) {
     conflictsCount: 0,
   });
 const [filters, setFilters] = useState({});
+const [recommendationFreshness, setRecommendationFreshness] = useState({
+  isOutdated: false,
+  newestInputDate: null,
+  generatedAt: null,
+  reason: "",
+});
 
 
 /* ================================
@@ -371,6 +377,89 @@ const recs = await base44.entities.JobRecommendation.filter(
     }
   };
 
+  const getItemTimestamp = (item) => {
+    const value =
+      item?.updated_date ||
+      item?.updated_at ||
+      item?.created_date ||
+      item?.created_at ||
+      item?.date ||
+      null;
+
+    if (!value) return 0;
+
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? time : 0;
+  };
+
+  const loadRecommendationFreshness = async (batch) => {
+    if (!resolvedClientId || !batch) {
+      setRecommendationFreshness({
+        isOutdated: false,
+        newestInputDate: null,
+        generatedAt: null,
+        reason: "",
+      });
+      return;
+    }
+
+    const generatedAt =
+      batch.generated_at ||
+      batch.created_date ||
+      batch.created_at ||
+      null;
+
+    const generatedTime = generatedAt ? new Date(generatedAt).getTime() : 0;
+
+    if (!generatedTime) {
+      setRecommendationFreshness({
+        isOutdated: false,
+        newestInputDate: null,
+        generatedAt,
+        reason: "",
+      });
+      return;
+    }
+
+    try {
+      const docs = await base44.entities.Document.filter({
+        client_id: resolvedClientId,
+      });
+
+      const assessments = base44.entities.Assessment?.filter
+        ? await base44.entities.Assessment.filter({
+            client_id: resolvedClientId,
+          })
+        : [];
+
+      const vfpTime = client?.vocational_facts_extracted_at
+        ? new Date(client.vocational_facts_extracted_at).getTime()
+        : 0;
+
+      const newestInputTime = Math.max(
+        0,
+        ...safeArray(docs).map(getItemTimestamp),
+        ...safeArray(assessments).map(getItemTimestamp),
+        vfpTime
+      );
+
+      const newestInputDate =
+        newestInputTime > 0 ? new Date(newestInputTime).toISOString() : null;
+
+      setRecommendationFreshness({
+        isOutdated: newestInputTime > generatedTime,
+        newestInputDate,
+        generatedAt,
+        reason:
+          newestInputTime > generatedTime
+            ? "New client data was added after these recommendations were generated."
+            : "",
+      });
+    } catch (e) {
+      console.error("Failed to check recommendation freshness", e);
+    }
+  };
+
   const loadLatestBatch = async () => {
   try {
     const batch = await loadLatestRecommendationBatch(resolvedClientId);
@@ -379,10 +468,15 @@ const recs = await base44.entities.JobRecommendation.filter(
 
     console.log("LOADED SAVED BATCH:", batch);
 
-    setRecommendationBatch({
+    const normalizedBatch = {
       ...batch,
-      recommendations: JSON.parse(batch.recommended_job_fields_json || "[]"),
-    });
+      recommendations: Array.isArray(batch.recommendations)
+        ? batch.recommendations
+        : JSON.parse(batch.recommended_job_fields_json || "[]"),
+    };
+
+    setRecommendationBatch(normalizedBatch);
+    await loadRecommendationFreshness(normalizedBatch);
   } catch (e) {
     console.error("Failed to load saved batch", e);
   }
