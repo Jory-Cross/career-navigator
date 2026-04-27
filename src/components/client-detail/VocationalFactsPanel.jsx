@@ -267,6 +267,20 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
         </Button>
       </div>
 
+{isOutdated && (
+  <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+    <div className="flex-1">
+      <p className="text-xs font-semibold text-amber-900">
+        Vocational Facts Profile may be outdated
+      </p>
+      <p className="mt-0.5 text-xs text-amber-800">
+        New assessments or documents have been added. Click <strong>Re-extract</strong> to refresh.
+      </p>
+    </div>
+  </div>
+)}
+      
       {/* Extraction metadata */}
       {vfp ? (
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
