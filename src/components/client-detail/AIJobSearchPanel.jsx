@@ -660,7 +660,20 @@ const recs = await base44.entities.JobRecommendation.filter(
         forceRegenerate: true,
       });
 
-      setRecommendationBatch(result?.batch || null);
+          const generatedBatch = result?.batch || null;
+
+      setRecommendationBatch(generatedBatch);
+
+      setRecommendationFreshness({
+        isOutdated: false,
+        newestInputDate: null,
+        generatedAt:
+          generatedBatch?.generated_at ||
+          generatedBatch?.created_date ||
+          generatedBatch?.created_at ||
+          new Date().toISOString(),
+        reason: "",
+      });
 
       if (result?.batch?.recommendations?.length > 0) {
         toast.success("Recommendations generated");
