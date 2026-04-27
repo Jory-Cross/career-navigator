@@ -1,251 +1,272 @@
-📄 PROJECT HANDOFF — CRM RECOMMENDATION ENGINE (PHASE COMPLETE)
+📄 PROJECT HANDOFF — CRM RECOMMENDATION ENGINE (POST-STABILITY BUILD)
 ✅ WHAT WAS ACCOMPLISHED IN THIS CHAT
-1. Recommendation Engine — FULL SYSTEM BUILT
-Core Engine
-runRecommendationEngine working end-to-end
-generateRecommendationBatch integrated
-Inputs flowing correctly:
-resume
-WSA (structured)
-assessments
-constraints
-2. Constraint System — SIGNIFICANT UPGRADE
-Existing Constraints Improved
-Social tolerance / customer interaction detection expanded
-More real-world phrasing supported:
-“independent work”
-“limited customer contact”
-etc.
-NEW Constraints Added
-Transportation constraint
-Schedule constraint
-Behavior
+1. Constraint System — FULLY UPGRADED
+Added severity levels
+hard → blocks job (score = 0)
+moderate → score penalty (-30)
+soft → minor penalty (-10, ready for future)
 Constraints now:
-add fit concerns
-reduce scores
-can hard block jobs
-influence environment recommendations
-3. Scoring Engine — REAL LOGIC IMPLEMENTED
-Weighted scoring
-resume
-strengths
-preferences
-environment
-Adjustments
-penalties for conflicts
-boosts for:
-custodial roles
-independent work
-Hard filtering
-customer-facing jobs can be zeroed out
-4. Confidence System — IMPLEMENTED
+influence scoring
+influence explanations
+are visible in UI
+2. WSA → INSIGHT LAYER (MAJOR UPGRADE)
+Before:
+Raw WSA text
+Weak signal quality
+Now:
+WSA → structured insights → recommendation engine
+Insights added:
+prefers independent work
+avoid customer-facing roles
+needs structured routine
+physical limitations
+transportation considerations
 
-Each job now has:
+👉 This is now core intelligence feeding the engine
 
-confidence_level (low / medium / high)
-confidence_reason
-Behavior
-low confidence → Not Recommended
-medium/high → Recommended
-5. UI — FULL RECOMMENDATION EXPERIENCE
-Sections
-✅ Recommended Jobs
-📋 Other Matches
-⚠️ Not Recommended (Review Only)
-Features
-Top 3 pinning
-Color-coded cards:
-green = high
-blue = medium
-amber = low
-Visual hierarchy fixed
-Section headers improved
-6. Alerts & Explanation Layer
-Added
-Confidence alert styling (amber vs purple)
-Fit concerns (⚠️)
-Fit strengths (✅)
-“Why this fits” explanation
-Client considerations (constraint visibility)
-7. Data Layer Improvements
-WSA normalization used for:
-strengths
-barriers
-preferences
-environment needs
-schedule
-transportation
-Constraint engine now reads:
-structured fields (not just raw text)
-🧠 WHAT THIS CHAT DID WELL (CRITICAL)
+3. Insight-Based Scoring (NEW)
 
-This chat succeeded because:
+Scoring now reacts to client reality, not just keywords:
 
-✔ No guessing code
-✔ Exact file + exact block instructions
-✔ Full replacements only
+Independent preference → boosts independent jobs
+Customer avoidance → penalizes retail/service
+Structure need → boosts routine jobs
+Physical limits → penalizes labor jobs
+
+👉 This is the first time the system behaves like a case manager
+
+4. Not-Fit Explanation System — COMPLETE
+Built:
+Constraint-based reasons
+Score/data-based reasons
+Data-quality awareness
+Improved:
+Deduplicated reasons
+Limited to top 3
+Priority ordering
+Hard constraints
+Moderate constraints
+Score/data reasons
+
+👉 Output is now:
+
+readable
+decision-focused
+not noisy
+5. UI — SIGNIFICANT IMPROVEMENTS
+Completed:
+Clear separation:
+Recommended
+Other Matches
+Not Recommended
+Color system refined:
+Green = strong
+Blue = good
+Red = risk
+“Why this may NOT fit” vs “Client considerations” logic
+Not Recommended section now visually stands out
+Confidence styling aligned (high / medium / low)
+6. AI Job Coach — ENHANCED
+
+Now includes:
+
+WSA insights in explanation
+Better alignment with actual engine logic
+More useful for staff interpretation
+7. System Behavior — STABILIZED
+No crashes
+Predictable scoring
+Deterministic outputs
+Recommendation persistence working
+No unnecessary auto-regeneration
+🧠 WHAT THIS CHAT DID WELL (IMPORTANT)
+
+This chat stayed clean because:
+
+✔ Exact file + exact block
+✔ No guessing
 ✔ One step at a time
-✔ Stayed focused on current phase
-✔ Did NOT jump to O*NET prematurely
-✔ Maintained system stability
-🧠 WHAT WE LEARNED (CARRY FORWARD)
-1. Instruction Style is EVERYTHING
+✔ No premature O*NET work
+✔ Focused on logic → then UI
+✔ Avoided over-engineering
 
-Must always:
+👉 This is the correct build pattern going forward
 
-give exact file path
-give exact block
-show full replacement
-never say “find something like”
-2. Build in Layers (this worked perfectly)
+🧠 KEY LEARNINGS (CARRY FORWARD)
+1. O*NET is a HARD DEPENDENCY
+Do NOT simulate beyond current fallback
+Do NOT over-tune scoring yet
+Real validation happens after O*NET
+2. Insights > Raw Data
+WSA text alone is weak
+Insights layer is essential
+This feeds:
+constraints
+scoring
+AI explanations
+future VFP
+3. Constraint System = Core Intelligence
 
-We followed correct order:
-
-Engine
-Constraints
-Scoring
-Confidence
-UI
-Ranking
-
-👉 This is why it worked cleanly
-
-3. Constraint System is the Core Intelligence
-
-This is what makes it:
+This is what makes the app:
 
 disability-aware
 case-manager aligned
-not just keyword matching
-4. UI Should Follow Logic (not lead it)
+not just a job matcher
+4. UI Must Reflect Decision Logic
 
-We did:
+You successfully enforced:
 
-logic first
-UI second
+logic first → UI second
 
 Correct approach.
 
-5. VFP Insight (IMPORTANT NEW LEARNING)
-Key realization:
+5. Avoid Over-Building Without Data
 
-👉 Recommendation engine should NOT keep re-extracting data
+You correctly stopped:
 
-Instead:
+deep scoring tweaks
+filtering hacks
+test-mode logic
 
-Documents + Assessments
-        ↓
-Vocational Facts Profile (VFP)
-        ↓
-Recommendation Engine
-Decision made:
-VFP will become primary data source
-fallback to raw data only when needed
-
-✔ Added to backlog
+👉 until O*NET is live
 
 🚀 CURRENT SYSTEM STATE
 
 You now have:
 
-✔ Constraint-aware recommendation engine
-✔ Confidence scoring
-✔ Hard filtering
-✔ Ranked outputs (Top 3 + others)
-✔ Clear explanations
-✔ Structured inputs
-✔ UI ready for real use
+✔ Insight-driven recommendation engine
+✔ Severity-based constraints
+✔ Smart scoring adjustments
+✔ Ranked outputs
+✔ Clean UI decision system
+✔ Clear explanations (fit + not fit)
+✔ AI coach aligned with logic
 
-👉 This is now a real tool, not a prototype
+👉 This is now a real decision-support tool
 
-🔥 NEXT STEPS (NEXT CHAT)
-Step 1 — VFP Integration (HIGH PRIORITY)
+⚠️ CURRENT LIMITATION
+Only ~5 fallback job results
 
-Update recommendation inputs to:
+So:
 
-read from VFP first
-fallback to:
-resume
-WSA
-assessments
+Ranking accuracy cannot be fully validated
+Constraint/insight depth cannot be fully tested
+System behavior is structurally correct, not data-validated
+🚀 NEXT STEPS (NEXT CHAT)
+🔴 STEP 1 — Recommendation Freshness Indicator
 
-Goal:
-👉 single source of truth
+Behavior:
 
-Step 2 — Strong vs Weak Fit Explanation
+If new data added (assessment, resume, VFP):
+→ show: "Recommendations may be outdated"
+→ require manual regenerate
+
+NOT auto-regenerate.
+
+🔴 STEP 2 — Constraint Severity Expansion
 
 Add:
 
-“Why this may NOT fit”
-separate from confidence text
-Step 3 — Constraint Severity Levels
+more constraint types
+better detection coverage
+soft vs moderate refinement
+🔴 STEP 3 — Insight Expansion
 
-Add:
+Add more signals:
 
-soft vs hard constraints
-better control over:
-score vs removal
-Step 4 — O*NET Alignment Layer (AFTER CREDITS)
-real occupation data
-work context matching
-skills/abilities mapping
-Step 5 — Job Search Input (BACKLOG)
+sensory tolerance
+supervision needs
+pace tolerance
+learning style
+🔴 STEP 4 — O*NET INTEGRATION (WHEN READY)
 
-User can:
+When credits refresh:
 
-type a job title
-see:
-score
-fit
-alerts
+Replace fallback jobs
+Use real occupation data
+Align scoring with:
+tasks
+work context
+skills
+job zones
+🔴 STEP 5 — Clickable Job Detail (BACKLOG)
+
+When O*NET is live:
+
+Click job title
+Show full O*NET profile:
+description
+tasks
+skills
+abilities
+environment
+outlook
 📌 BACKLOG (UPDATED)
-VFP → Recommendation integration (PRIMARY)
-Job search field tied to O*NET
-WSA AI summarization improvements
-Constraint refinement (severity levels)
+High Priority
+Recommendation freshness indicator
+VFP → full integration into engine
+WSA AI summarization (true AI, not rule-based)
+Medium
+Constraint expansion
+Insight expansion
 Debug log cleanup
-Document/assessment delete fix
-UI accessibility cleanup
-Tailwind production fix
+Later (O*NET Phase)
+Job search input field
+O*NET job detail viewer
+Real occupation matching
+Low / Cleanup
+Accessibility warnings (DialogDescription)
+Tailwind production setup
+React Router warnings
+Datadog/browser noise
 📌 NEXT CHAT START PROMPT
 
-Paste this into next chat:
+Paste this:
 
 We are continuing the CRM recommendation engine build.
 
 Current system:
 
-Recommendation engine fully working
-Constraint system implemented (including transportation and schedule)
-Confidence scoring complete
-Top 3 ranking implemented
-UI complete with:
-Recommended
-Other Matches
-Not Recommended
-WSA structured inputs in use
-Vocational Facts Profile exists but is NOT yet integrated into recommendations
+Constraint system with severity (hard / moderate)
+WSA insight extraction implemented
+Insight-based scoring implemented
+Not-fit explanation system complete (deduped, prioritized)
+UI fully structured (Recommended / Other / Not Recommended)
+AI Job Coach uses insights
+Recommendation persistence working
 
-We are NOT working on O*NET API yet.
+Limitations:
+
+Only fallback jobs available (no O*NET yet)
+Cannot fully validate ranking accuracy
+
+We are NOT working on O*NET yet.
 
 Next task:
 
-👉 Integrate Vocational Facts Profile (VFP) into recommendation inputs
+👉 Build Recommendation Freshness Indicator
+
+Behavior:
+
+If new data (assessment, resume, VFP) is added after last generation
+Show:
+“Recommendations may be outdated”
+Require manual regeneration
 
 Rules:
 
-Give exact file path
-Give exact block to replace
+Exact file path
+Exact block
 Full code only
 One step at a time
 Do NOT guess code
 💯 FINAL NOTE
 
-This was your cleanest build phase because:
+This was one of your strongest build phases.
 
-you enforced structure
-you slowed down when needed
-you caught ambiguity early
-you kept the system stable
+You now have:
+👉 structure
+👉 discipline
+👉 correct architecture direction
 
-👉 If you keep this exact pattern, the rest of the system will scale cleanly.
+If you continue like this, the O*NET integration will plug into a very solid system, not a fragile one.
