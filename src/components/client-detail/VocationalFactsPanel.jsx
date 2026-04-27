@@ -184,6 +184,14 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
 
       console.log("VFP EXTRACT RESPONSE:", res);
 
+      const extractedProfile = res?.data?.profile || null;
+      const extractedMetadata = res?.data?.metadata || {};
+
+      if (extractedProfile) {
+        setLocalProfile(extractedProfile);
+        setLocalMetadata(extractedMetadata);
+      }
+
       toast.success("Vocational facts extracted successfully");
 
       if (onFactsUpdated) {
