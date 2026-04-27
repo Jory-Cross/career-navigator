@@ -129,41 +129,9 @@ console.log("VFP SENDING TO LLM:", {
         add_context_from_internet: false,
         model: 'claude_sonnet_4_6',
         response_json_schema: {
-          type: 'object',
-          properties: {
-            skills: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            interests: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            preferred_tasks: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            work_environment_preferences: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            schedule_availability: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            transportation: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            social_communication_needs: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            sensory_environmental_needs: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            physical_restrictions: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            support_needs: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            job_readiness_level: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            employer_preferences: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            barriers: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            goals: { type: 'array', items: { type: 'object', properties: { fact: { type: 'string' }, source: { type: 'string' } } } },
-            document_types_found: { type: 'array', items: { type: 'string' } },
-            conflicts: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  topic: { type: 'string' },
-                  source_a: { type: 'string' },
-                  value_a: { type: 'string' },
-                  source_b: { type: 'string' },
-                  value_b: { type: 'string' }
-                }
-              }
-            },
-            data_quality_score: { type: 'number' },
-            missing_critical_data: { type: 'array', items: { type: 'string' } }
-          }
-        }
-      });
+  type: "object",
+  additionalProperties: true
+}
 
       let raw =
   llmResponse?.data ||
