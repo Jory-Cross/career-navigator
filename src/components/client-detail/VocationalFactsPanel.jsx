@@ -193,9 +193,11 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
 
       toast.success("Vocational facts extracted successfully");
 
-      if (onFactsUpdated) {
-        await onFactsUpdated();
-      }
+     if (onFactsUpdated) {
+  await onFactsUpdated();
+} else {
+  window.location.reload();
+}
     } catch (e) {
       console.error("VFP EXTRACT ERROR:", e);
       toast.error("Extraction failed: " + (e?.response?.data?.error || e.message));
