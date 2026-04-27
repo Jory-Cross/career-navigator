@@ -157,17 +157,19 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
     metadata.extracted_by ||
     "";
 
-  const docCount =
-  client?.vocational_facts_document_count ??
-  metadata.source_document_ids?.length ??
-  client?.vocational_facts_profile?.documents_processed ??
-  0;
+    const docCount =
+    client?.vocational_facts_document_count > 0
+      ? client.vocational_facts_document_count
+      : metadata.source_document_ids?.length > 0
+        ? metadata.source_document_ids.length
+        : client?.vocational_facts_profile?.documents_processed || 0;
 
-const assessCount =
-  client?.vocational_facts_assessment_count ??
-  metadata.source_assessment_ids?.length ??
-  client?.vocational_facts_profile?.assessments_processed ??
-  0;
+  const assessCount =
+    client?.vocational_facts_assessment_count > 0
+      ? client.vocational_facts_assessment_count
+      : metadata.source_assessment_ids?.length > 0
+        ? metadata.source_assessment_ids.length
+        : client?.vocational_facts_profile?.assessments_processed || 0;
 
     const handleExtract = async () => {
     setExtracting(true);
