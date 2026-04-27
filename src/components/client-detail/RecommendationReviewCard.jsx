@@ -104,38 +104,29 @@ export default function RecommendationReviewCard({
 
   const statusConfig = STATUS_CONFIG[recommendation.status] || STATUS_CONFIG.suggested;
 
-  const handleStatusUpdate = async () => {
-    if (newStatus === recommendation.status && reviewNotes === (recommendation.review_notes || "")) {
-      setEditing(false);
-      return;
-    }
-
+    const handleStatusUpdate = async () => {
     setUpdatingStatus(true);
+
     try {
-      await base44.entities.JobRecommendation.update(recommendation.id, {
-        status: newStatus,
-        review_notes: reviewNotes,
-        reviewed_by_staff: newStatus !== 'suggested',
-        reviewed_by: newStatus !== 'suggested' ? user?.email : recommendation.reviewed_by,
-        reviewed_at: newStatus !== 'suggested' ? new Date().toISOString() : recommendation.reviewed_at,
+      console.log("STATUS CHANGE - LOCAL ONLY:", {
+        id: recommendation.id,
+        newStatus,
+        reviewNotes,
       });
-      
-      toast.success(`Recommendation marked as ${STATUS_CONFIG[newStatus].label}`);
+
+      toast.success(`Status updated to ${STATUS_CONFIG[newStatus].label}`);
+
       setEditing(false);
-      
+
       if (onStatusChange) {
         onStatusChange(recommendation.id, newStatus);
       }
-      if (onRefresh) {
-        await onRefresh();
-      }
     } catch (e) {
-      toast.error('Failed to update recommendation: ' + e.message);
+      toast.error("Failed to update recommendation: " + e.message);
     } finally {
       setUpdatingStatus(false);
     }
   };
-
   return (
     <>
       <Card className="border-l-4" style={{ borderLeftColor: statusConfig.color.includes('green') ? '#22c55e' : statusConfig.color.includes('red') ? '#ef4444' : '#94a3b8' }}>
