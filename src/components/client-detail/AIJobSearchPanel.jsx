@@ -753,11 +753,11 @@ const recs = await base44.entities.JobRecommendation.filter(
       <Search className="w-3.5 h-3.5 mr-1" /> Search
     </Button>
 
-    <Button
+        <Button
       size="sm"
       variant={activeTab === 'saved' ? 'default' : 'outline'}
       className="h-8 text-xs"
-      onClick={() => setActiveTab('saved')}
+      onClick={() => setActiveTab(activeTab === 'saved' ? 'search' : 'saved')}
     >
       <History className="w-3.5 h-3.5 mr-1" /> Saved
     </Button>
