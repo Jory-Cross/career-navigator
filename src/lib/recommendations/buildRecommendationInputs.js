@@ -162,6 +162,8 @@ if (transportation.length === 0) {
     schedule_constraints: scheduleConstraints,
     transportation,
 
+    insights,
+    
     summary_text: [
       ...strengths,
       ...preferences,
