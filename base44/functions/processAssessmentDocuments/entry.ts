@@ -211,15 +211,15 @@ Also identify:
         description: `${user.full_name || user.email} extracted employment facts from ${targetDocs.length} documents and ${assessments.length} assessments. Quality score: ${result.data_quality_score}%. ${result.conflicts?.length > 0 ? `⚠️ ${result.conflicts.length} conflict(s) flagged for review.` : ''}`,
       });
 
-      return Response.json({
+            return Response.json({
         success: true,
         profile: result,
         metadata: extractionMetadata,
         documents_processed: targetDocs.length,
         assessments_processed: assessments.length,
         conflicts_found: result.conflicts?.length || 0,
-        data_quality_score: result.data_quality_score,
-        update_status: shouldUpdate ? 'updated' : 'skipped_weaker_profile'
+        data_quality_score: result.data_quality_score || 0,
+        update_status: shouldUpdate || !existingProfile ? "updated" : "skipped_weaker_profile"
       });
     }
 
