@@ -145,10 +145,8 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
   const [extracting, setExtracting] = useState(false);
   const [expandAll, setExpandAll] = useState(false);
 
-  const vfp = client?.vocational_facts_profile || null;
-  const metadata = client?.vocational_facts_metadata || {};  const vfp = localProfile || client?.vocational_facts_profile || null;
+  const vfp = localProfile || client?.vocational_facts_profile || null;
   const metadata = localMetadata || client?.vocational_facts_metadata || {};
-
   const extractedAt =
     client?.vocational_facts_extracted_at ||
     metadata.extracted_at ||
