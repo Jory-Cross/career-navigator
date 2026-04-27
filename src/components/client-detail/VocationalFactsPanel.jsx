@@ -208,6 +208,38 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
     ? CATEGORY_CONFIG.reduce((sum, c) => sum + (vfp[c.key]?.length || 0), 0)
     : 0;
 
+  useEffect(() => {
+    if (!client) {
+      setIsOutdated(false);
+      return;
+    }
+
+    const lastExtracted =
+      metadata?.extracted_at ||
+      client?.vocational_facts_extracted_at ||
+      client?.vocational_facts_last_updated_at ||
+      null;
+
+    if (!lastExtracted) {
+      setIsOutdated(false);
+      return;
+    }
+
+    const extractedTime = new Date(lastExtracted).getTime();
+
+    const newestDataTime = Math.max(
+      0,
+      ...(client?.documents || []).map((d) =>
+        new Date(d.updated_date || d.created_date || 0).getTime()
+      ),
+      ...(client?.assessments || []).map((a) =>
+        new Date(a.updated_date || a.created_date || 0).getTime()
+      )
+    );
+
+    setIsOutdated(newestDataTime > extractedTime);
+  }, [client, metadata]);
+  
   return (
     <div className="space-y-4">
       {/* Header */}
