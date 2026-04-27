@@ -1163,13 +1163,45 @@ const normalizedBatch = {
         </div>
       )}
 
-      {/* SAVED TAB */}
+            {/* SAVED TAB */}
       {activeTab === 'saved' && (
         <RecommendationBatchReview
-          recs={savedRecs}
-          batches={savedBatches}
+          recs={
+            recommendationBatch?.recommendations?.length
+              ? recommendationBatch.recommendations.map((job, index) => ({
+                  id: `${recommendationBatch.id || "batch"}-${index}`,
+                  batch_id: recommendationBatch.id || "latest",
+                  client_id: resolvedClientId,
+                  status: "suggested",
+                  job_title: job.title || job.job_title || "Untitled Recommendation",
+                  employer: job.employer || "",
+                  location: job.location || "",
+                  match_score: job.match_score,
+                  fit_score: job.fit_score,
+                  match_reason: job.match_reason,
+                  fit_strengths: job.fit_strengths || [],
+                  fit_concerns: job.fit_concerns || [],
+                  not_fit_reasons: job.not_fit_reasons || [],
+                  constraint_codes: job.constraint_codes || [],
+                  confidence_level: job.confidence_level,
+                  confidence_reason: job.confidence_reason,
+                  source_job: job,
+                }))
+              : savedRecs
+          }
+          batches={
+            recommendationBatch
+              ? {
+                  ...(savedBatches || {}),
+                  [recommendationBatch.id || "latest"]: recommendationBatch,
+                }
+              : savedBatches
+          }
           loading={loadingSaved}
-          onRefresh={loadSavedRecs}
+          onRefresh={() => {
+            loadSavedRecs();
+            loadLatestBatch();
+          }}
         />
       )}
     </div>
