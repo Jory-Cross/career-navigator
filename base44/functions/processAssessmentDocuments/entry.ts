@@ -216,12 +216,11 @@ console.log("VFP FINAL RESULT:", result);
       };
 
       // Only update if stronger or no existing profile
-      if (shouldUpdate || !existingProfile) {
-        await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
-        console.log(`[processAssessmentDocuments] Updated profile for client ${clientId}, quality: ${result.data_quality_score}`);
-      } else {
-        console.log(`[processAssessmentDocuments] Skipped update for client ${clientId}; existing profile is stronger (${existingMetadata.data_quality_score} vs ${result.data_quality_score})`);
-      }
+      await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+
+console.log(
+  `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}`
+);
 
       // Log activity
       await base44.asServiceRole.entities.Activity.create({
