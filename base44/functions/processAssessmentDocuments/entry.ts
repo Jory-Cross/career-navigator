@@ -247,8 +247,7 @@ console.log(
     // ── ACTION: get_vocational_facts ──────────────────────────────────────────
     // Returns full profile with metadata for review UI
     if (action === 'get_vocational_facts') {
-      const allClients = await base44.asServiceRole.entities.Client.list();
-      const client = allClients.find(c => c.id === clientId);
+      const client = await base44.asServiceRole.entities.Client.get(clientId);
       if (!client) {
         return Response.json({ error: 'Client not found' }, { status: 404 });
       }
