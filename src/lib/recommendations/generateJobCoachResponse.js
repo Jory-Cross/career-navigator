@@ -21,6 +21,7 @@ export async function generateJobCoachResponse({
 
   const strengths = joinList(profile.wsa_strengths);
   const themes = joinList(profile.vocational_themes);
+  const insights = joinList(profile.wsa?.insights);
 
   return `
 Based on the available resume, WSA, and assessment data, here’s the current job-fit guidance:
