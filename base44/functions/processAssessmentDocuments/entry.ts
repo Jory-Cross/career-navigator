@@ -132,7 +132,8 @@ console.log("VFP SENDING TO LLM:", {
   type: "object",
   additionalProperties: true
 }
-
+});
+      
       let raw =
   llmResponse?.data ||
   llmResponse?.result ||
