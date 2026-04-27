@@ -272,8 +272,7 @@ console.log(
     // ── ACTION: get_ai_grounding ──────────────────────────────────────────────
     // Returns compact, flattened profile for job recommendations and AI coaching
     if (action === 'get_ai_grounding') {
-      const allClients = await base44.asServiceRole.entities.Client.list();
-      const client = allClients.find(c => c.id === clientId);
+      const client = await base44.asServiceRole.entities.Client.get(clientId);
       if (!client || !client.vocational_facts_profile) {
         return Response.json({ error: 'No vocational profile available for this client' }, { status: 404 });
       }
@@ -291,8 +290,7 @@ console.log(
     // ── ACTION: get_profile_provenance ────────────────────────────────────────
     // Returns facts with source document/assessment IDs for traceability
     if (action === 'get_profile_provenance') {
-      const allClients = await base44.asServiceRole.entities.Client.list();
-      const client = allClients.find(c => c.id === clientId);
+      const client = await base44.asServiceRole.entities.Client.get(clientId);
       if (!client || !client.vocational_facts_profile) {
         return Response.json({ error: 'No vocational profile available for this client' }, { status: 404 });
       }
