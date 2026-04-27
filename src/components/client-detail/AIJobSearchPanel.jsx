@@ -738,10 +738,14 @@ const recs = await base44.entities.JobRecommendation.filter(
 
       {/* FACTS TAB */}
       {activeTab === 'facts' && (
-       <VocationalFactsPanel
+      <VocationalFactsPanel
   clientId={resolvedClientId}
   client={client}
   onFactsUpdated={refreshClient}
+  extractedAt={client?.vocational_facts_extracted_at}
+  extractedBy={client?.vocational_facts_extracted_by}
+  documentCount={client?.vocational_facts_document_count}
+  assessmentCount={client?.vocational_facts_assessment_count}
 />
 )}
             {/* SEARCH TAB */}
