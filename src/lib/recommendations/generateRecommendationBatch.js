@@ -258,6 +258,28 @@ if (
   if (score > 100) score = 100;
   if (score < 0) score = 0;
 
+const notFitReasons = [
+  ...(constraintResult.not_fit_reasons || []),
+];
+
+if (score < 40) {
+  notFitReasons.push(
+    `${job.title || "This role"} has a lower overall match score based on the available client data.`
+  );
+}
+
+if (!profile.resume_skills?.length && !profile.wsa_strengths?.length) {
+  notFitReasons.push(
+    "There is limited resume or WSA data available to support this recommendation."
+  );
+}
+
+if (fitConcerns.length > 0) {
+  notFitReasons.push(
+    `${job.title || "This role"} should be reviewed because one or more client constraints may affect fit.`
+  );
+}
+    
   const confidence = resolveConfidenceLevel({
     score,
     fitConcerns,
