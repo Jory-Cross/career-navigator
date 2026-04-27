@@ -81,8 +81,20 @@ LOCATION: ${client.location || 'Not specified'}
 TARGET ROLE (on record): ${client.target_role || 'Not specified'}
 CLIENT NOTES: ${client.notes || 'None'}
 
-=== STRUCTURED ASSESSMENT RESPONSES (${assessments.length} assessments) ===
-${assessmentText || 'No structured assessments on file'}
+=== STRUCTURED ASSESSMENT DATA ===
+
+${assessments.length > 0
+  ? assessments.map(a => {
+      const responses = Object.entries(a.responses || {})
+        .filter(([k, v]) => v && !k.startsWith("_"))
+        .map(([k, v]) =>
+          `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`
+        )
+        .join("\n");
+
+      return `Assessment: ${a.assessment_type}\n${responses}`;
+    }).join("\n\n")
+  : "No assessment data available"}
 
 === UPLOADED DOCUMENTS AVAILABLE (${targetDocs.length} documents) ===
 ${docList || 'None'}
