@@ -505,12 +505,28 @@ const recs = await base44.entities.JobRecommendation.filter(
 
     console.log("LOADED SAVED BATCH:", batch);
 
-    const normalizedBatch = {
-      ...batch,
-      recommendations: Array.isArray(batch.recommendations)
-        ? batch.recommendations
-        : JSON.parse(batch.recommended_job_fields_json || "[]"),
-    };
+   const parsedRecommendations = (() => {
+  if (Array.isArray(batch.recommendations)) {
+    return batch.recommendations;
+  }
+
+  if (typeof batch.recommended_job_fields_json === "string") {
+    try {
+      const parsed = JSON.parse(batch.recommended_job_fields_json);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error("FAILED TO PARSE recommended_job_fields_json", e);
+      return [];
+    }
+  }
+
+  return [];
+})();
+
+const normalizedBatch = {
+  ...batch,
+  recommendations: parsedRecommendations,
+};
 
     setRecommendationBatch(normalizedBatch);
     await loadRecommendationFreshness(normalizedBatch);
