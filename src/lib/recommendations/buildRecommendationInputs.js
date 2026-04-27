@@ -104,6 +104,53 @@ function summarizeWsa(wsa = null) {
     ...toArray(responses.transportation_private),
   ]);
 
+// 🔥 NEW: derived insights (rule-based for now)
+const insights = [];
+
+// Independent work preference
+if (
+  preferences.some((p) =>
+    String(p).toLowerCase().includes("independent")
+  )
+) {
+  insights.push("prefers independent work");
+}
+
+// Avoid customer interaction
+if (
+  barriers.some((b) =>
+    String(b).toLowerCase().includes("social") ||
+    String(b).toLowerCase().includes("customer")
+  )
+) {
+  insights.push("avoid customer-facing roles");
+}
+
+// Needs structure
+if (
+  environmentNeeds.some((e) =>
+    String(e).toLowerCase().includes("structure") ||
+    String(e).toLowerCase().includes("routine")
+  )
+) {
+  insights.push("needs structured and predictable work");
+}
+
+// Physical limitations
+if (
+  barriers.some((b) =>
+    String(b).toLowerCase().includes("physical") ||
+    String(b).toLowerCase().includes("standing")
+  )
+) {
+  insights.push("limited tolerance for prolonged standing or physical work");
+}
+
+// Transportation limitations
+if (transportation.length === 0) {
+  insights.push("may require transportation support");
+}
+  
   return {
     assessment_id: wsa.id || "",
     assessment_type: "wsa",
