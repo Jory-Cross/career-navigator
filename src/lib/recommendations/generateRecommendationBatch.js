@@ -290,7 +290,7 @@ if (fitConcerns.length > 0) {
   ...job,
   match_score: score,
   fit_concerns: fitConcerns,
-  not_fit_reasons: constraintResult.not_fit_reasons || [],
+  not_fit_reasons: Array.from(new Set(notFitReasons)),
   recommended_environments:
     constraintResult.recommended_environments || [],
   fit_level: resolveFitLevel({
