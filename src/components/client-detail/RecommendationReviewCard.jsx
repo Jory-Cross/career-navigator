@@ -104,22 +104,47 @@ export default function RecommendationReviewCard({
 
   const statusConfig = STATUS_CONFIG[recommendation.status] || STATUS_CONFIG.suggested;
 
-    const handleStatusUpdate = async () => {
+      const handleStatusUpdate = async () => {
     setUpdatingStatus(true);
 
     try {
-      console.log("STATUS CHANGE - LOCAL ONLY:", {
-        id: recommendation.id,
-        newStatus,
-        reviewNotes,
-      });
+      const reviewedPayload = {
+        status: newStatus,
+        review_notes: reviewNotes,
+        reviewed_by_staff: newStatus !== "suggested",
+        reviewed_by: newStatus !== "suggested" ? user?.email : recommendation.reviewed_by,
+        reviewed_at: newStatus !== "suggested" ? new Date().toISOString() : recommendation.reviewed_at,
+      };
 
-      toast.success(`Status updated to ${STATUS_CONFIG[newStatus].label}`);
+      if (recommendation.source_job && recommendation.batch_id) {
+        const batch = await base44.entities.JobRecommendationBatch.get(recommendation.batch_id);
+        const jobs = JSON.parse(batch.recommended_job_fields_json || "[]");
 
+        const index = Number(String(recommendation.id).split("-").pop());
+
+        if (Number.isFinite(index) && jobs[index]) {
+          jobs[index] = {
+            ...jobs[index],
+            ...reviewedPayload,
+          };
+
+          await base44.entities.JobRecommendationBatch.update(recommendation.batch_id, {
+            recommended_job_fields_json: JSON.stringify(jobs),
+          });
+        }
+      } else {
+        await base44.entities.JobRecommendation.update(recommendation.id, reviewedPayload);
+      }
+
+      toast.success(`Recommendation marked as ${STATUS_CONFIG[newStatus].label}`);
       setEditing(false);
 
       if (onStatusChange) {
         onStatusChange(recommendation.id, newStatus);
+      }
+
+      if (onRefresh) {
+        await onRefresh();
       }
     } catch (e) {
       toast.error("Failed to update recommendation: " + e.message);
