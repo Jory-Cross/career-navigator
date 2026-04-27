@@ -58,16 +58,8 @@ Deno.serve(async (req) => {
 
       // Build document file list for LLM analysis
       const docFileUrls = targetDocs
-        .filter(d => d.file_url && (
-          d.file_type?.includes('pdf') ||
-          d.file_type?.includes('image') ||
-          d.file_type?.includes('doc') ||
-          d.category === 'other' ||
-          d.category === 'reference' ||
-          d.category === 'notes' ||
-          d.category === 'certification'
-        ))
-        .map(d => d.file_url);
+  .filter(d => d.file_url)
+  .map(d => d.file_url);
 
       const docList = targetDocs.map(d =>
         `  - ${d.title} (${d.category}, ${d.file_type || 'unknown type'})`
