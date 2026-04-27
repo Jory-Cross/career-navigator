@@ -167,17 +167,24 @@ export default function VocationalFactsPanel({ clientId, client, onFactsUpdated 
     metadata.source_assessment_ids?.length ??
     0;
 
-  const handleExtract = async () => {
+    const handleExtract = async () => {
     setExtracting(true);
     try {
-      await base44.functions.invoke('processAssessmentDocuments', {
-        action: 'extract_from_documents',
+      const res = await base44.functions.invoke("processAssessmentDocuments", {
+        action: "extract_from_documents",
         clientId,
       });
-      toast.success('Vocational facts extracted successfully');
-      if (onFactsUpdated) await onFactsUpdated();
+
+      console.log("VFP EXTRACT RESPONSE:", res);
+
+      toast.success("Vocational facts extracted successfully");
+
+      if (onFactsUpdated) {
+        await onFactsUpdated();
+      }
     } catch (e) {
-      toast.error('Extraction failed: ' + (e?.response?.data?.error || e.message));
+      console.error("VFP EXTRACT ERROR:", e);
+      toast.error("Extraction failed: " + (e?.response?.data?.error || e.message));
     } finally {
       setExtracting(false);
     }
