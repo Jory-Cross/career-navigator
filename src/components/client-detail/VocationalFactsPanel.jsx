@@ -140,6 +140,8 @@ function ConflictBanner({ conflicts }) {
 }
 
 export default function VocationalFactsPanel({ clientId, client, onFactsUpdated }) {
+  const [localProfile, setLocalProfile] = useState(client?.vocational_facts_profile || null);
+  const [localMetadata, setLocalMetadata] = useState(client?.vocational_facts_metadata || {});
   const [extracting, setExtracting] = useState(false);
   const [expandAll, setExpandAll] = useState(false);
 
