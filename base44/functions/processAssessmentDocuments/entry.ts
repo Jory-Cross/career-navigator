@@ -118,6 +118,11 @@ Also identify:
 - data_quality_score: 0-100 rating of how complete and usable this profile is
 - missing_critical_data: List of important data categories with no information found`;
 
+console.log("VFP SENDING TO LLM:", {
+  documents: targetDocs.length,
+  assessments: assessments.length
+});
+      
       const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: extractionPrompt,
         file_urls: docFileUrls.length > 0 ? docFileUrls : undefined,
