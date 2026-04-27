@@ -118,7 +118,7 @@ Also identify:
 - data_quality_score: 0-100 rating of how complete and usable this profile is
 - missing_critical_data: List of important data categories with no information found`;
 
-      const result = await base44.integrations.Core.InvokeLLM({
+      const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: extractionPrompt,
         file_urls: docFileUrls.length > 0 ? docFileUrls : undefined,
         add_context_from_internet: false,
