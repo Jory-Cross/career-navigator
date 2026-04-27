@@ -70,13 +70,20 @@ import { toast } from "sonner";
 
 const STATUS_CONFIG = {
   suggested: { color: "bg-slate-100 text-slate-700 border-slate-200", label: "Suggested", icon: "✓" },
+
   staff_reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", label: "Staff Reviewed", icon: "👁" },
-  shared_with_client: { color: "bg-purple-100 text-purple-700 border-purple-200", label: "Shared", icon: "📤" },
-  applied: { color: "bg-green-100 text-green-700 border-green-200", label: "Applied", icon: "✉" },
-  interview: { color: "bg-indigo-100 text-indigo-700 border-indigo-200", label: "Interview", icon: "🎤" },
-  closed_not_fit: { color: "bg-red-100 text-red-700 border-red-200", label: "Not a Fit", icon: "✗" },
-  closed_declined: { color: "bg-amber-100 text-amber-700 border-amber-200", label: "Declined", icon: "👎" },
-  hired: { color: "bg-green-200 text-green-800 border-green-300", label: "Hired!", icon: "🎉" },
+
+  shared_with_client: { color: "bg-purple-100 text-purple-700 border-purple-200", label: "Shared with Client", icon: "📤" },
+
+  client_interested: { color: "bg-green-100 text-green-700 border-green-200", label: "Client Interested", icon: "👍" },
+
+  client_not_interested: { color: "bg-amber-100 text-amber-700 border-amber-200", label: "Client Not Interested", icon: "👎" },
+
+  job_search_target: { color: "bg-indigo-100 text-indigo-700 border-indigo-200", label: "Job Search Target", icon: "🎯" },
+
+  not_a_fit: { color: "bg-red-100 text-red-700 border-red-200", label: "Not a Good Fit", icon: "✗" },
+
+  archived: { color: "bg-slate-200 text-slate-600 border-slate-300", label: "Archived", icon: "📁" }
 };
 
 export default function RecommendationReviewCard({ 
