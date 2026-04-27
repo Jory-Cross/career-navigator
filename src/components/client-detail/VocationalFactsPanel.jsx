@@ -310,7 +310,9 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
 )}
       
       {/* Extraction metadata */}
-      {vfp ? (
+     {loadingFacts ? (
+  <div className="text-xs text-slate-400 p-4">Loading vocational facts...</div>
+) : vfp ? (
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
