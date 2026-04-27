@@ -1,272 +1,241 @@
-📄 PROJECT HANDOFF — CRM RECOMMENDATION ENGINE (POST-STABILITY BUILD)
-✅ WHAT WAS ACCOMPLISHED IN THIS CHAT
-1. Constraint System — FULLY UPGRADED
-Added severity levels
-hard → blocks job (score = 0)
-moderate → score penalty (-30)
-soft → minor penalty (-10, ready for future)
-Constraints now:
-influence scoring
-influence explanations
-are visible in UI
-2. WSA → INSIGHT LAYER (MAJOR UPGRADE)
-Before:
-Raw WSA text
-Weak signal quality
-Now:
-WSA → structured insights → recommendation engine
-Insights added:
-prefers independent work
-avoid customer-facing roles
-needs structured routine
-physical limitations
-transportation considerations
+🧠 CRM AI Job Search + Recommendations — HANDOFF
+✅ WHAT WAS COMPLETED IN THIS CHAT
+1. Vocational Facts Profile (VFP) — CORE SYSTEM BUILT
+AI extracts structured client data from:
+Resume
+WSA
+Career Goals Assessment
+O*NET Interest Profiler
+Stored via:
+processAssessmentDocuments (Base44 function)
+UI:
+VocationalFactsPanel
+Includes:
+Skills, interests, environment, barriers, support needs, etc.
+Conflict detection between sources
+Data quality score
+Missing critical data detection
 
-👉 This is now core intelligence feeding the engine
+✔ VFP now:
 
-3. Insight-Based Scoring (NEW)
+Extracts correctly
+Saves correctly
+Reloads on refresh
+Feeds AI Job Search
+2. AI Job Search Assistant — STABLE
 
-Scoring now reacts to client reality, not just keywords:
+Located in:
 
-Independent preference → boosts independent jobs
-Customer avoidance → penalizes retail/service
-Structure need → boosts routine jobs
-Physical limits → penalizes labor jobs
+src/components/client-detail/AIJobSearchPanel.jsx
 
-👉 This is the first time the system behaves like a case manager
+Features:
 
-4. Not-Fit Explanation System — COMPLETE
-Built:
-Constraint-based reasons
-Score/data-based reasons
-Data-quality awareness
-Improved:
-Deduplicated reasons
-Limited to top 3
-Priority ordering
-Hard constraints
-Moderate constraints
-Score/data reasons
+Tabs:
+Search
+Facts
+Saved
+Uses:
+VFP when available
+Falls back to assessments/documents
 
-👉 Output is now:
+✔ Fixed:
 
-readable
-decision-focused
-not noisy
-5. UI — SIGNIFICANT IMPROVEMENTS
-Completed:
-Clear separation:
-Recommended
-Other Matches
-Not Recommended
-Color system refined:
-Green = strong
-Blue = good
-Red = risk
-“Why this may NOT fit” vs “Client considerations” logic
-Not Recommended section now visually stands out
-Confidence styling aligned (high / medium / low)
-6. AI Job Coach — ENHANCED
+Facts tab now loads persisted data
+Tab toggling fixed (Facts/Search)
+Saved toggle fixed
+3. Recommendation Engine — WORKING PIPELINE
 
-Now includes:
+Flow:
 
-WSA insights in explanation
-Better alignment with actual engine logic
-More useful for staff interpretation
-7. System Behavior — STABILIZED
-No crashes
-Predictable scoring
-Deterministic outputs
-Recommendation persistence working
-No unnecessary auto-regeneration
-🧠 WHAT THIS CHAT DID WELL (IMPORTANT)
+runRecommendationEngine →
+buildRecommendationInputs →
+generateRecommendationBatch →
+save/load JobRecommendationBatch
 
-This chat stayed clean because:
+✔ Working:
 
-✔ Exact file + exact block
-✔ No guessing
-✔ One step at a time
-✔ No premature O*NET work
-✔ Focused on logic → then UI
-✔ Avoided over-engineering
+Generates recommendations
+Stores batch in:
+JobRecommendationBatch
+Loads latest batch on page load
+Displays:
+AI Coach summary
+Recommended jobs
+Not recommended jobs
+4. Recommendation Persistence — PARTIALLY WORKING
 
-👉 This is the correct build pattern going forward
+✔ CONFIRMED:
 
-🧠 KEY LEARNINGS (CARRY FORWARD)
-1. O*NET is a HARD DEPENDENCY
-Do NOT simulate beyond current fallback
-Do NOT over-tune scoring yet
-Real validation happens after O*NET
-2. Insights > Raw Data
-WSA text alone is weak
-Insights layer is essential
-This feeds:
-constraints
-scoring
-AI explanations
-future VFP
-3. Constraint System = Core Intelligence
+Data IS saving correctly in backend
+Batch includes:
+recommendations
+ai_coach_summary
+metadata
 
-This is what makes the app:
+❌ ISSUE FOUND:
 
-disability-aware
-case-manager aligned
-not just a job matcher
-4. UI Must Reflect Decision Logic
+UI overwrites saved status
+Everything shows as "Suggested" regardless of actual status
 
-You successfully enforced:
+ROOT CAUSE:
 
-logic first → UI second
+status: job.confidence_level === "low" ? "review_only" : "suggested"
 
-Correct approach.
+This line forces status every render
 
-5. Avoid Over-Building Without Data
+5. Status System (NEW FEATURE STARTED)
 
-You correctly stopped:
+You began defining workflow:
 
-deep scoring tweaks
-filtering hacks
-test-mode logic
+Current dropdown (not correct for your use case):
 
-👉 until O*NET is live
+Suggested
+Applied
+Interview
+Hired
+❌ Too job-application focused
 
-🚀 CURRENT SYSTEM STATE
+Your requirement:
+👉 These are job fields / career paths, NOT job applications
 
-You now have:
+🧭 CURRENT BUILD STATUS
+Stable
+VFP extraction + storage
+AI Job Search
+Recommendation generation
+Batch persistence
+Data loading on refresh
+Broken / Incomplete
+❌ Saved tab status override (UI bug)
+❌ Status system not aligned with workflow
+❌ No Kanban board yet
+❌ No client interaction layer
+❌ No “job search target → business list” system
+🎯 NEXT STEP (FIRST TASK IN NEW CHAT)
+FIX STATUS OVERRIDE (CRITICAL)
 
-✔ Insight-driven recommendation engine
-✔ Severity-based constraints
-✔ Smart scoring adjustments
-✔ Ranked outputs
-✔ Clean UI decision system
-✔ Clear explanations (fit + not fit)
-✔ AI coach aligned with logic
+In:
 
-👉 This is now a real decision-support tool
+AIJobSearchPanel.jsx
 
-⚠️ CURRENT LIMITATION
-Only ~5 fallback job results
+Replace:
 
-So:
+status: job.confidence_level === "low" ? "review_only" : "suggested"
 
-Ranking accuracy cannot be fully validated
-Constraint/insight depth cannot be fully tested
-System behavior is structurally correct, not data-validated
-🚀 NEXT STEPS (NEXT CHAT)
-🔴 STEP 1 — Recommendation Freshness Indicator
+With:
 
-Behavior:
+status: job.status || (job.confidence_level === "low" ? "not_a_fit" : "suggested"),
 
-If new data added (assessment, resume, VFP):
-→ show: "Recommendations may be outdated"
-→ require manual regenerate
+✔ This will:
 
-NOT auto-regenerate.
+Stop overwriting saved statuses
+Allow status updates to persist in UI
+🧠 DESIGN DECISIONS YOU MADE (VERY IMPORTANT)
+🔹 Recommendations are NOT jobs
 
-🔴 STEP 2 — Constraint Severity Expansion
+They are:
 
-Add:
+Job fields
+Career directions
+Exploration targets
+🔹 Future Workflow (CRITICAL)
 
-more constraint types
-better detection coverage
-soft vs moderate refinement
-🔴 STEP 3 — Insight Expansion
+You want:
 
-Add more signals:
+1. Kanban Board
 
-sensory tolerance
-supervision needs
-pace tolerance
-learning style
-🔴 STEP 4 — O*NET INTEGRATION (WHEN READY)
+Columns:
 
-When credits refresh:
+Suggested
+Staff Review
+Share with Client
+Client Interested
+Client Not Interested
+Job Search Target
+2. Client Portal Integration
 
-Replace fallback jobs
-Use real occupation data
-Align scoring with:
-tasks
-work context
-skills
-job zones
-🔴 STEP 5 — Clickable Job Detail (BACKLOG)
+Only these statuses visible to client:
 
-When O*NET is live:
+Shared with Client
+Client Interested
+Client Not Interested
+Job Search Target
+3. Job Search Target → Market Research
 
-Click job title
-Show full O*NET profile:
-description
-tasks
-skills
-abilities
-environment
-outlook
-📌 BACKLOG (UPDATED)
-High Priority
-Recommendation freshness indicator
-VFP → full integration into engine
-WSA AI summarization (true AI, not rule-based)
-Medium
-Constraint expansion
-Insight expansion
-Debug log cleanup
-Later (O*NET Phase)
-Job search input field
-O*NET job detail viewer
-Real occupation matching
-Low / Cleanup
-Accessibility warnings (DialogDescription)
-Tailwind production setup
-React Router warnings
-Datadog/browser noise
-📌 NEXT CHAT START PROMPT
+When status = job_search_target:
 
-Paste this:
+Generate list of ~20 local businesses
+NOT job postings
+Used for:
+outreach
+job development
+relationship building
+4. Each Status Will Have Tasks
 
-We are continuing the CRM recommendation engine build.
+You explicitly requested:
 
-Current system:
+👉 Each status should trigger required actions before moving forward
 
-Constraint system with severity (hard / moderate)
-WSA insight extraction implemented
-Insight-based scoring implemented
-Not-fit explanation system complete (deduped, prioritized)
-UI fully structured (Recommended / Other / Not Recommended)
-AI Job Coach uses insights
-Recommendation persistence working
+Example (planned, not built yet):
 
-Limitations:
+Staff Review → validate fit
+Share with Client → explain role
+Client Interested → prep + explore
+Job Search Target → generate business list
+📋 BACKLOG (DO NOT BUILD YET)
 
-Only fallback jobs available (no O*NET yet)
-Cannot fully validate ranking accuracy
+Keep current focus on stability.
 
-We are NOT working on O*NET yet.
+Add to backlog:
 
-Next task:
+Kanban UI for recommendations
+Status-driven task system
+Client portal sync
+Market research tool (20 businesses)
+VFP → recommendation weighting improvements
+O*NET deep integration (blocked by credits)
+⚠️ IMPORTANT RULES (YOUR PREFERENCES)
 
-👉 Build Recommendation Freshness Indicator
+These MUST be followed in next chat:
 
-Behavior:
+🔴 1. NO GUESSING
 
-If new data (assessment, resume, VFP) is added after last generation
-Show:
-“Recommendations may be outdated”
-Require manual regeneration
+If unsure:
+👉 ASK FOR THE FILE
 
-Rules:
+🔴 2. EXACT INSTRUCTIONS ONLY
+
+You require:
 
 Exact file path
-Exact block
-Full code only
-One step at a time
-Do NOT guess code
-💯 FINAL NOTE
+Exact code block
+FULL replacement (not partial)
+No “find something like this”
+🔴 3. ONE STEP AT A TIME
+No multi-step dumps
+No jumping ahead
+🔴 4. DO NOT BREAK WORKING SYSTEMS
+Stability first
+Only change what is necessary
+🔴 5. DO NOT RECOMMEND FIXES UNLESS IT IS THE NEXT STEP
+Stay focused on current task
+Add ideas to backlog instead
+🔴 6. IF MULTIPLE MATCHES EXIST → IDENTIFY EXACT LOCATION
+Use surrounding code context
+No ambiguity
+🔴 7. ALWAYS USE CURRENT FILE AS SOURCE OF TRUTH
+Do NOT assume structure
+Do NOT revert to older versions
+🧭 WHERE WE ARE GOING
+Phase (Current)
 
-This was one of your strongest build phases.
+Stability + Recommendation System
 
-You now have:
-👉 structure
-👉 discipline
-👉 correct architecture direction
-
-If you continue like this, the O*NET integration will plug into a very solid system, not a fragile one.
+Next Phase
+Status system redesign
+Kanban board
+Client interaction layer
+Later Phase
+O*NET full integration
+Market research automation
+AI job coaching expansion
