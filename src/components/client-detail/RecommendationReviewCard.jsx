@@ -295,16 +295,16 @@ export default function RecommendationReviewCard({
                 <SelectTrigger className="text-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="suggested">✓ Suggested</SelectItem>
-                  <SelectItem value="staff_reviewed">👁 Staff Reviewed</SelectItem>
-                  <SelectItem value="shared_with_client">📤 Shared with Client</SelectItem>
-                  <SelectItem value="applied">✉ Applied</SelectItem>
-                  <SelectItem value="interview">🎤 Interview</SelectItem>
-                  <SelectItem value="closed_not_fit">✗ Not a Fit</SelectItem>
-                  <SelectItem value="closed_declined">👎 Declined</SelectItem>
-                  <SelectItem value="hired">🎉 Hired!</SelectItem>
-                </SelectContent>
+               <SelectContent>
+  <SelectItem value="suggested">✓ Suggested</SelectItem>
+  <SelectItem value="staff_reviewed">👁 Staff Reviewed</SelectItem>
+  <SelectItem value="shared_with_client">📤 Shared with Client</SelectItem>
+  <SelectItem value="client_interested">👍 Client Interested</SelectItem>
+  <SelectItem value="client_not_interested">👎 Client Not Interested</SelectItem>
+  <SelectItem value="job_search_target">🎯 Use as Job Search Target</SelectItem>
+  <SelectItem value="not_a_fit">✗ Not a Good Fit</SelectItem>
+  <SelectItem value="archived">📁 Archive</SelectItem>
+</SelectContent>
               </Select>
             </div>
 
