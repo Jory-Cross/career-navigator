@@ -14,6 +14,60 @@ import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
+// ============================================================
+// RECOMMENDATION STATUS WORKFLOW (JOB FIELD / OCCUPATION LEVEL)
+// ============================================================
+//
+// These statuses DO NOT represent job applications.
+// They represent a structured workflow for evaluating
+// and progressing job-field / occupation recommendations.
+//
+// Each status is intended to eventually have its own
+// required actions / tasks before progressing to the next stage.
+//
+// FUTURE DESIGN INTENT:
+//
+// suggested
+//   → AI-generated recommendation
+//   → Awaiting staff review
+//
+// staff_reviewed
+//   → Staff has reviewed fit, barriers, and supports
+//   → Staff may add notes or refine understanding
+//
+// shared_with_client
+//   → Recommendation has been presented to client
+//   → Client discussion should occur
+//
+// client_interested
+//   → Client expresses interest in this job field
+//   → Begin deeper exploration / planning
+//
+// client_not_interested
+//   → Client declines this job field
+//   → Capture reasoning for future refinement
+//
+// job_search_target
+//   → Selected as an ACTIVE job search direction
+//   → FUTURE: Trigger market research workflow
+//       - Generate ~20 local businesses in this job theme
+//       - Staff/client validate and refine list
+//       - Used for outreach, not just job postings
+//
+// not_a_fit
+//   → Determined not appropriate based on constraints
+//   → Retained for audit / learning
+//
+// archived
+//   → No longer active, but retained for history
+//
+// ------------------------------------------------------------
+// IMPORTANT:
+// Task systems, client portal interactions, and automation
+// (including market research generation) will be tied to
+// these statuses in future phases.
+// ============================================================
+
 const STATUS_CONFIG = {
   suggested: { color: "bg-slate-100 text-slate-700 border-slate-200", label: "Suggested", icon: "✓" },
   staff_reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", label: "Staff Reviewed", icon: "👁" },
