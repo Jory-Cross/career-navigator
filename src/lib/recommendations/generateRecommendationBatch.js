@@ -258,9 +258,46 @@ if (
   if (score > 100) score = 100;
   if (score < 0) score = 0;
 
-const notFitReasons = [
+let notFitReasons = [
   ...(constraintResult.not_fit_reasons || []),
 ];
+
+// Add additional reasons
+if (score < 40) {
+  notFitReasons.push({
+    text: `${job.title || "This role"} has a lower overall match score based on the available client data.`,
+    priority: 3,
+  });
+}
+
+if (!profile.resume_skills?.length && !profile.wsa_strengths?.length) {
+  notFitReasons.push({
+    text: "There is limited resume or WSA data available to support this recommendation.",
+    priority: 3,
+  });
+}
+
+if (fitConcerns.length > 0) {
+  notFitReasons.push({
+    text: `${job.title || "This role"} should be reviewed because one or more client constraints may affect fit.`,
+    priority: 2,
+  });
+}
+
+// Normalize constraint reasons (priority 1 = highest)
+notFitReasons = [
+  ...notFitReasons.map((r) =>
+    typeof r === "string"
+      ? { text: r, priority: 1 }
+      : r
+  ),
+];
+
+// Sort by priority
+notFitReasons.sort((a, b) => a.priority - b.priority);
+
+// Return top 3 only
+notFitReasons = notFitReasons.slice(0, 3).map((r) => r.text);
 
 if (score < 40) {
   notFitReasons.push(
