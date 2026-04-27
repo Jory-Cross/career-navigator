@@ -27,11 +27,11 @@ const STATUS_COLORS = {
   suggested: "bg-slate-100 text-slate-700",
   staff_reviewed: "bg-blue-100 text-blue-700",
   shared_with_client: "bg-purple-100 text-purple-700",
-  applied: "bg-green-100 text-green-700",
-  interview: "bg-indigo-100 text-indigo-700",
-  closed_not_fit: "bg-red-100 text-red-700",
-  closed_declined: "bg-amber-100 text-amber-700",
-  hired: "bg-green-200 text-green-800"
+  client_interested: "bg-green-100 text-green-700",
+  client_not_interested: "bg-amber-100 text-amber-700",
+  job_search_target: "bg-indigo-100 text-indigo-700",
+  not_a_fit: "bg-red-100 text-red-700",
+  archived: "bg-slate-200 text-slate-600"
 };
 
 function BatchHeader({ batch, recs }) {
