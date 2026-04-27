@@ -216,7 +216,9 @@ console.log("VFP FINAL RESULT:", result);
       };
 
       // Only update if stronger or no existing profile
-      await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+      const updateResult = await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+
+console.log("VFP SAVE RESULT:", updateResult);
 
 console.log(
   `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}`
