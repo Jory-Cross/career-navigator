@@ -104,7 +104,18 @@ Analyze everything above and extract a structured vocational facts profile. For 
 1. Extract all relevant facts from structured assessments AND any document content visible to you
 2. Note the SOURCE of each fact (e.g., "from Career Goals assessment", "from Skills Audit", "from resume", "from staff notes")
 3. If two sources CONFLICT on the same topic, do NOT pick one — flag it in the conflicts array
-4. Only include what is explicitly stated — do NOT infer or assume
+4. Convert all extracted information into clear, usable, plain-language facts.
+
+DO NOT return labels like "WSA — other observations" or "Career Goals Assessment".
+Instead, extract the actual meaning behind the data.
+
+Examples:
+- Instead of: "WSA — other observations"
+  Return: "Client has difficulty with interpersonal social interactions"
+- Instead of: "WSA — computer skill observations"
+  Return: "Client demonstrates basic typing and computer navigation skills"
+
+Every fact must be written as a complete, human-readable statement describing the client.
 5. If a category has no data, return an empty array for that field
 
 Extract the following 14 categories:
