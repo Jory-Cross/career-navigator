@@ -529,6 +529,7 @@ const normalizedBatch = {
 };
 
     setRecommendationBatch(normalizedBatch);
+    console.log("FINAL RECOMMENDATIONS:", normalizedBatch.recommendations);
     await loadRecommendationFreshness(normalizedBatch);
   } catch (e) {
     console.error("Failed to load saved batch", e);
