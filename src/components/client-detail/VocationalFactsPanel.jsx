@@ -168,7 +168,9 @@ useEffect(() => {
   loadSavedFacts();
 }, [clientId]);
   
-  const vfp = localProfile || client?.vocational_facts_profile || null;
+  const [loadingFacts, setLoadingFacts] = useState(true);
+
+const vfp = localProfile || client?.vocational_facts_profile || null;
   const metadata = localMetadata || client?.vocational_facts_metadata || {};
   const extractedAt =
     client?.vocational_facts_extracted_at ||
