@@ -57,6 +57,7 @@ ${cautionRoles
 Assessment Themes Noted:
 ${strengths ? `- Strengths: ${strengths}` : "- Strengths: Not enough structured data yet."}
 ${themes ? `- Work themes/preferences: ${themes}` : "- Work themes/preferences: Not enough structured data yet."}
+${insights ? `- WSA insights: ${insights}` : "- WSA insights: Not enough structured data yet."}
 
 Key Insight:
 Some roles may match skills on paper but still need review if the work environment, social demands, pace, or support needs do not fit the client.
