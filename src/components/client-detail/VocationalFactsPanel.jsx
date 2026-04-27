@@ -162,6 +162,8 @@ useEffect(() => {
       }
     } catch (err) {
       console.error("Failed to load saved VFP:", err);
+    } finally {
+      setLoadingFacts(false);
     }
   }
 
