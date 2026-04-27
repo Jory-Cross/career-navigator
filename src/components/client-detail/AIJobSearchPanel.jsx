@@ -325,24 +325,33 @@ useEffect(() => {
 }, [resolvedClientId]);
   
   // Refresh client data (e.g. after extraction)
-  const refreshClient = useCallback(async () => {
+    const refreshClient = useCallback(async () => {
     try {
-     const res = await base44.functions.invoke('processAssessmentDocuments', {
-  action: 'get_vocational_facts',
-  clientId: resolvedClientId,
-});
-      const vfp = res?.data?.profile;
+      const res = await base44.functions.invoke("processAssessmentDocuments", {
+        action: "get_vocational_facts",
+        clientId: resolvedClientId,
+      });
+
+      const vfp = res?.data?.profile || null;
+      const metadata = res?.data?.metadata || {};
+
       setHasVFP(!!vfp);
-      setClient(prev => ({
+
+      setClient((prev) => ({
         ...prev,
         vocational_facts_profile: vfp,
-        vocational_facts_extracted_at: res?.data?.extracted_at,
-        vocational_facts_extracted_by: res?.data?.extracted_by,
-        vocational_facts_document_count: res?.data?.document_count,
-        vocational_facts_assessment_count: res?.data?.assessment_count,
+        vocational_facts_metadata: metadata,
+        vocational_facts_extracted_at:
+          metadata.extracted_at || res?.data?.last_updated_at || null,
+        vocational_facts_extracted_by: metadata.extracted_by || null,
+        vocational_facts_document_count:
+          metadata.source_document_ids?.length || 0,
+        vocational_facts_assessment_count:
+          metadata.source_assessment_ids?.length || 0,
+        vocational_facts_last_updated_at: res?.data?.last_updated_at || null,
       }));
-        } catch (e) {
-      // silently fail
+    } catch (e) {
+      console.error("Failed to refresh vocational facts profile", e);
     }
   }, [resolvedClientId]);
 
