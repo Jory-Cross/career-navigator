@@ -206,9 +206,7 @@ console.log("VFP FINAL RESULT:", result);
       // Preserve existing profile if newer extraction is weaker
       const existingProfile = client.vocational_facts_profile;
       const existingMetadata = client.vocational_facts_metadata;
-      const shouldUpdate = !existingMetadata || 
-                          result.data_quality_score >= (existingMetadata.data_quality_score || 0) ||
-                          targetDocs.length > (existingMetadata.source_document_ids?.length || 0);
+     const shouldUpdate = true;
 
       // Save the vocational facts profile to the client record
       const profilePayload = {
