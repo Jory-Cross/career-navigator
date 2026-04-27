@@ -160,6 +160,15 @@ Also identify:
         }
       });
 
+      const result =
+        llmResponse?.data ||
+        llmResponse?.result ||
+        llmResponse?.output ||
+        llmResponse ||
+        {};
+
+      console.log("VFP NORMALIZED LLM RESULT:", result);
+      
       // Build structured extraction metadata
       const extractionMetadata = {
         version: 1,
