@@ -155,7 +155,21 @@ const needsStaffReview = recommendation.status === "suggested";
   };
   return (
     <>
-      <Card className="border-l-4" style={{ borderLeftColor: statusConfig.color.includes('green') ? '#22c55e' : statusConfig.color.includes('red') ? '#ef4444' : '#94a3b8' }}>
+      <Card
+  className={cn(
+    "border-l-4",
+    needsStaffReview && "border-amber-300 bg-amber-50/40 shadow-sm"
+  )}
+  style={{
+    borderLeftColor: needsStaffReview
+      ? "#f59e0b"
+      : statusConfig.color.includes("green")
+      ? "#22c55e"
+      : statusConfig.color.includes("red")
+      ? "#ef4444"
+      : "#94a3b8",
+  }}
+>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
