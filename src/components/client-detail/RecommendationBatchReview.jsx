@@ -122,16 +122,30 @@ export default function RecommendationBatchReview({
   }
 
   // Group recs by batch
-  const recsByBatch = {};
-  const batchOrder = [];
-  recs.forEach(rec => {
-    const batchId = rec.batch_id || 'unbatched';
-    if (!recsByBatch[batchId]) {
-      recsByBatch[batchId] = [];
-      batchOrder.push(batchId);
-    }
-    recsByBatch[batchId].push(rec);
-  });
+const recsByBatch = {};
+const batchOrder = [];
+recs.forEach(rec => {
+  const batchId = rec.batch_id || 'unbatched';
+  if (!recsByBatch[batchId]) {
+    recsByBatch[batchId] = [];
+    batchOrder.push(batchId);
+  }
+  recsByBatch[batchId].push(rec);
+});
+
+// 🟣 NEW: Group recs by status (Kanban prep)
+const recsByStatus = {};
+Object.keys(STATUS_LABELS).forEach(status => {
+  recsByStatus[status] = [];
+});
+
+recs.forEach(rec => {
+  const status = rec.status || "suggested";
+  if (!recsByStatus[status]) {
+    recsByStatus[status] = [];
+  }
+  recsByStatus[status].push(rec);
+});
 
   // Filter recs
   let filteredRecs = recs;
