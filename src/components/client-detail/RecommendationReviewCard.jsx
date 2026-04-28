@@ -103,6 +103,7 @@ export default function RecommendationReviewCard({
   }, []);
 
   const statusConfig = STATUS_CONFIG[recommendation.status] || STATUS_CONFIG.suggested;
+const needsStaffReview = recommendation.status === "suggested";
 
       const handleStatusUpdate = async () => {
     setUpdatingStatus(true);
