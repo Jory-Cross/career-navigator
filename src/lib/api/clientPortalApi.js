@@ -622,7 +622,8 @@ export async function getSharedRecommendations(clientId) {
           id: `${batch.id}-${index}`,
           client_id: batch.client_id,
 
-          job_title: asString(job.job_title),
+                    job_title: asString(job.job_title || job.title || job.occupation_title),
+          title: asString(job.title || job.job_title || job.occupation_title),
           employer: asString(job.employer),
           location: asString(job.location),
           pay: asString(job.pay),
