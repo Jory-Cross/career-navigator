@@ -410,23 +410,7 @@ export default function ClientPortal() {
   </div>
 ) : null}
 
-<Button
-  size="sm"
-  type="button"
-  onClick={async () => {
-    const [batchId, index] = rec.id.split("-");
-    await updateRecommendationClientResponse({
-      batchId,
-      index: Number(index),
-      response: "interested",
-    });
-    window.location.reload();
-  }}
->
-  Interested
-</Button>
-
- <div className="mt-4 flex gap-2">
+<div className="mt-4 flex gap-2">
   <Button
     size="sm"
     type="button"
