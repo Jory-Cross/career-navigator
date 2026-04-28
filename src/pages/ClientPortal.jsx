@@ -426,14 +426,22 @@ export default function ClientPortal() {
   Interested
 </Button>
 
-  <Button
-    size="sm"
-    type="button"
-    variant="outline"
-    onClick={() => console.log("NOT INTERESTED", rec)}
-  >
-    Not Interested
-  </Button>
+ <Button
+  size="sm"
+  type="button"
+  variant="outline"
+  onClick={async () => {
+    const [batchId, index] = rec.id.split("-");
+    await updateRecommendationClientResponse({
+      batchId,
+      index: Number(index),
+      response: "not_interested",
+    });
+    window.location.reload();
+  }}
+>
+  Not Interested
+</Button>
 </div>
                 </div>
               ))}
