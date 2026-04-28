@@ -119,12 +119,16 @@ setReviewNotesError("");
 
   try {
       const reviewedPayload = {
-        status: newStatus,
-        review_notes: reviewNotes,
-        reviewed_by_staff: newStatus !== "suggested",
-        reviewed_by: newStatus !== "suggested" ? user?.email : recommendation.reviewed_by,
-        reviewed_at: newStatus !== "suggested" ? new Date().toISOString() : recommendation.reviewed_at,
-      };
+  status: newStatus,
+  review_notes: reviewNotes,
+
+  // 🟣 NEW: client sharing flag (Phase 5 foundation)
+  shared_with_client: newStatus === "shared_with_client",
+
+  reviewed_by_staff: newStatus !== "suggested",
+  reviewed_by: newStatus !== "suggested" ? user?.email : recommendation.reviewed_by,
+  reviewed_at: newStatus !== "suggested" ? new Date().toISOString() : recommendation.reviewed_at,
+};
 
       if (recommendation.source_job && recommendation.batch_id) {
         const batch = await base44.entities.JobRecommendationBatch.get(recommendation.batch_id);
