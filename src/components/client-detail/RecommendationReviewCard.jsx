@@ -357,11 +357,23 @@ setReviewNotesError("");
             <div>
               <p className="text-xs text-slate-500 font-medium mb-2">Staff Review Notes</p>
               <Textarea
-                placeholder="Add notes about this recommendation, barriers discussed, next steps, etc."
-                value={reviewNotes}
-                onChange={e => setReviewNotes(e.target.value)}
-                className="text-sm min-h-[100px] resize-none"
-              />
+  placeholder="Add notes about this recommendation, barriers discussed, next steps, etc."
+  value={reviewNotes}
+  onChange={e => {
+    setReviewNotes(e.target.value);
+    if (reviewNotesError) setReviewNotesError("");
+  }}
+  className={cn(
+    "text-sm min-h-[100px] resize-none",
+    reviewNotesError && "border-red-400 focus-visible:ring-red-400"
+  )}
+/>
+
+{reviewNotesError && (
+  <p className="text-xs font-medium text-red-600">
+    {reviewNotesError}
+  </p>
+)}
             </div>
 
             {/* Original Data (read-only summary) */}
