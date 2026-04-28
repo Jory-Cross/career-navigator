@@ -1,241 +1,180 @@
 🧠 CRM AI Job Search + Recommendations — HANDOFF
-✅ WHAT WAS COMPLETED IN THIS CHAT
-1. Vocational Facts Profile (VFP) — CORE SYSTEM BUILT
-AI extracts structured client data from:
-Resume
-WSA
-Career Goals Assessment
-O*NET Interest Profiler
-Stored via:
-processAssessmentDocuments (Base44 function)
-UI:
-VocationalFactsPanel
-Includes:
-Skills, interests, environment, barriers, support needs, etc.
-Conflict detection between sources
-Data quality score
-Missing critical data detection
+🧭 WHAT I’VE LEARNED (CARRY FORWARD — CRITICAL)
+🔴 How you want to work
+You require:
+Exact file paths
+Exact full block replacements
+Clear start/end boundaries
+No vague instructions like:
+“find something like…”
+One step at a time
+Do not break working systems
+Always use current file as source of truth
+🔴 Build philosophy (very important)
+Always decide:
+✅ Fix Now
+📋 Backlog
+Do NOT mix the two
+Do NOT derail current phase
+🔴 Product direction (locked in)
+Recommendations are:
+❌ NOT job applications
+✅ Job fields / career paths
+Staff must:
+Have full flexibility
+NOT be restricted by rigid workflows
+System should:
+Guide workflow
+NOT enforce rigid transitions
+🔴 Core design shift (this chat — VERY IMPORTANT)
 
-✔ VFP now:
+You clarified:
 
-Extracts correctly
-Saves correctly
-Reloads on refresh
-Feeds AI Job Search
-2. AI Job Search Assistant — STABLE
+❌ Do NOT restrict status transitions
+✅ Build task-driven client participation system
 
-Located in:
+This is now the correct Phase 5 direction
 
-src/components/client-detail/AIJobSearchPanel.jsx
+✅ WHAT WAS COMPLETED (THIS CHAT)
+1. Phase 4 — COMPLETED
 
-Features:
+Recommendation workflow stability is DONE:
 
-Tabs:
-Search
-Facts
-Saved
-Uses:
-VFP when available
-Falls back to assessments/documents
+✔ Recommendation generation pipeline
+✔ Batch persistence
+✔ Status persistence FIXED
+✔ Notes persistence FIXED
+✔ Pending review UI (card + global)
+✔ Required notes before review
+✔ Inline error messaging
+2. Phase 5 — STARTED (correctly)
+❌ Kanban attempt → REVERTED (correct decision)
+Removed board view
+Removed toggle
+Returned to clean list + filter
 
-✔ Fixed:
+👉 This was the right move
 
-Facts tab now loads persisted data
-Tab toggling fixed (Facts/Search)
-Saved toggle fixed
-3. Recommendation Engine — WORKING PIPELINE
+3. Status system — finalized direction
+❌ No rigid transitions
+✅ Staff decides status freely
+✅ Status supports workflow, not controls it
+4. Client workflow foundation (NEW — IMPORTANT)
+
+You defined the real system:
 
 Flow:
+Staff → Shared with Client
+Client sees job
+Client marks:
+Interested
+Not Interested
+Staff reacts:
+Archive OR
+Move to Job Search Target
+Job Search Target → feeds AI job search
+5. Data layer foundation (implemented)
+Added:
+✔ shared_with_client
+shared_with_client: newStatus === "shared_with_client"
+✔ Client response placeholders
+client_response
+client_responded_at
+client_response_notes
 
-runRecommendationEngine →
-buildRecommendationInputs →
-generateRecommendationBatch →
-save/load JobRecommendationBatch
+👉 No UI yet — correct
 
-✔ Working:
-
-Generates recommendations
-Stores batch in:
-JobRecommendationBatch
-Loads latest batch on page load
-Displays:
-AI Coach summary
-Recommended jobs
-Not recommended jobs
-4. Recommendation Persistence — PARTIALLY WORKING
-
-✔ CONFIRMED:
-
-Data IS saving correctly in backend
-Batch includes:
-recommendations
-ai_coach_summary
-metadata
-
-❌ ISSUE FOUND:
-
-UI overwrites saved status
-Everything shows as "Suggested" regardless of actual status
-
-ROOT CAUSE:
-
-status: job.confidence_level === "low" ? "review_only" : "suggested"
-
-This line forces status every render
-
-5. Status System (NEW FEATURE STARTED)
-
-You began defining workflow:
-
-Current dropdown (not correct for your use case):
-
-Suggested
-Applied
-Interview
-Hired
-❌ Too job-application focused
-
-Your requirement:
-👉 These are job fields / career paths, NOT job applications
-
-🧭 CURRENT BUILD STATUS
+🧱 CURRENT BUILD STATE
 Stable
-VFP extraction + storage
-AI Job Search
-Recommendation generation
-Batch persistence
-Data loading on refresh
-Broken / Incomplete
-❌ Saved tab status override (UI bug)
-❌ Status system not aligned with workflow
-❌ No Kanban board yet
-❌ No client interaction layer
-❌ No “job search target → business list” system
-🎯 NEXT STEP (FIRST TASK IN NEW CHAT)
-FIX STATUS OVERRIDE (CRITICAL)
+Recommendation system ✔
+Review workflow ✔
+Status + notes ✔
+Filtering UI ✔
+Data persistence ✔
+In Progress (Phase 5 foundation)
+Client interaction data model ✔
+Workflow direction defined ✔
+Not Built Yet
+Client portal interaction
+Task system
+O*NET integration
+Job search automation
+Market research system
+📋 BACKLOG (ORGANIZED BY PHASE)
+🔵 Phase: Client Portal
+Show shared recommendations
+Client can:
+Mark Interested
+Mark Not Interested
+Fix:
+Documents not appearing when visibility = client/both
+🟣 Phase: Task System (NEW CORE FEATURE)
 
-In:
+👉 Replace rigid workflow with:
 
-AIJobSearchPanel.jsx
+Client Task Assignment System
 
-Replace:
+Staff assigns tasks to client
+Tasks drive engagement
 
-status: job.confidence_level === "low" ? "review_only" : "suggested"
+Examples:
 
-With:
+Review this job field
+Research job (future: O*NET)
+Discuss with staff
+Identify barriers
+Practice skills
+🟡 Phase: O*NET Integration
 
-status: job.status || (job.confidence_level === "low" ? "not_a_fit" : "suggested"),
+Use O*NET as:
 
-✔ This will:
-
-Stop overwriting saved statuses
-Allow status updates to persist in UI
-🧠 DESIGN DECISIONS YOU MADE (VERY IMPORTANT)
-🔹 Recommendations are NOT jobs
-
-They are:
-
-Job fields
-Career directions
-Exploration targets
-🔹 Future Workflow (CRITICAL)
-
-You want:
-
-1. Kanban Board
-
-Columns:
-
-Suggested
-Staff Review
-Share with Client
-Client Interested
-Client Not Interested
+Interest Profiler (RIASEC)
+Job descriptions
+Career exploration
+Recommendation backbone
+🟢 Phase: AI Job Search
+Use:
 Job Search Target
-2. Client Portal Integration
-
-Only these statuses visible to client:
-
-Shared with Client
-Client Interested
-Client Not Interested
-Job Search Target
-3. Job Search Target → Market Research
+VFP
+Generate job opportunities
+🟠 Phase: Market Research / Job Development
 
 When status = job_search_target:
 
-Generate list of ~20 local businesses
-NOT job postings
-Used for:
-outreach
-job development
-relationship building
-4. Each Status Will Have Tasks
+Generate ~20 local businesses
+Not job postings
+Used for outreach
+🔴 Phase: Data Quality / Intake
+Resume OCR / parsing reliability
+Missing text detection
+Reprocess option
+🚀 NEXT STEP (NEW CHAT START)
 
-You explicitly requested:
+Paste this into new chat:
 
-👉 Each status should trigger required actions before moving forward
+START NEW CHAT WITH:
 
-Example (planned, not built yet):
+Continue CRM build.
 
-Staff Review → validate fit
-Share with Client → explain role
-Client Interested → prep + explore
-Job Search Target → generate business list
-📋 BACKLOG (DO NOT BUILD YET)
+We are now in Phase 5: Client Workflow + Task System
 
-Keep current focus on stability.
+Current state:
 
-Add to backlog:
+Recommendation system is stable
+Status + notes persistence working
+Shared with client flag added
+Client response fields added (no UI yet)
+Kanban removed (using list + filter)
 
-Kanban UI for recommendations
-Status-driven task system
-Client portal sync
-Market research tool (20 businesses)
-VFP → recommendation weighting improvements
-O*NET deep integration (blocked by credits)
-⚠️ IMPORTANT RULES (YOUR PREFERENCES)
+IMPORTANT RULES:
 
-These MUST be followed in next chat:
+Do NOT restrict status transitions
+Staff must have flexibility
+Focus on task-driven workflow instead
 
-🔴 1. NO GUESSING
+Next goal:
+👉 Begin Client Task Assignment System (data layer first, no UI overbuild)
 
-If unsure:
-👉 ASK FOR THE FILE
-
-🔴 2. EXACT INSTRUCTIONS ONLY
-
-You require:
-
-Exact file path
-Exact code block
-FULL replacement (not partial)
-No “find something like this”
-🔴 3. ONE STEP AT A TIME
-No multi-step dumps
-No jumping ahead
-🔴 4. DO NOT BREAK WORKING SYSTEMS
-Stability first
-Only change what is necessary
-🔴 5. DO NOT RECOMMEND FIXES UNLESS IT IS THE NEXT STEP
-Stay focused on current task
-Add ideas to backlog instead
-🔴 6. IF MULTIPLE MATCHES EXIST → IDENTIFY EXACT LOCATION
-Use surrounding code context
-No ambiguity
-🔴 7. ALWAYS USE CURRENT FILE AS SOURCE OF TRUTH
-Do NOT assume structure
-Do NOT revert to older versions
-🧭 WHERE WE ARE GOING
-Phase (Current)
-
-Stability + Recommendation System
-
-Next Phase
-Status system redesign
-Kanban board
-Client interaction layer
-Later Phase
-O*NET full integration
-Market research automation
-AI job coaching expansion
+Do NOT guess.
+Ask for file.
+Give exact full replacement only.
