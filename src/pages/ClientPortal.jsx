@@ -154,7 +154,7 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
-  const {
+    const {
     data: documents = [],
     isLoading: documentsLoading,
     error: documentsError,
@@ -162,6 +162,17 @@ export default function ClientPortal() {
     queryKey: queryKeys.documents(client?.id),
     queryFn: () => getClientVisibleDocuments(client.id),
     enabled: !!client?.id && activeTab === "documents",
+    staleTime: 60 * 1000,
+  });
+
+  const {
+    data: sharedRecommendations = [],
+    isLoading: sharedRecommendationsLoading,
+    error: sharedRecommendationsError,
+  } = useQuery({
+    queryKey: ["clientPortal", "sharedRecommendations", client?.id],
+    queryFn: () => getSharedRecommendations(client.id),
+    enabled: !!client?.id && activeTab === "recommendations",
     staleTime: 60 * 1000,
   });
 
