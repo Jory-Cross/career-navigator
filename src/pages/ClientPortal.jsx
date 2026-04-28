@@ -355,6 +355,65 @@ export default function ClientPortal() {
           )}
         </TabsContent>
 
+        <TabsContent value="recommendations" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Shared Recommendations</h2>
+          </div>
+
+          {sharedRecommendationsLoading ? (
+            <div>Loading recommendations...</div>
+          ) : sharedRecommendationsError ? (
+            <div className="text-red-600">Failed to load recommendations.</div>
+          ) : sharedRecommendations.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No recommendations have been shared yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sharedRecommendations.map((rec) => (
+                <div key={rec.id} className="rounded border p-4">
+                  <div className="font-medium">
+                    {rec.job_title || "Untitled Recommendation"}
+                  </div>
+
+                  {rec.employer ? (
+                    <div className="text-sm text-muted-foreground">
+                      {rec.employer}
+                    </div>
+                  ) : null}
+
+                  {rec.location || rec.pay ? (
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {[rec.location, rec.pay].filter(Boolean).join(" • ")}
+                    </div>
+                  ) : null}
+
+                  {rec.fit_reason ? (
+                    <div className="mt-3 rounded bg-muted p-3 text-sm">
+                      <div className="font-medium">Why this may fit</div>
+                      <div>{rec.fit_reason}</div>
+                    </div>
+                  ) : null}
+
+                  {rec.support_strategy ? (
+                    <div className="mt-3 rounded bg-muted p-3 text-sm">
+                      <div className="font-medium">Support strategy</div>
+                      <div>{rec.support_strategy}</div>
+                    </div>
+                  ) : null}
+
+                  {rec.concerns ? (
+                    <div className="mt-3 rounded bg-muted p-3 text-sm">
+                      <div className="font-medium">Things to consider</div>
+                      <div>{rec.concerns}</div>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Tasks</h2>
