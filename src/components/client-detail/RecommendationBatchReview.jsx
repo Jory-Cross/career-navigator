@@ -19,7 +19,7 @@ const STATUS_LABELS = {
   client_interested: "Client Interested",
   client_not_interested: "Client Not Interested",
   job_search_target: "Job Search Target",
-  not_a_fit: "Not a Good Fit",
+  not_a_fit: "Not a Fit",
   archived: "Archived"
 };
 
