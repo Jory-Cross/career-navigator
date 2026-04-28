@@ -403,11 +403,27 @@ export default function ClientPortal() {
                   ) : null}
 
                   {rec.concerns ? (
-                    <div className="mt-3 rounded bg-muted p-3 text-sm">
-                      <div className="font-medium">Things to consider</div>
-                      <div>{rec.concerns}</div>
-                    </div>
-                  ) : null}
+  <div className="mt-3 rounded bg-muted p-3 text-sm">
+    <div className="font-medium">Things to consider</div>
+    <div>{rec.concerns}</div>
+  </div>
+) : null}
+
+<div className="mt-4 flex gap-2">
+  <button
+    className="rounded bg-green-600 px-3 py-1 text-sm text-white"
+    onClick={() => console.log("INTERESTED", rec)}
+  >
+    Interested
+  </button>
+
+  <button
+    className="rounded bg-red-600 px-3 py-1 text-sm text-white"
+    onClick={() => console.log("NOT INTERESTED", rec)}
+  >
+    Not Interested
+  </button>
+</div>
                 </div>
               ))}
             </div>
