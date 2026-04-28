@@ -133,20 +133,6 @@ recs.forEach(rec => {
   recsByBatch[batchId].push(rec);
 });
 
-// 🟣 NEW: Group recs by status (Kanban prep)
-const recsByStatus = {};
-Object.keys(STATUS_LABELS).forEach(status => {
-  recsByStatus[status] = [];
-});
-
-recs.forEach(rec => {
-  const status = rec.status || "suggested";
-  if (!recsByStatus[status]) {
-    recsByStatus[status] = [];
-  }
-  recsByStatus[status].push(rec);
-});
-
   // Filter recs
   let filteredRecs = recs;
   if (statusFilter !== 'all') {
