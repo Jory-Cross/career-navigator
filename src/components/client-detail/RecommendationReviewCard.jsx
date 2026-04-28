@@ -118,12 +118,15 @@ setReviewNotesError("");
   setUpdatingStatus(true);
 
   try {
-      const reviewedPayload = {
+           const reviewedPayload = {
   status: newStatus,
   review_notes: reviewNotes,
 
-  // 🟣 NEW: client sharing flag (Phase 5 foundation)
+  // 🟣 Client sharing + future client response fields
   shared_with_client: newStatus === "shared_with_client",
+  client_response: recommendation.client_response || null,
+  client_responded_at: recommendation.client_responded_at || null,
+  client_response_notes: recommendation.client_response_notes || "",
 
   reviewed_by_staff: newStatus !== "suggested",
   reviewed_by: newStatus !== "suggested" ? user?.email : recommendation.reviewed_by,
