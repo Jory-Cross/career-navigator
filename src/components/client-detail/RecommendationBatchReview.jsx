@@ -147,11 +147,17 @@ export default function RecommendationBatchReview({
     );
   }
 
-  // Count statuses
-  const statusCounts = {};
-  recs.forEach(r => {
-    statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
-  });
+ // Count statuses
+const statusCounts = {};
+let needsReviewCount = 0;
+
+recs.forEach(r => {
+  statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+
+  if (r.status === "suggested") {
+    needsReviewCount += 1;
+  }
+});
 
   const toggleBatch = (batchId) => {
     setExpandedBatches(prev => ({
