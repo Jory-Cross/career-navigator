@@ -171,6 +171,12 @@ export default function RecommendationBatchReview({
     <div className="space-y-4">
       {/* Header with filters */}
       <div className="space-y-3">
+
+  {needsReviewCount > 0 && (
+    <div className="rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-900">
+      ⚠️ {needsReviewCount} recommendation{needsReviewCount !== 1 ? "s" : ""} pending staff review
+    </div>
+  )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1">
             <div className="relative">
