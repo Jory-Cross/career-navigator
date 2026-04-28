@@ -37,11 +37,16 @@ const STATUS_COLORS = {
 function BatchHeader({ batch, recs }) {
   if (!batch) return null;
 
-  const statusCounts = {};
-  recs.forEach(r => {
-    statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
-  });
+const statusCounts = {};
+let needsReviewCount = 0;
 
+recs.forEach(r => {
+  statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+
+  if (r.status === "suggested") {
+    needsReviewCount += 1;
+  }
+});
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
