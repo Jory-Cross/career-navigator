@@ -106,9 +106,15 @@ export default function RecommendationReviewCard({
 const needsStaffReview = recommendation.status === "suggested";
 
       const handleStatusUpdate = async () => {
-    setUpdatingStatus(true);
+  // 🚫 Enforce notes before review
+  if (newStatus !== "suggested" && !reviewNotes.trim()) {
+    toast.error("Please add review notes before updating status.");
+    return;
+  }
 
-    try {
+  setUpdatingStatus(true);
+
+  try {
       const reviewedPayload = {
         status: newStatus,
         review_notes: reviewNotes,
