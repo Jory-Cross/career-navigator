@@ -570,6 +570,58 @@ export async function getActiveClients() {
     .filter((client) => client.status !== "archived");
 }
 
+// ============================================================
+// SHARED RECOMMENDATIONS (CLIENT PORTAL)
+// ============================================================
+
+function mapRecommendation(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    client_id: raw.client_id ?? null,
+    job_title: asString(raw.job_title),
+    employer: asString(raw.employer),
+    location: asString(raw.location),
+    pay: asString(raw.pay),
+
+    status: asString(raw.status),
+    shared_with_client: asBoolean(raw.shared_with_client, false),
+
+    fit_score: asNumber(raw.fit_score, 0),
+    fit_reason: asString(raw.fit_reason),
+    support_strategy: asString(raw.support_strategy),
+    concerns: asString(raw.concerns),
+
+    client_response: asString(raw.client_response),
+    client_responded_at: raw.client_responded_at ?? null,
+    client_response_notes: asString(raw.client_response_notes),
+
+    created_date: raw.created_date ?? null,
+    updated_date: raw.updated_date ?? null,
+
+    raw,
+  };
+}
+
+export async function getSharedRecommendations(clientId) {
+  if (!clientId) return [];
+
+  try {
+    const rows = await base44.entities.JobRecommendation.filter({
+      client_id: clientId,
+      shared_with_client: true,
+    });
+
+    return sortByNewest(
+      asArray(rows).map(mapRecommendation).filter(Boolean)
+    );
+  } catch (e) {
+    console.error("Failed to load shared recommendations", e);
+    return [];
+  }
+}
+
 export async function getApplications(clientId) {
   if (!clientId) return [];
   const rows = await base44.entities.JobApplication.filter({ client_id: clientId });
