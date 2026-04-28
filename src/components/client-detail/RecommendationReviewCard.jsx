@@ -96,6 +96,7 @@ export default function RecommendationReviewCard({
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState(recommendation.status);
   const [reviewNotes, setReviewNotes] = useState(recommendation.review_notes || "");
+  const [reviewNotesError, setReviewNotesError] = useState("");
   const [user, setUser] = React.useState(null);
 
   React.useEffect(() => {
