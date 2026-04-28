@@ -206,6 +206,11 @@ const needsStaffReview = recommendation.status === "suggested";
         </CardHeader>
 
         <CardContent className="space-y-4">
+  {needsStaffReview && (
+    <div className="rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-900">
+      ⚠️ Pending staff review — open Review & Update to validate this recommendation.
+    </div>
+  )}
           {/* Fit Score */}
           {recommendation.fit_score && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg">
