@@ -11,7 +11,7 @@ import {
   getAssessments,
   getInterviews,
   getTimeEntries,
-    getActivities,
+  getActivities,
   getMeetings,
   getSharedRecommendations,
   createApplication,
