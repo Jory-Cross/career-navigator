@@ -410,19 +410,22 @@ export default function ClientPortal() {
 ) : null}
 
 <div className="mt-4 flex gap-2">
-  <button
-    className="rounded bg-green-600 px-3 py-1 text-sm text-white"
+  <Button
+    size="sm"
+    type="button"
     onClick={() => console.log("INTERESTED", rec)}
   >
     Interested
-  </button>
+  </Button>
 
-  <button
-    className="rounded bg-red-600 px-3 py-1 text-sm text-white"
+  <Button
+    size="sm"
+    type="button"
+    variant="outline"
     onClick={() => console.log("NOT INTERESTED", rec)}
   >
     Not Interested
-  </button>
+  </Button>
 </div>
                 </div>
               ))}
