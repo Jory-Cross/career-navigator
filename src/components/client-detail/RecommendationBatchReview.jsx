@@ -184,24 +184,7 @@ recs.forEach(r => {
     </div>
   )}
         <div className="flex items-center justify-between gap-2">
-  <div className="flex items-center gap-2">
-    <Button
-      size="sm"
-      variant={viewMode === "list" ? "default" : "outline"}
-      className="text-xs h-7"
-      onClick={() => setViewMode("list")}
-    >
-      List
-    </Button>
-    <Button
-      size="sm"
-      variant={viewMode === "board" ? "default" : "outline"}
-      className="text-xs h-7"
-      onClick={() => setViewMode("board")}
-    >
-      Board
-    </Button>
-  </div>
+  
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -239,88 +222,55 @@ recs.forEach(r => {
         </div>
       </div>
 
-            {/* View Rendering */}
-      {viewMode === "list" ? (
-        <div className="space-y-4">
-          {batchOrder.map(batchId => {
-            const batchRecs = recsByBatch[batchId].filter(r => {
-              if (statusFilter !== 'all' && r.status !== statusFilter) return false;
-              if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                return (
-                  r.job_title?.toLowerCase().includes(q) ||
-                  r.employer?.toLowerCase().includes(q) ||
-                  r.location?.toLowerCase().includes(q)
-                );
-              }
-              return true;
-            });
+{/* Batches and recommendations */}
+<div className="space-y-4">
+  {batchOrder.map(batchId => {
+    const batchRecs = recsByBatch[batchId].filter(r => {
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          r.job_title?.toLowerCase().includes(q) ||
+          r.employer?.toLowerCase().includes(q) ||
+          r.location?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
 
-            if (batchRecs.length === 0) return null;
+    if (batchRecs.length === 0) return null;
 
-            const batch = batches[batchId];
-            const isExpanded = expandedBatches[batchId] !== false;
+    const batch = batches[batchId];
+    const isExpanded = expandedBatches[batchId] !== false;
 
-            return (
-              <div key={batchId}>
-                {batchId !== 'unbatched' && batch && (
-                  <button
-                    onClick={() => toggleBatch(batchId)}
-                    className="w-full mb-2"
-                  >
-                    <BatchHeader batch={batch} recs={batchRecs} />
-                  </button>
-                )}
+    return (
+      <div key={batchId}>
+        {batchId !== 'unbatched' && batch && (
+          <button
+            onClick={() => toggleBatch(batchId)}
+            className="w-full mb-2"
+          >
+            <BatchHeader batch={batch} recs={batchRecs} />
+          </button>
+        )}
 
-                {isExpanded && (
-                  <div className="space-y-3">
-                    {batchRecs.map(rec => (
-                      <RecommendationReviewCard
-                        key={rec.id}
-                        recommendation={rec}
-                        clientId={rec.client_id}
-                        onStatusChange={handleStatusChange}
-                        onRefresh={onRefresh}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.keys(STATUS_LABELS).map(status => {
-            const columnRecs = recsByStatus[status] || [];
-
-            return (
-              <div key={status} className="bg-slate-50 rounded-lg p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase">
-                    {STATUS_LABELS[status]}
-                  </h3>
-                  <Badge variant="outline" className="text-[11px]">
-                    {columnRecs.length}
-                  </Badge>
-                </div>
-
-                <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
-                  {columnRecs.map(rec => (
-                    <RecommendationReviewCard
-                      key={rec.id}
-                      recommendation={rec}
-                      clientId={rec.client_id}
-                      onStatusChange={handleStatusChange}
-                      onRefresh={onRefresh}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        {isExpanded && (
+          <div className="space-y-3">
+            {batchRecs.map(rec => (
+              <RecommendationReviewCard
+                key={rec.id}
+                recommendation={rec}
+                clientId={rec.client_id}
+                onStatusChange={handleStatusChange}
+                onRefresh={onRefresh}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })}
+</div>
       {filteredRecs.length === 0 && (
         <div className="text-center py-8">
           <p className="text-sm text-slate-600">No recommendations match your filters</p>
