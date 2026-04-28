@@ -421,7 +421,9 @@ export default function ClientPortal() {
         index: Number(index),
         response: "interested",
       });
-      window.location.reload();
+      await queryClient.invalidateQueries({
+        queryKey: ["clientPortal", "sharedRecommendations", client?.id],
+      });
     }}
   >
     Interested
@@ -438,7 +440,9 @@ export default function ClientPortal() {
         index: Number(index),
         response: "not_interested",
       });
-      window.location.reload();
+      await queryClient.invalidateQueries({
+        queryKey: ["clientPortal", "sharedRecommendations", client?.id],
+      });
     }}
   >
     Not Interested
