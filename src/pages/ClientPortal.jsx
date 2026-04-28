@@ -14,6 +14,7 @@ import {
   getActivities,
   getMeetings,
   getSharedRecommendations,
+  updateRecommendationClientResponse,
   createApplication,
   updateApplication,
   createTask,
