@@ -101,7 +101,8 @@ export default function RecommendationBatchReview({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedBatches, setExpandedBatches] = useState({});
-
+  const [viewMode, setViewMode] = useState("list");
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
