@@ -608,14 +608,46 @@ export async function getSharedRecommendations(clientId) {
   if (!clientId) return [];
 
   try {
-    const rows = await base44.entities.JobRecommendation.filter({
+    const batches = await base44.entities.JobRecommendationBatch.filter({
       client_id: clientId,
-      shared_with_client: true,
     });
 
-    return sortByNewest(
-      asArray(rows).map(mapRecommendation).filter(Boolean)
-    );
+    let allRecommendations = [];
+
+    for (const batch of asArray(batches)) {
+      const jobs = JSON.parse(batch.recommended_job_fields_json || "[]");
+
+      const mapped = jobs
+        .map((job, index) => ({
+          id: `${batch.id}-${index}`,
+          client_id: batch.client_id,
+
+          job_title: asString(job.job_title),
+          employer: asString(job.employer),
+          location: asString(job.location),
+          pay: asString(job.pay),
+
+          status: asString(job.status),
+          shared_with_client: asBoolean(job.shared_with_client, false),
+
+          fit_score: asNumber(job.fit_score, 0),
+          fit_reason: asString(job.fit_reason),
+          support_strategy: asString(job.support_strategy),
+          concerns: asString(job.concerns),
+
+          client_response: asString(job.client_response),
+          client_responded_at: job.client_responded_at ?? null,
+          client_response_notes: asString(job.client_response_notes),
+
+          created_date: batch.generated_at,
+          updated_date: batch.generated_at,
+        }))
+        .filter((rec) => rec.shared_with_client);
+
+      allRecommendations.push(...mapped);
+    }
+
+    return sortByNewest(allRecommendations);
   } catch (e) {
     console.error("Failed to load shared recommendations", e);
     return [];
