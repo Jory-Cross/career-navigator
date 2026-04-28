@@ -604,6 +604,32 @@ function mapRecommendation(raw) {
   };
 }
 
+export async function updateRecommendationClientResponse({
+  batchId,
+  index,
+  response,
+}) {
+  if (!batchId && batchId !== 0) return;
+
+  const batch = await base44.entities.JobRecommendationBatch.get(batchId);
+
+  const jobs = JSON.parse(batch.recommended_job_fields_json || "[]");
+
+  if (!jobs[index]) return;
+
+  jobs[index] = {
+    ...jobs[index],
+    client_response: response,
+    client_responded_at: new Date().toISOString(),
+  };
+
+  await base44.entities.JobRecommendationBatch.update(batchId, {
+    recommended_job_fields_json: JSON.stringify(jobs),
+  });
+
+  return true;
+}
+
 export async function getSharedRecommendations(clientId) {
   if (!clientId) return [];
 
