@@ -109,9 +109,11 @@ const needsStaffReview = recommendation.status === "suggested";
       const handleStatusUpdate = async () => {
   // 🚫 Enforce notes before review
   if (newStatus !== "suggested" && !reviewNotes.trim()) {
-    toast.error("Please add review notes before updating status.");
-    return;
-  }
+  setReviewNotesError("Review notes are required before updating this status.");
+  return;
+}
+
+setReviewNotesError("");
 
   setUpdatingStatus(true);
 
