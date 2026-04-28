@@ -373,7 +373,7 @@ export default function ClientPortal() {
               {sharedRecommendations.map((rec) => (
                 <div key={rec.id} className="rounded border p-4">
                   <div className="font-medium">
-                    {rec.job_title || "Untitled Recommendation"}
+                   {rec.job_title || rec.title || "Untitled Recommendation"}
                   </div>
 
                   {rec.employer ? (
