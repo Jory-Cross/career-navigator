@@ -640,7 +640,12 @@ export async function getSharedRecommendations(clientId) {
 
     let allRecommendations = [];
 
-    for (const batch of asArray(batches)) {
+    // 🔥 ONLY USE LATEST BATCH
+const latestBatch = batches.sort(
+  (a, b) => new Date(b.generated_at) - new Date(a.generated_at)
+)[0];
+
+for (const batch of [latestBatch]) {
       const jobs = JSON.parse(batch.recommended_job_fields_json || "[]");
 
       const mapped = jobs
