@@ -272,6 +272,27 @@ setReviewNotesError("");
             </div>
           )}
 
+                   {/* Client Response */}
+          {recommendation.client_response && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-purple-700">
+                Client Response
+              </p>
+              <p className="mt-1 font-medium text-purple-900">
+                {recommendation.client_response === "interested"
+                  ? "Client marked this recommendation as Interested."
+                  : recommendation.client_response === "not_interested"
+                  ? "Client marked this recommendation as Not Interested."
+                  : recommendation.client_response}
+              </p>
+              {recommendation.client_responded_at && (
+                <p className="mt-1 text-xs text-purple-700">
+                  Responded {format(new Date(recommendation.client_responded_at), "MMM d, yyyy h:mm a")}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Review Status */}
           <div className="border-t border-slate-100 pt-3 space-y-2">
             {recommendation.reviewed_by_staff ? (
