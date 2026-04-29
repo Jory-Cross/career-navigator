@@ -679,7 +679,27 @@ for (const batch of [latestBatch]) {
       allRecommendations.push(...mapped);
     }
 
-    return sortByNewest(allRecommendations);
+        const uniqueRecommendations = [];
+
+    for (const recommendation of allRecommendations) {
+      const titleKey = asString(
+        recommendation.job_title || recommendation.title
+      ).toLowerCase();
+
+      const alreadyExists = uniqueRecommendations.some((existing) => {
+        const existingTitleKey = asString(
+          existing.job_title || existing.title
+        ).toLowerCase();
+
+        return existingTitleKey === titleKey;
+      });
+
+      if (!alreadyExists) {
+        uniqueRecommendations.push(recommendation);
+      }
+    }
+
+    return sortByNewest(uniqueRecommendations);
   } catch (e) {
     console.error("Failed to load shared recommendations", e);
     return [];
