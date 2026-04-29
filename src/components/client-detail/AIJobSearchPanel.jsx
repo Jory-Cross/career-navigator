@@ -1178,7 +1178,11 @@ const normalizedBatch = {
         review_notes: job.review_notes || "",
         reviewed_by: job.reviewed_by || null,
         reviewed_at: job.reviewed_at || null,
-        reviewed_by_staff: job.reviewed_by_staff || false,
+                reviewed_by_staff: job.reviewed_by_staff || false,
+
+        client_response: job.client_response || null,
+        client_responded_at: job.client_responded_at || null,
+        client_response_notes: job.client_response_notes || "",
 
         job_title: job.title || job.job_title || "Untitled Recommendation",
         employer: job.employer || "",
