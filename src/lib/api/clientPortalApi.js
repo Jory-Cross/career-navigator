@@ -680,24 +680,18 @@ for (const batch of [latestBatch]) {
     }
 
         const uniqueRecommendations = [];
+const seenKeys = new Set();
 
-    for (const recommendation of allRecommendations) {
-      const titleKey = asString(
-        recommendation.job_title || recommendation.title
-      ).toLowerCase();
+for (const recommendation of allRecommendations) {
+  const key = `${recommendation.client_id}-${asString(
+    recommendation.job_title || recommendation.title
+  ).toLowerCase()}`;
 
-      const alreadyExists = uniqueRecommendations.some((existing) => {
-        const existingTitleKey = asString(
-          existing.job_title || existing.title
-        ).toLowerCase();
-
-        return existingTitleKey === titleKey;
-      });
-
-      if (!alreadyExists) {
-        uniqueRecommendations.push(recommendation);
-      }
-    }
+  if (!seenKeys.has(key)) {
+    seenKeys.add(key);
+    uniqueRecommendations.push(recommendation);
+  }
+}
 
     return sortByNewest(uniqueRecommendations);
   } catch (e) {
