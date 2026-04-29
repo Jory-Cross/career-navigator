@@ -322,13 +322,9 @@ useEffect(() => {
   loadSavedRecs();
   loadLatestBatch();
 
-  // 🔁 AUTO REFRESH EVERY 5 SECONDS
   const interval = setInterval(() => {
     loadLatestBatch();
   }, 10000);
-
-  return () => clearInterval(interval);
-}, [resolvedClientId]);
 
   base44.functions
     .invoke("processAssessmentDocuments", {
@@ -358,6 +354,8 @@ useEffect(() => {
     .catch((err) => {
       console.error("Failed to load saved VFP on AI Job Search load:", err);
     });
+
+  return () => clearInterval(interval);
 }, [resolvedClientId]);
   
   // Refresh client data (e.g. after extraction)
