@@ -617,10 +617,18 @@ export async function updateRecommendationClientResponse({
 
   if (!jobs[index]) return;
 
+  const nextStatus =
+    response === "interested"
+      ? "job_search_target"
+      : response === "not_interested"
+      ? "archived"
+      : jobs[index].status;
+
   jobs[index] = {
     ...jobs[index],
     client_response: response,
     client_responded_at: new Date().toISOString(),
+    status: nextStatus,
   };
 
   await base44.entities.JobRecommendationBatch.update(batchId, {
