@@ -414,6 +414,7 @@ export default function ClientPortal() {
   <Button
     size="sm"
     type="button"
+    variant={rec.client_response === "interested" ? "default" : "outline"}
     onClick={async () => {
       const [batchId, index] = rec.id.split("-");
       await updateRecommendationClientResponse({
@@ -432,7 +433,7 @@ export default function ClientPortal() {
   <Button
     size="sm"
     type="button"
-    variant="outline"
+    variant={rec.client_response === "not_interested" ? "destructive" : "outline"}
     onClick={async () => {
       const [batchId, index] = rec.id.split("-");
       await updateRecommendationClientResponse({
