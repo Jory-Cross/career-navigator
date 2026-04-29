@@ -322,6 +322,14 @@ useEffect(() => {
   loadSavedRecs();
   loadLatestBatch();
 
+  // 🔁 AUTO REFRESH EVERY 5 SECONDS
+  const interval = setInterval(() => {
+    loadLatestBatch();
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [resolvedClientId]);
+
   base44.functions
     .invoke("processAssessmentDocuments", {
       action: "get_vocational_facts",
