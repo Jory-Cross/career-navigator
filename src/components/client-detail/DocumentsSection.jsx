@@ -143,12 +143,7 @@ const recommendationSkills = Array.from(
 const loadDocuments = useCallback(async () => {
   setLoading(true);
   try {
-    console.time("LOAD DOCS");
-    const docs = await getDocuments(clientId);
-
-console.log("DOCUMENTS LOADED FOR CLIENT:", docs);
-    console.timeEnd("LOAD DOCS");
-
+ const docs = await getDocuments(clientId);
     const visibleDocs = docs.filter((doc) => {
       const archived = doc.is_archived === true;
       return showArchived ? archived : !archived;
