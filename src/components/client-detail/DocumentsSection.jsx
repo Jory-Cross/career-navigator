@@ -735,9 +735,8 @@ const jobDiff = suggestedJobs.map(job => {
             : "staff";
 
         const savedDoc = await updateDocument(doc.id, {
-          ...doc.raw,
-          visibility: nextVisibility,
-        });
+  visibility: nextVisibility,
+});
 
         console.log("VISIBILITY SAVED DOC:", savedDoc);
 
