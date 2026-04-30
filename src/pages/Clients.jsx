@@ -96,27 +96,6 @@ export default function Clients() {
     enabled: !!user && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
   });
 
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", orgId],
-    queryFn: () => orgId
-      ? base44.entities.TimeEntry.filter({ org_id: orgId })
-      : base44.entities.TimeEntry.list()
-  });
-
-  const { data: applications = [] } = useQuery({
-    queryKey: ["applications", orgId],
-    queryFn: () => orgId
-      ? base44.entities.JobApplication.filter({ org_id: orgId })
-      : base44.entities.JobApplication.list()
-  });
-
-  const getClientHours = (clientId) => {
-    const mins = timeEntries.filter(t => t.client_id === clientId).reduce((s, t) => s + (t.duration_minutes || 0), 0);
-    return Math.round(mins / 60 * 10) / 10;
-  };
-
-  const getClientApps = (clientId) => applications.filter(a => a.client_id === clientId).length;
-
   const activeClientsCount = clients.filter(c => !c.is_archived).length;
 
   const filtered = clients.filter(c => {
