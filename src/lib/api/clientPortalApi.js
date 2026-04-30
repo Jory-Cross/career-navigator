@@ -873,23 +873,20 @@ export async function getDocumentVersions(docId) {
     .sort((a, b) => (b.version || 0) - (a.version || 0));
 }
 export async function createDocument(payload) {
-  const builtPayload = buildDocumentPayload({
-    ...payload,
-    ai_tags: payload.ai_tags || [],
-    ai_summary: payload.ai_summary || "",
-    ai_insights: payload.ai_insights || "",
-    ai_last_processed: new Date().toISOString(),
-    source: payload.source || (payload.category === "generated_report" ? "generated" : "staff_upload"),
-  });
-
-  console.log("CREATE DOCUMENT PAYLOAD:", builtPayload);
-
-  const raw = await base44.entities.Document.create(builtPayload);
-
-  console.log("CREATE DOCUMENT RAW RESULT:", raw);
+  const raw = await base44.entities.Document.create(
+    buildDocumentPayload({
+      ...payload,
+      ai_tags: payload.ai_tags || [],
+      ai_summary: payload.ai_summary || "",
+      ai_insights: payload.ai_insights || "",
+      ai_last_processed: new Date().toISOString(),
+      source: payload.source || (payload.category === "generated_report" ? "generated" : "staff_upload"),
+    })
+  );
 
   return mapDocument(raw);
 }
+
 export async function updateDocument(id, payload) {
   if (!id) throw new Error("Document id is required");
 
