@@ -829,58 +829,21 @@ export async function analyzeDocumentContent(payload) {
 export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
 
-  const rows = await base44.entities.Document.list();
-  const mappedDocs = asArray(rows).map(mapDocument).filter(Boolean);
+  const rows = await base44.entities.Document.filter({
+    client_id: clientId,
+  });
 
-  const matchingClientDocs = mappedDocs.filter(
-    (doc) => String(doc.client_id || "") === String(clientId || "")
+  return sortByNewest(
+    asArray(rows)
+      .map(mapDocument)
+      .filter(Boolean)
+      .filter((doc) => !doc.is_archived)
+      .filter((doc) => {
+        const visibility = String(doc.visibility || "").toLowerCase().trim();
+        return visibility === "client" || visibility === "both";
+      })
   );
-
-  const visibleDocs = matchingClientDocs.filter((doc) => {
-    const visibility = String(doc.visibility || "").toLowerCase().trim();
-
-    return (
-      !doc.is_archived &&
-      (visibility === "client" || visibility === "both")
-    );
-  });
-
-  console.log("CLIENT PORTAL DOCUMENT DEBUG:", {
-    portalClientId: clientId,
-    matchingClientDocs: matchingClientDocs.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      client_id: doc.client_id,
-      visibility: doc.visibility,
-      is_archived: doc.is_archived,
-      source: doc.source,
-      category: doc.category,
-    })),
-    visibleDocs: visibleDocs.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      client_id: doc.client_id,
-      visibility: doc.visibility,
-      is_archived: doc.is_archived,
-      source: doc.source,
-      category: doc.category,
-    })),
-    cbTest: mappedDocs
-      .filter((doc) => String(doc.title || "").toLowerCase().includes("cb test"))
-      .map((doc) => ({
-        id: doc.id,
-        title: doc.title,
-        client_id: doc.client_id,
-        visibility: doc.visibility,
-        is_archived: doc.is_archived,
-        source: doc.source,
-        category: doc.category,
-      })),
-  });
-
-  return sortByNewest(visibleDocs);
 }
-
 export async function getStaffVisibleDocuments(clientId) {
   if (!clientId) return [];
   const rows = await base44.entities.Document.filter({ client_id: clientId });
