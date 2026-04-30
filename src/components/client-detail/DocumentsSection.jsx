@@ -735,18 +735,14 @@ const jobDiff = suggestedJobs.map(job => {
             : "staff";
 
         await updateDocument(doc.id, {
-          ...doc.raw,
           visibility: nextVisibility,
         });
 
-        setDocuments((prev) =>
-          prev.map((d) =>
-            d.id === doc.id ? { ...d, visibility: nextVisibility } : d
-          )
-        );
+        await loadDocuments();
 
-        toast.success("Visibility updated");
+        toast.success(`Visibility updated to ${nextVisibility}`);
       } catch (err) {
+        console.error("VISIBILITY UPDATE FAILED", err);
         toast.error("Failed to update visibility");
       }
     }}
