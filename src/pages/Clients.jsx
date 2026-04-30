@@ -184,13 +184,11 @@ export default function Clients() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map(client => (
           <ClientCard
-            key={client.id}
-            client={client}
-            totalHours={getClientHours(client.id)}
-            applicationCount={getClientApps(client.id)}
-            onArchiveToggle={refetch}
-            canAssign={user?.role === 'admin' || user?.role === 'management'}
-          />
+  key={client.id}
+  client={client}
+  onArchiveToggle={refetch}
+  canAssign={user?.role === 'admin' || user?.role === 'management'}
+/>
         ))}
       </div>
 
