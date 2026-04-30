@@ -387,6 +387,8 @@ const clientProfile = {
 const [aiRecommendationResult, setAiRecommendationResult] = useState(null);
 
 useEffect(() => {
+  if (!runRecommendations) return;
+
   async function run() {
     const includeResume = activeRecommendationSources.includes("resume");
     const includeWSA = activeRecommendationSources.includes("wsa");
@@ -417,23 +419,17 @@ useEffect(() => {
       ? otherAssessmentDocs.map(doc => doc.ai_summary || doc.notes || "").join(" ")
       : "";
 
-    console.log("RECOMMENDATION INPUT:", {
-  resumeText,
-  wsaText,
-  otherAssessmentText
-});
-    
     const result = await getRecommendations({
-  resumeText,
-  wsaText,
-  assessmentText: otherAssessmentText,
-});
+      resumeText,
+      wsaText,
+      assessmentText: otherAssessmentText,
+    });
 
     setAiRecommendationResult(result);
   }
 
   run();
-}, [documents, activeRecommendationSources]);
+}, [runRecommendations, documents, activeRecommendationSources]);
 const refreshRecommendationHistory = useCallback(() => {
   if (!clientId) {
     setRecommendationHistory([]);
