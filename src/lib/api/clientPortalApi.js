@@ -631,9 +631,13 @@ export async function updateRecommendationClientResponse({
     status: nextStatus,
   };
 
-  await base44.entities.JobRecommendationBatch.update(batchId, {
-    recommended_job_fields_json: JSON.stringify(jobs),
-  });
+  // 🔍 Check if any jobs still need review
+const stillNeedsReview = jobs.some(j => j.status === "suggested");
+
+await base44.entities.JobRecommendationBatch.update(batchId, {
+  recommended_job_fields_json: JSON.stringify(jobs),
+  status: stillNeedsReview ? "pending_review" : "fully_reviewed",
+});
 
   return true;
 }
