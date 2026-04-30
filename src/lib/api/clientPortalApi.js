@@ -830,11 +830,23 @@ export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
 
   const rows = await base44.entities.Document.list();
+  const mappedDocs = asArray(rows).map(mapDocument).filter(Boolean);
+
+  console.log("CLIENT PORTAL DOCUMENT DEBUG:", {
+    portalClientId: clientId,
+    allDocuments: mappedDocs.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      client_id: doc.client_id,
+      visibility: doc.visibility,
+      is_archived: doc.is_archived,
+      source: doc.source,
+      category: doc.category,
+    })),
+  });
 
   return sortByNewest(
-    asArray(rows)
-      .map(mapDocument)
-      .filter(Boolean)
+    mappedDocs
       .filter((doc) => doc.client_id === clientId)
       .filter((doc) => !doc.is_archived)
       .filter((doc) => {
