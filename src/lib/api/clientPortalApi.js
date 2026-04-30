@@ -828,16 +828,20 @@ export async function analyzeDocumentContent(payload) {
 }
 export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
+
   const rows = await base44.entities.Document.filter({
     client_id: clientId,
-    is_archived: false,
   });
 
   return sortByNewest(
     asArray(rows)
       .map(mapDocument)
       .filter(Boolean)
-      .filter((doc) => doc.visibility === "client" || doc.visibility === "both")
+      .filter((doc) => !doc.is_archived)
+      .filter((doc) => {
+        const visibility = String(doc.visibility || "").toLowerCase().trim();
+        return visibility === "client" || visibility === "both";
+      })
   );
 }
 
