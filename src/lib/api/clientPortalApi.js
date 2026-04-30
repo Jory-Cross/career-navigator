@@ -892,25 +892,17 @@ export async function updateDocument(id, payload) {
 
   const existing = await base44.entities.Document.get(id);
 
-  const builtPayload = buildDocumentPayload({
-    ...existing,
-    ...payload,
-  });
-
-  console.log("UPDATE DOCUMENT DEBUG:", {
+  const raw = await base44.entities.Document.update(
     id,
-    incomingPayload: payload,
-    existingVisibility: existing?.visibility,
-    builtVisibility: builtPayload?.visibility,
-    builtPayload,
-  });
-
-  const raw = await base44.entities.Document.update(id, builtPayload);
-
-  console.log("UPDATE DOCUMENT RAW RESULT:", raw);
+    buildDocumentPayload({
+      ...existing,
+      ...payload,
+    })
+  );
 
   return mapDocument(raw);
 }
+
 export async function archiveDocument(id) {
   if (!id) throw new Error("Document id is required");
 
