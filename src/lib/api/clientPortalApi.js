@@ -557,9 +557,13 @@ export async function updateClientContacts(id, contacts) {
 
 export async function getClientByEmail(email) {
   if (!email) return null;
-  const clients = await base44.entities.Client.list();
-  const match = asArray(clients).find((c) => c.email === email);
-  return mapClient(match || null);
+
+  const rows = await base44.entities.Client.filter({
+    email,
+  });
+
+  const match = asArray(rows)[0] || null;
+  return mapClient(match);
 }
 
 export async function getActiveClients() {
