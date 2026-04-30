@@ -732,9 +732,6 @@ const jobDiff = suggestedJobs.map(job => {
         const savedDoc = await updateDocument(doc.id, {
   visibility: nextVisibility,
 });
-
-        console.log("VISIBILITY SAVED DOC:", savedDoc);
-
         await loadDocuments();
 
         toast.success(`Visibility updated to ${nextVisibility}`);
