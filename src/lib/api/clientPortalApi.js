@@ -895,13 +895,22 @@ export async function updateDocument(id, payload) {
 
   const existing = await base44.entities.Document.get(id);
 
-  const raw = await base44.entities.Document.update(
+  const builtPayload = buildDocumentPayload({
+    ...existing,
+    ...payload,
+  });
+
+  console.log("UPDATE DOCUMENT DEBUG:", {
     id,
-    buildDocumentPayload({
-      ...existing,
-      ...payload,
-    })
-  );
+    incomingPayload: payload,
+    existingVisibility: existing?.visibility,
+    builtVisibility: builtPayload?.visibility,
+    builtPayload,
+  });
+
+  const raw = await base44.entities.Document.update(id, builtPayload);
+
+  console.log("UPDATE DOCUMENT RAW RESULT:", raw);
 
   return mapDocument(raw);
 }
