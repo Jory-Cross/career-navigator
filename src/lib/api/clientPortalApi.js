@@ -832,9 +832,22 @@ export async function getClientVisibleDocuments(clientId) {
   const rows = await base44.entities.Document.list();
   const mappedDocs = asArray(rows).map(mapDocument).filter(Boolean);
 
+  const matchingClientDocs = mappedDocs.filter(
+    (doc) => String(doc.client_id || "") === String(clientId || "")
+  );
+
+  const visibleDocs = matchingClientDocs.filter((doc) => {
+    const visibility = String(doc.visibility || "").toLowerCase().trim();
+
+    return (
+      !doc.is_archived &&
+      (visibility === "client" || visibility === "both")
+    );
+  });
+
   console.log("CLIENT PORTAL DOCUMENT DEBUG:", {
     portalClientId: clientId,
-    allDocuments: mappedDocs.map((doc) => ({
+    matchingClientDocs: matchingClientDocs.map((doc) => ({
       id: doc.id,
       title: doc.title,
       client_id: doc.client_id,
@@ -843,17 +856,29 @@ export async function getClientVisibleDocuments(clientId) {
       source: doc.source,
       category: doc.category,
     })),
+    visibleDocs: visibleDocs.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      client_id: doc.client_id,
+      visibility: doc.visibility,
+      is_archived: doc.is_archived,
+      source: doc.source,
+      category: doc.category,
+    })),
+    cbTest: mappedDocs
+      .filter((doc) => String(doc.title || "").toLowerCase().includes("cb test"))
+      .map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        client_id: doc.client_id,
+        visibility: doc.visibility,
+        is_archived: doc.is_archived,
+        source: doc.source,
+        category: doc.category,
+      })),
   });
 
-  return sortByNewest(
-    mappedDocs
-      .filter((doc) => doc.client_id === clientId)
-      .filter((doc) => !doc.is_archived)
-      .filter((doc) => {
-        const visibility = String(doc.visibility || "").toLowerCase().trim();
-        return visibility === "client" || visibility === "both";
-      })
-  );
+  return sortByNewest(visibleDocs);
 }
 
 export async function getStaffVisibleDocuments(clientId) {
