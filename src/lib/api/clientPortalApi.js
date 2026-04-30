@@ -829,14 +829,13 @@ export async function analyzeDocumentContent(payload) {
 export async function getClientVisibleDocuments(clientId) {
   if (!clientId) return [];
 
-  const rows = await base44.entities.Document.filter({
-    client_id: clientId,
-  });
+  const rows = await base44.entities.Document.list();
 
   return sortByNewest(
     asArray(rows)
       .map(mapDocument)
       .filter(Boolean)
+      .filter((doc) => doc.client_id === clientId)
       .filter((doc) => !doc.is_archived)
       .filter((doc) => {
         const visibility = String(doc.visibility || "").toLowerCase().trim();
