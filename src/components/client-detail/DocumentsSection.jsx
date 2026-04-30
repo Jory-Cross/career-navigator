@@ -291,9 +291,7 @@ const tags = Array.from(
   ai_summary: "",
   ai_insights: "",
 });
-if (createdDoc.ai_tags && createdDoc.ai_tags.length > 0) {
-  setFilterTag(createdDoc.ai_tags[0]);
-}
+setFilterTag("");
 
 await loadDocuments();
 
