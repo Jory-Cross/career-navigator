@@ -734,9 +734,12 @@ const jobDiff = suggestedJobs.map(job => {
             ? "client"
             : "staff";
 
-        await updateDocument(doc.id, {
+        const savedDoc = await updateDocument(doc.id, {
+          ...doc.raw,
           visibility: nextVisibility,
         });
+
+        console.log("VISIBILITY SAVED DOC:", savedDoc);
 
         await loadDocuments();
 
@@ -748,12 +751,6 @@ const jobDiff = suggestedJobs.map(job => {
     }}
   >
     {doc.visibility} ↻
-  </Badge>
-)}
-
-{doc.visibility && doc.is_assessment && (
-  <Badge variant="outline" className="text-xs">
-    {doc.visibility}
   </Badge>
 )}
                         {doc.source && (
