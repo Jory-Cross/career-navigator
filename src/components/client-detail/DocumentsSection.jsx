@@ -310,8 +310,9 @@ setDocuments((prev) => {
 // CLEAR RECOMMENDATIONS AFTER NEW DATA
 setRecommendationHistory([]);
 setSelectedRecommendationId(null);
-      
-      toast.success("Document uploaded");
+
+toast.success("Document uploaded");
+toast("New data added. Regenerate recommendations when ready.");
       setShowUpload(false);
       setForm({
         title: "",
