@@ -1,180 +1,149 @@
-🧠 CRM AI Job Search + Recommendations — HANDOFF
-🧭 WHAT I’VE LEARNED (CARRY FORWARD — CRITICAL)
-🔴 How you want to work
-You require:
-Exact file paths
-Exact full block replacements
+🧠 WHAT I’VE LEARNED (CARRY FORWARD — CRITICAL)
+🔴 How you need instructions
+Exact file path
+Exact line or block to find
+Exact replacement
 Clear start/end boundaries
-No vague instructions like:
-“find something like…”
+No “find something like…”
+No partial snippets when replacing logic
 One step at a time
-Do not break working systems
-Always use current file as source of truth
-🔴 Build philosophy (very important)
+Never assume file structure — always use your current file
+🔴 Build discipline
+
 Always decide:
+
 ✅ Fix Now
 📋 Backlog
-Do NOT mix the two
+
+Do NOT mix them
 Do NOT derail current phase
-🔴 Product direction (locked in)
+
+🔴 Product direction (locked)
+
 Recommendations are:
+
 ❌ NOT job applications
 ✅ Job fields / career paths
-Staff must:
-Have full flexibility
-NOT be restricted by rigid workflows
-System should:
+
+System must:
+
 Guide workflow
 NOT enforce rigid transitions
-🔴 Core design shift (this chat — VERY IMPORTANT)
 
-You clarified:
+Staff must:
 
-❌ Do NOT restrict status transitions
-✅ Build task-driven client participation system
+Have full flexibility
+🔴 Phase 5 direction (important)
+❌ No rigid workflow enforcement
+✅ Task-driven client participation (later phase)
+Client interaction drives system state
+🧠 WHAT WAS LEARNED IN THIS CHAT
+🔴 Key technical lessons
+UI must never override data
 
-This is now the correct Phase 5 direction
+Status must come ONLY from:
 
-✅ WHAT WAS COMPLETED (THIS CHAT)
-1. Phase 4 — COMPLETED
+job.status
+Any fallback logic breaks system behavior
+Batch vs Recommendation state
+Jobs have status ✅
+Batch has status ❌ (was not updating)
+These must be kept in sync
+Client → Staff data flow
+Client response must:
+Save in batch JSON
+Flow into staff mapping
+Render in UI
+Duplicate issues source
+Not just batch duplication
+Also UI mapping + merge behavior
+Refresh vs real-time
+Polling added (10s)
+Works for now
+No need for real-time infra yet
+🔴 Strategic decision (VERY IMPORTANT)
 
-Recommendation workflow stability is DONE:
+👉 Stop deep testing until O*NET is integrated
 
-✔ Recommendation generation pipeline
-✔ Batch persistence
-✔ Status persistence FIXED
-✔ Notes persistence FIXED
-✔ Pending review UI (card + global)
-✔ Required notes before review
-✔ Inline error messaging
-2. Phase 5 — STARTED (correctly)
-❌ Kanban attempt → REVERTED (correct decision)
-Removed board view
-Removed toggle
-Returned to clean list + filter
+Reason:
 
-👉 This was the right move
-
-3. Status system — finalized direction
-❌ No rigid transitions
-✅ Staff decides status freely
-✅ Status supports workflow, not controls it
-4. Client workflow foundation (NEW — IMPORTANT)
-
-You defined the real system:
-
-Flow:
-Staff → Shared with Client
-Client sees job
-Client marks:
+Current recommendations = partial / simulated
+Status workflows depend on real recommendation structure
+Testing now = false positives / wasted effort
+✅ WHAT WAS ACCOMPLISHED (THIS CHAT)
+🔧 Client Portal
+✔ Shared recommendations display
+✔ Removed duplicates (latest batch + dedupe)
+✔ Fixed tab reset issue
+✔ Client buttons:
 Interested
 Not Interested
-Staff reacts:
-Archive OR
-Move to Job Search Target
-Job Search Target → feeds AI job search
-5. Data layer foundation (implemented)
-Added:
-✔ shared_with_client
-shared_with_client: newStatus === "shared_with_client"
-✔ Client response placeholders
+✔ Immediate UI feedback (button state)
+✔ Query invalidation instead of reload
+🔧 Data Layer
+✔ Added:
 client_response
 client_responded_at
-client_response_notes
+✔ Status auto-update:
+Interested → job_search_target
+Not Interested → archived
+🔧 Staff Side
+✔ Client response now visible in recommendation card
+✔ Fixed missing mapping (critical)
+✔ Auto-refresh (polling every 10s)
+🔧 Bugs Fixed
+✔ Duplicate recommendations
+✔ Tab switching on click
+✔ Missing client response display
+✔ Broken useEffect (syntax error)
+✔ UI overriding status logic
+⚠️ CURRENT STATE (IMPORTANT)
+Working
+Recommendation system stable
+Client → staff interaction loop works
+Status updates working at job level
+UI reflects client interaction
+No duplicates
+No forced refresh
+Not fully validated (INTENTIONAL)
+Batch status updates (paused)
+Full workflow logic validation
+Job search target pipeline
+AI job search integration
 
-👉 No UI yet — correct
+👉 These are waiting on O*NET
 
-🧱 CURRENT BUILD STATE
-Stable
-Recommendation system ✔
-Review workflow ✔
-Status + notes ✔
-Filtering UI ✔
-Data persistence ✔
-In Progress (Phase 5 foundation)
-Client interaction data model ✔
-Workflow direction defined ✔
-Not Built Yet
-Client portal interaction
-Task system
-O*NET integration
-Job search automation
-Market research system
-📋 BACKLOG (ORGANIZED BY PHASE)
-🔵 Phase: Client Portal
-Show shared recommendations
-Client can:
-Mark Interested
-Mark Not Interested
-Fix:
-Documents not appearing when visibility = client/both
-🟣 Phase: Task System (NEW CORE FEATURE)
+📋 WHAT STILL NEEDS TO BE DONE (BY PHASE)
+🔵 Phase: O*NET Integration (BLOCKER)
+Interest Profiler (RIASEC) live
+O*NET job recommendations
+MyNextMove integration
+Replace fallback recommendation logic
+🟣 Phase: Client Portal
+Ensure:
+Shared jobs reliably appear
+Documents (client/both visibility) FIX
+Add:
+O*NET job detail view (later)
+🟡 Phase: AI Job Search
 
-👉 Replace rigid workflow with:
-
-Client Task Assignment System
-
-Staff assigns tasks to client
-Tasks drive engagement
-
-Examples:
-
-Review this job field
-Research job (future: O*NET)
-Discuss with staff
-Identify barriers
-Practice skills
-🟡 Phase: O*NET Integration
-
-Use O*NET as:
-
-Interest Profiler (RIASEC)
-Job descriptions
-Career exploration
-Recommendation backbone
-🟢 Phase: AI Job Search
 Use:
-Job Search Target
-VFP
-Generate job opportunities
-🟠 Phase: Market Research / Job Development
 
-When status = job_search_target:
-
-Generate ~20 local businesses
+status === "job_search_target"
+Generate real job opportunities
+Connect to O*NET occupation data
+🟢 Phase: Task System (CORE FEATURE)
+Client Task Assignment System
+Replace workflow reliance on statuses
+Tasks drive engagement
+🟠 Phase: Market Research
+When job_search_target:
+Generate ~20 businesses
 Not job postings
-Used for outreach
-🔴 Phase: Data Quality / Intake
-Resume OCR / parsing reliability
-Missing text detection
-Reprocess option
-🚀 NEXT STEP (NEW CHAT START)
-
-Paste this into new chat:
-
-START NEW CHAT WITH:
-
+Outreach workflow
+🔴 Phase: Data Quality
+Resume parsing reliability
+Missing data detection
+Reprocessing tools
+🧱 UPDATED HANDOFF DOC (DROP INTO NEXT CHAT)
 Continue CRM build.
-
-We are now in Phase 5: Client Workflow + Task System
-
-Current state:
-
-Recommendation system is stable
-Status + notes persistence working
-Shared with client flag added
-Client response fields added (no UI yet)
-Kanban removed (using list + filter)
-
-IMPORTANT RULES:
-
-Do NOT restrict status transitions
-Staff must have flexibility
-Focus on task-driven workflow instead
-
-Next goal:
-👉 Begin Client Task Assignment System (data layer first, no UI overbuild)
-
-Do NOT guess.
-Ask for file.
-Give exact full replacement only.
