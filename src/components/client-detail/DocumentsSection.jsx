@@ -291,21 +291,11 @@ const tags = Array.from(
   ai_summary: "",
   ai_insights: "",
 });
-setDocuments((prev) => {
-  const updated = [
-    {
-      ...createdDoc,
-      is_archived: false,
-    },
-    ...prev,
-  ];
+if (createdDoc.ai_tags && createdDoc.ai_tags.length > 0) {
+  setFilterTag(createdDoc.ai_tags[0]);
+}
 
-  if (createdDoc.ai_tags && createdDoc.ai_tags.length > 0) {
-    setFilterTag(createdDoc.ai_tags[0]);
-  }
-
-  return updated;
-});
+await loadDocuments();
 
 // CLEAR RECOMMENDATIONS AFTER NEW DATA
 setRecommendationHistory([]);
