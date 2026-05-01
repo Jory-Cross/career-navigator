@@ -145,16 +145,15 @@ export default function ClientPortal() {
   });
 
   const {
-    data: tasks = [],
-    isLoading: tasksLoading,
-    error: tasksError,
-  } = useQuery({
-    queryKey: queryKeys.tasks(client?.id),
-    queryFn: () => getTasks(client.id),
-    enabled: !!client?.id && activeTab === "tasks",
-    staleTime: 60 * 1000,
-  });
-
+  data: tasks = [],
+  isLoading: tasksLoading,
+  error: tasksError,
+} = useQuery({
+  queryKey: queryKeys.tasks(client?.id),
+  queryFn: () => getClientVisibleTasks(client.id),
+  enabled: !!client?.id && activeTab === "tasks",
+  staleTime: 60 * 1000,
+});
     const {
     data: documents = [],
     isLoading: documentsLoading,
