@@ -762,6 +762,18 @@ export async function getTasks(clientId) {
   }
 }
 
+export async function getClientVisibleTasks(clientId) {
+  if (!clientId) return [];
+
+  const tasks = await getTasks(clientId);
+
+  return sortByNewest(
+    asArray(tasks)
+      .filter((task) => task.assigned_to_client === true)
+      .filter((task) => task.status !== "completed")
+  );
+}
+
 export async function createTask(payload) {
   const raw = await base44.entities.Task.create(buildTaskPayload(payload));
   return mapTask(raw);
