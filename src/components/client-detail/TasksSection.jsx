@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus,
   CheckCircle2,
-  Users,
   X,
   Loader2,
   Sparkles,
