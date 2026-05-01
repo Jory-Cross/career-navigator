@@ -19,6 +19,7 @@ import {
   updateApplication,
   createTask,
   updateTask,
+  completeTask,
   deleteTask,
   uploadFile,
   createDocument,
