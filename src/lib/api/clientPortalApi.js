@@ -769,7 +769,10 @@ export async function getClientVisibleTasks(clientId) {
 
   return sortByNewest(
     asArray(tasks)
-      .filter((task) => task.assigned_to_client === true)
+      .filter((task) =>
+        Array.isArray(task.client_ids) &&
+        task.client_ids.includes(clientId)
+      )
       .filter((task) => task.status !== "completed")
   );
 }
