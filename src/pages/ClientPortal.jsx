@@ -276,6 +276,30 @@ export default function ClientPortal() {
     }
   }, [invalidateTasks, isSavingTask, selectedTask]);
 
+  const handleCompleteTask = useCallback(
+    async (id) => {
+      if (!id || isSavingTask) return;
+
+      try {
+        setIsSavingTask(true);
+
+        await completeTask({
+          id,
+          completedByClient: true,
+        });
+
+        await invalidateTasks();
+        setSelectedTask(null);
+      } catch (error) {
+        console.error("Complete task failed:", error);
+        alert("Failed to complete task.");
+      } finally {
+        setIsSavingTask(false);
+      }
+    },
+    [invalidateTasks, isSavingTask]
+  );
+  
   const handleDeleteTask = useCallback(
     async (id) => {
       if (!id || isSavingTask) return;
