@@ -386,35 +386,12 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                Assign to Clients *
-              </Label>
+                       <div className="space-y-2">
+              <Label>Assigned Client</Label>
 
-              <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
-                {allClients.map((client) => (
-                  <div key={client.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`client-${client.id}`}
-                      checked={(form.client_ids || []).includes(client.id)}
-                      onCheckedChange={() => toggleClient(client.id)}
-                    />
-                    <label
-                      htmlFor={`client-${client.id}`}
-                      className="cursor-pointer text-sm text-slate-700"
-                    >
-                      {client.first_name} {client.last_name}
-                    </label>
-                  </div>
-                ))}
+              <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+                This task will be assigned to this client.
               </div>
-
-              {(form.client_ids || []).length > 0 ? (
-                <p className="text-xs text-slate-500">
-                  {form.client_ids.length} client(s) selected
-                </p>
-              ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
