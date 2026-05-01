@@ -774,6 +774,14 @@ export async function getClientVisibleTasks(clientId) {
   );
 }
 
+export async function getStaffTasks(clientId) {
+  if (!clientId) return [];
+
+  const tasks = await getTasks(clientId);
+
+  return sortByNewest(asArray(tasks));
+}
+
 export async function createTask(payload) {
   const raw = await base44.entities.Task.create(buildTaskPayload(payload));
   return mapTask(raw);
