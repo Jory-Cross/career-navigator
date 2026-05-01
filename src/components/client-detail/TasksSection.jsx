@@ -200,19 +200,6 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
     }
   };
 
-  const toggleClient = (selectedClientId) => {
-    const current = Array.isArray(form.client_ids) ? form.client_ids : [];
-
-    if (current.includes(selectedClientId)) {
-      u(
-        "client_ids",
-        current.filter((id) => id !== selectedClientId)
-      );
-    } else {
-      u("client_ids", [...current, selectedClientId]);
-    }
-  };
-
   const addChecklistItem = () => {
     const current = Array.isArray(form.checklist) ? form.checklist : [];
     u("checklist", [...current, { text: "", completed: false }]);
