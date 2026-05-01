@@ -119,14 +119,14 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
     setForm(emptyTaskForm(clientId));
   };
 
-  const handleSave = async () => {
+    const handleSave = async () => {
     if (!form.title?.trim()) {
       toast.error("Title is required");
       return;
     }
 
-    if (!form.client_ids || form.client_ids.length === 0) {
-      toast.error("Please select at least one client");
+    if (!clientId) {
+      toast.error("Client is required");
       return;
     }
 
@@ -141,7 +141,7 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
         priority: form.priority || "medium",
         due_date: form.due_date || null,
         category: form.category || "follow_up",
-        client_ids: Array.isArray(form.client_ids) ? form.client_ids : [],
+        client_ids: [clientId],
         checklist: Array.isArray(form.checklist) ? form.checklist : [],
       };
 
