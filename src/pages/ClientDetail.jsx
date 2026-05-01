@@ -552,10 +552,10 @@ const handleDocumentsChanged = useCallback(() => {
         {!isEmployed && (
           <TabsContent value="tasks">
             <TasksSection
-              client={client}
+              clientId={client.id}
               tasks={tasks}
               onRefresh={refreshTasks}
-            />
+/>
           </TabsContent>
         )}
 
