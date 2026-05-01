@@ -79,14 +79,6 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   const [editId, setEditId] = useState(null);
   const [organizingNotes, setOrganizingNotes] = useState(false);
 
-  const { data: allClients = [] } = useQuery({
-    queryKey: ["active-clients"],
-    queryFn: getActiveClients,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   const pending = useMemo(
     () => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
     [tasks]
