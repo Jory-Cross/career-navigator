@@ -757,8 +757,7 @@ export default function ClientPortal() {
                 >
                   Delete
                 </Button>
-              </div>
-              </div>
+                            </div>
             </div>
           )}
         </DialogContent>
