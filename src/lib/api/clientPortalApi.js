@@ -365,11 +365,16 @@ function buildTaskPayload(payload = {}) {
     title: asString(payload.title),
     description: asString(payload.description),
     notes: asString(payload.notes),
-    status: asString(payload.status, "open"),
+    status: asString(payload.status, "pending"),
     priority: asString(payload.priority, "medium"),
-    category: asString(payload.category),
+    category: asString(payload.category, "follow_up"),
     due_date: payload.due_date ?? null,
     client_ids: asArray(payload.client_ids),
+    recommendation_id: payload.recommendation_id ?? null,
+    assigned_to_client: asBoolean(payload.assigned_to_client, false),
+    assigned_by: asString(payload.assigned_by),
+    completed_at: payload.completed_at ?? null,
+    client_completed_at: payload.client_completed_at ?? null,
     checklist: buildChecklistPayload(payload.checklist),
   };
 }
