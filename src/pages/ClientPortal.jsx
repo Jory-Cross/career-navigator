@@ -6,7 +6,7 @@ import {
   getClientById,
   getClientByEmail,
   getApplications,
-  getTasks,
+  getClientVisibleTasks,
   getClientVisibleDocuments,
   getAssessments,
   getInterviews,
