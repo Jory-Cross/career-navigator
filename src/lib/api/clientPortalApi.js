@@ -784,6 +784,25 @@ export async function updateTask(id, payload) {
   return mapTask(raw);
 }
 
+export async function completeTask({ id, completedByClient = false }) {
+  if (!id) throw new Error("Task id is required");
+
+  const existing = await base44.entities.Task.get(id);
+
+  const now = new Date().toISOString();
+
+  const updatedPayload = {
+    ...existing,
+    status: "completed",
+    completed_at: now,
+    client_completed_at: completedByClient ? now : existing.client_completed_at,
+  };
+
+  const raw = await base44.entities.Task.update(id, updatedPayload);
+
+  return mapTask(raw);
+}
+
 export async function deleteTask(id) {
   return await base44.entities.Task.delete(id);
 }
