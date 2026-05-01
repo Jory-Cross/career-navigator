@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 import {
   createTask,
   updateTask,
-  getActiveClients,
   organizeTaskNotes,
 } from "@/lib/api/clientPortalApi";
 
