@@ -736,10 +736,20 @@ export default function ClientPortal() {
                 }
               />
 
-              <div className="flex gap-2">
+                            <div className="flex gap-2">
                 <Button onClick={handleUpdateTask} disabled={isSavingTask}>
                   {isSavingTask ? "Saving..." : "Save"}
                 </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleCompleteTask(selectedTask.id)}
+                  disabled={isSavingTask}
+                >
+                  Mark Complete
+                </Button>
+
                 <Button
                   variant="destructive"
                   onClick={() => handleDeleteTask(selectedTask.id)}
@@ -747,6 +757,7 @@ export default function ClientPortal() {
                 >
                   Delete
                 </Button>
+              </div>
               </div>
             </div>
           )}
