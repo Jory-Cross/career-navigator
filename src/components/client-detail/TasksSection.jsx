@@ -71,6 +71,12 @@ function safeDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function formatDateTime(value) {
+  const date = safeDate(value);
+  if (!date) return null;
+  return format(date, "MMM d, yyyy h:mm a");
+}
+
 export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState(() => emptyTaskForm(clientId));
