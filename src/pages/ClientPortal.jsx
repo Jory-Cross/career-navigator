@@ -77,7 +77,7 @@ export default function ClientPortal() {
 
   const [isSavingApp, setIsSavingApp] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
-
+  const [completionNote, setCompletionNote] = useState("");
   const clientIdFromUrl = useMemo(() => getClientIdFromUrl(), []);
 
   /**
