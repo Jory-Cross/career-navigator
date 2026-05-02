@@ -527,7 +527,32 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
                 </div>
               ) : null}
             </div>
-          </div>
+                  </div>
+
+          <DialogFooter className="flex justify-between">
+            <div className="flex gap-2">
+              {editId && (
+                <>
+                  <Button type="button" variant="outline" onClick={handleArchive}>
+                    Archive
+                  </Button>
+
+                  <Button type="button" variant="destructive" onClick={handleDelete}>
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeDialog}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
