@@ -1,149 +1,154 @@
-🧠 WHAT I’VE LEARNED (CARRY FORWARD — CRITICAL)
-🔴 How you need instructions
+🧠 HANDOFF — CRM TASK SYSTEM (CURRENT STATE)
+🔴 HOW TO WORK WITH YOU (CRITICAL — DO NOT BREAK)
+Always give:
 Exact file path
-Exact line or block to find
-Exact replacement
-Clear start/end boundaries
-No “find something like…”
-No partial snippets when replacing logic
+Exact block start
+Exact block end
+Full replacement code
+Never:
+Say “find something like…”
+Give partial snippets for full replacements
+Assume file structure
 One step at a time
-Never assume file structure — always use your current file
-🔴 Build discipline
+Stability > new features
+If something breaks → fix immediately before continuing
+🧠 WHAT I LEARNED FROM PREVIOUS CHATS
+Product Direction (LOCKED)
+Tasks drive workflow (not statuses)
+Recommendations = job fields, NOT applications
+Staff must have full flexibility
+Client participation is required
+Architecture Direction
+UI should NOT mutate state as source of truth
+Backend (Base44) is source of truth
+Use adapter layer (clientPortalApi.js)
+Avoid direct Base44 calls in UI where possible
+System Rules
+Tasks can be:
+client-specific
+recommendation-linked (optional)
+general (future)
+🧠 WHAT I LEARNED IN THIS CHAT
+Root Issues Identified
+❌ Task not showing in client portal → filter mismatch (client_ids vs assigned_to_client)
+❌ Save not working → missing clientId prop
+❌ UI not updating → missing refresh/invalidation
+❌ No visibility of client completion → added client_completed_at
+❌ No archive system → added is_archived
+❌ No delete/archive UI → built
+❌ Header UI corruption → JSX broken (current issue)
+✅ WHAT HAS BEEN ACCOMPLISHED
+🔧 TASK SYSTEM (CORE COMPLETE)
+Data Layer
+Task schema expanded:
+client_ids
+client_completed_at
+is_archived
+API functions:
+createTask
+updateTask
+archiveTask
+deleteTask
+getTasks
+getClientVisibleTasks
+getArchivedTasks
+Staff Side
+Create task in client file ✅
+Edit task ✅
+Complete task ✅
+Archive task ✅
+Delete task ✅
+See “client completed” indicator ✅
+Client Side
+See assigned tasks ✅
+Complete task ✅
+Updates persist to backend ✅
+System Behavior
+Archived tasks hidden by default ✅
+Completed tasks separated ✅
+Client → staff loop working ✅
+❌ CURRENT ISSUE (WHY YOU’RE RESETTING)
+🚨 React Error #185
+5
+Cause:
 
-Always decide:
+Broken JSX in TasksSection.jsx
 
-✅ Fix Now
-📋 Backlog
+Specifically:
 
-Do NOT mix them
-Do NOT derail current phase
+<Button
+  type="buttonv>
 
-🔴 Product direction (locked)
+👉 This corrupted the header block and broke rendering
 
-Recommendations are:
+📋 WHAT STILL NEEDS TO BE DONE
+🟢 Phase 5 — Continue (CURRENT)
+Fix Now
+Repair header JSX (FIRST STEP in new chat)
+Confirm toggle works
+Confirm archive visibility toggle works
+Then Build Next (in order)
+1. Task Activity (lightweight)
+Show:
+Created
+Completed
+Client completed timestamp
+2. Client Task Completion UX
+Add “Complete Task” UI improvement
+Optional notes on completion
+3. Staff Awareness (NOT notifications yet)
+Visual indicators only
+No alerts yet
+🔵 BLOCKED (DO NOT TOUCH YET)
+O*NET integration
+Recommendation accuracy
+AI job search
+🟡 BACKLOG (DO NOT BUILD NOW)
+Global task creation (multi-client)
+Notification system
+Task templates
+Workflow enforcement
+🚀 NEW CHAT — EXACT START INSTRUCTION
 
-❌ NOT job applications
-✅ Job fields / career paths
+Paste this as your first message:
 
-System must:
+START HERE
 
-Guide workflow
-NOT enforce rigid transitions
+We are continuing the CRM Task System.
 
-Staff must:
+Current issue:
+React error #185 due to broken JSX in:
 
-Have full flexibility
-🔴 Phase 5 direction (important)
-❌ No rigid workflow enforcement
-✅ Task-driven client participation (later phase)
-Client interaction drives system state
-🧠 WHAT WAS LEARNED IN THIS CHAT
-🔴 Key technical lessons
-UI must never override data
+src/components/client-detail/TasksSection.jsx
 
-Status must come ONLY from:
+I need you to:
 
-job.status
-Any fallback logic breaks system behavior
-Batch vs Recommendation state
-Jobs have status ✅
-Batch has status ❌ (was not updating)
-These must be kept in sync
-Client → Staff data flow
-Client response must:
-Save in batch JSON
-Flow into staff mapping
-Render in UI
-Duplicate issues source
-Not just batch duplication
-Also UI mapping + merge behavior
-Refresh vs real-time
-Polling added (10s)
-Works for now
-No need for real-time infra yet
-🔴 Strategic decision (VERY IMPORTANT)
+Fix the header block
+Provide:
+exact start line
+exact end line
+full replacement
+Do NOT give partial code
+Do NOT assume anything
 
-👉 Stop deep testing until O*NET is integrated
+Goal:
+Restore this block safely:
 
-Reason:
+Task title
+Show Archived toggle
+Add button
 
-Current recommendations = partial / simulated
-Status workflows depend on real recommendation structure
-Testing now = false positives / wasted effort
-✅ WHAT WAS ACCOMPLISHED (THIS CHAT)
-🔧 Client Portal
-✔ Shared recommendations display
-✔ Removed duplicates (latest batch + dedupe)
-✔ Fixed tab reset issue
-✔ Client buttons:
-Interested
-Not Interested
-✔ Immediate UI feedback (button state)
-✔ Query invalidation instead of reload
-🔧 Data Layer
-✔ Added:
-client_response
-client_responded_at
-✔ Status auto-update:
-Interested → job_search_target
-Not Interested → archived
-🔧 Staff Side
-✔ Client response now visible in recommendation card
-✔ Fixed missing mapping (critical)
-✔ Auto-refresh (polling every 10s)
-🔧 Bugs Fixed
-✔ Duplicate recommendations
-✔ Tab switching on click
-✔ Missing client response display
-✔ Broken useEffect (syntax error)
-✔ UI overriding status logic
-⚠️ CURRENT STATE (IMPORTANT)
-Working
-Recommendation system stable
-Client → staff interaction loop works
-Status updates working at job level
-UI reflects client interaction
-No duplicates
-No forced refresh
-Not fully validated (INTENTIONAL)
-Batch status updates (paused)
-Full workflow logic validation
-Job search target pipeline
-AI job search integration
+After fix:
+We will test archive toggle behavior.
 
-👉 These are waiting on O*NET
+🎯 FINAL STATE AFTER FIX
 
-📋 WHAT STILL NEEDS TO BE DONE (BY PHASE)
-🔵 Phase: O*NET Integration (BLOCKER)
-Interest Profiler (RIASEC) live
-O*NET job recommendations
-MyNextMove integration
-Replace fallback recommendation logic
-🟣 Phase: Client Portal
-Ensure:
-Shared jobs reliably appear
-Documents (client/both visibility) FIX
-Add:
-O*NET job detail view (later)
-🟡 Phase: AI Job Search
+Once fixed, you will have:
 
-Use:
+Fully working task system
+Archive + delete + toggle
+Client ↔ staff loop stable
 
-status === "job_search_target"
-Generate real job opportunities
-Connect to O*NET occupation data
-🟢 Phase: Task System (CORE FEATURE)
-Client Task Assignment System
-Replace workflow reliance on statuses
-Tasks drive engagement
-🟠 Phase: Market Research
-When job_search_target:
-Generate ~20 businesses
-Not job postings
-Outreach workflow
-🔴 Phase: Data Quality
-Resume parsing reliability
-Missing data detection
-Reprocessing tools
-🧱 UPDATED HANDOFF DOC (DROP INTO NEXT CHAT)
-Continue CRM build.
+Then we move to polish, not structure.
+
+When you start the new chat, I’ll take it from there cleanly.
