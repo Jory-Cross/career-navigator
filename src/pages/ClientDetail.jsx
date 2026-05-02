@@ -171,21 +171,21 @@ const handleDocumentsChanged = useCallback(() => {
   });
 
     const { data: tasks = [] } = useQuery({
-    queryKey: queryKeys.tasks(clientId),
-    queryFn: async () => {
-      const activeTasks = await getTasks(clientId);
-      const archivedTasks = await getArchivedTasks(clientId);
+  queryKey: queryKeys.tasks(clientId),
+  queryFn: async () => {
+    const activeTasks = await getTasks(clientId);
+    const archivedTasks = await getArchivedTasks(clientId);
 
-      return [
-        ...(Array.isArray(activeTasks) ? activeTasks : []),
-        ...(Array.isArray(archivedTasks) ? archivedTasks : []),
-      ];
-    },
-    enabled: shouldLoadTasks,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+    return [
+      ...(Array.isArray(activeTasks) ? activeTasks : []),
+      ...(Array.isArray(archivedTasks) ? archivedTasks : []),
+    ];
+  },
+  enabled: shouldLoadTasks,
+  staleTime: 10 * 1000,
+  refetchInterval: 10 * 1000,
+  refetchOnWindowFocus: true,
+});
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: queryKeys.timeEntries(clientId),
