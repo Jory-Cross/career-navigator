@@ -182,12 +182,18 @@ const handleDocumentsChanged = useCallback(() => {
     const activeTasks = await getTasks(clientId);
     const archivedTasks = await getArchivedTasks(clientId);
 
+   const { data: tasks = [] } = useQuery({
+  queryKey: queryKeys.tasks(clientId),
+  queryFn: async () => {
+    const activeTasks = await getTasks(clientId);
+    const archivedTasks = await getArchivedTasks(clientId);
+
     return [
       ...(Array.isArray(activeTasks) ? activeTasks : []),
       ...(Array.isArray(archivedTasks) ? archivedTasks : []),
     ];
   },
-  enabled: shouldLoadTasks,
+  enabled: !!clientId, // 🔴 ALWAYS RUN
   staleTime: 10 * 1000,
   refetchInterval: 10 * 1000,
   refetchOnWindowFocus: true,
