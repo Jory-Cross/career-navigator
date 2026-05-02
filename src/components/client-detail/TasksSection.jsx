@@ -327,7 +327,15 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
                     className="cursor-pointer border-slate-100 p-3 opacity-70"
                     onClick={() => openEdit(task)}
                   >
-                    <div className="text-sm text-slate-600">{task.title}</div>
+                   <div className="flex items-center gap-2 text-sm text-slate-600">
+  <span>{task.title}</span>
+
+  {task.client_completed_at && (
+    <span className="text-xs text-purple-600">
+      (client completed)
+    </span>
+  )}
+</div>
                   </Card>
                 ))}
               </div>
