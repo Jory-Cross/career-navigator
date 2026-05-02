@@ -356,11 +356,31 @@ const pending = useMemo(
                       ) : null}
                     </div>
 
-                    {task.description ? (
+                                        {task.description ? (
                       <p className="whitespace-pre-wrap text-sm text-slate-600">
                         {task.description}
                       </p>
                     ) : null}
+
+                    <div className="mt-3 space-y-1 text-xs text-slate-400">
+                      {formatDateTime(task.created_date || task.created_at) && (
+                        <div>
+                          Created: {formatDateTime(task.created_date || task.created_at)}
+                        </div>
+                      )}
+
+                      {formatDateTime(task.updated_date || task.updated_at) && (
+                        <div>
+                          Last updated: {formatDateTime(task.updated_date || task.updated_at)}
+                        </div>
+                      )}
+
+                      {formatDateTime(task.client_completed_at) && (
+                        <div className="font-medium text-purple-600">
+                          Client completed: {formatDateTime(task.client_completed_at)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
