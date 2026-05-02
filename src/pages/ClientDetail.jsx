@@ -176,12 +176,6 @@ const handleDocumentsChanged = useCallback(() => {
     refetchOnWindowFocus: false,
   });
 
-    const { data: tasks = [] } = useQuery({
-  queryKey: queryKeys.tasks(clientId),
-  queryFn: async () => {
-    const activeTasks = await getTasks(clientId);
-    const archivedTasks = await getArchivedTasks(clientId);
-
    const { data: tasks = [] } = useQuery({
     queryKey: queryKeys.tasks(clientId),
     queryFn: async () => {
