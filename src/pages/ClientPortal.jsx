@@ -357,7 +357,17 @@ const pendingRecommendationCount = useMemo(() => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
                <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+         <TabsTrigger value="recommendations">
+  <div className="flex items-center gap-2">
+    <span>Recommendations</span>
+
+    {pendingRecommendationCount > 0 && (
+      <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+        {pendingRecommendationCount}
+      </span>
+    )}
+  </div>
+</TabsTrigger>
           <TabsTrigger value="tasks">
   <div className="flex items-center gap-2">
     <span>Tasks</span>
