@@ -418,7 +418,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("tasks")}
+        onClick={() => handleTabChange("tasks")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "tasks"
