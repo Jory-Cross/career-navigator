@@ -86,12 +86,6 @@ export default function ClientDetail() {
   const queryClient = useQueryClient();
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
-const [user, setUser] = useState(null);
-  useEffect(() => {
-    if (defaultTab && !activeTab) {
-      setActiveTab(defaultTab);
-    }
-  }, [defaultTab, activeTab]);
 
   const handleTabChange = useCallback((nextTab) => {
     setActiveTab(nextTab);
