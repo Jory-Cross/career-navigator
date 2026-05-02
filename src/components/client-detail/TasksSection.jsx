@@ -256,16 +256,29 @@ const pending = useMemo(
     }
   };
   
-  return (
+   return (
     <>
-  <div className="mb-4 flex items-center justify-between gap-3">
-  <div className="flex items-center gap-3">
-    <h3 className="text-lg font-semibold text-slate-900">
-      Tasks ({pending.length} active)
-    </h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-slate-900">
+            Tasks ({pending.length} active)
+          </h3>
 
-    <Button
-      type="buttonv>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowArchived((prev) => !prev)}
+          >
+            {showArchived ? "Hide Archived" : "Show Archived"}
+          </Button>
+        </div>
+
+        <Button type="button" onClick={openNew}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Task
+        </Button>
+      </div>
 
       {pending.length === 0 && completed.length === 0 ? (
         <Card className="border-slate-100 p-8 text-center text-sm text-slate-400">
@@ -307,21 +320,21 @@ const pending = useMemo(
                       ) : null}
 
                       {task.status ? (
-  <Badge
-    className={cn(
-      "border-0",
-      statusColors[task.status] || "bg-slate-100 text-slate-600"
-    )}
-  >
-    {task.status.replace(/_/g, " ")}
-  </Badge>
-) : null}
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            statusColors[task.status] || "bg-slate-100 text-slate-600"
+                          )}
+                        >
+                          {task.status.replace(/_/g, " ")}
+                        </Badge>
+                      ) : null}
 
-{task.client_completed_at && (
-  <Badge className="border-0 bg-purple-100 text-purple-700">
-    client completed
-  </Badge>
-)}
+                      {task.client_completed_at && (
+                        <Badge className="border-0 bg-purple-100 text-purple-700">
+                          client completed
+                        </Badge>
+                      )}
 
                       {task.due_date && safeDate(task.due_date) ? (
                         <span className="text-xs text-slate-500">
@@ -361,15 +374,15 @@ const pending = useMemo(
                     className="cursor-pointer border-slate-100 p-3 opacity-70"
                     onClick={() => openEdit(task)}
                   >
-                   <div className="flex items-center gap-2 text-sm text-slate-600">
-  <span>{task.title}</span>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span>{task.title}</span>
 
-  {task.client_completed_at && (
-    <span className="text-xs text-purple-600">
-      (client completed)
-    </span>
-  )}
-</div>
+                      {task.client_completed_at && (
+                        <span className="text-xs text-purple-600">
+                          (client completed)
+                        </span>
+                      )}
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -377,8 +390,6 @@ const pending = useMemo(
           )}
         </>
       )}
-
-      <Dialog open={showNew} onOpenChange={(open) => (!open ? closeDialog() : null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editId ? "Edit Task" : "New Task"}</DialogTitle>
