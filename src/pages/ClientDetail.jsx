@@ -163,7 +163,6 @@ const handleDocumentsChanged = useCallback(() => {
   const isClientUser = user?.role === "client";
 
   const shouldLoadApplications = !!clientId && activeTab === "applications";
-  const shouldLoadTasks = !!clientId && activeTab === "tasks";
   const shouldLoadTime =
     !!clientId && (activeTab === "time" || activeTab === "job_supports");
 
