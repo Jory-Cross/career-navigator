@@ -145,16 +145,16 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
-  const {
-  data: tasks = [],
-  isLoading: tasksLoading,
-  error: tasksError,
-} = useQuery({
-  queryKey: queryKeys.tasks(client?.id),
-  queryFn: () => getClientVisibleTasks(client.id),
-  enabled: !!client?.id && activeTab === "tasks",
-  staleTime: 60 * 1000,
-});
+    const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    error: tasksError,
+  } = useQuery({
+    queryKey: queryKeys.tasks(client?.id),
+    queryFn: () => getClientVisibleTasks(client.id),
+    enabled: !!client?.id,
+    staleTime: 60 * 1000,
+  });
   const activeTaskCount = useMemo(() => {
   if (!Array.isArray(tasks)) return 0;
 
