@@ -400,14 +400,36 @@ const pending = useMemo(
                     className="cursor-pointer border-slate-100 p-3 opacity-70"
                     onClick={() => openEdit(task)}
                   >
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <span>{task.title}</span>
+                                       <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span>{task.title}</span>
 
-                      {task.client_completed_at && (
-                        <span className="text-xs text-purple-600">
-                          (client completed)
-                        </span>
-                      )}
+                        {task.client_completed_at && (
+                          <span className="text-xs text-purple-600">
+                            (client completed)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1 text-xs text-slate-400">
+                        {formatDateTime(task.created_date || task.created_at) && (
+                          <div>
+                            Created: {formatDateTime(task.created_date || task.created_at)}
+                          </div>
+                        )}
+
+                        {formatDateTime(task.updated_date || task.updated_at) && (
+                          <div>
+                            Last updated: {formatDateTime(task.updated_date || task.updated_at)}
+                          </div>
+                        )}
+
+                        {formatDateTime(task.client_completed_at) && (
+                          <div className="font-medium text-purple-600">
+                            Client completed: {formatDateTime(task.client_completed_at)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 ))}
