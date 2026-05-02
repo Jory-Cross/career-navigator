@@ -200,6 +200,7 @@ function buildOnboardingStepPayload(payload = {}) {
     step_name: asString(payload.step_name),
     step_type: asString(payload.step_type, "custom"),
     status: asString(payload.status, "pending"),
+    is_archived: asBoolean(payload.is_archived, false),
     order: typeof payload.order === "number" ? payload.order : Number(payload.order) || 0,
     notes: asString(payload.notes),
     completed_date: payload.completed_date ?? null,
