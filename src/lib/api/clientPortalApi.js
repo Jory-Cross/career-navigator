@@ -824,7 +824,21 @@ export async function completeTask({ id, completedByClient = false }) {
   return mapTask(raw);
 }
 
+export async function archiveTask(id) {
+  if (!id) throw new Error("Task id is required");
+
+  const existing = await base44.entities.Task.get(id);
+
+  const raw = await base44.entities.Task.update(id, {
+    ...existing,
+    is_archived: true,
+  });
+
+  return mapTask(raw);
+}
+
 export async function deleteTask(id) {
+  if (!id) throw new Error("Task id is required");
   return await base44.entities.Task.delete(id);
 }
 
