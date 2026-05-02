@@ -222,6 +222,36 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
     u("checklist", current);
   };
 
+  const handleArchive = async () => {
+    if (!editId) return;
+
+    try {
+      await archiveTask(editId);
+      toast.success("Task archived");
+      closeDialog();
+      onRefresh?.();
+    } catch (err) {
+      console.error("Archive failed", err);
+      toast.error("Failed to archive task");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editId) return;
+
+    if (!confirm("Delete this task permanently?")) return;
+
+    try {
+      await deleteTask(editId);
+      toast.success("Task deleted");
+      closeDialog();
+      onRefresh?.();
+    } catch (err) {
+      console.error("Delete failed", err);
+      toast.error("Failed to delete task");
+    }
+  };
+  
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-3">
