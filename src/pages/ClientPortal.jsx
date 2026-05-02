@@ -184,6 +184,14 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
+const pendingRecommendationCount = useMemo(() => {
+  if (!Array.isArray(sharedRecommendations)) return 0;
+
+  return sharedRecommendations.filter(
+    (rec) => !rec.client_response
+  ).length;
+}, [sharedRecommendations]);
+  
   /**
    * Helpers
    */
