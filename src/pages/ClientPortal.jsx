@@ -357,6 +357,12 @@ const pendingRecommendationCount = useMemo(() => {
         </p>
       </div>
 
+{(activeTaskCount > 0 || pendingRecommendationCount > 0) && (
+  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+    You have items that need your attention.
+  </div>
+)}
+      
       <Tabs value={activeTab} onValueChange={setActiveTab}>
                <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
