@@ -295,28 +295,31 @@ const pendingRecommendationCount = useMemo(() => {
   }, [invalidateTasks, isSavingTask, selectedTask]);
 
   const handleCompleteTask = useCallback(
-    async (id) => {
-      if (!id || isSavingTask) return;
+  async (id) => {
+    if (!id || isSavingTask) return;
 
-      try {
-        setIsSavingTask(true);
+    const note = prompt("Add a note (optional):") || "";
 
-        await completeTask({
-          id,
-          completedByClient: true,
-        });
+    try {
+      setIsSavingTask(true);
 
-        await invalidateTasks();
-        setSelectedTask(null);
-      } catch (error) {
-        console.error("Complete task failed:", error);
-        alert("Failed to complete task.");
-      } finally {
-        setIsSavingTask(false);
-      }
-    },
-    [invalidateTasks, isSavingTask]
-  );
+      await completeTask({
+        id,
+        completedByClient: true,
+        completion_note: note,
+      });
+
+      await invalidateTasks();
+      setSelectedTask(null);
+    } catch (error) {
+      console.error("Complete task failed:", error);
+      alert("Failed to complete task.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  },
+  [invalidateTasks, isSavingTask]
+);
   
   const handleDeleteTask = useCallback(
     async (id) => {
