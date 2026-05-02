@@ -258,16 +258,14 @@ const pending = useMemo(
   
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-3">
-  <h3 className="text-lg font-semibold text-slate-900">
-    Tasks ({pending.length} active)
-  </h3>
+  <div className="mb-4 flex items-center justify-between gap-3">
+  <div className="flex items-center gap-3">
+    <h3 className="text-lg font-semibold text-slate-900">
+      Tasks ({pending.length} active)
+    </h3>
 
-  <Button onClick={openNew}>
-    <Plus className="mr-2 h-4 w-4" />
-    Add
-  </Button>
-</div>
+    <Button
+      type="buttonv>
 
       {pending.length === 0 && completed.length === 0 ? (
         <Card className="border-slate-100 p-8 text-center text-sm text-slate-400">
