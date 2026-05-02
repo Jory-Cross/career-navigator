@@ -77,7 +77,7 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState(null);
   const [organizingNotes, setOrganizingNotes] = useState(false);
-
+  const [showArchived, setShowArchived] = useState(false);
   const pending = useMemo(
     () => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
     [tasks]
