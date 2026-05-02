@@ -750,14 +750,20 @@ export async function getTasks(clientId) {
 
   try {
     const rows = await base44.entities.Task.filter({ client_ids: clientId });
-    return sortByNewest(asArray(rows).map(mapTask).filter(Boolean));
+
+    return sortByNewest(
+      asArray(rows)
+        .map(mapTask)
+        .filter((t) => t && !t.is_archived)
+    );
   } catch {
     const all = await base44.entities.Task.list();
+
     return sortByNewest(
       asArray(all)
         .filter((t) => asArray(t.client_ids).includes(clientId))
         .map(mapTask)
-        .filter(Boolean)
+        .filter((t) => t && !t.is_archived)
     );
   }
 }
