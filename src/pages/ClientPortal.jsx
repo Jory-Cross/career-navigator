@@ -350,7 +350,17 @@ export default function ClientPortal() {
                <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="tasks">
+  <div className="flex items-center gap-2">
+    <span>Tasks</span>
+
+    {activeTaskCount > 0 && (
+      <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+        {activeTaskCount}
+      </span>
+    )}
+  </div>
+</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
