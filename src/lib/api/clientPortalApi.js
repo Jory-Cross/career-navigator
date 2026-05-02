@@ -184,6 +184,7 @@ function mapOnboardingStep(raw) {
     step_name: asString(raw.step_name),
     step_type: asString(raw.step_type, "custom"),
     status: asString(raw.status, "pending"),
+    is_archived: asBoolean(raw.is_archived, false),
     order: typeof raw.order === "number" ? raw.order : Number(raw.order) || 0,
     notes: asString(raw.notes),
     completed_date: raw.completed_date ?? null,
