@@ -145,7 +145,7 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
-    const {
+ const {
   data: tasks = [],
   isLoading: tasksLoading,
   error: tasksError,
@@ -153,8 +153,10 @@ export default function ClientPortal() {
   queryKey: queryKeys.tasks(client?.id),
   queryFn: () => getClientVisibleTasks(client.id),
   enabled: !!client?.id,
-  staleTime: 60 * 1000,
+  staleTime: 10 * 1000,
   refetchOnMount: "always",
+  refetchOnWindowFocus: true,
+  refetchInterval: 10 * 1000,
 });
   const activeTaskCount = useMemo(() => {
   if (!Array.isArray(tasks)) return 0;
