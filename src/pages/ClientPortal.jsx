@@ -174,7 +174,6 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
-      const {
   const {
   data: sharedRecommendations = [],
   isLoading: sharedRecommendationsLoading,
