@@ -795,6 +795,19 @@ export async function getStaffTasks(clientId) {
   return sortByNewest(asArray(tasks));
 }
 
+export async function getArchivedTasks(clientId) {
+  if (!clientId) return [];
+
+  const all = await base44.entities.Task.list();
+
+  return sortByNewest(
+    asArray(all)
+      .filter((task) => asArray(task.client_ids).includes(clientId))
+      .map(mapTask)
+      .filter((task) => task && task.is_archived)
+  );
+}
+
 export async function createTask(payload) {
   const raw = await base44.entities.Task.create(buildTaskPayload(payload));
   return mapTask(raw);
