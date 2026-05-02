@@ -155,6 +155,13 @@ export default function ClientPortal() {
   enabled: !!client?.id && activeTab === "tasks",
   staleTime: 60 * 1000,
 });
+  const activeTaskCount = useMemo(() => {
+  if (!Array.isArray(tasks)) return 0;
+
+  return tasks.filter(
+    (t) => t.status !== "completed" && t.status !== "cancelled"
+  ).length;
+}, [tasks]);
     const {
     data: documents = [],
     isLoading: documentsLoading,
