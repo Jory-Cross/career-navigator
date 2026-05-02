@@ -369,6 +369,7 @@ function buildTaskPayload(payload = {}) {
     description: asString(payload.description),
     notes: asString(payload.notes),
     status: asString(payload.status, "pending"),
+    is_archived: asBoolean(payload.is_archived, false),
     priority: asString(payload.priority, "medium"),
     category: asString(payload.category, "follow_up"),
     due_date: payload.due_date ?? null,
