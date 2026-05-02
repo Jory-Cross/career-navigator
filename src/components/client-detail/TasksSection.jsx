@@ -33,6 +33,8 @@ import { cn } from "@/lib/utils";
 import {
   createTask,
   updateTask,
+  archiveTask,
+  deleteTask,
   organizeTaskNotes,
 } from "@/lib/api/clientPortalApi";
 
