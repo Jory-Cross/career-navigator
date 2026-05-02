@@ -87,7 +87,25 @@ export default function ClientDetail() {
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
 const [user, setUser] = useState(null);
-const [activeTab, setActiveTab] = useState(null);
+  useEffect(() => {
+    if (defaultTab && !activeTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, activeTab]);
+
+  const handleTabChange = useCallback((nextTab) => {
+    setActiveTab(nextTab);
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("id", clientId);
+    params.set("tab", nextTab);
+
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}?${params.toString()}`
+    );
+  }, [clientId]);
 const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
 
 const handleDocumentsChanged = useCallback(() => {
