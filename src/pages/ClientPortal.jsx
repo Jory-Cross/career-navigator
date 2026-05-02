@@ -175,6 +175,7 @@ export default function ClientPortal() {
   });
 
       const {
+  const {
   data: sharedRecommendations = [],
   isLoading: sharedRecommendationsLoading,
   error: sharedRecommendationsError,
@@ -185,12 +186,6 @@ export default function ClientPortal() {
   staleTime: 60 * 1000,
   refetchOnMount: "always",
 });
-    queryKey: ["clientPortal", "sharedRecommendations", client?.id],
-    queryFn: () => getSharedRecommendations(client.id),
-    enabled: !!client?.id,
-    staleTime: 60 * 1000,
-  });
-
 const pendingRecommendationCount = useMemo(() => {
   if (!Array.isArray(sharedRecommendations)) return 0;
 
