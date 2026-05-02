@@ -78,15 +78,19 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   const [editId, setEditId] = useState(null);
   const [organizingNotes, setOrganizingNotes] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const pending = useMemo(
-    () => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
-    [tasks]
-  );
+  const visibleTasks = useMemo(() => {
+  return showArchived ? tasks : tasks.filter((t) => !t.is_archived);
+}, [tasks, showArchived]);
+
+const pending = useMemo(
+  () => visibleTasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
+  [visibleTasks]
+);
 
   const completed = useMemo(
-    () => tasks.filter((t) => t.status === "completed"),
-    [tasks]
-  );
+  () => visibleTasks.filter((t) => t.status === "completed"),
+  [visibleTasks]
+);
 
   const u = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
