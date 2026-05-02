@@ -87,6 +87,12 @@ export default function ClientDetail() {
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
 
+const [user, setUser] = useState(null);
+const [activeTab, setActiveTab] = useState(() => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("tab");
+});
+  
   const handleTabChange = useCallback((nextTab) => {
     setActiveTab(nextTab);
 
