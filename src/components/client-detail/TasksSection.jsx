@@ -273,15 +273,21 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
                       ) : null}
 
                       {task.status ? (
-                        <Badge
-                          className={cn(
-                            "border-0",
-                            statusColors[task.status] || "bg-slate-100 text-slate-600"
-                          )}
-                        >
-                          {task.status.replace(/_/g, " ")}
-                        </Badge>
-                      ) : null}
+  <Badge
+    className={cn(
+      "border-0",
+      statusColors[task.status] || "bg-slate-100 text-slate-600"
+    )}
+  >
+    {task.status.replace(/_/g, " ")}
+  </Badge>
+) : null}
+
+{task.client_completed_at && (
+  <Badge className="border-0 bg-purple-100 text-purple-700">
+    client completed
+  </Badge>
+)}
 
                       {task.due_date && safeDate(task.due_date) ? (
                         <span className="text-xs text-slate-500">
