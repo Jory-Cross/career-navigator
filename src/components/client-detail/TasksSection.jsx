@@ -528,15 +528,6 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
               ) : null}
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
