@@ -173,14 +173,14 @@ export default function ClientPortal() {
     staleTime: 60 * 1000,
   });
 
-  const {
+      const {
     data: sharedRecommendations = [],
     isLoading: sharedRecommendationsLoading,
     error: sharedRecommendationsError,
   } = useQuery({
     queryKey: ["clientPortal", "sharedRecommendations", client?.id],
     queryFn: () => getSharedRecommendations(client.id),
-    enabled: !!client?.id && activeTab === "recommendations",
+    enabled: !!client?.id,
     staleTime: 60 * 1000,
   });
 
