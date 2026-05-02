@@ -272,7 +272,7 @@ const handleDocumentsChanged = useCallback(() => {
   {!isClientUser && !isEmployed && (
   <button
     type="button"
-    onClick={() => setActiveTab("client_details")}
+     onClick={() => handleTabChange("client_details")}
     className={cn(
       "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
       activeTab === "client_details"
@@ -289,7 +289,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isClientUser && !isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("onboarding")}
+        onClick={() => handleTabChange("onboarding")}
        className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "onboarding"
@@ -307,7 +307,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isDspd && !isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("applications")}
+        onClick={() => handleTabChange("applications")}
         className={cn(
         "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "applications"
@@ -328,7 +328,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isDspd && !isEmployed && !isClientUser && (
       <button
         type="button"
-        onClick={() => setActiveTab("ai_job_search")}
+        onClick={() => handleTabChange("ai_job_search")}
        className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "ai_job_search"
@@ -346,7 +346,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isDspd && !isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("interview_prep")}
+        onClick={() => handleTabChange("interview_prep")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "interview_prep"
@@ -364,7 +364,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isDspd && !isEmployed && !isClientUser && (
       <button
         type="button"
-        onClick={() => setActiveTab("assessments")}
+        onClick={() => handleTabChange("assessments")}
        className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "assessments"
@@ -382,7 +382,7 @@ const handleDocumentsChanged = useCallback(() => {
     {client.client_type === "pre_ets" && !isClientUser && (
       <button
         type="button"
-        onClick={() => setActiveTab("wble_forms")}
+        onClick={() => handleTabChange("wble_forms")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "wble_forms"
@@ -400,7 +400,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isClientUser && (
       <button
         type="button"
-        onClick={() => setActiveTab("documents")}
+        onClick={() => handleTabChange("documents")}
        className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "documents"
@@ -439,7 +439,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isClientUser && isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("job_supports")}
+        onClick={() => handleTabChange("job_supports")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "job_supports"
@@ -460,7 +460,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isClientUser && !isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("time")}
+        onClick={() => handleTabChange("time")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "time"
@@ -480,7 +480,7 @@ const handleDocumentsChanged = useCallback(() => {
 
     <button
       type="button"
-      onClick={() => setActiveTab("activity")}
+      onClick={() => handleTabChange("activity")}
       className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
   activeTab === "activity"
@@ -497,7 +497,7 @@ const handleDocumentsChanged = useCallback(() => {
     {!isClientUser && !isEmployed && (
       <button
         type="button"
-        onClick={() => setActiveTab("assistant")}
+        onClick={() => handleTabChange("assistant")}
         className={cn(
   "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
  activeTab === "assistant"
