@@ -390,6 +390,7 @@ const pending = useMemo(
           )}
         </>
       )}
+              <Dialog open={showNew} onOpenChange={(open) => (!open ? closeDialog() : null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editId ? "Edit Task" : "New Task"}</DialogTitle>
@@ -427,13 +428,11 @@ const pending = useMemo(
                 value={form.description || ""}
                 onChange={(e) => u("description", e.target.value)}
                 rows={3}
-                placeholder="Jot down raw thoughts — AI can organize them for you..."
               />
             </div>
 
-                       <div className="space-y-2">
+            <div className="space-y-2">
               <Label>Assigned Client</Label>
-
               <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
                 This task will be assigned to this client.
               </div>
@@ -459,27 +458,6 @@ const pending = useMemo(
               </div>
 
               <div className="space-y-1">
-                <Label>Category</Label>
-                <Select
-                  value={form.category || "follow_up"}
-                  onValueChange={(v) => u("category", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="follow_up">Follow Up</SelectItem>
-                    <SelectItem value="resume">Resume</SelectItem>
-                    <SelectItem value="application">Application</SelectItem>
-                    <SelectItem value="interview_prep">Interview Prep</SelectItem>
-                    <SelectItem value="networking">Networking</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
                 <Label>Status</Label>
                 <Select
                   value={form.status || "pending"}
@@ -496,51 +474,8 @@ const pending = useMemo(
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-1">
-                <Label>Due Date</Label>
-                <Input
-                  type="date"
-                  value={form.due_date || ""}
-                  onChange={(e) => u("due_date", e.target.value)}
-                />
-              </div>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Todo Checklist</Label>
-                <Button type="button" size="sm" variant="ghost" onClick={addChecklistItem}>
-                  <Plus className="mr-1 h-3 w-3" />
-                  Add Item
-                </Button>
-              </div>
-
-              {(form.checklist || []).length > 0 ? (
-                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-                  {form.checklist.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <Input
-                        placeholder="Checklist item..."
-                        value={item.text || ""}
-                        onChange={(e) => updateChecklistItem(idx, e.target.value)}
-                        className="text-sm"
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeChecklistItem(idx)}
-                        className="h-8 w-8 shrink-0"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-                  </div>
+          </div>
 
           <DialogFooter className="flex justify-between">
             <div className="flex gap-2">
@@ -549,7 +484,6 @@ const pending = useMemo(
                   <Button type="button" variant="outline" onClick={handleArchive}>
                     Archive
                   </Button>
-
                   <Button type="button" variant="destructive" onClick={handleDelete}>
                     Delete
                   </Button>
