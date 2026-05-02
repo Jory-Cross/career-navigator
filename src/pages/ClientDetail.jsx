@@ -267,7 +267,7 @@ const handleDocumentsChanged = useCallback(() => {
 
       
 
-      <Tabs value={activeTab || ""} onValueChange={setActiveTab}>
+   <Tabs value={activeTab || ""} onValueChange={handleTabChange}>
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
   {!isClientUser && !isEmployed && (
   <button
