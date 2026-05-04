@@ -357,10 +357,21 @@ const pending = useMemo(
                     </div>
 
                                         {task.description ? (
-                      <p className="whitespace-pre-wrap text-sm text-slate-600">
-                        {task.description}
-                      </p>
-                    ) : null}
+  <p className="whitespace-pre-wrap text-sm text-slate-600">
+    {task.description}
+  </p>
+) : null}
+
+{task.notes ? (
+  <div className="mt-3 rounded-md border border-purple-200 bg-purple-50 p-3">
+    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
+      Client Note
+    </div>
+    <p className="whitespace-pre-wrap text-sm text-purple-900">
+      {task.notes}
+    </p>
+  </div>
+) : null}
 
                     <div className="mt-3 space-y-1 text-xs text-slate-400">
                       {formatDateTime(task.created_date || task.created_at) && (
