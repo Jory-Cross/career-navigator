@@ -740,14 +740,15 @@ const pendingRecommendationCount = useMemo(() => {
               <h3 className="text-lg font-medium">Edit Task</h3>
 
               <Input
-                value={selectedTask.title || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-              />
+  value={selectedTask.title || ""}
+  onChange={(e) =>
+    setSelectedTask((prev) => ({
+      ...prev,
+      title: e.target.value,
+    }))
+  }
+  className="h-12 text-base"
+/>
 
               <Textarea
                 value={selectedTask.description || ""}
