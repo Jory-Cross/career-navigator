@@ -769,16 +769,25 @@ const pendingRecommendationCount = useMemo(() => {
                 }
               />
 
-              <Input
-                value={selectedTask.status || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    status: e.target.value,
-                  }))
-                }
-              />
-
+              <Select
+  value={selectedTask.status || "pending"}
+  onValueChange={(value) =>
+    setSelectedTask((prev) => ({
+      ...prev,
+      status: value,
+    }))
+  }
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select status" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="pending">Pending</SelectItem>
+    <SelectItem value="in_progress">In Progress</SelectItem>
+    <SelectItem value="completed">Completed</SelectItem>
+    <SelectItem value="cancelled">Cancelled</SelectItem>
+  </SelectContent>
+</Select>
               <Input
                 type="date"
                 value={selectedTask.due_date || ""}
