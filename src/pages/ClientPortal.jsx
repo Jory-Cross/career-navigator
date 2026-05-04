@@ -733,8 +733,20 @@ const pendingRecommendationCount = useMemo(() => {
       </Dialog>
 
       {/* TASK DETAIL */}
-      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <Dialog
+  open={!!selectedTask}
+  onOpenChange={(open) => {
+    if (!open) {
+      setSelectedTask(null);
+    }
+  }}
+>
+  <DialogContent
+    className="max-h-[85vh] overflow-y-auto"
+    onInteractOutside={(event) => {
+      event.preventDefault();
+    }}
+  >
           {selectedTask && (
             <div className="space-y-3">
               <h3 className="text-lg font-medium">Edit Task</h3>
