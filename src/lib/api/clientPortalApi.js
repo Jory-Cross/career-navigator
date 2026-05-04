@@ -818,15 +818,31 @@ export async function updateTask(id, payload) {
   return mapTask(raw);
 }
 
-export async function completeTask({ id, completedByClient = false }) {
+export async function completeTask({
+  id,
+  completedByClient = false,
+  completion_note = "",
+}) {
   if (!id) throw new Error("Task id is required");
 
   const existing = await base44.entities.Task.get(id);
 
   const now = new Date().toISOString();
+  const cleanNote =
+    typeof completion_note === "string" ? completion_note.trim() : "";
+
+  const existingNotes =
+    typeof existing?.notes === "string" ? existing.notes.trim() : "";
+
+  const nextNotes = cleanNote
+    ? [existingNotes, `Client completion note (${now}):\n${cleanNote}`]
+        .filter(Boolean)
+        .join("\n\n")
+    : existingNotes;
 
   const updatedPayload = {
     ...existing,
+    notes: nextNotes,
     status: "completed",
     completed_at: now,
     client_completed_at: completedByClient ? now : existing.client_completed_at,
