@@ -422,25 +422,36 @@ const pending = useMemo(
                         )}
                       </div>
 
-                      <div className="space-y-1 text-xs text-slate-400">
-                        {formatDateTime(task.created_date || task.created_at) && (
-                          <div>
-                            Created: {formatDateTime(task.created_date || task.created_at)}
-                          </div>
-                        )}
+                      {task.notes ? (
+  <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-3">
+    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
+      Client Note
+    </div>
+    <p className="whitespace-pre-wrap text-sm text-purple-900">
+      {task.notes}
+    </p>
+  </div>
+) : null}
 
-                        {formatDateTime(task.updated_date || task.updated_at) && (
-                          <div>
-                            Last updated: {formatDateTime(task.updated_date || task.updated_at)}
-                          </div>
-                        )}
+<div className="space-y-1 text-xs text-slate-400">
+  {formatDateTime(task.created_date || task.created_at) && (
+    <div>
+      Created: {formatDateTime(task.created_date || task.created_at)}
+    </div>
+  )}
 
-                        {formatDateTime(task.client_completed_at) && (
-                          <div className="font-medium text-purple-600">
-                            Client completed: {formatDateTime(task.client_completed_at)}
-                          </div>
-                        )}
-                      </div>
+  {formatDateTime(task.updated_date || task.updated_at) && (
+    <div>
+      Last updated: {formatDateTime(task.updated_date || task.updated_at)}
+    </div>
+  )}
+
+  {formatDateTime(task.client_completed_at) && (
+    <div className="font-medium text-purple-600">
+      Client completed: {formatDateTime(task.client_completed_at)}
+    </div>
+  )}
+</div>
                     </div>
                   </Card>
                 ))}
