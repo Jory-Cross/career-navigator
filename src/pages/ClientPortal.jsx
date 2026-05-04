@@ -306,14 +306,31 @@ const pendingRecommendationCount = useMemo(() => {
     if (!id || isSavingTask) return;
 
     const note = prompt("Add a note (optional):") || "";
+    const now = new Date().toISOString();
+
+    const existingNotes =
+      typeof selectedTask?.notes === "string" ? selectedTask.notes.trim() : "";
+
+    const cleanNote = typeof note === "string" ? note.trim() : "";
+
+    const nextNotes = cleanNote
+      ? [
+          existingNotes,
+          `Client completion note (${now}):\n${cleanNote}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : existingNotes;
 
     try {
       setIsSavingTask(true);
 
-      await completeTask({
-        id,
-        completedByClient: true,
-        completion_note: note,
+      await updateTask(id, {
+        ...selectedTask,
+        notes: nextNotes,
+        status: "completed",
+        completed_at: now,
+        client_completed_at: now,
       });
 
       await invalidateTasks();
@@ -325,7 +342,7 @@ const pendingRecommendationCount = useMemo(() => {
       setIsSavingTask(false);
     }
   },
-  [invalidateTasks, isSavingTask]
+  [invalidateTasks, isSavingTask, selectedTask]
 );
   
   const handleDeleteTask = useCallback(
