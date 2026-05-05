@@ -406,11 +406,11 @@ const pending = useMemo(
       {completed.slice(0, 5).map((task) => (
         <Card
           key={task.id}
-          className="cursor-pointer border-slate-100 p-3 opacity-70"
+          className="cursor-pointer border-emerald-200 bg-emerald-50 p-3"
           onClick={() => openEdit(task)}
         >
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
+            <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
               <span>{task.title}</span>
 
               {task.client_completed_at && (
@@ -421,7 +421,7 @@ const pending = useMemo(
             </div>
 
             {task.client_notes ? (
-              <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-3">
+              <div className="mt-2 rounded-md border border-emerald-200 bg-white p-3">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
                   Client Note
                 </div>
