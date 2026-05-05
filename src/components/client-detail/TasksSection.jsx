@@ -117,7 +117,6 @@ const pending = useMemo(
       category: task.category || "follow_up",
       client_ids: Array.isArray(task.client_ids) ? task.client_ids : [],
       checklist: Array.isArray(task.checklist) ? task.checklist : [],
-      notes: task.notes || "",
     });
     setEditId(task.id);
     setShowNew(true);
