@@ -900,7 +900,15 @@ setCompletionNote("");
       status: nextStatus,
     };
 
-    setSelectedTask(updatedTask);
+   setSelectedTask(updatedTask);
+
+// auto trigger completion if all steps done
+if (
+  updatedTask.checklist.length > 0 &&
+  updatedTask.checklist.every((step) => step.completed)
+) {
+  setTaskToComplete(updatedTask);
+}
 
     try {
       setIsSavingTask(true);
