@@ -362,13 +362,13 @@ const pending = useMemo(
   </p>
 ) : null}
 
-{task.notes ? (
+{task.client_notes ? (
   <div className="mt-3 rounded-md border border-purple-200 bg-purple-50 p-3">
     <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
       Client Note
     </div>
     <p className="whitespace-pre-wrap text-sm text-purple-900">
-      {task.notes}
+      {task.client_notes}
     </p>
   </div>
 ) : null}
