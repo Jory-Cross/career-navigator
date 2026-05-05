@@ -324,11 +324,25 @@ const pendingRecommendationCount = useMemo(() => {
       client_completed_at: now,
     });
 
-    await invalidateTasks();
+   await invalidateTasks();
 
-    setTaskToComplete(null);
-    setCompletionNote("");
-    setSelectedTask(null);
+// safely get next task AFTER refresh
+const nextTasks = queryClient.getQueryData(
+  queryKeys.tasks(client?.id)
+) || [];
+
+const remainingTasks = nextTasks.filter(
+  (t) => t.id !== taskToComplete.id && t.status !== "completed"
+);
+
+if (remainingTasks.length > 0) {
+  setSelectedTask(remainingTasks[0]);
+} else {
+  setSelectedTask(null);
+}
+
+setTaskToComplete(null);
+setCompletionNote("");
   } catch (error) {
     console.error("Complete task failed:", error);
     alert("Failed to complete task.");
