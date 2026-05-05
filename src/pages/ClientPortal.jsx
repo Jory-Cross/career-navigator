@@ -383,7 +383,21 @@ const pendingRecommendationCount = useMemo(() => {
   </div>
 )}
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+     <Tabs
+  value={activeTab}
+  onValueChange={(value) => {
+    setActiveTab(value);
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", value);
+
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${params.toString()}`
+    );
+  }}
+>
                <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
          <TabsTrigger value="recommendations">
