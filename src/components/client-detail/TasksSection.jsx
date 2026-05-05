@@ -396,87 +396,66 @@ const pending = useMemo(
             ))}
           </div>
 
-          {completed.length > 0 && (
-            <div className="mt-6">
-              <h4 className="mb-3 text-sm font-semibold text-slate-500">
-                Completed ({completed.length})
-              </h4>
-
-              <div className="space-y-2">
-  <Label>Checklist</Label>
-
- <>
-  <div className="space-y-2">
-    <Label>Checklist</Label>
+         {completed.length > 0 && (
+  <div className="mt-6">
+    <h4 className="mb-3 text-sm font-semibold text-slate-500">
+      Completed ({completed.length})
+    </h4>
 
     <div className="space-y-2">
-      {(form.checklist || []).map((item, index) => (
-        <div key={index} className="flex gap-2">
-          <Input
-            value={item.text || ""}
-            placeholder={`Step ${index + 1}`}
-            onChange={(e) => updateChecklistItem(index, e.target.value)}
-          />
+      {completed.slice(0, 5).map((task) => (
+        <Card
+          key={task.id}
+          className="cursor-pointer border-slate-100 p-3 opacity-70"
+          onClick={() => openEdit(task)}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <span>{task.title}</span>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => removeChecklistItem(index)}
-          >
-            Remove
-          </Button>
-        </div>
-      ))}
-
-      <Button type="button" variant="outline" onClick={addChecklistItem}>
-        Add checklist item
-      </Button>
-    </div>
-  </div>
-</>
-<div className="space-y-2">
-  <Label>Assigned Client</Label>
-  <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-    This task will be assigned to this client.
-  </div>
-</div>
-
-                     {task.client_notes ? (
-  <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-3">
-    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
-      Client Note
-    </div>
-    <p className="whitespace-pre-wrap text-sm text-purple-900">
-      {task.client_notes}
-    </p>
-  </div>
-) : null}
-
-<div className="space-y-1 text-xs text-slate-400">
-  {formatDateTime(task.created_date || task.created_at) && (
-    <div>
-      Created: {formatDateTime(task.created_date || task.created_at)}
-    </div>
-  )}
-
-  {formatDateTime(task.updated_date || task.updated_at) && (
-    <div>
-      Last updated: {formatDateTime(task.updated_date || task.updated_at)}
-    </div>
-  )}
-
-  {formatDateTime(task.client_completed_at) && (
-    <div className="font-medium text-purple-600">
-      Client completed: {formatDateTime(task.client_completed_at)}
-    </div>
-  )}
-</div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              {task.client_completed_at && (
+                <span className="text-xs text-purple-600">
+                  (client completed)
+                </span>
+              )}
             </div>
-          )}
+
+            {task.client_notes ? (
+              <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
+                  Client Note
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-purple-900">
+                  {task.client_notes}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="space-y-1 text-xs text-slate-400">
+              {formatDateTime(task.created_date || task.created_at) && (
+                <div>
+                  Created: {formatDateTime(task.created_date || task.created_at)}
+                </div>
+              )}
+
+              {formatDateTime(task.updated_date || task.updated_at) && (
+                <div>
+                  Last updated: {formatDateTime(task.updated_date || task.updated_at)}
+                </div>
+              )}
+
+              {formatDateTime(task.client_completed_at) && (
+                <div className="font-medium text-purple-600">
+                  Client completed: {formatDateTime(task.client_completed_at)}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+)}
         </>
       )}
               <Dialog open={showNew} onOpenChange={(open) => (!open ? closeDialog() : null)}>
