@@ -45,6 +45,11 @@ function getClientIdFromUrl() {
   return params.get("id");
 }
 
+function getTabFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("tab") || "applications";
+}
+
 function emptyApplicationForm() {
   return {
     company: "",
