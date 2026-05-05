@@ -838,11 +838,14 @@ const pendingRecommendationCount = useMemo(() => {
   nextStatus = "in_progress"; // stays in_progress until user clicks complete
 }
 
+const allComplete = completedCount === updated.length;
+                              
                               setSelectedTask((prev) => ({
-                                ...prev,
-                                checklist: updated,
-                                status: nextStatus,
-                              }));
+  ...prev,
+  checklist: updated,
+  status: nextStatus,
+  ready_to_complete: allComplete,
+}));
                             }}
                           />
                           <span>{item.text}</span>
