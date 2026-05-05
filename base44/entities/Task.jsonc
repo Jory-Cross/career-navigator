@@ -29,6 +29,11 @@
       ],
       "default": "pending"
     },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when task should be hidden but preserved"
+    },
     "priority": {
       "type": "string",
       "enum": [
@@ -57,7 +62,16 @@
       "default": "follow_up"
     },
     "notes": {
-      "type": "string"
+      "type": "string",
+      "description": "General/internal staff notes"
+    },
+    "staff_notes": {
+      "type": "string",
+      "description": "Notes entered by staff"
+    },
+    "client_notes": {
+      "type": "string",
+      "description": "Notes entered by the client when completing or updating the task"
     },
     "checklist": {
       "type": "array",
@@ -73,6 +87,27 @@
           }
         }
       }
+    },
+    "recommendation_id": {
+      "type": "string",
+      "description": "Optional linked recommendation/job field ID"
+    },
+    "assigned_to_client": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when task should appear in the client portal"
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "Staff user/email who assigned the task"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "client_completed_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
