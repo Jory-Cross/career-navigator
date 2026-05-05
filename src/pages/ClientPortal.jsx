@@ -579,7 +579,6 @@ setCompletionNote("");
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Tasks</h2>
-            <Button onClick={() => setShowNewTask(true)}>Add Task</Button>
           </div>
 
           {tasksLoading ? (
