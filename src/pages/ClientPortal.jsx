@@ -916,13 +916,20 @@ const allComplete = completedCount === updated.length;
                 </Button>
 
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleCompleteTask(selectedTask.id)}
-                  disabled={isSavingTask}
-                >
-                  Mark Complete
-                </Button>
+  type="button"
+  variant="outline"
+  onClick={() => handleCompleteTask(selectedTask.id)}
+  disabled={
+    isSavingTask ||
+    (
+      Array.isArray(selectedTask.checklist) &&
+      selectedTask.checklist.length > 0 &&
+      selectedTask.checklist.some((step) => !step.completed)
+    )
+  }
+>
+  Mark Complete
+</Button>
 
                 <Button
                   variant="destructive"
