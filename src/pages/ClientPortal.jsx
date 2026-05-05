@@ -1023,6 +1023,43 @@ const allComplete = completedCount === updated.length;
             </div>
           )}
         </DialogContent>
+            </Dialog>
+
+      {/* COMPLETE TASK MODAL */}
+      <Dialog
+        open={!!taskToComplete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTaskToComplete(null);
+            setCompletionNote("");
+          }
+        }}
+      >
+        <DialogContent className="space-y-3">
+          <h3 className="text-lg font-medium">Complete Task</h3>
+
+          <Textarea
+            placeholder="Add a note (optional)"
+            value={completionNote}
+            onChange={(e) => setCompletionNote(e.target.value)}
+          />
+
+          <div className="flex gap-2">
+            <Button onClick={handleCompleteTask} disabled={isSavingTask}>
+              {isSavingTask ? "Saving..." : "Complete Task"}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTaskToComplete(null);
+                setCompletionNote("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   );
