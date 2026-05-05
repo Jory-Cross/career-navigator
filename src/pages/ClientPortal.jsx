@@ -77,7 +77,7 @@ export default function ClientPortal() {
   const [user, setUser] = useState(null);
   const [bootError, setBootError] = useState("");
 
-  const [activeTab, setActiveTab] = useState("applications");
+  const [activeTab, setActiveTab] = useState(() => getTabFromUrl());
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
 
