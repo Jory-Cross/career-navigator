@@ -215,8 +215,11 @@ export default function JobApplicationsSection({
         toast.success("Application added");
       }
 
-      closeDialog();
-      onRefresh?.();
+            await onRefresh?.();
+      setShowDialog(false);
+      setEditId(null);
+      setForm(emptyForm());
+      setNewNote("");
     } catch (error) {
       console.error("Failed to save application:", error);
       toast.error("Failed to save application");
