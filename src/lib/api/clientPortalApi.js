@@ -383,6 +383,26 @@ function buildTaskPayload(payload = {}) {
     client_completed_at: payload.client_completed_at ?? null,
     checklist: buildChecklistPayload(payload.checklist),
   };
+}function buildTaskPayload(payload = {}) {
+  return {
+    title: asString(payload.title),
+    description: asString(payload.description),
+    notes: asString(payload.notes),
+    staff_notes: asString(payload.staff_notes),
+    client_notes: asString(payload.client_notes),
+    status: asString(payload.status, "pending"),
+    is_archived: asBoolean(payload.is_archived, false),
+    priority: asString(payload.priority, "medium"),
+    category: asString(payload.category, "follow_up"),
+    due_date: payload.due_date ?? null,
+    client_ids: asArray(payload.client_ids),
+    recommendation_id: payload.recommendation_id ?? null,
+    assigned_to_client: asBoolean(payload.assigned_to_client, false),
+    assigned_by: asString(payload.assigned_by),
+    completed_at: payload.completed_at ?? null,
+    client_completed_at: payload.client_completed_at ?? null,
+    checklist: buildChecklistPayload(payload.checklist),
+  };
 }
 
 function buildDocumentPayload(payload = {}) {
