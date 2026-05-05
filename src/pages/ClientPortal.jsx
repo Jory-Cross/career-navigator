@@ -771,11 +771,12 @@ const pendingRecommendationCount = useMemo(() => {
       event.preventDefault();
     }}
   >
-          {selectedTask && (
-            <div className="space-y-3">
+                    {selectedTask && (
+            <div className="space-y-4">
               <h3 className="text-lg font-medium">Edit Task</h3>
 
-                           <Input
+              {/* TITLE */}
+              <Input
                 value={selectedTask.title || ""}
                 onChange={(e) =>
                   setSelectedTask((prev) => ({
@@ -786,6 +787,7 @@ const pendingRecommendationCount = useMemo(() => {
                 className="h-12 text-base"
               />
 
+              {/* DESCRIPTION / INSTRUCTIONS */}
               <Textarea
                 value={selectedTask.description || ""}
                 onChange={(e) =>
@@ -797,7 +799,7 @@ const pendingRecommendationCount = useMemo(() => {
                 placeholder="Task instructions"
               />
 
-              {/* CHECKLIST DISPLAY */}
+              {/* CHECKLIST */}
               {Array.isArray(selectedTask.checklist) &&
                 selectedTask.checklist.length > 0 && (
                   <div className="space-y-2 rounded border p-3">
@@ -825,7 +827,10 @@ const pendingRecommendationCount = useMemo(() => {
 
                               let nextStatus = "pending";
 
-                              if (completedCount > 0 && completedCount < updated.length) {
+                              if (
+                                completedCount > 0 &&
+                                completedCount < updated.length
+                              ) {
                                 nextStatus = "in_progress";
                               }
 
@@ -846,12 +851,17 @@ const pendingRecommendationCount = useMemo(() => {
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      {selectedTask.checklist.filter((step) => step.completed).length}/
-                      {selectedTask.checklist.length} steps complete
+                      {
+                        selectedTask.checklist.filter(
+                          (step) => step.completed
+                        ).length
+                      }
+                      /{selectedTask.checklist.length} steps complete
                     </div>
                   </div>
                 )}
 
+              {/* NOTES */}
               <Textarea
                 value={selectedTask.notes || ""}
                 onChange={(e) =>
@@ -863,6 +873,7 @@ const pendingRecommendationCount = useMemo(() => {
                 placeholder="Notes"
               />
 
+              {/* STATUS */}
               <Select
                 value={selectedTask.status || "pending"}
                 onValueChange={(value) =>
@@ -883,6 +894,7 @@ const pendingRecommendationCount = useMemo(() => {
                 </SelectContent>
               </Select>
 
+              {/* DUE DATE */}
               <Input
                 type="date"
                 value={selectedTask.due_date || ""}
@@ -894,91 +906,8 @@ const pendingRecommendationCount = useMemo(() => {
                 }
               />
 
-                           <Textarea
-                value={selectedTask.notes || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    notes: e.target.value,
-                  }))
-                }
-              />
-
-              {/* CHECKLIST DISPLAY */}
-              {Array.isArray(selectedTask.checklist) &&
-                selectedTask.checklist.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Checklist</div>
-
-                    <div className="space-y-2">
-                      {selectedTask.checklist.map((item, index) => (
-                        <label
-                          key={index}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!item.completed}
-                            onChange={(e) => {
-                              const updated = [...selectedTask.checklist];
-                              updated[index] = {
-                                ...updated[index],
-                                completed: e.target.checked,
-                              };
-
-                              setSelectedTask((prev) => ({
-                                ...prev,
-                                checklist: updated,
-                              }));
-                            }}
-                          />
-                          <span>{item.text}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              <Textarea
-                value={selectedTask.notes || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    notes: e.target.value,
-                  }))
-                }
-              />
-
-              <Select
-  value={selectedTask.status || "pending"}
-  onValueChange={(value) =>
-    setSelectedTask((prev) => ({
-      ...prev,
-      status: value,
-    }))
-  }
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select status" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="pending">Pending</SelectItem>
-    <SelectItem value="in_progress">In Progress</SelectItem>
-    <SelectItem value="completed">Completed</SelectItem>
-    <SelectItem value="cancelled">Cancelled</SelectItem>
-  </SelectContent>
-</Select>
-              <Input
-                type="date"
-                value={selectedTask.due_date || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    due_date: e.target.value,
-                  }))
-                }
-              />
-
-                            <div className="flex gap-2">
+              {/* ACTIONS */}
+              <div className="flex gap-2">
                 <Button onClick={handleUpdateTask} disabled={isSavingTask}>
                   {isSavingTask ? "Saving..." : "Save"}
                 </Button>
@@ -999,7 +928,7 @@ const pendingRecommendationCount = useMemo(() => {
                 >
                   Delete
                 </Button>
-                            </div>
+              </div>
             </div>
           )}
         </DialogContent>
