@@ -281,6 +281,7 @@ const pendingRecommendationCount = useMemo(() => {
   assigned_to_client: true,
 });
       await invalidateTasks();
+      setSelectedTask(null);
       setShowNewTask(false);
       setTaskForm(emptyTaskForm());
     } catch (error) {
