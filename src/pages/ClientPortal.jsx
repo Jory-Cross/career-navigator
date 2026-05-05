@@ -775,16 +775,124 @@ const pendingRecommendationCount = useMemo(() => {
             <div className="space-y-3">
               <h3 className="text-lg font-medium">Edit Task</h3>
 
+                           <Input
+                value={selectedTask.title || ""}
+                onChange={(e) =>
+                  setSelectedTask((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
+                className="h-12 text-base"
+              />
+
+              <Textarea
+                value={selectedTask.description || ""}
+                onChange={(e) =>
+                  setSelectedTask((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Task instructions"
+              />
+
+              {/* CHECKLIST DISPLAY */}
+              {Array.isArray(selectedTask.checklist) &&
+                selectedTask.checklist.length > 0 && (
+                  <div className="space-y-2 rounded border p-3">
+                    <div className="text-sm font-medium">Checklist</div>
+
+                    <div className="space-y-2">
+                      {selectedTask.checklist.map((item, index) => (
+                        <label
+                          key={index}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!item.completed}
+                            onChange={(e) => {
+                              const updated = [...selectedTask.checklist];
+                              updated[index] = {
+                                ...updated[index],
+                                completed: e.target.checked,
+                              };
+
+                              const completedCount = updated.filter(
+                                (step) => step.completed
+                              ).length;
+
+                              let nextStatus = "pending";
+
+                              if (completedCount > 0 && completedCount < updated.length) {
+                                nextStatus = "in_progress";
+                              }
+
+                              if (completedCount === updated.length) {
+                                nextStatus = "in_progress";
+                              }
+
+                              setSelectedTask((prev) => ({
+                                ...prev,
+                                checklist: updated,
+                                status: nextStatus,
+                              }));
+                            }}
+                          />
+                          <span>{item.text}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {selectedTask.checklist.filter((step) => step.completed).length}/
+                      {selectedTask.checklist.length} steps complete
+                    </div>
+                  </div>
+                )}
+
+              <Textarea
+                value={selectedTask.notes || ""}
+                onChange={(e) =>
+                  setSelectedTask((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                placeholder="Notes"
+              />
+
+              <Select
+                value={selectedTask.status || "pending"}
+                onValueChange={(value) =>
+                  setSelectedTask((prev) => ({
+                    ...prev,
+                    status: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Input
-  value={selectedTask.title || ""}
-  onChange={(e) =>
-    setSelectedTask((prev) => ({
-      ...prev,
-      title: e.target.value,
-    }))
-  }
-  className="h-12 text-base"
-/>
+                type="date"
+                value={selectedTask.due_date || ""}
+                onChange={(e) =>
+                  setSelectedTask((prev) => ({
+                    ...prev,
+                    due_date: e.target.value,
+                  }))
+                }
+              />
 
                            <Textarea
                 value={selectedTask.notes || ""}
