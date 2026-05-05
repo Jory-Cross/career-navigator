@@ -7,6 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  getCurrentUser,
+  getClientById,
+  getClientByEmail,
+  getApplications,
+  getClientVisibleTasks,
+  getClientVisibleDocuments,
+  getSharedRecommendations,
+  updateRecommendationClientResponse,
+  createApplication,
+  updateApplication,
+  updateTask,
+  deleteTask,
+} from "@/lib/api/clientPortalApi";
+import {
   Select,
   SelectContent,
   SelectItem,
