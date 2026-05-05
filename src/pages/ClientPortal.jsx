@@ -308,26 +308,14 @@ const pendingRecommendationCount = useMemo(() => {
     const note = prompt("Add a note (optional):") || "";
     const now = new Date().toISOString();
 
-    const existingNotes =
-      typeof selectedTask?.notes === "string" ? selectedTask.notes.trim() : "";
-
     const cleanNote = typeof note === "string" ? note.trim() : "";
-
-    const nextNotes = cleanNote
-      ? [
-          existingNotes,
-          `Client completion note (${now}):\n${cleanNote}`,
-        ]
-          .filter(Boolean)
-          .join("\n\n")
-      : existingNotes;
 
     try {
       setIsSavingTask(true);
 
       await updateTask(id, {
         ...selectedTask,
-        notes: nextNotes,
+        client_notes: cleanNote,
         status: "completed",
         completed_at: now,
         client_completed_at: now,
