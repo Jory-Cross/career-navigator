@@ -262,29 +262,6 @@ const pendingRecommendationCount = useMemo(() => {
     [invalidateApplications]
   );
 
-  const handleCreateTask = useCallback(async () => {
-    if (!client?.id || isSavingTask) return;
-
-    try {
-      setIsSavingTask(true);
-
-      await createTask({
-  ...taskForm,
-  client_ids: [client.id],
-  assigned_to_client: true,
-});
-      await invalidateTasks();
-      setSelectedTask(null);
-      setShowNewTask(false);
-      setTaskForm(emptyTaskForm());
-    } catch (error) {
-      console.error("Create task failed:", error);
-      alert("Failed to create task.");
-    } finally {
-      setIsSavingTask(false);
-    }
-  }, [client?.id, invalidateTasks, isSavingTask, taskForm]);
-
   const handleUpdateTask = useCallback(async () => {
     if (!selectedTask?.id || isSavingTask) return;
 
