@@ -952,13 +952,6 @@ const allComplete = completedCount === updated.length;
   Mark Complete
 </Button>
 
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteTask(selectedTask.id)}
-                  disabled={isSavingTask}
-                >
-                  Delete
-                </Button>
               </div>
             </div>
           )}
