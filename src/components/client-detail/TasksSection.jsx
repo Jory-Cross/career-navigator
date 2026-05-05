@@ -403,22 +403,39 @@ const pending = useMemo(
               </h4>
 
               <div className="space-y-2">
-                {completed.slice(0, 5).map((task) => (
-                  <Card
-                    key={task.id}
-                    className="cursor-pointer border-slate-100 p-3 opacity-70"
-                    onClick={() => openEdit(task)}
-                  >
-                                       <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <span>{task.title}</span>
+  <Label>Checklist</Label>
 
-                        {task.client_completed_at && (
-                          <span className="text-xs text-purple-600">
-                            (client completed)
-                          </span>
-                        )}
-                      </div>
+  <div className="space-y-2">
+    {(form.checklist || []).map((item, index) => (
+      <div key={index} className="flex gap-2">
+        <Input
+          value={item.text || ""}
+          placeholder={`Step ${index + 1}`}
+          onChange={(e) => updateChecklistItem(index, e.target.value)}
+        />
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => removeChecklistItem(index)}
+        >
+          Remove
+        </Button>
+      </div>
+    ))}
+
+    <Button type="button" variant="outline" onClick={addChecklistItem}>
+      Add checklist item
+    </Button>
+  </div>
+</div>
+
+<div className="space-y-2">
+  <Label>Assigned Client</Label>
+  <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+    This task will be assigned to this client.
+  </div>
+</div>
 
                      {task.client_notes ? (
   <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-3">
