@@ -527,14 +527,28 @@ const pending = useMemo(
                       key={index}
                       className="flex items-center gap-2"
                     >
-                                            <Textarea
+                                                                  <Input
                         placeholder={`Step ${index + 1}`}
                         value={item.text || ""}
                         onChange={(e) =>
                           updateChecklistItem(index, e.target.value)
                         }
-                        rows={2}
-                        className="min-h-[70px]"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addChecklistItem();
+
+                            setTimeout(() => {
+                              const inputs = document.querySelectorAll(
+                                "input[placeholder^='Step']"
+                              );
+
+                              if (inputs[index + 1]) {
+                                inputs[index + 1].focus();
+                              }
+                            }, 0);
+                          }
+                        }}
                       />
 
                       <Button
