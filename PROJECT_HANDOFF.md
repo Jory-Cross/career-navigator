@@ -1,154 +1,197 @@
-🧠 HANDOFF — CRM TASK SYSTEM (CURRENT STATE)
-🔴 HOW TO WORK WITH YOU (CRITICAL — DO NOT BREAK)
-Always give:
+🧠 HANDOFF — CRM TASK SYSTEM (POST-STABILITY + CLEANUP)
+🔴 HOW TO WORK WITH YOU (LOCKED RULES)
+
+Always provide:
+
 Exact file path
-Exact block start
-Exact block end
-Full replacement code
+Exact block start (unique line)
+Exact block end (unique line)
+Full replacement OR exact delete instructions
+
 Never:
+
 Say “find something like…”
+Use vague markers like </div> without context
 Give partial snippets for full replacements
 Assume file structure
+
+Process:
+
 One step at a time
 Stability > new features
-If something breaks → fix immediately before continuing
-🧠 WHAT I LEARNED FROM PREVIOUS CHATS
+If anything breaks → stop and fix immediately
+🧠 WHAT HAS BEEN LEARNED (ALL CHATS)
 Product Direction (LOCKED)
-Tasks drive workflow (not statuses)
-Recommendations = job fields, NOT applications
-Staff must have full flexibility
+Tasks = driver of workflow (not statuses)
 Client participation is required
-Architecture Direction
-UI should NOT mutate state as source of truth
-Backend (Base44) is source of truth
+Staff must have full flexibility
+Recommendations ≠ applications
+Architecture Direction (LOCKED)
+Backend (Base44) = source of truth
+UI must NOT be source of truth
 Use adapter layer (clientPortalApi.js)
 Avoid direct Base44 calls in UI where possible
-System Rules
-Tasks can be:
-client-specific
-recommendation-linked (optional)
-general (future)
-🧠 WHAT I LEARNED IN THIS CHAT
-Root Issues Identified
-❌ Task not showing in client portal → filter mismatch (client_ids vs assigned_to_client)
-❌ Save not working → missing clientId prop
-❌ UI not updating → missing refresh/invalidation
-❌ No visibility of client completion → added client_completed_at
-❌ No archive system → added is_archived
-❌ No delete/archive UI → built
-❌ Header UI corruption → JSX broken (current issue)
+Data Model (CURRENT STATE)
+Task
+- title
+- description (task instructions)
+- status
+- priority
+- due_date
+- category
+- client_ids
+- checklist []
+- client_notes
+- staff_notes
+- client_completed_at
+- completed_at
+- is_archived
+System Behavior (CURRENT)
+Client completes task → adds note → saved to client_notes
+Staff sees:
+client note
+timestamps
+completion indicator
+Polling updates both sides
+No refresh required for sync
+Tab persistence works
+🧠 WHAT WAS LEARNED IN THIS CHAT
+🔴 Critical Debug Lessons
+JSX errors came from:
+misplaced checklist UI
+rendering outside .map()
+“Adjacent JSX elements” = missing wrapper OR wrong placement
+Never insert UI blocks into list rendering without full context
+🔴 Major Fixes Completed
+Removed duplicate buildTaskPayload
+Fixed API mapping (client_notes)
+Fixed payload builder (data was being dropped)
+Fixed client → staff note visibility
+Fixed tab persistence
+Fixed task counts (active vs archived)
+Removed legacy notes from UI
+Cleaned task data model
+🔴 Key Insight
+
+Problem was NOT UI — it was data flow + incorrect placement
+
 ✅ WHAT HAS BEEN ACCOMPLISHED
-🔧 TASK SYSTEM (CORE COMPLETE)
+TASK SYSTEM — STABLE
 Data Layer
-Task schema expanded:
-client_ids
-client_completed_at
-is_archived
-API functions:
-createTask
-updateTask
-archiveTask
-deleteTask
-getTasks
-getClientVisibleTasks
-getArchivedTasks
+createTask ✅
+updateTask ✅
+archiveTask ✅
+deleteTask ✅
+client_notes persisted correctly ✅
 Staff Side
-Create task in client file ✅
-Edit task ✅
-Complete task ✅
-Archive task ✅
-Delete task ✅
-See “client completed” indicator ✅
+Create/edit tasks ✅
+See client notes ✅
+See completion timestamps ✅
+Active vs completed separation ✅
+Counts fixed ✅
 Client Side
-See assigned tasks ✅
 Complete task ✅
-Updates persist to backend ✅
+Add note (prompt) ✅
+Notes sync to staff ✅
+Live updates (polling) ✅
 System Behavior
-Archived tasks hidden by default ✅
-Completed tasks separated ✅
-Client → staff loop working ✅
-❌ CURRENT ISSUE (WHY YOU’RE RESETTING)
-🚨 React Error #185
-5
-Cause:
+No refresh required for updates ✅
+Tab persistence works ✅
+Clean data model ✅
+⚠️ CURRENT STATE (IMPORTANT)
 
-Broken JSX in TasksSection.jsx
+You are now:
 
-Specifically:
+OUT OF INSTABILITY
+INTO CONTROLLED FEATURE BUILD
+🚧 WHAT NEEDS TO BE BUILT NEXT
+PHASE 5 — TASK EXPERIENCE
+1. Checklist System (NEXT STEP)
+Staff creates checklist steps
+Stored in task.checklist
 
-<Button
-  type="buttonv>
+Client behavior:
 
-👉 This corrupted the header block and broke rendering
+Checkbox per step
+Auto status:
+0 complete → pending
+some complete → in_progress
+all complete → ready to complete
+Cannot complete until all steps done
+2. Replace Prompt UX
 
-📋 WHAT STILL NEEDS TO BE DONE
-🟢 Phase 5 — Continue (CURRENT)
-Fix Now
-Repair header JSX (FIRST STEP in new chat)
-Confirm toggle works
-Confirm archive visibility toggle works
-Then Build Next (in order)
-1. Task Activity (lightweight)
-Show:
-Created
-Completed
-Client completed timestamp
-2. Client Task Completion UX
-Add “Complete Task” UI improvement
-Optional notes on completion
-3. Staff Awareness (NOT notifications yet)
-Visual indicators only
-No alerts yet
-🔵 BLOCKED (DO NOT TOUCH YET)
+Current:
+
+window.prompt()
+
+Replace with:
+
+Modal
+Structured note entry
+3. Task UI Cleanup (IN PROGRESS)
+description = instructions ✅
+client_notes = feedback ✅
+staff_notes = future
+notes = removed from UI ✅
+🟡 PLANNED (DO NOT BUILD YET)
+Payload CMS Integration
+
+Use for:
+
+Task Templates
+Onboarding flows
+Reusable instructions
+Assessment tasks
+Checklist templates
+
+DO NOT use for:
+
+Task progress
+Client-specific data
+Status tracking
+Future Data Model
+TaskTemplate
+- title
+- description
+- checklist
+- category
+- priority
+- audience
+
+OnboardingPlan
+- name
+- task_template_ids
+🚫 BLOCKED / DO NOT TOUCH
 O*NET integration
-Recommendation accuracy
+Recommendation engine accuracy
 AI job search
-🟡 BACKLOG (DO NOT BUILD NOW)
-Global task creation (multi-client)
-Notification system
-Task templates
-Workflow enforcement
-🚀 NEW CHAT — EXACT START INSTRUCTION
+🎯 NEXT STEP FOR NEW CHAT
 
-Paste this as your first message:
+Start with:
 
-START HERE
+We are continuing CRM Task System.
 
-We are continuing the CRM Task System.
+System is stable.
 
-Current issue:
-React error #185 due to broken JSX in:
+Next step:
+Add checklist UI to task dialog (create/edit only).
 
+File:
 src/components/client-detail/TasksSection.jsx
 
-I need you to:
+We will insert checklist BELOW the "Assigned Client" block.
 
-Fix the header block
-Provide:
-exact start line
-exact end line
-full replacement
-Do NOT give partial code
-Do NOT assume anything
+I need:
+Exact block start
+Exact block end
+Full replacement
+💡 FINAL STATE
 
-Goal:
-Restore this block safely:
+You now have:
 
-Task title
-Show Archived toggle
-Add button
+Stable task system
+Clean data model
+Working client → staff sync
+Proper architecture direction
 
-After fix:
-We will test archive toggle behavior.
-
-🎯 FINAL STATE AFTER FIX
-
-Once fixed, you will have:
-
-Fully working task system
-Archive + delete + toggle
-Client ↔ staff loop stable
-
-Then we move to polish, not structure.
-
-When you start the new chat, I’ll take it from there cleanly.
+👉 Next phase = structured task execution (checklists)
