@@ -586,8 +586,10 @@ setCompletionNote("");
           ) : tasksError ? (
             <div className="text-red-600">Failed to load tasks.</div>
           ) : tasks.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No tasks yet.</div>
-          ) : (
+  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+    🎉 All tasks complete — great job!
+  </div>
+) : (
             <div className="space-y-2">
               {tasks.map((task) => (
                 <button
