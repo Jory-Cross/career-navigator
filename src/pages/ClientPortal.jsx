@@ -792,98 +792,122 @@ const pendingRecommendationCount = useMemo(() => {
       event.preventDefault();
     }}
   >
-                    {selectedTask && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Edit Task</h3>
+                  {selectedTask && (
+  <div className="space-y-4">
+    <h3 className="text-lg font-medium">Task</h3>
 
-              {/* TITLE */}
-              <Input
-                value={selectedTask.title || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-                className="h-12 text-base"
-              />
+    {/* TITLE */}
+    <div className="text-base font-semibold">
+      {selectedTask.title || "Untitled Task"}
+    </div>
 
-              {/* DESCRIPTION / INSTRUCTIONS */}
-              <Textarea
-                value={selectedTask.description || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Task instructions"
-              />
+    {/* DESCRIPTION */}
+    {selectedTask.description ? (
+      <div className="text-sm text-muted-foreground">
+        {selectedTask.description}
+      </div>
+    ) : null}
 
-              {/* CHECKLIST */}
-              {Array.isArray(selectedTask.checklist) &&
-                selectedTask.checklist.length > 0 && (
-                  <div className="space-y-2 rounded border p-3">
-                    <div className="text-sm font-medium">Checklist</div>
+    {/* CHECKLIST */}
+    {Array.isArray(selectedTask.checklist) &&
+      selectedTask.checklist.length > 0 && (
+        <div className="space-y-2 rounded border p-3">
+          <div className="text-sm font-medium">Checklist</div>
 
-                    <div className="space-y-2">
-                      {selectedTask.checklist.map((item, index) => (
-                        <label
-                          key={index}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!item.completed}
-                            onChange={(e) => {
-                              const updated = [...selectedTask.checklist];
-                              updated[index] = {
-                                ...updated[index],
-                                completed: e.target.checked,
-                              };
+          <div className="space-y-2">
+            {selectedTask.checklist.map((item, index) => (
+              <label
+                key={index}
+                className="flex items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={!!item.completed}
+                  onChange={(e) => {
+                    const updated = [...selectedTask.checklist];
+                    updated[index] = {
+                      ...updated[index],
+                      completed: e.target.checked,
+                    };
 
-                              const completedCount = updated.filter(
-                                (step) => step.completed
-                              ).length;
+                    const completedCount = updated.filter(
+                      (step) => step.completed
+                    ).length;
 
-                              let nextStatus = "pending";
+                    let nextStatus = "pending";
 
-                              if (
-                                completedCount > 0 &&
-                                completedCount < updated.length
-                              ) {
-                                nextStatus = "in_progress";
-                              }
+                    if (
+                      completedCount > 0 &&
+                      completedCount < updated.length
+                    ) {
+                      nextStatus = "in_progress";
+                    }
 
-                              if (completedCount === updated.length) {
-  nextStatus = "in_progress"; // stays in_progress until user clicks complete
-}
+                    if (completedCount === updated.length) {
+                      nextStatus = "in_progress";
+                    }
 
-const allComplete = completedCount === updated.length;
-                              
-                              setSelectedTask((prev) => ({
-  ...prev,
-  checklist: updated,
-  status: nextStatus,
-  ready_to_complete: allComplete,
-}));
-                            }}
-                          />
-                          <span>{item.text}</span>
-                        </label>
-                      ))}
-                    </div>
+                    setSelectedTask((prev) => ({
+                      ...prev,
+                      checklist: updated,
+                      status: nextStatus,
+                    }));
+                  }}
+                />
+                <span>{item.text}</span>
+              </label>
+            ))}
+          </div>
 
-                    <div className="text-xs text-muted-foreground">
-                      {
-                        selectedTask.checklist.filter(
-                          (step) => step.completed
-                        ).length
-                      }
-                      /{selectedTask.checklist.length} steps complete
-                    </div>
-                  </div>
-                )}
+          <div className="text-xs text-muted-foreground">
+            {
+              selectedTask.checklist.filter(
+                (step) => step.completed
+              ).length
+            }
+            /{selectedTask.checklist.length} steps complete
+          </div>
+        </div>
+      )}
+
+    {/* READY TO COMPLETE */}
+    {Array.isArray(selectedTask.checklist) &&
+      selectedTask.checklist.length > 0 &&
+      selectedTask.checklist.every((step) => step.completed) &&
+      selectedTask.status !== "completed" && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
+          Ready to complete — click Mark Complete
+        </div>
+      )}
+
+    {/* CLIENT NOTE (IF EXISTS) */}
+    {selectedTask.client_notes ? (
+      <div className="rounded-md border border-purple-200 bg-purple-50 p-2 text-xs text-purple-900">
+        <div className="font-medium text-purple-700">Your Note</div>
+        <div>{selectedTask.client_notes}</div>
+      </div>
+    ) : null}
+
+    {/* ACTION */}
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setTaskToComplete(selectedTask)}
+        disabled={
+          isSavingTask ||
+          (
+            Array.isArray(selectedTask.checklist) &&
+            selectedTask.checklist.length > 0 &&
+            selectedTask.checklist.some((step) => !step.completed)
+          )
+        }
+      >
+        Mark Complete
+      </Button>
+    </div>
+  </div>
+)}
 
               {/* NOTES */}
               <Textarea
