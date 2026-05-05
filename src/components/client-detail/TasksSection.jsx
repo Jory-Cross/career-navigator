@@ -606,11 +606,11 @@ const pending = useMemo(
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={closeDialog}>
+                        <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={closeDialog}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button type="button" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
