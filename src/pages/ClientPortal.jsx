@@ -72,21 +72,14 @@ function emptyTaskForm() {
 
 export default function ClientPortal() {
   const queryClient = useQueryClient();
-
   const [client, setClient] = useState(null);
   const [user, setUser] = useState(null);
   const [bootError, setBootError] = useState("");
-
   const [activeTab, setActiveTab] = useState(() => getTabFromUrl());
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
-
   const [showNewApp, setShowNewApp] = useState(false);
-  const [showNewTask, setShowNewTask] = useState(false);
-
   const [appForm, setAppForm] = useState(emptyApplicationForm());
-  const [taskForm, setTaskForm] = useState(emptyTaskForm());
-
   const [isSavingApp, setIsSavingApp] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [completionNote, setCompletionNote] = useState("");
