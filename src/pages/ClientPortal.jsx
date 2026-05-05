@@ -770,68 +770,6 @@ setCompletionNote("");
         </DialogContent>
       </Dialog>
 
-      {/* CREATE TASK */}
-      <Dialog open={showNewTask} onOpenChange={setShowNewTask}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <div className="space-y-3">
-            <h3 className="text-lg font-medium">New Task</h3>
-
-            <Input
-              placeholder="Title"
-              value={taskForm.title}
-              onChange={(e) =>
-                setTaskForm((prev) => ({ ...prev, title: e.target.value }))
-              }
-            />
-
-            <Textarea
-              placeholder="Description"
-              value={taskForm.description}
-              onChange={(e) =>
-                setTaskForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-            />
-
-            <Textarea
-              placeholder="Notes"
-              value={taskForm.notes}
-              onChange={(e) =>
-                setTaskForm((prev) => ({ ...prev, notes: e.target.value }))
-              }
-            />
-
-            <Input
-              placeholder="Status"
-              value={taskForm.status}
-              onChange={(e) =>
-                setTaskForm((prev) => ({ ...prev, status: e.target.value }))
-              }
-            />
-
-            <Input
-              type="date"
-              value={taskForm.due_date}
-              onChange={(e) =>
-                setTaskForm((prev) => ({ ...prev, due_date: e.target.value }))
-              }
-            />
-
-            <div className="flex gap-2">
-              <Button onClick={handleCreateTask} disabled={isSavingTask}>
-                {isSavingTask ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowNewTask(false)}
-                disabled={isSavingTask}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* TASK DETAIL */}
       <Dialog
   open={!!selectedTask}
