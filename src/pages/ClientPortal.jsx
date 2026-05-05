@@ -919,7 +919,7 @@ const allComplete = completedCount === updated.length;
                 <Button
   type="button"
   variant="outline"
-  onClick={() => handleCompleteTask(selectedTask.id)}
+  onClick={() => setTaskToComplete(selectedTask)}
   disabled={
     isSavingTask ||
     (
