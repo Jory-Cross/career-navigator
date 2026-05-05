@@ -908,77 +908,7 @@ const pendingRecommendationCount = useMemo(() => {
     </div>
   </div>
 )}
-
-              {/* NOTES */}
-              <Textarea
-                value={selectedTask.notes || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    notes: e.target.value,
-                  }))
-                }
-                placeholder="Notes"
-              />
-
-              {/* STATUS */}
-              <Select
-                value={selectedTask.status || "pending"}
-                onValueChange={(value) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    status: value,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* DUE DATE */}
-              <Input
-                type="date"
-                value={selectedTask.due_date || ""}
-                onChange={(e) =>
-                  setSelectedTask((prev) => ({
-                    ...prev,
-                    due_date: e.target.value,
-                  }))
-                }
-              />
-
-              {/* ACTIONS */}
-              <div className="flex gap-2">
-                <Button onClick={handleUpdateTask} disabled={isSavingTask}>
-                  {isSavingTask ? "Saving..." : "Save"}
-                </Button>
-
-                <Button
-  type="button"
-  variant="outline"
-  onClick={() => setTaskToComplete(selectedTask)}
-  disabled={
-    isSavingTask ||
-    (
-      Array.isArray(selectedTask.checklist) &&
-      selectedTask.checklist.length > 0 &&
-      selectedTask.checklist.some((step) => !step.completed)
-    )
-  }
->
-  Mark Complete
-</Button>
-
-              </div>
-            </div>
-          )}
+    
         </DialogContent>
       </Dialog>
 
