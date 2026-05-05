@@ -876,41 +876,45 @@ setCompletionNote("");
                 className="flex items-center gap-2 text-sm"
               >
                 <input
-                  type="checkbox"
-                  checked={!!item.completed}
-                  onChange={(e) => {
-                    const updated = [...selectedTask.checklist];
-                    updated[index] = {
-                      ...updated[index],
-                      completed: e.target.checked,
-                    };
+  type="checkbox"
+  checked={!!item.completed}
+  onChange={async (e) => {
+    const updated = [...selectedTask.checklist];
+    updated[index] = {
+      ...updated[index],
+      completed: e.target.checked,
+    };
 
-                    const completedCount = updated.filter(
-                      (step) => step.completed
-                    ).length;
+    const completedCount = updated.filter((step) => step.completed).length;
 
-                    let nextStatus = "pending";
+    let nextStatus = "pending";
 
-                    if (
-                      completedCount > 0 &&
-                      completedCount < updated.length
-                    ) {
-                      nextStatus = "in_progress";
-                    }
+    if (completedCount > 0) {
+      nextStatus = "in_progress";
+    }
 
-                    if (completedCount === updated.length) {
-                      nextStatus = "in_progress";
-                    }
+    const updatedTask = {
+      ...selectedTask,
+      checklist: updated,
+      status: nextStatus,
+    };
 
-                    setSelectedTask((prev) => ({
-                      ...prev,
-                      checklist: updated,
-                      status: nextStatus,
-                    }));
-                  }}
-                />
-                <span>{item.text}</span>
-              </label>
+    setSelectedTask(updatedTask);
+
+    try {
+      setIsSavingTask(true);
+      await updateTask(selectedTask.id, updatedTask);
+      await invalidateTasks();
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+      alert("Failed to save progress.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  }}
+/>
+<span>{item.text}</span>
+</label>
             ))}
           </div>
 
