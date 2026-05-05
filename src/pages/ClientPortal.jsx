@@ -943,8 +943,30 @@ setCompletionNote("");
       </div>
     ) : null}
 
-    {/* ACTION */}
+       {/* ACTION */}
     <div className="flex gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={async () => {
+          if (!selectedTask?.id || isSavingTask) return;
+
+          try {
+            setIsSavingTask(true);
+            await updateTask(selectedTask.id, selectedTask);
+            await invalidateTasks();
+          } catch (error) {
+            console.error("Save task progress failed:", error);
+            alert("Failed to save task progress.");
+          } finally {
+            setIsSavingTask(false);
+          }
+        }}
+        disabled={isSavingTask}
+      >
+        {isSavingTask ? "Saving..." : "Save Progress"}
+      </Button>
+
       <Button
         type="button"
         variant="outline"
