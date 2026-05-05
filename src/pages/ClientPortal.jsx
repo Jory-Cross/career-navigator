@@ -588,6 +588,15 @@ const pendingRecommendationCount = useMemo(() => {
   {task.status || "open"}
 </div>
 
+{Array.isArray(task.checklist) &&
+  task.checklist.length > 0 &&
+  task.checklist.every((step) => step.completed) &&
+  task.status !== "completed" && (
+    <div className="mt-2 rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
+      Ready to complete — click Mark Complete
+    </div>
+  )}
+
 {task.client_notes ? (
   <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-2 text-xs text-purple-900">
     <div className="font-medium text-purple-700">Your Note</div>
