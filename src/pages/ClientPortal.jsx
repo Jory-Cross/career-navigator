@@ -835,8 +835,8 @@ const pendingRecommendationCount = useMemo(() => {
                               }
 
                               if (completedCount === updated.length) {
-                                nextStatus = "in_progress";
-                              }
+  nextStatus = "in_progress"; // stays in_progress until user clicks complete
+}
 
                               setSelectedTask((prev) => ({
                                 ...prev,
