@@ -437,7 +437,7 @@ const currentTaskCount = tasks.filter(
   <span className="text-sm font-semibold">Tasks</span>
 </div>
         <div className={cn("mt-1 text-xs", activeTab === "tasks" ? "text-slate-200" : "text-slate-500")}>
-          {tasks.length} items
+          {currentTaskCount} items
         </div>
       </button>
     )}
