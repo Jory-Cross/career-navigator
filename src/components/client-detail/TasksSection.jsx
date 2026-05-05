@@ -146,7 +146,6 @@ const pending = useMemo(
       const payload = {
         title: form.title || "",
         description: form.description || "",
-        notes: form.notes || "",
         status: form.status || "pending",
         priority: form.priority || "medium",
         due_date: form.due_date || null,
