@@ -271,6 +271,8 @@ function mapTask(raw) {
     title: asString(raw.title),
     description: asString(raw.description),
     notes: asString(raw.notes),
+    staff_notes: asString(raw.staff_notes),
+    client_notes: asString(raw.client_notes),
     status: asString(raw.status, "pending"),
     is_archived: asBoolean(raw.is_archived, false),
     priority: asString(raw.priority, "medium"),
