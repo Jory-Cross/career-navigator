@@ -499,11 +499,58 @@ const pending = useMemo(
               />
             </div>
 
-            <div className="space-y-2">
+                        <div className="space-y-2">
               <Label>Assigned Client</Label>
               <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
                 This task will be assigned to this client.
               </div>
+            </div>
+
+            {/* CHECKLIST SECTION */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Checklist</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addChecklistItem}
+                >
+                  Add Step
+                </Button>
+              </div>
+
+              {Array.isArray(form.checklist) && form.checklist.length > 0 ? (
+                <div className="space-y-2">
+                  {form.checklist.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2"
+                    >
+                      <Input
+                        placeholder={`Step ${index + 1}`}
+                        value={item.text || ""}
+                        onChange={(e) =>
+                          updateChecklistItem(index, e.target.value)
+                        }
+                      />
+
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeChecklistItem(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-400">
+                  No checklist steps added
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
