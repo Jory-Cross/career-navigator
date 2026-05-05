@@ -786,16 +786,50 @@ const pendingRecommendationCount = useMemo(() => {
   className="h-12 text-base"
 />
 
-              <Textarea
-                value={selectedTask.description || ""}
+                           <Textarea
+                value={selectedTask.notes || ""}
                 onChange={(e) =>
                   setSelectedTask((prev) => ({
                     ...prev,
-                    description: e.target.value,
+                    notes: e.target.value,
                   }))
                 }
               />
 
+              {/* CHECKLIST DISPLAY */}
+              {Array.isArray(selectedTask.checklist) &&
+                selectedTask.checklist.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Checklist</div>
+
+                    <div className="space-y-2">
+                      {selectedTask.checklist.map((item, index) => (
+                        <label
+                          key={index}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!item.completed}
+                            onChange={(e) => {
+                              const updated = [...selectedTask.checklist];
+                              updated[index] = {
+                                ...updated[index],
+                                completed: e.target.checked,
+                              };
+
+                              setSelectedTask((prev) => ({
+                                ...prev,
+                                checklist: updated,
+                              }));
+                            }}
+                          />
+                          <span>{item.text}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               <Textarea
                 value={selectedTask.notes || ""}
                 onChange={(e) =>
