@@ -60,16 +60,6 @@ function emptyApplicationForm() {
   };
 }
 
-function emptyTaskForm() {
-  return {
-    title: "",
-    description: "",
-    notes: "",
-    status: "open",
-    due_date: "",
-  };
-}
-
 export default function ClientPortal() {
   const queryClient = useQueryClient();
   const [client, setClient] = useState(null);
