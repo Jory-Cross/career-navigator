@@ -169,7 +169,13 @@ export default function JobApplicationsSection({
     }));
   };
 
-  const handleSave = async () => {
+   const handleSave = async () => {
+    console.log("CREATE APPLICATION BUTTON CLICKED", {
+      clientId,
+      editId,
+      company: form.company,
+      position: form.position,
+    });
     if (!clientId) {
       toast.error("Client id is required");
       return;
