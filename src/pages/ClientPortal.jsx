@@ -1,30 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from '@/lib/queryKeys';
-import {
-  getCurrentUser,
-  getClientById,
-  getClientByEmail,
-  getApplications,
-  getClientVisibleTasks,
-  getClientVisibleDocuments,
-  getAssessments,
-  getInterviews,
-  getTimeEntries,
-  getActivities,
-  getMeetings,
-  getSharedRecommendations,
-  updateRecommendationClientResponse,
-  createApplication,
-  updateApplication,
-  createTask,
-  updateTask,
-  completeTask,
-  deleteTask,
-  uploadFile,
-  createDocument,
-  createActivity,
-} from "@/lib/api/clientPortalApi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
