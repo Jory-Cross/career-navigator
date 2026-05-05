@@ -591,36 +591,75 @@ setCompletionNote("");
   </div>
 ) : (
             <div className="space-y-2">
-              {tasks.map((task) => (
-                <button
-                  key={task.id}
-                  type="button"
-                  className="w-full rounded border p-3 text-left hover:bg-muted"
-                  onClick={() => setSelectedTask(task)}
-                >
-                  <div className="font-medium">{task.title || "Untitled Task"}</div>
+              {tasks.map((task) => {
+  const totalSteps = Array.isArray(task.checklist)
+    ? task.checklist.length
+    : 0;
 
-<div className="text-sm text-muted-foreground">
-  {task.status || "open"}
-</div>
+  const completedSteps = Array.isArray(task.checklist)
+    ? task.checklist.filter((s) => s.completed).length
+    : 0;
 
-{Array.isArray(task.checklist) &&
-  task.checklist.length > 0 &&
-  task.checklist.every((step) => step.completed) &&
-  task.status !== "completed" && (
-    <div className="mt-2 rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
-      Ready to complete — click Mark Complete
-    </div>
-  )}
+  const percent =
+    totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
-{task.client_notes ? (
-  <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-2 text-xs text-purple-900">
-    <div className="font-medium text-purple-700">Your Note</div>
-    <div>{task.client_notes}</div>
-  </div>
-) : null}
-                </button>
-              ))}
+  const isComplete = task.status === "completed";
+
+  return (
+    <button
+      key={task.id}
+      type="button"
+      onClick={() => setSelectedTask(task)}
+      className="w-full rounded-xl border p-4 text-left transition hover:shadow-sm"
+    >
+      {/* TITLE */}
+      <div className="font-medium text-base">
+        {task.title || "Untitled Task"}
+      </div>
+
+      {/* STATUS */}
+      <div className="mt-1 text-xs text-muted-foreground">
+        {isComplete ? "Completed" : `${completedSteps}/${totalSteps} steps`}
+      </div>
+
+      {/* PROGRESS BAR */}
+      <div className="mt-3 h-2 w-full rounded-full bg-gray-200">
+        <div
+          className={`h-2 rounded-full ${
+            isComplete ? "bg-emerald-500" : "bg-blue-500"
+          }`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      {/* PERCENT / COMPLETE */}
+      <div className="mt-2 text-xs font-medium">
+        {isComplete ? (
+          <span className="text-emerald-600">✔ Completed</span>
+        ) : (
+          <span>{percent}% complete</span>
+        )}
+      </div>
+
+      {/* READY STATE */}
+      {!isComplete &&
+        totalSteps > 0 &&
+        completedSteps === totalSteps && (
+          <div className="mt-2 rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
+            Ready to complete
+          </div>
+        )}
+
+      {/* CLIENT NOTE */}
+      {task.client_notes && (
+        <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-2 text-xs text-purple-900">
+          <div className="font-medium text-purple-700">Your Note</div>
+          <div>{task.client_notes}</div>
+        </div>
+      )}
+    </button>
+  );
+})}
             </div>
           )}
         </TabsContent>
