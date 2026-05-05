@@ -741,8 +741,26 @@ export async function getApplications(clientId) {
 }
 
 export async function createApplication(payload) {
-  const raw = await base44.entities.JobApplication.create(buildApplicationPayload(payload));
-  return mapApplication(raw);
+  const fullPayload = buildApplicationPayload(payload);
+
+  try {
+    const raw = await base44.entities.JobApplication.create(fullPayload);
+    return mapApplication(raw);
+  } catch (error) {
+    console.error("Create application failed with full payload:", error);
+
+    const fallbackPayload = {
+      client_id: fullPayload.client_id,
+      company: fullPayload.company,
+      position: fullPayload.position,
+      status: fullPayload.status || "active",
+      notes: fullPayload.notes || "",
+      running_notes: fullPayload.running_notes || "",
+    };
+
+    const raw = await base44.entities.JobApplication.create(fallbackPayload);
+    return mapApplication(raw);
+  }
 }
 
 export async function updateApplication(id, payload) {
