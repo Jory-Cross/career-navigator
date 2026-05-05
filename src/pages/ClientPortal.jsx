@@ -307,37 +307,40 @@ const pendingRecommendationCount = useMemo(() => {
     }
   }, [invalidateTasks, isSavingTask, selectedTask]);
 
-  const handleCompleteTask = useCallback(
-  async (id) => {
-    if (!id || isSavingTask) return;
+  const handleCompleteTask = useCallback(async () => {
+  if (!taskToComplete?.id || isSavingTask) return;
 
-    const note = prompt("Add a note (optional):") || "";
-    const now = new Date().toISOString();
+  const now = new Date().toISOString();
+  const cleanNote = completionNote?.trim() || "";
 
-    const cleanNote = typeof note === "string" ? note.trim() : "";
+  try {
+    setIsSavingTask(true);
 
-    try {
-      setIsSavingTask(true);
+    await updateTask(taskToComplete.id, {
+      ...taskToComplete,
+      client_notes: cleanNote,
+      status: "completed",
+      completed_at: now,
+      client_completed_at: now,
+    });
 
-      await updateTask(id, {
-        ...selectedTask,
-        client_notes: cleanNote,
-        status: "completed",
-        completed_at: now,
-        client_completed_at: now,
-      });
+    await invalidateTasks();
 
-      await invalidateTasks();
-      setSelectedTask(null);
-    } catch (error) {
-      console.error("Complete task failed:", error);
-      alert("Failed to complete task.");
-    } finally {
-      setIsSavingTask(false);
-    }
-  },
-  [invalidateTasks, isSavingTask, selectedTask]
-);
+    setTaskToComplete(null);
+    setCompletionNote("");
+    setSelectedTask(null);
+  } catch (error) {
+    console.error("Complete task failed:", error);
+    alert("Failed to complete task.");
+  } finally {
+    setIsSavingTask(false);
+  }
+}, [
+  completionNote,
+  invalidateTasks,
+  isSavingTask,
+  taskToComplete,
+]);
   
   const handleDeleteTask = useCallback(
     async (id) => {
