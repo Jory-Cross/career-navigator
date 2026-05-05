@@ -405,31 +405,35 @@ const pending = useMemo(
               <div className="space-y-2">
   <Label>Checklist</Label>
 
+ <>
   <div className="space-y-2">
-    {(form.checklist || []).map((item, index) => (
-      <div key={index} className="flex gap-2">
-        <Input
-          value={item.text || ""}
-          placeholder={`Step ${index + 1}`}
-          onChange={(e) => updateChecklistItem(index, e.target.value)}
-        />
+    <Label>Checklist</Label>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => removeChecklistItem(index)}
-        >
-          Remove
-        </Button>
-      </div>
-    ))}
+    <div className="space-y-2">
+      {(form.checklist || []).map((item, index) => (
+        <div key={index} className="flex gap-2">
+          <Input
+            value={item.text || ""}
+            placeholder={`Step ${index + 1}`}
+            onChange={(e) => updateChecklistItem(index, e.target.value)}
+          />
 
-    <Button type="button" variant="outline" onClick={addChecklistItem}>
-      Add checklist item
-    </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => removeChecklistItem(index)}
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+
+      <Button type="button" variant="outline" onClick={addChecklistItem}>
+        Add checklist item
+      </Button>
+    </div>
   </div>
-</div>
-
+</>
 <div className="space-y-2">
   <Label>Assigned Client</Label>
   <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
