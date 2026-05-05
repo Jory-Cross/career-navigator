@@ -527,12 +527,14 @@ const pending = useMemo(
                       key={index}
                       className="flex items-center gap-2"
                     >
-                      <Input
+                                            <Textarea
                         placeholder={`Step ${index + 1}`}
                         value={item.text || ""}
                         onChange={(e) =>
                           updateChecklistItem(index, e.target.value)
                         }
+                        rows={2}
+                        className="min-h-[70px]"
                       />
 
                       <Button
