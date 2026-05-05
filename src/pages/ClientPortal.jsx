@@ -583,9 +583,17 @@ const pendingRecommendationCount = useMemo(() => {
                   onClick={() => setSelectedTask(task)}
                 >
                   <div className="font-medium">{task.title || "Untitled Task"}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {task.status || "open"}
-                  </div>
+
+<div className="text-sm text-muted-foreground">
+  {task.status || "open"}
+</div>
+
+{task.client_notes ? (
+  <div className="mt-2 rounded-md border border-purple-200 bg-purple-50 p-2 text-xs text-purple-900">
+    <div className="font-medium text-purple-700">Your Note</div>
+    <div>{task.client_notes}</div>
+  </div>
+) : null}
                 </button>
               ))}
             </div>
