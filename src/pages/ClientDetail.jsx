@@ -542,6 +542,7 @@ const currentTaskCount = tasks.filter(
         {!isDspd && !isEmployed && (
           <TabsContent value="applications">
             <JobApplicationsSection
+              clientId={client.id}
               client={client}
               applications={applications}
               onRefresh={refreshApplications}
