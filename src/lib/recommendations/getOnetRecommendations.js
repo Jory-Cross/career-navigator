@@ -308,13 +308,13 @@ return {
 };
 });
 
-  const filtered = results
-    .filter((r) => r.score > 0 || r.fit_concerns.length > 0)
-    .sort((a, b) => b.score - a.score);
+  // ❌ NO FALLBACK — HARD FAIL IF O*NET DOES NOT RETURN RESULTS
+console.error("O*NET returned no results — aborting recommendation generation");
 
-  return {
-    source: "scored-fallback",
-    items: filtered,
-    onet_summary: buildOnetSummary(filtered),
-  };
+return {
+  source: "onet-failed",
+  items: [],
+  onet_summary: null,
+  error: "O*NET could not return results. Check API connection or profile inputs.",
+};
 }
