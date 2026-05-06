@@ -167,11 +167,21 @@ recs.forEach(r => {
   };
 
   const handleStatusChange = async (recId, newStatus) => {
-    // Update local state optimistically
+  try {
     if (onRefresh) {
       await onRefresh();
     }
-  };
+
+    // 🔥 FORCE immediate UI update (no waiting for polling)
+    setTimeout(() => {
+      if (onRefresh) {
+        onRefresh();
+      }
+    }, 500);
+  } catch (e) {
+    console.error("Failed to refresh after status change", e);
+  }
+};
 
   return (
     <div className="space-y-4">
