@@ -845,14 +845,20 @@ console.log("O*NET PROXY TEST RESULT:", result);
   }}
 >
   {generatingRecommendations ? (
-    <>
-      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-      Generating...
-    </>
-  ) : (
-    "Generate Recommendations"
-  )}
+  <>
+    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+    Generating...
+  </>
+) : (
+  "Generate Recommendations"
+)}
 </Button>
+
+{!hasInterestProfilerAssessment && (
+  <p className="text-[11px] text-amber-700 mt-1">
+    Complete the Interest Profiler assessment to generate recommendations.
+  </p>
+)}
    
         <Button
       size="sm"
