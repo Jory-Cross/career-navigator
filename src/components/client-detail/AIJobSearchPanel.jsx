@@ -691,11 +691,11 @@ const normalizedBatch = {
     className="h-8 text-xs"
     onClick={async () => {
       const result = await base44.functions.invoke("onetProxy", {
-  path: "/ip/questions",
-  params: { start: 1, end: 1 },
+  path: "/about/",
+  params: {},
 });
 
-const ok = !!result?.data?.success;
+const ok = !!result?.success;
 console.log("O*NET PROXY TEST RESULT:", result);
       if (ok) {
         toast.success("O*NET connection works");
