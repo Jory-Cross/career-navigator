@@ -61,7 +61,7 @@ if (baseUrl.includes('api-v2')) {
     );
   }
 
-  const credentials = btoa(`${username}:${apiKey}`);
+ const credentials = Buffer.from(`${username}:${apiKey}`).toString('base64');
   headers['Authorization'] = `Basic ${credentials}`;
 }
 
