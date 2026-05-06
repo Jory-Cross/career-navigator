@@ -105,6 +105,9 @@ useEffect(() => {
     category: latestTask.category || "follow_up",
     client_ids: Array.isArray(latestTask.client_ids) ? latestTask.client_ids : [],
     checklist: Array.isArray(latestTask.checklist) ? latestTask.checklist : [],
+    client_notes: latestTask.client_notes || "",
+    client_completed_at: latestTask.client_completed_at || null,
+    completed_at: latestTask.completed_at || null,
   }));
 }, [tasks, editId]);
   
