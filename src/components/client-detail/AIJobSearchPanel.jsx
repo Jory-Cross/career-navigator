@@ -721,7 +721,7 @@ const recs = await base44.entities.JobRecommendation.filter(
     </p>
   </div>
 
-  <div className="flex gap-2 flex-wrap justify-end">
+  <div className="flex flex-col items-end gap-2">
       <Button
     size="sm"
     variant="outline"
