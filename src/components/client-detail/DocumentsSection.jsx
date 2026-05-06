@@ -1095,40 +1095,37 @@ key={tag}
         </div>
 
         {selectedAssessmentDoc.raw?.responses && (
-  <div>
-    <strong>Assessment Details:</strong>
-
-   selectedAssessmentDoc.raw?.assessment_type === "interest_profiler"
-  <div className="mt-2 space-y-2 text-sm">
-    <p>
-      <strong>RIASEC Code:</strong>{" "}
-      {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
-    </p>
-
-   <div>
-  <strong>RIASEC Scores:</strong>
-  <div className="mt-1 space-y-1">
-    <div>Realistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Realistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.realistic ?? "Not available"}</div>
-    <div>Investigative = {selectedAssessmentDoc.raw.responses.riasec_scores?.Investigative ?? selectedAssessmentDoc.raw.responses.riasec_scores?.investigative ?? "Not available"}</div>
-    <div>Artistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Artistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.artistic ?? "Not available"}</div>
-    <div>Social = {selectedAssessmentDoc.raw.responses.riasec_scores?.Social ?? selectedAssessmentDoc.raw.responses.riasec_scores?.social ?? "Not available"}</div>
-    <div>Enterprising = {selectedAssessmentDoc.raw.responses.riasec_scores?.Enterprising ?? selectedAssessmentDoc.raw.responses.riasec_scores?.enterprising ?? "Not available"}</div>
-    <div>Conventional = {selectedAssessmentDoc.raw.responses.riasec_scores?.Conventional ?? selectedAssessmentDoc.raw.responses.riasec_scores?.conventional ?? "Not available"}</div>
-  </div>
-</div>
-
-    <p>
-      <strong>Answers Completed:</strong>{" "}
-      {selectedAssessmentDoc.raw.responses.answers?.length || 0}
-    </p>
-  </div>
-) : (
-      <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64 mt-2">
-        {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
-      </pre>
-    )}
-  </div>
-)}
+          <div>
+            <strong>Assessment Details:</strong>
+            {selectedAssessmentDoc.raw?.assessment_type === "interest_profiler" ? (
+              <div className="mt-2 space-y-2 text-sm">
+                <p>
+                  <strong>RIASEC Code:</strong>{" "}
+                  {selectedAssessmentDoc.raw.responses.riasec_code || "Not available"}
+                </p>
+                <div>
+                  <strong>RIASEC Scores:</strong>
+                  <div className="mt-1 space-y-1">
+                    <div>Realistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Realistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.realistic ?? "Not available"}</div>
+                    <div>Investigative = {selectedAssessmentDoc.raw.responses.riasec_scores?.Investigative ?? selectedAssessmentDoc.raw.responses.riasec_scores?.investigative ?? "Not available"}</div>
+                    <div>Artistic = {selectedAssessmentDoc.raw.responses.riasec_scores?.Artistic ?? selectedAssessmentDoc.raw.responses.riasec_scores?.artistic ?? "Not available"}</div>
+                    <div>Social = {selectedAssessmentDoc.raw.responses.riasec_scores?.Social ?? selectedAssessmentDoc.raw.responses.riasec_scores?.social ?? "Not available"}</div>
+                    <div>Enterprising = {selectedAssessmentDoc.raw.responses.riasec_scores?.Enterprising ?? selectedAssessmentDoc.raw.responses.riasec_scores?.enterprising ?? "Not available"}</div>
+                    <div>Conventional = {selectedAssessmentDoc.raw.responses.riasec_scores?.Conventional ?? selectedAssessmentDoc.raw.responses.riasec_scores?.conventional ?? "Not available"}</div>
+                  </div>
+                </div>
+                <p>
+                  <strong>Answers Completed:</strong>{" "}
+                  {selectedAssessmentDoc.raw.responses.answers?.length || 0}
+                </p>
+              </div>
+            ) : (
+              <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64 mt-2">
+                {JSON.stringify(selectedAssessmentDoc.raw.responses, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
       </div>
     </DialogContent>
   </Dialog>

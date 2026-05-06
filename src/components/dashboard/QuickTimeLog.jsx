@@ -40,7 +40,9 @@ const STRUCTURED_ENTRY_TYPES = [
 export default function QuickTimeLog() {
   console.warn('[QuickTimeLog] DEPRECATED - Use FormEngine instead');
   return null;
+}
 
+/*
   // Load entry types (deduplicated)
   useEffect(() => {
     setLoadingEntryTypes(true);
@@ -213,9 +215,10 @@ export default function QuickTimeLog() {
             }}
           />
         </div>
-      </Card>
-    );
-  }
+        </Card>
+        );
+        }
+        */
 
   return (
      <Card className="border-0 shadow-sm">
