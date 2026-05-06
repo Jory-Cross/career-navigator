@@ -722,27 +722,7 @@ const recs = await base44.entities.JobRecommendation.filter(
   </div>
 
   <div className="flex flex-col items-end gap-2">
-      <Button
-    size="sm"
-    variant="outline"
-    className="h-8 text-xs"
-    onClick={async () => {
-      const result = await base44.functions.invoke("onetProxy", {
-  path: "/about/",
-  params: {},
-});
-
-const ok = !!result?.success;
-console.log("O*NET PROXY TEST RESULT:", result);
-      if (ok) {
-        toast.success("O*NET connection works");
-      } else {
-        toast.error("O*NET connection failed. Check console.");
-      }
-    }}
-  >
-    Test O*NET
-  </Button>
+      
   <Button
   size="sm"
   className="h-8 text-xs"
