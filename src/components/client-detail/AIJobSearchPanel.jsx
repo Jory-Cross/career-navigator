@@ -305,6 +305,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient, onSt
     conflictsCount: 0,
   });
 const [filters, setFilters] = useState({});
+const [hasInterestProfilerAssessment, setHasInterestProfilerAssessment] = useState(false);
 const [recommendationFreshness, setRecommendationFreshness] = useState({
   isOutdated: false,
   newestInputDate: null,
