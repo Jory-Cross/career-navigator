@@ -835,24 +835,30 @@ const recs = await base44.entities.JobRecommendation.filter(
 </Button>
 
 {!hasInterestProfilerAssessment && (
-  <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
-    <p className="text-xs font-semibold text-amber-900">
-      Interest Profiler Required
-    </p>
+  <div className="mt-2 w-full max-w-sm rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 shadow-sm">
+    <div className="flex items-start gap-2">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
 
-    <p className="mt-1 text-[11px] text-amber-800">
-      Complete the Interest Profiler assessment before generating recommendations.
-    </p>
+      <div className="flex-1">
+        <p className="text-sm font-bold text-amber-900">
+          Interest Profiler Required
+        </p>
 
-    {onStartInterestProfiler && (
-      <Button
-        size="sm"
-        className="mt-2 h-7 text-xs"
-        onClick={onStartInterestProfiler}
-      >
-        Start Interest Profiler
-      </Button>
-    )}
+        <p className="mt-1 text-xs leading-relaxed text-amber-800">
+          Complete the Interest Profiler assessment before generating AI job recommendations.
+        </p>
+
+        {onStartInterestProfiler && (
+          <Button
+            size="sm"
+            className="mt-3 h-8 text-xs"
+            onClick={onStartInterestProfiler}
+          >
+            Start Interest Profiler
+          </Button>
+        )}
+      </div>
+    </div>
   </div>
 )}
    
