@@ -94,6 +94,12 @@ export function buildOnetRecommendationProfile({
 export async function testOnetConnection() {
   try {
     const res = await onetRequest("/ip/questions", { start: 1, end: 1 });
+
+    if (!res) {
+      console.error("O*NET TEST FAILED: Missing credentials or empty response.");
+      return false;
+    }
+
     console.log("O*NET TEST SUCCESS:", res);
     return true;
   } catch (err) {
