@@ -855,9 +855,25 @@ console.log("O*NET PROXY TEST RESULT:", result);
 </Button>
 
 {!hasInterestProfilerAssessment && (
-  <p className="text-[11px] text-amber-700 mt-1">
-    Complete the Interest Profiler assessment to generate recommendations.
-  </p>
+  <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+    <p className="text-xs font-semibold text-amber-900">
+      Interest Profiler Required
+    </p>
+
+    <p className="mt-1 text-[11px] text-amber-800">
+      Complete the Interest Profiler assessment before generating recommendations.
+    </p>
+
+    {onStartInterestProfiler && (
+      <Button
+        size="sm"
+        className="mt-2 h-7 text-xs"
+        onClick={onStartInterestProfiler}
+      >
+        Start Interest Profiler
+      </Button>
+    )}
+  </div>
 )}
    
         <Button
