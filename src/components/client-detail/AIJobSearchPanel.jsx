@@ -751,9 +751,34 @@ console.log("O*NET PROXY TEST RESULT:", result);
       console.log("ASSESSMENTS FETCHED FOR RECOMMENDATIONS:", assessments);
       
       if (!docs.length && !assessments.length) {
-        toast.error("Upload a resume or assessment first.");
-        return;
-      }
+  toast.error("Upload a resume or assessment first.");
+  return;
+}
+
+const hasInterestProfiler = assessments.some((assessment) => {
+  const type = safeString(assessment?.assessment_type).toLowerCase();
+  const title = safeString(assessment?.title || assessment?.name).toLowerCase();
+
+  return (
+    type === "interest_profiler" ||
+    type.includes("interest_profiler") ||
+    title.includes("interest profiler")
+  );
+});
+
+if (!hasInterestProfiler) {
+  const profilerError =
+    "Interest Profiler is required before recommendations can be generated. Complete the Interest Profiler first, then generate recommendations again.";
+
+  setRecommendationBatch({
+    error: profilerError,
+    recommendations: [],
+    job_count: 0,
+  });
+
+  toast.error(profilerError);
+  return;
+}
 
       const result = await runRecommendationEngine({
         client: { ...(client || {}), id: resolvedClientId },
