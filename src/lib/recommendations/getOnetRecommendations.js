@@ -195,6 +195,20 @@ function countMatches(keywords = [], profileKeywords = []) {
 export async function getOnetRecommendations(profile = {}) {
   const profileKeywords = buildProfileText(profile);
 
+// 🔴 HARD REQUIREMENT: Interest Profiler must exist
+const answers = profile?.onet_profile?.answers;
+
+if (!answers || answers.split(",").length < 10) {
+  console.error("Interest Profiler not completed — blocking recommendations");
+
+  return {
+    source: "missing-interest-profiler",
+    items: [],
+    onet_summary: null,
+    error: "Interest Profiler must be completed before generating recommendations.",
+  };
+}
+  
   console.log("O*NET PROFILE KEYWORDS:", profileKeywords);
 
   if (
