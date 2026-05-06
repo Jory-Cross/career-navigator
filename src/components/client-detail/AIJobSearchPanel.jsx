@@ -323,10 +323,6 @@ useEffect(() => {
   loadSavedRecs();
   loadLatestBatch();
 
-  const interval = setInterval(() => {
-    loadLatestBatch();
-  }, 10000);
-
   base44.functions
     .invoke("processAssessmentDocuments", {
       action: "get_vocational_facts",
