@@ -13,35 +13,42 @@ export async function runRecommendationEngine({
     throw new Error("runRecommendationEngine requires client.id");
   }
 
-  // ALWAYS try to load saved recommendations first
-const existing = await loadLatestRecommendationBatch(client.id);
+  const existing = await loadLatestRecommendationBatch(client.id);
 
-if (existing && !forceRegenerate) {
-  return {
-    batch: existing,
-    reused: true,
-  };
-}
+  if (existing && !forceRegenerate) {
+    return {
+      batch: existing,
+      reused: true,
+    };
+  }
+
   const inputs = buildRecommendationInputs({
-  documents,
-  assessments,
-  vocationalProfile,
-});
+    documents,
+    assessments,
+    vocationalProfile,
+  });
 
-const result = await generateRecommendationBatch({
-  client,
-  ...inputs,
-});
+  const result = await generateRecommendationBatch({
+    client,
+    ...inputs,
+  });
 
   console.log("RUN ENGINE RESULT:", result);
 
-return {
-  batch: result?.batch || {
+  const batch = result?.batch || {
     recommendations: result?.recommendations || result?.items || [],
     summary: result?.onet_summary || {},
-    source: result?.source || "fallback",
-  },
-  payload: result?.payload || result,
-  reused: false,
-};
+    source: result?.source || "unknown",
+    error: result?.error || null,
+  };
+
+  return {
+    batch: {
+      ...batch,
+      error: batch?.error || result?.error || null,
+      recommendations: batch?.recommendations || result?.recommendations || result?.items || [],
+    },
+    payload: result?.payload || result,
+    reused: false,
+  };
 }
