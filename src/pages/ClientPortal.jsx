@@ -299,25 +299,6 @@ setCompletionNote("");
   isSavingTask,
   taskToComplete,
 ]);
-  
-  const handleDeleteTask = useCallback(
-    async (id) => {
-      if (!id || isSavingTask) return;
-
-      try {
-        setIsSavingTask(true);
-        await deleteTask(id);
-        await invalidateTasks();
-        setSelectedTask(null);
-      } catch (error) {
-        console.error("Delete task failed:", error);
-        alert("Failed to delete task.");
-      } finally {
-        setIsSavingTask(false);
-      }
-    },
-    [invalidateTasks, isSavingTask]
-  );
 
   /**
    * Render guards
