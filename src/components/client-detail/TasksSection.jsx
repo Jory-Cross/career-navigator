@@ -88,6 +88,26 @@ export default function TasksSection({ clientId, tasks = [], onRefresh }) {
   return showArchived ? tasks : tasks.filter((t) => !t.is_archived);
 }, [tasks, showArchived]);
 
+useEffect(() => {
+  if (!editId) return;
+
+  const latestTask = tasks.find((task) => task.id === editId);
+  if (!latestTask) return;
+
+  setForm((prev) => ({
+    ...prev,
+    id: latestTask.id,
+    title: latestTask.title || "",
+    description: latestTask.description || "",
+    status: latestTask.status || "pending",
+    priority: latestTask.priority || "medium",
+    due_date: latestTask.due_date || "",
+    category: latestTask.category || "follow_up",
+    client_ids: Array.isArray(latestTask.client_ids) ? latestTask.client_ids : [],
+    checklist: Array.isArray(latestTask.checklist) ? latestTask.checklist : [],
+  }));
+}, [tasks, editId]);
+  
 const pending = useMemo(
   () => visibleTasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"),
   [visibleTasks]
