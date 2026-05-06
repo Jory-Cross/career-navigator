@@ -33,7 +33,14 @@ async function onetRequest(path, params = {}) {
     },
   });
 
-  if (!response.ok) {
+    if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("O*NET request failed:", {
+      status: response.status,
+      path,
+      params,
+      errorText,
+    });
     throw new Error(`O*NET request failed: ${response.status}`);
   }
 
