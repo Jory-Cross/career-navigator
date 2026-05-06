@@ -685,6 +685,21 @@ const normalizedBatch = {
   </div>
 
   <div className="flex gap-2 flex-wrap justify-end">
+      <Button
+    size="sm"
+    variant="outline"
+    className="h-8 text-xs"
+    onClick={async () => {
+      const ok = await testOnetConnection();
+      if (ok) {
+        toast.success("O*NET connection works");
+      } else {
+        toast.error("O*NET connection failed. Check console.");
+      }
+    }}
+  >
+    Test O*NET
+  </Button>
   <Button
   size="sm"
   className="h-8 text-xs"
