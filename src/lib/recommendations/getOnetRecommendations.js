@@ -209,21 +209,30 @@ export async function getOnetRecommendations(profile = {}) {
   };
 }
 
-if (profile?.onet_profile?.answers || profile?.onet_answer_string) {
-  const onetCareers = await getInterestProfilerCareers({
-    answers: profile?.onet_profile?.answers || profile?.onet_answer_string,
+// 🔥 ALWAYS TRY O*NET FIRST (via backend proxy)
+try {
+  const response = await base44.functions.invoke("onetProxy", {
+    path: "/ip/careers",
+    params: {
+      answers: profile?.onet_profile?.answers || profile?.onet_answer_string || "",
+    },
   });
 
-  const careers = toArray(onetCareers?.career || onetCareers?.careers || onetCareers?.items)
-    .map((item, index) => normalizeOnetCareerItem(item, index));
+  const raw = response?.data?.data;
+
+  const careers = toArray(
+    raw?.career || raw?.careers || raw?.items
+  ).map((item, index) => normalizeOnetCareerItem(item, index));
 
   if (careers.length > 0) {
     return {
-      source: "onet-interest-profiler",
+      source: "onet-live",
       items: careers,
       onet_summary: buildOnetSummary(careers),
     };
   }
+} catch (err) {
+  console.error("O*NET proxy failed, falling back:", err);
 }
   
   const conflicts = getConflictKeywords(profile);
