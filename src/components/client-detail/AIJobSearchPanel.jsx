@@ -18,6 +18,7 @@ import JobSearchFilters from "./JobSearchFilters";
 import RecommendationBatchReview from "./RecommendationBatchReview";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestRecommendationBatch";
+import { testOnetConnection } from "@/lib/onet/onetClient";
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
