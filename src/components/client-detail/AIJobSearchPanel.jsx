@@ -746,10 +746,15 @@ console.log("O*NET PROXY TEST RESULT:", result);
   <Button
   size="sm"
   className="h-8 text-xs"
- disabled={
-  generatingRecommendations ||
+ title={
   !hasInterestProfilerAssessment
+    ? "Complete the Interest Profiler assessment first."
+    : ""
 }
+>
+  {generatingRecommendations ? (
+    <>
+      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
   onClick={async () => {
     try {
       setGeneratingRecommendations(true);
