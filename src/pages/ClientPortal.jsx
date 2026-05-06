@@ -20,13 +20,6 @@ import {
   updateTask,
   deleteTask,
 } from "@/lib/api/clientPortalApi";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const STAFF_ROLES = ["admin", "management", "employee"];
 
