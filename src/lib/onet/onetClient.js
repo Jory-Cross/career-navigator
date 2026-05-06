@@ -91,3 +91,13 @@ export function buildOnetRecommendationProfile({
 
   return null;
 }
+export async function testOnetConnection() {
+  try {
+    const res = await onetRequest("/ip/questions", { start: 1, end: 1 });
+    console.log("O*NET TEST SUCCESS:", res);
+    return true;
+  } catch (err) {
+    console.error("O*NET TEST FAILED:", err);
+    return false;
+  }
+}
