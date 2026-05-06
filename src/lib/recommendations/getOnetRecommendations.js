@@ -226,11 +226,11 @@ if (!answers || answers.split(",").length < 10) {
 // 🔥 ALWAYS TRY O*NET FIRST (via backend proxy)
 try {
   const response = await base44.functions.invoke("onetProxy", {
-    path: "/ip/careers",
-    params: {
-      answers: profile?.onet_profile?.answers || profile?.onet_answer_string || "",
-    },
-  });
+  path: "/ip/careers",
+  params: {
+    answers,
+  },
+});
 
   const raw = response?.data?.data;
 
