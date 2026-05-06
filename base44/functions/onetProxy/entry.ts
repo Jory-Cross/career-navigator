@@ -28,7 +28,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const baseUrl = 'https://api-v2.onetcenter.org';
+   let baseUrl = 'https://api-v2.onetcenter.org';
+
+// 🔥 Route Interest Profiler endpoints to correct API
+if (path.startsWith('/ip/')) {
+  baseUrl = 'https://services.onetcenter.org/ws';
+}
     const url = new URL(`${baseUrl}${path}`);
 
     Object.entries(params || {}).forEach(([key, value]) => {
