@@ -592,6 +592,23 @@ const pending = useMemo(
               )}
             </div>
 
+            {form.client_notes ? (
+              <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-700">
+                  Client Note
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-purple-900">
+                  {form.client_notes}
+                </p>
+              </div>
+            ) : null}
+
+            {form.client_completed_at ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                Client completed this task: {formatDateTime(form.client_completed_at)}
+              </div>
+            ) : null}
+            
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Priority</Label>
