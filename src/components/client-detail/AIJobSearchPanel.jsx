@@ -757,11 +757,13 @@ console.log("O*NET PROXY TEST RESULT:", result);
         reason: "",
       });
 
-      if (result?.batch?.recommendations?.length > 0) {
-        toast.success("Recommendations generated");
-      } else {
-        toast.error("No O*NET results yet (API issue)");
-      }
+     if (result?.batch?.error) {
+  toast.error(result.batch.error);
+} else if (result?.batch?.recommendations?.length > 0) {
+  toast.success("Recommendations generated");
+} else {
+  toast.error("No recommendations were generated.");
+}
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate recommendations");
