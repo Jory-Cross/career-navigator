@@ -529,9 +529,7 @@ export default function StructuredVRTimeEntryForm({ clientId, clients = [], onSu
       is_reportable: entryType?.report_mode !== "none"
     };
 
-    const mockAuth = coreData.service_authorization_id
-      ? authorizations.find(a => a.id === coreData.service_authorization_id)
-      : null;
+    const mockAuth = null;
 
     const currentClient = clients.find(c => c.id === clientId);
 

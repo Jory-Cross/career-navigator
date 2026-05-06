@@ -16,9 +16,9 @@ Deno.serve(async (req) => {
     }
 
     const username = Deno.env.get('ONET_USERNAME');
-    const password = Deno.env.get('ONET_PASSWORD');
+    const apiKey = Deno.env.get('ONET_API_KEY');
 
-    if (!username || !password) {
+    if (!username || !apiKey) {
       console.error('[onetProxy] Missing ONET credentials in environment');
       return Response.json({ success: false, error: 'Server configuration error: missing credentials' }, { status: 500 });
     }
@@ -29,10 +29,14 @@ Deno.serve(async (req) => {
       queryString = '?' + new URLSearchParams(params).toString();
     }
 
-    const url = `https://services.onetcenter.org/ws/mnm${path}${queryString}`;
+    // Routes starting with /ip/ use the main O*NET WS base; all others use /mnm/
+    const base = path.startsWith('/ip/') || path.startsWith('/careers/')
+      ? 'https://services.onetcenter.org/ws'
+      : 'https://services.onetcenter.org/ws/mnm';
+    const url = `${base}${path}${queryString}`;
     console.log(`[onetProxy] Fetching: ${url}`);
 
-    const credentials = btoa(`${username}:${password}`);
+    const credentials = btoa(`${username}:${apiKey}`);
 
     const response = await fetch(url, {
       headers: {

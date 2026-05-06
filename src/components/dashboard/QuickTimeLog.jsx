@@ -219,7 +219,9 @@ export default function QuickTimeLog() {
         );
         }
         */
+        // END DEPRECATED
 
+/* DEPRECATED - dead code below, component returns null above
   return (
      <Card className="border-0 shadow-sm">
        <div className="h-1 w-full bg-violet-50" />
