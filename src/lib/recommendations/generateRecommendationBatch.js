@@ -144,6 +144,25 @@ export async function generateRecommendationBatch({
     onet_answer_string,
   });
 
+// 🔴 HARD STOP if O*NET returned an error
+if (result?.error) {
+  console.error("O*NET ERROR:", result.error);
+
+  return {
+    batch: {
+      client_id: client?.id,
+      recommendations: [],
+      summary: {},
+      source: "onet-error",
+      job_count: 0,
+      generated_at: new Date().toISOString(),
+      generated_by: "ai",
+      error: result.error, // ✅ THIS IS THE KEY
+    },
+    payload: result,
+  };
+}
+  
   const processed = (result?.items || []).map((job) => {
   const constraintResult = applyConstraintRules(
     job,
