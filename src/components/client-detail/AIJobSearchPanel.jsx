@@ -512,32 +512,52 @@ const recs = await base44.entities.JobRecommendation.filter(
 
     console.log("LOADED SAVED BATCH:", batch);
 
-   const parsedRecommendations = (() => {
-  if (Array.isArray(batch.recommendations)) {
-    return batch.recommendations;
-  }
+    const parsedRecommendations = (() => {
+      if (Array.isArray(batch.recommendations)) {
+        return batch.recommendations;
+      }
 
-  if (typeof batch.recommended_job_fields_json === "string") {
-    try {
-      const parsed = JSON.parse(batch.recommended_job_fields_json);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      console.error("FAILED TO PARSE recommended_job_fields_json", e);
+      if (typeof batch.recommended_job_fields_json === "string") {
+        try {
+          const parsed = JSON.parse(batch.recommended_job_fields_json);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          console.error("FAILED TO PARSE recommended_job_fields_json", e);
+          return [];
+        }
+      }
+
       return [];
+    })();
+
+    const normalizedBatch = {
+      ...batch,
+      recommendations: parsedRecommendations,
+    };
+
+    let shouldLoadFreshness = true;
+
+    setRecommendationBatch((currentBatch) => {
+      if (currentBatch?.error && !normalizedBatch?.error) {
+        console.log(
+          "SKIPPING SAVED BATCH OVERWRITE BECAUSE CURRENT ERROR MUST REMAIN VISIBLE:",
+          {
+            currentBatch,
+            incomingBatch: normalizedBatch,
+          }
+        );
+
+        shouldLoadFreshness = false;
+        return currentBatch;
+      }
+
+      console.log("FINAL RECOMMENDATIONS:", normalizedBatch.recommendations);
+      return normalizedBatch;
+    });
+
+    if (shouldLoadFreshness) {
+      await loadRecommendationFreshness(normalizedBatch);
     }
-  }
-
-  return [];
-})();
-
-const normalizedBatch = {
-  ...batch,
-  recommendations: parsedRecommendations,
-};
-
-    setRecommendationBatch(normalizedBatch);
-    console.log("FINAL RECOMMENDATIONS:", normalizedBatch.recommendations);
-    await loadRecommendationFreshness(normalizedBatch);
   } catch (e) {
     console.error("Failed to load saved batch", e);
   }
