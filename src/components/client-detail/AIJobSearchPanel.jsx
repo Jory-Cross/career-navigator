@@ -859,13 +859,26 @@ if (!hasInterestProfiler) {
 {recommendationBatch?.error && (
   <div className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 mt-3">
     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" />
-    <div className="flex-1">
-      <p className="text-sm font-semibold text-red-900">
-        Interest Profiler Required
-      </p>
-      <p className="mt-0.5 text-xs text-red-800">
-        {recommendationBatch.error}
-      </p>
+
+    <div className="flex-1 space-y-2">
+      <div>
+        <p className="text-sm font-semibold text-red-900">
+          Interest Profiler Required
+        </p>
+        <p className="mt-0.5 text-xs text-red-800">
+          {recommendationBatch.error}
+        </p>
+      </div>
+
+      {onStartInterestProfiler && (
+        <Button
+          size="sm"
+          className="h-7 text-xs"
+          onClick={onStartInterestProfiler}
+        >
+          Start Interest Profiler
+        </Button>
+      )}
     </div>
   </div>
 )}
