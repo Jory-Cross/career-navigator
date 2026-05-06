@@ -13,15 +13,8 @@ export async function runRecommendationEngine({
     throw new Error("runRecommendationEngine requires client.id");
   }
 
-  const existing = await loadLatestRecommendationBatch(client.id);
-
-  if (existing && !forceRegenerate) {
-    return {
-      batch: existing,
-      reused: true,
-    };
-  }
-
+  // 🔴 TEMP: disable loading saved batches so we see fresh results
+const existing = null;
   const inputs = buildRecommendationInputs({
     documents,
     assessments,
