@@ -44,12 +44,30 @@ if (path.startsWith('/ip/')) {
 
     console.log(`[onetProxy] Fetching: ${url.toString()}`);
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        'X-API-Key': apiKey,
-        Accept: 'application/json',
-      },
-    });
+   let headers = {
+  Accept: 'application/json',
+};
+
+// 🔥 Use correct auth per endpoint
+if (baseUrl.includes('api-v2')) {
+  headers['X-API-Key'] = apiKey;
+} else {
+  const username = Deno.env.get('ONET_USERNAME');
+
+  if (!username) {
+    return Response.json(
+      { success: false, error: 'Missing ONET_USERNAME for WS API' },
+      { status: 500 }
+    );
+  }
+
+  const credentials = btoa(`${username}:${apiKey}`);
+  headers['Authorization'] = `Basic ${credentials}`;
+}
+
+const response = await fetch(url.toString(), {
+  headers,
+});
 
     const text = await response.text();
 
