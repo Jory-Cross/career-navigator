@@ -944,21 +944,6 @@ console.log("O*NET PROXY TEST RESULT:", result);
           )}
 
           {/* Search results */}
-
-{/* 🔴 SHOW ERRORS FIRST */}
-{recommendationBatch?.error && (
-  <div className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 mb-3">
-    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" />
-    <div className="flex-1">
-      <p className="text-sm font-semibold text-red-900">
-        Interest Profiler Required
-      </p>
-      <p className="mt-0.5 text-xs text-red-800">
-        {recommendationBatch.error}
-      </p>
-    </div>
-  </div>
-)}
           
 {recommendationBatch &&
   recommendationBatch.recommendations &&
