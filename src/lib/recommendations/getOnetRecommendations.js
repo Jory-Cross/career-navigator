@@ -1,6 +1,6 @@
 import { buildOnetSummary } from "@/lib/recommendations/buildOnetSummary";
 import { getInterestProfilerCareers } from "@/lib/onet/onetClient";
-
+import { base44 } from "@/api/base44Client";
 function toArray(value) {
   if (Array.isArray(value)) return value;
   if (!value) return [];
