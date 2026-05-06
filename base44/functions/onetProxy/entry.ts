@@ -9,56 +9,78 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { path, params } = await req.json();
+    const { path, params = {} } = await req.json();
 
     if (!path) {
-      return Response.json({ success: false, error: 'Missing required parameter: path' }, { status: 400 });
+      return Response.json(
+        { success: false, error: 'Missing required parameter: path' },
+        { status: 400 }
+      );
     }
 
-    const username = Deno.env.get('ONET_USERNAME');
     const apiKey = Deno.env.get('ONET_API_KEY');
 
-    if (!username || !apiKey) {
-      console.error('[onetProxy] Missing ONET credentials in environment');
-      return Response.json({ success: false, error: 'Server configuration error: missing credentials' }, { status: 500 });
+    if (!apiKey) {
+      console.error('[onetProxy] Missing ONET_API_KEY in environment');
+      return Response.json(
+        { success: false, error: 'Server configuration error: missing ONET_API_KEY' },
+        { status: 500 }
+      );
     }
 
-    // Build query string from params
-    let queryString = '';
-    if (params && typeof params === 'object' && Object.keys(params).length > 0) {
-      queryString = '?' + new URLSearchParams(params).toString();
-    }
+    const baseUrl = 'https://api-v2.onetcenter.org';
+    const url = new URL(`${baseUrl}${path}`);
 
-    // Routes starting with /ip/ use the main O*NET WS base; all others use /mnm/
-    const base = path.startsWith('/ip/') || path.startsWith('/careers/')
-      ? 'https://services.onetcenter.org/ws'
-      : 'https://services.onetcenter.org/ws/mnm';
-    const url = `${base}${path}${queryString}`;
-    console.log(`[onetProxy] Fetching: ${url}`);
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, value);
+      }
+    });
 
-    const credentials = btoa(`${username}:${apiKey}`);
+    console.log(`[onetProxy] Fetching: ${url.toString()}`);
 
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Accept': 'application/json',
+        'X-API-Key': apiKey,
+        Accept: 'application/json',
       },
     });
 
+    const text = await response.text();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[onetProxy] O*NET API error ${response.status}: ${errorText}`);
+      console.error('[onetProxy] O*NET API error:', {
+        status: response.status,
+        body: text,
+      });
+
       return Response.json(
-        { success: false, error: `O*NET API returned ${response.status}: ${response.statusText}` },
+        {
+          success: false,
+          status: response.status,
+          error: text || response.statusText,
+        },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return Response.json({ success: true, data });
+    let data = null;
 
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+
+    return Response.json({
+      success: true,
+      data,
+    });
   } catch (error) {
-    console.error('[onetProxy] Unexpected error:', error.message);
-    return Response.json({ success: false, error: error.message }, { status: 500 });
+    console.error('[onetProxy] Unexpected error:', error?.message || error);
+    return Response.json(
+      { success: false, error: error?.message || 'Unexpected error' },
+      { status: 500 }
+    );
   }
 });
