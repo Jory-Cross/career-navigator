@@ -929,6 +929,12 @@ console.log("O*NET PROXY TEST RESULT:", result);
 
           {/* Search results */}
 
+{recommendationBatch?.error && (
+  <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 mb-3">
+    ⚠️ {recommendationBatch.error}
+  </div>
+)}
+          
 {recommendationBatch &&
   recommendationBatch.recommendations &&
   recommendationBatch.recommendations.length > 0 && (
