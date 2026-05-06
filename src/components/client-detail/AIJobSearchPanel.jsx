@@ -724,7 +724,13 @@ console.log("O*NET PROXY TEST RESULT:", result);
   <Button
   size="sm"
   className="h-8 text-xs"
-  disabled={generatingRecommendations}
+  disabled={
+  generatingRecommendations ||
+  !client?.assessments?.some(
+    (a) =>
+      safeString(a?.assessment_type).toLowerCase() === "interest_profiler"
+  )
+}
   onClick={async () => {
     try {
       setGeneratingRecommendations(true);
