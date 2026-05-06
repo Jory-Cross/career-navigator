@@ -167,13 +167,13 @@ const handleDocumentsChanged = useCallback(() => {
     !!clientId && (activeTab === "time" || activeTab === "job_supports");
 
   const { data: applications = [] } = useQuery({
-    queryKey: queryKeys.applications(clientId),
-    queryFn: () => getApplications(clientId),
-    enabled: shouldLoadApplications,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  queryKey: queryKeys.applications(clientId),
+  queryFn: () => getApplications(clientId),
+  enabled: shouldLoadApplications,
+  staleTime: 10 * 1000,
+  refetchInterval: 10 * 1000,
+  refetchOnWindowFocus: true,
+});
 
    const { data: tasks = [] } = useQuery({
   queryKey: queryKeys.tasks(clientId),
