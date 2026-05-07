@@ -286,7 +286,7 @@ let onetAnswerString = null;
 if (interestAssessment) {
   const responses = interestAssessment.responses || {};
 
-  const answers =
+    const answers =
     interestAssessment.answers ||
     responses.answers ||
     [];
@@ -294,6 +294,7 @@ if (interestAssessment) {
   const scores =
     interestAssessment.riasec_scores ||
     responses.riasec_scores ||
+    responses.scores ||
     {};
 
   interestProfile = buildRiasecProfile({
@@ -301,8 +302,14 @@ if (interestAssessment) {
     answers,
   });
 
-  onetAnswerString = buildInterestProfilerAnswerString(answers);
-}
+  onetAnswerString =
+    responses.answerString ||
+    responses.answer_string ||
+    responses.onet_answer_string ||
+    interestAssessment.answerString ||
+    interestAssessment.answer_string ||
+    interestAssessment.onet_answer_string ||
+    buildInterestProfilerAnswerString(answers);
 
   console.log("RIASEC PROFILE:", interestProfile);
 console.log("ONET ANSWER STRING:", onetAnswerString);
