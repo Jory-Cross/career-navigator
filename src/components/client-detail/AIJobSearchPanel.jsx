@@ -187,7 +187,7 @@ export default function AIJobSearchPanel({ clientId, client: initialClient, onSt
   });
 const [filters, setFilters] = useState({});
 const [hasInterestProfilerAssessment, setHasInterestProfilerAssessment] = useState(false);
-
+const [interestProfilerRequiredMessage, setInterestProfilerRequiredMessage] = useState("");
 const refreshInterestProfilerStatus = useCallback(async () => {
   if (!resolvedClientId) return false;
 
