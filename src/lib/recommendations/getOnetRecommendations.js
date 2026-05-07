@@ -195,10 +195,20 @@ function countMatches(keywords = [], profileKeywords = []) {
 export async function getOnetRecommendations(profile = {}) {
   const profileKeywords = buildProfileText(profile);
 
-// 🔴 HARD REQUIREMENT: Interest Profiler must exist
-const answers = profile?.onet_profile?.answers;
+// 🔴 HARD REQUIREMENT: completed O*NET Interest Profiler answer string must exist
+const answers =
+  profile?.onet_profile?.answerString ||
+  profile?.onet_profile?.answer_string ||
+  profile?.onet_profile?.onet_answer_string ||
+  profile?.onet_profile?.answers ||
+  profile?.answerString ||
+  profile?.answer_string ||
+  profile?.onet_answer_string ||
+  "";
 
-if (!answers || answers.split(",").length < 10) {
+const normalizedAnswers = String(answers || "").replace(/[^1-5]/g, "");
+
+if (normalizedAnswers.length < 30) {
   console.error("Interest Profiler not completed — blocking recommendations");
 
   return {
