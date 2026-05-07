@@ -571,10 +571,11 @@ const currentTaskCount = tasks.filter(
         {!isDspd && !isEmployed && !isClientUser && (
          <TabsContent value="assessments">
   <AssessmentSection
-    client={client}
-    onRefresh={refreshClient}
-    openAssessmentType={openAssessmentType}
-  />
+  client={client}
+  onRefresh={refreshClient}
+  openAssessmentType={openAssessmentType}
+  onOpenAssessmentTypeHandled={() => setOpenAssessmentType(null)}
+/>
 </TabsContent>
         )}
 
