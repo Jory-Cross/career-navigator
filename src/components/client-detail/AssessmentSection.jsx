@@ -138,9 +138,9 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
-  const openNew = () => {
+   const openNew = (type = "career_goals") => {
     setEditingAssessment(null);
-    setAssessmentType("career_goals");
+    setAssessmentType(type);
     setResponses({});
     setNotes("");
     setShowForm(true);
