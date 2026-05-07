@@ -589,7 +589,22 @@ setSavingAll(true);
 
   const handleStatusChange = async (job, status) => {
     if (status === 'save') {
-      try {
+  const jobTitle = safeString(job.job_title || job.title).toLowerCase();
+  const employer = safeString(job.employer).toLowerCase();
+
+  const alreadySaved = savedRecs.some((saved) => {
+    const savedTitle = safeString(saved.job_title || saved.title).toLowerCase();
+    const savedEmployer = safeString(saved.employer).toLowerCase();
+
+    return savedTitle === jobTitle && savedEmployer === employer;
+  });
+
+  if (alreadySaved) {
+    toast.error("This recommendation is already saved.");
+    return;
+  }
+
+  try {
        await base44.functions.invoke('jobSearchAssistant', {
   action: 'save_recommendations',
   clientId: resolvedClientId,
