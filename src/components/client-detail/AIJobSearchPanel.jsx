@@ -21,19 +21,6 @@ import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestR
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
-const normalizeSkill = (skill) =>
-  safeString(skill).toLowerCase().replace(/\s+/g, " ").trim();
-
-const dedupeStrings = (items = []) => {
-  const seen = new Set();
-  return items.filter((item) => {
-    const key = normalizeSkill(item);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-};
-
 const STATUS_LABELS = { suggested: "Suggested", saved: "Saved", applied: "Applied", rejected: "Not a Fit" };
 
 function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore, conflictsCount }) {
