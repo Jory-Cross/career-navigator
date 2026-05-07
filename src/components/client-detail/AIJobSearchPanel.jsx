@@ -650,7 +650,7 @@ if (!validJobs.length) {
       const res = await base44.functions.invoke('jobSearchAssistant', {
   action: 'save_recommendations',
   clientId: resolvedClientId,
-  jobs,
+  jobs: validJobs,
   assessmentsUsed,
   clientFieldsUsed: clientFieldsUsed,
   searchTermsUsed,
