@@ -890,8 +890,20 @@ setSavingAll(true);
               className="text-sm min-h-[70px] resize-none"
             />
             <Button className="w-full" onClick={runSearch} disabled={loading}>
-              
-            </Button>
+  {loading ? (
+    <>
+      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      Searching live jobs with citations...
+    </>
+  ) : (
+    <>
+      <Sparkles className="w-4 h-4 mr-2" />
+      {jobs.length > 0
+        ? "Search Again"
+        : "Find Grounded Jobs for This Client"}
+    </>
+  )}
+</Button>
           </Card>
 
           {/* Vocational profile result */}
