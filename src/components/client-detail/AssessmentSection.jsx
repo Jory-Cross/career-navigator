@@ -301,6 +301,14 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 
   const currentQuestions = assessmentQuestions[assessmentType] || [];
 
+  useEffect(() => {
+    if (!openAssessmentType) return;
+
+    if (openAssessmentType === "interest_profiler") {
+      openNew("interest_profiler");
+    }
+  }, [openAssessmentType]);
+  
  return (
   <Card className="border-0 shadow-sm">
     <CardHeader>
