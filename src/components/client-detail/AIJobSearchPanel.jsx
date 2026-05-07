@@ -1155,9 +1155,9 @@ const validJobCount = jobs.filter(
   size="sm"
   onClick={saveAllToClient}
   disabled={
-    savingAll ||
-    jobs.filter((job) => job.confidence_level !== "low").length === 0
-  }
+  savingAll ||
+  validJobCount === 0
+}
   className="h-8 text-xs shrink-0"
 >
                     {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
