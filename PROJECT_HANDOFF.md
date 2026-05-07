@@ -1,197 +1,407 @@
-🧠 HANDOFF — CRM TASK SYSTEM (POST-STABILITY + CLEANUP)
-🔴 HOW TO WORK WITH YOU (LOCKED RULES)
+HANDOFF SUMMARY — AI JOB SEARCH / O*NET WORKFLOW
+WHAT I LEARNED FROM PREVIOUS CHATS
+Core Architecture Direction
 
-Always provide:
 
-Exact file path
-Exact block start (unique line)
-Exact block end (unique line)
-Full replacement OR exact delete instructions
+O*NET is the source of truth.
 
-Never:
 
-Say “find something like…”
-Use vague markers like </div> without context
-Give partial snippets for full replacements
-Assume file structure
+No fake fallback recommendations allowed.
 
-Process:
 
-One step at a time
-Stability > new features
-If anything breaks → stop and fix immediately
-🧠 WHAT HAS BEEN LEARNED (ALL CHATS)
-Product Direction (LOCKED)
-Tasks = driver of workflow (not statuses)
-Client participation is required
-Staff must have full flexibility
-Recommendations ≠ applications
-Architecture Direction (LOCKED)
-Backend (Base44) = source of truth
-UI must NOT be source of truth
-Use adapter layer (clientPortalApi.js)
-Avoid direct Base44 calls in UI where possible
-Data Model (CURRENT STATE)
-Task
-- title
-- description (task instructions)
-- status
-- priority
-- due_date
-- category
-- client_ids
-- checklist []
-- client_notes
-- staff_notes
-- client_completed_at
-- completed_at
-- is_archived
-System Behavior (CURRENT)
-Client completes task → adds note → saved to client_notes
-Staff sees:
-client note
-timestamps
-completion indicator
-Polling updates both sides
-No refresh required for sync
-Tab persistence works
-🧠 WHAT WAS LEARNED IN THIS CHAT
-🔴 Critical Debug Lessons
-JSX errors came from:
-misplaced checklist UI
-rendering outside .map()
-“Adjacent JSX elements” = missing wrapper OR wrong placement
-Never insert UI blocks into list rendering without full context
-🔴 Major Fixes Completed
-Removed duplicate buildTaskPayload
-Fixed API mapping (client_notes)
-Fixed payload builder (data was being dropped)
-Fixed client → staff note visibility
-Fixed tab persistence
-Fixed task counts (active vs archived)
-Removed legacy notes from UI
-Cleaned task data model
-🔴 Key Insight
+Interest Profiler is REQUIRED before recommendations.
 
-Problem was NOT UI — it was data flow + incorrect placement
 
-✅ WHAT HAS BEEN ACCOMPLISHED
-TASK SYSTEM — STABLE
-Data Layer
-createTask ✅
-updateTask ✅
-archiveTask ✅
-deleteTask ✅
-client_notes persisted correctly ✅
-Staff Side
-Create/edit tasks ✅
-See client notes ✅
-See completion timestamps ✅
-Active vs completed separation ✅
-Counts fixed ✅
-Client Side
-Complete task ✅
-Add note (prompt) ✅
-Notes sync to staff ✅
-Live updates (polling) ✅
-System Behavior
-No refresh required for updates ✅
-Tab persistence works ✅
-Clean data model ✅
-⚠️ CURRENT STATE (IMPORTANT)
+Stability is prioritized over feature expansion.
 
-You are now:
 
-OUT OF INSTABILITY
-INTO CONTROLLED FEATURE BUILD
-🚧 WHAT NEEDS TO BE BUILT NEXT
-PHASE 5 — TASK EXPERIENCE
-1. Checklist System (NEXT STEP)
-Staff creates checklist steps
-Stored in task.checklist
+UI must clearly communicate state and failures.
 
-Client behavior:
 
-Checkbox per step
-Auto status:
-0 complete → pending
-some complete → in_progress
-all complete → ready to complete
-Cannot complete until all steps done
-2. Replace Prompt UX
+Recommendation engine should fail cleanly rather than guess.
 
-Current:
 
-window.prompt()
+Your Instruction Requirements
+These are now critical operating rules:
+❌ No guessing
+❌ No “find something like this”
+❌ No partial blocks without boundaries
+❌ No vague “replace the function” instructions
+✅ Exact file paths
+✅ Exact start/end boundaries
+✅ Full replacements
+✅ One step at a time
+✅ Use CURRENT pasted file only
+CRM Direction
+Current recommendation architecture:
+runRecommendationEngine  → buildRecommendationInputs  → getOnetRecommendations  → generateRecommendationBatch  → AIJobSearchPanel
+Current Major Product Direction
 
-Replace with:
 
-Modal
-Structured note entry
-3. Task UI Cleanup (IN PROGRESS)
-description = instructions ✅
-client_notes = feedback ✅
-staff_notes = future
-notes = removed from UI ✅
-🟡 PLANNED (DO NOT BUILD YET)
-Payload CMS Integration
+O*NET-backed recommendations
 
-Use for:
 
-Task Templates
-Onboarding flows
-Reusable instructions
-Assessment tasks
-Checklist templates
+Vocational Facts Profile grounding
 
-DO NOT use for:
 
-Task progress
-Client-specific data
-Status tracking
-Future Data Model
-TaskTemplate
-- title
-- description
-- checklist
-- category
-- priority
-- audience
+Staff review workflow
 
-OnboardingPlan
-- name
-- task_template_ids
-🚫 BLOCKED / DO NOT TOUCH
-O*NET integration
-Recommendation engine accuracy
-AI job search
-🎯 NEXT STEP FOR NEW CHAT
 
-Start with:
+Client interaction workflow
 
-We are continuing CRM Task System.
 
-System is stable.
+Future AI job-search automation
 
-Next step:
-Add checklist UI to task dialog (create/edit only).
 
-File:
-src/components/client-detail/TasksSection.jsx
+Future Payload CMS migration planning
 
-We will insert checklist BELOW the "Assigned Client" block.
 
-I need:
-Exact block start
-Exact block end
-Full replacement
-💡 FINAL STATE
+Base44 dependency reduction over time
 
-You now have:
 
-Stable task system
-Clean data model
-Working client → staff sync
-Proper architecture direction
 
-👉 Next phase = structured task execution (checklists)
+WHAT I LEARNED IN THIS CHAT
+Main Goal
+This chat became a major stabilization + integrity cleanup pass for:
+AIJobSearchPanel.jsx
+
+MAJOR ISSUES FIXED
+1. Disappearing Error Message (CRITICAL FIX)
+Problem
+Interest Profiler warning appeared briefly then vanished.
+Root Cause
+loadLatestBatch() was overwriting fresh local error state with stale DB batch state.
+Fix
+Added overwrite protection:
+if (currentBatch?.error && !normalizedBatch?.error) {  return currentBatch;}
+Result
+
+
+Error remains visible
+
+
+No more flicker
+
+
+Stable error behavior
+
+
+
+2. Interest Profiler Enforcement
+Added
+
+
+Disabled Generate button when profiler missing
+
+
+Large highlighted warning card
+
+
+“Start Interest Profiler” CTA button
+
+
+Better instructional UX
+
+
+Current UX
+If no Interest Profiler:
+
+
+Generate button disabled
+
+
+Warning card visible
+
+
+Start button visible
+
+
+
+3. Recommendation Integrity Rules
+Added
+Recommendations can no longer:
+
+
+generate fake jobs
+
+
+save low-confidence-only batches
+
+
+save empty batches
+
+
+duplicate-save recommendations
+
+
+duplicate-save via Save All
+
+
+double-click save into duplicates
+
+
+Added Logic
+
+
+validJobs
+
+
+newJobs
+
+
+duplicate comparison against savedRecs
+
+
+
+4. Save Workflow Stabilization
+Save All Now:
+✅ saves only valid jobs
+✅ skips low confidence jobs
+✅ skips duplicates
+✅ prevents double-click duplication
+✅ warns if everything already saved
+Individual Save Now:
+✅ prevents duplicates
+✅ checks existing recommendation matches first
+
+5. Recommendation Count Consistency
+Previously:
+jobs.length
+Now:
+validJobCount
+This aligns:
+
+
+displayed counts
+
+
+save behavior
+
+
+valid recommendation logic
+
+
+
+CLEANUP COMPLETED
+Removed
+Dead Logic
+
+
+unused profile builders
+
+
+unused extraction helpers
+
+
+old workflow state (step)
+
+
+duplicate render paths
+
+
+stale interval polling
+
+
+stale helper functions
+
+
+Debug Noise
+Removed multiple:
+console.log(...)
+Kept:
+console.error(...)
+Comment Cleanup
+Removed large amounts of:
+
+
+temporary debug comments
+
+
+stale section comments
+
+
+fix-history comments
+
+
+
+CURRENT STATE OF AIJobSearchPanel.jsx
+NOW STABLE
+The file is now:
+
+
+significantly cleaner
+
+
+less experimental
+
+
+less debug-patched
+
+
+more production-oriented
+
+
+workflow-stable
+
+
+Current Stable Behaviors
+✅ Recommendation errors persist
+✅ Save logic protected
+✅ Duplicate saves prevented
+✅ Interest Profiler gating works
+✅ Search button stable
+✅ Recommendation count consistent
+✅ Save All properly disabled when invalid
+✅ No stale overwrite flicker
+
+WHAT STILL NEEDS TO BE BUILT
+HIGH PRIORITY NEXT STEP
+Open Interest Profiler Directly
+Current Behavior
+“Start Interest Profiler” only navigates to Assessments tab.
+Desired Behavior
+Button should:
+
+
+open Assessments tab
+
+
+immediately launch/open Interest Profiler assessment
+
+
+NEXT FILE NEEDED
+We intentionally stopped before changing this.
+Next chat should begin with:
+src/components/client-detail/AssessmentSection.jsx
+(or exact current assessment tab component)
+DO NOT GUESS FILES.
+
+MEDIUM PRIORITY NEXT STEPS
+Real O*NET Occupation Detail View
+Future:
+
+
+clickable occupations
+
+
+My Next Move style details
+
+
+O*NET tasks
+
+
+skills
+
+
+abilities
+
+
+work context
+
+
+outlook
+
+
+related occupations
+
+
+
+Recommendation Review Workflow
+Still needs refinement:
+
+
+better staff review states
+
+
+client response workflow
+
+
+archive behavior
+
+
+job search target progression
+
+
+
+Recommendation Freshness UX
+Currently:
+
+
+outdated warning exists
+
+
+Future:
+
+
+smarter detection
+
+
+possibly auto-regeneration suggestions
+
+
+
+Better VFP Extraction
+Future:
+
+
+stronger AI summarization
+
+
+cleaner WSA synthesis
+
+
+stronger environmental constraints extraction
+
+
+
+BLOCKED UNTIL O*NET CREDITS
+Still waiting for:
+
+
+real O*NET live calls
+
+
+full Interest Profiler integration
+
+
+/ip/careers
+
+
+live occupation mapping
+
+
+real recommendation confidence validation
+
+
+
+IMPORTANT IMPLEMENTATION RULES FOR NEXT CHAT
+DO NOT:
+❌ Guess code structure
+❌ Say “replace the function”
+❌ Say “find something like”
+❌ Give partial boundaries
+❌ Change unrelated systems
+ALWAYS:
+✅ Use pasted file as source of truth
+✅ Give exact boundaries
+✅ One step at a time
+✅ Full replacements when needed
+✅ Keep stability first
+
+CURRENT BEST NEXT STEP
+START NEXT CHAT WITH:
+Here is AssessmentSection.jsx
+Then we will:
+
+
+wire Start Interest Profiler button properly
+
+
+open assessment directly
+
+
+avoid fake/placeholder flow coupling
+
+
+preserve current stable recommendation system
+
