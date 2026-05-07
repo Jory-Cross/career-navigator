@@ -647,7 +647,25 @@ if (!validJobs.length) {
   toast.error("No valid recommendations available to save.");
   return;
 }
-    setSavingAll(true);
+
+const newJobs = validJobs.filter((job) => {
+  const jobTitle = safeString(job.job_title || job.title).toLowerCase();
+  const employer = safeString(job.employer).toLowerCase();
+
+  return !savedRecs.some((saved) => {
+    const savedTitle = safeString(saved.job_title || saved.title).toLowerCase();
+    const savedEmployer = safeString(saved.employer).toLowerCase();
+
+    return savedTitle === jobTitle && savedEmployer === employer;
+  });
+});
+
+if (!newJobs.length) {
+  toast.error("All valid recommendations are already saved.");
+  return;
+}
+
+setSavingAll(true);
     try {
       const res = await base44.functions.invoke('jobSearchAssistant', {
   action: 'save_recommendations',
