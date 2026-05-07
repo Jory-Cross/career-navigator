@@ -754,7 +754,7 @@ const validJobCount = jobs.filter(
 )}
 </Button>
 
-{!hasInterestProfilerAssessment && (
+{(!hasInterestProfilerAssessment || recommendationBatch?.error) && (
   <div className="mt-2 w-full max-w-sm rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 shadow-sm">
     <div className="flex items-start gap-2">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
@@ -765,7 +765,7 @@ const validJobCount = jobs.filter(
         </p>
 
         <p className="mt-1 text-xs leading-relaxed text-amber-800">
-          Complete the Interest Profiler assessment before generating AI job recommendations.
+         {recommendationBatch?.error || "Complete the Interest Profiler assessment before generating AI job recommendations."}
         </p>
 
         {onStartInterestProfiler && (
