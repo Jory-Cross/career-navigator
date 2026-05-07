@@ -135,12 +135,7 @@ const buildCareerProfilePayload = ({ client, resume, assessments = [], documents
     document_ids: documents.map((d) => d.id).filter(Boolean),
   };
 };
-const STATUS_COLORS = {
-  suggested: "bg-slate-100 text-slate-600 border-slate-200",
-  saved: "bg-blue-100 text-blue-700 border-blue-200",
-  applied: "bg-green-100 text-green-700 border-green-200",
-  rejected: "bg-red-100 text-red-600 border-red-200",
-};
+
 const STATUS_LABELS = { suggested: "Suggested", saved: "Saved", applied: "Applied", rejected: "Not a Fit" };
 
 function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore, conflictsCount }) {
