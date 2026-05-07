@@ -355,10 +355,6 @@ useEffect(() => {
   loadLatestBatch();
 
   refreshInterestProfilerStatus();
-    .catch((err) => {
-      console.error("Failed to check Interest Profiler assessment:", err);
-      setHasInterestProfilerAssessment(false);
-    });
 
   base44.functions
     .invoke("processAssessmentDocuments", {
