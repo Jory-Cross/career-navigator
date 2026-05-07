@@ -236,9 +236,9 @@ if (normalizedAnswers.length < 30) {
 // 🔥 ALWAYS TRY O*NET FIRST (via backend proxy)
 try {
   const response = await base44.functions.invoke("onetProxy", {
-  path: "/ip/careers",
+  path: "/mnm/interestprofiler/careers",
   params: {
-    answers,
+    answers: normalizedAnswers,
   },
 });
 
