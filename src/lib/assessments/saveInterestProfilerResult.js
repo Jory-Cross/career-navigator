@@ -1,5 +1,21 @@
 import { base44 } from "@/api/base44Client";
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function getTimestamp(item) {
+  const value =
+    item?.updated_date ||
+    item?.updated_at ||
+    item?.created_date ||
+    item?.created_at ||
+    "";
+
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
 export async function saveInterestProfilerResult({
   clientId,
   assessmentId = null,
@@ -83,6 +99,18 @@ export async function saveInterestProfilerResult({
 
   const completedAt = completed_at || new Date().toISOString();
 
+  const existingAssessments = await base44.entities.Assessment.filter({
+    client_id: clientId,
+  });
+
+  const existingInterestProfilers = safeArray(existingAssessments)
+    .filter((assessment) => assessment?.assessment_type === "interest_profiler")
+    .filter((assessment) => assessment?.is_archived !== true)
+    .sort((a, b) => getTimestamp(b) - getTimestamp(a));
+
+  const targetAssessmentId =
+    assessmentId || existingInterestProfilers[0]?.id || null;
+
   const payload = {
     client_id: clientId,
     assessment_type: "interest_profiler",
@@ -91,6 +119,7 @@ export async function saveInterestProfilerResult({
     completed,
     completed_at: completedAt,
     completed_date: completedAt,
+    is_archived: false,
 
     responses: {
       answers,
@@ -116,9 +145,32 @@ export async function saveInterestProfilerResult({
     notes: `O*NET Interest Profiler / RIASEC assessment completed. RIASEC: ${normalizedCode}`,
   };
 
-  if (assessmentId) {
-    return await base44.entities.Assessment.update(assessmentId, payload);
+  let savedAssessment;
+
+  if (targetAssessmentId) {
+    savedAssessment = await base44.entities.Assessment.update(
+      targetAssessmentId,
+      payload
+    );
+  } else {
+    savedAssessment = await base44.entities.Assessment.create(payload);
   }
 
-  return await base44.entities.Assessment.create(payload);
+  const savedId = savedAssessment?.id || targetAssessmentId;
+
+  await Promise.all(
+    existingInterestProfilers
+      .filter((assessment) => assessment.id !== savedId)
+      .map((assessment) =>
+        base44.entities.Assessment.update(assessment.id, {
+          is_archived: true,
+          status: "archived",
+          archived_at: completedAt,
+          archive_reason:
+            "Archived because a newer O*NET Interest Profiler was completed.",
+        })
+      )
+  );
+
+  return savedAssessment;
 }
