@@ -474,7 +474,6 @@ const recs = await base44.entities.JobRecommendation.filter(
     setJobs([]);
     setProfile(null);
     setSavedBatchId(null);
-    setStep('profiling');
 
     try {
      const profileRes = await base44.functions.invoke('jobSearchAssistant', {
@@ -491,7 +490,7 @@ const recs = await base44.entities.JobRecommendation.filter(
         conflictsCount: profileRes?.data?.conflicts_count || 0,
       });
 
-      setStep('searching');
+     
  const jobRes = await base44.functions.invoke('jobSearchAssistant', {
   action: 'find_jobs',
   clientId: resolvedClientId,
@@ -506,10 +505,9 @@ const recs = await base44.entities.JobRecommendation.filter(
       setNextSteps(jobData?.next_steps || []);
       setSearchTermsUsed(jobData?.search_terms_used || []);
       setUnresolvedConflicts(jobData?.unresolved_conflicts_affecting_search || []);
-      setStep('done');
     } catch (e) {
       toast.error('Search failed: ' + (e?.response?.data?.error || e.message));
-      setStep('idle');
+      
     } finally {
       setLoading(false);
     }
