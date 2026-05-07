@@ -632,6 +632,8 @@ const recs = await base44.entities.JobRecommendation.filter(
   };
 
   const saveAllToClient = async () => {
+    if (savingAll) return;
+    
     if (!jobs.length) {
   toast.error("No recommendations available to save.");
   return;
