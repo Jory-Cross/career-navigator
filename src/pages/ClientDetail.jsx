@@ -552,9 +552,12 @@ const currentTaskCount = tasks.filter(
 
         {!isDspd && !isEmployed && !isClientUser && (
           <TabsContent value="ai_job_search">
-            <AIJobSearchPanel
+           <AIJobSearchPanel
   client={client}
-  onStartInterestProfiler={() => handleTabChange("assessments")}
+  onStartInterestProfiler={() => {
+    setOpenAssessmentType("interest_profiler");
+    handleTabChange("assessments");
+  }}
 />
           </TabsContent>
         )}
