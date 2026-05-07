@@ -618,6 +618,10 @@ setSavingAll(true);
 
   const needsFactExtraction = !hasVFP;
 
+const validJobCount = jobs.filter(
+  (job) => job.confidence_level !== "low"
+).length;
+
   return (
     <div className="space-y-4">
      
