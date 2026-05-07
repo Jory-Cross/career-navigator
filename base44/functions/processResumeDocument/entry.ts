@@ -199,11 +199,20 @@ Deno.serve(async (req) => {
 
     if (!extractedText || extractedText.trim().length < 20) {
       console.warn("[processResumeDocument] Extracted text is too short or empty");
-      return Response.json({
-        success: false,
-        extracted_text_length: extractedText.length,
-        error: "Extracted text is too short to analyze. The file may be image-based or empty.",
-      });
+      await base44.asServiceRole.entities.Document.update(documentId, {
+  extracted_text: extractedText || "",
+  extracted_text_length: extractedText?.length || 0,
+  extraction_status: "failed",
+  extraction_error:
+    "Extracted text is too short to analyze. The file may be image-based or empty.",
+  ai_last_processed: new Date().toISOString(),
+});
+
+return Response.json({
+  success: false,
+  extracted_text_length: extractedText?.length || 0,
+  error: "Extracted text is too short to analyze. The file may be image-based or empty.",
+});
     }
 
     // ── 3. Run AI analysis ───────────────────────────────────────────────
