@@ -408,8 +408,6 @@ const recs = await base44.entities.JobRecommendation.filter(
 
     if (!batch) return;
 
-    console.log("LOADED SAVED BATCH:", batch);
-
     const parsedRecommendations = (() => {
       if (Array.isArray(batch.recommendations)) {
         return batch.recommendations;
@@ -437,19 +435,11 @@ const recs = await base44.entities.JobRecommendation.filter(
 
     setRecommendationBatch((currentBatch) => {
       if (currentBatch?.error && !normalizedBatch?.error) {
-        console.log(
-          "SKIPPING SAVED BATCH OVERWRITE BECAUSE CURRENT ERROR MUST REMAIN VISIBLE:",
-          {
-            currentBatch,
-            incomingBatch: normalizedBatch,
-          }
-        );
 
         shouldLoadFreshness = false;
         return currentBatch;
       }
 
-      console.log("FINAL RECOMMENDATIONS:", normalizedBatch.recommendations);
       return normalizedBatch;
     });
 
