@@ -1134,10 +1134,7 @@ const validJobCount = jobs.filter(
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-800">
-  {
-    jobs.filter((job) => job.confidence_level !== "low").length
-  }{" "}
-  Recommended Jobs
+  {validJobCount} Recommended Jobs
 </p>
                   {searchSummary && <p className="text-xs text-slate-500 mt-0.5">{searchSummary}</p>}
                   {groundingNote && (
