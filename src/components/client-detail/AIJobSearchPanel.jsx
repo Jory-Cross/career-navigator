@@ -692,7 +692,7 @@ setSavingAll(true);
       if (res?.data?.batch) {
         setSavedBatches(prev => ({ ...prev, [res.data.batch_id]: res.data.batch }));
       }
-     toast.success(`${validJobs.length} recommendations saved and pending staff review`);
+     toast.success(`${newJobs.length} recommendations saved and pending staff review`);
       await loadSavedRecs();
       setActiveTab('saved');
     } catch (e) {
