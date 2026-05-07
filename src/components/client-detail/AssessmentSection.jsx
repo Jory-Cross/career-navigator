@@ -126,7 +126,7 @@ const WSA_FIELD_IDS = [
   "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
 ];
 
-export default function AssessmentSection({ clientId, client }) {
+export default function AssessmentSection({ clientId, client, openAssessmentType }) {
   const resolvedClientId = clientId || client?.id || "";
   const [showForm, setShowForm] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
