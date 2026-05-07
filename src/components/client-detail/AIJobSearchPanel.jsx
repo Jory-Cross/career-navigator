@@ -69,7 +69,6 @@ function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore
             </p>
           )}
 
-          {/* Data sources used */}
           {profile.data_sources_used?.length > 0 && (
             <div>
               <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Data Sources Used</p>
@@ -80,8 +79,7 @@ function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore
               </div>
             </div>
           )}
-
-          {/* Conflicts to review */}
+          
           {profile.conflicts_to_review?.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
@@ -816,7 +814,6 @@ setSavingAll(true);
   </div>
 </div>
       
-      {/* FACTS TAB */}
       {activeTab === 'facts' && (
       <VocationalFactsPanel
   clientId={resolvedClientId}
@@ -828,7 +825,7 @@ setSavingAll(true);
   assessmentCount={client?.vocational_facts_assessment_count}
 />
 )}
-            {/* SEARCH TAB */}
+           
       {activeTab === 'search' && (
         <div className="space-y-4">
           {recommendationFreshness.isOutdated && (
@@ -846,7 +843,6 @@ setSavingAll(true);
             </div>
           )}
 
-          {/* VFP status notice */}
           {needsFactExtraction && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -864,7 +860,6 @@ setSavingAll(true);
             </div>
           )}
 
-          {/* Grounding summary if available */}
           {hasVFP && !loading && (
             <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-lg text-xs text-green-800">
               <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
@@ -872,7 +867,6 @@ setSavingAll(true);
             </div>
           )}
 
-          {/* Search filters */}
           <JobSearchFilters filters={filters} onFiltersChange={setFilters} />
 
           <Card className="border-0 shadow-sm p-4 space-y-3">
@@ -900,7 +894,7 @@ setSavingAll(true);
 </Button>
           </Card>
 
-          {/* Vocational profile result */}
+      
           {profile && (
             <>
               <ProfileSummaryCard
@@ -922,7 +916,6 @@ setSavingAll(true);
             </>
           )}
 
-          {/* Unresolved conflicts affecting search */}
           {unresolvedConflicts.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center gap-1.5">
@@ -937,8 +930,6 @@ setSavingAll(true);
               </ul>
             </div>
           )}
-
-          {/* Search results */}
           
 {recommendationBatch &&
   recommendationBatch.recommendations &&
@@ -1215,7 +1206,6 @@ setSavingAll(true);
         </div>
       )}
 
-            {/* SAVED TAB */}
       {activeTab === 'saved' && (
         <RecommendationBatchReview
           recs={
