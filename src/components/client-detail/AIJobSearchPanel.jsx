@@ -774,7 +774,7 @@ const validJobCount = jobs.filter(
         </p>
 
         <p className="mt-1 text-xs leading-relaxed text-amber-800">
-         {recommendationBatch?.error || "Complete the Interest Profiler assessment before generating AI job recommendations."}
+         {interestProfilerRequiredMessage || recommendationBatch?.error || "Complete the Interest Profiler assessment before generating AI job recommendations."}
         </p>
 
         {onStartInterestProfiler && (
