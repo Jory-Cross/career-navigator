@@ -632,7 +632,19 @@ const recs = await base44.entities.JobRecommendation.filter(
   };
 
   const saveAllToClient = async () => {
-    if (!jobs.length) return;
+    if (!jobs.length) {
+  toast.error("No recommendations available to save.");
+  return;
+}
+
+const validJobs = jobs.filter(
+  (job) => job.confidence_level !== "low"
+);
+
+if (!validJobs.length) {
+  toast.error("No valid recommendations available to save.");
+  return;
+}
     setSavingAll(true);
     try {
       const res = await base44.functions.invoke('jobSearchAssistant', {
