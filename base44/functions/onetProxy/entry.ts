@@ -1,5 +1,14 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+
+    if (!user) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { path, params = {} } = await req.json();
 
     if (!path) {
@@ -16,22 +25,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("ONET_API_KEY");
+    const onetUsername = Deno.env.get("ONET_USERNAME") || Deno.env.get("VITE_ONET_USERNAME");
+    const onetPassword = Deno.env.get("ONET_PASSWORD") || Deno.env.get("VITE_ONET_PASSWORD");
 
-    if (!apiKey) {
-      console.error("[onetProxy] Missing ONET_API_KEY in environment");
+    if (!onetUsername || !onetPassword) {
+      console.error("[onetProxy] Missing ONET_USERNAME or ONET_PASSWORD in environment");
       return Response.json(
-        {
-          success: false,
-          error: "Server configuration error: missing ONET_API_KEY",
-        },
+        { success: false, error: "Server configuration error: missing O*NET credentials" },
         { status: 500 }
       );
     }
 
-    const baseUrl = path.startsWith("/ip/")
-      ? "https://services.onetcenter.org/ws/mnm"
-      : "https://api-v2.onetcenter.org";
+    const basicAuth = btoa(`${onetUsername}:${onetPassword}`);
+
+    const baseUrl = "https://services.onetcenter.org/ws/mnm";
 
     const url = new URL(`${baseUrl}${path}`);
 
@@ -46,7 +53,7 @@ Deno.serve(async (req) => {
     const response = await fetch(url.toString(), {
       headers: {
         Accept: "application/json",
-        "X-API-Key": apiKey,
+        Authorization: `Basic ${basicAuth}`,
       },
     });
 
@@ -76,18 +83,12 @@ Deno.serve(async (req) => {
       data = text;
     }
 
-    return Response.json({
-      success: true,
-      data,
-    });
+    return Response.json({ success: true, data });
+
   } catch (error) {
     console.error("[onetProxy] Unexpected error:", error?.message || error);
-
     return Response.json(
-      {
-        success: false,
-        error: error?.message || "Unexpected error",
-      },
+      { success: false, error: error?.message || "Unexpected error" },
       { status: 500 }
     );
   }
