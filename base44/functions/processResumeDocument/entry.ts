@@ -226,11 +226,16 @@ Deno.serve(async (req) => {
     // ── 4. Update Document entity ────────────────────────────────────────
     try {
       await base44.asServiceRole.entities.Document.update(documentId, {
-        ai_summary,
-        ai_tags,
-        ai_insights,
-        ai_last_processed: new Date().toISOString(),
-      });
+  ai_summary,
+  ai_tags,
+  ai_insights,
+  ai_last_processed: new Date().toISOString(),
+
+  extracted_text: extractedText,
+  extracted_text_length: extractedText.length,
+  extraction_status: "success",
+  extraction_error: "",
+});
       console.log(`[processResumeDocument] Document updated successfully: ${documentId}`);
     } catch (updateError) {
       console.error("[processResumeDocument] Document update failed:", updateError.message);
