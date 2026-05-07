@@ -1237,7 +1237,12 @@ if (!validJobs.length) {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{jobs.length} Grounded Recommendations</p>
+                  <p className="text-sm font-semibold text-slate-800">
+  {
+    jobs.filter((job) => job.confidence_level !== "low").length
+  }{" "}
+  Recommended Jobs
+</p>
                   {searchSummary && <p className="text-xs text-slate-500 mt-0.5">{searchSummary}</p>}
                   {groundingNote && (
                     <p className="text-xs text-violet-700 mt-1 bg-violet-50 border border-violet-100 rounded px-2 py-1">
