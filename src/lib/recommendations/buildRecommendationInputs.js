@@ -286,7 +286,7 @@ let onetAnswerString = null;
 if (interestAssessment) {
   const responses = interestAssessment.responses || {};
 
-    const answers =
+  const answers =
     interestAssessment.answers ||
     responses.answers ||
     [];
@@ -312,9 +312,10 @@ if (interestAssessment) {
     buildInterestProfilerAnswerString(answers);
 
   console.log("RIASEC PROFILE:", interestProfile);
-console.log("ONET ANSWER STRING:", onetAnswerString);
-  
-    const combined_profile = {
+  console.log("ONET ANSWER STRING:", onetAnswerString);
+}
+
+const combined_profile = {
   resume_skills: summarizedVfp?.strengths?.length
     ? summarizedVfp.strengths
     : resumeSkills,
