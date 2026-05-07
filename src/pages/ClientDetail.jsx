@@ -45,6 +45,7 @@ import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 import EmailComposer from "@/components/EmailComposer";
 import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
+import { testOnetConnection } from "@/lib/onet/onetClient";
 import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
 
 function getClientIdFromUrl() {
