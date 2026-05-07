@@ -1,50 +1,27 @@
-const ONET_BASE_URL = "https://services.onetcenter.org/ws/mnm";
-
-function getOnetAuthHeader() {
-  const username = import.meta.env.VITE_ONET_USERNAME;
-  const password = import.meta.env.VITE_ONET_PASSWORD;
-  if (!username || !password) {
-    console.warn("Missing O*NET credentials.");
-    return null;
-  }
-
-  return `Basic ${btoa(`${username}:${password}`)}`;
-}
+import { base44 } from "@/api/base44Client";
 
 async function onetRequest(path, params = {}) {
-  const authHeader = getOnetAuthHeader();
-
-  if (!authHeader) {
-    return null;
-  }
-
-  const url = new URL(`${ONET_BASE_URL}${path}`);
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, value);
-    }
+  const response = await base44.functions.invoke("onetProxy", {
+    path,
+    params,
   });
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: authHeader,
-      Accept: "application/json",
-    },
-  });
+  if (!response?.data?.success) {
+    const errorMessage =
+      response?.data?.error ||
+      response?.error ||
+      "O*NET request failed";
 
-    if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    console.error("O*NET request failed:", {
-      status: response.status,
+    console.error("O*NET proxy request failed:", {
       path,
       params,
-      errorText,
+      response,
     });
-    throw new Error(`O*NET request failed: ${response.status}`);
+
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  return response.data.data;
 }
 
 export async function getInterestProfilerQuestions({ start = 1, end = 60 } = {}) {
@@ -91,12 +68,13 @@ export function buildOnetRecommendationProfile({
 
   return null;
 }
+
 export async function testOnetConnection() {
   try {
-    const res = await onetRequest("/ip/questions", { start: 1, end: 1 });
+    const res = await getInterestProfilerQuestions({ start: 1, end: 1 });
 
     if (!res) {
-      console.error("O*NET TEST FAILED: Missing credentials or empty response.");
+      console.error("O*NET TEST FAILED: Empty response.");
       return false;
     }
 
