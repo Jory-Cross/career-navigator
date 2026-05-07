@@ -268,6 +268,20 @@ const currentTaskCount = tasks.filter(
               Send Email
             </Button>
           )}
+                    <Button
+            variant="outline"
+            onClick={async () => {
+              const ok = await testOnetConnection();
+
+              if (ok) {
+                alert("O*NET connection successful");
+              } else {
+                alert("O*NET connection failed. Check console.");
+              }
+            }}
+          >
+            Test O*NET
+          </Button>
         </div>
       </div>
 <ClientHeader client={client} showDetails={false} allowEdit={false} />
