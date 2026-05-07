@@ -871,7 +871,7 @@ setSavingAll(true);
           )}
 
           {/* Grounding summary if available */}
-          {hasVFP && step === 'idle' && (
+          {hasVFP && !loading && (
             <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-lg text-xs text-green-800">
               <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
               Vocational facts profile found — recommendations will be grounded in extracted client data with source citations.
