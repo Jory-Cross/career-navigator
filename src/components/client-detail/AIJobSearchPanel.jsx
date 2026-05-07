@@ -1225,7 +1225,7 @@ setSavingAll(true);
         batch_id: recommendationBatch.id || "latest",
         client_id: resolvedClientId,
 
-        // ✅ FIXED: preserve saved status + notes
+  
         status: job.status || (job.confidence_level === "low" ? "not_a_fit" : "suggested"),
         review_notes: job.review_notes || "",
         reviewed_by: job.reviewed_by || null,
