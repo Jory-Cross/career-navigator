@@ -722,18 +722,7 @@ const validJobCount = jobs.filter(
         return;
       }
 
-      const hasInterestProfiler = assessments.some((assessment) => {
-        const type = safeString(assessment?.assessment_type).toLowerCase();
-        const title = safeString(
-          assessment?.title || assessment?.name
-        ).toLowerCase();
-
-        return (
-          type === "interest_profiler" ||
-          type.includes("interest_profiler") ||
-          title.includes("interest profiler")
-        );
-      });
+            const hasInterestProfiler = safeArray(assessments).some(hasCompletedInterestProfiler);
 
       if (!hasInterestProfiler) {
         const profilerError =
