@@ -299,7 +299,7 @@ const recs = await base44.entities.JobRecommendation.filter(
   '-created_date',
   100
 );
-      // Fetch all batches and group recs by batch
+     
       const batchIds = [...new Set(recs.map(r => r.batch_id).filter(Boolean))];
       const batches = {};
       
