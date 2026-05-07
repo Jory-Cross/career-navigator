@@ -306,6 +306,37 @@ export default function AIJobSearchPanel({ clientId, client: initialClient, onSt
   });
 const [filters, setFilters] = useState({});
 const [hasInterestProfilerAssessment, setHasInterestProfilerAssessment] = useState(false);
+
+const refreshInterestProfilerStatus = useCallback(async () => {
+  if (!resolvedClientId) return false;
+
+  try {
+    const assessments = base44.entities.Assessment?.filter
+      ? await base44.entities.Assessment.filter({
+          client_id: resolvedClientId,
+        })
+      : [];
+
+    const hasProfiler = safeArray(assessments).some((assessment) => {
+      const type = safeString(assessment?.assessment_type).toLowerCase();
+      const title = safeString(assessment?.title || assessment?.name).toLowerCase();
+
+      return (
+        type === "interest_profiler" ||
+        type.includes("interest_profiler") ||
+        title.includes("interest profiler")
+      );
+    });
+
+    setHasInterestProfilerAssessment(hasProfiler);
+    return hasProfiler;
+  } catch (err) {
+    console.error("Failed to check Interest Profiler assessment:", err);
+    setHasInterestProfilerAssessment(false);
+    return false;
+  }
+}, [resolvedClientId]);
+
 const [recommendationFreshness, setRecommendationFreshness] = useState({
   isOutdated: false,
   newestInputDate: null,
