@@ -385,7 +385,7 @@ useEffect(() => {
       console.error("Failed to load saved VFP on AI Job Search load:", err);
     });
 
-  }, [resolvedClientId]);
+}, [resolvedClientId, refreshInterestProfilerStatus]);
   
   // Refresh client data (e.g. after extraction)
     const refreshClient = useCallback(async () => {
