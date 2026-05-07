@@ -354,23 +354,7 @@ useEffect(() => {
   loadSavedRecs();
   loadLatestBatch();
 
-  base44.entities.Assessment?.filter({
-    client_id: resolvedClientId,
-  })
-    .then((assessments = []) => {
-      const hasProfiler = safeArray(assessments).some((assessment) => {
-        const type = safeString(assessment?.assessment_type).toLowerCase();
-        const title = safeString(assessment?.title || assessment?.name).toLowerCase();
-
-        return (
-          type === "interest_profiler" ||
-          type.includes("interest_profiler") ||
-          title.includes("interest profiler")
-        );
-      });
-
-      setHasInterestProfilerAssessment(hasProfiler);
-    })
+  refreshInterestProfilerStatus();
     .catch((err) => {
       console.error("Failed to check Interest Profiler assessment:", err);
       setHasInterestProfilerAssessment(false);
