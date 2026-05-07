@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
 Deno.serve(async (req) => {
   try {
@@ -6,10 +6,15 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return Response.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { path, params = {} } = await req.json();
+    const body = await req.json();
+    const path = body.path;
+    const params = body.params || {};
 
     if (!path) {
       return Response.json(
@@ -25,24 +30,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    const onetUsername = Deno.env.get("ONET_USERNAME") || Deno.env.get("VITE_ONET_USERNAME");
-    const onetPassword = Deno.env.get("ONET_PASSWORD") || Deno.env.get("VITE_ONET_PASSWORD");
+    const apiKey =
+      Deno.env.get("ONET_API_KEY") ||
+      Deno.env.get("VITE_ONET_API_KEY");
 
-    if (!onetUsername || !onetPassword) {
-      console.error("[onetProxy] Missing ONET_USERNAME or ONET_PASSWORD in environment");
+    if (!apiKey) {
+      console.error("[onetProxy] Missing ONET_API_KEY in environment");
       return Response.json(
-        { success: false, error: "Server configuration error: missing O*NET credentials" },
+        {
+          success: false,
+          error: "Server configuration error: missing O*NET API key",
+        },
         { status: 500 }
       );
     }
 
-    const basicAuth = btoa(`${onetUsername}:${onetPassword}`);
-
-    const baseUrl = "https://services.onetcenter.org/ws/mnm";
-
+    const baseUrl = "https://api-v2.onetcenter.org";
     const url = new URL(`${baseUrl}${path}`);
 
-    Object.entries(params || {}).forEach(([key, value]) => {
+    Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, String(value));
       }
@@ -53,7 +59,7 @@ Deno.serve(async (req) => {
     const response = await fetch(url.toString(), {
       headers: {
         Accept: "application/json",
-        Authorization: `Basic ${basicAuth}`,
+        "X-API-Key": apiKey,
       },
     });
 
@@ -79,16 +85,19 @@ Deno.serve(async (req) => {
 
     try {
       data = text ? JSON.parse(text) : null;
-    } catch {
+    } catch (_parseError) {
       data = text;
     }
 
     return Response.json({ success: true, data });
-
   } catch (error) {
-    console.error("[onetProxy] Unexpected error:", error?.message || error);
+    const message =
+      error && error.message ? error.message : "Unexpected error";
+
+    console.error("[onetProxy] Unexpected error:", message);
+
     return Response.json(
-      { success: false, error: error?.message || "Unexpected error" },
+      { success: false, error: message },
       { status: 500 }
     );
   }
