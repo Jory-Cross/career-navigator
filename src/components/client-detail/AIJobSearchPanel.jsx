@@ -106,36 +106,6 @@ const extractWSAData = (assessments = []) => {
     }));
 };
 
-const buildCareerProfilePayload = ({ client, resume, assessments = [], documents = [] }) => {
-  const resumeSkills = extractResumeSkills(resume);
-  const riasecScores = extractRiasecScores(assessments);
-  const wsa = extractWSAData(assessments);
-
-  const topStrengths = dedupeStrings([
-    ...wsa.flatMap((item) => safeArray(item.strengths)),
-    ...resumeSkills.slice(0, 10),
-  ]);
-
-  const topBarriers = dedupeStrings(
-    wsa.flatMap((item) => safeArray(item.barriers))
-  );
-
-  return {
-    client_id: client?.id || "",
-    client_name: [client?.first_name, client?.last_name].filter(Boolean).join(" "),
-    target_role: safeString(client?.target_role),
-    target_industry: safeString(client?.industry),
-    location_preference: safeString(client?.location),
-    resume_skills: resumeSkills,
-    riasec_scores: riasecScores,
-    wsa,
-    top_strengths: topStrengths,
-    top_barriers: topBarriers,
-    assessment_ids: assessments.map((a) => a.id).filter(Boolean),
-    document_ids: documents.map((d) => d.id).filter(Boolean),
-  };
-};
-
 const STATUS_LABELS = { suggested: "Suggested", saved: "Saved", applied: "Applied", rejected: "Not a Fit" };
 
 function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore, conflictsCount }) {
