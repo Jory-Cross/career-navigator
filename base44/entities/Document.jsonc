@@ -3,20 +3,7 @@
   "type": "object",
   "description": "Stored file attached to a client, including uploaded docs and generated reports.",
   "properties": {
-   "description": {
-  "type": "string"
-},
-"visibility": {
-  "type": "string",
-  "enum": ["staff", "client", "both"],
-  "default": "staff"
-},
-"source": {
-  "type": "string",
-  "enum": ["staff_upload", "client_upload", "generated", "assessment"],
-  "default": "staff_upload"
-},
-"org_id": {
+    "org_id": {
       "type": "string"
     },
     "client_id": {
@@ -111,6 +98,15 @@
       "type": "boolean",
       "default": false
     },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "client",
+        "both"
+      ],
+      "default": "staff"
+    },
     "generated_report_id": {
       "type": "string",
       "description": "FK to GeneratedReport record this file belongs to"
@@ -118,11 +114,46 @@
     "entry_type_code": {
       "type": "string",
       "description": "Entry type this report document covers (for filtering)"
+    },
+    "ai_summary": {
+      "type": "string"
+    },
+    "ai_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ai_insights": {
+      "type": "string"
+    },
+    "ai_last_processed": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extracted_text": {
+      "type": "string",
+      "description": "Store raw extracted resume/document text from PDF/DOCX/TXT processing."
+    },
+    "extracted_text_length": {
+      "type": "number",
+      "default": 0,
+      "description": "Store character length of extracted text for validation/debugging."
+    },
+    "extraction_status": {
+      "type": "string",
+      "default": "pending",
+      "description": "Track extraction state: pending, success, failed."
+    },
+    "extraction_error": {
+      "type": "string",
+      "description": "Store extraction/parsing error details when document processing fails."
     }
   },
   "required": [
     "client_id",
     "title",
     "file_url"
-  ]
+  ],
+  "rls": {}
 }
