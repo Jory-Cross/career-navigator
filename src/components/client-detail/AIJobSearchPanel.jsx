@@ -21,7 +21,12 @@ import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestR
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
-const STATUS_LABELS = { suggested: "Suggested", saved: "Saved", applied: "Applied", rejected: "Not a Fit" };
+const STATUS_LABELS = {
+  suggested: "Suggested",
+  saved: "Saved",
+  applied: "Applied",
+  rejected: "Not a Fit",
+};
 
 function ProfileSummaryCard({ profile, assessmentsUsed, hasVFP, dataQualityScore, conflictsCount }) {
   const [open, setOpen] = useState(false);
