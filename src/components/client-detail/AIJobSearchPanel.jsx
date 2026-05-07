@@ -252,7 +252,9 @@ const refreshInterestProfilerStatus = useCallback(async () => {
     );
     return false;
   }
-}, [resolvedClientId]);const [recommendationFreshness, setRecommendationFreshness] = useState({
+}, [resolvedClientId]);
+
+const [recommendationFreshness, setRecommendationFreshness] = useState({
   isOutdated: false,
   newestInputDate: null,
   generatedAt: null,
