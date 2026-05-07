@@ -22,10 +22,17 @@ function isResume(doc) {
 }
 
 function getDocumentSkills(doc) {
+  const summary = cleanString(doc?.ai_summary);
+  const insights = cleanString(doc?.ai_insights);
+
   return uniqueStrings([
     ...toArray(doc?.ai_tags),
     ...toArray(doc?.tags),
     ...toArray(doc?.skills),
+
+    // Pull meaningful phrases from AI analysis
+    ...summary.split(/[.,|\n]/),
+    ...insights.split(/[.,|\n]/),
   ]);
 }
 
