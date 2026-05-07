@@ -222,11 +222,6 @@ const [recommendationFreshness, setRecommendationFreshness] = useState({
   reason: "",
 });
 
-
-/* ================================
-   EFFECTS
-================================ */
-
 useEffect(() => {
   if (!resolvedClientId) return;
   loadSavedRecs();
@@ -265,7 +260,6 @@ useEffect(() => {
 
 }, [resolvedClientId, refreshInterestProfilerStatus]);
   
-  // Refresh client data (e.g. after extraction)
     const refreshClient = useCallback(async () => {
     try {
       const res = await base44.functions.invoke("processAssessmentDocuments", {
