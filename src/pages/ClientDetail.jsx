@@ -569,9 +569,13 @@ const currentTaskCount = tasks.filter(
         )}
 
         {!isDspd && !isEmployed && !isClientUser && (
-          <TabsContent value="assessments">
-            <AssessmentSection client={client} onRefresh={refreshClient} />
-          </TabsContent>
+         <TabsContent value="assessments">
+  <AssessmentSection
+    client={client}
+    onRefresh={refreshClient}
+    openAssessmentType={openAssessmentType}
+  />
+</TabsContent>
         )}
 
         {client.client_type === "pre_ets" && !isClientUser && (
