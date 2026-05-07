@@ -231,13 +231,7 @@ const refreshInterestProfilerStatus = useCallback(async () => {
         })
       : [];
 
-    const hasProfiler = safeArray(assessments).some((assessment) => {
-      const type = safeString(assessment?.assessment_type).toLowerCase();
-      const title = safeString(
-        assessment?.title || assessment?.name
-      ).toLowerCase();
-
-         const hasProfiler = safeArray(assessments).some(hasCompletedInterestProfiler);
+    const hasProfiler = safeArray(assessments).some(hasCompletedInterestProfiler);
 
     setHasInterestProfilerAssessment(hasProfiler);
 
@@ -258,9 +252,7 @@ const refreshInterestProfilerStatus = useCallback(async () => {
     );
     return false;
   }
-}, [resolvedClientId]);
-
-const [recommendationFreshness, setRecommendationFreshness] = useState({
+}, [resolvedClientId]);const [recommendationFreshness, setRecommendationFreshness] = useState({
   isOutdated: false,
   newestInputDate: null,
   generatedAt: null,
