@@ -890,15 +890,7 @@ setSavingAll(true);
               className="text-sm min-h-[70px] resize-none"
             />
             <Button className="w-full" onClick={runSearch} disabled={loading}>
-              {loading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {step === 'profiling' ? 'Building grounded vocational profile...' : 'Searching live jobs with citations...'}
-                </>
-              ) : (
-                <><Sparkles className="w-4 h-4 mr-2" />
-                  {step === 'done' ? 'Search Again' : 'Find Grounded Jobs for This Client'}
-                </>
-              )}
+              
             </Button>
           </Card>
 
