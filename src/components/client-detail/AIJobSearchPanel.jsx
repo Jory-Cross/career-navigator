@@ -293,7 +293,7 @@ useEffect(() => {
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
     try {
-      // Fetch all saved recommendations
+   
 const recs = await base44.entities.JobRecommendation.filter(
   { client_id: resolvedClientId },
   '-created_date',
