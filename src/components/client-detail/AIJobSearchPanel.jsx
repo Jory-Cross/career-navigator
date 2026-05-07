@@ -209,7 +209,16 @@ const refreshInterestProfilerStatus = useCallback(async () => {
       );
     });
 
-    setHasInterestProfilerAssessment(hasProfiler);
+       setHasInterestProfilerAssessment(hasProfiler);
+
+    if (!hasProfiler) {
+      setInterestProfilerRequiredMessage(
+        "Complete the Interest Profiler assessment before generating AI job recommendations."
+      );
+    } else {
+      setInterestProfilerRequiredMessage("");
+    }
+
     return hasProfiler;
   } catch (err) {
     console.error("Failed to check Interest Profiler assessment:", err);
