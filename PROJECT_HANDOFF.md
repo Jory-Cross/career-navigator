@@ -405,3 +405,83 @@ avoid fake/placeholder flow coupling
 
 preserve current stable recommendation system
 
+Fix Soon (Current Recommendation Quality Phase)
+
+These directly affect recommendation quality right now and should be addressed relatively soon:
+
+Resume PDF unreadable
+Duplicate Interest Profiler handling
+Long-term career goals extraction
+Transportation/geographic radius
+Schedule availability/preferences
+Employer size/culture preferences
+Client-reported employment barriers
+
+These belong in the current “recommendation intelligence + intake normalization” phase.
+
+Wait Until VFP/Data Intake Refinement Phase
+
+These require deeper structured extraction and should happen later when refining Vocational Facts Profile logic:
+
+Support needs/accommodations
+Sensory/environmental sensitivities
+Social/communication challenges
+Physical limitations/restrictions
+Job coaching/support team history
+Benefits/SSI/SSDI status
+Legal barriers/background concerns
+
+These should ultimately come from:
+
+WSA extraction
+structured assessments
+AI normalization layer
+counselor notes
+future guided intake
+
+Not from ad-hoc recommendation patches.
+
+Important: Duplicate Interest Profiler Warning
+
+This one should probably be fixed relatively soon.
+
+Right now the engine sees:
+
+old profiler
+new O*NET profiler
+
+and flags duplicate administration.
+
+Later we should:
+
+archive old fake profiler assessments automatically
+OR
+mark legacy assessments as deprecated
+OR
+prefer newest completed O*NET assessment only
+
+But not during this stabilization pass.
+
+Very Important Architectural Lesson
+
+The fact that these warnings now appear means:
+
+the recommendation engine is no longer blindly generating recommendations
+the VFP integrity checking is working
+the O*NET integration is feeding into the data quality layer correctly
+
+That is actually a major milestone.
+
+Best Next Phase
+
+Do NOT immediately chase every missing-data warning.
+
+Next best phase is:
+
+Stabilize O*NET integration
+Clean duplicate profiler handling
+Improve recommendation confidence scoring
+Improve VFP normalization/extraction
+Then systematically eliminate missing-data warnings through better intake architecture
+
+That is the correct order.
