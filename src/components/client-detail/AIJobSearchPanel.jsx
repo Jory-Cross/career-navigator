@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Sparkles, Briefcase, Loader2, CheckCircle, BookmarkPlus,
-  RefreshCw, Search, History, Lightbulb, AlertTriangle, FileText,
+  Search, History, Lightbulb, AlertTriangle, FileText,
   ChevronDown, ChevronUp, Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
