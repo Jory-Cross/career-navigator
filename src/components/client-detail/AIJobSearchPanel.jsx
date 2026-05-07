@@ -637,8 +637,6 @@ setSavingAll(true);
     }
   };
 
-  const reviewNeeded = savedRecs.filter(r => r.status === 'suggested').length;
-
   const needsFactExtraction = !hasVFP;
 
   return (
