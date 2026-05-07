@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Sparkles, Briefcase, Loader2, CheckCircle, BookmarkPlus,
+  Sparkles, Loader2, CheckCircle, BookmarkPlus,
   Search, History, Lightbulb, AlertTriangle, FileText,
   ChevronDown, ChevronUp, Info
 } from "lucide-react";
