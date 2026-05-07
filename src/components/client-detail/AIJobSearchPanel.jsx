@@ -21,6 +21,38 @@ import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestR
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
+const hasCompletedInterestProfiler = (assessment) => {
+  const type = safeString(assessment?.assessment_type).toLowerCase();
+  const title = safeString(assessment?.title || assessment?.name).toLowerCase();
+  const responses = assessment?.responses || {};
+
+  const scores = responses?.riasec_scores || responses?.scores || {};
+  const scoreKeys = Object.keys(scores || {});
+
+  const hasScores =
+    scoreKeys.length >= 3 &&
+    scoreKeys.some((key) =>
+      ["realistic", "investigative", "artistic", "social", "enterprising", "conventional", "r", "i", "a", "s", "e", "c"].includes(
+        safeString(key).toLowerCase()
+      )
+    );
+
+  const hasAnswers =
+    (Array.isArray(responses?.answers) && responses.answers.length > 0) ||
+    safeString(responses?.answerString).length > 0 ||
+    safeString(responses?.answer_string).length > 0;
+
+  return (
+    (
+      type === "interest_profiler" ||
+      type.includes("interest_profiler") ||
+      title.includes("interest profiler")
+    ) &&
+    hasScores &&
+    hasAnswers
+  );
+};
+
 const STATUS_LABELS = {
   suggested: "Suggested",
   saved: "Saved",
