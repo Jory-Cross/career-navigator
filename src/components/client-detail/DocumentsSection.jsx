@@ -804,14 +804,43 @@ key={tag}
 )}
                     </div>
                     <div className="flex gap-1">
-                     <Button
+                    <Button
   size="sm"
   variant="ghost"
   className="h-7 px-2"
-  onClick={(e) => {
+  onClick={async (e) => {
     e.preventDefault();
     e.stopPropagation();
-   toast("Reprocessing coming next");
+
+    try {
+      toast.loading("Reprocessing document...", {
+        id: `process-doc-${doc.id}`,
+      });
+
+      const result = await base44.functions.invoke("processResumeDocument", {
+        documentId: doc.id,
+      });
+
+      const payload = result?.data || result || {};
+
+      if (!payload.success) {
+        toast.error(payload.error || "Document reprocessing failed", {
+          id: `process-doc-${doc.id}`,
+        });
+        return;
+      }
+
+      await loadDocuments();
+
+      toast.success("Document reprocessed", {
+        id: `process-doc-${doc.id}`,
+      });
+    } catch (error) {
+      console.error("DOCUMENT REPROCESS FAILED", error);
+      toast.error(error?.message || "Document reprocessing failed", {
+        id: `process-doc-${doc.id}`,
+      });
+    }
   }}
 >
   <RefreshCw className="w-3.5 h-3.5" />
