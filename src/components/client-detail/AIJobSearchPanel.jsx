@@ -712,7 +712,6 @@ const recs = await base44.entities.JobRecommendation.filter(
 
   const reviewNeeded = savedRecs.filter(r => r.status === 'suggested').length;
 
-  const vfpConflicts = client?.vocational_facts_profile?.conflicts?.length || 0;
   const needsFactExtraction = !hasVFP;
 
   return (
