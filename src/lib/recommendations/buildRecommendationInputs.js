@@ -203,7 +203,15 @@ function getVfpField(vfp = null, keys = []) {
   if (!vfp) return [];
 
   return uniqueStrings(
-    keys.flatMap((key) => toArray(vfp?.[key]))
+    keys.flatMap((key) =>
+      toArray(vfp?.[key]).map((item) => {
+        if (typeof item === "string") return item;
+        if (item?.fact) return item.fact;
+        if (item?.value) return item.value;
+        if (item?.label) return item.label;
+        return "";
+      })
+    )
   );
 }
 
