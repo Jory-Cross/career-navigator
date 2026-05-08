@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import BarriersAIClarify from "@/components/intake/BarriersAIClarify";
 import MedicationListField from "@/components/intake/MedicationListField";
 import ReleaseOfInformationForm from "@/components/intake/ReleaseOfInformationForm";
+import ServicesAgreementForm from "@/components/intake/ServicesAgreementForm";
 
 function RatingField({ label, value, onChange, readOnly }) {
   const levels = [1, 2, 3, 4, 5];
@@ -227,6 +228,15 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
       {/* Custom section renderers */}
       {sectionDef.customRenderer === "roi" && (
         <ReleaseOfInformationForm
+          answers={answers}
+          setField={setField}
+          readOnly={readOnly}
+          client={client}
+        />
+      )}
+
+      {sectionDef.customRenderer === "services_agreement" && (
+        <ServicesAgreementForm
           answers={answers}
           setField={setField}
           readOnly={readOnly}

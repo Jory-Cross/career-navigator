@@ -176,12 +176,8 @@ export const INTAKE_SECTIONS = [
     key: "services_agreement",
     label: "Services Agreement",
     emoji: "🤝",
-    fields: [
-      { key: "agreement_understood", label: "Client Understands Services?", type: "yesno" },
-      { key: "agreement_responsibilities", label: "Reviewed Client Responsibilities?", type: "yesno" },
-      { key: "agreement_signature_date", label: "Signature Date", type: "date" },
-      { key: "agreement_notes", label: "Notes", type: "textarea" },
-    ],
+    customRenderer: "services_agreement",
+    fields: [],
   },
   {
     key: "application_employment",
