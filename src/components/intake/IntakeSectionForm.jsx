@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,13 +72,24 @@ function YesNoField({ label, value, onChange, readOnly }) {
   );
 }
 
+// autosave status: null | 'saving' | 'saved' | 'error'
 export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId, orgId, currentUser, readOnly = false, onSaved }) {
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+
+  // Track the latest sectionRecord id/answers for autosave without triggering re-renders
+  const sectionRecordRef = useRef(sectionRecord);
+  useEffect(() => { sectionRecordRef.current = sectionRecord; }, [sectionRecord]);
+
+  // Track whether answers were changed by user (not just a load from props)
+  const isUserEdit = useRef(false);
+  const autoSaveTimer = useRef(null);
 
   useEffect(() => {
+    isUserEdit.current = false;
     if (sectionRecord?.answers) {
       setAnswers(sectionRecord.answers);
     } else {
@@ -86,9 +97,56 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
     }
   }, [sectionRecord?.id]);
 
+  const performAutoSave = useCallback(async (latestAnswers) => {
+    if (readOnly) return;
+    setAutoSaveStatus("saving");
+    try {
+      const rec = sectionRecordRef.current;
+      const nonEmpty = Object.fromEntries(
+        Object.entries(latestAnswers).filter(([, v]) => v !== null && v !== undefined && v !== "")
+      );
+      const currentStatus = rec?.status || "not_started";
+      const nextStatus = (currentStatus === "not_started" || currentStatus === "assigned") ? "in_progress" : currentStatus;
+
+      const payload = {
+        client_id: clientId,
+        org_id: orgId,
+        section_key: sectionDef.key,
+        section_label: sectionDef.label,
+        answers: nonEmpty,
+        status: nextStatus,
+      };
+
+      if (rec?.id) {
+        await base44.entities.IntakeSection.update(rec.id, payload);
+      } else {
+        await base44.entities.IntakeSection.create(payload);
+      }
+
+      setAutoSaveStatus("saved");
+      if (onSaved) onSaved();
+      setTimeout(() => setAutoSaveStatus(null), 2500);
+    } catch {
+      setAutoSaveStatus("error");
+      setTimeout(() => setAutoSaveStatus(null), 4000);
+    }
+  }, [readOnly, clientId, orgId, sectionDef.key, sectionDef.label, onSaved]);
+
   const setField = (key, val) => {
-    setAnswers((prev) => ({ ...prev, [key]: val }));
+    isUserEdit.current = true;
+    setAnswers((prev) => {
+      const next = { ...prev, [key]: val };
+      // debounce autosave
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = setTimeout(() => performAutoSave(next), 1000);
+      return next;
+    });
   };
+
+  // cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, []);
 
   const hasAnswers = () => Object.values(answers).some((v) => v !== null && v !== undefined && v !== "");
 
@@ -262,6 +320,20 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
             setAnswers((prev) => ({ ...prev, ...aiFields }));
           }}
         />
+      )}
+
+      {/* Autosave indicator */}
+      {autoSaveStatus && (
+        <div className={cn(
+          "text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg w-fit",
+          autoSaveStatus === "saving" && "bg-slate-100 text-slate-500",
+          autoSaveStatus === "saved" && "bg-emerald-50 text-emerald-600",
+          autoSaveStatus === "error" && "bg-red-50 text-red-500",
+        )}>
+          {autoSaveStatus === "saving" && <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>}
+          {autoSaveStatus === "saved" && <><CheckCircle2 className="w-3 h-3" /> Autosaved</>}
+          {autoSaveStatus === "error" && "Autosave failed — your changes are still here"}
+        </div>
       )}
 
       {/* Actions */}
