@@ -264,10 +264,17 @@ const certifications = Array.isArray(aiResult?.certifications) ? aiResult.certif
 
     // ── 4. Update Document entity ────────────────────────────────────────
     try {
-      await base44.asServiceRole.entities.Document.update(documentId, {
+await base44.asServiceRole.entities.Document.update(documentId, {
   ai_summary,
   ai_tags,
   ai_insights,
+
+  job_titles,
+  resume_skills,
+  work_history,
+  education_history,
+  certifications,
+
   ai_last_processed: new Date().toISOString(),
 
   extracted_text: extractedText,
