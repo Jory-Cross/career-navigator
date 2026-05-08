@@ -8,6 +8,7 @@ import { Loader2, Save, CheckCircle2, UserCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { SECTION_STATUS_COLORS, SECTION_STATUS_LABELS } from "@/lib/intakeSections";
 import { cn } from "@/lib/utils";
+import BarriersAIClarify from "@/components/intake/BarriersAIClarify";
 
 function RatingField({ label, value, onChange, readOnly }) {
   const levels = [1, 2, 3, 4, 5];
@@ -252,6 +253,16 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
           );
         })}
       </div>
+
+      {/* AI Clarify — barriers_support section only */}
+      {sectionDef.key === "barriers_support" && (
+        <BarriersAIClarify
+          answers={answers}
+          onAccept={(aiFields) => {
+            setAnswers((prev) => ({ ...prev, ...aiFields }));
+          }}
+        />
+      )}
 
       {/* Actions */}
       {!readOnly && (
