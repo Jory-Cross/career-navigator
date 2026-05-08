@@ -148,7 +148,12 @@ function buildProfileText(profile = {}) {
   ]);
 }
 
-function normalizeOnetCareerItem(item = {}, index = 0) {
+function normalizeOnetCareerItem(
+  item = {},
+  index = 0,
+  profileKeywords = [],
+  conflicts = []
+) {
   const title =
     item.title ||
     item.career_title ||
@@ -163,6 +168,52 @@ function normalizeOnetCareerItem(item = {}, index = 0) {
     item.occupation_code ||
     `ONET-${index + 1}`;
 
+  const loweredTitle = safeLower(title);
+
+  const matchedKeywords = profileKeywords.filter((keyword) =>
+    loweredTitle.includes(safeLower(keyword))
+  );
+
+  let score =
+    Number(item.score || item.fit_score || item.match_score || 50);
+
+  score += matchedKeywords.length * 5;
+
+  const fit_concerns = [];
+
+  if (
+    conflicts.includes("customer-facing roles") &&
+    (
+      loweredTitle.includes("customer") ||
+      loweredTitle.includes("bartender") ||
+      loweredTitle.includes("server") ||
+      loweredTitle.includes("attendant")
+    )
+  ) {
+    fit_concerns.push(
+      "This role may conflict with preference for independent or lower-social work."
+    );
+
+    score -= 25;
+  }
+
+  if (
+    conflicts.includes("high social environments") &&
+    (
+      loweredTitle.includes("service") ||
+      loweredTitle.includes("attendant") ||
+      loweredTitle.includes("bartender")
+    )
+  ) {
+    fit_concerns.push(
+      "This role may involve overstimulating or highly social environments."
+    );
+
+    score -= 20;
+  }
+
+  score = Math.max(score, 0);
+
   return {
     onet_code: code,
     title,
@@ -170,13 +221,33 @@ function normalizeOnetCareerItem(item = {}, index = 0) {
     bright_outlook: Boolean(item.bright_outlook),
     green: Boolean(item.green),
     apprenticeship: Boolean(item.apprenticeship),
-    score: Number(item.score || item.fit_score || item.match_score || 80),
-    match_score: Number(item.score || item.fit_score || item.match_score || 80),
-    fit_level: "possible",
-    fit_strengths: ["Matched from O*NET Interest Profiler career results."],
-    fit_concerns: [],
-    matched_keywords: [],
-    match_reason: "Matched from O*NET Interest Profiler RIASEC career results.",
+
+    score,
+    match_score: score,
+
+    fit_level:
+      fit_concerns.length > 0
+        ? "caution"
+        : score >= 85
+        ? "strong"
+        : score >= 60
+        ? "possible"
+        : "low",
+
+    fit_strengths:
+      matchedKeywords.length > 0
+        ? [`Matched profile themes: ${matchedKeywords.join(", ")}`]
+        : ["Matched from O*NET Interest Profiler career results."],
+
+    fit_concerns,
+
+    matched_keywords: matchedKeywords,
+
+    match_reason:
+      matchedKeywords.length > 0
+        ? `Matched using profile themes: ${matchedKeywords.join(", ")}`
+        : "Matched from O*NET Interest Profiler RIASEC career results.",
+
     source: "onet-interest-profiler",
   };
 }
