@@ -21,6 +21,7 @@ import {
 
 } from "@/lib/api/clientPortalApi";
 import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSection";
+import { base44 } from "@/api/base44Client";
 
 const STAFF_ROLES = ["admin", "management", "employee"];
 
@@ -61,7 +62,13 @@ export default function ClientPortal() {
   const clientIdFromUrl = useMemo(() => getClientIdFromUrl(), []);
 
   /**
-   * Bootstrap user + client
+   * Bootstrap user + client.
+   * Security rules:
+   * - client-role users: ONLY resolved by their own email. No fallback.
+   * - staff-role users: resolved by explicit ?id= param only.
+   * - Any self-registered user without a PendingRoleAssignment gets default role (not "client"),
+   *   so they will never enter the client branch below.
+   * - If no valid Client record maps to the authenticated user, access is denied.
    */
   useEffect(() => {
     let isMounted = true;
@@ -73,17 +80,37 @@ export default function ClientPortal() {
         const currentUser = await getCurrentUser();
         if (!isMounted) return;
 
-        setUser(currentUser || null);
-
         if (!currentUser) {
-          setClient(null);
+          // Not authenticated — redirect to login
+          base44.auth.redirectToLogin(window.location.href);
           return;
         }
 
+        setUser(currentUser);
+
         if (currentUser.role === "client") {
+          // Strict: only resolve by exact email match. Never fallback.
           const resolvedClient = await getClientByEmail(currentUser.email);
           if (!isMounted) return;
-          setClient(resolvedClient || null);
+
+          if (!resolvedClient || !resolvedClient.id) {
+            setBootError("NO_CLIENT_MAPPING");
+            setClient(null);
+            return;
+          }
+
+          // Validate org_id matches if present on both records
+          if (
+            resolvedClient.org_id &&
+            currentUser.org_id &&
+            resolvedClient.org_id !== currentUser.org_id
+          ) {
+            setBootError("NO_CLIENT_MAPPING");
+            setClient(null);
+            return;
+          }
+
+          setClient(resolvedClient);
           return;
         }
 
@@ -94,6 +121,7 @@ export default function ClientPortal() {
           return;
         }
 
+        // Any other role or missing params: deny
         setClient(null);
       } catch (error) {
         console.error("ClientPortal init failed:", error);
@@ -304,12 +332,36 @@ setCompletionNote("");
   /**
    * Render guards
    */
+  if (bootError === "NO_CLIENT_MAPPING") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-sm w-full rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm space-y-4">
+          <div className="text-4xl">🔒</div>
+          <h2 className="text-lg font-semibold text-slate-800">Portal Access Not Found</h2>
+          <p className="text-sm text-slate-500">
+            No portal account was found for this login. Please contact your provider to request access.
+          </p>
+          <button
+            onClick={() => base44.auth.logout()}
+            className="mt-2 text-xs text-slate-400 underline hover:text-slate-600"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (bootError) {
     return <div className="p-4 text-red-600">{bootError}</div>;
   }
 
   if (!user || !client) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
