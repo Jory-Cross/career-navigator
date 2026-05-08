@@ -175,11 +175,57 @@ function normalizeOnetCareerItem(
   );
 
   let score =
-    Number(item.score || item.fit_score || item.match_score || 50);
+  Number(item.score || item.fit_score || item.match_score || 50);
 
-  score += matchedKeywords.length * 5;
+score += matchedKeywords.length * 5;
 
-  const fit_concerns = [];
+const fit_concerns = [];
+
+const prefersIndependentWork =
+  profileKeywords.some((k) =>
+    safeLower(k).includes("independent")
+  ) ||
+  profileKeywords.some((k) =>
+    safeLower(k).includes("work alone")
+  );
+
+const prefersPublicInteraction =
+  profileKeywords.some((k) =>
+    safeLower(k).includes("customer")
+  ) ||
+  profileKeywords.some((k) =>
+    safeLower(k).includes("public")
+  ) ||
+  profileKeywords.some((k) =>
+    safeLower(k).includes("people")
+  ) ||
+  profileKeywords.some((k) =>
+    safeLower(k).includes("social")
+  );
+
+if (
+  prefersIndependentWork &&
+  (
+    loweredTitle.includes("customer") ||
+    loweredTitle.includes("sales") ||
+    loweredTitle.includes("bartender") ||
+    loweredTitle.includes("server")
+  )
+) {
+  score -= 15;
+}
+
+if (
+  prefersPublicInteraction &&
+  (
+    loweredTitle.includes("customer") ||
+    loweredTitle.includes("sales") ||
+    loweredTitle.includes("service") ||
+    loweredTitle.includes("bartender")
+  )
+) {
+  score += 15;
+}
 
   if (
     conflicts.includes("customer-facing roles") &&
