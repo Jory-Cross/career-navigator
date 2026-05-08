@@ -732,7 +732,7 @@ const validJobCount = jobs.filter(
         return;
       }
 
-      const result = await runRecommendationEngine({
+    const result = await runRecommendationEngine({
   client: { ...(client || {}), id: resolvedClientId },
   documents: docs,
   assessments,
