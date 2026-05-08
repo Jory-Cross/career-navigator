@@ -262,12 +262,6 @@ const work_history = Array.isArray(aiResult?.work_history) ? aiResult.work_histo
 const education_history = Array.isArray(aiResult?.education_history) ? aiResult.education_history : [];
 const certifications = Array.isArray(aiResult?.certifications) ? aiResult.certifications : [];
 
-const job_titles = Array.isArray(aiResult?.job_titles) ? aiResult.job_titles : [];
-const resume_skills = Array.isArray(aiResult?.resume_skills) ? aiResult.resume_skills : [];
-const work_history = Array.isArray(aiResult?.work_history) ? aiResult.work_history : [];
-const education_history = Array.isArray(aiResult?.education_history) ? aiResult.education_history : [];
-const certifications = Array.isArray(aiResult?.certifications) ? aiResult.certifications : [];
-
     // ── 4. Update Document entity ────────────────────────────────────────
     try {
       await base44.asServiceRole.entities.Document.update(documentId, {
