@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 import { SECTION_STATUS_COLORS, SECTION_STATUS_LABELS } from "@/lib/intakeSections";
 import { cn } from "@/lib/utils";
 import BarriersAIClarify from "@/components/intake/BarriersAIClarify";
+import MedicationListField from "@/components/intake/MedicationListField";
 
 function RatingField({ label, value, onChange, readOnly }) {
   const levels = [1, 2, 3, 4, 5];
@@ -253,6 +254,19 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            );
+          }
+
+          if (field.type === "medication_list") {
+            return (
+              <div key={field.key} className="space-y-2">
+                <Label className="text-sm font-medium">{field.label}</Label>
+                <MedicationListField
+                  value={answers[field.key] ?? []}
+                  onChange={(v) => setField(field.key, v)}
+                  readOnly={readOnly}
+                />
               </div>
             );
           }

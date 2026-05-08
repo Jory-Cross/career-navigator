@@ -151,9 +151,7 @@ export const INTAKE_SECTIONS = [
     emoji: "💊",
     fields: [
       { key: "takes_medications", label: "Currently Takes Medications?", type: "yesno" },
-      { key: "medications_list", label: "Medications (Name, Dosage, Frequency)", type: "textarea" },
-      { key: "medication_side_effects", label: "Side Effects That May Affect Work", type: "textarea" },
-      { key: "medication_notes", label: "Additional Medication Notes", type: "textarea" },
+      { key: "medication_list", label: "Medication List", type: "medication_list" },
     ],
   },
   {
