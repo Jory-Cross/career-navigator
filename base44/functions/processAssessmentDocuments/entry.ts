@@ -65,13 +65,45 @@ const assessments = (assessmentsRaw || []).filter(
       }).join('\n\n');
 
       // Build document file list for LLM analysis
-      const docFileUrls = targetDocs
-  .filter(d => d.file_url)
-  .map(d => d.file_url);
-
       const docList = targetDocs.map(d =>
         `  - ${d.title} (${d.category}, ${d.file_type || 'unknown type'})`
       ).join('\n');
+
+      // Build structured resume data section from pre-extracted Document fields
+      const resumeDocs = targetDocs.filter(d => d.category === 'resume');
+      const structuredResumeSection = resumeDocs.length > 0
+        ? resumeDocs.map(d => {
+            const parts = [`[RESUME: ${d.title}]`];
+
+            if (d.job_titles?.length) {
+              parts.push(`Job Titles: ${d.job_titles.join(', ')}`);
+            }
+            if (d.resume_skills?.length) {
+              parts.push(`Skills: ${d.resume_skills.join(', ')}`);
+            }
+            if (d.work_history?.length) {
+              parts.push(`Work History:\n` + d.work_history.map(w =>
+                `  - ${w.title || ''} at ${w.employer || ''} (${w.start_date || ''}${w.end_date ? ' – ' + w.end_date : ' – present'})${w.description ? ': ' + w.description : ''}`
+              ).join('\n'));
+            }
+            if (d.education_history?.length) {
+              parts.push(`Education:\n` + d.education_history.map(e =>
+                `  - ${e.degree || ''} in ${e.field || ''} from ${e.institution || ''} (${e.graduation_year || ''})`
+              ).join('\n'));
+            }
+            if (d.certifications?.length) {
+              parts.push(`Certifications:\n` + d.certifications.map(c =>
+                `  - ${c.name || ''} (${c.issuer || ''}, ${c.year || ''})`
+              ).join('\n'));
+            }
+            if (d.extracted_text && !d.job_titles?.length && !d.resume_skills?.length) {
+              // Fall back to raw extracted text only if no structured fields available
+              parts.push(`Raw Text (excerpt):\n${d.extracted_text.slice(0, 3000)}`);
+            }
+
+            return parts.join('\n');
+          }).join('\n\n')
+        : null;
 
       const extractionPrompt = `You are an expert vocational rehabilitation specialist. Your task is to analyze ALL available client assessment data and uploaded documents, then extract a comprehensive, structured vocational profile.
 
@@ -80,6 +112,10 @@ CLIENT TYPE: ${client.client_type || 'N/A'}
 LOCATION: ${client.location || 'Not specified'}
 TARGET ROLE (on record): ${client.target_role || 'Not specified'}
 CLIENT NOTES: ${client.notes || 'None'}
+
+=== STRUCTURED RESUME DATA ===
+
+${structuredResumeSection || 'No structured resume data available'}
 
 === STRUCTURED ASSESSMENT DATA ===
 
