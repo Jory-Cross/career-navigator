@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { INTAKE_SECTIONS } from "@/lib/intakeSections";
 import IntakeSectionCard from "./IntakeSectionCard";
@@ -17,6 +17,7 @@ export default function IntakePacketPanel({ client, currentUser }) {
   const [showAssignAll, setShowAssignAll] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const formPanelRef = useRef(null);
 
   const clientId = client?.id;
   const orgId = client?.org_id;
@@ -147,22 +148,25 @@ export default function IntakePacketPanel({ client, currentUser }) {
       </div>
 
       {/* Desktop: two-panel layout */}
-      <div className="hidden lg:grid lg:grid-cols-[280px_1fr] gap-5 items-start">
-        {/* Section list */}
-        <div className="space-y-2 sticky top-4">
+      <div className="hidden lg:flex gap-5" style={{ height: "calc(100vh - 260px)", minHeight: "500px" }}>
+        {/* Left nav — independently scrollable */}
+        <div className="w-[280px] shrink-0 overflow-y-auto space-y-2 pr-1">
           {INTAKE_SECTIONS.map((sectionDef) => (
             <IntakeSectionCard
               key={sectionDef.key}
               sectionDef={sectionDef}
               sectionRecord={getSectionRecord(sectionDef.key)}
               isActive={activeKey === sectionDef.key}
-              onClick={() => setActiveKey(sectionDef.key === activeKey ? null : sectionDef.key)}
+              onClick={() => {
+                setActiveKey(sectionDef.key === activeKey ? null : sectionDef.key);
+                if (formPanelRef.current) formPanelRef.current.scrollTop = 0;
+              }}
             />
           ))}
         </div>
 
-        {/* Form panel */}
-        <div className="min-h-[400px]">
+        {/* Right form panel — scrolls independently, always starts at top */}
+        <div ref={formPanelRef} className="flex-1 overflow-y-auto">
           {activeSectionDef ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <IntakeSectionForm
