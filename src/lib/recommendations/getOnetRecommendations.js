@@ -139,12 +139,32 @@ function normalizeKeywords(values = []) {
 function buildProfileText(profile = {}) {
   return uniqueStrings([
     ...normalizeKeywords(profile.resume_skills),
+
+    // strengths
     ...normalizeKeywords(profile.wsa_strengths),
+
+    // preferences/interests/goals
     ...normalizeKeywords(profile.wsa_preferences),
+
+    // environment + support needs
     ...normalizeKeywords(profile.wsa_environment_needs),
+
+    // barriers/conflicts
     ...normalizeKeywords(profile.wsa_barriers),
+
+    // assessments
     ...normalizeKeywords(profile.assessment_keywords),
+
+    // prior jobs
     ...normalizeKeywords(profile.job_titles),
+
+    // direct VFP support
+    ...normalizeKeywords(profile.interests),
+    ...normalizeKeywords(profile.preferred_tasks),
+    ...normalizeKeywords(profile.work_environment_preferences),
+    ...normalizeKeywords(profile.goals),
+    ...normalizeKeywords(profile.support_needs),
+    ...normalizeKeywords(profile.barriers),
   ]);
 }
 
