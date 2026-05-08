@@ -158,14 +158,8 @@ export const INTAKE_SECTIONS = [
     key: "release_of_information",
     label: "Release of Information",
     emoji: "📝",
-    fields: [
-      { key: "roi_agencies", label: "Agencies / Organizations Authorized", type: "textarea" },
-      { key: "roi_purpose", label: "Purpose of Release", type: "textarea" },
-      { key: "roi_expiration", label: "Expiration Date", type: "date" },
-      { key: "roi_signature_date", label: "Signature Date", type: "date" },
-      { key: "roi_agreed", label: "Client Acknowledged?", type: "yesno" },
-      { key: "roi_notes", label: "Notes", type: "textarea" },
-    ],
+    customRenderer: "roi",
+    fields: [],
   },
   {
     key: "media_release",

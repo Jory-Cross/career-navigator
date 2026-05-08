@@ -10,6 +10,7 @@ import { SECTION_STATUS_COLORS, SECTION_STATUS_LABELS } from "@/lib/intakeSectio
 import { cn } from "@/lib/utils";
 import BarriersAIClarify from "@/components/intake/BarriersAIClarify";
 import MedicationListField from "@/components/intake/MedicationListField";
+import ReleaseOfInformationForm from "@/components/intake/ReleaseOfInformationForm";
 
 function RatingField({ label, value, onChange, readOnly }) {
   const levels = [1, 2, 3, 4, 5];
@@ -73,7 +74,7 @@ function YesNoField({ label, value, onChange, readOnly }) {
   );
 }
 
-export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId, orgId, currentUser, readOnly = false, onSaved }) {
+export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId, orgId, currentUser, client, readOnly = false, onSaved }) {
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
@@ -221,6 +222,16 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
         <div className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           Assigned by {sectionRecord.assigned_by}
         </div>
+      )}
+
+      {/* Custom section renderers */}
+      {sectionDef.customRenderer === "roi" && (
+        <ReleaseOfInformationForm
+          answers={answers}
+          setField={setField}
+          readOnly={readOnly}
+          client={client}
+        />
       )}
 
       {/* Fields */}

@@ -137,6 +137,7 @@ export default function IntakePacketPanel({ client, currentUser }) {
                 clientId={clientId}
                 orgId={orgId}
                 currentUser={currentUser}
+                client={client}
                 onSaved={() => {
                   loadSections();
                   setMobileOpen(false);
@@ -176,6 +177,7 @@ export default function IntakePacketPanel({ client, currentUser }) {
                 clientId={clientId}
                 orgId={orgId}
                 currentUser={currentUser}
+                client={client}
                 onSaved={loadSections}
               />
             </div>
