@@ -11,7 +11,10 @@
       "enum": [
         "employee",
         "management",
-        "admin"
+        "admin",
+        "client",
+        "pre_ets",
+        "dspd"
       ],
       "description": "Role to assign when they register"
     },
@@ -22,6 +25,10 @@
     "invited_by_id": {
       "type": "string",
       "description": "User ID of the person who sent the invite \u2014 becomes the new user's manager_id"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Client record ID this portal invite is linked to (for client/pre_ets/dspd roles)"
     }
   },
   "required": [

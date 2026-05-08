@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserCheck, UserX, Clock } from 'lucide-react';
+import { UserCheck, UserX, Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AccessRequestsPanel() {
@@ -46,6 +46,19 @@ export default function AccessRequestsPanel() {
         <h3 className="font-semibold text-orange-900 text-sm">Pending Access Requests</h3>
         <Badge className="bg-orange-600 text-white text-xs">{requests.length}</Badge>
       </div>
+
+      {/* Security warning */}
+      <div className="flex gap-2 rounded-lg bg-red-50 border border-red-200 p-3 mb-3 text-xs text-red-800">
+        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+        <div>
+          <p className="font-semibold">Do not approve public signups for client portal access.</p>
+          <p className="mt-0.5 text-red-700">
+            Use the <strong>Invite to Portal</strong> button from the client record instead. Approving
+            unknown signups here is a security risk.
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-2">
         {requests.map(req => (
           <div key={req.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-orange-100">

@@ -27,6 +27,7 @@ import {
   Mail,
   Loader2,
   ClipboardList,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ import {
   createOnboardingStep,
   sendOnboardingEmail,
 } from "@/lib/api/clientPortalApi";
+import InviteClientPortalDialog from "@/components/intake/InviteClientPortalDialog";
 
 const statusColors = {
   pending: "text-slate-400",
@@ -76,6 +78,7 @@ export default function OnboardingSection({ client, onRefresh }) {
   const [steps, setSteps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showInvitePortal, setShowInvitePortal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(null);
   const [initializing, setInitializing] = useState(false);
   const [savingStep, setSavingStep] = useState(false);
@@ -250,18 +253,28 @@ export default function OnboardingSection({ client, onRefresh }) {
         {loading ? (
           <div className="py-8 text-center text-sm text-slate-400">Loading onboarding...</div>
         ) : steps.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center">
-            <p className="mb-4 text-sm text-slate-500">No onboarding steps yet</p>
-            <Button onClick={initializeOnboarding} disabled={initializing}>
-              {initializing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Initializing...
-                </>
-              ) : (
-                "Initialize Onboarding"
-              )}
-            </Button>
+          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center space-y-3">
+            <p className="text-sm text-slate-500">No onboarding steps yet</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Button onClick={initializeOnboarding} disabled={initializing}>
+                {initializing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Initializing...
+                  </>
+                ) : (
+                  "Initialize Onboarding"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                onClick={() => setShowInvitePortal(true)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Invite to Portal
+              </Button>
+            </div>
           </div>
         ) : (
           <>
@@ -343,10 +356,24 @@ export default function OnboardingSection({ client, onRefresh }) {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Step
               </Button>
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                onClick={() => setShowInvitePortal(true)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Invite to Portal
+              </Button>
             </div>
           </>
         )}
       </Card>
+
+      <InviteClientPortalDialog
+        open={showInvitePortal}
+        onOpenChange={setShowInvitePortal}
+        client={client}
+      />
 
       <Dialog open={showAdd} onOpenChange={(open) => (!open ? closeAddDialog() : null)}>
         <DialogContent className="sm:max-w-lg">
