@@ -478,6 +478,73 @@ Do NOT immediately chase every missing-data warning.
 
 Next best phase is:
 
+Add this to the CRM backlog / handoff notes:
+
+Recommendation engine architecture direction is now locked:
+O*NET is the broad occupational discovery layer, NOT the final decision-maker.
+The system is intended to become a layered vocational intelligence platform, not a static scoring engine.
+Recommendation flow should evolve as:
+O*NET Interest Profiler generates broad occupational possibility space
+VFP aggregates structured client intelligence from all assessments/documents
+Additional assessments progressively refine vocational fit
+AI synthesizes strengths, limitations, support needs, environment tolerances, work style, transportation, schedule, sensory needs, social tolerance, behavioral patterns, goals, and longitudinal observations
+Final recommendation confidence increases as profile completeness/data quality increases
+Current recommendation tuning should largely PAUSE after the recent plumbing fixes.
+Core plumbing now exists:
+structured resume ingestion
+VFP persistence
+O*NET integration
+VFP → recommendation engine wiring
+dynamic weighting foundation
+conflict/fit architecture
+Further heavy tuning right now will have diminishing returns because the assessment ecosystem is still immature.
+Future recommendation improvements should come primarily from richer assessments and richer structured intake — NOT hardcoded occupation logic.
+Avoid hardcoding “good jobs/bad jobs.”
+Jobs should rise/fall dynamically based on extracted traits/preferences/tolerances from assessments and VFP.
+Example:
+independent/sensory-sensitive clients → public-facing/social jobs penalized
+clients who enjoy social/public interaction → those same jobs boosted
+animal-interest profiles → animal-related occupations boosted
+logistics/detail-oriented profiles → inventory/warehouse/data-oriented jobs boosted
+Future weighting should be trait-driven, not occupation-driven.
+Current system state should be considered:
+“O*NET + light personalization”
+NOT yet “deep vocational fit intelligence”
+Long-term architecture target:
+semantic/vector occupational matching
+cross-assessment synthesis
+longitudinal profiling
+adaptive confidence scoring
+AI reasoning layers
+dynamic trait weighting
+occupation/environment compatibility modeling
+support/accommodation-aware recommendation ranking
+staff-observation influence
+longitudinal employment success tracking feeding future recommendations
+Current recommendation limitations are expected because VFP data is still relatively thin:
+limited WSA depth
+limited support/accommodation detail
+limited environment/sensory data
+limited behavioral/job tolerance data
+limited transportation/schedule constraints
+limited staff observational data
+limited longitudinal outcomes
+Recommendation engine should continue using:
+VFP as primary intelligence layer
+WSA as refinement layer
+resume/job history as grounding layer
+O*NET as occupational universe layer
+future assessments as progressive fit refinement layers
+Strategic guidance:
+pause deep recommendation tuning until assessment ecosystem matures
+focus future build phases on:
+richer assessments
+structured extraction
+normalized trait modeling
+support/accommodation intelligence
+environment tolerance modeling
+stronger VFP synthesis
+longitudinal client intelligence architecture
 Stabilize O*NET integration
 Clean duplicate profiler handling
 Improve recommendation confidence scoring
