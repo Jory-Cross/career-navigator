@@ -242,7 +242,35 @@ console.log("VFP FINAL RESULT:", result);
       // Preserve existing profile if newer extraction is weaker
       const existingProfile = client.vocational_facts_profile;
       const existingMetadata = client.vocational_facts_metadata;
-     const shouldUpdate = true;
+     const existingScore =
+  existingMetadata?.data_quality_score || 0;
+
+const newScore =
+  result?.data_quality_score || 0;
+
+const newFactCount = [
+  ...(result.skills || []),
+  ...(result.interests || []),
+  ...(result.preferred_tasks || []),
+  ...(result.work_environment_preferences || []),
+  ...(result.schedule_availability || []),
+  ...(result.transportation || []),
+  ...(result.social_communication_needs || []),
+  ...(result.sensory_environmental_needs || []),
+  ...(result.physical_restrictions || []),
+  ...(result.support_needs || []),
+  ...(result.job_readiness_level || []),
+  ...(result.employer_preferences || []),
+  ...(result.barriers || []),
+  ...(result.goals || []),
+].length;
+
+const shouldUpdate =
+  !existingProfile ||
+  (
+    newScore >= existingScore &&
+    newFactCount > 5
+  );
 
       // Save the vocational facts profile to the client record
       const profilePayload = {
