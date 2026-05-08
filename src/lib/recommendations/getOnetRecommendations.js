@@ -316,8 +316,15 @@ try {
   const raw = response?.data?.data;
 
   const careers = toArray(
-    raw?.career || raw?.careers || raw?.items
-  ).map((item, index) => normalizeOnetCareerItem(item, index));
+  raw?.career || raw?.careers || raw?.items
+).map((item, index) =>
+  normalizeOnetCareerItem(
+    item,
+    index,
+    profileKeywords,
+    getConflictKeywords(profile)
+  )
+);
 
   if (careers.length > 0) {
     return {
