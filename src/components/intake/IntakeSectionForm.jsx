@@ -72,116 +72,93 @@ function YesNoField({ label, value, onChange, readOnly }) {
   );
 }
 
-// autosave status: null | 'saving' | 'saved' | 'error'
 export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId, orgId, currentUser, readOnly = false, onSaved }) {
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [isDirty, setIsDirty] = useState(false);
+  const [exitSaveStatus, setExitSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
 
-  // Track the latest sectionRecord id/answers for autosave without triggering re-renders
+  // Always-current refs so async save-on-exit reads latest values
+  const answersRef = useRef(answers);
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+
   const sectionRecordRef = useRef(sectionRecord);
   useEffect(() => { sectionRecordRef.current = sectionRecord; }, [sectionRecord]);
 
-  // Track whether answers were changed by user (not just a load from props)
-  const isUserEdit = useRef(false);
-  const autoSaveTimer = useRef(null);
+  const isDirtyRef = useRef(false);
+  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
+  // Reset on section switch
   useEffect(() => {
-    isUserEdit.current = false;
-    if (sectionRecord?.answers) {
-      setAnswers(sectionRecord.answers);
-    } else {
-      setAnswers({});
-    }
+    setIsDirty(false);
+    setExitSaveStatus(null);
+    setAnswers(sectionRecord?.answers ?? {});
   }, [sectionRecord?.id]);
 
-  const performAutoSave = useCallback(async (latestAnswers) => {
-    if (readOnly) return;
-    setAutoSaveStatus("saving");
-    try {
-      const rec = sectionRecordRef.current;
-      const nonEmpty = Object.fromEntries(
-        Object.entries(latestAnswers).filter(([, v]) => v !== null && v !== undefined && v !== "")
-      );
-      const currentStatus = rec?.status || "not_started";
-      const nextStatus = (currentStatus === "not_started" || currentStatus === "assigned") ? "in_progress" : currentStatus;
-
-      const payload = {
-        client_id: clientId,
-        org_id: orgId,
-        section_key: sectionDef.key,
-        section_label: sectionDef.label,
-        answers: nonEmpty,
-        status: nextStatus,
-      };
-
-      if (rec?.id) {
-        await base44.entities.IntakeSection.update(rec.id, payload);
-      } else {
-        await base44.entities.IntakeSection.create(payload);
-      }
-
-      setAutoSaveStatus("saved");
-      if (onSaved) onSaved();
-      setTimeout(() => setAutoSaveStatus(null), 2500);
-    } catch {
-      setAutoSaveStatus("error");
-      setTimeout(() => setAutoSaveStatus(null), 4000);
-    }
-  }, [readOnly, clientId, orgId, sectionDef.key, sectionDef.label, onSaved]);
-
   const setField = (key, val) => {
-    isUserEdit.current = true;
-    setAnswers((prev) => {
-      const next = { ...prev, [key]: val };
-      // debounce autosave
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = setTimeout(() => performAutoSave(next), 1000);
-      return next;
-    });
+    setIsDirty(true);
+    setAnswers((prev) => ({ ...prev, [key]: val }));
   };
 
-  // cleanup timer on unmount
+  // Core save function — used by exit save, manual save, and unmount
+  const doSave = useCallback(async (latestAnswers, markComplete = false) => {
+    if (readOnly) return;
+    const rec = sectionRecordRef.current;
+    const nonEmpty = Object.fromEntries(
+      Object.entries(latestAnswers).filter(([, v]) => v !== null && v !== undefined && v !== "")
+    );
+    const currentStatus = rec?.status || "not_started";
+    const nextStatus = markComplete
+      ? "completed"
+      : (currentStatus === "not_started" || currentStatus === "assigned") ? "in_progress" : currentStatus;
+
+    const payload = {
+      client_id: clientId,
+      org_id: orgId,
+      section_key: sectionDef.key,
+      section_label: sectionDef.label,
+      answers: nonEmpty,
+      status: nextStatus,
+      ...(markComplete ? { completed_at: new Date().toISOString() } : {}),
+    };
+
+    if (rec?.id) {
+      await base44.entities.IntakeSection.update(rec.id, payload);
+    } else {
+      await base44.entities.IntakeSection.create(payload);
+    }
+    if (onSaved) onSaved();
+  }, [readOnly, clientId, orgId, sectionDef.key, sectionDef.label, onSaved]);
+
+  // Save-on-exit: fires when component unmounts (section switch or page close)
   useEffect(() => {
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, []);
+    const handleBeforeUnload = () => {
+      // Best-effort sync-style beacon on page unload — just fire and forget
+      if (isDirtyRef.current) {
+        doSave(answersRef.current).catch(() => {});
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Save on unmount (section switch)
+      if (isDirtyRef.current && !readOnly) {
+        doSave(answersRef.current).catch(() => {});
+      }
+    };
+  }, [doSave, readOnly]);
 
   const hasAnswers = () => Object.values(answers).some((v) => v !== null && v !== undefined && v !== "");
 
   const handleSave = async (markComplete = false) => {
     setSaving(true);
     try {
-      const now = new Date().toISOString();
-      const nonEmpty = Object.fromEntries(
-        Object.entries(answers).filter(([, v]) => v !== null && v !== undefined && v !== "")
-      );
-
-      const payload = {
-        client_id: clientId,
-        org_id: orgId,
-        section_key: sectionDef.key,
-        section_label: sectionDef.label,
-        answers: nonEmpty,
-      };
-
-      if (markComplete) {
-        payload.status = "completed";
-        payload.completed_at = now;
-      } else {
-        payload.status = sectionRecord?.status === "not_started" ? "in_progress" : (sectionRecord?.status || "in_progress");
-      }
-
-      if (sectionRecord?.id) {
-        await base44.entities.IntakeSection.update(sectionRecord.id, payload);
-      } else {
-        await base44.entities.IntakeSection.create(payload);
-      }
-
+      await doSave(answers, markComplete);
+      setIsDirty(false);
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 2500);
-      if (onSaved) onSaved();
     } finally {
       setSaving(false);
     }
@@ -317,23 +294,18 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
         <BarriersAIClarify
           answers={answers}
           onAccept={(aiFields) => {
+            setIsDirty(true);
             setAnswers((prev) => ({ ...prev, ...aiFields }));
           }}
         />
       )}
 
-      {/* Autosave indicator */}
-      {autoSaveStatus && (
-        <div className={cn(
-          "text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg w-fit",
-          autoSaveStatus === "saving" && "bg-slate-100 text-slate-500",
-          autoSaveStatus === "saved" && "bg-emerald-50 text-emerald-600",
-          autoSaveStatus === "error" && "bg-red-50 text-red-500",
-        )}>
-          {autoSaveStatus === "saving" && <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>}
-          {autoSaveStatus === "saved" && <><CheckCircle2 className="w-3 h-3" /> Autosaved</>}
-          {autoSaveStatus === "error" && "Autosave failed — your changes are still here"}
-        </div>
+      {/* Unsaved changes indicator */}
+      {isDirty && (
+        <p className="text-xs text-amber-600 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+          Unsaved changes — will save when you leave this section
+        </p>
       )}
 
       {/* Actions */}
