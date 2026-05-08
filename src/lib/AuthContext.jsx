@@ -5,6 +5,29 @@ import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
+// ─── Access Classification ────────────────────────────────────────────────────
+// Returns one of: 'staff' | 'client_portal' | 'denied'
+// STRICT: any blank/invalid role or access_level → denied
+export const classifyUserAccess = (user) => {
+  if (!user) return 'denied';
+
+  const role = user.role;
+  const access = user.access_level;
+
+  // Staff CRM access: explicit staff roles + matching access_level
+  if (['admin', 'management', 'employee'].includes(role) && ['staff', 'admin'].includes(access)) {
+    return 'staff';
+  }
+
+  // Client portal access: client roles + client_portal access_level
+  if (['client', 'pre_ets', 'dspd'].includes(role) && access === 'client_portal') {
+    return 'client_portal';
+  }
+
+  // Everything else (role="user", blank access_level, mismatches) → denied
+  return 'denied';
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -95,6 +118,7 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
+      console.log(`[Auth] user=${currentUser?.email} role=${currentUser?.role} access_level=${currentUser?.access_level} → ${classifyUserAccess(currentUser)}`);
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
@@ -138,7 +162,8 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState,
+      accessClass: user ? classifyUserAccess(user) : null,
     }}>
       {children}
     </AuthContext.Provider>

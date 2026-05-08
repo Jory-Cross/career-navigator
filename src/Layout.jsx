@@ -98,13 +98,26 @@ export default function Layout({ children, currentPageName }) {
   React.useEffect(() => {
     base44.auth.me().then(currentUser => {
       setUser(currentUser);
-      if (currentUser?.role === 'client' && currentPageName !== 'ClientPortal') {
+
+      const role = currentUser?.role;
+      const access = currentUser?.access_level;
+
+      // Deny staff CRM access if role/access_level is invalid
+      const staffRoles = ['admin', 'management', 'employee'];
+      const staffAccess = ['staff', 'admin'];
+      if (staffRoles.includes(role) && !staffAccess.includes(access)) {
+        // Staff role but no valid access_level — let App.jsx AccessDenied handle it
+        return;
+      }
+
+      // Route client portal roles to their portals
+      if (role === 'client' && access === 'client_portal' && currentPageName !== 'ClientPortal') {
         navigate('/ClientPortal');
-      } else if (currentUser?.role === 'pre_ets' && currentPageName !== 'PreEtsPortal') {
+      } else if (role === 'pre_ets' && access === 'client_portal' && currentPageName !== 'PreEtsPortal') {
         navigate(createPageUrl('PreEtsPortal'));
-      } else if (currentUser?.role === 'dspd' && currentPageName !== 'DspdPortal') {
+      } else if (role === 'dspd' && access === 'client_portal' && currentPageName !== 'DspdPortal') {
         navigate(createPageUrl('DspdPortal'));
-      } else if (currentUser?.role === 'pre_ets_employer' && currentPageName !== 'PreEtsEmployerPortal') {
+      } else if (role === 'pre_ets_employer' && currentPageName !== 'PreEtsEmployerPortal') {
         navigate('/PreEtsEmployerPortal');
       }
     }).catch(() => {});

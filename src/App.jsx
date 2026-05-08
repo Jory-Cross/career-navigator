@@ -17,6 +17,8 @@ import AppAnalytics from './pages/AppAnalytics';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AccessDenied from '@/components/AccessDenied';
+import { classifyUserAccess } from '@/lib/AuthContext';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -27,7 +29,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -43,9 +45,29 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
       return null;
+    }
+  }
+
+  // ── CRITICAL ACCESS GATE ──────────────────────────────────────────────────
+  // If a user is loaded, classify their access BEFORE rendering any routes.
+  // role="user", blank access_level, or any mismatch → AccessDenied immediately.
+  if (user) {
+    const accessClass = classifyUserAccess(user);
+
+    if (accessClass === 'denied') {
+      return <AccessDenied user={user} />;
+    }
+
+    // Client portal users: only allow /ClientPortal route — redirect everything else
+    if (accessClass === 'client_portal') {
+      const allowed = ['/ClientPortal', '/clientportal'];
+      const isOnPortal = allowed.some(p => window.location.pathname.toLowerCase().startsWith(p.toLowerCase()));
+      if (!isOnPortal) {
+        window.location.replace('/ClientPortal');
+        return null;
+      }
     }
   }
 

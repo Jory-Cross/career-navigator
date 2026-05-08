@@ -37,12 +37,19 @@ Deno.serve(async (req) => {
       inviterId = inviterUsers[0].id;
     }
 
-    // Store pending role + org_id + invited_by_id so all are applied when they register
+    // access_level for staff roles
+    const accessLevel = inviteRole === 'admin' ? 'admin' : 'staff';
+
+    // Store pending role + access_level + org_id so all are applied when they register
     await base44.asServiceRole.entities.PendingRoleAssignment.create({
       email,
       role: inviteRole,
+      access_level: accessLevel,
+      status: 'pending',
+      invited_at: new Date().toISOString(),
       org_id: orgId,
-      invited_by_id: inviterId
+      invited_by_id: inviterId,
+      invited_by_name: user.full_name || user.email,
     });
 
     console.log(`Invited ${email} as ${inviteRole} for org ${orgId}, manager will be ${inviterId}`);

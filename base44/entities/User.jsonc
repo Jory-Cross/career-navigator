@@ -12,7 +12,8 @@
         "pre_ets",
         "dspd"
       ],
-      "default": "employee"
+      "default": "employee",
+      "description": "User's role. 'user' is the platform default before onUserRegistered upgrades it."
     },
     "access_level": {
       "type": "string",
@@ -21,7 +22,7 @@
         "staff",
         "admin"
       ],
-      "description": "Portal access level granted via invitation"
+      "description": "Access level granted via invitation. Blank = denied everywhere."
     },
     "org_id": {
       "type": "string",
@@ -47,5 +48,6 @@
     "timezone": {
       "type": "string"
     }
-  }
+  },
+  "required": []
 }
