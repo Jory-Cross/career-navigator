@@ -279,14 +279,24 @@ const shouldUpdate =
         vocational_facts_last_updated_at: new Date().toISOString(),
       };
 
-      // Only update if stronger or no existing profile
-      const updateResult = await base44.asServiceRole.entities.Client.update(clientId, profilePayload);
+     let updateResult = null;
 
-console.log("VFP SAVE RESULT:", updateResult);
+if (shouldUpdate) {
+  updateResult = await base44.asServiceRole.entities.Client.update(
+    clientId,
+    profilePayload
+  );
 
-console.log(
-  `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}`
-);
+  console.log("VFP SAVE RESULT:", updateResult);
+
+  console.log(
+    `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}`
+  );
+} else {
+  console.log(
+    `[processAssessmentDocuments] Skipped weaker VFP extraction for client ${clientId}`
+  );
+}
 
       // Log activity
       await base44.asServiceRole.entities.Activity.create({
