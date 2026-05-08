@@ -61,7 +61,7 @@ function RoiRow({ label, fieldKey, answers, setField, readOnly }) {
 
 export default function ReleaseOfInformationForm({ answers, setField, readOnly, client }) {
   const clientName = client
-    ? [client.first_name, client.last_name].filter(Boolean).join(" ")
+    ? ([client.first_name, client.last_name].filter(Boolean).join(" ") || client.name || "")
     : "";
 
   // Default expiration = today + 1 year

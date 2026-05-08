@@ -5,7 +5,7 @@ import { format } from "date-fns";
 
 export default function ServicesAgreementForm({ answers, setField, readOnly, client }) {
   const clientName = client
-    ? [client.first_name, client.last_name].filter(Boolean).join(" ")
+    ? ([client.first_name, client.last_name].filter(Boolean).join(" ") || client.name || "")
     : "";
 
   const defaultSignatureDate = format(new Date(), "yyyy-MM-dd");
