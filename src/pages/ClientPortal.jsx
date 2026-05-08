@@ -20,6 +20,7 @@ import {
   updateTask,
 
 } from "@/lib/api/clientPortalApi";
+import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSection";
 
 const STAFF_ROLES = ["admin", "management", "employee"];
 
@@ -30,7 +31,7 @@ function getClientIdFromUrl() {
 
 function getTabFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("tab") || "applications";
+  return params.get("tab") || "intake";
 }
 
 function emptyApplicationForm() {
@@ -342,6 +343,7 @@ setCompletionNote("");
   }}
 >
                <TabsList>
+          <TabsTrigger value="intake">Intake Forms</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
          <TabsTrigger value="recommendations">
   <div className="flex items-center gap-2">
@@ -367,6 +369,10 @@ setCompletionNote("");
 </TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="intake" className="space-y-4">
+          <ClientPortalIntakeSection client={client} />
+        </TabsContent>
 
         <TabsContent value="applications" className="space-y-4">
           <div className="flex items-center justify-between">

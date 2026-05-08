@@ -1,0 +1,67 @@
+{
+  "name": "IntakeSection",
+  "type": "object",
+  "description": "One section of a client's intake/onboarding packet. Each section stores its own structured answers and tracks completion status independently.",
+  "properties": {
+    "org_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "section_key": {
+      "type": "string",
+      "description": "Unique identifier for the section type, e.g. 'basic_info', 'employment_goals'"
+    },
+    "section_label": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "assigned",
+        "in_progress",
+        "completed",
+        "reviewed"
+      ],
+      "default": "not_started"
+    },
+    "answers": {
+      "type": "object",
+      "description": "Structured field-by-field answers for this section",
+      "additionalProperties": true
+    },
+    "assigned_to_client": {
+      "type": "boolean",
+      "default": false
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "Staff email who assigned this section"
+    },
+    "assigned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal staff notes for this section"
+    }
+  },
+  "required": [
+    "client_id",
+    "section_key"
+  ]
+}

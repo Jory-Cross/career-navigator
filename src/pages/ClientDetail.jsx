@@ -47,6 +47,7 @@ import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
 import { testOnetConnection } from "@/lib/onet/onetClient";
 import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
+import IntakePacketPanel from "@/components/intake/IntakePacketPanel";
 
 function getClientIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -325,6 +326,24 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
+    {!isClientUser && !isEmployed && (
+      <button
+        type="button"
+        onClick={() => handleTabChange("intake_packet")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "intake_packet"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          <span className="text-sm font-semibold">Intake Packet</span>
+        </div>
+      </button>
+    )}
+
     {!isDspd && !isEmployed && (
       <button
         type="button"
@@ -550,6 +569,12 @@ const currentTaskCount = tasks.filter(
   {!isClientUser && !isEmployed && (
     <TabsContent value="onboarding">
       <OnboardingSection client={client} onRefresh={refreshClient} />
+    </TabsContent>
+  )}
+
+  {!isClientUser && !isEmployed && (
+    <TabsContent value="intake_packet">
+      <IntakePacketPanel client={client} currentUser={user} />
     </TabsContent>
   )}
 </>
