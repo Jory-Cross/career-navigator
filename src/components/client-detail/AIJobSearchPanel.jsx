@@ -733,11 +733,13 @@ const validJobCount = jobs.filter(
       }
 
       const result = await runRecommendationEngine({
-        client: { ...(client || {}), id: resolvedClientId },
-        documents: docs,
-        assessments,
-        forceRegenerate: true,
-      });
+  client: { ...(client || {}), id: resolvedClientId },
+  documents: docs,
+  assessments,
+  vocationalProfile:
+    client?.vocational_facts_profile || null,
+  forceRegenerate: true,
+});
 
       const generatedBatch = result?.batch || null;
 
