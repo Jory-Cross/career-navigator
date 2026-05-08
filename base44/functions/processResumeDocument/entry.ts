@@ -64,27 +64,51 @@ async function runAIAnalysis(extractedText, fileName) {
   const openAiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openAiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  const truncated = extractedText.slice(0, 12000); // keep within token limits
+  const truncated = extractedText.slice(0, 12000);
 
   const prompt = `You are an employment specialist AI for a vocational rehabilitation CRM.
 
-Analyze the following document text and provide a structured employment-focused analysis.
-
-Your goals:
-1. Extract realistic, specific employment skills (hard and soft skills — NO section heading labels)
-2. Extract job titles and brief work history entries if clearly present
-3. Write a vocational summary (2–3 sentences) focused on strengths for employment
-4. Identify any employment barriers or support needs ONLY if clearly evident in the text
-5. Keep all analysis grounded in the actual document content
-
-Do NOT include generic terms like: "resume", "skills", "work history", "employment history", "job seeking", "professional summary", "contact information", "section titles", or any document structure labels as tags.
+Analyze the following resume/document text and return structured employment data.
 
 Return ONLY valid JSON in this exact format:
 {
   "ai_summary": "2–3 sentence vocational summary",
-  "ai_tags": ["skill1", "skill2", "job_title_if_found", ...],
-  "ai_insights": "Paragraph noting vocational strengths, transferable skills, work history highlights, and any clearly identified support needs. Employment-focused."
+  "ai_tags": ["skill1", "skill2", "job_title_if_found"],
+  "ai_insights": "Employment-focused paragraph.",
+  "job_titles": ["Job title 1"],
+  "resume_skills": ["Skill 1"],
+  "work_history": [
+    {
+      "title": "Job title",
+      "employer": "Employer name",
+      "start_date": "Start date if available",
+      "end_date": "End date if available",
+      "description": "Brief job duties if available"
+    }
+  ],
+  "education_history": [
+    {
+      "degree": "Degree or credential",
+      "field": "Field of study",
+      "institution": "School or institution",
+      "graduation_year": "Graduation year if available"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Certification name",
+      "issuer": "Issuer if available",
+      "year": "Year if available"
+    }
+  ]
 }
+
+Rules:
+- Only extract facts clearly present in the document.
+- Use empty arrays when information is not found.
+- Do not invent employers, dates, schools, skills, certifications, or job titles.
+- Do not include section headings like "resume", "skills", or "work history" as skills or tags.
+- Keep all analysis grounded in the document text.
 
 Document file name: ${fileName || "unknown"}
 Document text:
@@ -92,7 +116,7 @@ Document text:
 ${truncated}
 ---`;
 
-  console.log("[processResumeDocument] Sending text to OpenAI for analysis...");
+  console.log("[processResumeDocument] Sending text to OpenAI for structured resume analysis...");
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -107,7 +131,7 @@ ${truncated}
         {
           role: "system",
           content:
-            "You analyze documents for a vocational rehab CRM and must return valid JSON only. Focus exclusively on employment and vocational rehabilitation context.",
+            "You extract structured resume data for a vocational rehab CRM and must return valid JSON only.",
         },
         {
           role: "user",
@@ -132,7 +156,7 @@ ${truncated}
     .trim();
 
   const parsed = JSON.parse(cleaned);
-  console.log("[processResumeDocument] AI analysis success");
+  console.log("[processResumeDocument] Structured resume analysis success");
   return parsed;
 }
 
