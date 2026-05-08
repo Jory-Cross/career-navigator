@@ -40,6 +40,7 @@ import {
   sendOnboardingEmail,
 } from "@/lib/api/clientPortalApi";
 import InviteClientPortalDialog from "@/components/intake/InviteClientPortalDialog";
+import PortalInvitationStatus from "@/components/intake/PortalInvitationStatus";
 
 const statusColors = {
   pending: "text-slate-400",
@@ -368,6 +369,12 @@ export default function OnboardingSection({ client, onRefresh }) {
           </>
         )}
       </Card>
+
+      {/* Portal invitation status — always visible below the step list */}
+      <div className="mt-4">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Portal Access</p>
+        <PortalInvitationStatus client={client} />
+      </div>
 
       <InviteClientPortalDialog
         open={showInvitePortal}

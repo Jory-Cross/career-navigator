@@ -89,8 +89,21 @@ export default function ClientPortal() {
         setUser(currentUser);
 
         if (currentUser.role === "client") {
-          // Strict: only resolve by exact email match. Never fallback.
-          const resolvedClient = await getClientByEmail(currentUser.email);
+          // Strict access check: must have been invited with client_portal access level
+          if (currentUser.access_level !== "client_portal") {
+            setBootError("NO_CLIENT_MAPPING");
+            setClient(null);
+            return;
+          }
+
+          // Resolve client: prefer linked_client_id (set by onUserRegistered), fallback to email match
+          let resolvedClient = null;
+          if (currentUser.linked_client_id) {
+            resolvedClient = await getClientById(currentUser.linked_client_id);
+          }
+          if (!resolvedClient) {
+            resolvedClient = await getClientByEmail(currentUser.email);
+          }
           if (!isMounted) return;
 
           if (!resolvedClient || !resolvedClient.id) {

@@ -18,17 +18,46 @@
       ],
       "description": "Role to assign when they register"
     },
+    "access_level": {
+      "type": "string",
+      "enum": [
+        "client_portal",
+        "staff",
+        "admin"
+      ],
+      "description": "Portal access level to assign"
+    },
     "org_id": {
       "type": "string",
       "description": "Org ID to stamp on the user when they register"
     },
     "invited_by_id": {
       "type": "string",
-      "description": "User ID of the person who sent the invite \u2014 becomes the new user's manager_id"
+      "description": "User ID of the person who sent the invite"
+    },
+    "invited_by_name": {
+      "type": "string",
+      "description": "Display name of inviter for UI"
+    },
+    "invited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invitation was created"
     },
     "client_id": {
       "type": "string",
       "description": "Client record ID this portal invite is linked to (for client/pre_ets/dspd roles)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "expired",
+        "revoked"
+      ],
+      "default": "pending",
+      "description": "Current invitation status"
     }
   },
   "required": [

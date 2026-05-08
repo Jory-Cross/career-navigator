@@ -10,14 +10,30 @@
         "employee",
         "client",
         "pre_ets",
-        "dspd",
-        "pre_ets_employer"
+        "dspd"
       ],
       "default": "employee"
     },
+    "access_level": {
+      "type": "string",
+      "enum": [
+        "client_portal",
+        "staff",
+        "admin"
+      ],
+      "description": "Portal access level granted via invitation"
+    },
     "org_id": {
       "type": "string",
-      "description": "Tenant organization ID this user belongs to"
+      "description": "Tenant organization ID"
+    },
+    "manager_id": {
+      "type": "string",
+      "description": "ID of the manager/admin who invited this user"
+    },
+    "linked_client_id": {
+      "type": "string",
+      "description": "Client record ID linked to this user (for client portal users)"
     },
     "phone": {
       "type": "string"
@@ -26,9 +42,6 @@
       "type": "string"
     },
     "avatar_url": {
-      "type": "string"
-    },
-    "manager_id": {
       "type": "string"
     },
     "timezone": {
