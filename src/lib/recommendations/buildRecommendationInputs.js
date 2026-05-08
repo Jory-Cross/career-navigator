@@ -238,12 +238,14 @@ function summarizeVfp(vfp = null) {
   "goals",
   "work_environment_preferences",
 ]),
-    environment_needs: getVfpField(vfp, [
-      "environment_needs",
-      "work_environment_needs",
-      "support_needs",
-      "accommodations",
-    ]),
+   environment_needs: getVfpField(vfp, [
+  "environment_needs",
+  "work_environment_needs",
+  "support_needs",
+  "accommodations",
+  "work_environment_preferences",
+  "job_readiness_level",
+]),
     barriers: getVfpField(vfp, [
       "barriers",
       "work_barriers",
