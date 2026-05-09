@@ -14,7 +14,8 @@
         "admin",
         "client",
         "pre_ets",
-        "dspd"
+        "dspd",
+        "pre_ets_employer"
       ],
       "description": "Role to assign when they register"
     },
@@ -23,7 +24,8 @@
       "enum": [
         "client_portal",
         "staff",
-        "admin"
+        "admin",
+        "pre_ets_employer_portal"
       ],
       "description": "Portal access level to assign"
     },
@@ -46,7 +48,7 @@
     },
     "client_id": {
       "type": "string",
-      "description": "Client record ID this portal invite is linked to (for client/pre_ets/dspd roles)"
+      "description": "Client record ID this portal invite is linked to (for client/pre_ets/dspd/pre_ets_employer roles)"
     },
     "status": {
       "type": "string",

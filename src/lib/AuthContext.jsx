@@ -6,7 +6,7 @@ import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 const AuthContext = createContext();
 
 // ─── Access Classification ────────────────────────────────────────────────────
-// Returns one of: 'staff' | 'client_portal' | 'denied'
+// Returns one of: 'staff' | 'client_portal' | 'pre_ets_employer_portal' | 'denied'
 // STRICT: any blank/invalid role or access_level → denied
 export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
@@ -22,6 +22,11 @@ export const classifyUserAccess = (user) => {
   // Client portal access: client roles + client_portal access_level
   if (['client', 'pre_ets', 'dspd'].includes(role) && access === 'client_portal') {
     return 'client_portal';
+  }
+
+  // Pre-ETS Employer portal: restricted to weekly form only
+  if (role === 'pre_ets_employer' && access === 'pre_ets_employer_portal') {
+    return 'pre_ets_employer_portal';
   }
 
   // Everything else (role="user", blank access_level, mismatches) → denied

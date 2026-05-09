@@ -10,7 +10,8 @@
         "employee",
         "client",
         "pre_ets",
-        "dspd"
+        "dspd",
+        "pre_ets_employer"
       ],
       "default": "employee",
       "description": "User's role. 'user' is the platform default before onUserRegistered upgrades it."
@@ -20,7 +21,8 @@
       "enum": [
         "client_portal",
         "staff",
-        "admin"
+        "admin",
+        "pre_ets_employer_portal"
       ],
       "description": "Access level granted via invitation. Blank = denied everywhere."
     },

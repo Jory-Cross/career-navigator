@@ -69,6 +69,15 @@ const AuthenticatedApp = () => {
         return null;
       }
     }
+
+    // Pre-ETS Employer portal users: only allow /PreEtsEmployerPortal
+    if (accessClass === 'pre_ets_employer_portal') {
+      const isOnPortal = window.location.pathname.toLowerCase() === '/preetsemployerportal';
+      if (!isOnPortal) {
+        window.location.replace('/PreEtsEmployerPortal');
+        return null;
+      }
+    }
   }
 
   // Render the main app

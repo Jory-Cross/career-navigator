@@ -37,7 +37,8 @@ const ROLE_LABELS = {
   employee: "Employee",
   client: "Client",
   pre_ets: "Pre-ETS",
-  dspd: "DSPD"
+  dspd: "DSPD",
+  pre_ets_employer: "Pre-ETS Employer"
 };
 
 function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
@@ -117,7 +118,7 @@ export default function Layout({ children, currentPageName }) {
         navigate(createPageUrl('PreEtsPortal'));
       } else if (role === 'dspd' && access === 'client_portal' && currentPageName !== 'DspdPortal') {
         navigate(createPageUrl('DspdPortal'));
-      } else if (role === 'pre_ets_employer' && currentPageName !== 'PreEtsEmployerPortal') {
+      } else if (role === 'pre_ets_employer' && access === 'pre_ets_employer_portal' && currentPageName !== 'PreEtsEmployerPortal') {
         navigate('/PreEtsEmployerPortal');
       }
     }).catch(() => {});
@@ -244,7 +245,7 @@ export default function Layout({ children, currentPageName }) {
 
       <div className="flex">
         {/* Sidebar */}
-        {user?.role !== 'client' && user?.role !== 'pre_ets' && user?.role !== 'dspd' && (
+        {user?.role !== 'client' && user?.role !== 'pre_ets' && user?.role !== 'dspd' && user?.role !== 'pre_ets_employer' && (
           <aside className={cn(
             "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
