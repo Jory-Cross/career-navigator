@@ -69,30 +69,44 @@ const INTAKE_TO_VFP_MAPPING = {
 
 /**
  * Transportation section → VFP fields
+ * 
+ * Properly distinguishes between:
+ * - has_vehicle === true AND has_license === true → reliable_personal_vehicle
+ * - transportation_method includes bus/public transit → relies_on_public_transit
+ * - transportation_notes includes paratransit → paratransit_dependent
+ * - has_vehicle === false → adds no_personal_vehicle limitation
+ * - has_license === false → adds no_driver_license limitation
  */
 function extractTransportationByAnswerKey(answers) {
   const extracted = {};
   const text = Object.values(answers || {}).join(' ').toLowerCase();
-
-  // transportation_reliability
-  const hasVehicle = answers.has_vehicle || text.includes('own') || text.includes('car');
-  const hasLicense = answers.has_license || text.includes('license');
+  const notes = (answers.transportation_notes || '').toLowerCase();
   const method = (answers.transportation_method || '').toLowerCase();
 
-  if (hasVehicle && hasLicense) {
-    extracted.transportation_reliability = ['reliable_personal_vehicle'];
-  } else if (method.includes('public') || method.includes('transit')) {
-    extracted.transportation_reliability = ['relies_on_public_transit'];
-  } else if (hasVehicle || text.includes('sometimes')) {
-    extracted.transportation_reliability = ['sometimes_available'];
-  } else if (!hasVehicle || text.includes('no car') || text.includes('cannot drive')) {
-    extracted.transportation_reliability = ['unreliable_no_vehicle'];
-  }
+  // Extract boolean fields properly: check for actual 'yes'/'no' or true/false values
+  const hasVehicle = answers.has_vehicle === 'yes' || answers.has_vehicle === true;
+  const hasLicense = answers.has_license === 'yes' || answers.has_license === true;
 
-  // transportation_limitations
+  // transportation_reliability - only reliable if BOTH vehicle AND license
+  const reliability = [];
+  if (hasVehicle && hasLicense) {
+    reliability.push('reliable_personal_vehicle');
+  } else if (method.includes('bus') || method.includes('public') || method.includes('transit')) {
+    reliability.push('relies_on_public_transit');
+  } else if (notes.includes('paratransit')) {
+    reliability.push('paratransit_dependent');
+  } else if (hasVehicle && !hasLicense) {
+    reliability.push('vehicle_without_license');
+  } else if (!hasVehicle && method) {
+    reliability.push('relies_on_alternative_transport');
+  }
+  if (reliability.length) extracted.transportation_reliability = reliability;
+
+  // transportation_limitations - explicit negative conditions
   const limitations = [];
-  if (!hasLicense || text.includes('no license')) limitations.push('no_driver_license');
-  if (!hasVehicle || text.includes('no car')) limitations.push('no_personal_vehicle');
+  if (!hasLicense) limitations.push('no_driver_license');
+  if (!hasVehicle) limitations.push('no_personal_vehicle');
+  if (notes.includes('paratransit')) limitations.push('requires_scheduled_transportation');
   if (text.includes('mobility') || text.includes('wheelchair')) limitations.push('mobility_access_needed');
   if (text.includes('cost') || text.includes('afford')) limitations.push('cost_prohibitive');
   if (text.includes('distance') || text.includes('far')) limitations.push('distance_barrier');
@@ -117,7 +131,7 @@ function extractTransportationByAnswerKey(answers) {
   // work_availability
   if (availHours && availHours !== 'flexible') {
     extracted.work_availability = [availHours];
-  } else if (!constraints.length && (hasVehicle || method.includes('public'))) {
+  } else if (!constraints.length && (hasVehicle || method.includes('bus') || method.includes('public'))) {
     extracted.work_availability = ['flexible'];
   }
 
@@ -125,7 +139,8 @@ function extractTransportationByAnswerKey(answers) {
   const needs = [];
   if (!hasVehicle) needs.push('transportation_assistance');
   if (!hasLicense) needs.push('transportation_training');
-  if (text.includes('transit')) needs.push('public_transit_access');
+  if (method.includes('public') || method.includes('transit') || method.includes('bus')) needs.push('public_transit_access');
+  if (notes.includes('paratransit')) needs.push('paratransit_coordination');
   if (text.includes('carpool')) needs.push('carpool_coordination');
   if (limitations.length) needs.push('transportation_planning');
   if (needs.length) extracted.support_needs = needs;
