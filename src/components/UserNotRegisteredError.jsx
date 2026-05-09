@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,25 @@ const UserNotRegisteredError = () => {
   const [form, setForm] = useState({ full_name: '', email: '', message: '', client_type: 'job_seeker' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [autoChecking, setAutoChecking] = useState(true);
+
+  // On mount: silently try to apply a pending role assignment.
+  // If the user was invited, this will upgrade them and reload into the app.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
+        if (res?.data?.upgraded) {
+          // Role applied — reload so AuthContext picks up the new role
+          window.location.reload();
+          return;
+        }
+      } catch (_) {
+        // Ignore — user simply has no pending assignment, show normal UI
+      }
+      setAutoChecking(false);
+    })();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +60,17 @@ const UserNotRegisteredError = () => {
       setSubmitting(false);
     }
   };
+
+  if (autoChecking) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-slate-500 text-sm">Checking your access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'submitted') {
     return (
