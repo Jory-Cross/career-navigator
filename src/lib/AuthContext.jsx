@@ -12,7 +12,8 @@ export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
 
   const role = user.role;
-  const access = user.access_level;
+  // access_level may be top-level or nested under user.data (view-as mode)
+  const access = user.access_level ?? user.data?.access_level;
 
   // Staff CRM access: explicit staff roles + matching access_level
   if (['admin', 'management', 'employee'].includes(role) && ['staff', 'admin'].includes(access)) {
