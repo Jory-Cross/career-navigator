@@ -283,8 +283,14 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
   const takesMedications = answers.takes_medications;
   const medicationList = answers[field.key] ?? [];
 
-  const hasMedications =
-    Array.isArray(medicationList) && medicationList.length > 0;
+const hasMedications =
+  Array.isArray(medicationList) &&
+  medicationList.some((med) =>
+    Object.entries(med || {}).some(([key, value]) => {
+      if (key === "_id") return false;
+      return String(value || "").trim() !== "";
+    })
+  );
 
   const showNoButHasMedsWarning =
     takesMedications === "No" && hasMedications;
