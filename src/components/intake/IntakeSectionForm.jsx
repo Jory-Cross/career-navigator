@@ -302,9 +302,7 @@ const hasMedications =
   const showNoButHasMedsWarning =
   takesMedications === "No" && hasMedications;
 
-const showYesButNoMedsWarning =
-  takesMedications === "Yes" &&
-  (!hasMedications || hasEmptyMedicationCards);
+const showYesButNoMedsWarning = false;
 
   return (
     <div key={field.key} className="space-y-2">
