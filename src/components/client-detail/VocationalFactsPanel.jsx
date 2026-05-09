@@ -233,7 +233,38 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
   };
 
   const totalFacts = vfp
-    ? CATEGORY_CONFIG.reduce((sum, c) => sum + (vfp[c.key]?.length || 0), 0)
+    ? CATEGORY_CONFIG.reduce((sum, c) => {
+        let count = (vfp[c.key]?.length || 0);
+        
+        // Add aliases for each category
+        if (c.key === "work_environment_preferences") {
+          count += (vfp.preferred_work_environment?.length || 0);
+        } else if (c.key === "schedule_availability") {
+          count += (vfp.schedule_constraints?.length || 0);
+        } else if (c.key === "transportation") {
+          count += (vfp.transportation_reliability?.length || 0) + 
+                   (vfp.transportation_limitations?.length || 0);
+        } else if (c.key === "social_communication_needs") {
+          count += (vfp.communication_style?.length || 0) + 
+                   (vfp.social_tolerance?.length || 0) + 
+                   (vfp.social_supports?.length || 0);
+        } else if (c.key === "sensory_environmental_needs") {
+          count += (vfp.sensory_limitations?.length || 0);
+        } else if (c.key === "physical_restrictions") {
+          count += (vfp.accommodation_needs?.length || 0);
+        } else if (c.key === "support_needs") {
+          count += (vfp.medication_side_effect_flags?.length || 0) + 
+                   (vfp.safety_risk_flags?.length || 0);
+        } else if (c.key === "job_readiness_level") {
+          count += (vfp.stamina_endurance_concerns?.length || 0);
+        } else if (c.key === "employer_preferences") {
+          count += (vfp.benefits_considerations?.length || 0);
+        } else if (c.key === "goals") {
+          count += (vfp.work_goal_themes?.length || 0);
+        }
+        
+        return sum + count;
+      }, 0)
     : 0;
 
   useEffect(() => {
@@ -393,13 +424,65 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {CATEGORY_CONFIG.map(config => (
-              <CategoryCard
-                key={config.key}
-                config={config}
-                items={vfp[config.key] || []}
-              />
-            ))}
+            {CATEGORY_CONFIG.map(config => {
+              // Map VFP fields to category keys, expanding aliases
+              let items = [];
+
+              if (config.key === "skills") {
+                items = vfp.skills || [];
+              } else if (config.key === "interests") {
+                items = vfp.interests || [];
+              } else if (config.key === "preferred_tasks") {
+                items = vfp.preferred_tasks || [];
+              } else if (config.key === "work_environment_preferences") {
+                items = (vfp.work_environment_preferences || []).concat(vfp.preferred_work_environment || []);
+              } else if (config.key === "schedule_availability") {
+                items = (vfp.schedule_availability || []).concat(vfp.schedule_constraints || []);
+              } else if (config.key === "transportation") {
+                items = (vfp.transportation || [])
+                  .concat(vfp.transportation_reliability || [])
+                  .concat(vfp.transportation_limitations || []);
+              } else if (config.key === "social_communication_needs") {
+                items = (vfp.social_communication_needs || [])
+                  .concat(vfp.communication_style || [])
+                  .concat(vfp.social_tolerance || [])
+                  .concat(vfp.social_supports || []);
+              } else if (config.key === "sensory_environmental_needs") {
+                items = (vfp.sensory_environmental_needs || [])
+                  .concat(vfp.sensory_limitations || []);
+              } else if (config.key === "physical_restrictions") {
+                items = (vfp.physical_restrictions || [])
+                  .concat(vfp.accommodation_needs || []);
+              } else if (config.key === "support_needs") {
+                items = (vfp.support_needs || [])
+                  .concat(vfp.medication_side_effect_flags || [])
+                  .concat(vfp.safety_risk_flags || []);
+              } else if (config.key === "job_readiness_level") {
+                items = (vfp.job_readiness_level || [])
+                  .concat(vfp.stamina_endurance_concerns || []);
+              } else if (config.key === "employer_preferences") {
+                items = (vfp.employer_preferences || [])
+                  .concat(vfp.benefits_considerations || []);
+              } else if (config.key === "barriers") {
+                items = vfp.barriers || [];
+              } else if (config.key === "goals") {
+                items = (vfp.goals || [])
+                  .concat(vfp.work_goal_themes || []);
+              }
+
+              // Convert strings to objects with fact/source if needed
+              items = items.map(item => 
+                typeof item === 'string' ? { fact: item, source: null } : item
+              );
+
+              return (
+                <CategoryCard
+                  key={config.key}
+                  config={config}
+                  items={items}
+                />
+              );
+            })}
           </div>
         </>
       )}
