@@ -280,17 +280,54 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
           }
 
           if (field.type === "medication_list") {
-            return (
-              <div key={field.key} className="space-y-2">
-                <Label className="text-sm font-medium">{field.label}</Label>
-                <MedicationListField
-                  value={answers[field.key] ?? []}
-                  onChange={(v) => setField(field.key, v)}
-                  readOnly={readOnly}
-                />
-              </div>
-            );
-          }
+  const takesMedications = answers.takes_medications;
+  const medicationList = answers[field.key] ?? [];
+
+  const hasMedications =
+    Array.isArray(medicationList) && medicationList.length > 0;
+
+  const showNoButHasMedsWarning =
+    takesMedications === "No" && hasMedications;
+
+  const showYesButNoMedsWarning =
+    takesMedications === "Yes" && !hasMedications;
+
+  return (
+    <div key={field.key} className="space-y-2">
+      <Label className="text-sm font-medium">{field.label}</Label>
+
+      {showNoButHasMedsWarning && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-900">
+            Medication mismatch detected
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            “Currently Takes Medications?” is marked No, but medication entries
+            exist below. Please review and correct one of these before saving.
+          </p>
+        </div>
+      )}
+
+      {showYesButNoMedsWarning && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-900">
+            Medication information missing
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            “Currently Takes Medications?” is marked Yes, but no medications
+            have been added yet.
+          </p>
+        </div>
+      )}
+
+      <MedicationListField
+        value={medicationList}
+        onChange={(v) => setField(field.key, v)}
+        readOnly={readOnly}
+      />
+    </div>
+  );
+}
 
           if (field.type === "textarea") {
             return (
