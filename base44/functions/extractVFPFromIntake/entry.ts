@@ -652,15 +652,20 @@ function extractBarriersSupportByAnswerKey(answers) {
   // Extract open-ended supports from AI recommendations and direct intake
   const openEndedSupports = [];
   
-  // Parse AI support recommendations (likely bulleted list)
+  // Parse AI support recommendations (likely bulleted list with - or •)
   if (answers.ai_support_recommendations) {
     const recs = answers.ai_support_recommendations;
-    // Split by bullet or newline, clean up, and extract phrases
-    const lines = recs.split(/[\n-•*]+/).filter(line => line.trim().length > 2);
-    lines.forEach(line => {
-      const phrase = line.trim().toLowerCase();
-      // Only add if it's a meaningful phrase (not just a single word or already captured as canonical tag)
-      if (phrase.length > 5 && !support.some(s => phrase.includes(s.replace(/_/g, ' ')))) {
+    // Split by newline, extract bullet items, and remove bullet characters
+    const lines = recs
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => line.replace(/^[-•*]\s*/, '').trim().toLowerCase())
+      .filter(phrase => phrase.length > 5);
+    
+    lines.forEach(phrase => {
+      // Only add if not already captured as canonical tag
+      if (!support.some(s => phrase.includes(s.replace(/_/g, ' ')))) {
         openEndedSupports.push(phrase);
       }
     });
@@ -855,7 +860,18 @@ Deno.serve(async (req) => {
                sourceMetadata[field] = [];
              }
 
-             allSignals[field] = value;
+             // For arrays (like support_needs), combine instead of replace
+             if (Array.isArray(value)) {
+               if (Array.isArray(allSignals[field])) {
+                 // Combine arrays, removing duplicates
+                 allSignals[field] = [...new Set([...allSignals[field], ...value])];
+               } else {
+                 allSignals[field] = value;
+               }
+             } else {
+               allSignals[field] = value;
+             }
+
              sourceMetadata[field].push({
                source: 'intake_section',
                section_key,
