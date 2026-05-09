@@ -51,8 +51,8 @@ const AuthenticatedApp = () => {
   }
 
   // ── CRITICAL ACCESS GATE ──────────────────────────────────────────────────
-  // If a user is loaded, classify their access BEFORE rendering any routes.
-  // role="user", blank access_level, or any mismatch → AccessDenied immediately.
+  // Classify access BEFORE rendering any routes or layout.
+  // This prevents the staff sidebar from ever flashing for portal/denied users.
   if (user) {
     const accessClass = classifyUserAccess(user);
 
@@ -60,27 +60,36 @@ const AuthenticatedApp = () => {
       return <AccessDenied user={user} />;
     }
 
-    // Client portal users: only allow /ClientPortal route — redirect everything else
+    // Client portal users: render portal routes ONLY — never mount staff layout
     if (accessClass === 'client_portal') {
-      const allowed = ['/ClientPortal', '/clientportal'];
-      const isOnPortal = allowed.some(p => window.location.pathname.toLowerCase().startsWith(p.toLowerCase()));
-      if (!isOnPortal) {
-        window.location.replace('/ClientPortal');
-        return null;
-      }
+      const ClientPortal = Pages['ClientPortal'];
+      return (
+        <Routes>
+          <Route path="*" element={ClientPortal ? <ClientPortal /> : null} />
+        </Routes>
+      );
     }
 
-    // Pre-ETS Employer portal users: only allow /PreEtsEmployerPortal
+    // Pre-ETS Employer portal users: render portal only
     if (accessClass === 'pre_ets_employer_portal') {
-      const isOnPortal = window.location.pathname.toLowerCase() === '/preetsemployerportal';
-      if (!isOnPortal) {
-        window.location.replace('/PreEtsEmployerPortal');
-        return null;
-      }
+      return (
+        <Routes>
+          <Route path="*" element={<PreEtsEmployerPortal />} />
+        </Routes>
+      );
+    }
+
+    // Staff/admin: only render routes once classification is confirmed as staff
+    if (accessClass !== 'staff') {
+      return (
+        <div className="fixed inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+        </div>
+      );
     }
   }
 
-  // Render the main app
+  // Render the main app (staff only reaches here)
   return (
     <Routes>
       <Route path="/" element={
