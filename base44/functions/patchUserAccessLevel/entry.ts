@@ -11,13 +11,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { userId, access_level, linked_client_id, org_id } = await req.json();
+    const { userId, access_level, role, linked_client_id, org_id } = await req.json();
     if (!userId || !access_level) {
       return Response.json({ error: 'userId and access_level required' }, { status: 400 });
     }
 
     const updateData = { access_level };
-    if (linked_client_id) updateData.linked_client_id = linked_client_id;
+    if (role) updateData.role = role;
+    if (linked_client_id !== undefined) updateData.linked_client_id = linked_client_id;
     if (org_id) updateData.org_id = org_id;
 
     await base44.asServiceRole.entities.User.update(userId, updateData);
