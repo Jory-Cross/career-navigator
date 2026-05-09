@@ -64,9 +64,10 @@ Deno.serve(async (req) => {
       userMap.set(u.id, u);
     }
 
-    // Only strip users that have client_portal access (don't accidentally strip staff)
+    // Only strip users that have client_portal access — never touch pre_ets_employer, staff, admin, etc.
+    const CLIENT_PORTAL_ROLES = new Set(['client', 'pre_ets', 'dspd']);
     const portalUsers = [...userMap.values()].filter(
-      u => u.access_level === 'client_portal' || u.linked_client_id === clientId
+      u => u.access_level === 'client_portal' || CLIENT_PORTAL_ROLES.has(u.role)
     );
 
     for (const u of portalUsers) {

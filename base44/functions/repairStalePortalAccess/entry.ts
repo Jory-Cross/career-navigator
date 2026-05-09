@@ -39,9 +39,19 @@ Deno.serve(async (req) => {
     };
 
     // ── 1. Audit Users with linked_client_id ────────────────────────────────
+    // ONLY touch client_portal users — never pre_ets_employer, staff, admin, etc.
+    const CLIENT_PORTAL_ROLES = new Set(['client', 'pre_ets', 'dspd']);
     const allUsers = await base44.asServiceRole.entities.User.list();
     for (const u of allUsers || []) {
       if (!u.linked_client_id) continue;
+
+      // Skip anyone who is NOT a client_portal access user
+      const isClientPortalUser = u.access_level === 'client_portal' || CLIENT_PORTAL_ROLES.has(u.role);
+      if (!isClientPortalUser) {
+        console.log(`[repairStalePortalAccess] Skipping ${u.email} — role=${u.role} access_level=${u.access_level} (not client portal)`);
+        continue;
+      }
+
       results.users_checked++;
 
       if (!validClientIds.has(u.linked_client_id)) {
@@ -53,7 +63,7 @@ Deno.serve(async (req) => {
           old_access_level: u.access_level,
         };
         results.users_repaired.push(entry);
-        console.log(`[repairStalePortalAccess] Stale user: ${u.email} → linked_client_id=${u.linked_client_id} (not found)`);
+        console.log(`[repairStalePortalAccess] Stale client portal user: ${u.email} → linked_client_id=${u.linked_client_id} (not found)`);
 
         if (!dryRun) {
           await base44.asServiceRole.entities.User.update(u.id, {
