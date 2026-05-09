@@ -157,7 +157,30 @@ export default function IntakeSectionForm({ sectionDef, sectionRecord, clientId,
 
   const handleSave = async (markComplete = false) => {
     setSaving(true);
-    try {
+
+const medicationList = answers.medications ?? [];
+
+const hasRealMedicationData =
+  Array.isArray(medicationList) &&
+  medicationList.some((med) =>
+    Object.entries(med || {}).some(([key, value]) => {
+      if (["_id", "_new"].includes(key)) return false;
+      return String(value || "").trim() !== "";
+    })
+  );
+
+if (
+  answers.takes_medications === "Yes" &&
+  !hasRealMedicationData
+) {
+  alert(
+    "Currently Takes Medications? is marked Yes, but no medication information has been entered."
+  );
+  setSaving(false);
+  return;
+}
+
+try {
       await doSave(answers, markComplete);
       setIsDirty(false);
       setSavedMsg(true);
