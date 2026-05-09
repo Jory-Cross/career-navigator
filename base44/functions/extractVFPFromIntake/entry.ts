@@ -538,84 +538,179 @@ function extractEducationByAnswerKey(answers) {
  * Extract VFP fields from barriers_support section with nuanced vocational intelligence.
  * 
  * Maps detailed intake descriptions into specific, actionable workplace signals:
- * - Mobility/sensory/cognitive/learning barriers → specific vocational implications
- * - Accommodations → accessibility/support infrastructure needed
- * - Communication patterns → interaction capabilities and speed
- * - Support needs → external assistance level
- * - Strengths → demonstrated capabilities
+ * - Direct answers: mobility/sensory/cognitive/learning barriers, accommodations, communication
+ * - AI clarification fields: augment direct extraction with LLM-refined summaries and keywords
+ * - Support needs, strengths, job readiness
  * 
- * Preserves raw intake text and source metadata; avoids generic collapsing.
+ * Preserves original intake extraction. AI clarification augments, never replaces, direct facts.
  */
 function extractBarriersSupportByAnswerKey(answers) {
   const extracted = {};
-  const text = Object.values(answers || {}).join(' ').toLowerCase();
+  const sourceMetadata = {};
+
+  // Combine direct answers + AI clarification for comprehensive text analysis
+  const directText = Object.values(answers || {})
+    .filter(v => typeof v === 'string' && !v.startsWith('ai_'))
+    .join(' ')
+    .toLowerCase();
+
+  const aiText = [
+    answers.ai_clarified_barriers,
+    answers.ai_vocational_impact,
+    answers.ai_support_recommendations,
+    answers.ai_vfp_keywords
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const allText = (directText + ' ' + aiText).toLowerCase();
 
   // ── BARRIERS (workplace functional limitations) ──
   const barriers = [];
-  if (text.includes('wheelchair') || text.includes('mobility') || text.includes('walk') || text.includes('stairs')) barriers.push('mobility_limitations');
-  if (text.includes('vision') || text.includes('blind') || text.includes('sight') || text.includes('visual')) barriers.push('visual_impairment');
-  if (text.includes('routine') && text.includes('change')) barriers.push('routine_change_difficulty');
-  if (text.includes('deaf') || text.includes('hearing')) barriers.push('hearing_impairment');
-  if (text.includes('cognitive') || text.includes('memory') || text.includes('attention')) barriers.push('cognitive_processing');
-  if (text.includes('learning') || text.includes('dyslexia') || text.includes('processing')) barriers.push('learning_difference');
-  if (text.includes('anxiety') || text.includes('depression') || text.includes('mental') || text.includes('ptsd')) barriers.push('mental_health_condition');
-  if (text.includes('pain') || text.includes('chronic') || text.includes('fatigue')) barriers.push('chronic_pain_fatigue');
-  if (barriers.length) extracted.barriers = barriers;
+  if (allText.includes('wheelchair') || allText.includes('mobility') || allText.includes('walk') || allText.includes('stairs')) barriers.push('mobility_limitations');
+  if (allText.includes('vision') || allText.includes('blind') || allText.includes('sight') || allText.includes('visual')) barriers.push('visual_impairment');
+  if (allText.includes('routine') && allText.includes('change')) barriers.push('routine_change_difficulty');
+  if (allText.includes('deaf') || allText.includes('hearing')) barriers.push('hearing_impairment');
+  if (allText.includes('cognitive') || allText.includes('memory') || allText.includes('attention')) barriers.push('cognitive_processing');
+  if (allText.includes('learning') || allText.includes('dyslexia') || allText.includes('processing')) barriers.push('learning_difference');
+  if (allText.includes('anxiety') || allText.includes('depression') || allText.includes('mental') || allText.includes('ptsd')) barriers.push('mental_health_condition');
+  if (allText.includes('pain') || allText.includes('chronic') || allText.includes('fatigue')) barriers.push('chronic_pain_fatigue');
+  if (barriers.length) {
+    extracted.barriers = barriers;
+    sourceMetadata.barriers = [{
+      source: directText.includes('barrier') ? 'intake_direct' : 'barriers_ai_clarify',
+      confidence: aiText ? 'medium' : 'high'
+    }];
+  }
 
   // ── ACCOMMODATION_NEEDS (environmental/support adjustments) ──
   const accommodations = [];
-  if (text.includes('wheelchair')) accommodations.push('wheelchair_accessibility');
-  if (text.includes('accessible') && text.includes('restroom')) accommodations.push('accessible_restroom');
-  if (text.includes('parking')) accommodations.push('accessible_parking');
-  if (text.includes('large print') || text.includes('magnification')) accommodations.push('magnification_or_large_print');
-  if (text.includes('screen reader') || text.includes('assistive')) accommodations.push('assistive_technology');
-  if (text.includes('extra time') || text.includes('slow') || text.includes('extended')) accommodations.push('extended_training_time');
-  if (text.includes('repetition') || text.includes('repeat')) accommodations.push('routine_repetition_support');
-  if (text.includes('written') && (text.includes('instruction') || text.includes('direction'))) accommodations.push('written_instructions');
-  if (text.includes('quiet') || text.includes('distraction')) accommodations.push('low_distraction_workspace');
-  if (text.includes('flexible') && (text.includes('schedule') || text.includes('break'))) accommodations.push('flexible_schedule');
-  if (text.includes('frequent break')) accommodations.push('frequent_breaks');
-  if (accommodations.length) extracted.accommodation_needs = accommodations;
+  if (allText.includes('wheelchair')) accommodations.push('wheelchair_accessibility');
+  if (allText.includes('accessible') && allText.includes('restroom')) accommodations.push('accessible_restroom');
+  if (allText.includes('parking')) accommodations.push('accessible_parking');
+  if (allText.includes('large print') || allText.includes('magnification')) accommodations.push('magnification_or_large_print');
+  if (allText.includes('screen reader') || allText.includes('assistive')) accommodations.push('assistive_technology');
+  if (allText.includes('extra time') || allText.includes('slow') || allText.includes('extended')) accommodations.push('extended_training_time');
+  if (allText.includes('repetition') || allText.includes('repeat')) accommodations.push('routine_repetition_support');
+  if (allText.includes('written') && (allText.includes('instruction') || allText.includes('direction'))) accommodations.push('written_instructions');
+  if (allText.includes('quiet') || allText.includes('distraction')) accommodations.push('low_distraction_workspace');
+  if (allText.includes('flexible') && (allText.includes('schedule') || allText.includes('break'))) accommodations.push('flexible_schedule');
+  if (allText.includes('frequent break')) accommodations.push('frequent_breaks');
+  if (accommodations.length) {
+    extracted.accommodation_needs = accommodations;
+    sourceMetadata.accommodation_needs = [{
+      source: directText.includes('accommodat') ? 'intake_direct' : 'barriers_ai_clarify',
+      confidence: aiText ? 'medium' : 'high'
+    }];
+  }
 
   // ── COMMUNICATION_STYLE (interaction patterns & capabilities) ──
   const commStyle = [];
-  if (text.includes('slow') && text.includes('processing')) commStyle.push('slower_processing_time');
-  if (text.includes('processing') && (text.includes('time') || text.includes('slow'))) commStyle.push('needs_processing_time');
-  if (text.includes('customer') && (text.includes('communication') || text.includes('successful') || text.includes('able'))) commStyle.push('capable_customer_interaction');
-  if (text.includes('email') || text.includes('written')) commStyle.push('prefers_written_communication');
-  if (text.includes('verbal') || text.includes('phone')) commStyle.push('prefers_verbal_communication');
-  if (text.includes('visual') || text.includes('demonstration')) commStyle.push('learns_by_demonstration');
-  if (commStyle.length) extracted.communication_style = commStyle;
+  if (allText.includes('slow') && allText.includes('processing')) commStyle.push('slower_processing_time');
+  if (allText.includes('processing') && (allText.includes('time') || allText.includes('slow'))) commStyle.push('needs_processing_time');
+  if (allText.includes('customer') && (allText.includes('communication') || allText.includes('successful') || allText.includes('able'))) commStyle.push('capable_customer_interaction');
+  if (allText.includes('email') || allText.includes('written')) commStyle.push('prefers_written_communication');
+  if (allText.includes('verbal') || allText.includes('phone')) commStyle.push('prefers_verbal_communication');
+  if (allText.includes('visual') || allText.includes('demonstration')) commStyle.push('learns_by_demonstration');
+  if (commStyle.length) {
+    extracted.communication_style = commStyle;
+    sourceMetadata.communication_style = [{
+      source: aiText ? 'barriers_ai_clarify' : 'intake_direct',
+      confidence: 'medium'
+    }];
+  }
 
   // ── SUPPORT_NEEDS (external assistance level & coaching) ──
   const support = [];
-  if (text.includes('moderate') && text.includes('support')) support.push('moderate_support_needs');
-  if (text.includes('high') && text.includes('support')) support.push('high_support_needs');
-  if (text.includes('job coach') || text.includes('coaching required') || text.includes('job coaching')) support.push('job_coaching_required');
-  if (text.includes('mentor') || text.includes('mentoring')) support.push('mentoring_needed');
-  if (text.includes('on-the-job')) support.push('on_the_job_support');
-  if (text.includes('task breakdown') || text.includes('break down')) support.push('task_breakdown_support');
-  if (text.includes('routine development') || text.includes('establish routine')) support.push('routine_development_support');
-  if (support.length) extracted.support_needs = support;
+  if (allText.includes('moderate') && allText.includes('support')) support.push('moderate_support_needs');
+  if (allText.includes('high') && allText.includes('support')) support.push('high_support_needs');
+  if (allText.includes('job coach') || allText.includes('coaching required') || allText.includes('job coaching')) support.push('job_coaching_required');
+  if (allText.includes('mentor') || allText.includes('mentoring')) support.push('mentoring_needed');
+  if (allText.includes('on-the-job')) support.push('on_the_job_support');
+  if (allText.includes('task breakdown') || allText.includes('break down')) support.push('task_breakdown_support');
+  if (allText.includes('routine development') || allText.includes('establish routine')) support.push('routine_development_support');
+  if (support.length) {
+    extracted.support_needs = support;
+    sourceMetadata.support_needs = [{
+      source: aiText ? 'barriers_ai_clarify' : 'intake_direct',
+      confidence: 'medium'
+    }];
+  }
+
+  // ── JOB_COACHING_NEEDS (from AI impact statement or direct needs) ──
+  if (allText.includes('job coach') || (aiText && aiText.includes('coach'))) {
+    extracted.job_coaching_needs = true;
+    sourceMetadata.job_coaching_needs = [{
+      source: 'barriers_ai_clarify',
+      confidence: aiText ? 'medium' : 'high'
+    }];
+  }
+
+  // ── PREFERRED_WORK_ENVIRONMENT (from AI or direct) ──
+  const envPrefs = [];
+  if (allText.includes('quiet') || allText.includes('low noise') || allText.includes('minimal distraction')) envPrefs.push('low_noise');
+  if (allText.includes('structured') || allText.includes('routine')) envPrefs.push('structured');
+  if (allText.includes('flexible') || allText.includes('autonomy')) envPrefs.push('flexible');
+  if (allText.includes('team') || allText.includes('collaborative')) envPrefs.push('team_oriented');
+  if (allText.includes('independent') && !allText.includes('not independent')) envPrefs.push('independent');
+  if (envPrefs.length) {
+    extracted.preferred_work_environment = envPrefs;
+    sourceMetadata.preferred_work_environment = [{
+      source: aiText ? 'barriers_ai_clarify' : 'intake_direct',
+      confidence: 'medium'
+    }];
+  }
+
+  // ── JOB_READINESS_LEVEL (from AI vocational impact or direct) ──
+  if (aiText.includes('may impact') || aiText.includes('barrier') || directText.includes('barrier')) {
+    extracted.job_readiness_level = ['developing'];
+    sourceMetadata.job_readiness_level = [{
+      source: 'barriers_ai_clarify',
+      confidence: 'medium'
+    }];
+  } else if (allText.includes('ready') || allText.includes('prepared')) {
+    extracted.job_readiness_level = ['ready_to_start'];
+    sourceMetadata.job_readiness_level = [{
+      source: aiText ? 'barriers_ai_clarify' : 'intake_direct',
+      confidence: 'medium'
+    }];
+  }
 
   // ── STRENGTHS (demonstrated capabilities & assets) ──
   const strengths = [];
-  if (text.includes('technology') && (text.includes('capable') || text.includes('able') || text.includes('skill'))) strengths.push('computer_literate');
-  if (text.includes('email') || (text.includes('technology') && text.includes('skill'))) strengths.push('email_skills');
-  if (text.includes('social media')) strengths.push('social_media_skills');
-  if (text.includes('customer') && (text.includes('service') || text.includes('communication') || text.includes('capable'))) strengths.push('customer_service_capable');
-  if (text.includes('reliable') || text.includes('punctual')) strengths.push('reliability');
-  if (text.includes('detail') || text.includes('accuracy')) strengths.push('attention_to_detail');
-  if (text.includes('team') || text.includes('collaborate')) strengths.push('teamwork');
-  if (strengths.length) extracted.strengths = strengths;
+  if (allText.includes('technology') && (allText.includes('capable') || allText.includes('able') || allText.includes('skill'))) strengths.push('computer_literate');
+  if (allText.includes('email') || (allText.includes('technology') && allText.includes('skill'))) strengths.push('email_skills');
+  if (allText.includes('social media')) strengths.push('social_media_skills');
+  if (allText.includes('customer') && (allText.includes('service') || allText.includes('communication') || allText.includes('capable'))) strengths.push('customer_service_capable');
+  if (allText.includes('reliable') || allText.includes('punctual')) strengths.push('reliability');
+  if (allText.includes('detail') || allText.includes('accuracy')) strengths.push('attention_to_detail');
+  if (allText.includes('team') || allText.includes('collaborate')) strengths.push('teamwork');
+  if (strengths.length) {
+    extracted.strengths = strengths;
+    sourceMetadata.strengths = [{
+      source: 'intake_direct',
+      confidence: 'high'
+    }];
+  }
 
-  // ── RAW INTAKE TEXT & METADATA ──
-  // Store raw barrier/accommodation descriptions for reference
+  // ── RAW INTAKE & AI TEXT FOR REFERENCE ──
   if (answers.barriers_description) {
     extracted.raw_barriers_text = answers.barriers_description;
   }
-  if (answers.accommodations_description) {
-    extracted.raw_accommodations_text = answers.accommodations_description;
+  if (answers.ai_clarified_barriers) {
+    extracted.ai_clarified_barriers = answers.ai_clarified_barriers;
+  }
+  if (answers.ai_vocational_impact) {
+    extracted.ai_vocational_impact = answers.ai_vocational_impact;
+  }
+  if (answers.ai_vfp_keywords) {
+    extracted.ai_vfp_keywords = answers.ai_vfp_keywords;
+  }
+
+  // Attach source metadata for audit trail
+  if (Object.keys(sourceMetadata).length > 0) {
+    extracted._barriers_support_sources = sourceMetadata;
   }
 
   // Filter out empty arrays/null values
