@@ -96,12 +96,19 @@ export default function ClientPortal() {
             return;
           }
 
-          // Resolve client: prefer linked_client_id (set by onUserRegistered), fallback to email match
+          // Resolve client:
+          // - If linked_client_id is set, use ONLY that. A null result means the client was deleted → deny access.
+          // - Only fall back to email match when no linked_client_id exists (legacy / pre-invite flow).
           let resolvedClient = null;
           if (currentUser.linked_client_id) {
             resolvedClient = await getClientById(currentUser.linked_client_id);
-          }
-          if (!resolvedClient) {
+            // linked_client_id is set but client is gone (deleted) → hard deny, no email fallback
+            if (!resolvedClient) {
+              setBootError("NO_CLIENT_MAPPING");
+              setClient(null);
+              return;
+            }
+          } else {
             resolvedClient = await getClientByEmail(currentUser.email);
           }
           if (!isMounted) return;
