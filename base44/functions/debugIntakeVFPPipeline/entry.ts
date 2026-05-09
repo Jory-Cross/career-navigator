@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     logs.push(`[debugIntakeVFPPipeline] client_id: ${client_id}`);
 
     // Fetch client
-    const client = await base44.entities.Client.read(client_id);
+    const clients = await base44.entities.Client.list();
+    const client = clients.find(c => c.id === client_id);
     if (!client) {
       logs.push(`[debugIntakeVFPPipeline] ERROR: Client not found`);
       return Response.json({ error: 'Client not found', logs }, { status: 404 });

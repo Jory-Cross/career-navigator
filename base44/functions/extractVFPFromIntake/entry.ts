@@ -353,7 +353,8 @@ Deno.serve(async (req) => {
     }
 
     // Fetch client
-    const client = await base44.entities.Client.read(client_id);
+    const clients = await base44.entities.Client.list();
+    const client = clients.find(c => c.id === client_id);
     if (!client) {
       return Response.json({ error: 'Client not found' }, { status: 404 });
     }
@@ -376,7 +377,7 @@ Deno.serve(async (req) => {
     const logs = [];
 
     for (const section of completedSections) {
-      const { section_key, answers } = section;
+      const { id: section_id, section_key, answers } = section;
       const mapping = INTAKE_TO_VFP_MAPPING[section_key];
 
       if (!mapping || !answers) continue;
@@ -396,6 +397,7 @@ Deno.serve(async (req) => {
             sourceMetadata[field].push({
               source: 'intake_section',
               section_key,
+              section_id,
               confidence: 'high', // structured data = high confidence
               extracted_at: new Date().toISOString(),
             });
@@ -425,17 +427,19 @@ Deno.serve(async (req) => {
     });
 
     logs.push(`[Client] Updated vocational_facts_profile with ${Object.keys(allSignals).length} signals`);
+    console.log(logs.join('\n'));
 
     return Response.json({
       client_id,
       extracted_signals: allSignals,
       source_metadata: sourceMetadata,
       intake_sections_processed: completedSections.length,
+      total_vfp_fields: Object.keys(merged).length,
       logs,
       status: 'success',
     });
-  } catch (error) {
-    console.error('[extractVFPFromIntake]', error);
-    return Response.json({ error: error.message }, { status: 500 });
-  }
+    } catch (error) {
+    console.error('[extractVFPFromIntake] ERROR:', error.message, error.stack);
+    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
+    }
 });
