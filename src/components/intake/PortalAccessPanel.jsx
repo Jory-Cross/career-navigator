@@ -28,15 +28,19 @@ import {
 
 function deriveStatus({ pra, portalUser, client }) {
   const hasStaleUser = portalUser && portalUser.linked_client_id && portalUser.linked_client_id !== client?.id;
-  const hasActiveUser = portalUser && portalUser.access_level === 'client_portal' && portalUser.linked_client_id === client?.id;
+  // Active = User record exists with correct client link + client_portal access
+  const hasActiveUser = portalUser &&
+    portalUser.access_level === 'client_portal' &&
+    portalUser.linked_client_id === client?.id;
 
   if (hasStaleUser) return 'stale';
-  if (hasActiveUser && (!pra || pra.status === 'accepted')) return 'active';
+  // Live User record is authoritative — if they're linked and active, show Active regardless of PRA state
+  if (hasActiveUser) return 'active';
+  // No live user — fall back to PRA state
   if (!pra) return 'not_invited';
   if (pra.status === 'revoked') return 'revoked';
   if (pra.status === 'expired') return 'expired';
-  if (pra.status === 'accepted') return 'active';
-  // pending — check if email delivery failed (we surface this via activity log elsewhere, here we just show pending)
+  if (pra.status === 'accepted') return 'active'; // accepted PRA but user record not found yet
   return 'pending';
 }
 
@@ -101,12 +105,18 @@ export default function PortalAccessPanel({ client, onRefresh }) {
     if (!client?.email || !client?.id) return;
     setLoading(true);
     try {
-      const [pras, users] = await Promise.all([
+      // Query PRAs by email, Users by linked_client_id (primary) AND by email (fallback)
+      const [pras, usersByClientId, usersByEmail] = await Promise.all([
         base44.entities.PendingRoleAssignment.filter({ email: client.email.toLowerCase().trim() }),
-        base44.asServiceRole
-          ? base44.asServiceRole.entities.User.filter({ email: client.email.toLowerCase().trim() }).catch(() => [])
-          : Promise.resolve([]),
+        base44.entities.User.filter({ linked_client_id: client.id }).catch(() => []),
+        base44.entities.User.filter({ email: client.email.toLowerCase().trim() }).catch(() => []),
       ]);
+
+      // Merge user results: prefer linked_client_id match, dedupe by id
+      const allUsers = [...(usersByClientId || [])];
+      for (const u of (usersByEmail || [])) {
+        if (!allUsers.find(x => x.id === u.id)) allUsers.push(u);
+      }
 
       const clientPras = (pras || []).filter(p =>
         p.client_id === client.id || p.access_level === 'client_portal'
@@ -120,8 +130,13 @@ export default function PortalAccessPanel({ client, onRefresh }) {
         || null;
       setPra(best);
 
-      // Find portal user
-      const pUser = (users || []).find(u => u.access_level === 'client_portal') || null;
+      // Find active portal user: must have client_portal access_level and correct role
+      // Primary: linked_client_id match. Secondary: email match with client_portal access.
+      const pUser =
+        allUsers.find(u => u.linked_client_id === client.id && u.access_level === 'client_portal' && u.role === 'client') ||
+        allUsers.find(u => u.linked_client_id === client.id && u.access_level === 'client_portal') ||
+        allUsers.find(u => u.email?.toLowerCase() === client.email?.toLowerCase() && u.access_level === 'client_portal') ||
+        null;
       setPortalUser(pUser);
     } catch (err) {
       console.error('[PortalAccessPanel] load failed:', err);
@@ -264,11 +279,15 @@ export default function PortalAccessPanel({ client, onRefresh }) {
         </div>
 
         {/* Details row */}
-        {pra && (
+        {(pra || portalUser) && (
           <div className="text-xs opacity-75 space-y-0.5">
-            <div>{pra.email}{pra.invited_by_name && ` · invited by ${pra.invited_by_name}`}</div>
+            {portalUser && (
+              <div>Portal account: <strong>{portalUser.email}</strong> · role: {portalUser.role}</div>
+            )}
+            {pra && (
+              <div>{pra.email}{pra.invited_by_name && ` · invited by ${pra.invited_by_name}`}</div>
+            )}
             {invitedAt && <div>Sent {format(new Date(invitedAt), 'MMM d, yyyy h:mm a')}</div>}
-            {portalUser && <div>Portal account: {portalUser.email} (role: {portalUser.role})</div>}
           </div>
         )}
 
