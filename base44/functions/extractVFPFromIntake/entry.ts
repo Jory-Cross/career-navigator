@@ -427,7 +427,7 @@ Deno.serve(async (req) => {
       _intake_signals: sourceMetadata,
       _intake_extracted_at: new Date().toISOString(),
       _intake_extracted_by: user.email,
-      _intake_sources_count: completedSections.length,
+      _intake_sources_count: processableSections.length,
     };
 
     // Update client
@@ -437,6 +437,9 @@ Deno.serve(async (req) => {
     try {
       const updateResult = await base44.entities.Client.update(client_id, {
         vocational_facts_profile,
+        vocational_facts_extracted_at: new Date().toISOString(),
+        vocational_facts_extracted_by: user.email,
+        vocational_facts_document_count: processableSections.length,
       });
       
       logs.push(`[Client] UPDATE SUCCEEDED - result: ${JSON.stringify(updateResult).substring(0, 200)}`);
