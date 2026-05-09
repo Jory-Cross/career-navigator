@@ -59,18 +59,16 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
             clientType: form.client_type,
             org_id: orgId || null,
           });
-          if (inviteRes.data?.success === false) {
-            throw new Error(inviteRes.data?.error || 'Invite failed');
+          const inviteData = inviteRes?.data || {};
+          if (inviteData.success === false) {
+            throw new Error(inviteData.error || 'Invite failed');
           }
-          
-          await base44.entities.Activity.create({
-            client_id: client.id,
-            activity_type: 'email_sent',
-            title: 'Invitation email sent',
-            description: `Registration invitation sent to ${form.email}`
-          });
-          
-          toast.success("Client created and invitation sent to " + form.email);
+
+          if (inviteData.email_sent) {
+            toast.success("Client created and invitation sent to " + form.email);
+          } else {
+            toast.warning(`Client created. Portal access prepared for ${form.email}, but the invitation email could not be delivered. Use "Resend Invite" from the client record.`);
+          }
         } catch (emailError) {
           console.error("Failed to send invitation:", emailError);
           toast.warning("Client created, but invitation email failed: " + emailError.message);

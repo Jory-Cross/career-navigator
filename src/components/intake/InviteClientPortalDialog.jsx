@@ -10,7 +10,7 @@ import { Mail, ShieldCheck, AlertTriangle } from "lucide-react";
 export default function InviteClientPortalDialog({ open, onOpenChange, client }) {
   const [email, setEmail] = useState(client?.email || "");
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [result, setResult] = useState(null); // null | { email_sent, access_prepared, email_error }
 
   const handleInvite = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -21,13 +21,19 @@ export default function InviteClientPortalDialog({ open, onOpenChange, client })
 
     setSending(true);
     try {
-      await base44.functions.invoke("inviteClient", {
+      const res = await base44.functions.invoke("inviteClient", {
         email: trimmed,
         clientId: client?.id,
         clientType: client?.client_type || "job_seeker",
       });
-      setSent(true);
-      toast.success(`Portal invitation sent to ${trimmed}`);
+      const data = res?.data || {};
+      if (data.success === false) throw new Error(data.error || "Invite failed");
+      setResult(data);
+      if (data.email_sent) {
+        toast.success(`Portal invitation sent to ${trimmed}`);
+      } else {
+        toast.warning(`Portal access prepared for ${trimmed}, but the invitation email could not be delivered.`);
+      }
     } catch (err) {
       toast.error("Failed to send invitation: " + err.message);
     } finally {
@@ -36,7 +42,7 @@ export default function InviteClientPortalDialog({ open, onOpenChange, client })
   };
 
   const handleClose = () => {
-    setSent(false);
+    setResult(null);
     setEmail(client?.email || "");
     onOpenChange(false);
   };
@@ -51,14 +57,31 @@ export default function InviteClientPortalDialog({ open, onOpenChange, client })
           </DialogTitle>
         </DialogHeader>
 
-        {sent ? (
+        {result ? (
           <div className="py-6 text-center space-y-3">
-            <ShieldCheck className="w-10 h-10 text-green-500 mx-auto" />
-            <p className="font-semibold text-slate-800">Invitation Sent</p>
-            <p className="text-sm text-slate-500">
-              An invitation email has been sent to <strong>{email}</strong>. When they sign up using
-              that email, they will automatically receive client portal access linked to this record.
-            </p>
+            {result.email_sent ? (
+              <>
+                <ShieldCheck className="w-10 h-10 text-green-500 mx-auto" />
+                <p className="font-semibold text-slate-800">Invitation Sent</p>
+                <p className="text-sm text-slate-500">
+                  An invitation email has been sent to <strong>{email}</strong>. When they sign up using
+                  that email, they will automatically receive client portal access linked to this record.
+                </p>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+                <p className="font-semibold text-slate-800">Portal Access Prepared — Email Not Delivered</p>
+                <p className="text-sm text-slate-500">
+                  Portal access has been set up for <strong>{email}</strong>, but the invitation email could not be delivered.
+                  This may happen if the address already has a pending invite or the email provider rejected it.
+                </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-left text-xs text-amber-800">
+                  <strong>What to do:</strong> Ask the client to go directly to the app URL and log in with <strong>{email}</strong> — their portal access will activate automatically.
+                  {result.email_error && <p className="mt-1 text-amber-600">Error: {result.email_error}</p>}
+                </div>
+              </>
+            )}
             <Button onClick={handleClose} className="mt-2">Done</Button>
           </div>
         ) : (
