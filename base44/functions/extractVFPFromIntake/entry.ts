@@ -22,14 +22,10 @@ const INTAKE_TO_VFP_MAPPING = {
      }),
    },
   medications: {
-    extract: (answers) => ({
-      medication_side_effect_flags: extractMedicationEffects(answers),
-    }),
+    extract: (answers) => extractMedicationsByAnswerKey(answers),
   },
   transportation: {
-    extract: (answers) => ({
-      transportation_reliability: extractTransportation(answers),
-    }),
+    extract: (answers) => extractTransportationByAnswerKey(answers),
   },
   work_preferences: {
     extract: (answers) => ({
@@ -457,6 +453,189 @@ function extractBarriersSupportByAnswerKey(answers) {
   }
 
   // Filter out null values
+  return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null));
+}
+
+/**
+ * Extract transportation section answers into VFP fields.
+ * Maps specific answer_keys → [field, field, ...] for targeted signal extraction.
+ * 
+ * Answer keys:
+ * - has_reliable_transportation: yes/no/sometimes
+ * - transportation_method: owns_vehicle, public_transit, carpool, other
+ * - transportation_barriers: list of barriers (no_car, no_license, mobility, cost, etc)
+ * - schedule_impact: early_start, late_finish, shift_specific, childcare_pickup, medical_appts
+ */
+function extractTransportationByAnswerKey(answers) {
+  const answerKeyMap = {
+    has_reliable_transportation: ['transportation_reliability', 'barriers'],
+    transportation_method: ['transportation_reliability', 'schedule_constraints'],
+    transportation_barriers: ['transportation_limitations', 'barriers', 'support_needs'],
+    schedule_impact: ['schedule_constraints', 'barriers'],
+  };
+
+  const extracted = {};
+
+  for (const [answerKey, targetFields] of Object.entries(answerKeyMap)) {
+    const answerValue = answers[answerKey];
+    if (!answerValue || (typeof answerValue === 'string' && answerValue.trim() === '')) {
+      continue;
+    }
+
+    const text = (typeof answerValue === 'string' ? answerValue : JSON.stringify(answerValue)).toLowerCase();
+
+    for (const field of targetFields) {
+      if (!extracted[field]) {
+        extracted[field] = null;
+      }
+
+      if (field === 'transportation_reliability') {
+        if (text.includes('no') || text.includes('none') || text.includes('unreliable')) {
+          extracted[field] = 'unreliable';
+        } else if (text.includes('sometimes') || text.includes('inconsistent')) {
+          extracted[field] = 'sometimes_available';
+        } else if (text.includes('yes') || text.includes('own') || text.includes('reliable')) {
+          extracted[field] = 'reliable';
+        }
+      }
+
+      else if (field === 'transportation_limitations') {
+        const limits = [];
+        if (text.includes('no car') || text.includes('no vehicle')) limits.push('no_personal_vehicle');
+        if (text.includes('no license') || text.includes('cannot drive')) limits.push('no_driver_license');
+        if (text.includes('mobility') || text.includes('wheelchair')) limits.push('mobility_access');
+        if (text.includes('cost') || text.includes('afford')) limits.push('cost_prohibitive');
+        if (text.includes('transit') || text.includes('public')) limits.push('limited_transit');
+        if (text.includes('distance') || text.includes('miles')) limits.push('distance_barrier');
+        if (limits.length > 0) extracted[field] = limits;
+      }
+
+      else if (field === 'schedule_constraints') {
+        const constraints = [];
+        if (text.includes('early') || text.includes('start')) constraints.push('early_start_required');
+        if (text.includes('late') || text.includes('evening')) constraints.push('late_finish_required');
+        if (text.includes('shift') || text.includes('specific hours')) constraints.push('shift_specific');
+        if (text.includes('childcare') || text.includes('pickup')) constraints.push('childcare_hours');
+        if (text.includes('medical') || text.includes('appointment')) constraints.push('medical_appointments');
+        if (constraints.length > 0) extracted[field] = constraints;
+      }
+
+      else if (field === 'barriers') {
+        const barriers = [];
+        if (text.includes('transportation') || text.includes('transit')) barriers.push('transportation');
+        if (text.includes('mobility') || text.includes('physical')) barriers.push('physical');
+        if (text.includes('cost') || text.includes('afford')) barriers.push('financial');
+        if (barriers.length > 0) extracted[field] = barriers;
+      }
+
+      else if (field === 'support_needs') {
+        const needs = [];
+        if (text.includes('transportation')) needs.push('transportation');
+        if (text.includes('childcare')) needs.push('childcare');
+        if (text.includes('mobility') || text.includes('accessible')) needs.push('accessible_transportation');
+        if (needs.length > 0) extracted[field] = needs;
+      }
+    }
+  }
+
+  return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null));
+}
+
+/**
+ * Extract medications section answers into VFP fields.
+ * Maps medication_list (and side effects) → work-impact signals.
+ * 
+ * Answer keys:
+ * - medication_list: structured list of medications
+ * - side_effects: user-reported side effects
+ * - energy_level: high/medium/low
+ * - cognitive_impact: none/minimal/moderate/significant
+ */
+function extractMedicationsByAnswerKey(answers) {
+  const answerKeyMap = {
+    medication_list: ['medication_side_effect_flags', 'stamina_endurance_concerns', 'support_needs'],
+    side_effects: ['medication_side_effect_flags', 'stamina_endurance_concerns', 'accommodation_needs'],
+    energy_level: ['stamina_endurance_concerns', 'schedule_constraints'],
+    cognitive_impact: ['medication_side_effect_flags', 'support_needs', 'accommodation_needs'],
+  };
+
+  const extracted = {};
+
+  for (const [answerKey, targetFields] of Object.entries(answerKeyMap)) {
+    const answerValue = answers[answerKey];
+    if (!answerValue || (typeof answerValue === 'string' && answerValue.trim() === '')) {
+      continue;
+    }
+
+    const text = (typeof answerValue === 'string' ? answerValue : JSON.stringify(answerValue)).toLowerCase();
+
+    for (const field of targetFields) {
+      if (!extracted[field]) {
+        extracted[field] = null;
+      }
+
+      if (field === 'medication_side_effect_flags') {
+        const flags = [];
+        if (text.includes('drowsy') || text.includes('sedating') || text.includes('fatigue')) flags.push('sedation');
+        if (text.includes('tremor') || text.includes('shake') || text.includes('motor')) flags.push('motor_effects');
+        if (text.includes('cognitive') || text.includes('brain fog') || text.includes('confusion') || text.includes('memory')) flags.push('cognitive_effects');
+        if (text.includes('mood') || text.includes('emotional') || text.includes('irritability')) flags.push('mood_effects');
+        if (text.includes('weight') || text.includes('appetite') || text.includes('metabolic')) flags.push('metabolic_effects');
+        if (text.includes('dizziness') || text.includes('dizzy')) flags.push('dizziness');
+        if (text.includes('headache') || text.includes('migraine')) flags.push('headache');
+        if (text.includes('nausea') || text.includes('stomach')) flags.push('gi_effects');
+        if (flags.length > 0) extracted[field] = flags;
+      }
+
+      else if (field === 'stamina_endurance_concerns') {
+        if (text.includes('low energy') || text.includes('fatigue') || text.includes('tired')) {
+          extracted[field] = 'low_endurance';
+        } else if (text.includes('mid') || text.includes('moderate')) {
+          extracted[field] = 'moderate_endurance';
+        } else if (text.includes('high') || text.includes('good energy') || text.includes('full-time')) {
+          extracted[field] = 'good_endurance';
+        }
+      }
+
+      else if (field === 'support_needs') {
+        const needs = [];
+        if (text.includes('medication management') || text.includes('reminder')) needs.push('medication_reminders');
+        if (text.includes('frequent breaks') || text.includes('rest')) needs.push('frequent_breaks');
+        if (text.includes('flexible schedule') || text.includes('part-time')) needs.push('flexible_schedule');
+        if (text.includes('counseling') || text.includes('support')) needs.push('counseling');
+        if (needs.length > 0) extracted[field] = needs;
+      }
+
+      else if (field === 'accommodation_needs') {
+        const accom = [];
+        if (text.includes('frequent breaks') || text.includes('rest period')) accom.push('frequent_breaks');
+        if (text.includes('flexible') || text.includes('part-time')) accom.push('flexible_schedule');
+        if (text.includes('reduced hours') || text.includes('less than full')) accom.push('reduced_hours');
+        if (text.includes('quiet') || text.includes('low stimulation')) accom.push('quiet_workspace');
+        if (text.includes('sit')) accom.push('seated_work');
+        if (accom.length > 0) extracted[field] = accom;
+      }
+
+      else if (field === 'safety_risk_flags') {
+        const flags = [];
+        if (text.includes('drowsy') || text.includes('sedating')) flags.push('impaired_alertness');
+        if (text.includes('tremor') || text.includes('motor')) flags.push('motor_impairment');
+        if (text.includes('cognitive') || text.includes('confusion')) flags.push('cognitive_impairment');
+        if (text.includes('dizziness') || text.includes('balance')) flags.push('balance_issues');
+        if (flags.length > 0) extracted[field] = flags;
+      }
+
+      else if (field === 'schedule_constraints') {
+        const constraints = [];
+        if (text.includes('morning') || text.includes('morning dose')) constraints.push('morning_medication_schedule');
+        if (text.includes('afternoon') || text.includes('midday')) constraints.push('afternoon_medication_schedule');
+        if (text.includes('evening') || text.includes('bedtime')) constraints.push('evening_medication_schedule');
+        if (text.includes('meal') || text.includes('food')) constraints.push('meal_dependent');
+        if (constraints.length > 0) extracted[field] = constraints;
+      }
+    }
+  }
+
   return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null));
 }
 
