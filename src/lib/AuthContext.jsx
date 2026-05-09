@@ -120,7 +120,26 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      let currentUser = await base44.auth.me();
+
+      // ── Invite upgrade path ──────────────────────────────────────────────
+      // If this user has no role/access_level yet (e.g. existed before invite),
+      // attempt to apply any pending role assignment, then re-fetch the user.
+      const needsUpgrade = !currentUser?.role || currentUser.role === 'user' || !currentUser?.access_level;
+      if (needsUpgrade) {
+        try {
+          const result = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
+          if (result?.data?.upgraded) {
+            console.log('[Auth] Pending role applied, re-fetching user...');
+            currentUser = await base44.auth.me();
+          }
+        } catch (upgradeErr) {
+          // Non-fatal — if upgrade fails, user stays denied which is correct
+          console.warn('[Auth] applyPendingRoleIfNeeded failed:', upgradeErr?.message);
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
