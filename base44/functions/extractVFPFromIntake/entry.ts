@@ -628,31 +628,78 @@ function extractBarriersSupportByAnswerKey(answers) {
   if (allText.includes('moderate') && allText.includes('support')) support.push('moderate_support_needs');
   if (allText.includes('high') && allText.includes('support')) support.push('high_support_needs');
   
-  // Job coaching & mentoring
+  // Canonical support tags (known workplace supports)
   if (allText.includes('job coach') || allText.includes('coaching required') || allText.includes('job coaching')) support.push('job_coaching_required');
   if (allText.includes('mentor') || allText.includes('mentoring')) support.push('mentoring_needed');
   if (allText.includes('on-the-job')) support.push('on_the_job_support');
-  
-  // Task & routine learning
   if (allText.includes('task breakdown') || allText.includes('break down')) support.push('task_breakdown_support');
+  if (allText.includes('task prompt') || allText.includes('prompting')) support.push('task_prompting');
   if (allText.includes('routine') && (allText.includes('learning') || allText.includes('development') || allText.includes('change'))) support.push('routine_learning_support');
   if (allText.includes('establish routine') || allText.includes('routine development')) support.push('routine_learning_support');
-  
-  // Processing & communication support (AI-driven from barriers/impact)
   if (allText.includes('slow') && allText.includes('processing')) support.push('slower_processing_support');
   if (allText.includes('processing') && (allText.includes('time') || allText.includes('response'))) support.push('slower_processing_support');
   if (allText.includes('communication') && (allText.includes('support') || allText.includes('barrier') || allText.includes('needs'))) support.push('communication_support');
   if (aiText && (aiText.includes('communication') || aiText.includes('engage'))) support.push('communication_support');
-  
-  // Training & time accommodations
   if (allText.includes('extra time') || (allText.includes('extended') && allText.includes('training'))) support.push('extended_training_support');
   if (allText.includes('additional time') && allText.includes('training')) support.push('extended_training_support');
+  if (allText.includes('written') && (allText.includes('instruction') || allText.includes('direction'))) support.push('written_instructions');
+  if (allText.includes('schedule') && (allText.includes('flexible') || allText.includes('support') || allText.includes('structured'))) support.push('schedule_support');
+  if (allText.includes('supervision')) support.push('supervision_support');
+  if (allText.includes('accessibility')) support.push('accessibility_support');
+  if (allText.includes('sensory') || allText.includes('quiet') && allText.includes('space')) support.push('sensory_support');
+  if (allText.includes('transportation')) support.push('transportation_support');
   
-  if (support.length) {
-    extracted.support_needs = support;
+  // Extract open-ended supports from AI recommendations and direct intake
+  const openEndedSupports = [];
+  
+  // Parse AI support recommendations (likely bulleted list)
+  if (answers.ai_support_recommendations) {
+    const recs = answers.ai_support_recommendations;
+    // Split by bullet or newline, clean up, and extract phrases
+    const lines = recs.split(/[\n-•*]+/).filter(line => line.trim().length > 2);
+    lines.forEach(line => {
+      const phrase = line.trim().toLowerCase();
+      // Only add if it's a meaningful phrase (not just a single word or already captured as canonical tag)
+      if (phrase.length > 5 && !support.some(s => phrase.includes(s.replace(/_/g, ' ')))) {
+        openEndedSupports.push(phrase);
+      }
+    });
+  }
+  
+  // Parse direct intake accommodation/support recommendations
+  if (answers.accommodations_description) {
+    const desc = answers.accommodations_description.toLowerCase();
+    // Extract multi-word phrases (likely actual support recommendations)
+    const phrases = desc.split(/[,;.]+/).filter(p => p.trim().length > 5);
+    phrases.forEach(phrase => {
+      const clean = phrase.trim();
+      if (!openEndedSupports.includes(clean) && !support.some(s => clean.includes(s.replace(/_/g, ' ')))) {
+        openEndedSupports.push(clean);
+      }
+    });
+  }
+  
+  if (answers.support_notes) {
+    const notes = answers.support_notes.toLowerCase();
+    const phrases = notes.split(/[,;.]+/).filter(p => p.trim().length > 5);
+    phrases.forEach(phrase => {
+      const clean = phrase.trim();
+      if (!openEndedSupports.includes(clean) && !support.some(s => clean.includes(s.replace(/_/g, ' ')))) {
+        openEndedSupports.push(clean);
+      }
+    });
+  }
+  
+  // Merge canonical tags with open-ended support phrases
+  const allSupports = [...support, ...openEndedSupports];
+  
+  if (allSupports.length) {
+    extracted.support_needs = allSupports;
     sourceMetadata.support_needs = [{
       source: aiText ? 'barriers_ai_clarify' : 'intake_direct',
-      confidence: 'medium'
+      confidence: 'medium',
+      canonical_count: support.length,
+      open_ended_count: openEndedSupports.length
     }];
   }
 
