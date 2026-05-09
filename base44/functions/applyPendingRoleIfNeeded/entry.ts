@@ -1,8 +1,29 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // Called on login for any authenticated user.
-// If the user has role="user" or blank access_level AND a pending PendingRoleAssignment exists,
+// If the user has role="user" or blank access_level AND a valid pending PendingRoleAssignment exists,
 // upgrade their account. Safe to call repeatedly — no-ops if already upgraded.
+//
+// A "valid" assignment MUST have:
+//   - role (non-empty)
+//   - access_level (non-empty)
+//   - org_id (non-empty)
+//   - client_id (non-empty, required for client/pre_ets/dspd roles)
+//
+// Incomplete assignments (missing any of the above) are IGNORED to prevent bad upgrades.
+
+const CLIENT_ROLES = ['client', 'pre_ets', 'dspd'];
+
+function isValidAssignment(assignment) {
+  if (!assignment.role || !assignment.access_level || !assignment.org_id) {
+    return false;
+  }
+  // Client portal roles must also have a client_id
+  if (CLIENT_ROLES.includes(assignment.role) && !assignment.client_id) {
+    return false;
+  }
+  return true;
+}
 
 Deno.serve(async (req) => {
   try {
@@ -27,28 +48,40 @@ Deno.serve(async (req) => {
 
     console.log(`[applyPendingRoleIfNeeded] Checking pending assignments for ${email} (role=${currentRole}, access=${currentAccess})`);
 
-    // Look up pending assignments
+    // Look up all pending assignments for this email
     const pending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });
-    const validPending = (pending || []).filter(p => p.status === 'pending');
+    const pendingOnly = (pending || []).filter(p => p.status === 'pending');
+
+    // Filter to only VALID assignments (complete records)
+    const validPending = pendingOnly.filter(isValidAssignment);
 
     if (validPending.length === 0) {
-      console.log(`[applyPendingRoleIfNeeded] No pending assignment for ${email}.`);
-      return Response.json({ upgraded: false, reason: 'no_pending_assignment' });
+      const invalidCount = pendingOnly.length;
+      if (invalidCount > 0) {
+        console.warn(`[applyPendingRoleIfNeeded] Found ${invalidCount} pending assignment(s) for ${email} but all are incomplete (missing access_level/org_id/client_id). Skipping upgrade.`);
+        // Log the bad ones for debugging
+        pendingOnly.forEach(p => {
+          console.warn(`  [invalid] id=${p.id} role=${p.role} access_level=${p.access_level} org_id=${p.org_id} client_id=${p.client_id}`);
+        });
+      } else {
+        console.log(`[applyPendingRoleIfNeeded] No pending assignment for ${email}.`);
+      }
+      return Response.json({ upgraded: false, reason: 'no_valid_pending_assignment' });
     }
 
-    // Most recent assignment wins
+    // Most recent VALID assignment wins
     const assignment = validPending.sort(
       (a, b) => new Date(b.invited_at || b.created_date) - new Date(a.invited_at || a.created_date)
     )[0];
 
-    console.log(`[applyPendingRoleIfNeeded] Applying: role=${assignment.role} access_level=${assignment.access_level} to ${email}`);
+    console.log(`[applyPendingRoleIfNeeded] Applying: role=${assignment.role} access_level=${assignment.access_level} org_id=${assignment.org_id} client_id=${assignment.client_id} to ${email}`);
 
     const updateData = {
       role: assignment.role,
-      access_level: assignment.access_level || null,
+      access_level: assignment.access_level,
+      org_id: assignment.org_id,
     };
 
-    if (assignment.org_id) updateData.org_id = assignment.org_id;
     if (assignment.invited_by_id) updateData.manager_id = assignment.invited_by_id;
     if (assignment.client_id) updateData.linked_client_id = assignment.client_id;
 
@@ -62,6 +95,7 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.User.update(userRecord.id, updateData);
     console.log(`[applyPendingRoleIfNeeded] Updated ${email}:`, updateData);
 
+    // Mark the applied assignment as accepted — keep it for audit, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
 
     return Response.json({ upgraded: true, applied: updateData });
