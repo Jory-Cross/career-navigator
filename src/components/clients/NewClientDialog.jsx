@@ -91,11 +91,11 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">New Client</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4 py-4 overflow-y-auto pr-2 flex-1">
           <div className="col-span-2 space-y-1.5">
             <Label className="text-xs text-slate-500">Client Type *</Label>
             <Select value={form.client_type} onValueChange={v => update("client_type", v)}>
