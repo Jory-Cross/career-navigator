@@ -12,6 +12,7 @@ import { useOrg } from "@/lib/useOrg";
 
 export default function NewClientDialog({ open, onOpenChange, onCreated }) {
   const { orgId } = useOrg();
+  const [currentUserOrgId, setCurrentUserOrgId] = useState(null);
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     target_role: "", industry: "", location: "", notes: "",
