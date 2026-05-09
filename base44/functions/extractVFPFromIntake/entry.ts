@@ -195,32 +195,75 @@ function extractMedicationsByAnswerKey(answers) {
 
 /**
  * Benefits section → VFP fields
+ * 
+ * Properly evaluates boolean/yes-no fields:
+ * - Only creates benefit facts when answer is explicitly yes/true/enrolled/active
+ * - Explicitly excludes no/false/none/empty values
+ * - Tracks when client receives no benefits
  */
 function extractBenefitsByAnswerKey(answers) {
   const extracted = {};
-  const text = Object.values(answers || {}).join(' ').toLowerCase();
 
-  // benefits_considerations
+  // Helper: check if value indicates YES
+  const isYes = (val) => {
+    if (val === true || val === 'true') return true;
+    if (typeof val === 'string') {
+      const norm = val.toLowerCase().trim();
+      return norm === 'yes' || norm === 'enrolled' || norm === 'active' || norm === 'y';
+    }
+    return false;
+  };
+
+  // Helper: check if value indicates NO
+  const isNo = (val) => {
+    if (val === false || val === 'false') return true;
+    if (typeof val === 'string') {
+      const norm = val.toLowerCase().trim();
+      return norm === 'no' || norm === 'n' || norm === 'none' || norm === '';
+    }
+    return val === null || val === undefined;
+  };
+
+  // benefits_considerations - ONLY if answer is explicitly YES
   const considerations = [];
-  if (answers.receives_ssi || text.includes('ssi')) considerations.push('ssi_recipient');
-  if (answers.receives_ssdi || text.includes('ssdi')) considerations.push('ssdi_recipient');
-  if (answers.receives_medicare || text.includes('medicare')) considerations.push('medicare_coverage');
-  if (answers.receives_medicaid || text.includes('medicaid')) considerations.push('medicaid_coverage');
-  if (answers.receives_snap || text.includes('snap') || text.includes('food')) considerations.push('snap_recipient');
-  if (answers.ticket_to_work || text.includes('ticket')) considerations.push('ticket_to_work_enrolled');
+  if (isYes(answers.receives_ssi)) considerations.push('ssi_recipient');
+  if (isYes(answers.receives_ssdi)) considerations.push('ssdi_recipient');
+  if (isYes(answers.receives_medicare)) considerations.push('medicare_coverage');
+  if (isYes(answers.receives_medicaid)) considerations.push('medicaid_coverage');
+  if (isYes(answers.receives_snap)) considerations.push('snap_recipient');
+  if (isYes(answers.ticket_to_work)) considerations.push('ticket_to_work_enrolled');
+
+  // If all benefits are explicitly NO, note it
+  const allBenefitsAreNo = [
+    answers.receives_ssi,
+    answers.receives_ssdi,
+    answers.receives_medicare,
+    answers.receives_medicaid,
+    answers.receives_snap,
+    answers.ticket_to_work
+  ].every(val => isNo(val));
+
+  if (allBenefitsAreNo && Object.keys(answers).length > 0) {
+    considerations.push('no_current_benefits');
+  }
+
   if (considerations.length) extracted.benefits_considerations = considerations;
 
-  // support_needs
+  // support_needs - only if counseling is explicitly requested
   const needs = [];
-  if (answers.benefits_counseling_needed || text.includes('benefits counseling') || text.includes('benefits planning')) {
+  if (isYes(answers.benefits_counseling_needed)) {
     needs.push('benefits_counseling');
   }
-  if (text.includes('work incentive') || text.includes('earnings')) needs.push('work_incentive_planning');
-  if (text.includes('healthcare') || text.includes('insurance')) needs.push('healthcare_coordination');
+  if (answers.work_incentive_planning && isYes(answers.work_incentive_planning)) {
+    needs.push('work_incentive_planning');
+  }
+  if (answers.healthcare_coordination && isYes(answers.healthcare_coordination)) {
+    needs.push('healthcare_coordination');
+  }
   if (needs.length) extracted.support_needs = needs;
 
-  // work_incentive_flags
-  if (answers.ticket_to_work) {
+  // work_incentive_flags - only if ticket is actively enrolled
+  if (isYes(answers.ticket_to_work)) {
     extracted.work_incentive_flags = ['ticket_to_work_available'];
   }
 
