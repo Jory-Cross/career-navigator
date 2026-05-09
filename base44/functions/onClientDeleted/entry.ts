@@ -50,15 +50,32 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Strip portal access from Users whose linked_client_id = this client ──
-    const affectedUsers = await base44.asServiceRole.entities.User.filter({ linked_client_id: clientId });
-    for (const u of affectedUsers || []) {
+    // Also catch by email fallback (in case linked_client_id was never stamped)
+    const [usersByClientId, usersByEmail] = await Promise.all([
+      base44.asServiceRole.entities.User.filter({ linked_client_id: clientId }),
+      clientEmail
+        ? base44.asServiceRole.entities.User.filter({ email: clientEmail.toLowerCase().trim() })
+        : Promise.resolve([]),
+    ]);
+
+    // Dedupe by id
+    const userMap = new Map();
+    for (const u of [...(usersByClientId || []), ...(usersByEmail || [])]) {
+      userMap.set(u.id, u);
+    }
+
+    // Only strip users that have client_portal access (don't accidentally strip staff)
+    const portalUsers = [...userMap.values()].filter(
+      u => u.access_level === 'client_portal' || u.linked_client_id === clientId
+    );
+
+    for (const u of portalUsers) {
       try {
-        const updatePayload = {
+        await base44.asServiceRole.entities.User.update(u.id, {
           linked_client_id: null,
           access_level: null,
           role: 'user',
-        };
-        await base44.asServiceRole.entities.User.update(u.id, updatePayload);
+        });
         results.users_stripped.push({ id: u.id, email: u.email });
         console.log(`[onClientDeleted] Stripped portal access from user ${u.email} (linked_client_id was ${clientId})`);
       } catch (err) {
