@@ -623,13 +623,31 @@ function extractBarriersSupportByAnswerKey(answers) {
 
   // ── SUPPORT_NEEDS (external assistance level & coaching) ──
   const support = [];
+  
+  // Level-of-support indicators
   if (allText.includes('moderate') && allText.includes('support')) support.push('moderate_support_needs');
   if (allText.includes('high') && allText.includes('support')) support.push('high_support_needs');
+  
+  // Job coaching & mentoring
   if (allText.includes('job coach') || allText.includes('coaching required') || allText.includes('job coaching')) support.push('job_coaching_required');
   if (allText.includes('mentor') || allText.includes('mentoring')) support.push('mentoring_needed');
   if (allText.includes('on-the-job')) support.push('on_the_job_support');
+  
+  // Task & routine learning
   if (allText.includes('task breakdown') || allText.includes('break down')) support.push('task_breakdown_support');
-  if (allText.includes('routine development') || allText.includes('establish routine')) support.push('routine_development_support');
+  if (allText.includes('routine') && (allText.includes('learning') || allText.includes('development') || allText.includes('change'))) support.push('routine_learning_support');
+  if (allText.includes('establish routine') || allText.includes('routine development')) support.push('routine_learning_support');
+  
+  // Processing & communication support (AI-driven from barriers/impact)
+  if (allText.includes('slow') && allText.includes('processing')) support.push('slower_processing_support');
+  if (allText.includes('processing') && (allText.includes('time') || allText.includes('response'))) support.push('slower_processing_support');
+  if (allText.includes('communication') && (allText.includes('support') || allText.includes('barrier') || allText.includes('needs'))) support.push('communication_support');
+  if (aiText && (aiText.includes('communication') || aiText.includes('engage'))) support.push('communication_support');
+  
+  // Training & time accommodations
+  if (allText.includes('extra time') || (allText.includes('extended') && allText.includes('training'))) support.push('extended_training_support');
+  if (allText.includes('additional time') && allText.includes('training')) support.push('extended_training_support');
+  
   if (support.length) {
     extracted.support_needs = support;
     sourceMetadata.support_needs = [{
