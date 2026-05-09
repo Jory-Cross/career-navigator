@@ -431,9 +431,30 @@ Deno.serve(async (req) => {
     };
 
     // Update client
-    await base44.entities.Client.update(client_id, {
-      vocational_facts_profile,
-    });
+    logs.push(`[Client] BEFORE UPDATE - current VFP fields: ${Object.keys(existing).length}`);
+    logs.push(`[Client] ATTEMPTING UPDATE with vocational_facts_profile containing ${Object.keys(allSignals).length} new signals`);
+    
+    try {
+      const updateResult = await base44.entities.Client.update(client_id, {
+        vocational_facts_profile,
+      });
+      
+      logs.push(`[Client] UPDATE SUCCEEDED - result: ${JSON.stringify(updateResult).substring(0, 200)}`);
+      
+      // Verify the update actually persisted
+      const updatedClient = await base44.entities.Client.list();
+      const verifyClient = updatedClient.find(c => c.id === client_id);
+      const verifyVFP = verifyClient?.vocational_facts_profile || {};
+      
+      logs.push(`[Client] VERIFICATION - VFP now has ${Object.keys(verifyVFP).length} fields`);
+      logs.push(`[Client] VERIFICATION - vocational_facts_extracted_at: ${verifyClient?.vocational_facts_extracted_at}`);
+      logs.push(`[Client] VERIFICATION - vocational_facts_extracted_by: ${verifyClient?.vocational_facts_extracted_by}`);
+      
+    } catch (updateErr) {
+      logs.push(`[Client] UPDATE FAILED: ${updateErr.message}`);
+      console.error(logs.join('\n'));
+      throw updateErr;
+    }
 
     logs.push(`[Client] Updated vocational_facts_profile with ${Object.keys(allSignals).length} signals from ${processableSections.length} sections`);
     console.log(logs.join('\n'));
