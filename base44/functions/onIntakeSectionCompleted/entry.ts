@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Entity automation trigger: IntakeSection created/updated
  * 
- * Checks if status changed to "completed" or "reviewed".
+ * Checks if status changed to "in_progress", "completed", or "reviewed".
  * If so, calls extractVFPFromIntake to normalize intake data into VFP signals.
  */
 
@@ -19,12 +19,13 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { event, data, old_data, changed_fields } = payload;
 
-    // Only trigger on status change to completed or reviewed
-    const isCompletion = (changed_fields || []).includes('status') &&
-      (data?.status === 'completed' || data?.status === 'reviewed');
+    // Trigger on status change to in_progress, completed, or reviewed
+    // (skip only assigned and not_started)
+    const isProcessable = (changed_fields || []).includes('status') &&
+      (data?.status === 'in_progress' || data?.status === 'completed' || data?.status === 'reviewed');
 
-    if (!isCompletion) {
-      return Response.json({ skipped: true, reason: 'Not a completion event' });
+    if (!isProcessable) {
+      return Response.json({ skipped: true, reason: 'Not a processable event' });
     }
 
     const { client_id } = data;

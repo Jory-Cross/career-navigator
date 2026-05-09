@@ -359,15 +359,20 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Fetch all completed IntakeSections for this client
+    // Fetch all IntakeSections for this client
     const intakeSections = await base44.entities.IntakeSection.filter({ client_id });
-    const completedSections = (intakeSections || []).filter(s => s.status === 'completed');
+    const processableSections = (intakeSections || []).filter(s => {
+      // Include in_progress and completed; skip assigned, not_started, reviewed, empty
+      const hasAnswers = s.answers && Object.keys(s.answers).length > 0;
+      const isProcessable = s.status === 'in_progress' || s.status === 'completed';
+      return isProcessable && hasAnswers;
+    });
 
-    if (!completedSections.length) {
+    if (!processableSections.length) {
       return Response.json({
         client_id,
         extracted_signals: {},
-        source_summary: 'No completed intake sections found',
+        source_summary: 'No in-progress or completed intake sections with answers found',
       });
     }
 
@@ -376,37 +381,41 @@ Deno.serve(async (req) => {
     const sourceMetadata = {};
     const logs = [];
 
-    for (const section of completedSections) {
-      const { id: section_id, section_key, answers } = section;
-      const mapping = INTAKE_TO_VFP_MAPPING[section_key];
+    for (const section of processableSections) {
+       const { id: section_id, section_key, status, answers } = section;
+       const mapping = INTAKE_TO_VFP_MAPPING[section_key];
 
-      if (!mapping || !answers) continue;
+       if (!mapping || !answers) continue;
 
-      try {
-        const extracted = mapping.extract(answers);
-        logs.push(`[${section_key}] Extracted: ${Object.keys(extracted).join(', ')}`);
+       // Determine confidence based on completion status
+       const confidence = status === 'completed' ? 'high' : 'medium';
 
-        for (const [field, value] of Object.entries(extracted)) {
-          if (value !== null && value !== undefined) {
-            // Initialize source tracking for this field
-            if (!sourceMetadata[field]) {
-              sourceMetadata[field] = [];
-            }
+       try {
+         const extracted = mapping.extract(answers);
+         logs.push(`[${section_key}] status=${status}, confidence=${confidence}, extracted: ${Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined).join(', ')}`);
 
-            allSignals[field] = value;
-            sourceMetadata[field].push({
-              source: 'intake_section',
-              section_key,
-              section_id,
-              confidence: 'high', // structured data = high confidence
-              extracted_at: new Date().toISOString(),
-            });
-          }
-        }
-      } catch (e) {
-        logs.push(`[${section_key}] Error: ${e.message}`);
-      }
-    }
+         for (const [field, value] of Object.entries(extracted)) {
+           if (value !== null && value !== undefined) {
+             // Initialize source tracking for this field
+             if (!sourceMetadata[field]) {
+               sourceMetadata[field] = [];
+             }
+
+             allSignals[field] = value;
+             sourceMetadata[field].push({
+               source: 'intake_section',
+               section_key,
+               section_id,
+               status,
+               confidence,
+               extracted_at: new Date().toISOString(),
+             });
+           }
+         }
+       } catch (e) {
+         logs.push(`[${section_key}] Error: ${e.message}`);
+       }
+     }
 
     // Merge with existing vocational_facts_profile (augment, not replace)
     const existing = client.vocational_facts_profile || {};
@@ -426,14 +435,14 @@ Deno.serve(async (req) => {
       vocational_facts_profile,
     });
 
-    logs.push(`[Client] Updated vocational_facts_profile with ${Object.keys(allSignals).length} signals`);
+    logs.push(`[Client] Updated vocational_facts_profile with ${Object.keys(allSignals).length} signals from ${processableSections.length} sections`);
     console.log(logs.join('\n'));
 
     return Response.json({
       client_id,
       extracted_signals: allSignals,
       source_metadata: sourceMetadata,
-      intake_sections_processed: completedSections.length,
+      intake_sections_processed: processableSections.length,
       total_vfp_fields: Object.keys(merged).length,
       logs,
       status: 'success',
