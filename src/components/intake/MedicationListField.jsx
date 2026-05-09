@@ -7,6 +7,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 const EMPTY_MED = () => ({
   _id: Math.random().toString(36).slice(2),
+  _new: true,
   name: "",
   dosage: "",
   frequency: "",
