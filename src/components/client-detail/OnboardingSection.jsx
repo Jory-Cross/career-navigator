@@ -27,7 +27,6 @@ import {
   Mail,
   Loader2,
   ClipboardList,
-  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -39,8 +38,7 @@ import {
   createOnboardingStep,
   sendOnboardingEmail,
 } from "@/lib/api/clientPortalApi";
-import InviteClientPortalDialog from "@/components/intake/InviteClientPortalDialog";
-import PortalInvitationStatus from "@/components/intake/PortalInvitationStatus";
+import PortalAccessPanel from "@/components/intake/PortalAccessPanel";
 
 const statusColors = {
   pending: "text-slate-400",
@@ -267,14 +265,6 @@ export default function OnboardingSection({ client, onRefresh }) {
                   "Initialize Onboarding"
                 )}
               </Button>
-              <Button
-                variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                onClick={() => setShowInvitePortal(true)}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Invite to Portal
-              </Button>
             </div>
           </div>
         ) : (
@@ -357,30 +347,16 @@ export default function OnboardingSection({ client, onRefresh }) {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Step
               </Button>
-              <Button
-                variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                onClick={() => setShowInvitePortal(true)}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Invite to Portal
-              </Button>
             </div>
           </>
         )}
       </Card>
 
-      {/* Portal invitation status — always visible below the step list */}
+      {/* Portal access panel — full management controls */}
       <div className="mt-4">
         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Portal Access</p>
-        <PortalInvitationStatus client={client} />
+        <PortalAccessPanel client={client} onRefresh={onRefresh} />
       </div>
-
-      <InviteClientPortalDialog
-        open={showInvitePortal}
-        onOpenChange={setShowInvitePortal}
-        client={client}
-      />
 
       <Dialog open={showAdd} onOpenChange={(open) => (!open ? closeAddDialog() : null)}>
         <DialogContent className="sm:max-w-lg">
