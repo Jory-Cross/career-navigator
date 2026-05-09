@@ -51,12 +51,16 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
       
       if (sendInvite) {
         try {
-          await base44.functions.invoke('inviteClient', { 
+          const inviteRes = await base44.functions.invoke('inviteClient', { 
             email: form.email, 
             firstName: form.first_name,
             clientId: client.id,
-            clientType: form.client_type
+            clientType: form.client_type,
+            org_id: orgId || null,
           });
+          if (inviteRes.data?.success === false) {
+            throw new Error(inviteRes.data?.error || 'Invite failed');
+          }
           
           await base44.entities.Activity.create({
             client_id: client.id,

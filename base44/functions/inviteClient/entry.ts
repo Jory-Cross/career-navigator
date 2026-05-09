@@ -9,25 +9,25 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, clientId, clientType } = await req.json();
+    const body = await req.json();
+    const { email, clientId, clientType } = body;
+    // Accept org_id from frontend payload, fall back to inviting user's org_id
+    const org_id = body.org_id || user.org_id || null;
 
     if (!email) {
       return Response.json({ error: 'Email is required' }, { status: 400 });
+    }
+    if (!clientId) {
+      return Response.json({ error: 'clientId is required — cannot create a valid portal invitation without it' }, { status: 400 });
+    }
+    if (!org_id) {
+      return Response.json({ error: 'org_id is required — cannot create a valid portal invitation without it' }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
     const role = clientType === 'pre_ets' ? 'pre_ets' : clientType === 'dspd' ? 'dspd' : 'client';
     const access_level = 'client_portal';
-    const org_id = user.org_id || null;
     const now = new Date().toISOString();
-
-    // Validate required fields before proceeding
-    if (!org_id) {
-      console.warn(`[inviteClient] Warning: inviting user has no org_id. User=${user.email}`);
-    }
-    if (!clientId) {
-      console.warn(`[inviteClient] Warning: no clientId provided for email=${normalizedEmail}`);
-    }
 
     console.log(`[inviteClient] Inviting ${normalizedEmail} as role=${role} access_level=${access_level} client_id=${clientId} org_id=${org_id}`);
 
