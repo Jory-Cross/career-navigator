@@ -15,63 +15,78 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
  */
 
 const INTAKE_TO_VFP_MAPPING = {
-   barriers_support: {
-     extract: (answers) => ({
-       ...extractBarriersSupportByAnswerKey(answers),
-       safety_risk_flags: extractSafetyRisks(answers),
-     }),
-   },
+  barriers_support: {
+    extract: (answers) => ({
+      ...extractBarriersSupportByAnswerKey(answers),
+      safety_risk_flags: extractSafetyRisks(answers),
+    }),
+  },
   medications: {
     extract: (answers) => extractMedicationsByAnswerKey(answers),
   },
   transportation: {
     extract: (answers) => extractTransportationByAnswerKey(answers),
   },
-  work_preferences: {
+  employment_goals: {
     extract: (answers) => ({
-      preferred_work_environment: extractWorkEnvironment(answers),
-      independent_vs_team_preference: extractTeamPreference(answers),
-      customer_interaction_tolerance: extractCustomerTolerance(answers),
+      work_goal_themes: extractGoalThemesFromAnswers(answers),
+      preferred_job_titles: extractJobTitlesFromAnswers(answers),
+      job_readiness: extractJobReadinessFromAnswers(answers),
+      employer_preferences: extractEmployerPreferencesFromAnswers(answers),
     }),
   },
-  accommodations: {
+  social_supports: {
     extract: (answers) => ({
-      accommodation_needs: extractAccommodations(answers),
-      physical_limitations: extractPhysicalLimitations(answers),
-      sensory_limitations: extractSensoryLimitations(answers),
+      support_contacts: extractSupportContactsFromAnswers(answers),
+      social_tolerance: extractSocialToleranceFromAnswers(answers),
+      support_needs: extractSupportNeedsFromAnswers(answers),
     }),
   },
-  schedule_availability: {
+  benefits: {
     extract: (answers) => ({
-      schedule_constraints: extractScheduleConstraints(answers),
+      benefits_considerations: extractBenefitsFromAnswers(answers),
+      support_needs: extractBenefitSupportNeeds(answers),
     }),
   },
-  support_systems: {
+  previous_employment: {
     extract: (answers) => ({
-      support_contacts: extractSupportContacts(answers),
-      social_tolerance: extractSocialTolerance(answers),
+      strengths: extractStrengthsFromEmploymentHistory(answers),
+      stamina_endurance_concerns: extractStaminaFromHistory(answers),
+      preferred_tasks: extractPreferredTasksFromHistory(answers),
     }),
   },
-  education: {
+  education_training: {
     extract: (answers) => ({
-      education_level: extractEducationLevel(answers),
+      education_level: extractEducationLevelFromAnswers(answers),
+      preferred_tasks: extractPreferredTasksFromEducation(answers),
+      strengths: extractStrengthsFromEducation(answers),
     }),
   },
-  employment_history: {
+  basic_info: {
     extract: (answers) => ({
-      strengths: extractStrengthsFromEmployment(answers),
-      stamina_endurance_concerns: extractStamina(answers),
+      communication_style: extractCommunicationStyleFromBasicInfo(answers),
     }),
   },
-  goals: {
-    extract: (answers) => ({
-      work_goal_themes: extractGoalThemes(answers),
-    }),
+  documents_available: {
+    extract: () => ({}),
   },
-  communication_preferences: {
-    extract: (answers) => ({
-      communication_style: extractCommunicationStyle(answers),
-    }),
+  vr_referral: {
+    extract: () => ({}),
+  },
+  emergency_contact: {
+    extract: () => ({}),
+  },
+  services_agreement: {
+    extract: () => ({}),
+  },
+  release_of_information: {
+    extract: () => ({}),
+  },
+  references: {
+    extract: () => ({}),
+  },
+  application_employment: {
+    extract: () => ({}),
   },
 };
 
@@ -454,6 +469,223 @@ function extractBarriersSupportByAnswerKey(answers) {
 
   // Filter out null values
   return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null));
+}
+
+/**
+ * Extract employment goals answers → work goal themes, job titles, readiness.
+ * Answer keys: goal_primary, goal_secondary, job_title_*, timeline_*
+ */
+function extractGoalThemesFromAnswers(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+  const themes = [];
+
+  if (text.includes('accounting') || text.includes('finance')) themes.push('finance');
+  if (text.includes('healthcare') || text.includes('medical')) themes.push('healthcare');
+  if (text.includes('technology') || text.includes('it') || text.includes('software')) themes.push('technology');
+  if (text.includes('education') || text.includes('teaching')) themes.push('education');
+  if (text.includes('management') || text.includes('leadership')) themes.push('management');
+  if (text.includes('retail') || text.includes('sales') || text.includes('customer')) themes.push('sales');
+  if (text.includes('creative') || text.includes('art') || text.includes('design') || text.includes('graphic')) themes.push('creative');
+  if (text.includes('trade') || text.includes('skilled') || text.includes('construction')) themes.push('skilled_trades');
+  if (text.includes('hospitality') || text.includes('food') || text.includes('restaurant')) themes.push('hospitality');
+  if (text.includes('transportation') || text.includes('driver')) themes.push('transportation');
+
+  return themes.length > 0 ? themes : null;
+}
+
+function extractJobTitlesFromAnswers(answers) {
+  const titles = [];
+  Object.entries(answers || {}).forEach(([key, value]) => {
+    if (key.includes('job_title') || key.includes('title') || key === 'goal_primary') {
+      if (value && typeof value === 'string' && value.trim()) {
+        titles.push(value.trim());
+      }
+    }
+  });
+  return titles.length > 0 ? titles : null;
+}
+
+function extractJobReadinessFromAnswers(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+  if (text.includes('ready') || text.includes('prepared')) return 'ready';
+  if (text.includes('develop') || text.includes('work with') || text.includes('skills')) return 'developing';
+  if (text.includes('exploring') || text.includes('uncertain') || text.includes('new')) return 'exploring';
+  return null;
+}
+
+function extractEmployerPreferencesFromAnswers(answers) {
+  const prefs = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('small') || text.includes('startup')) prefs.push('small_company');
+  if (text.includes('large') || text.includes('corporation') || text.includes('enterprise')) prefs.push('large_company');
+  if (text.includes('nonprofit') || text.includes('non-profit')) prefs.push('nonprofit');
+  if (text.includes('government') || text.includes('public sector')) prefs.push('government');
+  if (text.includes('family') || text.includes('family-owned')) prefs.push('family_owned');
+
+  return prefs.length > 0 ? prefs : null;
+}
+
+/**
+ * Extract social supports answers → support contacts, social tolerance, needs.
+ * Answer keys: support_type_*, family_*, professional_*, peer_*
+ */
+function extractSupportContactsFromAnswers(answers) {
+  const contacts = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('family') || text.includes('spouse') || text.includes('parent')) contacts.push('family');
+  if (text.includes('friend') || text.includes('peer') || text.includes('social group')) contacts.push('friends');
+  if (text.includes('counselor') || text.includes('therapist') || text.includes('case manager') || text.includes('professional')) contacts.push('professional');
+  if (text.includes('church') || text.includes('religious') || text.includes('community')) contacts.push('community');
+
+  return contacts.length > 0 ? contacts : null;
+}
+
+function extractSocialToleranceFromAnswers(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('isolated') || text.includes('alone') || text.includes('avoid') || text.includes('anxiety')) return 'low';
+  if (text.includes('small group') || text.includes('limited') || text.includes('difficulty')) return 'moderate';
+  if (text.includes('social') && !text.includes('anxiety')) return 'high';
+
+  return null;
+}
+
+function extractSupportNeedsFromAnswers(answers) {
+  const needs = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('emotional') || text.includes('counseling') || text.includes('support')) needs.push('emotional_support');
+  if (text.includes('practical') || text.includes('help') || text.includes('assistance')) needs.push('practical_help');
+  if (text.includes('advocacy') || text.includes('advocate')) needs.push('advocacy');
+  if (text.includes('connection') || text.includes('networking')) needs.push('social_connection');
+
+  return needs.length > 0 ? needs : null;
+}
+
+/**
+ * Extract benefits answers → considerations and support needs.
+ * Answer keys: benefits_*, receiving_*
+ */
+function extractBenefitsFromAnswers(answers) {
+  const considerations = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('ssi') || text.includes('social security')) considerations.push('ssi_considerations');
+  if (text.includes('medicaid') || text.includes('medicare')) considerations.push('health_insurance_concerns');
+  if (text.includes('food') || text.includes('snap')) considerations.push('food_assistance');
+  if (text.includes('housing') || text.includes('rent')) considerations.push('housing_assistance');
+  if (text.includes('childcare')) considerations.push('childcare_support');
+  if (text.includes('work incentive') || text.includes('ticket')) considerations.push('work_incentive_aware');
+
+  return considerations.length > 0 ? considerations : null;
+}
+
+function extractBenefitSupportNeeds(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+  if (text.includes('benefits counseling') || text.includes('benefits')) {
+    return ['benefits_counseling'];
+  }
+  return null;
+}
+
+/**
+ * Extract employment history → strengths, stamina, preferred tasks.
+ * Answer keys: emp_title_*, emp_employer_*, emp_duration_*, accomplishments_*
+ */
+function extractStrengthsFromEmploymentHistory(answers) {
+  const strengths = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('reliable') || text.includes('punctual') || text.includes('attendance')) strengths.push('reliability');
+  if (text.includes('detail') || text.includes('accuracy') || text.includes('precision') || text.includes('organized')) strengths.push('attention_to_detail');
+  if (text.includes('lead') || text.includes('manage') || text.includes('supervised')) strengths.push('leadership');
+  if (text.includes('communication') || text.includes('speaking') || text.includes('interpersonal')) strengths.push('communication');
+  if (text.includes('problem') || text.includes('solve') || text.includes('critical think')) strengths.push('problem_solving');
+  if (text.includes('creative') || text.includes('innovate') || text.includes('idea')) strengths.push('creativity');
+  if (text.includes('technical') || text.includes('skill') || text.includes('expertise')) strengths.push('technical');
+  if (text.includes('team') || text.includes('collaborate') || text.includes('work together')) strengths.push('teamwork');
+
+  return strengths.length > 0 ? strengths : null;
+}
+
+function extractStaminaFromHistory(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('part-time') || text.includes('part time')) return 'low_endurance';
+  if (text.includes('full-time') || text.includes('full time')) return 'high_endurance';
+  if (text.includes('temporary') || text.includes('seasonal')) return 'moderate_endurance';
+
+  return null;
+}
+
+function extractPreferredTasksFromHistory(answers) {
+  const tasks = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('hands-on') || text.includes('hands on')) tasks.push('hands_on');
+  if (text.includes('behind desk') || text.includes('office')) tasks.push('desk_work');
+  if (text.includes('customer') || text.includes('interaction')) tasks.push('customer_facing');
+  if (text.includes('independent') || text.includes('self-directed')) tasks.push('independent_work');
+  if (text.includes('routine') || text.includes('structured')) tasks.push('structured_tasks');
+  if (text.includes('creative') || text.includes('variety')) tasks.push('varied_tasks');
+
+  return tasks.length > 0 ? tasks : null;
+}
+
+/**
+ * Extract education/training → education level, preferred tasks, strengths.
+ * Answer keys: edu_level_*, institution_*, degree_*, field_*, gpa_*
+ */
+function extractEducationLevelFromAnswers(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('college') || text.includes('bachelor') || text.includes('masters') || text.includes('graduate')) return 'college';
+  if (text.includes('some college') || text.includes('associate')) return 'some_college';
+  if (text.includes('high school') || text.includes('diploma') || text.includes('ged')) return 'high_school';
+  if (text.includes('certificate') || text.includes('training program')) return 'certificate';
+
+  return null;
+}
+
+function extractPreferredTasksFromEducation(answers) {
+  const tasks = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('research') || text.includes('analysis')) tasks.push('analytical_work');
+  if (text.includes('project') || text.includes('organize')) tasks.push('project_management');
+  if (text.includes('teach') || text.includes('training')) tasks.push('teaching');
+  if (text.includes('writing') || text.includes('communication')) tasks.push('writing');
+  if (text.includes('hands') || text.includes('practical')) tasks.push('hands_on');
+
+  return tasks.length > 0 ? tasks : null;
+}
+
+function extractStrengthsFromEducation(answers) {
+  const strengths = [];
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('high gpa') || text.includes('excellent') || text.includes('honors')) strengths.push('academic_excellence');
+  if (text.includes('scholarship') || text.includes('award')) strengths.push('recognized_achievement');
+  if (text.includes('specialized') || text.includes('expertise')) strengths.push('specialization');
+
+  return strengths.length > 0 ? strengths : null;
+}
+
+/**
+ * Extract basic info → communication style.
+ * Answer keys: communication_*, preferred_*
+ */
+function extractCommunicationStyleFromBasicInfo(answers) {
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
+
+  if (text.includes('written') || text.includes('email') || text.includes('text')) return 'written';
+  if (text.includes('verbal') || text.includes('speak') || text.includes('phone')) return 'verbal';
+  if (text.includes('visual') || text.includes('diagram') || text.includes('picture')) return 'visual';
+  if (text.includes('face') || text.includes('in-person')) return 'face_to_face';
+
+  return null;
 }
 
 /**
