@@ -36,19 +36,6 @@ export default function MedicationListField({ value = [], onChange, readOnly }) 
 
   return (
     <div className="space-y-4">
-      {medications.length > 0 && (
-  <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-    <p className="text-sm font-medium text-amber-900">
-      Medication Review Reminder
-    </p>
-
-    <p className="mt-1 text-xs text-amber-800">
-      Verify that the “Currently Takes Medications?” question matches the
-      medication entries below. Medication information should only reflect
-      medications the client currently takes.
-    </p>
-  </div>
-)}
       {medications.length === 0 && (
         <p className="text-sm text-slate-400 italic">No medications added yet.</p>
       )}
