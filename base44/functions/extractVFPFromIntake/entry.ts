@@ -492,128 +492,91 @@ function extractEducationByAnswerKey(answers) {
 
 
 /**
- * Extract VFP fields per answer_key within barriers_support section.
- * Maps specific answer keys → [field, field, ...] for targeted signal extraction.
+ * Extract VFP fields from barriers_support section with nuanced vocational intelligence.
+ * 
+ * Maps detailed intake descriptions into specific, actionable workplace signals:
+ * - Mobility/sensory/cognitive/learning barriers → specific vocational implications
+ * - Accommodations → accessibility/support infrastructure needed
+ * - Communication patterns → interaction capabilities and speed
+ * - Support needs → external assistance level
+ * - Strengths → demonstrated capabilities
+ * 
+ * Preserves raw intake text and source metadata; avoids generic collapsing.
  */
 function extractBarriersSupportByAnswerKey(answers) {
-  const answerKeyMap = {
-    barriers_list: ['barriers'],
-    accommodations_needed: ['accommodation_needs', 'support_needs'],
-    technology_barriers: ['barriers', 'support_needs'],
-    communication_barriers: ['communication_style', 'social_tolerance', 'support_needs'],
-    sensory_needs: ['sensory_limitations', 'preferred_work_environment', 'accommodation_needs'],
-    job_coach_needed: ['support_needs', 'job_coaching_needs'],
-    support_level: ['support_needs', 'independent_vs_team_preference', 'job_readiness_level'],
-  };
-
   const extracted = {};
+  const text = Object.values(answers || {}).join(' ').toLowerCase();
 
-  // Process each answer_key that exists in the provided answers
-  for (const [answerKey, targetFields] of Object.entries(answerKeyMap)) {
-    const answerValue = answers[answerKey];
+  // ── BARRIERS (workplace functional limitations) ──
+  const barriers = [];
+  if (text.includes('wheelchair') || text.includes('mobility') || text.includes('walk') || text.includes('stairs')) barriers.push('mobility_limitations');
+  if (text.includes('vision') || text.includes('blind') || text.includes('sight') || text.includes('visual')) barriers.push('visual_impairment');
+  if (text.includes('routine') && text.includes('change')) barriers.push('routine_change_difficulty');
+  if (text.includes('deaf') || text.includes('hearing')) barriers.push('hearing_impairment');
+  if (text.includes('cognitive') || text.includes('memory') || text.includes('attention')) barriers.push('cognitive_processing');
+  if (text.includes('learning') || text.includes('dyslexia') || text.includes('processing')) barriers.push('learning_difference');
+  if (text.includes('anxiety') || text.includes('depression') || text.includes('mental') || text.includes('ptsd')) barriers.push('mental_health_condition');
+  if (text.includes('pain') || text.includes('chronic') || text.includes('fatigue')) barriers.push('chronic_pain_fatigue');
+  if (barriers.length) extracted.barriers = barriers;
 
-    // Skip empty answers
-    if (!answerValue || (typeof answerValue === 'string' && answerValue.trim() === '')) {
-      continue;
-    }
+  // ── ACCOMMODATION_NEEDS (environmental/support adjustments) ──
+  const accommodations = [];
+  if (text.includes('wheelchair')) accommodations.push('wheelchair_accessibility');
+  if (text.includes('accessible') && text.includes('restroom')) accommodations.push('accessible_restroom');
+  if (text.includes('parking')) accommodations.push('accessible_parking');
+  if (text.includes('large print') || text.includes('magnification')) accommodations.push('magnification_or_large_print');
+  if (text.includes('screen reader') || text.includes('assistive')) accommodations.push('assistive_technology');
+  if (text.includes('extra time') || text.includes('slow') || text.includes('extended')) accommodations.push('extended_training_time');
+  if (text.includes('repetition') || text.includes('repeat')) accommodations.push('routine_repetition_support');
+  if (text.includes('written') && (text.includes('instruction') || text.includes('direction'))) accommodations.push('written_instructions');
+  if (text.includes('quiet') || text.includes('distraction')) accommodations.push('low_distraction_workspace');
+  if (text.includes('flexible') && (text.includes('schedule') || text.includes('break'))) accommodations.push('flexible_schedule');
+  if (text.includes('frequent break')) accommodations.push('frequent_breaks');
+  if (accommodations.length) extracted.accommodation_needs = accommodations;
 
-    // Extract VFP fields appropriate to this answer_key
-    for (const field of targetFields) {
-      if (!extracted[field]) {
-        extracted[field] = null;
-      }
+  // ── COMMUNICATION_STYLE (interaction patterns & capabilities) ──
+  const commStyle = [];
+  if (text.includes('slow') && text.includes('processing')) commStyle.push('slower_processing_time');
+  if (text.includes('processing') && (text.includes('time') || text.includes('slow'))) commStyle.push('needs_processing_time');
+  if (text.includes('customer') && (text.includes('communication') || text.includes('successful') || text.includes('able'))) commStyle.push('capable_customer_interaction');
+  if (text.includes('email') || text.includes('written')) commStyle.push('prefers_written_communication');
+  if (text.includes('verbal') || text.includes('phone')) commStyle.push('prefers_verbal_communication');
+  if (text.includes('visual') || text.includes('demonstration')) commStyle.push('learns_by_demonstration');
+  if (commStyle.length) extracted.communication_style = commStyle;
 
-      // Extract value based on field type and answer content
-      const text = (typeof answerValue === 'string' ? answerValue : JSON.stringify(answerValue)).toLowerCase();
+  // ── SUPPORT_NEEDS (external assistance level & coaching) ──
+  const support = [];
+  if (text.includes('moderate') && text.includes('support')) support.push('moderate_support_needs');
+  if (text.includes('high') && text.includes('support')) support.push('high_support_needs');
+  if (text.includes('job coach') || text.includes('coaching required') || text.includes('job coaching')) support.push('job_coaching_required');
+  if (text.includes('mentor') || text.includes('mentoring')) support.push('mentoring_needed');
+  if (text.includes('on-the-job')) support.push('on_the_job_support');
+  if (text.includes('task breakdown') || text.includes('break down')) support.push('task_breakdown_support');
+  if (text.includes('routine development') || text.includes('establish routine')) support.push('routine_development_support');
+  if (support.length) extracted.support_needs = support;
 
-      if (field === 'barriers') {
-        const barriers = [];
-        if (text.includes('physical') || text.includes('mobility') || text.includes('pain')) barriers.push('physical');
-        if (text.includes('cognitive') || text.includes('memory') || text.includes('attention')) barriers.push('cognitive');
-        if (text.includes('mental') || text.includes('anxiety') || text.includes('depression')) barriers.push('mental_health');
-        if (text.includes('substance') || text.includes('addiction') || text.includes('recovery')) barriers.push('substance');
-        if (text.includes('social') || text.includes('isolation') || text.includes('discrimination')) barriers.push('social');
-        if (barriers.length > 0) extracted[field] = barriers;
-      }
+  // ── STRENGTHS (demonstrated capabilities & assets) ──
+  const strengths = [];
+  if (text.includes('technology') && (text.includes('capable') || text.includes('able') || text.includes('skill'))) strengths.push('computer_literate');
+  if (text.includes('email') || (text.includes('technology') && text.includes('skill'))) strengths.push('email_skills');
+  if (text.includes('social media')) strengths.push('social_media_skills');
+  if (text.includes('customer') && (text.includes('service') || text.includes('communication') || text.includes('capable'))) strengths.push('customer_service_capable');
+  if (text.includes('reliable') || text.includes('punctual')) strengths.push('reliability');
+  if (text.includes('detail') || text.includes('accuracy')) strengths.push('attention_to_detail');
+  if (text.includes('team') || text.includes('collaborate')) strengths.push('teamwork');
+  if (strengths.length) extracted.strengths = strengths;
 
-      else if (field === 'accommodation_needs') {
-        const accom = [];
-        if (text.includes('flexible') || text.includes('part-time')) accom.push('flexible_schedule');
-        if (text.includes('remote') || text.includes('home')) accom.push('remote_work');
-        if (text.includes('break')) accom.push('frequent_breaks');
-        if (text.includes('technology') || text.includes('assistive')) accom.push('assistive_tech');
-        if (text.includes('written')) accom.push('written_instructions');
-        if (text.includes('visual') || text.includes('large print')) accom.push('visual_accommodation');
-        if (text.includes('hearing') || text.includes('caption')) accom.push('hearing_accommodation');
-        if (accom.length > 0) extracted[field] = accom;
-      }
-
-      else if (field === 'support_needs') {
-        const needs = [];
-        if (text.includes('childcare') || text.includes('child care')) needs.push('childcare');
-        if (text.includes('transportation')) needs.push('transportation');
-        if (text.includes('housing')) needs.push('housing');
-        if (text.includes('healthcare') || text.includes('medical')) needs.push('healthcare');
-        if (text.includes('counseling') || text.includes('therapy')) needs.push('counseling');
-        if (text.includes('job coach') || text.includes('coaching')) needs.push('job_coaching');
-        if (text.includes('advocate') || text.includes('advocacy')) needs.push('advocacy');
-        if (needs.length > 0) extracted[field] = needs;
-      }
-
-      else if (field === 'communication_style') {
-        if (text.includes('written') || text.includes('email')) extracted[field] = 'written';
-        else if (text.includes('verbal') || text.includes('speak')) extracted[field] = 'verbal';
-        else if (text.includes('visual') || text.includes('diagram')) extracted[field] = 'visual';
-      }
-
-      else if (field === 'social_tolerance') {
-        if (text.includes('avoid') || text.includes('isolation') || text.includes('anxiety')) extracted[field] = 'low';
-        else if (text.includes('limited') || text.includes('some difficulty')) extracted[field] = 'moderate';
-        else if (text.includes('social')) extracted[field] = 'high';
-      }
-
-      else if (field === 'sensory_limitations') {
-        const limits = [];
-        if (text.includes('blind') || text.includes('vision')) limits.push('vision');
-        if (text.includes('deaf') || text.includes('hearing')) limits.push('hearing');
-        if (text.includes('noise sensitive') || text.includes('sound sensitive')) limits.push('sound_sensitivity');
-        if (text.includes('light sensitive') || text.includes('fluorescent')) limits.push('light_sensitivity');
-        if (text.includes('touch sensitive') || text.includes('sensory processing')) limits.push('touch_sensitivity');
-        if (limits.length > 0) extracted[field] = limits;
-      }
-
-      else if (field === 'preferred_work_environment') {
-        const prefs = [];
-        if (text.includes('outdoor')) prefs.push('outdoor');
-        if (text.includes('indoor')) prefs.push('indoor');
-        if (text.includes('quiet')) prefs.push('low_noise');
-        if (text.includes('structured')) prefs.push('structured');
-        if (text.includes('flexible')) prefs.push('flexible');
-        if (text.includes('retail') || text.includes('customer')) prefs.push('customer_facing');
-        if (text.includes('behind') || text.includes('no customer')) prefs.push('non_customer_facing');
-        if (prefs.length > 0) extracted[field] = prefs;
-      }
-
-      else if (field === 'independent_vs_team_preference') {
-        if (text.includes('alone') || text.includes('independent')) extracted[field] = 'independent';
-        else if (text.includes('team') || text.includes('collaborative') || text.includes('group')) extracted[field] = 'team_oriented';
-      }
-
-      else if (field === 'job_coaching_needed') {
-        if (text.includes('yes') || text.includes('need') || text.includes('required')) extracted[field] = true;
-        else if (text.includes('no')) extracted[field] = false;
-      }
-
-      else if (field === 'job_readiness_level') {
-        if (text.includes('ready') || text.includes('prepared')) extracted[field] = 'ready';
-        else if (text.includes('develop') || text.includes('progress')) extracted[field] = 'developing';
-        else if (text.includes('early') || text.includes('not ready')) extracted[field] = 'early_stage';
-      }
-    }
+  // ── RAW INTAKE TEXT & METADATA ──
+  // Store raw barrier/accommodation descriptions for reference
+  if (answers.barriers_description) {
+    extracted.raw_barriers_text = answers.barriers_description;
+  }
+  if (answers.accommodations_description) {
+    extracted.raw_accommodations_text = answers.accommodations_description;
   }
 
-  // Filter out null values
-  return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null));
+  // Filter out empty arrays/null values
+  return Object.fromEntries(Object.entries(extracted).filter(([, v]) => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true)));
 }
 
 
