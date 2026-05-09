@@ -70,12 +70,14 @@ const INTAKE_TO_VFP_MAPPING = {
 /**
  * Transportation section → VFP fields
  * 
- * Properly distinguishes between:
+ * Context only (no assumptions about support needs):
  * - has_vehicle === true AND has_license === true → reliable_personal_vehicle
  * - transportation_method includes bus/public transit → relies_on_public_transit
- * - transportation_notes includes paratransit → paratransit_dependent
- * - has_vehicle === false → adds no_personal_vehicle limitation
- * - has_license === false → adds no_driver_license limitation
+ * - transportation_notes includes paratransit → requires_scheduled_transportation
+ * - has_vehicle === false → no_personal_vehicle
+ * - has_license === false → no_driver_license
+ * 
+ * Support needs ONLY if intake explicitly mentions help with scheduling, planning, learning routes, coordinating rides
  */
 function extractTransportationByAnswerKey(answers) {
   const extracted = {};
@@ -87,14 +89,14 @@ function extractTransportationByAnswerKey(answers) {
   const hasVehicle = answers.has_vehicle === 'yes' || answers.has_vehicle === true;
   const hasLicense = answers.has_license === 'yes' || answers.has_license === true;
 
-  // transportation_reliability - only reliable if BOTH vehicle AND license
+  // transportation_reliability - context only
   const reliability = [];
   if (hasVehicle && hasLicense) {
     reliability.push('reliable_personal_vehicle');
   } else if (method.includes('bus') || method.includes('public') || method.includes('transit')) {
     reliability.push('relies_on_public_transit');
   } else if (notes.includes('paratransit')) {
-    reliability.push('paratransit_dependent');
+    reliability.push('requires_scheduled_transportation');
   } else if (hasVehicle && !hasLicense) {
     reliability.push('vehicle_without_license');
   } else if (!hasVehicle && method) {
@@ -102,7 +104,7 @@ function extractTransportationByAnswerKey(answers) {
   }
   if (reliability.length) extracted.transportation_reliability = reliability;
 
-  // transportation_limitations - explicit negative conditions
+  // transportation_limitations - context/constraints only
   const limitations = [];
   if (!hasLicense) limitations.push('no_driver_license');
   if (!hasVehicle) limitations.push('no_personal_vehicle');
@@ -135,14 +137,16 @@ function extractTransportationByAnswerKey(answers) {
     extracted.work_availability = ['flexible'];
   }
 
-  // support_needs
+  // support_needs - ONLY if explicitly mentioned
   const needs = [];
-  if (!hasVehicle) needs.push('transportation_assistance');
-  if (!hasLicense) needs.push('transportation_training');
-  if (method.includes('public') || method.includes('transit') || method.includes('bus')) needs.push('public_transit_access');
-  if (notes.includes('paratransit')) needs.push('paratransit_coordination');
-  if (text.includes('carpool')) needs.push('carpool_coordination');
-  if (limitations.length) needs.push('transportation_planning');
+  // Only add supports if intake text explicitly mentions needing help with these
+  if (text.includes('help') && (text.includes('schedule') || text.includes('plan') || text.includes('route') || text.includes('coordinate'))) {
+    if (text.includes('schedule')) needs.push('transportation_scheduling_support');
+    if (text.includes('plan') || text.includes('planning')) needs.push('transportation_planning');
+    if (text.includes('route') || text.includes('navigation')) needs.push('route_learning_support');
+    if (text.includes('coordinate') || text.includes('coordinating')) needs.push('ride_coordination');
+  }
+  if (text.includes('carpool') && text.includes('help')) needs.push('carpool_coordination');
   if (needs.length) extracted.support_needs = needs;
 
   return extracted;
