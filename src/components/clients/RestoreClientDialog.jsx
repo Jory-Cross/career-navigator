@@ -1,27 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, ArchiveRestore } from "lucide-react";
+import { AlertTriangle, ArchiveRestore, Info } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
+const PORTAL_OPTIONS = [
+  { value: "none", label: "Do not restore portal access" },
+  { value: "client", label: "Restore as Client Portal User", role: "client" },
+  { value: "pre_ets", label: "Restore as Pre-ETS Client Portal User", role: "pre_ets" },
+  { value: "dspd", label: "Restore as DSPD Client Portal User", role: "dspd" },
+];
+
+const STAFF_ROLES = new Set(["admin", "management", "employee", "pre_ets_employer"]);
+
 export default function RestoreClientDialog({ open, onOpenChange, client, onRestored }) {
-  const [status, setStatus] = useState("active");
+  const [portalOption, setPortalOption] = useState("none");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [portalUser, setPortalUser] = useState(null); // matched User record
+  const [loadingUser, setLoadingUser] = useState(false);
+  const [portalResult, setPortalResult] = useState(null); // summary after save
+
+  // Look up existing portal user by email when dialog opens
+  useEffect(() => {
+    if (!open || !client?.email) return;
+    setLoadingUser(true);
+    setPortalUser(null);
+    base44.entities.User.filter({ email: client.email.toLowerCase().trim() })
+      .then(users => {
+        const match = (users || []).find(u => !STAFF_ROLES.has(u.role));
+        setPortalUser(match || null);
+      })
+      .catch(() => setPortalUser(null))
+      .finally(() => setLoadingUser(false));
+  }, [open, client?.email]);
 
   const handleRestore = async () => {
     setLoading(true);
     try {
+      // 1. Restore client record
       await base44.entities.Client.update(client.id, {
         is_archived: false,
-        status,
+        status: "active",
       });
+
+      // 2. Portal access update
+      let accessSummary = "Portal access not changed.";
+      const selected = PORTAL_OPTIONS.find(o => o.value === portalOption);
+
+      if (portalOption !== "none" && selected?.role) {
+        if (portalUser) {
+          await base44.entities.User.update(portalUser.id, {
+            role: selected.role,
+            access_level: "client_portal",
+            linked_client_id: client.id,
+            org_id: client.org_id || portalUser.org_id,
+          });
+          accessSummary = `Portal access restored as ${selected.label.replace("Restore as ", "")}.`;
+        } else {
+          accessSummary = "No portal user found — send a new portal invite to grant access.";
+        }
+      }
+
+      setPortalResult(accessSummary);
       setDone(true);
       if (onRestored) onRestored();
-    } catch {
-      toast.error("Failed to restore client");
+    } catch (e) {
+      toast.error("Failed to restore client: " + e.message);
     } finally {
       setLoading(false);
     }
@@ -29,9 +76,12 @@ export default function RestoreClientDialog({ open, onOpenChange, client, onRest
 
   const handleClose = () => {
     setDone(false);
-    setStatus("active");
+    setPortalOption("none");
+    setPortalResult(null);
     onOpenChange(false);
   };
+
+  const noUserWarning = portalOption !== "none" && !loadingUser && !portalUser;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -47,34 +97,49 @@ export default function RestoreClientDialog({ open, onOpenChange, client, onRest
           <>
             <div className="space-y-4 py-2">
               <p className="text-sm text-slate-600">
-                Restoring <strong>{client?.first_name} {client?.last_name}</strong> will move them back to the active client list.
+                Restoring <strong>{client?.first_name} {client?.last_name}</strong> will set their status to <strong>Active</strong> and move them back to the active client list.
               </p>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-700">Restore with status</label>
-                <Select value={status} onValueChange={setStatus}>
+                <label className="text-xs font-medium text-slate-700">Portal access</label>
+                <Select value={portalOption} onValueChange={setPortalOption} disabled={loadingUser}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    {PORTAL_OPTIONS.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-800">
-                  <strong>Portal access is NOT restored.</strong> When this client was archived, their portal access was revoked. You must intentionally re-invite them or manually grant access after restoring.
-                </p>
-              </div>
+              {noUserWarning && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-800">
+                    No portal user found for <strong>{client?.email}</strong>. Restore the client first, then send a new portal invite to grant access.
+                  </p>
+                </div>
+              )}
+
+              {portalOption === "none" && (
+                <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-slate-600">
+                    Portal access will remain disabled. You can re-invite this client from their profile at any time.
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleRestore} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button
+                onClick={handleRestore}
+                disabled={loading || loadingUser}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
                 {loading ? "Restoring..." : "Restore Client"}
               </Button>
             </DialogFooter>
@@ -85,20 +150,12 @@ export default function RestoreClientDialog({ open, onOpenChange, client, onRest
               <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <ArchiveRestore className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                 <p className="text-xs text-emerald-800">
-                  <strong>{client?.first_name} {client?.last_name}</strong> has been restored with status: <strong>{status}</strong>.
+                  <strong>{client?.first_name} {client?.last_name}</strong> has been restored as <strong>Active</strong>.
                 </p>
               </div>
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <div className="text-xs text-amber-800 space-y-1">
-                  <p className="font-semibold">Portal access was not restored.</p>
-                  <p>Next steps — choose one:</p>
-                  <ul className="list-disc ml-3 space-y-0.5">
-                    <li>Re-invite the client via the Portal Access panel on their profile</li>
-                    <li>Assign new portal access manually</li>
-                    <li>Leave portal access disabled</li>
-                  </ul>
-                </div>
+              <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <Info className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-slate-600">{portalResult}</p>
               </div>
             </div>
             <DialogFooter>
