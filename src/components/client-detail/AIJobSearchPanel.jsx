@@ -476,8 +476,15 @@ const recs = await base44.entities.JobRecommendation.filter(
     let shouldLoadFreshness = true;
 
     setRecommendationBatch((currentBatch) => {
-      if (currentBatch?.error && !normalizedBatch?.error) {
+      // Only overwrite with the DB batch if we don't already have a freshly generated
+      // in-memory batch (identified by having recommendations but no DB id, or same/newer id).
+      // Never let a stale DB read silently overwrite a just-generated batch.
+      const currentIsNewer =
+        currentBatch?.generated_at &&
+        normalizedBatch?.generated_at &&
+        new Date(currentBatch.generated_at).getTime() > new Date(normalizedBatch.generated_at).getTime();
 
+      if (currentIsNewer) {
         shouldLoadFreshness = false;
         return currentBatch;
       }
@@ -695,9 +702,9 @@ const validJobCount = jobs.filter(
       : ""
   }
   onClick={async () => {
+    console.log("GENERATE CLICKED");
+    setGeneratingRecommendations(true);
     try {
-      setGeneratingRecommendations(true);
-
       const { runRecommendationEngine } = await import(
         "@/lib/recommendations/runRecommendationEngine"
       );
@@ -717,45 +724,44 @@ const validJobCount = jobs.filter(
         return;
       }
 
-            const hasInterestProfiler = safeArray(assessments).some(hasCompletedInterestProfiler);
+      const hasInterestProfiler = safeArray(assessments).some(hasCompletedInterestProfiler);
 
       if (!hasInterestProfiler) {
         const profilerError =
           "Interest Profiler is required before recommendations can be generated. Complete the Interest Profiler first, then generate recommendations again.";
-
         setRecommendationBatch({
           error: profilerError,
           recommendations: [],
           job_count: 0,
         });
-
         toast.error(profilerError);
         return;
       }
 
-    const result = await runRecommendationEngine({
-  client: { ...(client || {}), id: resolvedClientId },
-  documents: docs,
-  assessments,
-  vocationalProfile:
-    client?.vocational_facts_profile || null,
-  forceRegenerate: true,
-});
-
-      const generatedBatch = result?.batch || null;
-
-      // Debug log as requested
-      const recs = generatedBatch?.recommendations || [];
-      console.log("[GenerateRecommendations] complete:", {
-        count: recs.length,
-        firstTitle: recs[0]?.title || recs[0]?.job_title || "(none)",
-        firstHasGrounding: !!recs[0]?.grounding,
-        firstHasConstraintFit: !!recs[0]?.constraint_fit,
+      const result = await runRecommendationEngine({
+        client: { ...(client || {}), id: resolvedClientId },
+        documents: docs,
+        assessments,
+        vocationalProfile: client?.vocational_facts_profile || null,
+        forceRegenerate: true,
       });
 
+      console.log("ENGINE RESULT:", result);
+
+      const generatedBatch = result?.batch || null;
+      const recs = generatedBatch?.recommendations || [];
+
+      console.log("FIRST REC HAS GROUNDING:", !!recs[0]?.grounding);
+      console.log("FIRST REC HAS CONSTRAINT_FIT:", !!recs[0]?.constraint_fit);
+      console.log("SETTING RECOMMENDATION BATCH:", {
+        recCount: recs.length,
+        firstTitle: recs[0]?.title || recs[0]?.job_title || "(none)",
+      });
+
+      // Directly replace state — do NOT go through loadLatestBatch (avoids stale overwrite)
       setRecommendationBatch(generatedBatch);
 
-      // Issue 1 fix: always clear outdated warning after successful generation
+      // Clear outdated warning
       setRecommendationFreshness({
         isOutdated: false,
         newestInputDate: null,
@@ -771,7 +777,7 @@ const validJobCount = jobs.filter(
         toast.error("No recommendations were generated.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("GENERATE RECOMMENDATIONS ERROR:", err);
       toast.error("Failed to generate recommendations");
     } finally {
       setGeneratingRecommendations(false);
