@@ -326,6 +326,7 @@ setReviewNotesError("");
           <RecommendationGroundingPanel
             grounding={recommendation.grounding}
             confidenceLevel={recommendation.confidence_level}
+            constraintFit={recommendation.constraint_fit}
           />
 
           {/* Action Buttons */}

@@ -1115,6 +1115,7 @@ const validJobCount = jobs.filter(
               <RecommendationGroundingPanel
                 grounding={rec.grounding}
                 confidenceLevel={rec.confidence_level}
+                constraintFit={rec.constraint_fit}
               />
             </div>
           );
@@ -1270,6 +1271,7 @@ const validJobCount = jobs.filter(
         confidence_reason: job.confidence_reason,
 
         grounding: job.grounding || null,
+        constraint_fit: job.constraint_fit || null,
 
         source_job: job,
       }))

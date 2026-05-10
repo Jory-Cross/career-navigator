@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Info, Search, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ConstraintFitPanel from "@/components/client-detail/ConstraintFitPanel";
 
 /**
  * Compact, expandable grounding evidence panel.
@@ -45,7 +46,7 @@ function Section({ title, items, icon: Icon, iconClass, emptyText, colorClass })
   );
 }
 
-export default function RecommendationGroundingPanel({ grounding, confidenceLevel }) {
+export default function RecommendationGroundingPanel({ grounding, confidenceLevel, constraintFit }) {
   const [open, setOpen] = useState(false);
 
   if (!grounding) return null;
@@ -102,6 +103,9 @@ export default function RecommendationGroundingPanel({ grounding, confidenceLeve
           {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
         </div>
       </button>
+
+      {/* Constraint Fit panel sits outside the toggle, always visible summary */}
+      <ConstraintFitPanel constraintFit={constraintFit} />
 
       {/* Expanded content */}
       {open && (

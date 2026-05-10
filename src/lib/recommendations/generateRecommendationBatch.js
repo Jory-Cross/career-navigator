@@ -8,6 +8,7 @@ import {
   resolveFitLevel,
 } from "@/lib/recommendations/constraintRules";
 import { buildRecommendationGrounding } from "@/lib/recommendations/buildRecommendationGrounding.js";
+import { buildConstraintFit } from "@/lib/recommendations/buildConstraintFit.js";
 import { evaluateVFPMaturity } from "@/lib/vfpMaturity.js";
 
 function resolveConfidenceLevel({
@@ -378,6 +379,9 @@ if (fitConcerns.length > 0) {
 
   // Attach grounding object (explainability layer)
   groundedJob.grounding = buildRecommendationGrounding(groundedJob, groundingContext);
+
+  // Attach constraint fit layer (severity + environmental analysis)
+  groundedJob.constraint_fit = buildConstraintFit(groundedJob, groundingContext);
 
   return groundedJob;
 });
