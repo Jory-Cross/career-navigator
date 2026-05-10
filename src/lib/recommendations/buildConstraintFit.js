@@ -185,6 +185,8 @@ function evalSocial(vfp, job) {
 
 function evalSupportNeeds(vfp, job) {
   const moderate = [];
+  const unknowns = [];
+  const soft = [];
   const verify = [];
 
   const supportNeeds = vfp?.support_needs || [];
@@ -195,21 +197,52 @@ function evalSupportNeeds(vfp, job) {
     "urgent", "deadline", "pressure",
   ]);
 
+  // Explicit job coaching keywords — only these warrant a moderate concern
+  const EXPLICIT_COACHING_KEYWORDS = [
+    "job coaching required", "job coaching needed", "needs job coach",
+    "requires job coach", "requires on-site support", "on-site job coach",
+    "job coach on site", "task prompting required", "task prompting needed",
+  ];
+
+  // Inferred / weak support language — softer treatment
+  const INFERRED_SUPPORT_KEYWORDS = [
+    "coaching", "on-the-job", "task prompting", "prompting",
+    "may need support", "limited support", "some support", "inferred",
+    "not formally assessed", "possible support",
+  ];
+
   if (supportNeeds.length > 0) {
-    const coachingNeeds = supportNeeds.filter((s) =>
-      matchesAny(s, ["job coaching", "coaching", "on-the-job", "task prompting", "prompting"])
+    const hasExplicitCoaching = supportNeeds.some((s) =>
+      EXPLICIT_COACHING_KEYWORDS.some((kw) => safeLower(s).includes(kw))
     );
-    if (coachingNeeds.length > 0) {
-      moderate.push("Client requires job coaching support — confirm employer is supportive of a job coach.");
+
+    const hasInferredSupport = !hasExplicitCoaching && supportNeeds.some((s) =>
+      INFERRED_SUPPORT_KEYWORDS.some((kw) => safeLower(s).includes(kw))
+    );
+
+    if (hasExplicitCoaching) {
+      // Only here do we escalate to a moderate concern
+      moderate.push("Documented job coaching or on-site support need — confirm employer can accommodate a support specialist.");
       verify.push("Confirm employer will accommodate a job coach or support specialist on-site.");
+    } else if (hasInferredSupport) {
+      // Inferred / weakly evidenced — goes to unknowns + verify, not moderate
+      unknowns.push("Support needs are not fully assessed; may need onboarding or job coaching support.");
+      verify.push("Confirm whether onboarding, accommodations, or job coaching support is needed before placement.");
+    } else {
+      // Support needs listed but no coaching language — just flag for verification
+      verify.push("Confirm whether any onboarding or workplace support accommodations are needed.");
     }
 
-    if (isHighPace) {
-      moderate.push("Client has documented support needs — high-pace role may increase demands.");
+    if (isHighPace && (hasExplicitCoaching || hasInferredSupport)) {
+      soft.push("High-pace role may increase support demands — discuss with client before applying.");
     }
+  } else {
+    // No support needs documented — unknown, not a concern
+    unknowns.push("Support needs are not documented — confirm whether any onboarding or job coaching support would be beneficial.");
+    verify.push("Confirm whether onboarding, accommodations, or job coaching support is needed.");
   }
 
-  return { moderate, verify };
+  return { moderate, unknowns, soft, verify };
 }
 
 // ── TRANSPORTATION ───────────────────────────────────────────────────────────

@@ -254,11 +254,43 @@ export function buildRecommendationGrounding(job, context = {}) {
       );
     }
 
-    // Support needs
+    // Support needs — distinguish documented vs. inferred vs. unknown
+    const EXPLICIT_COACHING_TERMS = [
+      "job coaching required", "job coaching needed", "needs job coach",
+      "requires job coach", "requires on-site support", "on-site job coach",
+      "task prompting required", "task prompting needed",
+    ];
+    const INFERRED_SUPPORT_TERMS = [
+      "coaching", "on-the-job", "task prompting", "prompting",
+      "may need support", "limited support", "some support", "inferred",
+      "not formally assessed", "possible support",
+    ];
+
     if (supportNeeds.length > 0) {
-      staff_review_flags.push(
-        `Client support needs should be discussed with employer: ${supportNeeds.slice(0, 2).join("; ")}.`
+      const hasExplicitCoaching = supportNeeds.some((s) =>
+        EXPLICIT_COACHING_TERMS.some((kw) => s.toLowerCase().includes(kw))
       );
+      const hasInferredSupport = !hasExplicitCoaching && supportNeeds.some((s) =>
+        INFERRED_SUPPORT_TERMS.some((kw) => s.toLowerCase().includes(kw))
+      );
+
+      if (hasExplicitCoaching) {
+        staff_review_flags.push(
+          `Documented job coaching or on-site support need. Confirm employer can accommodate a support specialist.`
+        );
+      } else if (hasInferredSupport) {
+        missing_data_factors.push("Support needs are not fully assessed — possible need is inferred, not formally documented.");
+        staff_review_flags.push(
+          "Confirm whether onboarding, accommodations, or job coaching support is needed before placement."
+        );
+      } else {
+        staff_review_flags.push(
+          `Support needs noted — confirm whether any workplace accommodations or onboarding support are needed.`
+        );
+      }
+    } else {
+      missing_data_factors.push("Support needs are not documented.");
+      staff_review_flags.push("Confirm whether onboarding, accommodations, or job coaching support would be beneficial.");
     }
 
     // Physical restrictions
