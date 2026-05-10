@@ -8,6 +8,14 @@
  * relying on narrow keyword matching against job description text.
  */
 
+import {
+  scoreEvidenceItem,
+  scoreEvidenceList,
+  evaluateProfileRichness,
+  evidenceTierLabel,
+  filterByMinTier,
+} from "@/lib/recommendations/evidenceWeighting.js";
+
 const RIASEC_LABELS = {
   R: "Realistic", r: "Realistic",
   I: "Investigative", i: "Investigative",
@@ -147,38 +155,47 @@ export function buildRecommendationGrounding(job, context = {}) {
   if (hasResume) {
     supported_by.push("resume");
 
-    // Prefer matched keywords from engine if available
+    // Score the quality of resume/skill evidence
+    const skillEvidenceTier = scoreEvidenceList(resumeSkills).best;
+    const skillLabel = evidenceTierLabel(skillEvidenceTier);
+
     if (matchedKeywords.length > 0) {
+      const kwTier = scoreEvidenceList(matchedKeywords).best;
       supporting_sources.push({
         label: "Resume / Work History",
         detail: `Resume shows: ${matchedKeywords.slice(0, 5).join(", ")}.`,
+        evidence_tier: kwTier,
         type: "resume",
       });
-      confidence_factors.push(`Resume shows ${matchedKeywords.slice(0, 3).join(", ")}.`);
+      confidence_factors.push(`Resume shows ${matchedKeywords.slice(0, 3).join(", ")}. [${evidenceTierLabel(kwTier)}]`);
     } else if (resumeSkills.length > 0) {
       supporting_sources.push({
         label: "Resume / Work History",
         detail: `Resume includes skills: ${resumeSkills.slice(0, 5).join(", ")}.`,
+        evidence_tier: skillEvidenceTier,
         type: "resume",
       });
-      confidence_factors.push(`Resume includes relevant skills: ${resumeSkills.slice(0, 3).join(", ")}.`);
+      confidence_factors.push(`Resume includes relevant skills: ${resumeSkills.slice(0, 3).join(", ")}. [${skillLabel}]`);
     } else {
       supporting_sources.push({
         label: "Resume / Work History",
-        detail: "Resume or work history is available.",
+        detail: "Resume or work history is available (limited detail).",
+        evidence_tier: "weak",
         type: "resume",
       });
-      confidence_factors.push("Resume or work history is available.");
+      confidence_factors.push("Resume or work history is available but detail is limited. [Weak support]");
     }
 
     // Work history jobs
     const jobTitles = workHistory
       .map(w => safeStr(w?.title || w?.job_title || w?.position))
       .filter(Boolean);
-    if (jobTitles.length > 0) {
+    if (jobTitles.length >= 2) {
       confidence_factors.push(
-        `Work history includes: ${jobTitles.slice(0, 3).join(", ")}.`
+        `Work history includes multiple roles: ${jobTitles.slice(0, 3).join(", ")}. [Moderate support]`
       );
+    } else if (jobTitles.length === 1) {
+      confidence_factors.push(`Work history includes: ${jobTitles[0]}. [Weak / general support]`);
     }
   } else {
     missing_data_factors.push("No resume or work history data available.");
@@ -377,7 +394,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     });
   }
 
-  // ── 9. Grounding summary ──────────────────────────────────────────────────
+  // ── 9. Profile richness + grounding summary ──────────────────────────────
 
   const dedupedConfidence = [...new Set(confidence_factors.filter(Boolean))];
   const dedupedConcern = [...new Set(concern_factors.filter(Boolean))];
@@ -385,17 +402,41 @@ export function buildRecommendationGrounding(job, context = {}) {
   const dedupedFlags = [...new Set(staff_review_flags.filter(Boolean))];
   const dedupedSupported = [...new Set(supported_by)];
 
+  // Compute overall profile richness for the summary
+  const vfpDomainsCovered = hasVFP ? Object.keys(vfp).filter(k => {
+    const v = vfp[k];
+    return Array.isArray(v) ? v.length > 0 : !!v;
+  }) : [];
+
+  const richness = evaluateProfileRichness({
+    hasInterestProfile,
+    hasResume,
+    hasWSA,
+    hasVFP,
+    resumeSkillCount: resumeSkills.length,
+    workHistoryCount: workHistory.length,
+    vfpDomainsCovered,
+    matchedKeywordCount: matchedKeywords.length,
+    maturityLevel: maturity?.confidence_level || maturity?.maturity_level || null,
+  });
+
   let grounding_summary = "";
   const sourceCount = dedupedSupported.length;
 
   if (sourceCount === 0) {
     grounding_summary = `${title} was suggested based on general career matching. Gather more client data to strengthen this match.`;
+  } else if (richness.tier === "strong" && hasInterestProfile && topCodes.length > 0) {
+    grounding_summary = `${title} is well-supported: matched via O*NET Interest Profiler (${topCodes.slice(0, 2).join(", ")} interests) and corroborated by ${sourceCount} data sources. ${dedupedConcern.length > 0 ? "Some areas require staff verification." : "Staff should confirm client interest and any training requirements."}`;
   } else if (hasInterestProfile && topCodes.length > 0) {
     grounding_summary = `${title} was matched via O*NET Interest Profiler (${topCodes.slice(0, 2).join(", ")} interests). ${
       hasResume ? "Resume and work history provide additional context. " : ""
     }${dedupedConcern.length > 0 ? "Some areas require staff verification before proceeding." : "Staff should confirm client interest and any training requirements."}`;
+  } else if (richness.tier === "strong" && sourceCount >= 2) {
+    grounding_summary = `${title} is strongly supported by ${sourceCount} corroborated data sources. ${dedupedConfidence[0] || ""} Staff should verify fit before presenting to client.`;
+  } else if (richness.tier === "weak") {
+    grounding_summary = `${title} is based on limited evidence (${richness.score}/100 profile richness). Recommendations should be treated as preliminary — gather additional assessment data before acting.`;
   } else if (sourceCount >= 2) {
-    grounding_summary = `${title} is broadly supported by ${sourceCount} data sources. ${dedupedConfidence[0] || ""} Staff should verify fit before presenting to client.`;
+    grounding_summary = `${title} is moderately supported by ${sourceCount} data sources. ${dedupedConfidence[0] || ""} Staff should verify fit before presenting to client.`;
   } else {
     grounding_summary = `${title} is supported by ${dedupedSupported[0]?.replace(/_/g, " ") || "available data"}. Additional assessment would strengthen this match.`;
   }
@@ -408,6 +449,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     missing_data_factors: dedupedMissing.slice(0, 5),
     staff_review_flags: dedupedFlags.slice(0, 6),
     grounding_summary,
+    evidence_richness: { tier: richness.tier, score: richness.score },
   };
 }
 

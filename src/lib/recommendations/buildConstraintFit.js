@@ -11,15 +11,19 @@
  *   soft_preferences: [],
  *   unknowns: [],
  *   environmental_fit_summary: "",
- *   staff_verification_needed: []
+ *   staff_verification_needed: [],
+ *   evidence_tier: "strong" | "moderate" | "weak"
  * }
  *
  * Rules:
  * - Only use hard constraints for specific, vocationally significant evidence.
  * - Vague/generic evidence → moderate or unknown, never hard.
+ * - Evidence quality (strong/moderate/weak) gates how aggressively concerns are raised.
  * - Preserve detailed evidence; do not overwrite with weaker labels.
  * - Do not over-block. Do not assume inability from weak evidence.
  */
+
+import { scoreEvidenceItem, scoreEvidenceList } from "@/lib/recommendations/evidenceWeighting.js";
 
 function safeLower(v) {
   return String(v || "").toLowerCase();
@@ -65,7 +69,8 @@ function evalPhysical(vfp, job) {
   ]);
 
   if (restrictions.length > 0) {
-    // Check for specific severe documented restrictions
+    const { best: evidenceTier } = scoreEvidenceList(restrictions);
+
     const severeRestrictions = restrictions.filter((r) =>
       matchesAny(r, [
         "cannot stand", "no standing", "wheelchair", "unable to lift",
@@ -75,10 +80,20 @@ function evalPhysical(vfp, job) {
     );
 
     if (severeRestrictions.length > 0 && isPhysicallyDemanding) {
-      hard.push(`Documented restriction conflicts with physical job demands: ${severeRestrictions[0]}`);
-      verify.push("Confirm physical demands are compatible with documented restrictions before pursuing.");
+      // Only escalate to hard if evidence is strong/moderate (not a vague generic label)
+      if (evidenceTier === "strong" || evidenceTier === "moderate") {
+        hard.push(`Documented restriction conflicts with physical job demands: ${severeRestrictions[0]}`);
+        verify.push("Confirm physical demands are compatible with documented restrictions before pursuing.");
+      } else {
+        moderate.push(`Physical restriction noted (${severeRestrictions[0]}) — evidence is general; verify job demands before ruling out.`);
+        verify.push("Confirm the physical requirements of this role against documented restrictions.");
+      }
     } else if (isPhysicallyDemanding) {
-      moderate.push(`Physical restrictions noted (${restrictions.slice(0, 2).join(", ")}) — verify job demands.`);
+      if (evidenceTier === "weak") {
+        unknowns.push(`Physical considerations noted (${restrictions.slice(0, 2).join(", ")}) — evidence is general; clarify functional capacity.`);
+      } else {
+        moderate.push(`Physical restrictions noted (${restrictions.slice(0, 2).join(", ")}) — verify job demands.`);
+      }
       verify.push("Confirm the physical requirements of this role against documented restrictions.");
     }
   } else if (isPhysicallyDemanding) {
@@ -110,7 +125,8 @@ function evalSensory(vfp, job) {
   ]);
 
   if (sensoryNeeds.length > 0) {
-    // Check for severe/safety-relevant sensory flags
+    const { best: evidenceTier } = scoreEvidenceList(sensoryNeeds);
+
     const severeFlags = sensoryNeeds.filter((s) =>
       matchesAny(s, [
         "self-harm", "safety", "trigger", "coughing", "sneezing", "yawning",
@@ -119,10 +135,21 @@ function evalSensory(vfp, job) {
     );
 
     if (severeFlags.length > 0 && isHighStimulation) {
-      hard.push(`High-severity sensory trigger documented: "${severeFlags[0]}" — high-stimulation environment may pose safety risk.`);
-      verify.push("Safety-level sensory trigger noted. Confirm environment is appropriate before proceeding.");
+      if (evidenceTier === "strong") {
+        // Specific named triggers with safety implications → hard constraint
+        hard.push(`High-severity sensory trigger documented: "${severeFlags[0]}" — high-stimulation environment may pose safety risk.`);
+        verify.push("Safety-level sensory trigger noted. Confirm environment is appropriate before proceeding.");
+      } else {
+        // Severe-sounding keyword but vague evidence → moderate, not hard
+        moderate.push(`Sensory concern noted ("${severeFlags[0]}") — high-stimulation environment may be challenging; verify specifics.`);
+        verify.push("Clarify the nature and severity of this sensory need before placing in a high-stimulation environment.");
+      }
     } else if (isHighStimulation) {
-      moderate.push(`Sensory/environmental needs documented — high-stimulation environment may be challenging.`);
+      if (evidenceTier === "weak") {
+        unknowns.push("General sensory preferences noted — high-stimulation environment may not suit client; clarify tolerance.");
+      } else {
+        moderate.push(`Sensory/environmental needs documented — high-stimulation environment may be challenging.`);
+      }
       verify.push("Review sensory needs against the work environment for this role.");
     }
   } else if (isHighStimulation) {
@@ -388,29 +415,54 @@ function evalReadiness(vfp) {
 
 function evalBarriers(vfp) {
   const moderate = [];
+  const unknowns = [];
   const verify = [];
 
   const barriers = vfp?.barriers || [];
 
   if (barriers.length > 0) {
-    moderate.push(`Documented barriers: ${barriers.slice(0, 2).map(readableItem).join(", ")}.`);
+    const { best: evidenceTier } = scoreEvidenceList(barriers);
+
+    if (evidenceTier === "strong") {
+      moderate.push(`Documented barriers with functional impact: ${barriers.slice(0, 2).map(readableItem).join(", ")}.`);
+    } else if (evidenceTier === "moderate") {
+      moderate.push(`Barriers noted: ${barriers.slice(0, 2).map(readableItem).join(", ")}.`);
+    } else {
+      // Weak evidence (generic labels) → unknown, not a moderate concern
+      unknowns.push(`General barriers noted (${barriers.slice(0, 2).map(readableItem).join(", ")}) — functional impact not fully described.`);
+    }
+
     if (barriers.some((b) => matchesAny(b, ["mental_health", "psychiatric", "ptsd", "anxiety", "depression"]))) {
-      verify.push("Mental health barriers documented — discuss workplace support options with client.");
+      // Only escalate if not purely a generic diagnostic label
+      if (evidenceTier !== "weak") {
+        verify.push("Mental health barriers documented — discuss workplace support options with client.");
+      } else {
+        verify.push("Mental health considerations noted (general) — confirm functional impact with client.");
+      }
     }
   }
 
-  return { moderate, verify };
+  return { moderate, unknowns, verify };
 }
 
 // ── OVERALL FIT LEVEL ────────────────────────────────────────────────────────
 
-function resolveOverallFitLevel(hard, moderate, unknowns, soft) {
+/**
+ * evidenceTier ("strong"|"moderate"|"weak") gates how aggressively we score.
+ * Weak evidence → unknowns don't count as heavily toward caution/poor_fit.
+ */
+function resolveOverallFitLevel(hard, moderate, unknowns, soft, evidenceTier = "moderate") {
   if (hard.length >= 1) return "poor_fit";
-  if (moderate.length >= 3) return "caution";
-  if (moderate.length >= 1 && unknowns.length >= 2) return "caution";
+
+  // With weak overall evidence, be less aggressive about escalating to caution
+  const unknownWeight = evidenceTier === "weak" ? 3 : 2; // need more unknowns to trigger caution
+  const moderateThreshold = evidenceTier === "strong" ? 2 : 3; // strong evidence: caution sooner
+
+  if (moderate.length >= moderateThreshold) return "caution";
+  if (moderate.length >= 1 && unknowns.length >= unknownWeight) return "caution";
   if (moderate.length === 0 && unknowns.length === 0 && soft.length > 0) return "strong_fit";
   if (moderate.length <= 1 && unknowns.length <= 1) return "possible_fit";
-  if (unknowns.length >= 3) return "unknown";
+  if (unknowns.length >= 4) return "unknown";
   return "possible_fit";
 }
 
@@ -544,11 +596,22 @@ export function buildConstraintFit(job = {}, context = {}) {
   merge(evalReadiness(vfp));
   merge(evalBarriers(vfp));
 
-  const fitLevel = resolveOverallFitLevel(hard, moderate, unknowns, soft);
+  // Assess overall evidence quality from key VFP domains to calibrate fit level
+  const allVfpEvidence = [
+    ...(vfp.physical_restrictions || []),
+    ...(vfp.sensory_environmental_needs || []),
+    ...(vfp.sensory_limitations || []),
+    ...(vfp.barriers || []),
+    ...(vfp.support_needs || []),
+  ];
+  const { best: overallEvidenceTier } = scoreEvidenceList(allVfpEvidence);
+
+  const fitLevel = resolveOverallFitLevel(hard, moderate, unknowns, soft, overallEvidenceTier);
   const envSummary = buildEnvSummary(fitLevel, job, hard, moderate, unknowns, soft);
 
   return {
     overall_fit_level: fitLevel,
+    evidence_tier: overallEvidenceTier,
     hard_constraints: hard,
     moderate_constraints: moderate,
     soft_preferences: soft,

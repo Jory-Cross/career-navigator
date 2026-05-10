@@ -15,6 +15,7 @@ function resolveConfidenceLevel({
   score = 0,
   fitConcerns = [],
   profile = {},
+  groundingEvidenceTier = null,  // "strong"|"moderate"|"weak" from grounding layer
 }) {
   const hasResume = (profile.resume_skills || []).length > 0;
   const hasWSA = (profile.wsa_strengths || []).length > 0;
@@ -29,33 +30,50 @@ function resolveConfidenceLevel({
 
   const hasConflicts = fitConcerns.length > 0;
 
-  // HIGH CONFIDENCE
-  if (score >= 70 && !hasConflicts && dataScore >= 3) {
+  // Evidence tier modifier: weak evidence raises the bar for high/medium
+  const evidenceBoost = groundingEvidenceTier === "strong" ? 5
+    : groundingEvidenceTier === "weak" ? -10
+    : 0;
+
+  const effectiveScore = score + evidenceBoost;
+
+  // HIGH CONFIDENCE — requires strong evidence base
+  if (
+    effectiveScore >= 70 &&
+    !hasConflicts &&
+    dataScore >= 3 &&
+    groundingEvidenceTier !== "weak"
+  ) {
     return {
       confidence_level: "high",
-      confidence_reason:
-        "Strong match with no conflicts and supported by multiple data sources (resume, WSA, or assessments).",
+      confidence_reason: groundingEvidenceTier === "strong"
+        ? "Strong match supported by specific, corroborated vocational evidence across multiple sources."
+        : "Strong match with no conflicts and supported by multiple data sources (resume, WSA, or assessments).",
     };
   }
 
-  // MEDIUM CONFIDENCE (THIS IS THE KEY FIX)
+  // MEDIUM CONFIDENCE
   if (
-    (score >= 40 && !hasConflicts) ||
-    (score >= 55 && hasConflicts) ||
-    (dataScore >= 3 && score >= 25)
+    (effectiveScore >= 40 && !hasConflicts) ||
+    (effectiveScore >= 55 && hasConflicts) ||
+    (dataScore >= 3 && effectiveScore >= 25)
   ) {
+    const weakCaveat = groundingEvidenceTier === "weak"
+      ? " Evidence is general — gather more specific vocational data before acting."
+      : "";
     return {
       confidence_level: "medium",
-      confidence_reason:
-        "Reasonable match with some supporting data. May require staff review but is a viable option.",
+      confidence_reason: `Reasonable match with some supporting data. May require staff review but is a viable option.${weakCaveat}`,
     };
   }
 
   // LOW CONFIDENCE
+  const weakNote = groundingEvidenceTier === "weak"
+    ? " Evidence is primarily general or inferred."
+    : "";
   return {
     confidence_level: "low",
-    confidence_reason:
-      "Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.",
+    confidence_reason: `Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.${weakNote}`,
   };
 }
 
@@ -397,6 +415,17 @@ if (fitConcerns.length > 0) {
     console.error("[generateRecommendationBatch] buildConstraintFit failed for:", groundedJob.title, e);
     groundedJob.constraint_fit = null;
   }
+
+  // Re-resolve confidence using evidence tier from grounding
+  const groundingEvidenceTier = groundedJob.grounding?.evidence_richness?.tier || null;
+  const recalibratedConfidence = resolveConfidenceLevel({
+    score,
+    fitConcerns,
+    profile,
+    groundingEvidenceTier,
+  });
+  groundedJob.confidence_level = recalibratedConfidence.confidence_level;
+  groundedJob.confidence_reason = recalibratedConfidence.confidence_reason;
 
   console.log("[generateRecommendationBatch] enriched job:", {
     title: groundedJob.title,
