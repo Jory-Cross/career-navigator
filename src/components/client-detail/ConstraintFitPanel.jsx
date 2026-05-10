@@ -145,20 +145,22 @@ export default function ConstraintFitPanel({ constraintFit }) {
           )}
 
           {/* Occupation context notes */}
-          {occupation_notes.length > 0 && (
+          {(occupation_notes?.length > 0 || occupation_profile_label) && (
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide mb-1 text-slate-500 flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Occupational Context{occupation_profile_label ? ` — ${occupation_profile_label}` : ""}
               </p>
-              <ul className="space-y-1 pl-0.5">
-                {occupation_notes.map((note, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 leading-relaxed">
-                    <span className="shrink-0 text-slate-400 font-bold mt-0.5">◦</span>
-                    <span>{note}</span>
-                  </li>
-                ))}
-              </ul>
+              {occupation_notes?.length > 0 && (
+                <ul className="space-y-1 pl-0.5">
+                  {occupation_notes.map((note, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 leading-relaxed">
+                      <span className="shrink-0 text-slate-400 font-bold mt-0.5">◦</span>
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
