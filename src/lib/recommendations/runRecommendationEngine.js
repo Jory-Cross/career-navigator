@@ -24,6 +24,7 @@ const existing = null;
   const result = await generateRecommendationBatch({
     client,
     ...inputs,
+    rawVfp: vocationalProfile,  // pass raw VFP for grounding engine
   });
 
   console.log("RUN ENGINE RESULT:", result);

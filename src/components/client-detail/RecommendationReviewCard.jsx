@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import RecommendationGroundingPanel from "@/components/client-detail/RecommendationGroundingPanel";
 
 // ============================================================
 // RECOMMENDATION STATUS WORKFLOW (JOB FIELD / OCCUPATION LEVEL)
@@ -320,6 +321,12 @@ setReviewNotesError("");
               <p className="text-xs text-slate-500 italic">Not yet reviewed by staff</p>
             )}
           </div>
+
+          {/* Grounding Evidence Panel */}
+          <RecommendationGroundingPanel
+            grounding={recommendation.grounding}
+            confidenceLevel={recommendation.confidence_level}
+          />
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2 border-t border-slate-100">

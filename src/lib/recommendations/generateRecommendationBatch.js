@@ -7,6 +7,8 @@ import {
   applyConstraintRules,
   resolveFitLevel,
 } from "@/lib/recommendations/constraintRules";
+import { buildRecommendationGrounding } from "@/lib/recommendations/buildRecommendationGrounding.js";
+import { evaluateVFPMaturity } from "@/lib/vfpMaturity.js";
 
 function resolveConfidenceLevel({
   score = 0,
@@ -64,6 +66,7 @@ export async function generateRecommendationBatch({
   otherAssessments = [],
   interestProfile = null,
   onet_answer_string = null,
+  rawVfp = null,       // raw VFP object for grounding (vocational_facts_profile)
 } = {}) {
     const profile = {
     resume_skills: vocationalProfile?.strengths?.length
@@ -114,6 +117,25 @@ export async function generateRecommendationBatch({
   };
 
   const constraintProfile = buildClientConstraints(profile);
+
+  // Build maturity evaluation for grounding context
+  const vfpMaturity = evaluateVFPMaturity({
+    vfp: rawVfp,
+    client,
+    documents: resumes,
+    assessments: otherAssessments,
+  });
+
+  // Grounding context passed to each recommendation
+  const groundingContext = {
+    vfp: rawVfp,
+    wsa,
+    resumes,
+    interestProfile,
+    otherAssessments,
+    maturity: vfpMaturity,
+    profile,
+  };
 
   const onetProfile = buildOnetRecommendationProfile({
     riasecProfile: interestProfile,
@@ -342,21 +364,22 @@ if (fitConcerns.length > 0) {
     profile,
   });
 
-  return {
-  ...job,
-  match_score: score,
-  fit_concerns: fitConcerns,
-  not_fit_reasons: notFitReasons,
-  recommended_environments:
-    constraintResult.recommended_environments || [],
-  fit_level: resolveFitLevel({
-    score,
-    fitConcerns,
-  }),
-  confidence_level: confidence.confidence_level,
-  confidence_reason: confidence.confidence_reason,
-  constraint_codes: constraintProfile.constraints.map((c) => c.code),
-};
+  const groundedJob = {
+    ...job,
+    match_score: score,
+    fit_concerns: fitConcerns,
+    not_fit_reasons: notFitReasons,
+    recommended_environments: constraintResult.recommended_environments || [],
+    fit_level: resolveFitLevel({ score, fitConcerns }),
+    confidence_level: confidence.confidence_level,
+    confidence_reason: confidence.confidence_reason,
+    constraint_codes: constraintProfile.constraints.map((c) => c.code),
+  };
+
+  // Attach grounding object (explainability layer)
+  groundedJob.grounding = buildRecommendationGrounding(groundedJob, groundingContext);
+
+  return groundedJob;
 });
 
 const recommendationsWithConstraints = processed
