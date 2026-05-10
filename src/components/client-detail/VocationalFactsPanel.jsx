@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   Loader2, RefreshCw, AlertTriangle, CheckCircle, ChevronDown, ChevronUp,
-  Sparkles, FileText, Clock, Info
+  Sparkles, FileText, Clock, Info, ShieldCheck, ShieldAlert, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { evaluateVFPMaturity } from "@/lib/vfpMaturity";
 
 const CATEGORY_CONFIG = [
   { key: "skills",                    label: "Skills",                      emoji: "🛠️",  color: "blue" },
@@ -339,6 +340,120 @@ function formatFactForDisplay(categoryKey, fact) {
   return toReadable(fact);
 }
 
+// ── MATURITY + CONFIDENCE DISPLAY ────────────────────────────────────────────
+
+const MATURITY_CONFIG = {
+  "Early Intake Profile":          { color: "bg-slate-100 text-slate-600 border-slate-200",      dot: "bg-slate-400" },
+  "Foundational Profile":          { color: "bg-blue-50 text-blue-700 border-blue-200",           dot: "bg-blue-400" },
+  "Multi-Source Profile":          { color: "bg-indigo-50 text-indigo-700 border-indigo-200",     dot: "bg-indigo-500" },
+  "Comprehensive Vocational Profile": { color: "bg-green-50 text-green-700 border-green-200",    dot: "bg-green-500" },
+};
+
+const CONFIDENCE_CONFIG = {
+  Low:      { color: "bg-red-50 text-red-600 border-red-200",       icon: ShieldAlert },
+  Moderate: { color: "bg-amber-50 text-amber-700 border-amber-200", icon: Shield },
+  High:     { color: "bg-green-50 text-green-700 border-green-200", icon: ShieldCheck },
+};
+
+function MaturityCard({ maturity }) {
+  const [showDetails, setShowDetails] = useState(false);
+  if (!maturity?.maturity_level) return null;
+
+  const mCfg = MATURITY_CONFIG[maturity.maturity_level] || MATURITY_CONFIG["Foundational Profile"];
+  const cCfg = CONFIDENCE_CONFIG[maturity.confidence_level] || CONFIDENCE_CONFIG["Low"];
+  const ConfIcon = cCfg.icon;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      {/* Top row: badges */}
+      <div className="flex items-center justify-between px-3 py-2.5 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Maturity badge */}
+          <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border", mCfg.color)}>
+            <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", mCfg.dot)} />
+            {maturity.maturity_level}
+          </span>
+          {/* Confidence badge */}
+          <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border", cCfg.color)}>
+            <ConfIcon className="w-3 h-3 shrink-0" />
+            {maturity.confidence_level} Confidence
+            <span className="opacity-60 ml-0.5">({maturity.confidence_score})</span>
+          </span>
+        </div>
+        <button
+          onClick={() => setShowDetails(v => !v)}
+          className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 shrink-0"
+        >
+          {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {showDetails ? "Less" : "Details"}
+        </button>
+      </div>
+
+      {/* Primary reason(s) — always visible, just the first 1-2 */}
+      {maturity.reasons?.length > 0 && (
+        <div className="px-3 pb-2 text-[11px] text-slate-500 leading-relaxed">
+          {maturity.reasons.slice(0, 2).join(" ")}
+        </div>
+      )}
+
+      {/* Expanded details */}
+      {showDetails && (
+        <div className="border-t border-slate-100 px-3 py-3 space-y-3">
+          {/* Source coverage */}
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Source Coverage</p>
+            <div className="flex flex-wrap gap-1.5">
+              {maturity.source_coverage.map((s, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "text-[10px] px-2 py-0.5 rounded-full border font-medium",
+                    s.present
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-slate-50 border-slate-200 text-slate-400 line-through"
+                  )}
+                >
+                  {s.present ? "✓ " : ""}{s.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* All reasons */}
+          {maturity.reasons?.length > 2 && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Profile Notes</p>
+              <ul className="space-y-0.5">
+                {maturity.reasons.map((r, i) => (
+                  <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                    <span className="shrink-0 text-slate-300 mt-0.5">•</span>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Next steps */}
+          {maturity.next_steps?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Suggested Next Steps</p>
+              <ul className="space-y-0.5">
+                {maturity.next_steps.map((s, i) => (
+                  <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                    <span className="shrink-0 text-blue-400 mt-0.5">→</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FactItem({ fact, source }) {
   return (
     <div className="flex items-start gap-2 text-xs py-1.5 border-b border-slate-50 last:border-0">
@@ -495,7 +610,15 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
         ? metadata.source_assessment_ids.length
         : client?.vocational_facts_profile?.assessments_processed || 0;
 
-    const handleExtract = async () => {
+  // Compute maturity whenever vfp / client / documents / assessments change
+  const maturity = useMemo(() => evaluateVFPMaturity({
+    vfp,
+    client,
+    documents: client?.documents || [],
+    assessments: client?.assessments || [],
+  }), [vfp, client]);
+
+  const handleExtract = async () => {
     setExtracting(true);
     try {
       const res = await base44.functions.invoke("processAssessmentDocuments", {
@@ -672,6 +795,9 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
           </p>
         </Card>
       )}
+
+      {/* Maturity + Confidence */}
+      {vfp && <MaturityCard maturity={maturity} />}
 
       {/* Conflicts */}
       {vfp?.conflicts?.length > 0 && (
