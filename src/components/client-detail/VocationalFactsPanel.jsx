@@ -43,69 +43,300 @@ const COLOR_MAP = {
   slate: "bg-slate-50 border-slate-200 text-slate-700",
 };
 
-const SUPPORT_NEEDS_DISPLAY_MAP = {
-  job_coaching_required: "Job coaching support",
-  routine_learning_support: "Additional training time for learning routines",
-  extended_training_support: "Extended training/support for task learning",
-  slower_processing_support: "Additional processing/responding time",
-  communication_support: "Communication/task adaptation support",
-  accessibility_support: "Accessibility accommodation support",
-  wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
-  moderate_support_needs: "Moderate ongoing support needs",
+// ── DISPLAY LABEL MAPS ──────────────────────────────────────────────────────
+// Maps internal snake_case tags → staff-friendly readable labels, per category.
+// Unknown tags fall back to: replace underscores, title-case.
+
+const DISPLAY_MAPS = {
+  skills: {
+    computer_literate: "Computer literate",
+    email_skills: "Email communication",
+    social_media_skills: "Social media skills",
+    customer_service_capable: "Customer service capable",
+    reliability: "Reliable / dependable",
+    attention_to_detail: "Attention to detail",
+    teamwork: "Teamwork / collaboration",
+    leadership: "Leadership experience",
+    communication: "Strong communication skills",
+    problem_solving: "Problem-solving ability",
+    creativity: "Creative thinking",
+    academic_achievement: "Academic achievement",
+    specialization: "Specialized training or expertise",
+  },
+
+  interests: {
+    helping_people: "Helping others / people-oriented",
+    teamwork: "Teamwork and collaboration",
+    autonomy: "Independent work / autonomy",
+    problem_solving: "Problem-solving",
+    attention_to_detail: "Detail-oriented work",
+    creativity: "Creative or artistic interests",
+    technology: "Technology and computers",
+    healthcare: "Healthcare and caregiving",
+    education: "Education / teaching",
+    skilled_trades: "Skilled trades",
+    finance: "Finance / accounting",
+    sales: "Sales / retail",
+    outdoor: "Outdoor or physical work",
+  },
+
+  preferred_tasks: {
+    hands_on: "Hands-on work",
+    customer_facing: "Customer-facing tasks",
+    structured_tasks: "Structured, routine tasks",
+    independent_work: "Independent work",
+    teamwork: "Team-based tasks",
+    data_entry: "Data entry",
+    filing_organizing: "Filing and organizing",
+    physical_labor: "Physical labor",
+    computer_work: "Computer / desk work",
+  },
+
+  avoided_tasks: {
+    public_facing: "Prefers to avoid public-facing roles",
+    high_pressure: "Avoids high-pressure or deadline-heavy work",
+    repetitive_tasks: "Prefers variety over repetitive tasks",
+    chaotic_environment: "Avoids chaotic or disorganized environments",
+  },
+
+  work_environment_preferences: {
+    low_noise: "Low-noise / quiet environment",
+    structured: "Structured work environment",
+    flexible: "Flexible work environment",
+    team_oriented: "Team-oriented setting",
+    independent: "Prefers independent work setting",
+    outdoor: "Outdoor work environment",
+    indoor: "Indoor work environment",
+    remote: "Remote / work-from-home",
+    hybrid: "Hybrid work preferred",
+    small_team: "Small team preferred",
+    large_organization: "Open to large organization",
+  },
+
+  schedule_availability: {
+    full_time: "Full-time availability",
+    part_time: "Part-time availability",
+    weekdays_only: "Weekdays only",
+    weekends_only: "Weekends only",
+    morning_preferred: "Morning hours preferred",
+    afternoon_preferred: "Afternoon hours preferred",
+    evening_preferred: "Evening hours preferred",
+    no_overnight_shifts: "No overnight shifts",
+    childcare_hours: "Schedule limited by childcare",
+    flexible: "Flexible schedule",
+  },
+
+  transportation: {
+    reliable_personal_vehicle: "Has reliable personal vehicle",
+    relies_on_public_transit: "Relies on public transit",
+    requires_scheduled_transportation: "Requires scheduled transportation (e.g. paratransit)",
+    no_personal_vehicle: "No personal vehicle",
+    no_driver_license: "No driver's license",
+    vehicle_without_license: "Has vehicle but no license",
+    relies_on_alternative_transport: "Relies on alternative transportation",
+    mobility_access_needed: "Mobility/accessibility needs for transit",
+    cost_prohibitive: "Transportation costs are a barrier",
+    distance_barrier: "Distance is a transportation barrier",
+    transportation_scheduling_support: "Needs help scheduling transportation",
+    transportation_planning: "Needs transportation planning support",
+    route_learning_support: "Needs support learning transit routes",
+    ride_coordination: "Needs ride coordination support",
+    carpool_coordination: "Open to / needs carpool coordination",
+    rural_location: "Lives in a rural area",
+    urban_location: "Lives in an urban area",
+    suburban_location: "Lives in a suburban area",
+  },
+
+  social_communication_needs: {
+    slower_processing_time: "Additional processing / responding time",
+    needs_processing_time: "Needs extra processing time",
+    capable_customer_interaction: "Capable of appropriate customer interaction",
+    prefers_written_communication: "Prefers written communication",
+    prefers_verbal_communication: "Prefers verbal / phone communication",
+    learns_by_demonstration: "Learns best through demonstration",
+    primary_language_spanish: "Primary language: Spanish",
+    primary_language_french: "Primary language: French",
+    communication_support: "Communication / task adaptation support",
+    social_tolerance: "Social interaction tolerance noted",
+    social_supports: "Has social support network",
+    family: "Family support network",
+    friends: "Friend / peer support network",
+    professional: "Professional counselor or case manager support",
+    faith_community: "Faith community support",
+    support_group: "Participates in support group",
+  },
+
+  sensory_environmental_needs: {
+    low_noise: "Low-noise / quiet workspace needed",
+    low_distraction_workspace: "Low-distraction workspace needed",
+    sensory_sensitivity: "Sensory sensitivity noted",
+    lighting_sensitivity: "Lighting sensitivity",
+    temperature_sensitivity: "Temperature sensitivity",
+    scent_sensitivity: "Scent / chemical sensitivity",
+    tactile_sensitivity: "Tactile sensitivity",
+    mobility_access_needed: "Mobility / physical access needed",
+  },
+
+  physical_restrictions: {
+    wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
+    accessible_restroom: "Accessible restroom required",
+    accessible_parking: "Accessible parking required",
+    magnification_or_large_print: "Large print or magnification support",
+    assistive_technology: "Assistive technology needed",
+    extended_training_time: "Additional training time for learning routines",
+    routine_repetition_support: "Routine repetition / reinforcement support",
+    written_instructions: "Written instructions preferred",
+    low_distraction_workspace: "Low-distraction workspace",
+    flexible_schedule: "Flexible schedule accommodation",
+    frequent_breaks: "Frequent break accommodation needed",
+    mobility_limitations: "Mobility limitations noted",
+    visual_impairment: "Visual impairment noted",
+    hearing_impairment: "Hearing impairment noted",
+    chronic_pain_fatigue: "Chronic pain or fatigue affects work",
+  },
+
+  support_needs: {
+    moderate_support_needs: "Moderate ongoing support needs",
+    high_support_needs: "High level of ongoing support needed",
+    job_coaching_required: "Job coaching support",
+    on_the_job_support: "On-the-job support",
+    mentoring_needed: "Mentoring / peer support",
+    routine_learning_support: "Additional training time for learning routines",
+    extended_training_support: "Extended training / support for task learning",
+    slower_processing_support: "Additional processing / responding time",
+    task_breakdown_support: "Task breakdown and step-by-step guidance",
+    task_prompting: "Task prompting support",
+    communication_support: "Communication / task adaptation support",
+    written_instructions: "Written instructions preferred",
+    schedule_support: "Schedule structure support",
+    supervision_support: "Supervisor check-ins needed",
+    accessibility_support: "Accessibility accommodation support",
+    wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
+    sensory_support: "Sensory accommodation support",
+    transportation_support: "Transportation support needed",
+    benefits_counseling: "Benefits counseling needed",
+    work_incentive_planning: "Work incentive planning support",
+    healthcare_coordination: "Healthcare coordination support",
+    veteran_services: "Veteran services support",
+  },
+
+  job_readiness_level: {
+    ready_to_start: "Ready to start job search",
+    developing: "Developing job readiness",
+    exploring: "Exploring career options",
+    fully_documented: "Fully documented profile",
+    mostly_ready: "Mostly ready — some documents pending",
+    documents_complete: "All required documents complete",
+    documents_partial: "Some documents still needed",
+    documents_minimal: "Minimal documentation available",
+    documents_missing: "Key documents missing",
+    good_endurance: "Good stamina / work endurance",
+    low_endurance: "Low stamina — may need part-time start",
+  },
+
+  employer_preferences: {
+    ssi_recipient: "Receives SSI",
+    ssdi_recipient: "Receives SSDI",
+    medicare_coverage: "Has Medicare coverage",
+    medicaid_coverage: "Has Medicaid coverage",
+    snap_recipient: "Receives SNAP benefits",
+    ticket_to_work_enrolled: "Enrolled in Ticket to Work",
+    no_current_benefits: "No current benefits reported",
+    ticket_to_work_available: "Ticket to Work available",
+    work_incentive_planning: "Work incentive planning recommended",
+    healthcare_coordination: "Healthcare coordination recommended",
+  },
+
+  barriers: {
+    mobility_limitations: "Mobility limitations",
+    visual_impairment: "Visual impairment",
+    hearing_impairment: "Hearing impairment",
+    cognitive_processing: "Cognitive processing differences",
+    learning_difference: "Learning difference / dyslexia",
+    mental_health_condition: "Mental health condition",
+    chronic_pain_fatigue: "Chronic pain or fatigue",
+    routine_change_difficulty: "Difficulty adapting to routine changes",
+    physical_disability: "Physical disability",
+    cognitive_disability: "Cognitive disability",
+    mental_health_disability: "Mental health disability",
+    developmental_disability: "Developmental disability",
+    sensory_disability: "Sensory disability",
+  },
+
+  goals: {
+    employment: "Gain / maintain employment",
+    daily_living: "Improve daily living skills",
+    social_skills: "Build social skills",
+    communication: "Improve communication skills",
+    job_retention: "Job retention",
+    education: "Pursue further education",
+    other: "Other personal / vocational goal",
+    helping_people: "Career goal: helping others",
+    problem_solving: "Career goal: problem-solving role",
+    teamwork: "Career goal: collaborative environment",
+    autonomy: "Career goal: independent / autonomous work",
+  },
 };
 
-function formatSupportNeed(fact) {
+// Phrase-level collapse rules: if the raw fact (lowercased) includes any of these
+// substrings, map to the canonical readable label.
+const PHRASE_COLLAPSE_RULES = [
+  // Support Needs phrases
+  { match: ["job coaching", "assist in adapting to work tasks", "job coach"], label: "Job coaching support" },
+  { match: ["additional time and training", "learning job task routines", "learning routines"], label: "Additional training time for learning routines" },
+  { match: ["wheelchair accessibility", "workplace and restroom"], label: "Wheelchair-accessible workplace/restroom" },
+  { match: ["communication scenarios", "communication support", "assist with communication"], label: "Communication / task adaptation support" },
+  { match: ["slower processing", "additional processing", "processing time"], label: "Additional processing / responding time" },
+  { match: ["provide additional time"], label: "Additional processing / responding time" },
+  { match: ["extended training", "additional training"], label: "Extended training / support for task learning" },
+  // Transportation phrases
+  { match: ["help scheduling transportation", "scheduling transportation"], label: "Needs help scheduling transportation" },
+  { match: ["route learning", "learn transit routes"], label: "Needs support learning transit routes" },
+  // Physical / Accommodation phrases
+  { match: ["large print", "magnification"], label: "Large print or magnification support" },
+  { match: ["assistive technology", "screen reader"], label: "Assistive technology needed" },
+  { match: ["written instruction", "written direction"], label: "Written instructions preferred" },
+  { match: ["frequent break", "rest break"], label: "Frequent break accommodation needed" },
+];
+
+/** Fallback: convert snake_case or dash-case to Title Case readable string */
+function toReadable(str) {
+  return str
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Main display formatter. Given a category key and a raw fact string,
+ * returns a staff-friendly readable label.
+ */
+function formatFactForDisplay(categoryKey, fact) {
   if (!fact || typeof fact !== "string") return fact;
 
   const normalized = fact.trim().toLowerCase();
 
-    const canonicalMap = {
-    moderate_support_needs: "Moderate ongoing support needs",
-    job_coaching_required: "Job coaching support",
-    routine_learning_support: "Additional training time for learning routines",
-    slower_processing_support: "Additional processing/responding time",
-    communication_support: "Communication/task adaptation support",
-    extended_training_support: "Extended training/support for task learning",
-    accessibility_support: "Accessibility accommodation support",
-    wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
-  };
-
-  if (canonicalMap[normalized]) {
-    return canonicalMap[normalized];
+  // 1. Try exact canonical map for the given category
+  const catMap = DISPLAY_MAPS[categoryKey];
+  if (catMap && catMap[normalized]) {
+    return catMap[normalized];
   }
 
-  // Deduplicate verbose phrases into canonical labels
-  if (
-    normalized.includes("job coaching") ||
-    normalized.includes("assist in adapting to work tasks")
-  ) {
-    return "Job coaching support";
+  // 2. Try exact canonical map in support_needs as a cross-category fallback
+  //    (many tags overlap across categories)
+  for (const map of Object.values(DISPLAY_MAPS)) {
+    if (map[normalized]) return map[normalized];
   }
 
-  if (
-    normalized.includes("additional time and training") ||
-    normalized.includes("learning job task routines")
-  ) {
-    return "Additional training time for learning routines";
+  // 3. Phrase-level collapse rules (substring matching)
+  for (const rule of PHRASE_COLLAPSE_RULES) {
+    if (rule.match.some(phrase => normalized.includes(phrase))) {
+      return rule.label;
+    }
   }
 
-  if (
-    normalized.includes("wheelchair accessibility") ||
-    normalized.includes("workplace and restroom")
-  ) {
-    return "Wheelchair-accessible workplace/restroom";
-  }
-
-  if (
-    normalized.includes("communication scenarios") ||
-    normalized.includes("communication support")
-  ) {
-    return "Communication/task adaptation support";
-  }
-
-  return fact
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  // 4. Fallback: readable title-case
+  return toReadable(fact);
 }
 
 function FactItem({ fact, source }) {
@@ -535,7 +766,7 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
                   .concat(vfp.work_goal_themes || []);
               }
 
-                           // Convert strings/objects to display-ready objects
+              // Convert strings/objects to display-ready objects, format for display
               items = items.map(item => {
                 const rawFact =
                   typeof item === "string"
@@ -547,28 +778,19 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
                     ? { fact: rawFact, source: null }
                     : { ...item, fact: rawFact };
 
-                if (config.key === "support_needs") {
-                  return {
-                    ...normalizedItem,
-                    fact: formatSupportNeed(rawFact),
-                  };
-                }
-
-                return normalizedItem;
+                return {
+                  ...normalizedItem,
+                  fact: formatFactForDisplay(config.key, rawFact),
+                };
               });
 
-              // Deduplicate support needs after formatting
-              if (config.key === "support_needs") {
-                const seenSupportNeeds = new Set();
-
+              // Deduplicate all categories after formatting (same logic as support_needs)
+              {
+                const seen = new Set();
                 items = items.filter((item) => {
                   const key = String(item.fact || "").trim().toLowerCase();
-
-                  if (!key || seenSupportNeeds.has(key)) {
-                    return false;
-                  }
-
-                  seenSupportNeeds.add(key);
+                  if (!key || seen.has(key)) return false;
+                  seen.add(key);
                   return true;
                 });
               }
