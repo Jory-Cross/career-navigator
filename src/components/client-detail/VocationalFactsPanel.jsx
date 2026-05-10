@@ -535,23 +535,27 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
                   .concat(vfp.work_goal_themes || []);
               }
 
-                            // Convert strings to objects with fact/source if needed
+                           // Convert strings/objects to display-ready objects
               items = items.map(item => {
+                const rawFact =
+                  typeof item === "string"
+                    ? item
+                    : item?.fact || item?.value || item?.label || item?.name || "";
+
                 const normalizedItem =
-                  typeof item === "string" ? { fact: item, source: null } : item;
+                  typeof item === "string"
+                    ? { fact: rawFact, source: null }
+                    : { ...item, fact: rawFact };
 
                 if (config.key === "support_needs") {
                   return {
                     ...normalizedItem,
-                    fact: formatSupportNeed(normalizedItem.fact),
+                    fact: formatSupportNeed(rawFact),
                   };
                 }
 
                 return normalizedItem;
               });
-
-              return (
-                <CategoryCard
                   key={config.key}
                   config={config}
                   items={items}
