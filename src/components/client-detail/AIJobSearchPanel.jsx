@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import RecommendationGroundingPanel from "@/components/client-detail/RecommendationGroundingPanel";
+import RecommendationCardPanels from "@/components/client-detail/RecommendationCardPanels";
 import {
   Sparkles, Loader2, CheckCircle, BookmarkPlus,
   Search, History, Lightbulb, AlertTriangle, FileText,
@@ -1122,8 +1122,8 @@ const validJobCount = jobs.filter(
     Client considerations: {rec.constraint_codes.join(", ")}
   </div>
 )}
-              {/* Grounding evidence panel */}
-              <RecommendationGroundingPanel
+              {/* Evidence panels */}
+              <RecommendationCardPanels
                 grounding={rec.grounding}
                 confidenceLevel={rec.confidence_level}
                 constraintFit={rec.constraint_fit}

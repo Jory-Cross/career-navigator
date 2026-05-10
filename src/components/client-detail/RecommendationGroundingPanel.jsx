@@ -49,13 +49,6 @@ function Section({ title, items, icon: Icon, iconClass, emptyText, colorClass })
 export default function RecommendationGroundingPanel({ grounding, confidenceLevel, constraintFit }) {
   const [open, setOpen] = useState(false);
 
-  // Debug: log grounding state on every render
-  console.log("[GroundingPanel]", {
-    title: grounding?.grounding_summary?.slice(0, 40) || "(no summary)",
-    hasGrounding: !!grounding,
-    hasConstraintFit: !!constraintFit,
-  });
-
   if (!grounding) {
     // Fallback: show minimal panel if constraintFit exists
     if (constraintFit) {
