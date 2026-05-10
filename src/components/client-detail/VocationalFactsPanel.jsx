@@ -43,6 +43,31 @@ const COLOR_MAP = {
   slate: "bg-slate-50 border-slate-200 text-slate-700",
 };
 
+const SUPPORT_NEEDS_DISPLAY_MAP = {
+  job_coaching_required: "Job coaching support",
+  routine_learning_support: "Additional training time for learning routines",
+  extended_training_support: "Extended training/support for task learning",
+  slower_processing_support: "Additional processing/responding time",
+  communication_support: "Communication/task adaptation support",
+  accessibility_support: "Accessibility accommodation support",
+  wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
+  moderate_support_needs: "Moderate ongoing support needs",
+};
+
+function formatSupportNeed(fact) {
+  if (!fact || typeof fact !== "string") return fact;
+
+  const normalized = fact.trim().toLowerCase();
+
+  if (SUPPORT_NEEDS_DISPLAY_MAP[normalized]) {
+    return SUPPORT_NEEDS_DISPLAY_MAP[normalized];
+  }
+
+  return fact
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function FactItem({ fact, source }) {
   return (
     <div className="flex items-start gap-2 text-xs py-1.5 border-b border-slate-50 last:border-0">
