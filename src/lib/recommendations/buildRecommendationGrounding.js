@@ -30,6 +30,35 @@ function labelRiasec(code) {
 function safeArr(v) { return Array.isArray(v) ? v : []; }
 function safeStr(v) { return typeof v === "string" ? v.trim() : ""; }
 
+/**
+ * Convert a VFP fact item (string or structured object) into a readable string.
+ * Supports: strings, { fact, source }, { label }, { value }, { summary }, { detail }
+ * If item has both fact and source, renders "fact [source]".
+ */
+function readableFact(item) {
+  if (typeof item === "string") return item.trim();
+  if (!item || typeof item !== "object") return String(item ?? "").trim();
+  // Best-case: fact + source attribution
+  if (item.fact && item.source) return `${item.fact} [${item.source}]`;
+  if (item.fact) return item.fact;
+  // Fallback priority
+  return (
+    item.label ||
+    item.value ||
+    item.summary ||
+    item.detail ||
+    item.text ||
+    item.description ||
+    item.name ||
+    Object.values(item).find((v) => typeof v === "string") ||
+    ""
+  ).trim();
+}
+
+function readableFactList(arr) {
+  return safeArr(arr).map(readableFact).filter(Boolean);
+}
+
 // Pull top N RIASEC codes from a scores object
 function topRiasecCodes(scores = {}, n = 3) {
   return Object.entries(scores)
@@ -172,15 +201,29 @@ export function buildRecommendationGrounding(job, context = {}) {
   // ── 4. VFP — goals, interests, preferences ───────────────────────────────
 
   if (hasVFP) {
-    const preferredTitles = safeArr(vfp.preferred_job_titles).concat(safeArr(vfp.suggested_job_targets));
-    const vfpInterests = safeArr(vfp.interests).concat(safeArr(vfp.career_interests));
-    const vfpBarriers = safeArr(vfp.barriers).concat(safeArr(vfp.employment_barriers));
-    const accommodations = safeArr(vfp.accommodation_needs).concat(safeArr(vfp.accommodations));
-    const supportNeeds = safeArr(vfp.support_needs);
-    const physRestrictions = safeArr(vfp.physical_restrictions);
-    const scheduleConstraints = safeArr(vfp.schedule_constraints).concat(safeArr(profile?.wsa_schedule_constraints));
-    const transportation = safeArr(vfp.transportation).concat(safeArr(profile?.wsa_transportation));
-    const envPrefs = safeArr(vfp.work_environment_preferences).concat(safeArr(profile?.wsa_environment_needs));
+    const preferredTitles = readableFactList(
+      safeArr(vfp.preferred_job_titles).concat(safeArr(vfp.suggested_job_targets))
+    );
+    const vfpInterests = readableFactList(
+      safeArr(vfp.interests).concat(safeArr(vfp.career_interests))
+    );
+    const vfpBarriers = readableFactList(
+      safeArr(vfp.barriers).concat(safeArr(vfp.employment_barriers))
+    );
+    const accommodations = readableFactList(
+      safeArr(vfp.accommodation_needs).concat(safeArr(vfp.accommodations))
+    );
+    const supportNeeds = readableFactList(safeArr(vfp.support_needs));
+    const physRestrictions = readableFactList(safeArr(vfp.physical_restrictions));
+    const scheduleConstraints = readableFactList(
+      safeArr(vfp.schedule_constraints).concat(safeArr(profile?.wsa_schedule_constraints))
+    );
+    const transportation = readableFactList(
+      safeArr(vfp.transportation).concat(safeArr(profile?.wsa_transportation))
+    );
+    const envPrefs = readableFactList(
+      safeArr(vfp.work_environment_preferences).concat(safeArr(profile?.wsa_environment_needs))
+    );
 
     // Preferred titles / goals
     if (preferredTitles.length > 0) {
@@ -214,7 +257,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     // Support needs
     if (supportNeeds.length > 0) {
       staff_review_flags.push(
-        `Client support needs should be discussed with employer: ${supportNeeds.slice(0, 2).join(", ")}.`
+        `Client support needs should be discussed with employer: ${supportNeeds.slice(0, 2).join("; ")}.`
       );
     }
 
@@ -234,7 +277,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     // Transportation
     if (transportation.length > 0) {
       const hasUnknown = transportation.some(t =>
-        safeStr(t).toLowerCase().includes("unknown") || safeStr(t).toLowerCase().includes("unclear")
+        t.toLowerCase().includes("unknown") || t.toLowerCase().includes("unclear")
       );
       if (hasUnknown) {
         concern_factors.push("Transportation availability requires clarification.");
