@@ -25,6 +25,17 @@ function safeLower(v) {
   return String(v || "").toLowerCase();
 }
 
+/** Extract a readable string from a constraint item (string or object). */
+function readableItem(item) {
+  if (typeof item === "string") return item;
+  if (!item || typeof item !== "object") return String(item ?? "");
+  return (
+    item.label || item.summary || item.reason || item.detail ||
+    item.evidence || item.source || item.text || item.description ||
+    Object.values(item).find((v) => typeof v === "string") || ""
+  );
+}
+
 function matchesAny(text, keywords = []) {
   const t = safeLower(text);
   return keywords.some((k) => t.includes(safeLower(k)));
@@ -349,7 +360,7 @@ function evalBarriers(vfp) {
   const barriers = vfp?.barriers || [];
 
   if (barriers.length > 0) {
-    moderate.push(`Documented barriers: ${barriers.slice(0, 2).join(", ")}.`);
+    moderate.push(`Documented barriers: ${barriers.slice(0, 2).map(readableItem).join(", ")}.`);
     if (barriers.some((b) => matchesAny(b, ["mental_health", "psychiatric", "ptsd", "anxiety", "depression"]))) {
       verify.push("Mental health barriers documented — discuss workplace support options with client.");
     }
@@ -382,7 +393,7 @@ function buildEnvSummary(fitLevel, job, hard, moderate, unknowns, soft) {
     return `${title} has hard constraints that may make it incompatible — staff review required before presenting.`;
   }
   if (fitLevel === "caution") {
-    const topConcern = moderate[0] || hard[0] || "Multiple concerns present";
+    const topConcern = readableItem(moderate[0] || hard[0]) || "Multiple concerns present";
     return `${title} warrants caution. ${topConcern}`;
   }
   if (fitLevel === "unknown") {
