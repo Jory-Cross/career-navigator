@@ -164,13 +164,18 @@ function EnvFitSection({ constraintFit }) {
     soft_preferences = [],
     unknowns = [],
     environmental_fit_summary = "",
+    occupation_notes = [],
+    occupation_profile_label = null,
   } = constraintFit || {};
+
+  console.log("OCC CONTEXT", occupation_profile_label, occupation_notes);
 
   const cfg = FIT_LEVEL[overall_fit_level] || FIT_LEVEL.unknown;
   const FitIcon = cfg.icon;
 
   const hasContent = hard_constraints.length || moderate_constraints.length ||
-    soft_preferences.length || unknowns.length || environmental_fit_summary;
+    soft_preferences.length || unknowns.length || environmental_fit_summary ||
+    occupation_notes?.length > 0 || occupation_profile_label;
 
   const badges = (
     <div className="flex items-center gap-1 flex-wrap">
@@ -212,6 +217,24 @@ function EnvFitSection({ constraintFit }) {
             <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-2", cfg.summary)}>
               <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", cfg.dot)} />
               <p className="text-[11px] leading-relaxed font-medium">{environmental_fit_summary}</p>
+            </div>
+          )}
+          {(occupation_notes?.length > 0 || occupation_profile_label) && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide flex items-center gap-1 text-slate-600">
+                <Info className="w-3 h-3" />
+                Occupational Context{occupation_profile_label ? ` — ${occupation_profile_label}` : ""}
+              </p>
+              {occupation_notes?.length > 0 && (
+                <ul className="space-y-1">
+                  {occupation_notes.map((note, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 leading-relaxed">
+                      <span className="shrink-0 text-slate-400 font-bold mt-0.5">◦</span>
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
           <SubSection label="Hard Constraints" labelClass="text-red-700" items={hard_constraints} icon={ShieldAlert} iconClass="text-red-500" />
