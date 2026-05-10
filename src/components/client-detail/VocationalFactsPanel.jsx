@@ -556,7 +556,24 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
 
                 return normalizedItem;
               });
-                               return (
+
+              // Deduplicate support needs after formatting
+              if (config.key === "support_needs") {
+                const seenSupportNeeds = new Set();
+
+                items = items.filter((item) => {
+                  const key = String(item.fact || "").trim().toLowerCase();
+
+                  if (!key || seenSupportNeeds.has(key)) {
+                    return false;
+                  }
+
+                  seenSupportNeeds.add(key);
+                  return true;
+                });
+              }
+
+              return (
                 <CategoryCard
                   key={config.key}
                   config={config}
