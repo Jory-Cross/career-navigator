@@ -111,6 +111,12 @@ export default function RecommendationBatchReview({
     );
   }
 
+  console.log("[FIRST REC PRIORITY]", {
+    count: recs.length,
+    firstTitle: recs[0]?.job_title,
+    firstPriority: recs[0]?.priority?.priority_level,
+  });
+
   if (recs.length === 0) {
     return (
       <div className="text-center py-12">

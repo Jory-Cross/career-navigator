@@ -1268,43 +1268,54 @@ const validJobCount = jobs.filter(
         <RecommendationBatchReview
           recs={
   recommendationBatch?.recommendations?.length
-    ? recommendationBatch.recommendations.map((job, index) => ({
-        id: `${recommendationBatch.id || "batch"}-${index}`,
-        batch_id: recommendationBatch.id || "latest",
-        client_id: resolvedClientId,
+    ? recommendationBatch.recommendations.map((job, index) => {
+        console.log("[AIJobSearchPanel] mapping recommendation:", {
+          title: job.title,
+          hasPriority: !!job.priority,
+          priority_level: job.priority?.priority_level,
+        });
+        return {
+          id: `${recommendationBatch.id || "batch"}-${index}`,
+          batch_id: recommendationBatch.id || "latest",
+          client_id: resolvedClientId,
 
-  
-        status: job.status || (job.confidence_level === "low" ? "not_a_fit" : "suggested"),
-        review_notes: job.review_notes || "",
-        reviewed_by: job.reviewed_by || null,
-        reviewed_at: job.reviewed_at || null,
-                reviewed_by_staff: job.reviewed_by_staff || false,
+    
+          status: job.status || (job.confidence_level === "low" ? "not_a_fit" : "suggested"),
+          review_notes: job.review_notes || "",
+          reviewed_by: job.reviewed_by || null,
+          reviewed_at: job.reviewed_at || null,
+                  reviewed_by_staff: job.reviewed_by_staff || false,
 
-        client_response: job.client_response || null,
-        client_responded_at: job.client_responded_at || null,
-        client_response_notes: job.client_response_notes || "",
+          client_response: job.client_response || null,
+          client_responded_at: job.client_responded_at || null,
+          client_response_notes: job.client_response_notes || "",
 
-        job_title: job.title || job.job_title || "Untitled Recommendation",
-        employer: job.employer || "",
-        location: job.location || "",
+          job_title: job.title || job.job_title || "Untitled Recommendation",
+          employer: job.employer || "",
+          location: job.location || "",
+          pay: job.pay || "",
 
-        match_score: job.match_score,
-        fit_score: job.fit_score,
-        match_reason: job.match_reason,
+          match_score: job.match_score,
+          fit_score: job.fit_score,
+          match_reason: job.match_reason,
 
-        fit_strengths: job.fit_strengths || [],
-        fit_concerns: job.fit_concerns || [],
-        not_fit_reasons: job.not_fit_reasons || [],
-        constraint_codes: job.constraint_codes || [],
+          fit_strengths: job.fit_strengths || [],
+          fit_concerns: job.fit_concerns || [],
+          not_fit_reasons: job.not_fit_reasons || [],
+          constraint_codes: job.constraint_codes || [],
 
-        confidence_level: job.confidence_level,
-        confidence_reason: job.confidence_reason,
+          confidence_level: job.confidence_level,
+          confidence_reason: job.confidence_reason,
 
-        grounding: job.grounding || null,
-        constraint_fit: job.constraint_fit || null,
+          grounding: job.grounding || null,
+          constraint_fit: job.constraint_fit || null,
 
-        source_job: job,
-      }))
+          // ✅ ADD PRIORITY FIELDS
+          priority: job.priority || null,
+
+          source_job: job,
+        };
+      })
     : savedRecs
 }          batches={
             recommendationBatch

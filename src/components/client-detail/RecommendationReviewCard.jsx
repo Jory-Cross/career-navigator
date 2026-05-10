@@ -229,16 +229,27 @@ setReviewNotesError("");
       ⚠️ Pending staff review — open Review & Update to validate this recommendation.
     </div>
   )}
-          {/* Fit Score */}
-          {recommendation.fit_score && (
-            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg">
-              <TrendingUp className="w-4 h-4 text-slate-600" />
-              <div className="flex-1">
-                <p className="text-xs text-slate-500 font-medium">Fit Score</p>
-                <p className="text-sm font-bold text-slate-900">{recommendation.fit_score}% Match</p>
+          {/* Fit Score and Confidence */}
+          <div className="space-y-2">
+            {recommendation.match_score != null && (
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg">
+                <TrendingUp className="w-4 h-4 text-slate-600" />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 font-medium">Match Score</p>
+                  <p className="text-sm font-bold text-slate-900">{recommendation.match_score}%</p>
+                </div>
+                {recommendation.confidence_level && (
+                  <div className={cn("text-xs font-semibold px-2 py-1 rounded-full",
+                    recommendation.confidence_level === "high" ? "bg-green-100 text-green-700" :
+                    recommendation.confidence_level === "medium" ? "bg-blue-100 text-blue-700" :
+                    "bg-amber-100 text-amber-700"
+                  )}>
+                    {recommendation.confidence_level}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Fit Reason */}
           {recommendation.fit_reason && (
@@ -325,7 +336,14 @@ setReviewNotesError("");
 
           {/* Priority Badge */}
           {recommendation.priority && (
-            <RecommendationPriorityBadge priority={recommendation.priority} />
+            <>
+              <RecommendationPriorityBadge priority={recommendation.priority} />
+              {console.log("[CARD PRIORITY PROPS]", {
+                title: recommendation.job_title,
+                priority_level: recommendation.priority?.priority_level,
+                priority_reason: recommendation.priority?.priority_reason,
+              })}
+            </>
           )}
 
           {/* Evidence Panels */}
