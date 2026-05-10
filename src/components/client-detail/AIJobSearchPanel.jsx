@@ -744,22 +744,28 @@ const validJobCount = jobs.filter(
 
       const generatedBatch = result?.batch || null;
 
+      // Debug log as requested
+      const recs = generatedBatch?.recommendations || [];
+      console.log("[GenerateRecommendations] complete:", {
+        count: recs.length,
+        firstTitle: recs[0]?.title || recs[0]?.job_title || "(none)",
+        firstHasGrounding: !!recs[0]?.grounding,
+        firstHasConstraintFit: !!recs[0]?.constraint_fit,
+      });
+
       setRecommendationBatch(generatedBatch);
 
+      // Issue 1 fix: always clear outdated warning after successful generation
       setRecommendationFreshness({
         isOutdated: false,
         newestInputDate: null,
-        generatedAt:
-          generatedBatch?.generated_at ||
-          generatedBatch?.created_date ||
-          generatedBatch?.created_at ||
-          new Date().toISOString(),
+        generatedAt: new Date().toISOString(),
         reason: "",
       });
 
       if (result?.batch?.error) {
         toast.error(result.batch.error);
-      } else if (result?.batch?.recommendations?.length > 0) {
+      } else if (recs.length > 0) {
         toast.success("Recommendations generated");
       } else {
         toast.error("No recommendations were generated.");

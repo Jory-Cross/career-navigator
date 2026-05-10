@@ -378,10 +378,26 @@ if (fitConcerns.length > 0) {
   };
 
   // Attach grounding object (explainability layer)
-  groundedJob.grounding = buildRecommendationGrounding(groundedJob, groundingContext);
+  try {
+    groundedJob.grounding = buildRecommendationGrounding(groundedJob, groundingContext);
+  } catch (e) {
+    console.error("[generateRecommendationBatch] buildRecommendationGrounding failed for:", groundedJob.title, e);
+    groundedJob.grounding = null;
+  }
 
   // Attach constraint fit layer (severity + environmental analysis)
-  groundedJob.constraint_fit = buildConstraintFit(groundedJob, groundingContext);
+  try {
+    groundedJob.constraint_fit = buildConstraintFit(groundedJob, groundingContext);
+  } catch (e) {
+    console.error("[generateRecommendationBatch] buildConstraintFit failed for:", groundedJob.title, e);
+    groundedJob.constraint_fit = null;
+  }
+
+  console.log("[generateRecommendationBatch] enriched job:", {
+    title: groundedJob.title,
+    hasGrounding: !!groundedJob.grounding,
+    hasConstraintFit: !!groundedJob.constraint_fit,
+  });
 
   return groundedJob;
 });
