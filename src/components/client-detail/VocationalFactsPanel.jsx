@@ -556,6 +556,8 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
 
                 return normalizedItem;
               });
+                               return (
+                <CategoryCard
                   key={config.key}
                   config={config}
                   items={items}
