@@ -84,35 +84,30 @@ const FIT_LEVEL = {
 
 // ── Section 1: Why this recommendation? ──────────────────────────────────────
 
+const CONF_COLORS = {
+  high:   "bg-green-50 border-green-200 text-green-800",
+  medium: "bg-blue-50 border-blue-200 text-blue-800",
+  low:    "bg-amber-50 border-amber-200 text-amber-800",
+};
+const CONF_DOTS = { high: "bg-green-500", medium: "bg-blue-400", low: "bg-amber-400" };
+
 function WhySection({ grounding, confidenceLevel }) {
   const [open, setOpen] = useState(false);
 
-  if (!grounding) return null;
+  const supported_by = grounding?.supported_by || [];
+  const supporting_sources = grounding?.supporting_sources || [];
+  const confidence_factors = grounding?.confidence_factors || [];
+  const concern_factors = grounding?.concern_factors || [];
+  const missing_data_factors = grounding?.missing_data_factors || [];
+  const grounding_summary = grounding?.grounding_summary || "";
 
-  const {
-    supported_by = [],
-    supporting_sources = [],
-    confidence_factors = [],
-    concern_factors = [],
-    missing_data_factors = [],
-    grounding_summary = "",
-  } = grounding;
+  const hasEvidence = supported_by.length || confidence_factors.length ||
+    concern_factors.length || missing_data_factors.length || grounding_summary;
 
   const normalizedSources = supporting_sources
     .map(s => typeof s === "string" ? s : (s?.label || ""))
     .filter(Boolean);
 
-  const hasContent = supported_by.length || confidence_factors.length ||
-    concern_factors.length || missing_data_factors.length || grounding_summary;
-
-  if (!hasContent) return null;
-
-  const CONF_COLORS = {
-    high:   "bg-green-50 border-green-200 text-green-800",
-    medium: "bg-blue-50 border-blue-200 text-blue-800",
-    low:    "bg-amber-50 border-amber-200 text-amber-800",
-  };
-  const CONF_DOTS = { high: "bg-green-500", medium: "bg-blue-400", low: "bg-amber-400" };
   const level = confidenceLevel || "medium";
 
   const badges = normalizedSources.length > 0 && (
@@ -137,16 +132,22 @@ function WhySection({ grounding, confidenceLevel }) {
       title="Why this recommendation?"
       badges={badges}
     >
-      {grounding_summary && (
-        <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-2", CONF_COLORS[level] || CONF_COLORS.medium)}>
-          <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", CONF_DOTS[level] || CONF_DOTS.medium)} />
-          <p className="text-[11px] leading-relaxed font-medium">{grounding_summary}</p>
-        </div>
+      {!hasEvidence ? (
+        <p className="text-[11px] text-slate-400 italic">Limited grounding evidence currently available.</p>
+      ) : (
+        <>
+          {grounding_summary && (
+            <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-2", CONF_COLORS[level] || CONF_COLORS.medium)}>
+              <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", CONF_DOTS[level] || CONF_DOTS.medium)} />
+              <p className="text-[11px] leading-relaxed font-medium">{grounding_summary}</p>
+            </div>
+          )}
+          <SubSection label="Supporting Evidence" labelClass="text-green-700" items={supported_by} icon={CheckCircle2} iconClass="text-green-500" />
+          <SubSection label="Confidence Factors" labelClass="text-blue-700" items={confidence_factors} icon={Info} iconClass="text-blue-500" />
+          <SubSection label="Concerns / Barriers" labelClass="text-amber-700" items={concern_factors} icon={AlertTriangle} iconClass="text-amber-500" />
+          <SubSection label="Missing Data" labelClass="text-slate-500" items={missing_data_factors} icon={Search} iconClass="text-slate-400" />
+        </>
       )}
-      <SubSection label="Supporting Evidence" labelClass="text-green-700" items={supported_by} icon={CheckCircle2} iconClass="text-green-500" />
-      <SubSection label="Confidence Factors" labelClass="text-blue-700" items={confidence_factors} icon={Info} iconClass="text-blue-500" />
-      <SubSection label="Concerns / Barriers" labelClass="text-amber-700" items={concern_factors} icon={AlertTriangle} iconClass="text-amber-500" />
-      <SubSection label="Missing Data" labelClass="text-slate-500" items={missing_data_factors} icon={Search} iconClass="text-slate-400" />
     </SectionToggle>
   );
 }
@@ -156,8 +157,6 @@ function WhySection({ grounding, confidenceLevel }) {
 function EnvFitSection({ constraintFit }) {
   const [open, setOpen] = useState(false);
 
-  if (!constraintFit) return null;
-
   const {
     overall_fit_level = "unknown",
     hard_constraints = [],
@@ -165,15 +164,13 @@ function EnvFitSection({ constraintFit }) {
     soft_preferences = [],
     unknowns = [],
     environmental_fit_summary = "",
-  } = constraintFit;
+  } = constraintFit || {};
 
   const cfg = FIT_LEVEL[overall_fit_level] || FIT_LEVEL.unknown;
   const FitIcon = cfg.icon;
 
   const hasContent = hard_constraints.length || moderate_constraints.length ||
     soft_preferences.length || unknowns.length || environmental_fit_summary;
-
-  if (!hasContent) return null;
 
   const badges = (
     <div className="flex items-center gap-1 flex-wrap">
@@ -213,10 +210,22 @@ function EnvFitSection({ constraintFit }) {
           <p className="text-[11px] leading-relaxed font-medium">{environmental_fit_summary}</p>
         </div>
       )}
-      <SubSection label="Hard Constraints" labelClass="text-red-700" items={hard_constraints} icon={ShieldAlert} iconClass="text-red-500" />
-      <SubSection label="Moderate Concerns" labelClass="text-amber-700" items={moderate_constraints} icon={AlertTriangle} iconClass="text-amber-500" />
-      <SubSection label="Soft Preferences" labelClass="text-violet-700" items={soft_preferences} icon={Star} iconClass="text-violet-400" />
-      <SubSection label="Missing / Unknown" labelClass="text-slate-500" items={unknowns} icon={HelpCircle} iconClass="text-slate-400" />
+      {!hasContent ? (
+        <p className="text-[11px] text-slate-400 italic">No environmental fit data available.</p>
+      ) : (
+        <>
+          {environmental_fit_summary && (
+            <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-2", cfg.summary)}>
+              <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", cfg.dot)} />
+              <p className="text-[11px] leading-relaxed font-medium">{environmental_fit_summary}</p>
+            </div>
+          )}
+          <SubSection label="Hard Constraints" labelClass="text-red-700" items={hard_constraints} icon={ShieldAlert} iconClass="text-red-500" />
+          <SubSection label="Moderate Concerns" labelClass="text-amber-700" items={moderate_constraints} icon={AlertTriangle} iconClass="text-amber-500" />
+          <SubSection label="Soft Preferences" labelClass="text-violet-700" items={soft_preferences} icon={Star} iconClass="text-violet-400" />
+          <SubSection label="Missing / Unknown" labelClass="text-slate-500" items={unknowns} icon={HelpCircle} iconClass="text-slate-400" />
+        </>
+      )}
     </SectionToggle>
   );
 }
@@ -230,9 +239,7 @@ function StaffVerifySection({ grounding, constraintFit }) {
   const constraintFlags = constraintFit?.staff_verification_needed || [];
   const allFlags = [...new Set([...groundingFlags, ...constraintFlags].map(readableItem))].filter(Boolean);
 
-  if (!allFlags.length) return null;
-
-  const badges = (
+  const badges = allFlags.length > 0 && (
     <span className="text-[9px] bg-purple-100 border border-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
       {allFlags.length} item{allFlags.length !== 1 ? "s" : ""}
     </span>
@@ -247,14 +254,18 @@ function StaffVerifySection({ grounding, constraintFit }) {
       title="Staff Should Verify"
       badges={badges}
     >
-      <ul className="space-y-1.5">
-        {allFlags.map((flag, i) => (
-          <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 leading-relaxed">
-            <span className="shrink-0 text-purple-400 font-bold mt-0.5">→</span>
-            <span>{flag}</span>
-          </li>
-        ))}
-      </ul>
+      {allFlags.length === 0 ? (
+        <p className="text-[11px] text-slate-400 italic">No major staff verification flags currently detected.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {allFlags.map((flag, i) => (
+            <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 leading-relaxed">
+              <span className="shrink-0 text-purple-400 font-bold mt-0.5">→</span>
+              <span>{flag}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </SectionToggle>
   );
 }
@@ -262,9 +273,6 @@ function StaffVerifySection({ grounding, constraintFit }) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function RecommendationCardPanels({ grounding, confidenceLevel, constraintFit }) {
-  const hasAny = grounding || constraintFit;
-  if (!hasAny) return null;
-
   return (
     <div className="mt-3 space-y-1.5">
       <WhySection grounding={grounding} confidenceLevel={confidenceLevel} />
