@@ -24,6 +24,7 @@
  */
 
 import { scoreEvidenceItem, scoreEvidenceList } from "@/lib/recommendations/evidenceWeighting.js";
+import { evalJobEnvironmentOverlay } from "@/lib/recommendations/jobEnvironmentProfiles.js";
 
 function safeLower(v) {
   return String(v || "").toLowerCase();
@@ -596,6 +597,16 @@ export function buildConstraintFit(job = {}, context = {}) {
   merge(evalReadiness(vfp));
   merge(evalBarriers(vfp));
 
+  // ── OCCUPATIONAL ENVIRONMENT OVERLAY ──────────────────────────────────────
+  // Compares O*NET-style job environment profile against VFP evidence.
+  const envOverlay = evalJobEnvironmentOverlay(job, vfp, scoreEvidenceList, matchesAny);
+  merge({
+    soft: envOverlay.soft,
+    moderate: envOverlay.moderate,
+    unknowns: envOverlay.unknowns,
+    verify: envOverlay.verify,
+  });
+
   // Assess overall evidence quality from key VFP domains to calibrate fit level
   const allVfpEvidence = [
     ...(vfp.physical_restrictions || []),
@@ -617,6 +628,8 @@ export function buildConstraintFit(job = {}, context = {}) {
     soft_preferences: soft,
     unknowns,
     environmental_fit_summary: envSummary,
+    occupation_notes: envOverlay.occupation_notes,
+    occupation_profile_label: envOverlay.profile?.label || null,
     staff_verification_needed: verify,
   };
 }

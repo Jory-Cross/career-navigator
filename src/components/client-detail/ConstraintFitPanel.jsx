@@ -76,13 +76,15 @@ export default function ConstraintFitPanel({ constraintFit }) {
     unknowns = [],
     environmental_fit_summary = "",
     staff_verification_needed = [],
+    occupation_notes = [],
+    occupation_profile_label = null,
   } = constraintFit;
 
   const config = FIT_LEVEL_CONFIG[overall_fit_level] || FIT_LEVEL_CONFIG.unknown;
   const FitIcon = config.icon;
 
   const totalIssues = hard_constraints.length + moderate_constraints.length + unknowns.length;
-  const hasContent = totalIssues > 0 || soft_preferences.length > 0 || staff_verification_needed.length > 0;
+  const hasContent = totalIssues > 0 || soft_preferences.length > 0 || staff_verification_needed.length > 0 || occupation_notes.length > 0;
 
   if (!hasContent && !environmental_fit_summary) return null;
 
@@ -139,6 +141,24 @@ export default function ConstraintFitPanel({ constraintFit }) {
             <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-1.5", config.color)}>
               <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", config.dot)} />
               <p className="text-[11px] leading-relaxed font-medium">{environmental_fit_summary}</p>
+            </div>
+          )}
+
+          {/* Occupation context notes */}
+          {occupation_notes.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-1 text-slate-500 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                Occupational Context{occupation_profile_label ? ` — ${occupation_profile_label}` : ""}
+              </p>
+              <ul className="space-y-1 pl-0.5">
+                {occupation_notes.map((note, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 leading-relaxed">
+                    <span className="shrink-0 text-slate-400 font-bold mt-0.5">◦</span>
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
