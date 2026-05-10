@@ -495,10 +495,20 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
                   .concat(vfp.work_goal_themes || []);
               }
 
-              // Convert strings to objects with fact/source if needed
-              items = items.map(item => 
-                typeof item === 'string' ? { fact: item, source: null } : item
-              );
+                            // Convert strings to objects with fact/source if needed
+              items = items.map(item => {
+                const normalizedItem =
+                  typeof item === "string" ? { fact: item, source: null } : item;
+
+                if (config.key === "support_needs") {
+                  return {
+                    ...normalizedItem,
+                    fact: formatSupportNeed(normalizedItem.fact),
+                  };
+                }
+
+                return normalizedItem;
+              });
 
               return (
                 <CategoryCard
