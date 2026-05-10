@@ -128,8 +128,13 @@ export async function generateRecommendationBatch({
   });
 
   // Grounding context passed to each recommendation
+  // Provide multiple fallback paths so buildConstraintFit always finds the VFP
+  const resolvedVfp = rawVfp || vocationalProfile?.raw || null;
+  console.log("CONSTRAINT FIT HAS VFP (batch):", !!resolvedVfp, resolvedVfp ? Object.keys(resolvedVfp) : "none");
+
   const groundingContext = {
-    vfp: rawVfp,
+    vfp: resolvedVfp,
+    vocationalProfile,
     wsa,
     resumes,
     interestProfile,
@@ -401,6 +406,8 @@ if (fitConcerns.length > 0) {
 
   return groundedJob;
 });
+
+console.log("FIRST REC CONSTRAINT FIT:", processed[0]?.constraint_fit?.overall_fit_level, processed[0]?.title);
 
 const recommendationsWithConstraints = processed
 .filter((job) => job.match_score > 0)

@@ -407,12 +407,67 @@ function buildEnvSummary(fitLevel, job, hard, moderate, unknowns, soft) {
   return `${title} is a possible fit. ${notes.join(", ")}.`;
 }
 
+/**
+ * Normalize a VFP array field so every item is a plain string.
+ * Handles: strings, { fact, source }, { label }, { value }, etc.
+ */
+function normalizeVfpArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((item) => {
+    if (typeof item === "string") return item;
+    if (!item || typeof item !== "object") return String(item ?? "");
+    if (item.fact && item.source) return `${item.fact} [${item.source}]`;
+    return (
+      item.fact || item.label || item.value || item.summary ||
+      item.detail || item.text || item.description ||
+      Object.values(item).find((v) => typeof v === "string") || ""
+    );
+  }).filter(Boolean);
+}
+
+/**
+ * Normalize all array fields in a VFP object so they contain plain strings.
+ * Does not mutate the original; returns a shallow copy with normalized arrays.
+ */
+function normalizeVfp(vfp) {
+  if (!vfp || typeof vfp !== "object") return vfp;
+  const arrayFields = [
+    "physical_restrictions", "sensory_environmental_needs", "sensory_limitations",
+    "social_communication_needs", "communication_style", "social_tolerance",
+    "support_needs", "accommodation_needs", "accommodations",
+    "transportation_reliability", "transportation_limitations", "transportation",
+    "schedule_constraints", "schedule_availability", "work_availability",
+    "work_environment_preferences", "preferred_work_environment",
+    "preferred_job_titles", "preferred_industries", "avoided_tasks",
+    "barriers", "employment_barriers",
+    "job_readiness_level", "onboarding_readiness",
+    "interests", "career_interests", "strengths", "skills",
+  ];
+  const normalized = { ...vfp };
+  for (const field of arrayFields) {
+    if (Array.isArray(vfp[field])) {
+      normalized[field] = normalizeVfpArray(vfp[field]);
+    }
+  }
+  return normalized;
+}
+
 // ── MAIN EXPORT ───────────────────────────────────────────────────────────────
 
 export function buildConstraintFit(job = {}, context = {}) {
-  const vfp = context?.vfp || null;
+  // Fallback chain: vfp → vocationalProfile → profile.vocational_profile → client VFP
+  const rawVfp =
+    context?.vfp ||
+    context?.vocationalProfile ||
+    context?.profile?.vocational_profile ||
+    null;
 
-  if (!vfp) {
+  console.log("CONSTRAINT FIT HAS VFP:", !!rawVfp);
+  if (rawVfp) {
+    console.log("VFP KEYS:", Object.keys(rawVfp));
+  }
+
+  if (!rawVfp) {
     return {
       overall_fit_level: "unknown",
       hard_constraints: [],
@@ -428,6 +483,9 @@ export function buildConstraintFit(job = {}, context = {}) {
       ],
     };
   }
+
+  // Normalize all VFP array fields to plain strings before evaluation
+  const vfp = normalizeVfp(rawVfp);
 
   const hard = [];
   const moderate = [];

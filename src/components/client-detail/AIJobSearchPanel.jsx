@@ -738,11 +738,23 @@ const validJobCount = jobs.filter(
         return;
       }
 
+      // Ensure we have the latest VFP — use state if already loaded, otherwise fetch directly
+      let vfpForEngine = client?.vocational_facts_profile || null;
+      if (!vfpForEngine) {
+        try {
+          const freshClient = await base44.entities.Client.filter({ id: resolvedClientId });
+          vfpForEngine = freshClient?.[0]?.vocational_facts_profile || null;
+        } catch (e) {
+          console.warn("Could not fetch VFP for engine:", e);
+        }
+      }
+      console.log("VFP FOR ENGINE:", vfpForEngine ? Object.keys(vfpForEngine) : "NULL");
+
       const result = await runRecommendationEngine({
         client: { ...(client || {}), id: resolvedClientId },
         documents: docs,
         assessments,
-        vocationalProfile: client?.vocational_facts_profile || null,
+        vocationalProfile: vfpForEngine,
         forceRegenerate: true,
       });
 
