@@ -34,63 +34,143 @@ function countCoveredDomains(vfp) {
 }
 
 // ── SOURCE TYPE DETECTION ─────────────────────────────────────────────────────
-// Infers which source types are present based on documents and assessments arrays,
-// plus VFP internal metadata.
+// Infers which source types are present from ALL available evidence:
+//   1. documents[] / assessments[] arrays (if passed in)
+//   2. VFP internal metadata (_intake_signals, extracted_at)
+//   3. VFP fields that strongly imply a source (job_titles, work_history, interests)
+//   4. document_types_found / source labels inside fact items
+//   5. conflict source labels (e.g. "Resume", "O*NET", "WSA")
+//   6. client-level fields (resume_file_url, etc.)
+//
+// Intake is one possible source — NOT the default. Missing intake does NOT mean intake-only.
+
+function collectSourceStrings(vfp) {
+  // Gather all string values from VFP facts that might carry source labels
+  const strings = [];
+
+  // Top-level string fields that carry source info
+  for (const key of ["document_types_found", "source_types"]) {
+    const val = vfp?.[key];
+    if (Array.isArray(val)) val.forEach(v => typeof v === "string" && strings.push(v.toLowerCase()));
+    else if (typeof val === "string") strings.push(val.toLowerCase());
+  }
+
+  // Fact-level source labels: walk all array fields and pull .source values
+  for (const [key, val] of Object.entries(vfp || {})) {
+    if (key.startsWith("_")) continue;
+    if (!Array.isArray(val)) continue;
+    for (const item of val) {
+      if (typeof item === "object" && item !== null) {
+        if (typeof item.source === "string") strings.push(item.source.toLowerCase());
+        if (typeof item.source_label === "string") strings.push(item.source_label.toLowerCase());
+      }
+    }
+  }
+
+  // Conflicts carry source labels like "Resume", "O*NET", "WSA", "Interest Profiler"
+  for (const conflict of vfp?.conflicts || []) {
+    if (typeof conflict.source_a === "string") strings.push(conflict.source_a.toLowerCase());
+    if (typeof conflict.source_b === "string") strings.push(conflict.source_b.toLowerCase());
+    if (typeof conflict.topic === "string") strings.push(conflict.topic.toLowerCase());
+  }
+
+  // VFP metadata from processAssessmentDocuments
+  const meta = vfp?._metadata || vfp?.metadata || {};
+  if (Array.isArray(meta.document_types_found)) {
+    meta.document_types_found.forEach(v => typeof v === "string" && strings.push(v.toLowerCase()));
+  }
+
+  return strings;
+}
+
+function matchesAny(strings, patterns) {
+  return strings.some(s => patterns.some(p => s.includes(p)));
+}
 
 function detectSourceTypes({ vfp, client, documents = [], assessments = [] }) {
   const sources = new Set();
+  const sourceStrings = collectSourceStrings(vfp);
 
-  // Intake: if any intake signals exist on the VFP
-  if (vfp?._intake_extracted_at || vfp?._intake_signals) {
+  // ── INTAKE ────────────────────────────────────────────────────────────────
+  // Only mark intake present if there is actual intake extraction evidence
+  if (
+    vfp?._intake_extracted_at ||
+    vfp?._intake_signals ||
+    matchesAny(sourceStrings, ["intake"])
+  ) {
     sources.add("intake");
   }
 
-  // Resume / work history
-  const hasResume = documents.some(d =>
+  // ── RESUME / WORK HISTORY ─────────────────────────────────────────────────
+  const resumeFromDocs = documents.some(d =>
     d.category === "resume" ||
     (d.file_name || "").toLowerCase().includes("resume") ||
     (d.title || "").toLowerCase().includes("resume")
-  ) || client?.resume_file_url;
-  if (hasResume) sources.add("resume");
+  );
+  const resumeFromClient = !!client?.resume_file_url;
+  const resumeFromVFP =
+    (vfp?.job_titles?.length > 0) ||          // extracted job titles from resume
+    (vfp?.work_history?.length > 0) ||        // extracted work history
+    (vfp?.education_history?.length > 0) ||   // extracted education (often from resume)
+    matchesAny(sourceStrings, ["resume", "work history", "cv"]);
 
-  // WSA (Work Strategy Assessment)
-  const hasWSA = documents.some(d =>
+  if (resumeFromDocs || resumeFromClient || resumeFromVFP) sources.add("resume");
+
+  // ── WSA (Work Strategy Assessment) ───────────────────────────────────────
+  const wsaFromDocs = documents.some(d =>
     (d.document_subtype || "").toLowerCase().includes("wsa") ||
     (d.title || "").toLowerCase().includes("work strategy") ||
     (d.title || "").toLowerCase().includes("wsa")
-  ) || assessments.some(a =>
+  );
+  const wsaFromAssessments = assessments.some(a =>
     a.assessment_type === "work_strategy_assessment" ||
     (a.notes || "").toLowerCase().includes("wsa")
   );
-  if (hasWSA) sources.add("wsa");
+  const wsaFromVFP = matchesAny(sourceStrings, ["wsa", "work strategy assessment", "work strategy"]);
 
-  // O*NET Interest Profiler
-  const hasONet = assessments.some(a =>
+  if (wsaFromDocs || wsaFromAssessments || wsaFromVFP) sources.add("wsa");
+
+  // ── O*NET INTEREST PROFILER ───────────────────────────────────────────────
+  const onetFromAssessments = assessments.some(a =>
     a.assessment_type === "riasec" ||
     a.assessment_type === "interest_profiler" ||
     (a.notes || "").toLowerCase().includes("o*net") ||
     (a.notes || "").toLowerCase().includes("onet") ||
     (a.notes || "").toLowerCase().includes("interest profiler")
   );
-  if (hasONet) sources.add("onet_interest_profiler");
+  const onetFromVFP =
+    matchesAny(sourceStrings, ["o*net", "onet", "interest profiler", "riasec"]) ||
+    // If interests exist and no intake, likely from O*NET
+    (vfp?.interests?.length > 0 && !sources.has("intake"));
 
-  // Other structured assessments
+  if (onetFromAssessments || onetFromVFP) sources.add("onet_interest_profiler");
+
+  // ── STRUCTURED ASSESSMENTS (other types) ─────────────────────────────────
   const otherAssessTypes = ["career_goals", "skills_audit", "job_search_readiness", "interview_readiness"];
-  if (assessments.some(a => otherAssessTypes.includes(a.assessment_type))) {
-    sources.add("structured_assessment");
-  }
+  const assessFromList = assessments.some(a => otherAssessTypes.includes(a.assessment_type));
+  const assessFromVFP = matchesAny(sourceStrings, ["assessment", "career goals", "skills audit"]);
+  // If assessments were analyzed (source_assessment_ids in metadata)
+  const hasAssessmentIds = (vfp?._metadata?.source_assessment_ids?.length > 0) ||
+    (vfp?.assessments_processed > 0);
 
-  // Staff notes / support notes (from document category or assessment notes fields)
-  const hasStaffNotes = documents.some(d => d.category === "notes") ||
-    documents.some(d => d.category === "other" && d.notes);
-  if (hasStaffNotes) sources.add("staff_notes");
+  if (assessFromList || assessFromVFP || hasAssessmentIds) sources.add("structured_assessment");
 
-  // Generic uploaded documents (non-resume, non-notes)
+  // ── DOCUMENTS ─────────────────────────────────────────────────────────────
   const hasOtherDocs = documents.some(d =>
     !["resume", "notes"].includes(d.category) &&
     d.category !== "generated_report"
   );
-  if (hasOtherDocs) sources.add("documents");
+  const hasDocumentIds = (vfp?._metadata?.source_document_ids?.length > 0) ||
+    (vfp?.documents_processed > 0) ||
+    (vfp?.document_types_found?.length > 0);
+
+  if (hasOtherDocs || hasDocumentIds) sources.add("documents");
+
+  // ── STAFF NOTES ───────────────────────────────────────────────────────────
+  const hasStaffNotes = documents.some(d => d.category === "notes") ||
+    documents.some(d => d.category === "other" && d.notes) ||
+    matchesAny(sourceStrings, ["staff note", "case note"]);
+  if (hasStaffNotes) sources.add("staff_notes");
 
   return Array.from(sources);
 }
@@ -138,7 +218,9 @@ function hasCrossSourceCorroboration(vfp, sourceTypes) {
 function profileAgeDays(vfp, client) {
   const extractedAt =
     client?.vocational_facts_extracted_at ||
+    vfp?._extracted_at ||
     vfp?._intake_extracted_at ||
+    vfp?.extracted_at ||
     null;
   if (!extractedAt) return null;
   return Math.floor((Date.now() - new Date(extractedAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -170,7 +252,7 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   const ageDays = profileAgeDays(vfp, client);
   const isStale = ageDays !== null && ageDays > 90;
 
-  const hasIntakeOnly = sourceCount === 0 || (sourceCount === 1 && sourceTypes[0] === "intake");
+  const hasIntake = sourceTypes.includes("intake");
   const hasResume = sourceTypes.includes("resume");
   const hasWSA = sourceTypes.includes("wsa");
   const hasONet = sourceTypes.includes("onet_interest_profiler");
@@ -178,6 +260,9 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   const highQualitySourceCount = sourceTypes.filter(s =>
     ["resume", "wsa", "onet_interest_profiler", "structured_assessment"].includes(s)
   ).length;
+  // intake-only = no high-quality non-intake sources detected
+  const hasIntakeOnly = highQualitySourceCount === 0 && !sourceTypes.includes("documents") &&
+    (sourceCount === 0 || (sourceCount === 1 && hasIntake));
 
   const richnessFacts = countRichnessFacts(vfp);
   const corroborated = hasCrossSourceCorroboration(vfp, sourceTypes);
@@ -257,25 +342,33 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   // ── REASON SENTENCES ────────────────────────────────────────────────────────
   const reasons = [];
 
-  if (hasIntakeOnly) {
-    reasons.push("Only intake data is currently available.");
+  const sourceLabels = {
+    intake: "intake form",
+    resume: "resume / work history",
+    wsa: "Work Strategy Assessment (WSA)",
+    onet_interest_profiler: "O*NET Interest Profiler",
+    structured_assessment: "structured assessments",
+    documents: "uploaded documents",
+    staff_notes: "staff notes",
+  };
+
+  if (hasIntakeOnly && sourceCount === 0) {
+    reasons.push("No source data detected yet — extraction has not been run.");
+  } else if (hasIntakeOnly) {
+    reasons.push("Only intake form data is currently available.");
   } else {
-    const sourceLabels = {
-      intake: "intake form",
-      resume: "resume / work history",
-      wsa: "Work Strategy Assessment (WSA)",
-      onet_interest_profiler: "O*NET Interest Profiler",
-      structured_assessment: "structured assessments",
-      documents: "uploaded documents",
-      staff_notes: "staff notes",
-    };
+    const nonIntakeSources = sourceTypes.filter(s => s !== "intake").map(s => sourceLabels[s] || s);
     const listedSources = sourceTypes.map(s => sourceLabels[s] || s).join(", ");
-    reasons.push(`Sources available: ${listedSources}.`);
+    if (!hasIntake && nonIntakeSources.length > 0) {
+      reasons.push(`Multiple non-intake sources available: ${nonIntakeSources.join(", ")}. Intake has not been started.`);
+    } else {
+      reasons.push(`Sources available: ${listedSources}.`);
+    }
   }
 
   if (!hasResume) reasons.push("Resume / work history has not been added.");
-  if (!hasONet) reasons.push("O*NET Interest Profiler is missing.");
-  if (!hasWSA) reasons.push("Work Strategy Assessment (WSA) is missing.");
+  if (!hasONet) reasons.push("O*NET Interest Profiler has not been completed.");
+  if (!hasWSA) reasons.push("Work Strategy Assessment (WSA) has not been completed.");
 
   if (missingCount > 0) {
     reasons.push(`${missingCount} critical data point${missingCount !== 1 ? "s" : ""} are missing from the profile.`);
@@ -319,8 +412,9 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   if (!hasResume) next_steps.push("Upload or build a resume to add work history context.");
   if (!hasONet) next_steps.push("Complete the O*NET Interest Profiler assessment.");
   if (!hasWSA) next_steps.push("Complete a Work Strategy Assessment (WSA).");
-  if (conflictCount > 0) next_steps.push("Review flagged conflicts with the client before using recommendations.");
-  if (missingCount > 0) next_steps.push("Fill in missing critical data in intake sections.");
+  if (conflictCount > 0) next_steps.push("Review flagged conflicts with the client to clarify vocational direction.");
+  if (missingCount > 0) next_steps.push(hasIntake ? "Fill in missing critical data in intake sections." : "Consider starting an intake packet to capture additional vocational context.");
+  if (!hasIntake && highQualitySourceCount >= 1) next_steps.push("Starting an intake packet would add valuable context to complement existing sources.");
   if (isStale) next_steps.push("Re-extract the Vocational Facts Profile to reflect recent updates.");
   if (next_steps.length === 0 && confidence_level !== "High") {
     next_steps.push("Continue building out assessments and documents to strengthen the profile.");
