@@ -204,12 +204,6 @@ function EnvFitSection({ constraintFit }) {
       title="Environmental Fit"
       badges={badges}
     >
-      {environmental_fit_summary && (
-        <div className={cn("rounded-md border px-2.5 py-2 flex items-start gap-2", cfg.summary)}>
-          <span className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", cfg.dot)} />
-          <p className="text-[11px] leading-relaxed font-medium">{environmental_fit_summary}</p>
-        </div>
-      )}
       {!hasContent ? (
         <p className="text-[11px] text-slate-400 italic">No environmental fit data available.</p>
       ) : (

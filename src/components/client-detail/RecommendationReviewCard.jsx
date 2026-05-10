@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import RecommendationGroundingPanel from "@/components/client-detail/RecommendationGroundingPanel";
+import RecommendationCardPanels from "@/components/client-detail/RecommendationCardPanels";
 
 // ============================================================
 // RECOMMENDATION STATUS WORKFLOW (JOB FIELD / OCCUPATION LEVEL)
@@ -322,8 +322,8 @@ setReviewNotesError("");
             )}
           </div>
 
-          {/* Grounding Evidence Panel */}
-          <RecommendationGroundingPanel
+          {/* Evidence Panels */}
+          <RecommendationCardPanels
             grounding={recommendation.grounding}
             confidenceLevel={recommendation.confidence_level}
             constraintFit={recommendation.constraint_fit}
