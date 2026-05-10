@@ -49,7 +49,28 @@ function Section({ title, items, icon: Icon, iconClass, emptyText, colorClass })
 export default function RecommendationGroundingPanel({ grounding, confidenceLevel, constraintFit }) {
   const [open, setOpen] = useState(false);
 
-  if (!grounding) return null;
+  // Debug: log grounding state on every render
+  console.log("[GroundingPanel]", {
+    title: grounding?.grounding_summary?.slice(0, 40) || "(no summary)",
+    hasGrounding: !!grounding,
+    hasConstraintFit: !!constraintFit,
+  });
+
+  if (!grounding) {
+    // Fallback: show minimal panel if constraintFit exists
+    if (constraintFit) {
+      return (
+        <div className="mt-2 rounded-lg border border-slate-200 overflow-hidden bg-slate-50/60">
+          <ConstraintFitPanel constraintFit={constraintFit} />
+        </div>
+      );
+    }
+    return (
+      <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-[11px] text-slate-400 italic">
+        Grounding not available for this recommendation.
+      </div>
+    );
+  }
 
   const {
     supported_by = [],
@@ -61,13 +82,17 @@ export default function RecommendationGroundingPanel({ grounding, confidenceLeve
     grounding_summary = "",
   } = grounding;
 
+  // Normalize supporting_sources: may be strings or {label, detail, type} objects
+  const normalizedSources = supporting_sources.map(s =>
+    typeof s === "string" ? s : (s?.label || "")
+  ).filter(Boolean);
+
   const hasContent =
     supported_by.length > 0 ||
     concern_factors.length > 0 ||
     missing_data_factors.length > 0 ||
-    staff_review_flags.length > 0;
-
-  if (!hasContent && !grounding_summary) return null;
+    staff_review_flags.length > 0 ||
+    grounding_summary;
 
   const level = confidenceLevel || "medium";
   const confStyle = CONFIDENCE_STYLE[level] || CONFIDENCE_STYLE.medium;
@@ -84,9 +109,9 @@ export default function RecommendationGroundingPanel({ grounding, confidenceLeve
           <Lightbulb className="w-3.5 h-3.5 text-violet-500 shrink-0" />
           <span className="text-[11px] font-semibold text-slate-700">Why this recommendation?</span>
           {/* Mini source pills */}
-          {supporting_sources.length > 0 && (
+          {normalizedSources.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
-              {supporting_sources.slice(0, 3).map((src, i) => (
+              {normalizedSources.slice(0, 3).map((src, i) => (
                 <span key={i} className="text-[9px] bg-violet-50 border border-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-medium">
                   {src}
                 </span>

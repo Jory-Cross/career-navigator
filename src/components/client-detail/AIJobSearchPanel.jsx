@@ -982,8 +982,13 @@ const validJobCount = jobs.filter(
             (r) => r.confidence_level === "low"
           );
 
-          const renderRecommendationCard = (rec, key, sectionType = "recommended") => (
-            <div
+          const renderRecommendationCard = (rec, key, sectionType = "recommended") => {
+            console.log("[RecCard]", {
+              title: rec.title || rec.job_title,
+              hasGrounding: !!rec.grounding,
+              hasConstraintFit: !!rec.constraint_fit,
+            });
+            return (<div
   key={key}
   className={`border rounded p-3 space-y-2 ${
     rec.confidence_level === "high"
@@ -1118,7 +1123,8 @@ const validJobCount = jobs.filter(
                 constraintFit={rec.constraint_fit}
               />
             </div>
-          );
+          );};
+
 
           return (
   <>
