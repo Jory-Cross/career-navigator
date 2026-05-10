@@ -5,6 +5,12 @@ import {
   Lightbulb, ShieldAlert, ShieldCheck, HelpCircle, Star, ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  extractKeyTopics,
+  ExpandableEvidenceList,
+  SummaryChips,
+  deduplicateEvidence,
+} from "./RecommendationCardHelper";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +116,13 @@ function WhySection({ grounding, confidenceLevel }) {
 
   const level = confidenceLevel || "medium";
 
+  // Extract key topics for summary chips
+  const keyTopics = extractKeyTopics({
+    supported: supported_by,
+    concerns: concern_factors,
+    missing: missing_data_factors,
+  });
+
   const badges = normalizedSources.length > 0 && (
     <div className="flex items-center gap-1 flex-wrap min-w-0">
       {normalizedSources.slice(0, 3).map((src, i) => (
@@ -142,10 +155,25 @@ function WhySection({ grounding, confidenceLevel }) {
               <p className="text-[11px] leading-relaxed font-medium">{grounding_summary}</p>
             </div>
           )}
-          <SubSection label="Supporting Evidence" labelClass="text-green-700" items={supported_by} icon={CheckCircle2} iconClass="text-green-500" />
-          <SubSection label="Confidence Factors" labelClass="text-blue-700" items={confidence_factors} icon={Info} iconClass="text-blue-500" />
-          <SubSection label="Concerns / Barriers" labelClass="text-amber-700" items={concern_factors} icon={AlertTriangle} iconClass="text-amber-500" />
-          <SubSection label="Missing Data" labelClass="text-slate-500" items={missing_data_factors} icon={Search} iconClass="text-slate-400" />
+          {keyTopics.length > 0 && <SummaryChips topics={keyTopics} />}
+          <div className="space-y-2">
+            <ExpandableEvidenceList items={supported_by} icon={CheckCircle2} iconClass="text-green-500" showCount={2} />
+            <ExpandableEvidenceList items={confidence_factors} icon={Info} iconClass="text-blue-500" showCount={2} />
+            {(concern_factors.length > 0 || missing_data_factors.length > 0) && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-1 text-amber-700 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Concerns / Missing Data
+                </p>
+                <ExpandableEvidenceList
+                  items={[...concern_factors, ...missing_data_factors]}
+                  icon={AlertTriangle}
+                  iconClass="text-amber-500"
+                  showCount={2}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
     </SectionToggle>
@@ -237,10 +265,20 @@ function EnvFitSection({ constraintFit }) {
               )}
             </div>
           )}
-          <SubSection label="Hard Constraints" labelClass="text-red-700" items={hard_constraints} icon={ShieldAlert} iconClass="text-red-500" />
-          <SubSection label="Moderate Concerns" labelClass="text-amber-700" items={moderate_constraints} icon={AlertTriangle} iconClass="text-amber-500" />
-          <SubSection label="Soft Preferences" labelClass="text-violet-700" items={soft_preferences} icon={Star} iconClass="text-violet-400" />
-          <SubSection label="Missing / Unknown" labelClass="text-slate-500" items={unknowns} icon={HelpCircle} iconClass="text-slate-400" />
+          <div className="space-y-2">
+            {hard_constraints.length > 0 && (
+              <ExpandableEvidenceList items={hard_constraints} icon={ShieldAlert} iconClass="text-red-500" showCount={2} />
+            )}
+            {moderate_constraints.length > 0 && (
+              <ExpandableEvidenceList items={moderate_constraints} icon={AlertTriangle} iconClass="text-amber-500" showCount={2} />
+            )}
+            {soft_preferences.length > 0 && (
+              <ExpandableEvidenceList items={soft_preferences} icon={Star} iconClass="text-violet-400" showCount={2} />
+            )}
+            {unknowns.length > 0 && (
+              <ExpandableEvidenceList items={unknowns} icon={HelpCircle} iconClass="text-slate-400" showCount={2} />
+            )}
+          </div>
         </>
       )}
     </SectionToggle>
@@ -254,11 +292,11 @@ function StaffVerifySection({ grounding, constraintFit }) {
 
   const groundingFlags = grounding?.staff_review_flags || [];
   const constraintFlags = constraintFit?.staff_verification_needed || [];
-  const allFlags = [...new Set([...groundingFlags, ...constraintFlags].map(readableItem))].filter(Boolean);
+  const dedupedFlags = deduplicateEvidence({ grounding: groundingFlags, constraint: constraintFlags });
 
-  const badges = allFlags.length > 0 && (
+  const badges = dedupedFlags.length > 0 && (
     <span className="text-[9px] bg-purple-100 border border-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
-      {allFlags.length} item{allFlags.length !== 1 ? "s" : ""}
+      {dedupedFlags.length} item{dedupedFlags.length !== 1 ? "s" : ""}
     </span>
   );
 
@@ -271,17 +309,10 @@ function StaffVerifySection({ grounding, constraintFit }) {
       title="Staff Should Verify"
       badges={badges}
     >
-      {allFlags.length === 0 ? (
+      {dedupedFlags.length === 0 ? (
         <p className="text-[11px] text-slate-400 italic">No major staff verification flags currently detected.</p>
       ) : (
-        <ul className="space-y-1.5">
-          {allFlags.map((flag, i) => (
-            <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700 leading-relaxed">
-              <span className="shrink-0 text-purple-400 font-bold mt-0.5">→</span>
-              <span>{flag}</span>
-            </li>
-          ))}
-        </ul>
+        <ExpandableEvidenceList items={dedupedFlags} icon={Info} iconClass="text-purple-500" showCount={3} />
       )}
     </SectionToggle>
   );
