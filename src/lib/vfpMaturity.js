@@ -96,18 +96,42 @@ function detectSourceTypes({ vfp, client, documents = [], assessments = [] }) {
 }
 
 // ── SOURCE QUALITY WEIGHTS ────────────────────────────────────────────────────
+// Higher = more vocational intelligence value
 const SOURCE_WEIGHTS = {
-  wsa: 3,
-  onet_interest_profiler: 3,
-  resume: 2,
-  structured_assessment: 2,
+  wsa: 4,
+  onet_interest_profiler: 4,
+  resume: 3,
+  structured_assessment: 3,
   intake: 1,
-  documents: 1,
+  documents: 2,
   staff_notes: 1,
 };
 
 function sourceQualityScore(sourceTypes) {
   return sourceTypes.reduce((sum, s) => sum + (SOURCE_WEIGHTS[s] || 1), 0);
+}
+
+// ── PROFILE RICHNESS ──────────────────────────────────────────────────────────
+// Counts total non-empty, non-private VFP array fields to measure data density
+function countRichnessFacts(vfp) {
+  if (!vfp) return 0;
+  let total = 0;
+  for (const [key, val] of Object.entries(vfp)) {
+    if (key.startsWith("_")) continue;
+    if (Array.isArray(val)) total += val.length;
+  }
+  return total;
+}
+
+// ── CROSS-SOURCE CORROBORATION ────────────────────────────────────────────────
+// Checks if skills/interests/goals appear to have data from 2+ source types
+function hasCrossSourceCorroboration(vfp, sourceTypes) {
+  const highQualitySources = sourceTypes.filter(s =>
+    ["resume", "wsa", "onet_interest_profiler", "structured_assessment"].includes(s)
+  );
+  // If 2+ high-quality sources present AND core domains have data, assume corroboration
+  return highQualitySources.length >= 2 &&
+    (vfp?.skills?.length > 0 || vfp?.interests?.length > 0 || vfp?.goals?.length > 0);
 }
 
 // ── FRESHNESS CHECK ───────────────────────────────────────────────────────────
@@ -146,46 +170,88 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   const ageDays = profileAgeDays(vfp, client);
   const isStale = ageDays !== null && ageDays > 90;
 
-  const hasIntakeOnly = sourceTypes.length === 1 && sourceTypes[0] === "intake";
+  const hasIntakeOnly = sourceCount === 0 || (sourceCount === 1 && sourceTypes[0] === "intake");
   const hasResume = sourceTypes.includes("resume");
   const hasWSA = sourceTypes.includes("wsa");
   const hasONet = sourceTypes.includes("onet_interest_profiler");
   const hasStructuredAssessment = sourceTypes.includes("structured_assessment");
+  const highQualitySourceCount = sourceTypes.filter(s =>
+    ["resume", "wsa", "onet_interest_profiler", "structured_assessment"].includes(s)
+  ).length;
+
+  const richnessFacts = countRichnessFacts(vfp);
+  const corroborated = hasCrossSourceCorroboration(vfp, sourceTypes);
+  const hasWorkHistory = (vfp?.preferred_job_titles?.length > 0) ||
+    (vfp?.skills?.length > 0 && hasResume);
 
   // ── MATURITY LEVEL ──────────────────────────────────────────────────────────
+  // Thresholds tuned so multi-source profiles with assessments score correctly
   let maturity_level;
-  if (sourceCount === 0 || (sourceCount === 1 && sourceTypes[0] === "intake" && domainCoverage < 0.35)) {
+  if (hasIntakeOnly && domainCoverage < 0.35) {
+    // Truly sparse: only intake, and most domains are empty
     maturity_level = "Early Intake Profile";
-  } else if (qualityScore >= 6 && coveredDomains >= 8 && (hasResume || hasWSA || hasONet)) {
+  } else if (highQualitySourceCount >= 2 && coveredDomains >= 7 && qualityScore >= 8) {
+    // Full multi-source with strong coverage
     maturity_level = "Comprehensive Vocational Profile";
-  } else if ((hasResume || hasWSA || hasONet || hasStructuredAssessment) && sourceCount >= 2) {
+  } else if (highQualitySourceCount >= 1 || (sourceCount >= 2 && domainCoverage >= 0.4)) {
+    // At least one quality source (resume, O*NET, WSA, assessment) with some coverage
     maturity_level = "Multi-Source Profile";
-  } else {
+  } else if (!hasIntakeOnly || domainCoverage >= 0.35) {
+    // Intake plus some other source, or intake with decent domain coverage
     maturity_level = "Foundational Profile";
+  } else {
+    maturity_level = "Early Intake Profile";
   }
 
   // ── CONFIDENCE SCORE (0–100) ────────────────────────────────────────────────
+  // Redesigned with stronger positive signals and lighter penalties.
   let score = 0;
 
-  // Source diversity (max 35)
-  score += Math.min(35, sourceCount * 7);
+  // === POSITIVE SIGNALS ===
 
-  // Source quality weight (max 25)
-  score += Math.min(25, qualityScore * 3);
+  // Source diversity: each unique source type adds value (max 20)
+  score += Math.min(20, sourceCount * 5);
 
-  // Domain coverage (max 25)
-  score += Math.round(domainCoverage * 25);
+  // Source quality: weighted sum of high-value sources (max 30)
+  // wsa=4, onet=4, resume=3, assessment=3 → 2 high sources = comfortable 20+
+  score += Math.min(30, qualityScore * 2.5);
 
-  // Deductions
-  score -= Math.min(15, missingCount * 3);   // missing data
-  score -= Math.min(10, conflictCount * 5);  // conflicts
-  if (isStale) score -= 8;                   // stale profile
+  // Domain coverage: how many of 12 vocational domains have data (max 20)
+  score += Math.round(domainCoverage * 20);
+
+  // Cross-source corroboration bonus: 2+ quality sources agree on core domains (bonus 10)
+  if (corroborated) score += 10;
+
+  // Profile richness: many individual facts extracted (bonus up to 8)
+  if (richnessFacts >= 30) score += 8;
+  else if (richnessFacts >= 15) score += 5;
+  else if (richnessFacts >= 5) score += 2;
+
+  // Work history present (bonus 5)
+  if (hasWorkHistory) score += 5;
+
+  // === PENALTIES ===
+
+  // Missing critical data: light penalty — optional domains are not required (max -10)
+  score -= Math.min(10, missingCount * 2);
+
+  // Conflicts: informative but uncertain — small penalty (max -8)
+  // Conflicts in a rich profile are normal, so cap deduction low
+  score -= Math.min(8, conflictCount * 2);
+
+  // Stale profile: moderate penalty (-6)
+  if (isStale) score -= 6;
+
+  // Intake-only: significant penalty since single source is unreliable (-15)
+  if (hasIntakeOnly) score -= 15;
 
   score = Math.max(0, Math.min(100, score));
 
+  // Thresholds: 55+ = High, 32+ = Moderate, below = Low
+  // This means: intake-only → Low, one quality source → Moderate, multi-source → High
   const confidence_level =
-    score >= 65 ? "High" :
-    score >= 35 ? "Moderate" :
+    score >= 55 ? "High" :
+    score >= 32 ? "Moderate" :
     "Low";
 
   // ── REASON SENTENCES ────────────────────────────────────────────────────────
@@ -216,7 +282,7 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
   }
 
   if (conflictCount > 0) {
-    reasons.push(`${conflictCount} conflict${conflictCount !== 1 ? "s" : ""} exist and should be reviewed before relying on recommendations.`);
+    reasons.push(`${conflictCount} conflict${conflictCount !== 1 ? "s" : ""} flagged — these represent normal vocational complexity and may be useful intelligence.`);
   }
 
   const missingDomains = Object.entries(DOMAIN_FIELDS)
@@ -229,8 +295,18 @@ export function evaluateVFPMaturity({ vfp, client, documents = [], assessments =
     reasons.push(`Many vocational domains are still incomplete (${missingDomains.length} of ${totalDomains}).`);
   }
 
-  if (sourceCount >= 3 && conflictCount === 0) {
-    reasons.push("Multiple sources support the same vocational direction.");
+  if (corroborated) {
+    reasons.push("Core vocational domains are supported by multiple quality sources.");
+  }
+
+  if (richnessFacts >= 30) {
+    reasons.push(`Profile is rich with ${richnessFacts} extracted vocational facts.`);
+  } else if (richnessFacts >= 15) {
+    reasons.push(`Profile contains ${richnessFacts} extracted vocational facts.`);
+  }
+
+  if (highQualitySourceCount >= 2) {
+    reasons.push(`${highQualitySourceCount} high-quality vocational sources are present.`);
   }
 
   if (isStale) {
