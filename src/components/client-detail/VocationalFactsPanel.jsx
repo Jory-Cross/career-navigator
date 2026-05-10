@@ -59,8 +59,19 @@ function formatSupportNeed(fact) {
 
   const normalized = fact.trim().toLowerCase();
 
-  if (SUPPORT_NEEDS_DISPLAY_MAP[normalized]) {
-    return SUPPORT_NEEDS_DISPLAY_MAP[normalized];
+    const canonicalMap = {
+    moderate_support_needs: "Moderate ongoing support needs",
+    job_coaching_required: "Job coaching support",
+    routine_learning_support: "Additional training time for learning routines",
+    slower_processing_support: "Additional processing/responding time",
+    communication_support: "Communication/task adaptation support",
+    extended_training_support: "Extended training/support for task learning",
+    accessibility_support: "Accessibility accommodation support",
+    wheelchair_accessibility: "Wheelchair-accessible workplace/restroom",
+  };
+
+  if (canonicalMap[normalized]) {
+    return canonicalMap[normalized];
   }
 
   // Deduplicate verbose phrases into canonical labels
