@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import RecommendationCardPanels from "@/components/client-detail/RecommendationCardPanels";
+import RecommendationPriorityBadge from "@/components/client-detail/RecommendationPriorityBadge";
 import {
   Sparkles, Loader2, CheckCircle, BookmarkPlus,
   Search, History, Lightbulb, AlertTriangle, FileText,
@@ -1057,19 +1058,28 @@ const validJobCount = jobs.filter(
               )}
 
               {rec.confidence_reason && (
-  <div
-    className={
-      rec.confidence_level === "high"
-        ? "rounded-md border border-green-300 bg-green-50 px-2 py-1 text-[11px] font-medium text-green-800"
-        : rec.confidence_level === "medium"
-        ? "rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
-        : "rounded-md border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800"
-    }
-  >
-    {rec.confidence_level === "low" ? "⚠️ " : ""}
-    {rec.confidence_reason}
-  </div>
-)}
+              <div
+              className={
+              rec.confidence_level === "high"
+              ? "rounded-md border border-green-300 bg-green-50 px-2 py-1 text-[11px] font-medium text-green-800"
+              : rec.confidence_level === "medium"
+              ? "rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800"
+              : "rounded-md border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800"
+              }
+              >
+              {rec.confidence_level === "low" ? "⚠️ " : ""}
+              {rec.confidence_reason}
+              </div>
+              )}
+
+              {/* Priority Badge */}
+              {rec.priority && (
+                <>
+                  {console.log("LIVE CARD PRIORITY", rec.priority)}
+                  {console.log("RENDERING PRIORITY BADGE")}
+                  <RecommendationPriorityBadge priority={rec.priority} />
+                </>
+              )}
 
               {rec.matched_keywords?.length > 0 && (
                 <div className="flex flex-wrap gap-1">
