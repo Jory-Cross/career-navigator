@@ -66,7 +66,7 @@ recs.forEach(r => {
             batch.status === 'pending_review' ? 'bg-amber-100 text-amber-700' : 
             'bg-slate-100 text-slate-700'
           )}>
-            {batch.status.replace(/_/g, ' ')}
+            {(batch.status || '').replace(/_/g, ' ')}
           </Badge>
         </div>
       </CardHeader>
