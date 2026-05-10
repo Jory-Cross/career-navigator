@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import RecommendationCardPanels from "@/components/client-detail/RecommendationCardPanels";
+import RecommendationPriorityBadge from "@/components/client-detail/RecommendationPriorityBadge";
 
 // ============================================================
 // RECOMMENDATION STATUS WORKFLOW (JOB FIELD / OCCUPATION LEVEL)
@@ -321,6 +322,11 @@ setReviewNotesError("");
               <p className="text-xs text-slate-500 italic">Not yet reviewed by staff</p>
             )}
           </div>
+
+          {/* Priority Badge */}
+          {recommendation.priority && (
+            <RecommendationPriorityBadge priority={recommendation.priority} />
+          )}
 
           {/* Evidence Panels */}
           <RecommendationCardPanels

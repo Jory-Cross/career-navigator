@@ -9,6 +9,7 @@ import {
 } from "@/lib/recommendations/constraintRules";
 import { buildRecommendationGrounding } from "@/lib/recommendations/buildRecommendationGrounding.js";
 import { buildConstraintFit } from "@/lib/recommendations/buildConstraintFit.js";
+import { buildRecommendationPriority, extractPriorityContext } from "@/lib/recommendations/buildRecommendationPriority.js";
 import { evaluateVFPMaturity } from "@/lib/vfpMaturity.js";
 
 function resolveConfidenceLevel({
@@ -427,10 +428,25 @@ if (fitConcerns.length > 0) {
   groundedJob.confidence_level = recalibratedConfidence.confidence_level;
   groundedJob.confidence_reason = recalibratedConfidence.confidence_reason;
 
+  // Attach priority/ranking layer
+  try {
+    const priorityContext = extractPriorityContext(groundedJob, groundingContext);
+    groundedJob.priority = buildRecommendationPriority(groundedJob, priorityContext);
+  } catch (e) {
+    console.error("[generateRecommendationBatch] buildRecommendationPriority failed for:", groundedJob.title, e);
+    groundedJob.priority = {
+      priority_level: "unknown",
+      priority_reason: "Could not assess priority",
+      priority_factors: [],
+      staff_action: "Review manually",
+    };
+  }
+
   console.log("[generateRecommendationBatch] enriched job:", {
     title: groundedJob.title,
     hasGrounding: !!groundedJob.grounding,
     hasConstraintFit: !!groundedJob.constraint_fit,
+    priority: groundedJob.priority?.priority_level,
   });
 
   return groundedJob;

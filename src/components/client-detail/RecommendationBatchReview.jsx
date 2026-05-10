@@ -266,15 +266,25 @@ recs.forEach(r => {
 
         {isExpanded && (
           <div className="space-y-3">
-            {batchRecs.map(rec => (
-              <RecommendationReviewCard
-                key={rec.id}
-                recommendation={rec}
-                clientId={rec.client_id}
-                onStatusChange={handleStatusChange}
-                onRefresh={onRefresh}
-              />
-            ))}
+            {batchRecs
+              .sort((a, b) => {
+                // Sort by priority level first
+                const priorityOrder = { strong_target: 0, explore_further: 1, stretch: 2, caution: 3, low_priority: 4, unknown: 5 };
+                const aPriority = priorityOrder[a.priority?.priority_level] ?? 5;
+                const bPriority = priorityOrder[b.priority?.priority_level] ?? 5;
+                if (aPriority !== bPriority) return aPriority - bPriority;
+                // Then by match score descending
+                return (b.match_score || 0) - (a.match_score || 0);
+              })
+              .map(rec => (
+                <RecommendationReviewCard
+                  key={rec.id}
+                  recommendation={rec}
+                  clientId={rec.client_id}
+                  onStatusChange={handleStatusChange}
+                  onRefresh={onRefresh}
+                />
+              ))}
           </div>
         )}
       </div>
