@@ -7,6 +7,28 @@ import { cn } from "@/lib/utils";
  * Shows the environmental fit level + severity-classified constraint evidence.
  */
 
+/**
+ * Safely extract a readable string from a constraint item.
+ * Handles plain strings and structured objects.
+ */
+function formatConstraintItem(item) {
+  if (typeof item === "string") return item;
+  if (!item || typeof item !== "object") return String(item ?? "");
+  // Try common readable fields in priority order
+  return (
+    item.label ||
+    item.summary ||
+    item.reason ||
+    item.detail ||
+    item.evidence ||
+    item.source ||
+    item.text ||
+    item.description ||
+    Object.values(item).find((v) => typeof v === "string") ||
+    ""
+  );
+}
+
 const FIT_LEVEL_CONFIG = {
   strong_fit:   { label: "Strong Fit",   color: "bg-green-50 border-green-200 text-green-800",  dot: "bg-green-500",  icon: ShieldCheck },
   possible_fit: { label: "Possible Fit", color: "bg-blue-50 border-blue-200 text-blue-800",     dot: "bg-blue-400",   icon: ShieldCheck },
@@ -34,7 +56,7 @@ function ConstraintSection({ title, items, icon: Icon, iconClass, headerClass })
       </p>
       <ul className="space-y-1 pl-0.5">
         {items.map((item, i) => (
-          <ConstraintRow key={i} icon={Icon} iconClass={iconClass} text={item} />
+          <ConstraintRow key={i} icon={Icon} iconClass={iconClass} text={formatConstraintItem(item)} />
         ))}
       </ul>
     </div>
@@ -167,7 +189,7 @@ export default function ConstraintFitPanel({ constraintFit }) {
                 {staff_verification_needed.map((flag, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 leading-relaxed">
                     <span className="shrink-0 text-purple-400 font-bold mt-0.5">→</span>
-                    <span>{flag}</span>
+                    <span>{formatConstraintItem(flag)}</span>
                   </li>
                 ))}
               </ul>
