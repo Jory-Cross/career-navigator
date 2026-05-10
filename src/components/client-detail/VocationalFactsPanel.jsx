@@ -63,6 +63,35 @@ function formatSupportNeed(fact) {
     return SUPPORT_NEEDS_DISPLAY_MAP[normalized];
   }
 
+  // Deduplicate verbose phrases into canonical labels
+  if (
+    normalized.includes("job coaching") ||
+    normalized.includes("assist in adapting to work tasks")
+  ) {
+    return "Job coaching support";
+  }
+
+  if (
+    normalized.includes("additional time and training") ||
+    normalized.includes("learning job task routines")
+  ) {
+    return "Additional training time for learning routines";
+  }
+
+  if (
+    normalized.includes("wheelchair accessibility") ||
+    normalized.includes("workplace and restroom")
+  ) {
+    return "Wheelchair-accessible workplace/restroom";
+  }
+
+  if (
+    normalized.includes("communication scenarios") ||
+    normalized.includes("communication support")
+  ) {
+    return "Communication/task adaptation support";
+  }
+
   return fact
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
