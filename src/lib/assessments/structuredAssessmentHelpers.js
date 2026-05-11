@@ -98,6 +98,25 @@ export function extractEvidenceFromResponses(sections, responses, meta = {}) {
   return evidence;
 }
 
+/**
+ * Convert an implications array (which may contain objects) into strings.
+ * Objects are serialized as "<type>: <description> [flag: <flag>]" for readability.
+ */
+function normalizeImplications(implications) {
+  if (!Array.isArray(implications)) return [];
+  return implications.map((imp) => {
+    if (typeof imp === "string") return imp;
+    if (imp && typeof imp === "object") {
+      const parts = [];
+      if (imp.type) parts.push(imp.type);
+      if (imp.description) parts.push(imp.description);
+      if (imp.flag) parts.push(`[flag: ${imp.flag}]`);
+      return parts.join(": ") || JSON.stringify(imp);
+    }
+    return String(imp);
+  });
+}
+
 function _collectEvidence(question, responses, sectionId, meta, output) {
   if (question.type === QUESTION_TYPES.SECTION_HEADER) return;
 
@@ -116,7 +135,7 @@ function _collectEvidence(question, responses, sectionId, meta, output) {
       evidence_category: question.evidenceCategory,
       evidence_source: meta.source || question.evidenceSource || EVIDENCE_SOURCE.SELF_REPORT,
       evidence_weight: question.evidenceWeight || "medium",
-      implications: question.implications || [],
+      implications: normalizeImplications(question.implications),
       completed_by: meta.completedBy || null,
       completed_at: meta.completedAt || null,
     });
