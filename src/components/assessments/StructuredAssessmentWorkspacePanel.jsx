@@ -8,7 +8,7 @@
  * - No dialog — no close race conditions
  */
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, Circle } from "lucide-react";
@@ -82,20 +82,35 @@ export default function StructuredAssessmentWorkspacePanel({
   // Expose saveDraft on ref so parent could call it if ever needed
   draftSaveRef.current = saveDraft;
 
+  // Track dirty state — true after any response change, false after any save
+  const isDirtyRef = useRef(false);
+  // Keep stable refs so unmount effect always has latest values
+  const saveDraftRef = useRef(saveDraft);
+  useEffect(() => { saveDraftRef.current = saveDraft; }, [saveDraft]);
+  const onSavedRef = useRef(onSaved);
+  useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
+
   // Debounced auto-save — fires 2s after last change
   const autoSaveTimer = useRef(null);
   const handleAutoSave = useCallback((responses) => {
     responsesRef.current = responses;
+    isDirtyRef.current = true;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      saveDraft(responses).catch(() => {}); // silent fail — user still sees their changes
+      saveDraftRef.current(responses).catch(() => {});
+      isDirtyRef.current = false;
     }, 2000);
-  }, [saveDraft]);
+  }, []);
 
-  // Cleanup timer on unmount
+  // On unmount: flush any pending save immediately
   useEffect(() => {
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      if (isDirtyRef.current && Object.keys(responsesRef.current).length > 0) {
+        saveDraftRef.current(responsesRef.current)
+          .then(() => onSavedRef.current?.())
+          .catch(() => {});
+      }
     };
   }, []);
 
