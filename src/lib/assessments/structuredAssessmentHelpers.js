@@ -99,6 +99,19 @@ export function extractEvidenceFromResponses(sections, responses, meta = {}) {
 }
 
 /**
+ * Normalize any evidence value to a string for schema compliance.
+ */
+function normalizeEvidenceValue(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/**
  * Convert an implications array (which may contain objects) into strings.
  * Objects are serialized as "<type>: <description> [flag: <flag>]" for readability.
  */
@@ -131,7 +144,7 @@ function _collectEvidence(question, responses, sectionId, meta, output) {
       question_id: question.id,
       section_id: sectionId,
       label: question.label,
-      value: normalized,
+      value: normalizeEvidenceValue(normalized),
       evidence_category: question.evidenceCategory,
       evidence_source: meta.source || question.evidenceSource || EVIDENCE_SOURCE.SELF_REPORT,
       evidence_weight: question.evidenceWeight || "medium",
