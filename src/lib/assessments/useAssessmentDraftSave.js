@@ -32,6 +32,10 @@ export function useAssessmentDraftSave({
 }) {
   // Track live record ID — prevents duplicate creates
   const recordIdRef = useRef(existingAssessment?.id || null);
+  // Keep recordIdRef current if existingAssessment arrives after initial mount
+  if (existingAssessment?.id && !recordIdRef.current) {
+    recordIdRef.current = existingAssessment.id;
+  }
   // Concurrency guard
   const savingRef = useRef(false);
 
@@ -39,6 +43,7 @@ export function useAssessmentDraftSave({
     assessmentType,
     clientId,
     existingId: existingAssessment?.id || null,
+    recordIdRefCurrent: recordIdRef.current,
     responseCount: Object.keys(existingAssessment?.responses || {}).length,
   });
 

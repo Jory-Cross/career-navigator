@@ -95,27 +95,37 @@ export default function StructuredAssessmentForm({
   const [responses, setResponses] = useState(initialResponses);
   const [saving, setSaving] = useState(false);
 
-  // Internal ref always in sync — used by onCancel handler
-  const internalRef = useRef(responses);
+  // Internal ref — always synchronously in sync (never stale on close)
+  const internalRef = useRef(initialResponses);
+  // Seed parent ref immediately at mount so close handler has data even before any change
+  if (responsesRef && Object.keys(responsesRef.current || {}).length === 0 && Object.keys(initialResponses).length > 0) {
+    responsesRef.current = initialResponses;
+  }
 
   // Sync from initialResponses if they arrive after mount (e.g. async existingAssessment load)
   useEffect(() => {
     if (!initialResponses || Object.keys(initialResponses).length === 0) return;
     console.log("STRUCTURED FORM RESPONSES SYNC", { assessmentType, count: Object.keys(initialResponses).length, sample: Object.keys(initialResponses).slice(0, 3) });
     console.log("STRUCTURED REOPEN RESPONSES", initialResponses);
+    internalRef.current = initialResponses;
+    if (responsesRef) responsesRef.current = initialResponses;
     setResponses(initialResponses);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(initialResponses)]);
 
+  // Fallback effect sync (only needed for edge cases — primary sync is in handleChange)
   useEffect(() => {
-    internalRef.current = responses;
-    // Also sync into parent-provided ref (for dialog-close draft save)
-    if (responsesRef) responsesRef.current = responses;
     console.log("STRUCTURED RESPONSE CHANGE", { assessmentType, count: Object.keys(responses).length });
-  }, [responses, responsesRef, assessmentType]);
+  }, [responses, assessmentType]);
 
   const handleChange = (id, value) => {
-    setResponses((prev) => ({ ...prev, [id]: value }));
+    setResponses((prev) => {
+      const next = { ...prev, [id]: value };
+      // Sync refs synchronously so dialog-close always sees the latest value
+      internalRef.current = next;
+      if (responsesRef) responsesRef.current = next;
+      return next;
+    });
   };
 
   const handleSave = async () => {
