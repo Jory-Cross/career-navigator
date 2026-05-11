@@ -35,6 +35,13 @@ export function useAssessmentDraftSave({
   // Concurrency guard
   const savingRef = useRef(false);
 
+  console.log("STRUCTURED INITIAL RESPONSES", {
+    assessmentType,
+    clientId,
+    existingId: existingAssessment?.id || null,
+    responseCount: Object.keys(existingAssessment?.responses || {}).length,
+  });
+
   const hasAnyResponse = (responses) =>
     Object.values(responses).some(
       (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
@@ -73,7 +80,8 @@ export function useAssessmentDraftSave({
         ...extra,
       };
 
-      console.log("STRUCTURED DRAFT PAYLOAD", payload);
+      console.log("STRUCTURED DRAFT PAYLOAD", { ...payload, responses: `{${Object.keys(responses).length} keys}` });
+      console.log("STRUCTURED DRAFT SAVED RESPONSES", responses);
 
       let result;
       if (recordIdRef.current) {
@@ -83,7 +91,7 @@ export function useAssessmentDraftSave({
         recordIdRef.current = result?.id || null;
       }
 
-      console.log("STRUCTURED DRAFT SAVE RESULT", result, "→ recordId:", recordIdRef.current);
+      console.log("STRUCTURED DRAFT SAVE RESULT", { id: recordIdRef.current, status: "in_progress" });
     } catch (err) {
       console.error("STRUCTURED DRAFT SAVE ERROR", err);
       // Don't show toast for background draft saves — only throw so callers can handle

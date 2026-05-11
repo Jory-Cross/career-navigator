@@ -143,7 +143,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const structuredDraftSaveRef = useRef(null);
   const structuredResponsesRef = useRef({});
 
-  const openNew = (type = "career_goals", assessmentsList = []) => {
+  const openNew = async (type = "career_goals", assessmentsList = []) => {
     // Reset shared structured refs for the new form
     structuredDraftSaveRef.current = null;
     structuredResponsesRef.current = {};
@@ -152,10 +152,24 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     setResponses({});
     setNotes("");
 
-    // Resume any existing draft (in_progress) for structured assessment types
+    // For structured types, always fetch fresh list to resume any existing record
     const STRUCTURED_TYPES = ["work_environment_tolerance"];
     if (STRUCTURED_TYPES.includes(type)) {
-      const existing = assessmentsList.find(a => a.assessment_type === type);
+      // Fetch fresh to avoid stale cache after draft save
+      let freshList = assessmentsList;
+      try {
+        freshList = await base44.entities.Assessment.filter({ client_id: resolvedClientId });
+        queryClient.setQueryData(["client-assessments", resolvedClientId], freshList);
+      } catch (e) {
+        console.warn("STRUCTURED OPEN EXISTING ASSESSMENT: fresh fetch failed, using cached list", e);
+      }
+      const existing = freshList.find(a => a.assessment_type === type);
+      console.log("STRUCTURED OPEN EXISTING ASSESSMENT", {
+        type,
+        foundId: existing?.id,
+        status: existing?.status,
+        responseCount: Object.keys(existing?.responses || {}).length,
+      });
       setEditingAssessment(existing || null);
     } else {
       setEditingAssessment(null);

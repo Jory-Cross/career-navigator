@@ -82,12 +82,21 @@ export default function WorkEnvironmentTolerancePanel({
     onCancel?.();
   }, [saveDraft, onCancel]);
 
+  const initialResponses = existingAssessment?.responses || {};
+  console.log("STRUCTURED OPEN EXISTING ASSESSMENT", {
+    id: existingAssessment?.id,
+    status: existingAssessment?.status,
+    responseCount: Object.keys(initialResponses).length,
+    sample: Object.keys(initialResponses).slice(0, 3),
+  });
+
   return (
     <StructuredAssessmentForm
+      key={existingAssessment?.id || "new"}
       sections={WORK_ENVIRONMENT_TOLERANCE_SECTIONS}
       assessmentType={WORK_ENVIRONMENT_TOLERANCE_META.assessment_type}
       assessmentLabel={WORK_ENVIRONMENT_TOLERANCE_META.label}
-      initialResponses={existingAssessment?.responses || {}}
+      initialResponses={initialResponses}
       onSave={handleSave}
       onCancel={handleCancel}
       responsesRef={responsesRef}

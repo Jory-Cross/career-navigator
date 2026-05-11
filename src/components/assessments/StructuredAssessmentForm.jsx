@@ -98,6 +98,15 @@ export default function StructuredAssessmentForm({
   // Internal ref always in sync — used by onCancel handler
   const internalRef = useRef(responses);
 
+  // Sync from initialResponses if they arrive after mount (e.g. async existingAssessment load)
+  useEffect(() => {
+    if (!initialResponses || Object.keys(initialResponses).length === 0) return;
+    console.log("STRUCTURED FORM RESPONSES SYNC", { assessmentType, count: Object.keys(initialResponses).length, sample: Object.keys(initialResponses).slice(0, 3) });
+    console.log("STRUCTURED REOPEN RESPONSES", initialResponses);
+    setResponses(initialResponses);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialResponses)]);
+
   useEffect(() => {
     internalRef.current = responses;
     // Also sync into parent-provided ref (for dialog-close draft save)
