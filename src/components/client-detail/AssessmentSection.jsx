@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FileText, Plus, Download, Loader2, Pencil, Upload, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import WorkEnvironmentTolerancePanel from "@/components/assessments/WorkEnvironmentTolerancePanel";
 
 const assessmentQuestions = {
   career_goals: [
@@ -51,6 +52,7 @@ const assessmentQuestions = {
   ],
 
 interest_profiler: [],
+work_environment_tolerance: [], // handled by WorkEnvironmentTolerancePanel
   
   work_strategy_assessment: [
     { id: "_section_referral", label: "── COUNSELOR REFERRAL PAGE ──", type: "section" },
@@ -461,6 +463,22 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
       setEditingAssessment(null);
     }}
   />
+)}
+
+{assessmentType === "work_environment_tolerance" && (
+  <WorkEnvironmentTolerancePanel
+    clientId={resolvedClientId}
+    existingAssessment={editingAssessment}
+    onSaved={() => {
+      queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+      setShowForm(false);
+      setEditingAssessment(null);
+    }}
+    onCancel={() => {
+      setShowForm(false);
+      setEditingAssessment(null);
+    }}
+  />
 )}          
           {currentQuestions.map((q) => (
             <div key={q.id}>
@@ -527,7 +545,7 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             Cancel
           </Button>
 
-      {assessmentType !== "interest_profiler" && (
+      {assessmentType !== "interest_profiler" && assessmentType !== "work_environment_tolerance" && (
   <Button
     onClick={handleSubmit}
     disabled={
