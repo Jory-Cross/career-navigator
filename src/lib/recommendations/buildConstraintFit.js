@@ -540,6 +540,61 @@ function normalizeVfp(vfp) {
 
 // ── MAIN EXPORT ───────────────────────────────────────────────────────────────
 
+/**
+ * Merge barriers assessment evidence into a VFP snapshot for constraint evaluation.
+ * Does NOT mutate either input. Barriers evidence fills in fields the VFP may lack,
+ * but will not overwrite stronger VFP evidence (non-empty arrays win).
+ */
+function mergeBarriersIntoVfp(vfp, barriers) {
+  if (!barriers) return vfp;
+  const base = vfp ? { ...vfp } : {};
+
+  const mergeArr = (existing, incoming) => {
+    const e = Array.isArray(existing) ? existing : [];
+    const i = Array.isArray(incoming) ? incoming : [];
+    return e.length > 0 ? e : i.length > 0 ? [...new Set([...e, ...i])] : e;
+  };
+
+  // Physical restrictions
+  if (!base.physical_restrictions?.length && barriers.physical_limitations?.length) {
+    base.physical_restrictions = barriers.physical_limitations;
+  }
+
+  // Sensory/environmental needs
+  if (!base.sensory_environmental_needs?.length && barriers.environment_needs?.length) {
+    base.sensory_environmental_needs = barriers.environment_needs;
+  }
+
+  // Barriers
+  base.barriers = mergeArr(base.barriers, barriers.barriers);
+
+  // Support needs
+  base.support_needs = mergeArr(base.support_needs, barriers.support_needs);
+
+  // Social tolerance
+  if (!base.social_tolerance?.length && barriers.social_tolerance?.length) {
+    base.social_tolerance = barriers.social_tolerance;
+  }
+
+  // Transportation
+  if (!base.transportation_reliability?.length && barriers.transportation?.length) {
+    const reliable = barriers.transportation.filter(t =>
+      t.toLowerCase().includes("drives own vehicle") || t.toLowerCase().includes("public transit")
+    );
+    const unreliable = barriers.transportation.some(t => t.toLowerCase().includes("unreliable"));
+    if (unreliable) base.transportation_limitations = [...(base.transportation_limitations || []), "unreliable_transportation"];
+    if (reliable.length) base.transportation_reliability = reliable;
+  }
+
+  // Schedule constraints (shift_constraints)
+  if (!base.schedule_constraints?.length && barriers.raw?.shift_constraints === "yes") {
+    const detail = barriers.raw?.shift_constraints_detail || "";
+    if (detail) base.schedule_constraints = [detail];
+  }
+
+  return base;
+}
+
 export function buildConstraintFit(job = {}, context = {}) {
   // Fallback chain: vfp → vocationalProfile → profile.vocational_profile → client VFP
   const rawVfp =
@@ -548,12 +603,15 @@ export function buildConstraintFit(job = {}, context = {}) {
     context?.profile?.vocational_profile ||
     null;
 
-  console.log("CONSTRAINT FIT HAS VFP:", !!rawVfp);
-  if (rawVfp) {
-    console.log("VFP KEYS:", Object.keys(rawVfp));
-  }
+  // Merge barriers assessment evidence to enrich VFP for constraint evaluation
+  const barriersData = context?.barriers || null;
 
-  if (!rawVfp) {
+  console.log("CONSTRAINT FIT HAS VFP:", !!rawVfp, "HAS BARRIERS:", !!barriersData);
+
+  // If no VFP but we have barriers data, use barriers as the base
+  const effectiveRawVfp = rawVfp || (barriersData ? {} : null);
+
+  if (!effectiveRawVfp) {
     return {
       overall_fit_level: "unknown",
       hard_constraints: [],
@@ -570,8 +628,12 @@ export function buildConstraintFit(job = {}, context = {}) {
     };
   }
 
+  // Merge barriers evidence into VFP snapshot (non-destructive)
+  const mergedRawVfp = mergeBarriersIntoVfp(effectiveRawVfp, barriersData);
+  console.log("VFP KEYS (merged):", Object.keys(mergedRawVfp || {}));
+
   // Normalize all VFP array fields to plain strings before evaluation
-  const vfp = normalizeVfp(rawVfp);
+  const vfp = normalizeVfp(mergedRawVfp);
 
   const hard = [];
   const moderate = [];

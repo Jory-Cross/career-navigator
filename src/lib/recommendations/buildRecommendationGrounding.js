@@ -80,6 +80,7 @@ export function buildRecommendationGrounding(job, context = {}) {
   const {
     vfp = null,
     wsa = null,
+    barriers = null,
     resumes = [],
     interestProfile = null,
     otherAssessments = [],
@@ -121,6 +122,11 @@ export function buildRecommendationGrounding(job, context = {}) {
     (interestProfile.riasec_scores || interestProfile.scores || interestProfile.answer_string || interestProfile.answerString)
   );
   const hasVFP = !!(vfp && Object.keys(vfp).length > 0);
+  const hasBarriers = !!(barriers && (
+    safeArr(barriers.barriers).length > 0 ||
+    safeArr(barriers.support_needs).length > 0 ||
+    safeArr(barriers.environment_needs).length > 0
+  ));
 
   // ── 1. O*NET Interest Profiler match ─────────────────────────────────────
 
@@ -366,7 +372,95 @@ export function buildRecommendationGrounding(job, context = {}) {
     missing_data_factors.push("Work Strategy Assessment (WSA) has not been completed.");
   }
 
-  // ── 6. Maturity/profile quality ───────────────────────────────────────────
+  // ── 6. Barriers to Employment Assessment ─────────────────────────────────
+
+  if (hasBarriers) {
+    supported_by.push("barriers_assessment");
+    supporting_sources.push({
+      label: "Barriers to Employment Assessment",
+      detail: barriers.barriers?.length > 0
+        ? `Documented functional barriers: ${safeArr(barriers.barriers).slice(0, 3).join("; ")}.`
+        : "Barriers assessment data available.",
+      type: "barriers_assessment",
+    });
+
+    // Barrier evidence → concerns
+    if (safeArr(barriers.barriers).length > 0) {
+      concern_factors.push(
+        `Barriers assessment documents: ${safeArr(barriers.barriers).slice(0, 2).join("; ")}.`
+      );
+    }
+
+    // Environment needs
+    if (safeArr(barriers.environment_needs).length > 0) {
+      concern_factors.push(
+        `Environment requirements from barriers assessment: ${safeArr(barriers.environment_needs).slice(0, 2).join("; ")}.`
+      );
+    }
+
+    // Physical limitations
+    if (safeArr(barriers.physical_limitations).length > 0) {
+      concern_factors.push(
+        `Physical limitations documented: ${safeArr(barriers.physical_limitations).slice(0, 2).join("; ")}.`
+      );
+      staff_review_flags.push("Confirm physical demands of this role against documented limitations from barriers assessment.");
+    }
+
+    // Social tolerance
+    if (safeArr(barriers.social_tolerance).length > 0) {
+      concern_factors.push(
+        `Social/interaction barriers noted: ${safeArr(barriers.social_tolerance).slice(0, 2).join("; ")}.`
+      );
+    }
+
+    // Transportation
+    const barriersTransport = safeArr(barriers.transportation);
+    const hasUnreliableTransport = barriersTransport.some(t =>
+      t.toLowerCase().includes("unreliable") || t.toLowerCase().includes("no current")
+    );
+    if (hasUnreliableTransport) {
+      concern_factors.push("Barriers assessment flags transportation as unreliable or absent.");
+      staff_review_flags.push("Resolve transportation barrier before job placement — flagged in barriers assessment.");
+    }
+
+    // Support needs → staff flags
+    if (safeArr(barriers.support_needs).length > 0) {
+      staff_review_flags.push(
+        `Barriers assessment identifies support needs: ${safeArr(barriers.support_needs).slice(0, 3).join("; ")}.`
+      );
+    }
+
+    // Barriers staff flags
+    if (safeArr(barriers.staff_review_flags).length > 0) {
+      safeArr(barriers.staff_review_flags).slice(0, 3).forEach(flag => {
+        staff_review_flags.push(`[Barriers] ${flag}`);
+      });
+    }
+
+    // Ideal job profile narrative → confidence
+    if (barriers.narratives?.ideal_job_profile) {
+      confidence_factors.push(
+        `Barriers assessment ideal job profile: "${barriers.narratives.ideal_job_profile.slice(0, 120)}…"`
+      );
+    }
+
+    // Environments to eliminate → concern
+    if (barriers.narratives?.environments_to_eliminate) {
+      concern_factors.push(
+        `Barriers assessment — avoid: "${barriers.narratives.environments_to_eliminate.slice(0, 100)}…"`
+      );
+    }
+
+    // Insights
+    safeArr(barriers.insights).slice(0, 2).forEach(insight => {
+      concern_factors.push(`[Barriers insight] ${insight}`);
+    });
+  } else if (!hasWSA) {
+    // Only flag missing if we also have no WSA (avoid noise when WSA is present)
+    missing_data_factors.push("Barriers to Employment assessment has not been completed.");
+  }
+
+  // ── 7. Maturity/profile quality ───────────────────────────────────────────
 
   if (maturity) {
     const level = maturity.confidence_level || maturity.maturity_level || "";
@@ -378,7 +472,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     }
   }
 
-  // ── 7. Universal staff verify flags ──────────────────────────────────────
+  // ── 8. Universal staff verify flags ──────────────────────────────────────
 
   staff_review_flags.push("Confirm client's interest in this specific occupation.");
   staff_review_flags.push("Confirm any training or licensing requirements relevant to this role.");
@@ -386,7 +480,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     // already added above, avoid duplicate
   }
 
-  // ── 8. Constraint engine concerns ────────────────────────────────────────
+  // ── 9. Constraint engine concerns ────────────────────────────────────────
 
   if (fitConcerns.length > 0) {
     fitConcerns.slice(0, 3).forEach(c => {
@@ -394,7 +488,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     });
   }
 
-  // ── 9. Profile richness + grounding summary ──────────────────────────────
+  // ── 10. Profile richness + grounding summary ─────────────────────────────
 
   const dedupedConfidence = [...new Set(confidence_factors.filter(Boolean))];
   const dedupedConcern = [...new Set(concern_factors.filter(Boolean))];
@@ -413,6 +507,7 @@ export function buildRecommendationGrounding(job, context = {}) {
     hasResume,
     hasWSA,
     hasVFP,
+    hasBarriersAssessment: hasBarriers,
     resumeSkillCount: resumeSkills.length,
     workHistoryCount: workHistory.length,
     vfpDomainsCovered,

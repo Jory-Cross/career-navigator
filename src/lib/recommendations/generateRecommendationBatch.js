@@ -83,6 +83,7 @@ export async function generateRecommendationBatch({
   resumes = [],
   vocationalProfile = null,
   wsa = null,
+  barriers = null,     // summarized Barriers to Employment assessment
   otherAssessments = [],
   interestProfile = null,
   onet_answer_string = null,
@@ -155,6 +156,7 @@ export async function generateRecommendationBatch({
     vfp: resolvedVfp,
     vocationalProfile,
     wsa,
+    barriers,
     resumes,
     interestProfile,
     otherAssessments,
@@ -273,7 +275,10 @@ constraintProfile.constraints.forEach((constraint) => {
   const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
  // 🔥 Insight-based scoring
-const insights = profile?.wsa?.insights || [];
+const insights = [
+  ...(profile?.wsa?.insights || []),
+  ...(barriers?.insights || []),
+];
 
 const jobText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
@@ -309,7 +314,7 @@ if (
   score += 10;
 }
 
-// Physical limitation penalty
+// Physical limitation penalty (WSA)
 if (
   insights.includes("limited tolerance for prolonged standing or physical work") &&
   (
@@ -319,6 +324,32 @@ if (
   )
 ) {
   score = Math.max(0, score - 50);
+}
+
+// Barriers: seated work required — penalize standing-heavy roles
+if (
+  insights.includes("seated work required") &&
+  (jobText.includes("labor") || jobText.includes("warehouse") || jobText.includes("standing") || jobText.includes("dishwasher"))
+) {
+  score = Math.max(0, score - 50);
+}
+
+// Barriers: sensory environment required — penalize loud/busy environments
+if (
+  insights.includes("requires sensory-controlled environment") &&
+  (jobText.includes("restaurant") || jobText.includes("fast food") || jobText.includes("warehouse") ||
+   jobText.includes("call center") || jobText.includes("factory") || jobText.includes("loud"))
+) {
+  score = Math.max(0, score - 40);
+}
+
+// Barriers: low stress tolerance — penalize fast-paced or high-pressure roles
+if (
+  insights.includes("needs low-stress, low-pressure work") &&
+  (jobText.includes("fast-paced") || jobText.includes("high volume") || jobText.includes("deadline") ||
+   jobText.includes("urgent") || jobText.includes("pressure"))
+) {
+  score = Math.max(0, score - 35);
 }
 
   if (score > 100) score = 100;
