@@ -139,24 +139,26 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
-  // Ref to the WET panel's draft-save function so Dialog close can trigger it
-  const wetDraftSaveRef = useRef(null);
-  const wetResponsesRef = useRef({});
+  // Generic refs used by ANY structured assessment panel for dialog-close draft save
+  const structuredDraftSaveRef = useRef(null);
+  const structuredResponsesRef = useRef({});
 
   const openNew = (type = "career_goals", assessmentsList = []) => {
-    setEditingAssessment(null);
+    // Reset shared structured refs for the new form
+    structuredDraftSaveRef.current = null;
+    structuredResponsesRef.current = {};
+
     setAssessmentType(type);
     setResponses({});
     setNotes("");
 
-    // For WET: look for an existing in_progress draft to resume
-    if (type === "work_environment_tolerance") {
-      const existing = assessmentsList.find(
-        a => a.assessment_type === "work_environment_tolerance"
-      );
-      if (existing) {
-        setEditingAssessment(existing);
-      }
+    // Resume any existing draft (in_progress) for structured assessment types
+    const STRUCTURED_TYPES = ["work_environment_tolerance"];
+    if (STRUCTURED_TYPES.includes(type)) {
+      const existing = assessmentsList.find(a => a.assessment_type === type);
+      setEditingAssessment(existing || null);
+    } else {
+      setEditingAssessment(null);
     }
 
     setShowForm(true);
@@ -357,15 +359,22 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
                 <div className="flex items-start gap-3">
                   <FileText className="w-4 h-4 text-slate-500 mt-1" />
                   <div>
-                    <p className="text-sm font-medium text-slate-800 capitalize">
-                      {assessment.assessment_type.replace(/_/g, " ")}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-slate-800 capitalize">
+                        {assessment.assessment_type.replace(/_/g, " ")}
+                      </p>
+                      {assessment.status === "in_progress" && (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium">
+                          Draft
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Completed{" "}
-                      {format(new Date(assessment.created_date), "MMM d, yyyy")}{" "}
-                      by {assessment.completed_by}
+                      {assessment.status === "in_progress" ? "Last saved" : "Completed"}{" "}
+                      {format(new Date(assessment.updated_date || assessment.created_date), "MMM d, yyyy")}{" "}
+                      {assessment.completed_by && `by ${assessment.completed_by}`}
                     </p>
-                    {assessment.notes && (
+                    {assessment.notes && assessment.status !== "in_progress" && (
                       <p className="text-xs text-slate-600 mt-2">
                         {assessment.notes}
                       </p>
@@ -403,17 +412,16 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
     </CardContent>
 
     <Dialog open={showForm} onOpenChange={(open) => {
-      if (!open && assessmentType === "work_environment_tolerance") {
-        // Trigger draft save via the panel's exposed ref before closing
-        if (wetDraftSaveRef.current && wetResponsesRef.current) {
-          wetDraftSaveRef.current(wetResponsesRef.current).then(() => {
+      if (!open) {
+        console.log("STRUCTURED CLOSE REQUESTED", { assessmentType });
+        // For any structured assessment panel, trigger draft save before closing
+        if (structuredDraftSaveRef.current && structuredResponsesRef.current) {
+          structuredDraftSaveRef.current(structuredResponsesRef.current).then(() => {
             queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
           }).catch(() => {});
         }
         setShowForm(false);
         setEditingAssessment(null);
-      } else {
-        setShowForm(open);
       }
     }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -499,8 +507,8 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
   <WorkEnvironmentTolerancePanel
     clientId={resolvedClientId}
     existingAssessment={editingAssessment}
-    onDraftSaveRef={wetDraftSaveRef}
-    onResponsesRef={wetResponsesRef}
+    draftSaveRef={structuredDraftSaveRef}
+    responsesRef={structuredResponsesRef}
     onSaved={() => {
       queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
       setShowForm(false);

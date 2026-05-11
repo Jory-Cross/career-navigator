@@ -27,6 +27,15 @@
       ],
       "default": "career_goals"
     },
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "completed"
+      ],
+      "default": "completed",
+      "description": "Draft state: in_progress = partial/draft, completed = final saved"
+    },
     "responses": {
       "type": "object",
       "additionalProperties": true,

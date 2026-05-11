@@ -7,8 +7,8 @@
  *   assessmentLabel  - Display name
  *   initialResponses - optional existing response map
  *   onSave           - async (responses, meta) => void  — manual completed save
- *   onDraftSave      - async (responses) => void        — silent draft save (optional)
  *   onCancel         - async (responses) => void        — called with current responses so panel can draft-save
+ *   responsesRef     - optional ref; kept in sync with latest responses for parent/dialog-close use
  *   disabled         - optional boolean
  */
 
@@ -88,20 +88,22 @@ export default function StructuredAssessmentForm({
   assessmentLabel,
   initialResponses = {},
   onSave,
-  onDraftSave,
   onCancel,
-  onResponsesRef,
+  responsesRef,
   disabled = false,
 }) {
   const [responses, setResponses] = useState(initialResponses);
   const [saving, setSaving] = useState(false);
-  // Keep a ref always in sync so onCancel / dialog-close can read latest responses
-  const responsesRef = useRef(responses);
+
+  // Internal ref always in sync — used by onCancel handler
+  const internalRef = useRef(responses);
+
   useEffect(() => {
-    responsesRef.current = responses;
-    // Also sync into parent ref if provided (for Dialog onOpenChange draft-save)
-    if (onResponsesRef) onResponsesRef.current = responses;
-  }, [responses, onResponsesRef]);
+    internalRef.current = responses;
+    // Also sync into parent-provided ref (for dialog-close draft save)
+    if (responsesRef) responsesRef.current = responses;
+    console.log("STRUCTURED RESPONSE CHANGE", { assessmentType, count: Object.keys(responses).length });
+  }, [responses, responsesRef, assessmentType]);
 
   const handleChange = (id, value) => {
     setResponses((prev) => ({ ...prev, [id]: value }));
@@ -119,7 +121,7 @@ export default function StructuredAssessmentForm({
       const staffReviewFlags = extractStaffReviewFlags(sections, responses);
       await onSave(responses, { staffReviewFlags, assessmentType });
     } catch (err) {
-      console.error("WET SAVE ERROR", err);
+      console.error("STRUCTURED SAVE ERROR", err);
       toast.error("Failed to save: " + (err?.message || "Unknown error"));
     } finally {
       setSaving(false);
@@ -127,9 +129,9 @@ export default function StructuredAssessmentForm({
   };
 
   const handleCancel = async () => {
-    // Pass current responses so the panel can draft-save before closing
+    console.log("STRUCTURED CLOSE REQUESTED", { assessmentType, responseCount: Object.keys(internalRef.current).length });
     if (onCancel) {
-      await onCancel(responsesRef.current);
+      await onCancel(internalRef.current);
     }
   };
 
@@ -139,7 +141,7 @@ export default function StructuredAssessmentForm({
         <div className="pb-2 border-b border-slate-100">
           <p className="text-base font-semibold text-slate-900">{assessmentLabel}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            Complete as many fields as possible. Progress is auto-saved as a draft when you close.
+            Progress is auto-saved as a draft when you close.
           </p>
         </div>
       )}
