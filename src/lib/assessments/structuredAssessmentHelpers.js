@@ -116,9 +116,7 @@ function _collectEvidence(question, responses, sectionId, meta, output) {
       evidence_category: question.evidenceCategory,
       evidence_source: meta.source || question.evidenceSource || EVIDENCE_SOURCE.SELF_REPORT,
       evidence_weight: question.evidenceWeight || "medium",
-      implications: (question.implications || []).map(imp =>
-        typeof imp === "string" ? imp : (imp.description || imp.flag || JSON.stringify(imp))
-      ),
+      implications: question.implications || [],
       completed_by: meta.completedBy || null,
       completed_at: meta.completedAt || null,
     });

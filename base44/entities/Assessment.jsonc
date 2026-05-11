@@ -67,7 +67,9 @@
             "type": "string"
           },
           "implications": {
-            "type": "array"
+            "type": "array",
+            "description": "Implication strings or structured implication objects",
+            "items": {}
           },
           "completed_by": {
             "type": "string"

@@ -90,6 +90,7 @@ export default function StructuredAssessmentForm({
   onSave,
   onCancel,
   responsesRef,
+  onChangeDebounced,
   disabled = false,
 }) {
   const [responses, setResponses] = useState(initialResponses);
@@ -124,6 +125,8 @@ export default function StructuredAssessmentForm({
       // Sync refs synchronously so dialog-close always sees the latest value
       internalRef.current = next;
       if (responsesRef) responsesRef.current = next;
+      // Notify workspace panel for debounced auto-save
+      if (onChangeDebounced) onChangeDebounced(next);
       return next;
     });
   };

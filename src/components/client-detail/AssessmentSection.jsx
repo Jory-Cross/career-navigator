@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, Download, Loader2, Pencil, Upload, Trash2 } from "lucide-react";
+import { FileText, Plus, Download, Loader2, Pencil, Upload, Trash2, LayoutDashboard } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
-import WorkEnvironmentTolerancePanel from "@/components/assessments/WorkEnvironmentTolerancePanel";
+import AssessmentWorkspace from "@/components/assessments/AssessmentWorkspace";
 
 const assessmentQuestions = {
   career_goals: [
@@ -52,7 +52,6 @@ const assessmentQuestions = {
   ],
 
 interest_profiler: [],
-work_environment_tolerance: [], // handled by WorkEnvironmentTolerancePanel
   
   work_strategy_assessment: [
     { id: "_section_referral", label: "── COUNSELOR REFERRAL PAGE ──", type: "section" },
@@ -128,6 +127,9 @@ const WSA_FIELD_IDS = [
   "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
 ];
 
+// Structured assessment types that use the workspace, not the modal
+const WORKSPACE_TYPES = ["work_environment_tolerance", "barriers_to_employment", "transportation", "support_and_accommodation", "work_values"];
+
 export default function AssessmentSection({ clientId, client, openAssessmentType, onOpenAssessmentTypeHandled }) {
   const resolvedClientId = clientId || client?.id || "";
   const [showForm, setShowForm] = useState(false);
@@ -139,12 +141,22 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
-  // Generic refs used by ANY structured assessment panel for dialog-close draft save
+  // Workspace mode — replaces modal for structured assessments
+  const [showWorkspace, setShowWorkspace] = useState(false);
+  const [workspaceInitialKey, setWorkspaceInitialKey] = useState(null);
+  // Legacy refs (kept for existing panels still using the modal path)
   const structuredDraftSaveRef = useRef(null);
   const structuredResponsesRef = useRef({});
   const [structuredClosing, setStructuredClosing] = useState(false);
 
   const openNew = async (type = "career_goals", assessmentsList = []) => {
+    // Workspace types open in the workspace panel, not the modal
+    if (WORKSPACE_TYPES.includes(type)) {
+      setWorkspaceInitialKey(type);
+      setShowWorkspace(true);
+      return;
+    }
+
     // Reset shared structured refs for the new form
     structuredDraftSaveRef.current = null;
     structuredResponsesRef.current = {};
@@ -152,34 +164,17 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     setAssessmentType(type);
     setResponses({});
     setNotes("");
-
-    // For structured types, always fetch fresh list to resume any existing record
-    const STRUCTURED_TYPES = ["work_environment_tolerance"];
-    if (STRUCTURED_TYPES.includes(type)) {
-      // Fetch fresh to avoid stale cache after draft save
-      let freshList = assessmentsList;
-      try {
-        freshList = await base44.entities.Assessment.filter({ client_id: resolvedClientId });
-        queryClient.setQueryData(["client-assessments", resolvedClientId], freshList);
-      } catch (e) {
-        console.warn("STRUCTURED OPEN EXISTING ASSESSMENT: fresh fetch failed, using cached list", e);
-      }
-      const existing = freshList.find(a => a.assessment_type === type);
-      console.log("STRUCTURED OPEN EXISTING ASSESSMENT", {
-        type,
-        foundId: existing?.id,
-        status: existing?.status,
-        responseCount: Object.keys(existing?.responses || {}).length,
-      });
-      setEditingAssessment(existing || null);
-    } else {
-      setEditingAssessment(null);
-    }
-
+    setEditingAssessment(null);
     setShowForm(true);
   };
 
   const openEdit = (assessment) => {
+    // Workspace types open in workspace
+    if (WORKSPACE_TYPES.includes(assessment.assessment_type)) {
+      setWorkspaceInitialKey(assessment.assessment_type);
+      setShowWorkspace(true);
+      return;
+    }
     setEditingAssessment(assessment);
     setAssessmentType(assessment.assessment_type);
     setResponses(assessment.responses || {});
@@ -334,57 +329,40 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 
   const currentQuestions = assessmentQuestions[assessmentType] || [];
 
-  // Shared handler for structured assessment close (overlay click or Escape)
-  const handleStructuredClose = async (trigger) => {
-    if (structuredClosing) return;
-    const latestResponses = structuredResponsesRef.current || {};
-    const saveFn = structuredDraftSaveRef.current;
-
-    console.log("STRUCTURED CLOSE REQUESTED", { assessmentType, trigger });
-    console.log("STRUCTURED CLOSE LATEST RESPONSES", { count: Object.keys(latestResponses).length, sample: Object.keys(latestResponses).slice(0, 3) });
-    console.log("STRUCTURED CLOSE SAVE FN EXISTS", !!saveFn);
-
-    if (saveFn) {
-      setStructuredClosing(true);
-      try {
-        console.log("STRUCTURED CLOSE SAVE AWAIT START");
-        await saveFn(latestResponses);
-        console.log("STRUCTURED CLOSE SAVE AWAIT DONE");
-        await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-      } catch (err) {
-        console.error("STRUCTURED CLOSE SAVE ERROR", err);
-        toast.error("Failed to save draft: " + (err?.message || "Unknown error"));
-        setStructuredClosing(false);
-        return false; // signal: keep dialog open
-      }
-      setStructuredClosing(false);
-    }
-
-    setShowForm(false);
-    setEditingAssessment(null);
-    return true;
-  };
 
   useEffect(() => {
     if (!openAssessmentType) return;
-
-    if (openAssessmentType === "interest_profiler") {
-      openNew("interest_profiler", assessments);
-      onOpenAssessmentTypeHandled?.();
-    } else if (openAssessmentType === "work_environment_tolerance") {
-      openNew("work_environment_tolerance", assessments);
-      onOpenAssessmentTypeHandled?.();
-    }
+    openNew(openAssessmentType, assessments);
+    onOpenAssessmentTypeHandled?.();
   }, [openAssessmentType, onOpenAssessmentTypeHandled, assessments]);
   
+ // Show workspace view
+  if (showWorkspace) {
+    return (
+      <AssessmentWorkspace
+        clientId={resolvedClientId}
+        initialAssessmentKey={workspaceInitialKey}
+        onBack={() => {
+          setShowWorkspace(false);
+          queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+        }}
+      />
+    );
+  }
+
  return (
   <Card className="border-0 shadow-sm">
     <CardHeader>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <CardTitle className="text-base">Client Assessments</CardTitle>
-        <Button size="sm" onClick={() => openNew("career_goals", assessments)}>
-          <Plus className="w-3.5 h-3.5 mr-1" /> New Assessment
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setWorkspaceInitialKey("work_environment_tolerance"); setShowWorkspace(true); }}>
+            <LayoutDashboard className="w-3.5 h-3.5 mr-1" /> Structured Assessments
+          </Button>
+          <Button size="sm" onClick={() => openNew("career_goals", assessments)}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> New Assessment
+          </Button>
+        </div>
       </div>
     </CardHeader>
 
@@ -458,28 +436,11 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
     </CardContent>
 
     <Dialog open={showForm} onOpenChange={(open) => {
-      // Only handle non-structured close here (structured close is handled by onInteractOutside/onEscapeKeyDown)
       if (open) return;
-      const STRUCTURED_TYPES = ["work_environment_tolerance"];
-      if (STRUCTURED_TYPES.includes(assessmentType)) return; // blocked — handled below
       setShowForm(false);
       setEditingAssessment(null);
     }}>
-      <DialogContent
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
-        onInteractOutside={async (e) => {
-          const STRUCTURED_TYPES = ["work_environment_tolerance"];
-          if (!STRUCTURED_TYPES.includes(assessmentType)) return;
-          e.preventDefault(); // block Radix from closing immediately
-          await handleStructuredClose("interact-outside");
-        }}
-        onEscapeKeyDown={async (e) => {
-          const STRUCTURED_TYPES = ["work_environment_tolerance"];
-          if (!STRUCTURED_TYPES.includes(assessmentType)) return;
-          e.preventDefault(); // block Radix from closing immediately
-          await handleStructuredClose("escape");
-        }}
-      >
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingAssessment ? "Edit Assessment" : "Complete Assessment"}
@@ -494,13 +455,13 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.keys(assessmentQuestions).map((type) => (
-                  <SelectItem key={type} value={type}>
-  {type === "interest_profiler"
-    ? "Interest Profiler"
-    : type.replace(/_/g, " ")}
-</SelectItem>
-                ))}
+                {Object.keys(assessmentQuestions)
+                  .filter(type => !WORKSPACE_TYPES.includes(type))
+                  .map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type === "interest_profiler" ? "Interest Profiler" : type.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -558,24 +519,7 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
   />
 )}
 
-{assessmentType === "work_environment_tolerance" && (
-  <WorkEnvironmentTolerancePanel
-    clientId={resolvedClientId}
-    existingAssessment={editingAssessment}
-    draftSaveRef={structuredDraftSaveRef}
-    responsesRef={structuredResponsesRef}
-    onSaved={() => {
-      queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-      setShowForm(false);
-      setEditingAssessment(null);
-    }}
-    onCancel={() => {
-      queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-      setShowForm(false);
-      setEditingAssessment(null);
-    }}
-  />
-)}          
+
           {currentQuestions.map((q) => (
             <div key={q.id}>
               {q.type === "section" ? (
@@ -626,7 +570,7 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             </div>
           ))}
 
-          {assessmentType !== "interest_profiler" && assessmentType !== "work_environment_tolerance" && (
+          {assessmentType !== "interest_profiler" && (
             <div>
               <Label>Additional Notes (Optional)</Label>
               <Textarea
@@ -639,19 +583,13 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          {assessmentType === "work_environment_tolerance" && structuredClosing && (
-            <div className="flex items-center gap-2 text-xs text-slate-500 mr-auto">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Saving draft…
-            </div>
-          )}
-          {assessmentType !== "work_environment_tolerance" && (
+          {assessmentType !== "interest_profiler" && (
             <Button variant="outline" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
           )}
 
-      {assessmentType !== "interest_profiler" && assessmentType !== "work_environment_tolerance" && (
+      {assessmentType !== "interest_profiler" && !WORKSPACE_TYPES.includes(assessmentType) && (
   <Button
     onClick={handleSubmit}
     disabled={
