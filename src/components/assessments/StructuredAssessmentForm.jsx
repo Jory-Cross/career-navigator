@@ -1,27 +1,24 @@
 /**
  * Structured Assessment Framework — Assessment Form Container
  *
- * Renders a complete structured assessment from section definitions.
- * Handles section navigation, response state, and save/submit.
- *
  * Props:
- *   sections        - Array of defineSection() results
- *   assessmentType  - string key (e.g. "work_environment_tolerance")
- *   assessmentLabel - Display name
+ *   sections         - Array of defineSection() results
+ *   assessmentType   - string key
+ *   assessmentLabel  - Display name
  *   initialResponses - optional existing response map
- *   onSave          - (responses, meta) => Promise<void>
- *   onCancel        - () => void
- *   disabled        - optional boolean
+ *   onSave           - async (responses, meta) => void  — manual completed save
+ *   onDraftSave      - async (responses) => void        — silent draft save (optional)
+ *   onCancel         - async (responses) => void        — called with current responses so panel can draft-save
+ *   disabled         - optional boolean
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StructuredQuestionRenderer from "./StructuredQuestionRenderer";
 import { QUESTION_TYPES } from "@/lib/assessments/structuredAssessmentTypes";
 import {
-  normalizeResponse,
   findUnansweredRequired,
   extractStaffReviewFlags,
 } from "@/lib/assessments/structuredAssessmentHelpers";
@@ -32,7 +29,6 @@ import { toast } from "sonner";
 function SectionPanel({ section, responses, onChange, disabled, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
 
-  // Count answered questions in section (for progress hint)
   const answerable = section.questions.filter(
     (q) => q.type !== QUESTION_TYPES.SECTION_HEADER
   );
@@ -92,18 +88,26 @@ export default function StructuredAssessmentForm({
   assessmentLabel,
   initialResponses = {},
   onSave,
+  onDraftSave,
   onCancel,
+  onResponsesRef,
   disabled = false,
 }) {
   const [responses, setResponses] = useState(initialResponses);
   const [saving, setSaving] = useState(false);
+  // Keep a ref always in sync so onCancel / dialog-close can read latest responses
+  const responsesRef = useRef(responses);
+  useEffect(() => {
+    responsesRef.current = responses;
+    // Also sync into parent ref if provided (for Dialog onOpenChange draft-save)
+    if (onResponsesRef) onResponsesRef.current = responses;
+  }, [responses, onResponsesRef]);
 
   const handleChange = (id, value) => {
     setResponses((prev) => ({ ...prev, [id]: value }));
   };
 
   const handleSave = async () => {
-    // Check required fields
     const missing = findUnansweredRequired(sections, responses);
     if (missing.length > 0) {
       toast.error(`Please complete required fields (${missing.length} remaining)`);
@@ -122,13 +126,20 @@ export default function StructuredAssessmentForm({
     }
   };
 
+  const handleCancel = async () => {
+    // Pass current responses so the panel can draft-save before closing
+    if (onCancel) {
+      await onCancel(responsesRef.current);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {assessmentLabel && (
         <div className="pb-2 border-b border-slate-100">
           <p className="text-base font-semibold text-slate-900">{assessmentLabel}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            Complete as many fields as possible. Narrative detail improves vocational matching.
+            Complete as many fields as possible. Progress is auto-saved as a draft when you close.
           </p>
         </div>
       )}
@@ -147,8 +158,8 @@ export default function StructuredAssessmentForm({
       </div>
 
       <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-        <Button variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+        <Button variant="outline" onClick={handleCancel} disabled={saving}>
+          Save & Close
         </Button>
         <Button onClick={handleSave} disabled={saving || disabled}>
           {saving ? (

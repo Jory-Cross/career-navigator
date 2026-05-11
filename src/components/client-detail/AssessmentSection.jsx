@@ -139,12 +139,26 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
+  // Ref to the WET panel's draft-save function so Dialog close can trigger it
+  const wetDraftSaveRef = useRef(null);
+  const wetResponsesRef = useRef({});
 
-   const openNew = (type = "career_goals") => {
+  const openNew = (type = "career_goals", assessmentsList = []) => {
     setEditingAssessment(null);
     setAssessmentType(type);
     setResponses({});
     setNotes("");
+
+    // For WET: look for an existing in_progress draft to resume
+    if (type === "work_environment_tolerance") {
+      const existing = assessmentsList.find(
+        a => a.assessment_type === "work_environment_tolerance"
+      );
+      if (existing) {
+        setEditingAssessment(existing);
+      }
+    }
+
     setShowForm(true);
   };
 
@@ -303,21 +317,24 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 
   const currentQuestions = assessmentQuestions[assessmentType] || [];
 
-    useEffect(() => {
+  useEffect(() => {
     if (!openAssessmentType) return;
 
     if (openAssessmentType === "interest_profiler") {
-      openNew("interest_profiler");
+      openNew("interest_profiler", assessments);
+      onOpenAssessmentTypeHandled?.();
+    } else if (openAssessmentType === "work_environment_tolerance") {
+      openNew("work_environment_tolerance", assessments);
       onOpenAssessmentTypeHandled?.();
     }
-  }, [openAssessmentType, onOpenAssessmentTypeHandled]);
+  }, [openAssessmentType, onOpenAssessmentTypeHandled, assessments]);
   
  return (
   <Card className="border-0 shadow-sm">
     <CardHeader>
       <div className="flex items-center justify-between">
         <CardTitle className="text-base">Client Assessments</CardTitle>
-        <Button size="sm" onClick={openNew}>
+        <Button size="sm" onClick={() => openNew("career_goals", assessments)}>
           <Plus className="w-3.5 h-3.5 mr-1" /> New Assessment
         </Button>
       </div>
@@ -385,7 +402,20 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
       )}
     </CardContent>
 
-    <Dialog open={showForm} onOpenChange={setShowForm}>
+    <Dialog open={showForm} onOpenChange={(open) => {
+      if (!open && assessmentType === "work_environment_tolerance") {
+        // Trigger draft save via the panel's exposed ref before closing
+        if (wetDraftSaveRef.current && wetResponsesRef.current) {
+          wetDraftSaveRef.current(wetResponsesRef.current).then(() => {
+            queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+          }).catch(() => {});
+        }
+        setShowForm(false);
+        setEditingAssessment(null);
+      } else {
+        setShowForm(open);
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -469,12 +499,15 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
   <WorkEnvironmentTolerancePanel
     clientId={resolvedClientId}
     existingAssessment={editingAssessment}
+    onDraftSaveRef={wetDraftSaveRef}
+    onResponsesRef={wetResponsesRef}
     onSaved={() => {
       queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
       setShowForm(false);
       setEditingAssessment(null);
     }}
     onCancel={() => {
+      queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
       setShowForm(false);
       setEditingAssessment(null);
     }}
