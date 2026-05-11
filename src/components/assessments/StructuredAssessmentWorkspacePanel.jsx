@@ -27,8 +27,16 @@ export default function StructuredAssessmentWorkspacePanel({
   onSaved,
 }) {
   const { sections, meta } = assessment;
+  // Always seed from existingRecord; update when it changes
   const responsesRef = useRef(existingRecord?.responses || {});
   const draftSaveRef = useRef(null);
+
+  // Keep responsesRef seeded when existingRecord changes (e.g. after query refetch)
+  useEffect(() => {
+    if (existingRecord?.responses && Object.keys(existingRecord.responses).length > 0) {
+      responsesRef.current = existingRecord.responses;
+    }
+  }, [existingRecord?.id, existingRecord?.responses]);
 
   // Build extra payload (evidence + metadata) for VFP integration
   const buildExtraPayload = useCallback(async (responses, status) => {

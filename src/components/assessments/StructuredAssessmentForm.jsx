@@ -132,12 +132,7 @@ export default function StructuredAssessmentForm({
   };
 
   const handleSave = async () => {
-    const missing = findUnansweredRequired(sections, responses);
-    if (missing.length > 0) {
-      toast.error(`Please complete required fields (${missing.length} remaining)`);
-      return;
-    }
-
+    // Save Progress never requires completion — no required-field gate here
     setSaving(true);
     try {
       const staffReviewFlags = extractStaffReviewFlags(sections, responses);
