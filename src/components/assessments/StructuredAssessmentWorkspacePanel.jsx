@@ -20,7 +20,6 @@ import {
   extractStaffReviewFlags,
 } from "@/lib/assessments/structuredAssessmentHelpers";
 import { base44 } from "@/api/base44Client";
-import { appParams } from "@/lib/app-params";
 import { toast } from "sonner";
 
 export default function StructuredAssessmentWorkspacePanel({
@@ -127,43 +126,13 @@ export default function StructuredAssessmentWorkspacePanel({
   const doSaveRef = useRef(doSave);
   useEffect(() => { doSaveRef.current = doSave; }, [doSave]);
 
-  // Stable refs for beacon (always current, no closure staleness)
-  const clientIdRef = useRef(clientId);
-  const assessmentTypeRef = useRef(meta.assessment_type);
-  useEffect(() => { clientIdRef.current = clientId; }, [clientId]);
-  useEffect(() => { assessmentTypeRef.current = meta.assessment_type; }, [meta.assessment_type]);
-
-  // ── sendBeacon flush: the ONLY reliable way to persist on page unload.
-  // fetch()-based saves are cancelled by the browser before completion.
-  // sendBeacon() is queued by the browser independently of page lifetime.
-  const flushBeacon = useCallback(() => {
-    if (!isDirtyRef.current) return;
-    const responses = responsesRef.current;
-    const hasAny = Object.values(responses).some(
-      (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
-    );
-    if (!hasAny) return;
-
-    const blob = new Blob(
-      [JSON.stringify({
-        recordId: recordIdRef.current || null,
-        clientId: clientIdRef.current,
-        assessmentType: assessmentTypeRef.current,
-        responses,
-        completedBy: "",
-      })],
-      { type: "application/json" }
-    );
-    // Resolve the function URL using the same appId the SDK uses
-    const appId = appParams.appId || "";
-    const url = `/api/functions/${appId}/beaconSaveAssessment`;
-    navigator.sendBeacon(url, blob);
-  }, []);
-
-  // ── Save-on-exit: fires when component unmounts (card switch / clicking away)
+  // ── beforeunload: show native browser warning when there are unsaved changes
   useEffect(() => {
-    // beforeunload: browser refresh / tab close / navigate away
-    const handleBeforeUnload = () => flushBeacon();
+    const handleBeforeUnload = (e) => {
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -172,7 +141,7 @@ export default function StructuredAssessmentWorkspacePanel({
         doSaveRef.current(responsesRef.current).catch(() => {});
       }
     };
-  }, [flushBeacon]);
+  }, []);
 
   // ── Manual "Save Progress" button handler
   const handleSave = useCallback(async () => {
