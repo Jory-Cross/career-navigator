@@ -11,6 +11,10 @@ import {
   WORK_ENVIRONMENT_TOLERANCE_SECTIONS,
   WORK_ENVIRONMENT_TOLERANCE_META,
 } from "@/lib/assessments/workEnvironmentToleranceDefinition";
+import {
+  BARRIERS_TO_EMPLOYMENT_SECTIONS,
+  BARRIERS_TO_EMPLOYMENT_META,
+} from "@/lib/assessments/barriersToEmploymentDefinition";
 
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
@@ -171,11 +175,11 @@ const ALL_ASSESSMENTS = [
     key: "barriers_to_employment",
     label: "Barriers to Employment",
     emoji: "🚧",
-    description: "Identify practical and situational barriers affecting job search",
+    description: "Functional barriers across sensory, social, physical, and logistical domains",
     type: "structured",
-    available: false,
-    sections: [],
-    meta: { assessment_type: "barriers_to_employment", label: "Barriers to Employment" },
+    available: true,
+    sections: BARRIERS_TO_EMPLOYMENT_SECTIONS,
+    meta: BARRIERS_TO_EMPLOYMENT_META,
   },
   {
     key: "transportation",
