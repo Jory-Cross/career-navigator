@@ -1,24 +1,26 @@
 /**
  * StructuredAssessmentWorkspacePanel
  *
- * Wraps StructuredAssessmentForm in a workspace-style panel.
- * - Auto-saves as draft on every section change (debounced)
- * - Final save marks as completed
- * - Reuses existing record to prevent duplicates
- * - No dialog — no close race conditions
+ * Follows the same save lifecycle as IntakeSectionForm:
+ * - Local state for responses while editing
+ * - Refs track latest responses + dirty flag (never stale on async save)
+ * - doSave() is the single save function used by manual save, unmount, and cancel
+ * - On unmount (card switch / clicking away): saves if dirty, no debounce
+ * - No key/remount tricks — stable component, no flashing
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Circle } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import StructuredAssessmentForm from "./StructuredAssessmentForm";
 import {
   extractEvidenceFromResponses,
   buildSourceMetadata,
 } from "@/lib/assessments/structuredAssessmentHelpers";
+import { extractStaffReviewFlags } from "@/lib/assessments/structuredAssessmentHelpers";
 import { base44 } from "@/api/base44Client";
-import { useAssessmentDraftSave } from "@/lib/assessments/useAssessmentDraftSave";
+import { toast } from "sonner";
 
 export default function StructuredAssessmentWorkspacePanel({
   clientId,
@@ -27,33 +29,57 @@ export default function StructuredAssessmentWorkspacePanel({
   onSaved,
 }) {
   const { sections, meta } = assessment;
-  // Always seed from existingRecord; update when it changes
-  const responsesRef = useRef(existingRecord?.responses || {});
-  const draftSaveRef = useRef(null);
 
-  // Keep responsesRef seeded when existingRecord changes (e.g. after query refetch)
+  // Local state — mirrors IntakeSectionForm pattern
+  const [responses, setResponses] = useState(existingRecord?.responses || {});
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Always-current refs so async save reads latest values (never stale)
+  const responsesRef = useRef(responses);
+  useEffect(() => { responsesRef.current = responses; }, [responses]);
+
+  const isDirtyRef = useRef(false);
+  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+
+  // Track the DB record id so we update rather than create a duplicate
+  const recordIdRef = useRef(existingRecord?.id || null);
+
+  // Reset when switching to a different assessment (existingRecord changes)
   useEffect(() => {
-    if (existingRecord?.responses && Object.keys(existingRecord.responses).length > 0) {
-      responsesRef.current = existingRecord.responses;
-    }
-  }, [existingRecord?.id, existingRecord?.responses]);
+    setIsDirty(false);
+    recordIdRef.current = existingRecord?.id || null;
+    setResponses(existingRecord?.responses || {});
+  }, [existingRecord?.id]);
 
-  // Build extra payload (evidence + metadata) for VFP integration
-  const buildExtraPayload = useCallback(async (responses, status) => {
+  // Field change handler — mark dirty, update state
+  const handleChange = useCallback((id, value) => {
+    setIsDirty(true);
+    setResponses((prev) => ({ ...prev, [id]: value }));
+  }, []);
+
+  // ── Core save (mirrors doSave in IntakeSectionForm) ───────────────────────
+  const doSave = useCallback(async (latestResponses, showToast = false) => {
+    const hasAny = Object.values(latestResponses).some(
+      (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
+    );
+    if (!hasAny) return;
+
     const user = await base44.auth.me();
     const completedAt = new Date().toISOString();
 
     let structured_evidence = [];
     let source_metadata = {};
+    let staff_review_flags = [];
 
     try {
-      structured_evidence = extractEvidenceFromResponses(sections, responses, {
+      structured_evidence = extractEvidenceFromResponses(sections, latestResponses, {
         completedBy: user?.email,
         completedAt,
         source: "staff_observed",
       });
     } catch (e) {
-      console.warn("WorkspacePanel buildExtraPayload: extractEvidence failed (non-fatal)", e);
+      console.warn("StructuredWorkspacePanel: extractEvidence failed (non-fatal)", e);
     }
 
     try {
@@ -65,61 +91,81 @@ export default function StructuredAssessmentWorkspacePanel({
         clientId,
       });
     } catch (e) {
-      console.warn("WorkspacePanel buildExtraPayload: buildSourceMetadata failed (non-fatal)", e);
+      console.warn("StructuredWorkspacePanel: buildSourceMetadata failed (non-fatal)", e);
     }
 
-    return { structured_evidence, source_metadata };
-  }, [sections, meta.assessment_type, clientId]);
+    try {
+      staff_review_flags = extractStaffReviewFlags(sections, latestResponses);
+    } catch (e) {
+      console.warn("StructuredWorkspacePanel: extractStaffReviewFlags failed (non-fatal)", e);
+    }
 
-  const { saveDraft, handleSave } = useAssessmentDraftSave({
-    clientId,
-    assessmentType: meta.assessment_type,
-    existingAssessment: existingRecord,
-    buildExtraPayload,
-    onSaved,
-  });
+    const payload = {
+      client_id: clientId,
+      assessment_type: meta.assessment_type,
+      status: "in_progress",
+      responses: latestResponses,
+      completed_by: user?.email || "",
+      structured_evidence,
+      source_metadata,
+      staff_review_flags,
+    };
 
-  // Expose saveDraft on ref so parent could call it if ever needed
-  draftSaveRef.current = saveDraft;
+    if (recordIdRef.current) {
+      await base44.entities.Assessment.update(recordIdRef.current, payload);
+    } else {
+      const result = await base44.entities.Assessment.create(payload);
+      recordIdRef.current = result?.id || null;
+    }
 
-  // Track dirty state — true after any response change, false after any save
-  const isDirtyRef = useRef(false);
-  // Keep stable refs so unmount effect always has latest values
-  const saveDraftRef = useRef(saveDraft);
-  useEffect(() => { saveDraftRef.current = saveDraft; }, [saveDraft]);
-  const onSavedRef = useRef(onSaved);
-  useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
+    if (showToast) toast.success("Progress saved");
+    if (onSaved) onSaved();
+  }, [clientId, meta.assessment_type, sections, onSaved]);
 
-  // Debounced auto-save — fires 2s after last change
-  const autoSaveTimer = useRef(null);
-  const handleAutoSave = useCallback((responses) => {
-    responsesRef.current = responses;
-    isDirtyRef.current = true;
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      saveDraftRef.current(responses).catch(() => {});
-      isDirtyRef.current = false;
-    }, 2000);
-  }, []);
+  // Keep a stable ref to doSave so the unmount effect is never stale
+  const doSaveRef = useRef(doSave);
+  useEffect(() => { doSaveRef.current = doSave; }, [doSave]);
 
-  // On unmount: flush any pending save immediately
+  // ── Save-on-exit: fires when component unmounts (card switch / clicking away)
+  // Mirrors the exact pattern in IntakeSectionForm
   useEffect(() => {
-    return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-      if (isDirtyRef.current && Object.keys(responsesRef.current).length > 0) {
-        saveDraftRef.current(responsesRef.current)
-          .then(() => onSavedRef.current?.())
-          .catch(() => {});
+    const handleBeforeUnload = () => {
+      if (isDirtyRef.current) {
+        doSaveRef.current(responsesRef.current).catch(() => {});
       }
     };
-  }, []);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Save on unmount (card switch)
+      if (isDirtyRef.current) {
+        doSaveRef.current(responsesRef.current).catch(() => {});
+      }
+    };
+  }, []); // empty deps — intentional, reads everything via stable refs
 
-  // Cancel button: save draft and clear selection (parent handles UI)
-  const handleCancel = useCallback(async (currentResponses) => {
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    await saveDraft(currentResponses).catch(() => {});
-    onSaved?.(); // refresh parent list
-  }, [saveDraft, onSaved]);
+  // ── Manual "Save Progress" button handler
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await doSave(responsesRef.current, true);
+      setIsDirty(false);
+    } catch (err) {
+      console.error("STRUCTURED SAVE ERROR", err);
+      toast.error("Failed to save: " + (err?.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
+  }, [doSave]);
+
+  // ── "Save & Close" button (cancel) — save then notify parent
+  const handleCancel = useCallback(async () => {
+    if (isDirtyRef.current) {
+      await doSave(responsesRef.current, false).catch(() => {});
+      setIsDirty(false);
+    }
+    onSaved?.();
+  }, [doSave, onSaved]);
 
   const status = !existingRecord
     ? "not_started"
@@ -131,7 +177,7 @@ export default function StructuredAssessmentWorkspacePanel({
     not_started: null,
     in_progress: (
       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 gap-1">
-        <Clock className="w-3 h-3" /> Draft — auto-saving
+        <Clock className="w-3 h-3" /> Draft
       </Badge>
     ),
     completed: (
@@ -140,8 +186,6 @@ export default function StructuredAssessmentWorkspacePanel({
       </Badge>
     ),
   }[status];
-
-  const initialResponses = existingRecord?.responses || {};
 
   return (
     <Card className="border border-slate-200 shadow-sm h-full flex flex-col">
@@ -159,15 +203,14 @@ export default function StructuredAssessmentWorkspacePanel({
 
       <CardContent className="flex-1 overflow-y-auto pt-4">
         <StructuredAssessmentForm
-          key={existingRecord?.id || "new-" + meta.assessment_type}
           sections={sections}
           assessmentType={meta.assessment_type}
-          assessmentLabel={null} /* label shown in header above */
-          initialResponses={initialResponses}
+          responses={responses}
+          onChange={handleChange}
           onSave={handleSave}
           onCancel={handleCancel}
-          responsesRef={responsesRef}
-          onChangeDebounced={handleAutoSave}
+          saving={saving}
+          isDirty={isDirty}
         />
       </CardContent>
     </Card>

@@ -358,12 +358,8 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const activeAssessment = ALL_ASSESSMENTS.find((a) => a.key === activeKey);
   const activeRecord = activeKey ? getRecord(activeKey) : null;
 
-  // Bump this counter after every save so the panel remounts with fresh data from the query
-  const [saveGeneration, setSaveGeneration] = useState(0);
-
   const handleSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-    setSaveGeneration((g) => g + 1);
   };
 
   // Handle external trigger (e.g. AI Job Search → open Interest Profiler)
@@ -384,7 +380,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     if (activeAssessment.type === "structured") {
       return (
         <StructuredAssessmentWorkspacePanel
-          key={activeKey + (activeRecord?.id || "new") + saveGeneration}
+          key={activeKey}
           clientId={resolvedClientId}
           assessment={activeAssessment}
           existingRecord={activeRecord}
@@ -397,7 +393,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <LegacyAssessmentPanel
-          key={activeKey + (activeRecord?.id || "new") + saveGeneration}
+          key={activeKey}
           assessmentDef={activeAssessment}
           existingRecord={activeRecord}
           clientId={resolvedClientId}
