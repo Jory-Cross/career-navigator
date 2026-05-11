@@ -106,16 +106,16 @@ export function useAssessmentDraftSave({
     }
   }, [clientId, assessmentType, buildExtraPayload]);
 
-  // ── Final Save (completed) ─────────────────────────────────────────────────
+  // ── Final Save (in_progress — saving never auto-completes) ────────────────
 
   const handleSave = useCallback(async (responses, meta = {}) => {
     const user = await base44.auth.me();
-    const extra = buildExtraPayload ? await buildExtraPayload(responses, "completed") : {};
+    const extra = buildExtraPayload ? await buildExtraPayload(responses, "in_progress") : {};
 
     const payload = {
       client_id: clientId,
       assessment_type: assessmentType,
-      status: "completed",
+      status: "in_progress",
       responses,
       completed_by: user?.email || "",
       ...extra,
@@ -129,7 +129,7 @@ export function useAssessmentDraftSave({
       recordIdRef.current = result?.id || null;
     }
 
-    toast.success(`${assessmentType.replace(/_/g, " ")} assessment saved`);
+    toast.success(`Progress saved`);
     onSaved?.();
     return result;
   }, [clientId, assessmentType, buildExtraPayload, onSaved]);

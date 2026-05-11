@@ -189,7 +189,7 @@ export default function StructuredAssessmentForm({
           {saving ? (
             <><Loader2 className="w-4 h-4 animate-spin mr-1.5" /> Saving…</>
           ) : (
-            "Save Assessment"
+            "Save Progress"
           )}
         </Button>
       </div>

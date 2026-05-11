@@ -79,20 +79,20 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
         await base44.entities.Assessment.update(existingRecord.id, {
           responses,
           notes,
-          status: "completed",
+          status: "in_progress",
         });
-        toast.success("Assessment updated");
+        toast.success("Progress saved");
       } else {
         await base44.entities.Assessment.create({
           client_id: clientId,
           assessment_type: key,
           responses,
           notes,
-          status: "completed",
+          status: "in_progress",
           completed_by: user.email,
           pdf_url: responses._uploaded_pdf_url || "",
         });
-        toast.success(isWSA ? "WSA saved" : "Assessment saved");
+        toast.success("Progress saved");
       }
       onSaved?.();
     } catch (err) {
@@ -229,11 +229,11 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
       <div className="flex justify-end pt-4 border-t border-slate-100">
         <Button
           onClick={handleSave}
-          disabled={saving || extracting || (isWSA && !responses._uploaded_pdf_url)}
+          disabled={saving || extracting}
         >
           {saving
             ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
-            : isWSA ? "Save WSA" : "Save Assessment"}
+            : "Save Progress"}
         </Button>
       </div>
     </div>
