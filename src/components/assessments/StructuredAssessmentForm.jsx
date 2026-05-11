@@ -115,6 +115,7 @@ export default function StructuredAssessmentForm({
       const staffReviewFlags = extractStaffReviewFlags(sections, responses);
       await onSave(responses, { staffReviewFlags, assessmentType });
     } catch (err) {
+      console.error("WET SAVE ERROR", err);
       toast.error("Failed to save: " + (err?.message || "Unknown error"));
     } finally {
       setSaving(false);

@@ -530,20 +530,24 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
             </div>
           ))}
 
-          <div>
-            <Label>Additional Notes (Optional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1"
-            />
-          </div>
+          {assessmentType !== "interest_profiler" && assessmentType !== "work_environment_tolerance" && (
+            <div>
+              <Label>Additional Notes (Optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => setShowForm(false)}>
-            Cancel
-          </Button>
+          {assessmentType !== "work_environment_tolerance" && (
+            <Button variant="outline" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
+          )}
 
       {assessmentType !== "interest_profiler" && assessmentType !== "work_environment_tolerance" && (
   <Button

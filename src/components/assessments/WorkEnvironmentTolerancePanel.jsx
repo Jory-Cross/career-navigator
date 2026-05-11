@@ -29,41 +29,56 @@ export default function WorkEnvironmentTolerancePanel({ clientId, existingAssess
   const initialResponses = existingAssessment?.responses || {};
 
   const handleSave = async (responses, { staffReviewFlags }) => {
-    const user = await base44.auth.me();
+    console.log("WET SAVE CLICKED", { clientId, existingId: existingAssessment?.id });
 
+    const user = await base44.auth.me();
     const completedAt = new Date().toISOString();
 
-    // Extract structured evidence from all sections
-    const structured_evidence = extractEvidenceFromResponses(
-      WORK_ENVIRONMENT_TOLERANCE_SECTIONS,
-      responses,
-      { completedBy: user.email, completedAt, source: "staff_observed" }
-    );
+    let structured_evidence = [];
+    let source_metadata = {};
 
-    // Build source metadata for VFP integration
-    const source_metadata = buildSourceMetadata({
-      assessmentType: WORK_ENVIRONMENT_TOLERANCE_META.assessment_type,
-      completedBy: user.email,
-      completedAt,
-      source: "staff_observed",
-      clientId,
-    });
+    try {
+      structured_evidence = extractEvidenceFromResponses(
+        WORK_ENVIRONMENT_TOLERANCE_SECTIONS,
+        responses,
+        { completedBy: user.email, completedAt, source: "staff_observed" }
+      );
+    } catch (e) {
+      console.warn("WET SAVE: extractEvidenceFromResponses failed (non-fatal)", e);
+    }
+
+    try {
+      source_metadata = buildSourceMetadata({
+        assessmentType: WORK_ENVIRONMENT_TOLERANCE_META.assessment_type,
+        completedBy: user.email,
+        completedAt,
+        source: "staff_observed",
+        clientId,
+      });
+    } catch (e) {
+      console.warn("WET SAVE: buildSourceMetadata failed (non-fatal)", e);
+    }
 
     const payload = {
       client_id: clientId,
       assessment_type: WORK_ENVIRONMENT_TOLERANCE_META.assessment_type,
       responses,
       structured_evidence,
-      staff_review_flags: staffReviewFlags,
+      staff_review_flags: staffReviewFlags || [],
       source_metadata,
       completed_by: user.email,
     };
 
+    console.log("WET PAYLOAD", payload);
+
+    let result;
     if (existingAssessment?.id) {
-      await base44.entities.Assessment.update(existingAssessment.id, payload);
+      result = await base44.entities.Assessment.update(existingAssessment.id, payload);
+      console.log("WET SAVE RESULT (update)", result);
       toast.success("Work Environment Tolerance Assessment updated");
     } else {
-      await base44.entities.Assessment.create(payload);
+      result = await base44.entities.Assessment.create(payload);
+      console.log("WET SAVE RESULT (create)", result);
       toast.success("Work Environment Tolerance Assessment saved");
     }
 
