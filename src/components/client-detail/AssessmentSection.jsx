@@ -142,6 +142,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   // Generic refs used by ANY structured assessment panel for dialog-close draft save
   const structuredDraftSaveRef = useRef(null);
   const structuredResponsesRef = useRef({});
+  const [structuredClosing, setStructuredClosing] = useState(false);
 
   const openNew = async (type = "career_goals", assessmentsList = []) => {
     // Reset shared structured refs for the new form
@@ -425,18 +426,40 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
       )}
     </CardContent>
 
-    <Dialog open={showForm} onOpenChange={(open) => {
-      if (!open) {
-        console.log("STRUCTURED CLOSE REQUESTED", { assessmentType });
-        // For any structured assessment panel, trigger draft save before closing
-        if (structuredDraftSaveRef.current && structuredResponsesRef.current) {
-          structuredDraftSaveRef.current(structuredResponsesRef.current).then(() => {
-            queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-          }).catch(() => {});
+    <Dialog open={showForm} onOpenChange={async (open) => {
+      if (open) return;
+
+      const STRUCTURED_TYPES = ["work_environment_tolerance"];
+      const isStructured = STRUCTURED_TYPES.includes(assessmentType);
+
+      console.log("STRUCTURED CLOSE REQUESTED", { assessmentType, isStructured, structuredClosing });
+
+      if (isStructured && !structuredClosing) {
+        const latestResponses = structuredResponsesRef.current || {};
+        const saveFn = structuredDraftSaveRef.current;
+
+        console.log("STRUCTURED CLOSE LATEST RESPONSES", { count: Object.keys(latestResponses).length, sample: Object.keys(latestResponses).slice(0, 3) });
+        console.log("STRUCTURED CLOSE SAVE FN EXISTS", !!saveFn);
+
+        if (saveFn) {
+          setStructuredClosing(true);
+          try {
+            console.log("STRUCTURED CLOSE SAVE AWAIT START");
+            await saveFn(latestResponses);
+            console.log("STRUCTURED CLOSE SAVE AWAIT DONE");
+            await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+          } catch (err) {
+            console.error("STRUCTURED CLOSE SAVE ERROR", err);
+            toast.error("Failed to save draft: " + (err?.message || "Unknown error"));
+            setStructuredClosing(false);
+            return; // keep dialog open on error
+          }
+          setStructuredClosing(false);
         }
-        setShowForm(false);
-        setEditingAssessment(null);
       }
+
+      setShowForm(false);
+      setEditingAssessment(null);
     }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -598,6 +621,12 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
+          {assessmentType === "work_environment_tolerance" && structuredClosing && (
+            <div className="flex items-center gap-2 text-xs text-slate-500 mr-auto">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving draft…
+            </div>
+          )}
           {assessmentType !== "work_environment_tolerance" && (
             <Button variant="outline" onClick={() => setShowForm(false)}>
               Cancel
