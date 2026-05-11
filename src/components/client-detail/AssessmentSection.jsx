@@ -334,6 +334,37 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
 
   const currentQuestions = assessmentQuestions[assessmentType] || [];
 
+  // Shared handler for structured assessment close (overlay click or Escape)
+  const handleStructuredClose = async (trigger) => {
+    if (structuredClosing) return;
+    const latestResponses = structuredResponsesRef.current || {};
+    const saveFn = structuredDraftSaveRef.current;
+
+    console.log("STRUCTURED CLOSE REQUESTED", { assessmentType, trigger });
+    console.log("STRUCTURED CLOSE LATEST RESPONSES", { count: Object.keys(latestResponses).length, sample: Object.keys(latestResponses).slice(0, 3) });
+    console.log("STRUCTURED CLOSE SAVE FN EXISTS", !!saveFn);
+
+    if (saveFn) {
+      setStructuredClosing(true);
+      try {
+        console.log("STRUCTURED CLOSE SAVE AWAIT START");
+        await saveFn(latestResponses);
+        console.log("STRUCTURED CLOSE SAVE AWAIT DONE");
+        await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+      } catch (err) {
+        console.error("STRUCTURED CLOSE SAVE ERROR", err);
+        toast.error("Failed to save draft: " + (err?.message || "Unknown error"));
+        setStructuredClosing(false);
+        return false; // signal: keep dialog open
+      }
+      setStructuredClosing(false);
+    }
+
+    setShowForm(false);
+    setEditingAssessment(null);
+    return true;
+  };
+
   useEffect(() => {
     if (!openAssessmentType) return;
 
@@ -426,42 +457,29 @@ const merged = { ...responses, _uploaded_pdf_url: file_url };      Object.entrie
       )}
     </CardContent>
 
-    <Dialog open={showForm} onOpenChange={async (open) => {
+    <Dialog open={showForm} onOpenChange={(open) => {
+      // Only handle non-structured close here (structured close is handled by onInteractOutside/onEscapeKeyDown)
       if (open) return;
-
       const STRUCTURED_TYPES = ["work_environment_tolerance"];
-      const isStructured = STRUCTURED_TYPES.includes(assessmentType);
-
-      console.log("STRUCTURED CLOSE REQUESTED", { assessmentType, isStructured, structuredClosing });
-
-      if (isStructured && !structuredClosing) {
-        const latestResponses = structuredResponsesRef.current || {};
-        const saveFn = structuredDraftSaveRef.current;
-
-        console.log("STRUCTURED CLOSE LATEST RESPONSES", { count: Object.keys(latestResponses).length, sample: Object.keys(latestResponses).slice(0, 3) });
-        console.log("STRUCTURED CLOSE SAVE FN EXISTS", !!saveFn);
-
-        if (saveFn) {
-          setStructuredClosing(true);
-          try {
-            console.log("STRUCTURED CLOSE SAVE AWAIT START");
-            await saveFn(latestResponses);
-            console.log("STRUCTURED CLOSE SAVE AWAIT DONE");
-            await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
-          } catch (err) {
-            console.error("STRUCTURED CLOSE SAVE ERROR", err);
-            toast.error("Failed to save draft: " + (err?.message || "Unknown error"));
-            setStructuredClosing(false);
-            return; // keep dialog open on error
-          }
-          setStructuredClosing(false);
-        }
-      }
-
+      if (STRUCTURED_TYPES.includes(assessmentType)) return; // blocked — handled below
       setShowForm(false);
       setEditingAssessment(null);
     }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={async (e) => {
+          const STRUCTURED_TYPES = ["work_environment_tolerance"];
+          if (!STRUCTURED_TYPES.includes(assessmentType)) return;
+          e.preventDefault(); // block Radix from closing immediately
+          await handleStructuredClose("interact-outside");
+        }}
+        onEscapeKeyDown={async (e) => {
+          const STRUCTURED_TYPES = ["work_environment_tolerance"];
+          if (!STRUCTURED_TYPES.includes(assessmentType)) return;
+          e.preventDefault(); // block Radix from closing immediately
+          await handleStructuredClose("escape");
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {editingAssessment ? "Edit Assessment" : "Complete Assessment"}
