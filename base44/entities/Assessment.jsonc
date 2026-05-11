@@ -17,12 +17,85 @@
         "job_search_readiness",
         "interview_readiness",
         "riasec",
-        "work_strategy_assessment"
+        "work_strategy_assessment",
+        "work_environment_tolerance",
+        "barriers_to_employment",
+        "transportation",
+        "support_and_accommodation",
+        "job_satisfaction",
+        "work_values"
       ],
       "default": "career_goals"
     },
     "responses": {
       "type": "object",
+      "additionalProperties": true,
+      "description": "Structured field-by-field responses. For structured assessments, contains normalized values keyed by question ID."
+    },
+    "structured_evidence": {
+      "type": "array",
+      "description": "Extracted evidence items produced by extractEvidenceFromResponses(). Ready for VFP integration.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "section_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {},
+          "evidence_category": {
+            "type": "string"
+          },
+          "evidence_source": {
+            "type": "string"
+          },
+          "evidence_weight": {
+            "type": "string"
+          },
+          "implications": {
+            "type": "array"
+          },
+          "completed_by": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "staff_review_flags": {
+      "type": "array",
+      "description": "Flags extracted from implications requiring staff follow-up.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "flag": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "implication_type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source_metadata": {
+      "type": "object",
+      "description": "Source provenance metadata for VFP integration (buildSourceMetadata output).",
       "additionalProperties": true
     },
     "completed_by": {
