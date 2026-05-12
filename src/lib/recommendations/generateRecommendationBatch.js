@@ -16,7 +16,9 @@ function resolveConfidenceLevel({
   score = 0,
   fitConcerns = [],
   profile = {},
-  groundingEvidenceTier = null,  // "strong"|"moderate"|"weak" from grounding layer
+  groundingEvidenceTier = null,   // "strong"|"moderate"|"weak" from grounding layer
+  conflictScore = 0,              // environmental/functional conflict severity (0–6+)
+  constraintFitLevel = "unknown", // overall_fit_level from buildConstraintFit
 }) {
   const hasResume = (profile.resume_skills || []).length > 0;
   const hasWSA = (profile.wsa_strengths || []).length > 0;
@@ -27,23 +29,38 @@ function resolveConfidenceLevel({
     (hasResume ? 1 : 0) +
     (hasWSA ? 2 : 0) +
     (hasAssessments ? 1 : 0) +
-    (hasRiasec ? 2 : 0);
+    (hasRiasec ? 1 : 0); // RIASEC reduced from 2→1: shouldn't dominate confidence alone
 
   const hasConflicts = fitConcerns.length > 0;
 
-  // Evidence tier modifier: weak evidence raises the bar for high/medium
+  // Evidence tier modifier
   const evidenceBoost = groundingEvidenceTier === "strong" ? 5
     : groundingEvidenceTier === "weak" ? -10
     : 0;
 
-  const effectiveScore = score + evidenceBoost;
+  // Conflict penalty: environmental conflicts reduce effective confidence score
+  // Severe conflicts (5+) = -25, moderate (3-4) = -15, mild (1-2) = -5
+  const conflictPenalty = conflictScore >= 5 ? 25
+    : conflictScore >= 3 ? 15
+    : conflictScore >= 1 ? 5
+    : 0;
 
-  // HIGH CONFIDENCE — requires strong evidence base
+  // Environmental fit penalty
+  const fitPenalty = constraintFitLevel === "poor_fit" ? 20
+    : constraintFitLevel === "caution" ? 10
+    : 0;
+
+  const effectiveScore = score + evidenceBoost - conflictPenalty - fitPenalty;
+
+  // HIGH CONFIDENCE — requires strong evidence base AND no severe conflicts
   if (
     effectiveScore >= 70 &&
     !hasConflicts &&
     dataScore >= 3 &&
-    groundingEvidenceTier !== "weak"
+    groundingEvidenceTier !== "weak" &&
+    conflictScore < 3 &&
+    constraintFitLevel !== "poor_fit" &&
+    constraintFitLevel !== "caution"
   ) {
     return {
       confidence_level: "high",
@@ -55,16 +72,19 @@ function resolveConfidenceLevel({
 
   // MEDIUM CONFIDENCE
   if (
-    (effectiveScore >= 40 && !hasConflicts) ||
-    (effectiveScore >= 55 && hasConflicts) ||
-    (dataScore >= 3 && effectiveScore >= 25)
+    (effectiveScore >= 40 && !hasConflicts && conflictScore < 4) ||
+    (effectiveScore >= 55 && hasConflicts && conflictScore < 3) ||
+    (dataScore >= 3 && effectiveScore >= 30 && conflictScore < 4)
   ) {
     const weakCaveat = groundingEvidenceTier === "weak"
       ? " Evidence is general — gather more specific vocational data before acting."
       : "";
+    const conflictCaveat = conflictScore >= 2
+      ? " Some environmental conflicts present — review fit carefully."
+      : "";
     return {
       confidence_level: "medium",
-      confidence_reason: `Reasonable match with some supporting data. May require staff review but is a viable option.${weakCaveat}`,
+      confidence_reason: `Reasonable match with some supporting data. May require staff review but is a viable option.${weakCaveat}${conflictCaveat}`,
     };
   }
 
@@ -72,9 +92,12 @@ function resolveConfidenceLevel({
   const weakNote = groundingEvidenceTier === "weak"
     ? " Evidence is primarily general or inferred."
     : "";
+  const conflictNote = conflictScore >= 3
+    ? " Environmental/functional conflicts reduce fit confidence."
+    : "";
   return {
     confidence_level: "low",
-    confidence_reason: `Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.${weakNote}`,
+    confidence_reason: `Lower match score, limited supporting data, or fit concerns are present. This recommendation should be reviewed carefully.${weakNote}${conflictNote}`,
   };
 }
 
@@ -274,82 +297,96 @@ constraintProfile.constraints.forEach((constraint) => {
 
   const envText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
 
- // 🔥 Insight-based scoring
+ // 🔥 Insight-based scoring — barriers + WSA evidence adjustments
 const insights = [
   ...(profile?.wsa?.insights || []),
   ...(barriers?.insights || []),
 ];
 
 const jobText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+const jobTitle = (job.title || "").toLowerCase();
 
+// ── POSITIVE ADJUSTMENTS ────────────────────────────────────────────────
 // Prefer independent work
-if (
-  insights.includes("prefers independent work") &&
-  jobText.includes("independent")
-) {
+if (insights.includes("prefers independent work") && jobText.includes("independent")) {
   score += 15;
 }
-
-// Avoid customer-facing roles
-if (
-  insights.includes("avoid customer-facing roles") &&
-  (
-    jobText.includes("customer") ||
-    jobText.includes("cashier") ||
-    jobText.includes("retail") ||
-    jobText.includes("sales")
-  )
-) {
-  score = Math.max(0, score - 40);
+// Needs structure — reward structured/routine roles
+if (insights.includes("needs structured and predictable work") &&
+    (jobText.includes("routine") || jobText.includes("structured"))) {
+  score += 10;
 }
-
-// Needs structure
-if (
-  insights.includes("needs structured and predictable work") &&
-  (
-    jobText.includes("routine") ||
-    jobText.includes("structured")
-  )
-) {
+// Calm/low-stimulation job match
+if (insights.includes("needs low-stress, low-pressure work") &&
+    (jobText.includes("quiet") || jobText.includes("routine") || jobText.includes("low-stress"))) {
   score += 10;
 }
 
-// Physical limitation penalty (WSA)
-if (
-  insights.includes("limited tolerance for prolonged standing or physical work") &&
-  (
-    jobText.includes("labor") ||
-    jobText.includes("warehouse") ||
-    jobText.includes("construction")
-  )
-) {
-  score = Math.max(0, score - 50);
-}
-
-// Barriers: seated work required — penalize standing-heavy roles
-if (
-  insights.includes("seated work required") &&
-  (jobText.includes("labor") || jobText.includes("warehouse") || jobText.includes("standing") || jobText.includes("dishwasher"))
-) {
-  score = Math.max(0, score - 50);
-}
-
-// Barriers: sensory environment required — penalize loud/busy environments
-if (
-  insights.includes("requires sensory-controlled environment") &&
-  (jobText.includes("restaurant") || jobText.includes("fast food") || jobText.includes("warehouse") ||
-   jobText.includes("call center") || jobText.includes("factory") || jobText.includes("loud"))
-) {
+// ── NEGATIVE ADJUSTMENTS (score penalties) ──────────────────────────────
+// Avoid customer-facing roles
+if (insights.includes("avoid customer-facing roles") &&
+    (jobText.includes("customer") || jobText.includes("cashier") ||
+     jobText.includes("retail") || jobText.includes("sales"))) {
   score = Math.max(0, score - 40);
 }
 
-// Barriers: low stress tolerance — penalize fast-paced or high-pressure roles
-if (
-  insights.includes("needs low-stress, low-pressure work") &&
-  (jobText.includes("fast-paced") || jobText.includes("high volume") || jobText.includes("deadline") ||
-   jobText.includes("urgent") || jobText.includes("pressure"))
-) {
+// Physical limitation (WSA) — standing/labor
+if (insights.includes("limited tolerance for prolonged standing or physical work") &&
+    (jobText.includes("labor") || jobText.includes("warehouse") ||
+     jobText.includes("construction") || jobText.includes("standing"))) {
+  score = Math.max(0, score - 50);
+}
+
+// Seated work required — penalize physically demanding roles
+if (insights.includes("seated work required") &&
+    (jobText.includes("labor") || jobText.includes("warehouse") ||
+     jobText.includes("standing") || jobText.includes("dishwasher") ||
+     jobText.includes("construction") || jobText.includes("manual"))) {
+  score = Math.max(0, score - 50);
+}
+
+// Sensory needs — penalize loud/chaotic environments
+if (insights.includes("requires sensory-controlled environment") &&
+    (jobText.includes("restaurant") || jobText.includes("fast food") ||
+     jobText.includes("warehouse") || jobText.includes("call center") ||
+     jobText.includes("factory") || jobText.includes("loud") ||
+     jobText.includes("crowded") || jobText.includes("busy"))) {
+  score = Math.max(0, score - 40);
+}
+
+// Low stress tolerance — penalize fast-paced/high-pressure
+if (insights.includes("needs low-stress, low-pressure work") &&
+    (jobText.includes("fast-paced") || jobText.includes("high volume") ||
+     jobText.includes("deadline") || jobText.includes("urgent") ||
+     jobText.includes("pressure") || jobText.includes("on-call") ||
+     jobText.includes("high-stress") || jobText.includes("emergency"))) {
   score = Math.max(0, score - 35);
+}
+
+// Social/emotional limitations — penalize intensive public-facing/performance roles
+const hasSocialBarriers = insights.some(i =>
+  i.includes("avoid customer-facing") || i.includes("low social") || i.includes("social limitations")
+);
+const isHighSocialDemand =
+  jobTitle.includes("actor") || jobTitle.includes("actress") ||
+  jobTitle.includes("performer") || jobTitle.includes("entertainer") ||
+  jobTitle.includes("advertising sales") || jobTitle.includes("sales agent") ||
+  jobTitle.includes("telemarketer") || jobTitle.includes("real estate agent") ||
+  jobTitle.includes("flight attendant") || jobTitle.includes("tour guide");
+if (hasSocialBarriers && isHighSocialDemand) {
+  score = Math.max(0, score - 45);
+}
+
+// Acute care / emergency — penalize if stress limitations present
+const hasStressBarriers = insights.some(i =>
+  i.includes("low-stress") || i.includes("low stress") || i.includes("stress tolerance")
+);
+const isAcuteCare =
+  jobTitle.includes("acute care") || jobTitle.includes("emergency") ||
+  jobTitle.includes("trauma") || jobTitle.includes("icu") ||
+  jobTitle.includes("intensive care") || jobTitle.includes("first responder");
+if (hasStressBarriers && isAcuteCare) {
+  score = Math.max(0, score - 40);
 }
 
   if (score > 100) score = 100;
@@ -448,19 +485,31 @@ if (fitConcerns.length > 0) {
     groundedJob.constraint_fit = null;
   }
 
-  // Re-resolve confidence using evidence tier from grounding
+  // Re-resolve confidence using evidence tier from grounding + conflict signals
   const groundingEvidenceTier = groundedJob.grounding?.evidence_richness?.tier || null;
+  const constraintFitLevel = groundedJob.constraint_fit?.overall_fit_level || "unknown";
+  // Compute conflict score for confidence calibration (mirrors priority layer logic)
+  const hardCount = (groundedJob.constraint_fit?.hard_constraints || []).length;
+  const moderateCount = (groundedJob.constraint_fit?.moderate_constraints || []).length;
+  const fitPenaltyConflict =
+    (hardCount >= 2 ? 5 : hardCount === 1 ? 3 : 0) +
+    (moderateCount >= 3 ? 3 : moderateCount >= 2 ? 2 : moderateCount === 1 ? 1 : 0) +
+    (constraintFitLevel === "poor_fit" ? 4 : constraintFitLevel === "caution" ? 2 : 0);
+
   const recalibratedConfidence = resolveConfidenceLevel({
     score,
     fitConcerns,
     profile,
     groundingEvidenceTier,
+    conflictScore: fitPenaltyConflict,
+    constraintFitLevel,
   });
   groundedJob.confidence_level = recalibratedConfidence.confidence_level;
   groundedJob.confidence_reason = recalibratedConfidence.confidence_reason;
 
   // Attach priority/ranking layer
   try {
+    // Pass full groundingContext so priority layer sees barriers, interestProfile, resumes
     const priorityContext = extractPriorityContext(groundedJob, groundingContext);
     groundedJob.priority = buildRecommendationPriority(groundedJob, priorityContext);
   } catch (e) {
@@ -485,17 +534,37 @@ if (fitConcerns.length > 0) {
 
 console.log("FIRST REC CONSTRAINT FIT:", processed[0]?.constraint_fit?.overall_fit_level, processed[0]?.title);
 
+// ── MULTI-FACTOR PRIORITY-AWARE SORT ────────────────────────────────────────
+// Priority order (higher = better rank):
+//   strong_target(5) > explore_further(4) > stretch(3) > caution(2) > low_priority(1) > unknown(0)
+// Within the same priority bucket: sort by confidence, then match_score.
+// This ensures environmental conflicts that demote priority actually affect ranking,
+// not just labeling.
+const priorityRank = {
+  strong_target: 5,
+  explore_further: 4,
+  stretch: 3,
+  caution: 2,
+  low_priority: 1,
+  unknown: 0,
+};
+const confidenceRank = { high: 3, medium: 2, low: 1 };
+
 const recommendationsWithConstraints = processed
-.filter((job) => job.match_score > 0)
+  .filter((job) => job.match_score > 0)
   .sort((a, b) => {
-    const confidenceRank = { high: 3, medium: 2, low: 1 };
+    const aPriority = priorityRank[a.priority?.priority_level] ?? 0;
+    const bPriority = priorityRank[b.priority?.priority_level] ?? 0;
 
-    const confDiff =
-      (confidenceRank[b.confidence_level] || 0) -
-      (confidenceRank[a.confidence_level] || 0);
+    // Primary: priority level (most important — reflects all evidence)
+    if (bPriority !== aPriority) return bPriority - aPriority;
 
-    if (confDiff !== 0) return confDiff;
+    // Secondary: confidence level (within same priority bucket)
+    const aConf = confidenceRank[a.confidence_level] || 0;
+    const bConf = confidenceRank[b.confidence_level] || 0;
+    if (bConf !== aConf) return bConf - aConf;
 
+    // Tertiary: match score (tie-breaker)
     return (b.match_score || 0) - (a.match_score || 0);
   });
 
