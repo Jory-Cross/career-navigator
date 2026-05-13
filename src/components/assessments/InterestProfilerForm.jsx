@@ -91,7 +91,7 @@ function buildRiasecCode(scores) {
     .join("");
 }
 
-export default function InterestProfilerForm({ onComplete, initialAnswers = [] }) {
+export default function InterestProfilerForm({ onComplete, onProgress, initialAnswers = [] }) {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -168,14 +168,32 @@ export default function InterestProfilerForm({ onComplete, initialAnswers = [] }
   function handleAnswer(questionId, value) {
     setAnswers((prev) => {
       const existing = prev.find((a) => String(a.questionId) === String(questionId));
+      const updated = existing
+        ? prev.map((a) => String(a.questionId) === String(questionId) ? { ...a, value } : a)
+        : [...prev, { questionId, value }];
 
-      if (existing) {
-        return prev.map((a) =>
-          String(a.questionId) === String(questionId) ? { ...a, value } : a
-        );
+      // Notify parent of in-progress answers for auto-save on unmount
+      if (onProgress) {
+        const currentAnswerString = questions
+          .map((q, idx) => {
+            const qId = getQuestionId(q, idx);
+            const ans = updated.find((a) => String(a.questionId) === qId);
+            return ans?.value || "";
+          })
+          .join("");
+        onProgress({
+          answers: updated,
+          answerString: currentAnswerString,
+          scores: {},
+          riasec_scores: {},
+          topCodes: [],
+          riasec_code: "",
+          completed: false,
+          onetResult: null,
+        });
       }
 
-      return [...prev, { questionId, value }];
+      return updated;
     });
   }
 
