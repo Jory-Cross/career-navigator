@@ -151,6 +151,9 @@ export default function TimeTracking() {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editingEntryTypeCode, setEditingEntryTypeCode] = useState("");
+  // Local override map: freshly-saved entries keyed by id, merged before the
+  // React Query cache is invalidated and refetched, so re-opening uses fresh form_data.
+  const [savedEntryOverrides, setSavedEntryOverrides] = useState({});
 
 const [showNewEntry, setShowNewEntry] = useState(false);
 const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
@@ -614,23 +617,33 @@ useEffect(() => {
     );
   }, [user?.role, effectiveUser?.role, employeeFilter, filterableEmployees.length]);
 
+ const prevTimeEntriesRef = useRef(timeEntries);
+ useEffect(() => {
+   if (prevTimeEntriesRef.current !== timeEntries) {
+     prevTimeEntriesRef.current = timeEntries;
+     setSavedEntryOverrides({});
+   }
+ }, [timeEntries]);
+
  const handleRefresh = useCallback(async () => {
   await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"] });
 }, [queryClient]);
 
   const handleEditEntry = useCallback(
     async (entry) => {
+      // Use freshly-saved override if available so form_data is current.
+      const freshEntry = savedEntryOverrides[entry?.id] ?? entry;
       const code =
-        resolvedEntryTypeCodes[entry.id] ||
-        getImmediateEntryTypeCode(entry) ||
-        normalizeEntryTypeCode(await resolveEntryTypeCode(entry)) ||
+        resolvedEntryTypeCodes[freshEntry.id] ||
+        getImmediateEntryTypeCode(freshEntry) ||
+        normalizeEntryTypeCode(await resolveEntryTypeCode(freshEntry)) ||
         "";
 
-      setEditingEntry(entry);
+      setEditingEntry(freshEntry);
       setEditingEntryTypeCode(code);
       setSelectedEntry(null);
     },
-    [resolvedEntryTypeCodes]
+    [resolvedEntryTypeCodes, savedEntryOverrides]
   );
 
   const handleOpenEntry = useCallback((entry) => {
@@ -1075,10 +1088,10 @@ useEffect(() => {
               entry={editingEntry}
               entryTypeCode={editingEntryTypeCode}
               onSaved={async (savedEntry) => {
-                // Update editingEntry with the fresh saved entry so that if
-                // the dialog is reopened, buildFormDataFromEntry sees the
-                // persisted form_data instead of the stale pre-save snapshot.
-                if (savedEntry && savedEntry.id) {
+                if (savedEntry?.id) {
+                  // Store override so re-opening from list uses fresh form_data
+                  // before React Query refetch completes.
+                  setSavedEntryOverrides((prev) => ({ ...prev, [savedEntry.id]: savedEntry }));
                   setEditingEntry(savedEntry);
                 }
                 await handleRefresh();

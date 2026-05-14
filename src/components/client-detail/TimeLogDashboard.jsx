@@ -169,6 +169,17 @@ export default function TimeLogDashboard({
   const [showFilters, setShowFilters] = useState(false);
   const [isDuplicatingId, setIsDuplicatingId] = useState(null);
   const [isDeletingId, setIsDeletingId] = useState(null);
+  // Local override map: freshly-saved entries keyed by id.
+  // Merged with the timeEntries prop so re-opening an entry uses the DB-fresh version
+  // before the parent's React Query cache has been invalidated and refetched.
+  const [savedEntryOverrides, setSavedEntryOverrides] = useState({});
+
+  // Merge freshly-saved entry overrides with the incoming prop so the list
+  // reflects the latest DB state even before React Query refetches.
+  const effectiveTimeEntries = useMemo(() => {
+    if (Object.keys(savedEntryOverrides).length === 0) return timeEntries;
+    return timeEntries.map((e) => savedEntryOverrides[e.id] ?? e);
+  }, [timeEntries, savedEntryOverrides]);
 
   const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
@@ -350,7 +361,7 @@ export default function TimeLogDashboard({
   }, [clients]);
 
   const filtered = useMemo(() => {
-    let result = Array.isArray(timeEntries) ? [...timeEntries] : [];
+    let result = Array.isArray(effectiveTimeEntries) ? [...effectiveTimeEntries] : [];
 
     if (filters.clientId) {
       result = result.filter((entry) => entry.client_id === filters.clientId);
@@ -417,6 +428,15 @@ export default function TimeLogDashboard({
     return (totalMinutes / 60).toFixed(1);
   }, [totalMinutes]);
 
+  // Clear overrides when parent refreshes (new timeEntries prop reference means refetch completed)
+  const prevTimeEntriesRef = useRef(timeEntries);
+  useEffect(() => {
+    if (prevTimeEntriesRef.current !== timeEntries) {
+      prevTimeEntriesRef.current = timeEntries;
+      setSavedEntryOverrides({});
+    }
+  }, [timeEntries]);
+
   const resetFormState = useCallback(() => {
     setShowForm(false);
     setEditingEntry(null);
@@ -449,13 +469,15 @@ export default function TimeLogDashboard({
         return;
       }
 
-      const resolvedCode = getResolvedEntryTypeCode(entry);
+      // Use the freshly-saved override if available, so form_data is current.
+      const freshEntry = savedEntryOverrides[entry?.id] ?? entry;
+      const resolvedCode = getResolvedEntryTypeCode(freshEntry);
 
-      setEditingEntry(entry);
+      setEditingEntry(freshEntry);
       setSelectedEntryTypeCode(resolvedCode);
       setShowForm(true);
     },
-    [onEditEntry, getResolvedEntryTypeCode]
+    [onEditEntry, getResolvedEntryTypeCode, savedEntryOverrides]
   );
 
   const handleDuplicate = useCallback(
@@ -844,7 +866,13 @@ export default function TimeLogDashboard({
               entry={editingEntry}
               clientId={editingEntry.client_id || clientId}
               entryTypeCode={activeEntryTypeCode}
-              onSaved={async () => {
+              onSaved={async (savedEntry) => {
+                if (savedEntry?.id) {
+                  // Store the fresh DB entry so re-opening from the list
+                  // uses the saved form_data before React Query refetches.
+                  setSavedEntryOverrides((prev) => ({ ...prev, [savedEntry.id]: savedEntry }));
+                  setEditingEntry(savedEntry);
+                }
                 await onRefresh?.();
                 resetFormState();
               }}
