@@ -519,6 +519,15 @@ useEffect(() => {
       continue;
     }
 
+if (entryTypeFilter !== "all") {
+  const entryCode =
+    resolvedEntryTypeCodes[entry.id] ||
+    getImmediateEntryTypeCode(entry) ||
+    normalizeEntryTypeCode(entry.entry_type_code);
+
+  if (entryCode !== entryTypeFilter) continue;
+}
+    
     if (!entry.date) {
       if (periodFilter === "all") result.push(entry);
       continue;
