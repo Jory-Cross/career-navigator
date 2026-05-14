@@ -24,7 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Filter, AlertTriangle, Pencil, Plus } from "lucide-react";
+import { User, Filter, AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
@@ -621,6 +622,14 @@ useEffect(() => {
     setEditingEntryTypeCode("");
   }, []);
 
+  const handleDeleteEntry = useCallback(async (entry) => {
+    if (!window.confirm("Delete this time entry? This cannot be undone.")) return;
+    await base44.entities.TimeEntry.delete(entry.id);
+    setSelectedEntry(null);
+    toast.success("Entry deleted");
+    await handleRefresh();
+  }, [handleRefresh]);
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -898,6 +907,28 @@ useEffect(() => {
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </span>
+
+                    {isDuplicate ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1 text-red-500 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEntry(entry);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteEntry(entry);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </span>
+                    ) : null}
                   </div>
                 </button>
               );
@@ -1080,7 +1111,17 @@ useEffect(() => {
                 </div>
               ) : null}
 
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                {duplicateIds.has(selectedEntry?.id) ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteEntry(selectedEntry)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete Entry
+                  </Button>
+                ) : <div />}
                 <Button
                   onClick={() => {
                     const entry = selectedEntry;
