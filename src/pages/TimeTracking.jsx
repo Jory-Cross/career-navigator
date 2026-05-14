@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useViewAs } from "@/lib/ViewAsContext";
 import {
   getCurrentUser,
-  getAllUsers,
   getAllClients,
   getAllTimeEntries,
   getScopedUsers,
@@ -196,22 +195,27 @@ const { data: allUsers = [] } = useQuery({
   return getScopedUsers(allUsers, effectiveUser);
 }, [allUsers, effectiveUser]);
 
-// All staff users whose entries are visible to the current user (used for scoping + filter dropdown)
-// Uses the same hierarchy logic as EmployeePortal (manager_id based)
+// All staff users whose entries are visible to the current user.
+// Mirrors EmployeePortal hierarchy exactly (manager_id based, via getOrgUsers).
 const visibleStaffUsers = useMemo(() => {
-  if (!user) return [];
+  if (!effectiveUser) return [];
 
-  const isRealAdmin = user.role === "admin" && !viewAsUser;
-
-  // Admin (not viewing-as): all non-archived staff
-  if (isRealAdmin) {
-    return allUsers.filter(
-      (u) => !u.is_archived && (u.role === "employee" || u.role === "management" || u.role === "admin")
+  // Admin: all non-archived managers + their employees (same set EmployeePortal shows)
+  if (effectiveUser.role === "admin") {
+    const managers = allUsers.filter((u) => !u.is_archived && u.role === "management");
+    const managerIds = new Set(managers.map((m) => m.id));
+    const employees = allUsers.filter(
+      (u) => !u.is_archived && u.role === "employee" && managerIds.has(u.manager_id)
+    );
+    // Include self (admin) + all managers + all managed employees
+    const selfEntry = allUsers.find((u) => u.id === effectiveUser.id) || effectiveUser;
+    return [selfEntry, ...managers, ...employees].filter(
+      (u, i, arr) => arr.findIndex((x) => x.id === u.id) === i
     );
   }
 
-  // Management: self + direct reports by manager_id (matches EmployeePortal exactly)
-  if (effectiveUser?.role === "management") {
+  // Management: self + direct reports by manager_id (mirrors EmployeePortal exactly)
+  if (effectiveUser.role === "management") {
     const directReports = allUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id
     );
@@ -219,25 +223,28 @@ const visibleStaffUsers = useMemo(() => {
   }
 
   // Employee: only self
-  return effectiveUser ? [effectiveUser] : [];
-}, [allUsers, effectiveUser, user, viewAsUser]);
+  return [effectiveUser];
+}, [allUsers, effectiveUser]);
 
-// Employees shown in the filter dropdown
-// For management: self + direct reports (same as visibleStaffUsers minus pure admin accounts)
-// For admin: all staff
+// Employees shown in the filter dropdown.
+// Admin: all managers + employees. Management: self + direct reports.
 const filterableEmployees = useMemo(() => {
-  if (!user) return [];
-  const isRealAdmin = user.role === "admin" && !viewAsUser;
+  if (!effectiveUser) return [];
 
-  if (isRealAdmin || effectiveUser?.role === "management") {
+  if (effectiveUser.role === "admin") {
     return visibleStaffUsers.filter(
       (u) => u.role === "employee" || u.role === "management"
     );
   }
 
+  if (effectiveUser.role === "management") {
+    // Self + direct reports — manager can filter to see their own entries or a report's
+    return visibleStaffUsers;
+  }
+
   // Employees see no dropdown
   return [];
-}, [visibleStaffUsers, effectiveUser, user, viewAsUser]);
+}, [visibleStaffUsers, effectiveUser]);
 
 // Build fast lookup: user id → user and user email → user (covers all visible staff)
 const staffById = useMemo(() => {
@@ -282,16 +289,54 @@ const allClients = useMemo(() => {
   return getScopedClients(rawClients, effectiveUser, scopedUsers);
 }, [rawClients, effectiveUser, scopedUsers]);
   
+  // Build list of employee_ids to include when fetching entries.
+  // For managers: self + direct reports (from getOrgUsers, already safe for non-admins).
+  // For admin: empty (fetch all via list()).
+  // For employees: empty (fetch all owned via list()).
+  const managedEmployeeIds = useMemo(() => {
+    if (!effectiveUser || effectiveUser.role !== "management") return [];
+    return allUsers
+      .filter((u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id)
+      .map((u) => u.id)
+      .filter(Boolean);
+  }, [allUsers, effectiveUser]);
+
   const { data: timeEntries = [] } = useQuery({
-  queryKey: ["timeTracking", "entries", effectiveUser?.id],
-  queryFn: getAllTimeEntries,
-  enabled: !!effectiveUser,
-  staleTime: 5 * 60 * 1000,
-  gcTime: 15 * 60 * 1000,
-  refetchOnWindowFocus: false,
-  refetchOnReconnect: false,
-  refetchInterval: false,
-});
+    queryKey: ["timeTracking", "entries", effectiveUser?.id, managedEmployeeIds.join(",")],
+    queryFn: async () => {
+      // Admin: fetch everything
+      if (effectiveUser?.role === "admin" && !viewAsUser) {
+        return getAllTimeEntries();
+      }
+      // Management: fetch own entries + each direct report's entries in parallel
+      if (effectiveUser?.role === "management" && managedEmployeeIds.length > 0) {
+        const [ownEntries, ...reportEntries] = await Promise.all([
+          getAllTimeEntries(), // returns entries the current user can see (own entries)
+          ...managedEmployeeIds.map((empId) =>
+            base44.entities.TimeEntry.filter({ employee_id: empId })
+          ),
+        ]);
+        // Deduplicate by id
+        const seen = new Set();
+        const combined = [];
+        for (const entry of [...ownEntries, ...reportEntries.flat()]) {
+          if (entry?.id && !seen.has(entry.id)) {
+            seen.add(entry.id);
+            combined.push(entry);
+          }
+        }
+        return combined;
+      }
+      // Employee or management with no direct reports: just own entries
+      return getAllTimeEntries();
+    },
+    enabled: !!effectiveUser && (effectiveUser.role !== "management" || allUsers.length > 0 || managedEmployeeIds.length >= 0),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+  });
 
   useEffect(() => {
     const directMap = {};
@@ -399,25 +444,25 @@ useEffect(() => {
   // clientIds kept for potential future use
 
   const scopedTimeEntries = useMemo(() => {
-  if (!effectiveUser) return [];
-  // Real admin sees everything
-  if (user?.role === "admin" && !viewAsUser) return timeEntries;
+    if (!effectiveUser) return [];
 
-  // Build set of visible staff user ids/emails for fast lookup
-  const visibleIds = new Set(visibleStaffUsers.map((u) => u.id).filter(Boolean));
-  const visibleEmails = new Set(visibleStaffUsers.map((u) => u.email).filter(Boolean));
+    // Build set of visible staff user ids/emails for fast lookup
+    const visibleIds = new Set(visibleStaffUsers.map((u) => u.id).filter(Boolean));
+    const visibleEmails = new Set(visibleStaffUsers.map((u) => u.email).filter(Boolean));
 
-  return timeEntries.filter((entry) => {
-    // Match by any staff identifier on the entry
-    if (entry.employee_id && visibleIds.has(entry.employee_id)) return true;
-    if (entry.staff_id && visibleIds.has(entry.staff_id)) return true;
-    if (entry.user_id && visibleIds.has(entry.user_id)) return true;
-    if (entry.created_by && visibleEmails.has(entry.created_by)) return true;
-    if (entry.employee_email && visibleEmails.has(entry.employee_email)) return true;
-    if (entry.staff_email && visibleEmails.has(entry.staff_email)) return true;
-    return false;
-  });
-}, [timeEntries, visibleStaffUsers, effectiveUser, user?.role, viewAsUser]);
+    // Admin with no viewAs: all fetched entries are already org-scoped, show all
+    if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
+
+    return timeEntries.filter((entry) => {
+      if (entry.employee_id && visibleIds.has(entry.employee_id)) return true;
+      if (entry.staff_id && visibleIds.has(entry.staff_id)) return true;
+      if (entry.user_id && visibleIds.has(entry.user_id)) return true;
+      if (entry.created_by && visibleEmails.has(entry.created_by)) return true;
+      if (entry.employee_email && visibleEmails.has(entry.employee_email)) return true;
+      if (entry.staff_email && visibleEmails.has(entry.staff_email)) return true;
+      return false;
+    });
+  }, [timeEntries, visibleStaffUsers, effectiveUser, viewAsUser]);
 
  
  const payrollRanges = useMemo(() => {
@@ -611,11 +656,11 @@ useEffect(() => {
   // Whether we should show staff name on entries (admin/manager viewing all)
   const showStaffColumn = useMemo(() => {
     return (
-      (user?.role === "admin" || effectiveUser?.role === "management") &&
+      (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
       employeeFilter === "all" &&
       filterableEmployees.length > 0
     );
-  }, [user?.role, effectiveUser?.role, employeeFilter, filterableEmployees.length]);
+  }, [effectiveUser?.role, employeeFilter, filterableEmployees.length]);
 
  const prevTimeEntriesRef = useRef(timeEntries);
  useEffect(() => {
