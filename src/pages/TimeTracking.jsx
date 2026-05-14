@@ -1017,9 +1017,12 @@ if (entryTypeFilter !== "all") {
                         tabIndex={0}
                         className="inline-flex items-center gap-1 hover:text-slate-800"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/ClientDetail?id=${entry.client_id}`);
-                        }}
+  e.stopPropagation();
+
+  if (clientById[entry.client_id]) {
+    navigate(`/ClientDetail?id=${entry.client_id}`);
+  }
+}}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
