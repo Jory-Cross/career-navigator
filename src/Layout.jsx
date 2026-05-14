@@ -17,8 +17,8 @@ import { COMMON_TIMEZONES } from "@/lib/timezoneUtils";
 const navItems = [
   { name: "Dashboard",      icon: LayoutDashboard, page: "Dashboard",      featureKey: "dashboard" },
   { name: "Clients",        icon: Users,           page: "Clients",        featureKey: "clients" },
-  { name: "Job Seeker",     icon: Users,           page: "Clients",        featureKey: "clients",       indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
-  { name: "Employed",       icon: Users,           page: "Clients",        featureKey: "clients",       indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
+  { name: "Job Seeker",     icon: Users,           page: "Clients",        featureKey: "job_seeker",    indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
+  { name: "Employed",       icon: Users,           page: "Clients",        featureKey: "employed",      indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
   { name: "Pre-ETS",        icon: GraduationCap,   page: "PreEtsPortal",   featureKey: "pre_ets",       indent: true, roles: ["admin", "management", "employee"] },
   { name: "DSPD",           icon: Users,           page: "DspdPortal",     featureKey: "dspd",          indent: true, roles: ["admin", "management", "employee"] },
   { name: "Employees",      icon: UserCog,         page: "EmployeePortal", featureKey: "employees",     roles: ["admin", "management"] },
