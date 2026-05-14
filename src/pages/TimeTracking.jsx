@@ -879,6 +879,34 @@ if (entryTypeFilter !== "all") {
             </div>
           ) : null}
 
+<div className="space-y-1">
+  <label className="text-xs text-slate-500">Entry Type</label>
+
+  <Select
+    value={entryTypeFilter}
+    onValueChange={setEntryTypeFilter}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="All Types" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="all">
+        All Types
+      </SelectItem>
+
+      {entryTypes.map((type) => (
+        <SelectItem
+          key={type.code}
+          value={type.code}
+        >
+          {type.label}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+          
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Client</label>
             <Select value={clientFilter} onValueChange={setClientFilter}>
