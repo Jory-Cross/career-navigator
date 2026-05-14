@@ -258,8 +258,16 @@ export default function Layout({ children, currentPageName }) {
               {navItems.filter(item => {
                 // While user is still loading, hide everything to avoid flicker
                 if (!user) return false;
+                // Determine if current user is admin (by role OR access_level)
+                const isAdmin = user.role === 'admin' || user.access_level === 'admin';
                 // Role-based filter
-                if (item.roles && !item.roles.includes(user.role)) return false;
+                if (item.roles) {
+                  const allowed = item.roles.some(r => {
+                    if (r === 'admin') return isAdmin;
+                    return user.role === r;
+                  });
+                  if (!allowed) return false;
+                }
                 // Feature-based filter (null featureKey = always show for matching role)
                 if (item.featureKey !== null && item.featureKey !== undefined) {
                   if (!canView(item.featureKey)) return false;
