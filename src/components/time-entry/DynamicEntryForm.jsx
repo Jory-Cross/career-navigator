@@ -185,13 +185,15 @@ export default function DynamicEntryForm({
       }
     }
     return initialized;
-  }, [normalizedSchema, entry]);
+    // Only depend on entry.id and entry to prevent re-rehydration on schema changes
+  }, [entry?.id, entry]);
 
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
   const [entryTypeLoading, setEntryTypeLoading] = useState(false);
+  const hasHydratedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -200,9 +202,11 @@ export default function DynamicEntryForm({
     };
   }, []);
 
-  // Only sync formData when entry object itself changes (e.g., fresh from save),
-  // not when schema loads. Schema changes shouldn't trigger re-rehydration.
+  // Only rehydrate on entry.id change, and only once per entry.
+  // Prevent stale re-rehydration when schema loads or parent re-renders with same entry.
   useEffect(() => {
+    // Always reset flag on entry.id change (new entry)
+    hasHydratedRef.current = false;
     setFormData(initialData);
   }, [entry?.id]);
 
