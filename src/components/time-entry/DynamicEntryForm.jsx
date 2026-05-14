@@ -167,11 +167,24 @@ export default function DynamicEntryForm({
   }, [normalizedEntryTypeCode]);
 
   const initialData = useMemo(() => {
+    let data;
     if (entry?.id) {
-      return buildFormDataFromEntry(entry, { fields: normalizedSchema });
+      data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
+    } else {
+      data = buildInitialFormData(normalizedSchema, null);
     }
-
-    return buildInitialFormData(normalizedSchema, null);
+    
+    // Ensure all schema fields exist in formData (as empty strings if missing)
+    // This prevents uncontrolled textarea/input components
+    const initialized = { ...data };
+    if (Array.isArray(normalizedSchema)) {
+      for (const field of normalizedSchema) {
+        if (field?.key && initialized[field.key] === undefined) {
+          initialized[field.key] = "";
+        }
+      }
+    }
+    return initialized;
   }, [normalizedSchema, entry]);
 
   const [formData, setFormData] = useState(initialData);
