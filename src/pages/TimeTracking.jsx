@@ -804,10 +804,13 @@ if (entryTypeFilter !== "all") {
                     key={clientId}
                     type="button"
                     onClick={() => {
-                      if (clientId !== "__self__") {
-                       navigate(`/ClientDetail?id=${clientId}`);
-                      }
-                    }}
+  if (
+    clientId !== "__self__" &&
+    clientById[clientId]
+  ) {
+    navigate(`/ClientDetail?id=${clientId}`);
+  }
+}}
                     className={cn(
                       "w-full rounded-lg border p-3 text-left transition hover:bg-slate-50",
                       clientId === "__self__" && "cursor-default"
