@@ -591,6 +591,8 @@ if (entryTypeFilter !== "all") {
   staffById,
   filteredClientIds,
   clientFilter,
+  entryTypeFilter,
+  resolvedEntryTypeCodes,
   periodFilter,
   payrollRanges,
 ]);
