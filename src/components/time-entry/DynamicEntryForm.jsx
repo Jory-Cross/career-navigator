@@ -193,7 +193,7 @@ export default function DynamicEntryForm({
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
   const [entryTypeLoading, setEntryTypeLoading] = useState(false);
-  const hasHydratedRef = useRef(false);
+  const lastHydratedEntryIdRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -202,13 +202,32 @@ export default function DynamicEntryForm({
     };
   }, []);
 
-  // Only rehydrate on entry.id change, and only once per entry.
-  // Prevent stale re-rehydration when schema loads or parent re-renders with same entry.
+  // Only rehydrate on entry.id change to prevent stale overwrites.
+  // If same entry.id and current formData is "richer" than incoming initialData, skip reset.
   useEffect(() => {
-    // Always reset flag on entry.id change (new entry)
-    hasHydratedRef.current = false;
+    // If this is a brand new entry (different from last hydrated), always reset
+    if (entry?.id !== lastHydratedEntryIdRef.current) {
+      lastHydratedEntryIdRef.current = entry?.id;
+      setFormData(initialData);
+      return;
+    }
+
+    // Same entry.id: check if current formData has more fields than initialData
+    // This prevents stale rehydration from wiping user input
+    const currentFieldCount = Object.keys(formData).filter(
+      (key) => formData[key] !== undefined && formData[key] !== null && formData[key] !== ""
+    ).length;
+    const incomingFieldCount = Object.keys(initialData).filter(
+      (key) => initialData[key] !== undefined && initialData[key] !== null && initialData[key] !== ""
+    ).length;
+
+    // If current data is richer, don't overwrite
+    if (currentFieldCount > incomingFieldCount) {
+      return;
+    }
+
     setFormData(initialData);
-  }, [entry?.id]);
+  }, [entry?.id, initialData]);
 
   useEffect(() => {
     let cancelled = false;
