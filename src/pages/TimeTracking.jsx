@@ -177,8 +177,11 @@ const [selectedNewEntryClientId, setSelectedNewEntryClientId] = useState("");
   const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
 
 const { data: allUsers = [] } = useQuery({
-  queryKey: ["timeTracking", "users", effectiveUser?.id],
-  queryFn: getAllUsers,
+  queryKey: ["timeTracking", "users"],
+  queryFn: async () => {
+    const res = await base44.functions.invoke('getOrgUsers', {});
+    return res.data?.users || [];
+  },
   enabled: !!user && (user.role === "admin" || user.role === "management"),
   staleTime: 5 * 60 * 1000,
   gcTime: 15 * 60 * 1000,
@@ -191,6 +194,7 @@ const { data: allUsers = [] } = useQuery({
 }, [allUsers, effectiveUser]);
 
 // All staff users whose entries are visible to the current user (used for scoping + filter dropdown)
+// Uses the same hierarchy logic as EmployeePortal (manager_id based)
 const visibleStaffUsers = useMemo(() => {
   if (!user) return [];
 
@@ -203,22 +207,21 @@ const visibleStaffUsers = useMemo(() => {
     );
   }
 
-  // Management: self + direct reports (by manager_id). Fallback: self + all employees.
+  // Management: self + direct reports by manager_id (matches EmployeePortal exactly)
   if (effectiveUser?.role === "management") {
     const directReports = allUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id
     );
-    const base = [effectiveUser, ...directReports];
-    if (directReports.length > 0) return base;
-    // No hierarchy set — show self + all employees so nothing is hidden
-    return [effectiveUser, ...allUsers.filter((u) => !u.is_archived && u.role === "employee")];
+    return [effectiveUser, ...directReports];
   }
 
   // Employee: only self
   return effectiveUser ? [effectiveUser] : [];
 }, [allUsers, effectiveUser, user, viewAsUser]);
 
-// Employees shown in the filter dropdown (excludes self for employee role since they have no choice)
+// Employees shown in the filter dropdown
+// For management: self + direct reports (same as visibleStaffUsers minus pure admin accounts)
+// For admin: all staff
 const filterableEmployees = useMemo(() => {
   if (!user) return [];
   const isRealAdmin = user.role === "admin" && !viewAsUser;
