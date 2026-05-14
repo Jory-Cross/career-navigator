@@ -190,28 +190,77 @@ const { data: allUsers = [] } = useQuery({
   return getScopedUsers(allUsers, effectiveUser);
 }, [allUsers, effectiveUser]);
 
-const filterableEmployees = useMemo(() => {
+// All staff users whose entries are visible to the current user (used for scoping + filter dropdown)
+const visibleStaffUsers = useMemo(() => {
   if (!user) return [];
 
-  // Admin (not viewing-as): sees all employees + managers
-  if (user.role === "admin" && !viewAsUser) {
-    return scopedUsers.filter(
-      (u) => !u.is_archived && (u.role === "employee" || u.role === "management")
+  const isRealAdmin = user.role === "admin" && !viewAsUser;
+
+  // Admin (not viewing-as): all non-archived staff
+  if (isRealAdmin) {
+    return allUsers.filter(
+      (u) => !u.is_archived && (u.role === "employee" || u.role === "management" || u.role === "admin")
     );
   }
 
-  // Management: see subordinates (by manager_id). If none assigned, show all employees.
+  // Management: self + direct reports (by manager_id). Fallback: self + all employees.
   if (effectiveUser?.role === "management") {
-    const subordinates = scopedUsers.filter(
+    const directReports = allUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id
     );
-    if (subordinates.length > 0) return subordinates;
-    // No manager_id relationships set yet — show all employees
-    return scopedUsers.filter((u) => !u.is_archived && u.role === "employee");
+    const base = [effectiveUser, ...directReports];
+    if (directReports.length > 0) return base;
+    // No hierarchy set — show self + all employees so nothing is hidden
+    return [effectiveUser, ...allUsers.filter((u) => !u.is_archived && u.role === "employee")];
   }
 
+  // Employee: only self
+  return effectiveUser ? [effectiveUser] : [];
+}, [allUsers, effectiveUser, user, viewAsUser]);
+
+// Employees shown in the filter dropdown (excludes self for employee role since they have no choice)
+const filterableEmployees = useMemo(() => {
+  if (!user) return [];
+  const isRealAdmin = user.role === "admin" && !viewAsUser;
+
+  if (isRealAdmin || effectiveUser?.role === "management") {
+    return visibleStaffUsers.filter(
+      (u) => u.role === "employee" || u.role === "management"
+    );
+  }
+
+  // Employees see no dropdown
   return [];
-}, [scopedUsers, effectiveUser, user, viewAsUser]);
+}, [visibleStaffUsers, effectiveUser, user, viewAsUser]);
+
+// Build fast lookup: user id → user and user email → user (covers all visible staff)
+const staffById = useMemo(() => {
+  const map = {};
+  for (const u of visibleStaffUsers) map[u.id] = u;
+  return map;
+}, [visibleStaffUsers]);
+
+const staffByEmail = useMemo(() => {
+  const map = {};
+  for (const u of visibleStaffUsers) {
+    if (u.email) map[u.email] = u;
+  }
+  return map;
+}, [visibleStaffUsers]);
+
+// Helper: does an entry belong to a given staff user?
+function entryBelongsToUser(entry, staffUser) {
+  if (!staffUser) return false;
+  if (entry.employee_id && entry.employee_id === staffUser.id) return true;
+  if (entry.staff_id && entry.staff_id === staffUser.id) return true;
+  if (entry.user_id && entry.user_id === staffUser.id) return true;
+  if (staffUser.email) {
+    if (entry.created_by === staffUser.email) return true;
+    if (entry.employee_email === staffUser.email) return true;
+    if (entry.staff_email === staffUser.email) return true;
+  }
+  return false;
+}
 
   const { data: rawClients = [] } = useQuery({
   queryKey: ["timeTracking", "clients", effectiveUser?.id],
@@ -304,13 +353,8 @@ const allClients = useMemo(() => {
     };
   }, [timeEntries]);
 
-  const employeeById = useMemo(() => {
-    const map = {};
-    for (const employee of filterableEmployees) {
-      map[employee.id] = employee;
-    }
-    return map;
-  }, [filterableEmployees]);
+  // employeeById for clients sub-filter — reuse staffById
+  const employeeById = staffById;
 
   const clientById = useMemo(() => {
     const map = {};
@@ -346,45 +390,28 @@ useEffect(() => {
     return allClients;
   }, [allClients, effectiveUser?.role, employeeFilter, employeeById]);
 
-  const clientIds = useMemo(() => allClients.map((client) => client.id), [allClients]);
+  // clientIds kept for potential future use
 
   const scopedTimeEntries = useMemo(() => {
-  if (!effectiveUser) return timeEntries;
-  if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
+  if (!effectiveUser) return [];
+  // Real admin sees everything
+  if (user?.role === "admin" && !viewAsUser) return timeEntries;
 
-  const clientIdSet = new Set(clientIds);
+  // Build set of visible staff user ids/emails for fast lookup
+  const visibleIds = new Set(visibleStaffUsers.map((u) => u.id).filter(Boolean));
+  const visibleEmails = new Set(visibleStaffUsers.map((u) => u.email).filter(Boolean));
 
-  // For management: include entries for their scoped clients + their own entries
-  // For employee: include all entries they created/own, plus entries for their clients
-  const result = [];
-  for (const entry of timeEntries) {
-    // Entry belongs to a scoped client
-    if (entry.client_id && clientIdSet.has(entry.client_id)) {
-      result.push(entry);
-      continue;
-    }
-    // Entry has no client (admin time, etc.)
-    if (!entry.client_id) {
-      // Only include if it belongs to this user
-      const matchById = entry.employee_id === effectiveUser.id;
-      const matchByEmail = effectiveUser.email && entry.created_by === effectiveUser.email;
-      if (matchById || matchByEmail) {
-        result.push(entry);
-      }
-      continue;
-    }
-    // Entry has a client_id not in scoped list — include if it's the user's own entry
-    if (effectiveUser.role === "employee") {
-      const matchById = entry.employee_id === effectiveUser.id;
-      const matchByEmail = effectiveUser.email && entry.created_by === effectiveUser.email;
-      if (matchById || matchByEmail) {
-        result.push(entry);
-      }
-    }
-  }
-
-  return result;
-}, [timeEntries, clientIds, effectiveUser?.id, effectiveUser?.email, effectiveUser?.role, viewAsUser]);
+  return timeEntries.filter((entry) => {
+    // Match by any staff identifier on the entry
+    if (entry.employee_id && visibleIds.has(entry.employee_id)) return true;
+    if (entry.staff_id && visibleIds.has(entry.staff_id)) return true;
+    if (entry.user_id && visibleIds.has(entry.user_id)) return true;
+    if (entry.created_by && visibleEmails.has(entry.created_by)) return true;
+    if (entry.employee_email && visibleEmails.has(entry.employee_email)) return true;
+    if (entry.staff_email && visibleEmails.has(entry.staff_email)) return true;
+    return false;
+  });
+}, [timeEntries, visibleStaffUsers, effectiveUser, user?.role, viewAsUser]);
 
  
  const payrollRanges = useMemo(() => {
@@ -412,31 +439,17 @@ useEffect(() => {
   return result;
 }, [clients]);
 
-  // Build a lookup of employee id → email for matching entries by created_by
-  const employeeEmailById = useMemo(() => {
-    const map = {};
-    for (const emp of filterableEmployees) {
-      if (emp.email) map[emp.id] = emp.email;
-    }
-    return map;
-  }, [filterableEmployees]);
-
   const filtered = useMemo(() => {
-  const filteredClientIdSet = new Set(filteredClientIds);
-
   const result = [];
 
   for (const entry of scopedTimeEntries) {
-    // Employee filter: match entry directly by employee_id OR created_by email
+    // Employee filter: match entry to the selected staff user using all available fields
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
       employeeFilter !== "all"
     ) {
-      const selectedEmail = employeeEmailById[employeeFilter];
-      const entryEmployeeId = entry.employee_id || entry.staff_id;
-      const matchById = entryEmployeeId && entryEmployeeId === employeeFilter;
-      const matchByEmail = selectedEmail && entry.created_by === selectedEmail;
-      if (!matchById && !matchByEmail) continue;
+      const selectedStaff = staffById[employeeFilter];
+      if (!entryBelongsToUser(entry, selectedStaff)) continue;
     }
 
     if (clientFilter !== "all" && entry.client_id !== clientFilter) {
@@ -503,7 +516,7 @@ useEffect(() => {
   scopedTimeEntries,
   effectiveUser?.role,
   employeeFilter,
-  employeeEmailById,
+  staffById,
   filteredClientIds,
   clientFilter,
   periodFilter,
@@ -579,21 +592,14 @@ useEffect(() => {
     [clientById]
   );
 
-  // Build employee lookup by email for staff name display
-  const employeeByEmail = useMemo(() => {
-    const map = {};
-    for (const emp of filterableEmployees) {
-      if (emp.email) map[emp.email] = emp;
-    }
-    return map;
-  }, [filterableEmployees]);
-
   const getEntryStaffName = useCallback(
     (entry) => {
-      const emp = employeeByEmail[entry.created_by];
+      const emp = staffByEmail[entry.created_by]
+        || staffById[entry.employee_id]
+        || staffById[entry.staff_id];
       return emp ? (emp.full_name || emp.email) : (entry.created_by || null);
     },
-    [employeeByEmail]
+    [staffByEmail, staffById]
   );
 
   // Whether we should show staff name on entries (admin/manager viewing all)
