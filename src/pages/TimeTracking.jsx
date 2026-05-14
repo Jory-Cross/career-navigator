@@ -354,15 +354,37 @@ useEffect(() => {
 
   const clientIdSet = new Set(clientIds);
 
+  // For management: include entries for their scoped clients + their own entries
+  // For employee: include all entries they created/own, plus entries for their clients
   const result = [];
   for (const entry of timeEntries) {
-    if (!entry.client_id || clientIdSet.has(entry.client_id)) {
+    // Entry belongs to a scoped client
+    if (entry.client_id && clientIdSet.has(entry.client_id)) {
       result.push(entry);
+      continue;
+    }
+    // Entry has no client (admin time, etc.)
+    if (!entry.client_id) {
+      // Only include if it belongs to this user
+      const matchById = entry.employee_id === effectiveUser.id;
+      const matchByEmail = effectiveUser.email && entry.created_by === effectiveUser.email;
+      if (matchById || matchByEmail) {
+        result.push(entry);
+      }
+      continue;
+    }
+    // Entry has a client_id not in scoped list — include if it's the user's own entry
+    if (effectiveUser.role === "employee") {
+      const matchById = entry.employee_id === effectiveUser.id;
+      const matchByEmail = effectiveUser.email && entry.created_by === effectiveUser.email;
+      if (matchById || matchByEmail) {
+        result.push(entry);
+      }
     }
   }
 
   return result;
-}, [timeEntries, clientIds, effectiveUser?.role, viewAsUser]);
+}, [timeEntries, clientIds, effectiveUser?.id, effectiveUser?.email, effectiveUser?.role, viewAsUser]);
 
  
  const payrollRanges = useMemo(() => {
