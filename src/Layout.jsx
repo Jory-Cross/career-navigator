@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, EyeOff, LogOut } from "lucide-react";
+import { useFeaturePermissions } from "@/lib/useFeaturePermissions";
 import { cn } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,21 +15,22 @@ import { toast } from "sonner";
 import { COMMON_TIMEZONES } from "@/lib/timezoneUtils";
 
 const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
-  { name: "Clients", icon: Users, page: "Clients" },
-  { name: "Job Seeker", icon: Users, page: "Clients", indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
-  { name: "Employed", icon: Users, page: "Clients", indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
-  { name: "Pre-ETS", icon: GraduationCap, page: "PreEtsPortal", indent: true, roles: ["admin", "management", "employee"] },
-  { name: "DSPD", icon: Users, page: "DspdPortal", indent: true, roles: ["admin", "management", "employee"] },
-  { name: "Employees", icon: UserCog, page: "EmployeePortal", roles: ["admin", "management"] },
-  { name: "Calendar", icon: Calendar, page: "Calendar" },
-  { name: "Reports", icon: BarChart3, page: "Reports" },
-  { name: "Time Tracking", icon: Clock, page: "TimeTracking" },
-  { name: "Tasks", icon: ListChecks, page: "Tasks" },
-  { name: "Email Templates", icon: Mail, page: "EmailTemplates" },
-  { name: "AI Agents", icon: Bot, page: "Agents" },
-  { name: "App Analytics", icon: BarChart3, page: "AppAnalytics" },
-  { name: "My Organization", icon: Building2, page: "OrgDashboard", roles: ["admin"] },
+  { name: "Dashboard",      icon: LayoutDashboard, page: "Dashboard",      featureKey: "dashboard" },
+  { name: "Clients",        icon: Users,           page: "Clients",        featureKey: "clients" },
+  { name: "Job Seeker",     icon: Users,           page: "Clients",        featureKey: "clients",       indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
+  { name: "Employed",       icon: Users,           page: "Clients",        featureKey: "clients",       indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
+  { name: "Pre-ETS",        icon: GraduationCap,   page: "PreEtsPortal",   featureKey: "pre_ets",       indent: true, roles: ["admin", "management", "employee"] },
+  { name: "DSPD",           icon: Users,           page: "DspdPortal",     featureKey: "dspd",          indent: true, roles: ["admin", "management", "employee"] },
+  { name: "Employees",      icon: UserCog,         page: "EmployeePortal", featureKey: "employees",     roles: ["admin", "management"] },
+  { name: "Calendar",       icon: Calendar,        page: "Calendar",       featureKey: "calendar" },
+  { name: "Reports",        icon: BarChart3,       page: "Reports",        featureKey: "reports" },
+  { name: "Time Tracking",  icon: Clock,           page: "TimeTracking",   featureKey: "time_tracking" },
+  { name: "Tasks",          icon: ListChecks,      page: "Tasks",          featureKey: "tasks" },
+  { name: "Email Templates",icon: Mail,            page: "EmailTemplates", featureKey: "email_templates" },
+  { name: "AI Agents",      icon: Bot,             page: "Agents",         featureKey: "ai_agents" },
+  { name: "App Analytics",  icon: BarChart3,       page: "AppAnalytics",   featureKey: "app_analytics" },
+  { name: "My Organization",icon: Building2,       page: "OrgDashboard",   featureKey: "org_dashboard", roles: ["admin"] },
+  { name: "Permissions",    icon: Shield,          page: "FeaturePermissions", featureKey: null,        roles: ["admin"] },
 ];
 
 const ROLE_LABELS = {
@@ -88,6 +90,7 @@ export default function Layout({ children, currentPageName }) {
   const { viewAsUser, setViewAsUser } = useViewAs();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const { canView } = useFeaturePermissions(user);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({});
@@ -252,7 +255,15 @@ export default function Layout({ children, currentPageName }) {
           )}>
             <nav className="p-3 space-y-0.5 flex flex-col h-full">
               <div className="flex-1 space-y-0.5">
-              {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => {
+              {navItems.filter(item => {
+                // Role-based filter
+                if (item.roles && !item.roles.includes(user?.role)) return false;
+                // Feature-based filter (null featureKey = always show)
+                if (item.featureKey !== null && item.featureKey !== undefined) {
+                  if (!canView(item.featureKey)) return false;
+                }
+                return true;
+              }).map(item => {
                 const currentSearch = window.location.search;
                 const isActive = currentPageName === item.page && (
                   item.param ? currentSearch === item.param : !currentSearch

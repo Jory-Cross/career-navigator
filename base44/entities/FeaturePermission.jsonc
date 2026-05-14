@@ -1,0 +1,46 @@
+{
+  "name": "FeaturePermission",
+  "type": "object",
+  "description": "Controls which features/pages are visible and interactive per staff role.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant org ID"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "management",
+        "employee"
+      ],
+      "description": "Staff role this permission applies to"
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Unique key for the feature (e.g. time_tracking, clients, documents)"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label for the feature"
+    },
+    "category": {
+      "type": "string",
+      "description": "Grouping category (e.g. core, clinical, admin)"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this feature is visible to users with this role"
+    },
+    "can_interact": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether users with this role can interact (edit/create) \u2014 not yet used in V1"
+    }
+  },
+  "required": [
+    "role",
+    "feature_key"
+  ]
+}

@@ -14,11 +14,13 @@ import DspdPortal from './pages/DspdPortal';
 import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
 import Agents from './pages/Agents';
 import AppAnalytics from './pages/AppAnalytics';
+import FeaturePermissions from './pages/FeaturePermissions';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AccessDenied from '@/components/AccessDenied';
 import { classifyUserAccess } from '@/lib/AuthContext';
+
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -27,6 +29,13 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
+
+// Admin-only gate for FeaturePermissions page
+const FeaturePermissionsGated = () => {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') return <AccessDenied user={user} />;
+  return <FeaturePermissions />;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
@@ -114,6 +123,7 @@ const AuthenticatedApp = () => {
       <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
       <Route path="/AppAnalytics" element={<LayoutWrapper currentPageName="AppAnalytics"><AppAnalytics /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
+      <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
       <Route path="/OrgSignup" element={<OrgSignup />} />
       <Route path="/OrgDashboard" element={<LayoutWrapper currentPageName="OrgDashboard"><OrgDashboard /></LayoutWrapper>} />
