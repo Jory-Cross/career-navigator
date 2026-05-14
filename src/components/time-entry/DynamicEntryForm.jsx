@@ -187,9 +187,11 @@ export default function DynamicEntryForm({
     };
   }, []);
 
+  // Only sync formData when entry object itself changes (e.g., fresh from save),
+  // not when schema loads. Schema changes shouldn't trigger re-rehydration.
   useEffect(() => {
     setFormData(initialData);
-  }, [initialData]);
+  }, [entry?.id]);
 
   useEffect(() => {
     let cancelled = false;
