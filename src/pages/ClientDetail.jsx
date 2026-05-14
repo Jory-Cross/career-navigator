@@ -22,6 +22,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import { createPageUrl } from "@/utils";
 import { queryKeys } from "@/lib/queryKeys";
+import { useFeaturePermissions } from "@/lib/useFeaturePermissions";
 import {
   getCurrentUser,
   getClientById,
@@ -164,6 +165,27 @@ const handleDocumentsChanged = useCallback(() => {
   const isEmployed = client?.client_type === "employed";
   const isClientUser = user?.role === "client";
 
+  // Feature-gating for client detail sections (admin always sees all)
+  const { canView: cdCanView } = useFeaturePermissions(user);
+  const cd = {
+    details:       cdCanView("client_details"),
+    onboarding:    cdCanView("client_onboarding"),
+    intake_packet: cdCanView("client_intake_packet"),
+    applications:  cdCanView("client_applications"),
+    ai_job_search: cdCanView("client_ai_job_search"),
+    interview_prep:cdCanView("client_interview_prep"),
+    assessments:   cdCanView("client_assessments"),
+    documents:     cdCanView("client_documents"),
+    tasks:         cdCanView("client_tasks"),
+    time:          cdCanView("client_time"),
+    activity:      cdCanView("client_activity"),
+    assistant:     cdCanView("client_assistant"),
+    portal:        cdCanView("client_portal"),
+    send_email:    cdCanView("client_send_email"),
+    test_onet:     cdCanView("client_test_onet"),
+    add_actions:   cdCanView("client_add_actions"),
+  };
+
   const shouldLoadApplications = !!clientId && activeTab === "applications";
   const shouldLoadTime =
     !!clientId && (activeTab === "time" || activeTab === "job_supports");
@@ -257,32 +279,34 @@ const currentTaskCount = tasks.filter(
         </Link>
 
         <div className="flex flex-wrap gap-2">
-          {client.client_type !== "employed" && (
+          {cd.portal && client.client_type !== "employed" && (
             <Button variant="outline" onClick={() => window.open(portalUrl, "_blank")}>
               <ExternalLink className="w-4 h-4 mr-2" />
               Client Portal
             </Button>
           )}
 
-          {client.email && (
+          {cd.send_email && client.email && (
             <Button onClick={() => setShowEmailComposer(true)}>
               Send Email
             </Button>
           )}
-                    <Button
-            variant="outline"
-            onClick={async () => {
-              const ok = await testOnetConnection();
 
-              if (ok) {
-                alert("O*NET connection successful");
-              } else {
-                alert("O*NET connection failed. Check console.");
-              }
-            }}
-          >
-            Test O*NET
-          </Button>
+          {cd.test_onet && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const ok = await testOnetConnection();
+                if (ok) {
+                  alert("O*NET connection successful");
+                } else {
+                  alert("O*NET connection failed. Check console.");
+                }
+              }}
+            >
+              Test O*NET
+            </Button>
+          )}
         </div>
       </div>
 <ClientHeader client={client} showDetails={false} allowEdit={false} />
@@ -291,7 +315,7 @@ const currentTaskCount = tasks.filter(
 
    <Tabs value={activeTab || ""} onValueChange={handleTabChange}>
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-  {!isClientUser && !isEmployed && (
+  {cd.details && !isClientUser && !isEmployed && (
   <button
     type="button"
      onClick={() => handleTabChange("client_details")}
@@ -308,25 +332,25 @@ const currentTaskCount = tasks.filter(
     </div>
   </button>
 )}
-    {!isClientUser && !isEmployed && (
+    {cd.onboarding && !isClientUser && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("onboarding")}
-       className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "onboarding"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "onboarding"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
         <div className="flex items-center gap-2">
-  <ClipboardList className="h-4 w-4" />
-  <span className="text-sm font-semibold">Onboarding</span>
-</div>
+          <ClipboardList className="h-4 w-4" />
+          <span className="text-sm font-semibold">Onboarding</span>
+        </div>
       </button>
     )}
 
-    {!isClientUser && !isEmployed && (
+    {cd.intake_packet && !isClientUser && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("intake_packet")}
@@ -344,78 +368,78 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
-    {!isDspd && !isEmployed && (
+    {cd.applications && !isDspd && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("applications")}
         className={cn(
-        "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
           activeTab === "applications"
-  ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-  : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
         )}
       >
         <div className="flex items-center gap-2">
-  <Briefcase className="h-4 w-4" />
-  <span className="text-sm font-semibold">Applications</span>
-</div>
+          <Briefcase className="h-4 w-4" />
+          <span className="text-sm font-semibold">Applications</span>
+        </div>
         <div className={cn("mt-1 text-xs", activeTab === "applications" ? "text-slate-200" : "text-slate-500")}>
           {applications.length} items
         </div>
       </button>
     )}
 
-    {!isDspd && !isEmployed && !isClientUser && (
+    {cd.ai_job_search && !isDspd && !isEmployed && !isClientUser && (
       <button
         type="button"
         onClick={() => handleTabChange("ai_job_search")}
-       className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "ai_job_search"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "ai_job_search"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
         <div className="flex items-center gap-2">
-  <Brain className="h-4 w-4" />
-  <span className="text-sm font-semibold">AI Job Search</span>
-</div>
+          <Brain className="h-4 w-4" />
+          <span className="text-sm font-semibold">AI Job Search</span>
+        </div>
       </button>
     )}
 
-    {!isDspd && !isEmployed && (
+    {cd.interview_prep && !isDspd && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("interview_prep")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "interview_prep"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "interview_prep"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
-       <div className="flex items-center gap-2">
-  <MessageSquare className="h-4 w-4" />
-  <span className="text-sm font-semibold">Interview Prep</span>
-</div>
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-sm font-semibold">Interview Prep</span>
+        </div>
       </button>
     )}
 
-    {!isDspd && !isEmployed && !isClientUser && (
+    {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
       <button
         type="button"
         onClick={() => handleTabChange("assessments")}
-       className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "assessments"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "assessments"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
-       <div className="flex items-center gap-2">
-  <FileText className="h-4 w-4" />
-  <span className="text-sm font-semibold">Assessments</span>
-</div>
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          <span className="text-sm font-semibold">Assessments</span>
+        </div>
       </button>
     )}
 
@@ -424,162 +448,163 @@ const currentTaskCount = tasks.filter(
         type="button"
         onClick={() => handleTabChange("wble_forms")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "wble_forms"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "wble_forms"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
         <div className="flex items-center gap-2">
-  <FileText className="h-4 w-4" />
-  <span className="text-sm font-semibold">WBLE Forms</span>
-</div>
+          <FileText className="h-4 w-4" />
+          <span className="text-sm font-semibold">WBLE Forms</span>
+        </div>
       </button>
     )}
 
-    {!isClientUser && (
+    {cd.documents && !isClientUser && (
       <button
         type="button"
         onClick={() => handleTabChange("documents")}
-       className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "documents"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "documents"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
         <div className="flex items-center gap-2">
-  <Folder className="h-4 w-4" />
-  <span className="text-sm font-semibold">Documents</span>
-</div>
+          <Folder className="h-4 w-4" />
+          <span className="text-sm font-semibold">Documents</span>
+        </div>
       </button>
     )}
 
-    {!isEmployed && (
+    {cd.tasks && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("tasks")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "tasks"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "tasks"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
-       <div className="flex items-center gap-2">
-  <CheckSquare className="h-4 w-4" />
-  <span className="text-sm font-semibold">Tasks</span>
-</div>
+        <div className="flex items-center gap-2">
+          <CheckSquare className="h-4 w-4" />
+          <span className="text-sm font-semibold">Tasks</span>
+        </div>
         <div className={cn("mt-1 text-xs", activeTab === "tasks" ? "text-slate-200" : "text-slate-500")}>
           {currentTaskCount} items
         </div>
       </button>
     )}
 
-    {!isClientUser && isEmployed && (
+    {cd.time && !isClientUser && isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("job_supports")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "job_supports"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "job_supports"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
         <div className="flex items-center gap-2">
-  <Clock className="h-4 w-4" />
-  <span className="text-sm font-semibold">Job Supports</span>
-</div>
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-semibold">Job Supports</span>
+        </div>
         <div className={cn("mt-1 text-xs", activeTab === "job_supports" ? "text-slate-200" : "text-slate-500")}>
           {timeEntries.length} entries
         </div>
       </button>
     )}
 
-    {!isClientUser && !isEmployed && (
+    {cd.time && !isClientUser && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("time")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "time"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "time"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
-       <div className="flex items-center gap-2">
-  <Clock className="h-4 w-4" />
-  <span className="text-sm font-semibold">Time</span>
-</div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-semibold">Time</span>
+        </div>
         <div className={cn("mt-1 text-xs", activeTab === "time" ? "text-slate-200" : "text-slate-500")}>
           {timeEntries.length} entries
         </div>
       </button>
     )}
 
-    <button
-      type="button"
-      onClick={() => handleTabChange("activity")}
-      className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-  activeTab === "activity"
-    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-    : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
-    >
-     <div className="flex items-center gap-2">
-  <Activity className="h-4 w-4" />
-  <span className="text-sm font-semibold">Activity</span>
-</div>
-    </button>
+    {cd.activity && (
+      <button
+        type="button"
+        onClick={() => handleTabChange("activity")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "activity"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4" />
+          <span className="text-sm font-semibold">Activity</span>
+        </div>
+      </button>
+    )}
 
-    {!isClientUser && !isEmployed && (
+    {cd.assistant && !isClientUser && !isEmployed && (
       <button
         type="button"
         onClick={() => handleTabChange("assistant")}
         className={cn(
-  "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
- activeTab === "assistant"
-  ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-  : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-)}
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "assistant"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
-      <div className="flex items-center gap-2">
-  <Bot className="h-4 w-4" />
-  <span className="text-sm font-semibold">Assistant</span>
-</div>
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4" />
+          <span className="text-sm font-semibold">Assistant</span>
+        </div>
       </button>
     )}
   </div>
   
        <>
-  {!isClientUser && !isEmployed && (
- <TabsContent value="client_details">
-  <div className="space-y-6">
-    <ClientHeader client={client} onUpdate={refreshClient} formOnly />
-
-    {!isDspd && !isEmployed && !isClientUser && (
-      <VocationalProfileCard client={client} onRefresh={refreshClient} />
-    )}
-  </div>
-</TabsContent>
+  {cd.details && !isClientUser && !isEmployed && (
+    <TabsContent value="client_details">
+      <div className="space-y-6">
+        <ClientHeader client={client} onUpdate={refreshClient} formOnly />
+        {!isDspd && !isEmployed && !isClientUser && (
+          <VocationalProfileCard client={client} onRefresh={refreshClient} />
+        )}
+      </div>
+    </TabsContent>
   )}
 
-  {!isClientUser && !isEmployed && (
+  {cd.onboarding && !isClientUser && !isEmployed && (
     <TabsContent value="onboarding">
       <OnboardingSection client={client} onRefresh={refreshClient} />
     </TabsContent>
   )}
 
-  {!isClientUser && !isEmployed && (
+  {cd.intake_packet && !isClientUser && !isEmployed && (
     <TabsContent value="intake_packet">
       <IntakePacketPanel client={client} currentUser={user} />
     </TabsContent>
   )}
 </>
 
-        {!isDspd && !isEmployed && (
+        {cd.applications && !isDspd && !isEmployed && (
           <TabsContent value="applications">
             <JobApplicationsSection
               clientId={client.id}
@@ -590,33 +615,33 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {!isDspd && !isEmployed && !isClientUser && (
+        {cd.ai_job_search && !isDspd && !isEmployed && !isClientUser && (
           <TabsContent value="ai_job_search">
-           <AIJobSearchPanel
-  client={client}
-  onStartInterestProfiler={() => {
-    setOpenAssessmentType("interest_profiler");
-    handleTabChange("assessments");
-  }}
-/>
+            <AIJobSearchPanel
+              client={client}
+              onStartInterestProfiler={() => {
+                setOpenAssessmentType("interest_profiler");
+                handleTabChange("assessments");
+              }}
+            />
           </TabsContent>
         )}
 
-        {!isDspd && !isEmployed && (
+        {cd.interview_prep && !isDspd && !isEmployed && (
           <TabsContent value="interview_prep">
             <InterviewPrepSection client={client} onRefresh={refreshClient} />
           </TabsContent>
         )}
 
-        {!isDspd && !isEmployed && !isClientUser && (
-         <TabsContent value="assessments">
-  <AssessmentSection
-  client={client}
-  onRefresh={refreshClient}
-  openAssessmentType={openAssessmentType}
-  onOpenAssessmentTypeHandled={() => setOpenAssessmentType(null)}
-/>
-</TabsContent>
+        {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
+          <TabsContent value="assessments">
+            <AssessmentSection
+              client={client}
+              onRefresh={refreshClient}
+              openAssessmentType={openAssessmentType}
+              onOpenAssessmentTypeHandled={() => setOpenAssessmentType(null)}
+            />
+          </TabsContent>
         )}
 
         {client.client_type === "pre_ets" && !isClientUser && (
@@ -625,26 +650,19 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {!isClientUser && (
+        {cd.documents && !isClientUser && (
           <TabsContent value="documents">
-           <DocumentsSection
-  clientId={client.id}
-  refreshKey={documentsRefreshKey}
-/>
+            <DocumentsSection clientId={client.id} refreshKey={documentsRefreshKey} />
           </TabsContent>
         )}
 
-        {!isEmployed && (
+        {cd.tasks && !isEmployed && (
           <TabsContent value="tasks">
-            <TasksSection
-              clientId={client.id}
-              tasks={tasks}
-              onRefresh={refreshTasks}
-/>
+            <TasksSection clientId={client.id} tasks={tasks} onRefresh={refreshTasks} />
           </TabsContent>
         )}
 
-        {!isClientUser && isEmployed && (
+        {cd.time && !isClientUser && isEmployed && (
           <TabsContent value="job_supports">
             <TimeLogDashboard
               client={client}
@@ -656,7 +674,7 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {!isClientUser && !isEmployed && (
+        {cd.time && !isClientUser && !isEmployed && (
           <TabsContent value="time">
             <TimeLogDashboard
               client={client}
@@ -668,11 +686,13 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        <TabsContent value="activity">
-          <ActivitySection clientId={client.id} />
-        </TabsContent>
+        {cd.activity && (
+          <TabsContent value="activity">
+            <ActivitySection clientId={client.id} />
+          </TabsContent>
+        )}
 
-        {!isClientUser && !isEmployed && (
+        {cd.assistant && !isClientUser && !isEmployed && (
           <TabsContent value="assistant">
             <AIAssistantPanel client={client} />
           </TabsContent>
