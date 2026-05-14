@@ -1074,7 +1074,13 @@ useEffect(() => {
             <FormEngine
               entry={editingEntry}
               entryTypeCode={editingEntryTypeCode}
-              onSaved={async () => {
+              onSaved={async (savedEntry) => {
+                // Update editingEntry with the fresh saved entry so that if
+                // the dialog is reopened, buildFormDataFromEntry sees the
+                // persisted form_data instead of the stale pre-save snapshot.
+                if (savedEntry && savedEntry.id) {
+                  setEditingEntry(savedEntry);
+                }
                 await handleRefresh();
                 closeEditDialog();
               }}

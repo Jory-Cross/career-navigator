@@ -280,7 +280,7 @@ export default function DynamicEntryForm({
       setSaving(true);
 
       try {
-        await handleDynamicEntrySave({
+        const savedEntry = await handleDynamicEntrySave({
           entryType: {
             id: entryTypeObj.id,
             code: normalizeEntryTypeCode(
@@ -297,7 +297,7 @@ export default function DynamicEntryForm({
         });
 
         if (typeof onSave === "function") {
-          await onSave();
+          await onSave(savedEntry);
         }
       } catch (err) {
         console.error("[DynamicEntryForm] Save failed:", err);

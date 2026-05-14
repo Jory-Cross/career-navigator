@@ -162,13 +162,13 @@ export default function FormEngine({
     };
   }, [normalizedEntryTypeCode, config]);
 
-  const handleSaved = async () => {
+  const handleSaved = async (savedEntry) => {
     if (typeof onSave === "function") {
-      await onSave();
+      await onSave(savedEntry);
     }
 
     if (typeof onSaved === "function") {
-      await onSaved();
+      await onSaved(savedEntry);
     }
   };
 
