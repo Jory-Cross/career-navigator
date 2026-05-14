@@ -1024,12 +1024,15 @@ if (entryTypeFilter !== "all") {
   }
 }}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            navigate(`/ClientDetail?id=${entry.client_id}`);
-                          }
-                        }}
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (clientById[entry.client_id]) {
+      navigate(`/ClientDetail?id=${entry.client_id}`);
+    }
+  }
+}}
                       >
                         <User className="h-3.5 w-3.5" />
                         {getClientName(entry.client_id)}
