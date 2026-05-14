@@ -805,7 +805,7 @@ if (entryTypeFilter !== "all") {
                     type="button"
                     onClick={() => {
                       if (clientId !== "__self__") {
-                        navigate(`/ClientDetail?clientId=${clientId}`);
+                       navigate(`/ClientDetail?id=${clientId}`);
                       }
                     }}
                     className={cn(
