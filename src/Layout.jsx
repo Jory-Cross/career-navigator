@@ -256,9 +256,11 @@ export default function Layout({ children, currentPageName }) {
             <nav className="p-3 space-y-0.5 flex flex-col h-full">
               <div className="flex-1 space-y-0.5">
               {navItems.filter(item => {
+                // While user is still loading, hide everything to avoid flicker
+                if (!user) return false;
                 // Role-based filter
-                if (item.roles && !item.roles.includes(user?.role)) return false;
-                // Feature-based filter (null featureKey = always show)
+                if (item.roles && !item.roles.includes(user.role)) return false;
+                // Feature-based filter (null featureKey = always show for matching role)
                 if (item.featureKey !== null && item.featureKey !== undefined) {
                   if (!canView(item.featureKey)) return false;
                 }
