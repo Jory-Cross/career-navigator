@@ -1015,13 +1015,13 @@ if (entryTypeFilter !== "all") {
                         className="inline-flex items-center gap-1 hover:text-slate-800"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/ClientDetail?clientId=${entry.client_id}`);
+                          navigate(`/ClientDetail?id=${entry.client_id}`);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             e.stopPropagation();
-                            navigate(`/ClientDetail?clientId=${entry.client_id}`);
+                            navigate(`/ClientDetail?id=${entry.client_id}`);
                           }
                         }}
                       >
