@@ -78,5 +78,47 @@
     "client_id",
     "entry_type_code",
     "authorization_number"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "management",
+            "employee"
+          ]
+        }
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.org_id": "{{user.data.org_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.org_id": "{{user.data.org_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
