@@ -466,6 +466,7 @@ function mapTimeEntry(raw) {
   return {
     id: raw.id,
     client_id: raw.client_id ?? null,
+    employee_id: raw.employee_id ?? raw.staff_id ?? raw.user_id ?? null,
     staff_id: raw.staff_id ?? raw.user_id ?? null,
     created_by: asString(raw.created_by),
     entry_type_id: raw.entry_type_id ?? null,

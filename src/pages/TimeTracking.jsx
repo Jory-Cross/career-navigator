@@ -190,19 +190,26 @@ const { data: allUsers = [] } = useQuery({
 }, [allUsers, effectiveUser]);
 
 const filterableEmployees = useMemo(() => {
-  return scopedUsers.filter((u) => {
-    if (u.is_archived) return false;
+  if (!user) return [];
 
-    if (effectiveUser?.role === "management") {
-      return u.role === "employee" && u.manager_id === effectiveUser.id;
-    }
+  // Admin (not viewing-as): sees all employees + managers
+  if (user.role === "admin" && !viewAsUser) {
+    return scopedUsers.filter(
+      (u) => !u.is_archived && (u.role === "employee" || u.role === "management")
+    );
+  }
 
-    if (user?.role === "admin" && !viewAsUser) {
-      return u.role === "employee" || u.role === "management";
-    }
+  // Management: see subordinates (by manager_id). If none assigned, show all employees.
+  if (effectiveUser?.role === "management") {
+    const subordinates = scopedUsers.filter(
+      (u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id
+    );
+    if (subordinates.length > 0) return subordinates;
+    // No manager_id relationships set yet — show all employees
+    return scopedUsers.filter((u) => !u.is_archived && u.role === "employee");
+  }
 
-    return false;
-  });
+  return [];
 }, [scopedUsers, effectiveUser, user, viewAsUser]);
 
   const { data: rawClients = [] } = useQuery({
@@ -382,19 +389,31 @@ useEffect(() => {
   return result;
 }, [clients]);
 
+  // Build a lookup of employee id → email for matching entries by created_by
+  const employeeEmailById = useMemo(() => {
+    const map = {};
+    for (const emp of filterableEmployees) {
+      if (emp.email) map[emp.id] = emp.email;
+    }
+    return map;
+  }, [filterableEmployees]);
+
   const filtered = useMemo(() => {
   const filteredClientIdSet = new Set(filteredClientIds);
 
   const result = [];
 
   for (const entry of scopedTimeEntries) {
+    // Employee filter: match entry directly by employee_id OR created_by email
     if (
       (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-      employeeFilter !== "all" &&
-      entry.client_id &&
-      !filteredClientIdSet.has(entry.client_id)
+      employeeFilter !== "all"
     ) {
-      continue;
+      const selectedEmail = employeeEmailById[employeeFilter];
+      const entryEmployeeId = entry.employee_id || entry.staff_id;
+      const matchById = entryEmployeeId && entryEmployeeId === employeeFilter;
+      const matchByEmail = selectedEmail && entry.created_by === selectedEmail;
+      if (!matchById && !matchByEmail) continue;
     }
 
     if (clientFilter !== "all" && entry.client_id !== clientFilter) {
@@ -461,6 +480,7 @@ useEffect(() => {
   scopedTimeEntries,
   effectiveUser?.role,
   employeeFilter,
+  employeeEmailById,
   filteredClientIds,
   clientFilter,
   periodFilter,
@@ -535,6 +555,32 @@ useEffect(() => {
     },
     [clientById]
   );
+
+  // Build employee lookup by email for staff name display
+  const employeeByEmail = useMemo(() => {
+    const map = {};
+    for (const emp of filterableEmployees) {
+      if (emp.email) map[emp.email] = emp;
+    }
+    return map;
+  }, [filterableEmployees]);
+
+  const getEntryStaffName = useCallback(
+    (entry) => {
+      const emp = employeeByEmail[entry.created_by];
+      return emp ? (emp.full_name || emp.email) : (entry.created_by || null);
+    },
+    [employeeByEmail]
+  );
+
+  // Whether we should show staff name on entries (admin/manager viewing all)
+  const showStaffColumn = useMemo(() => {
+    return (
+      (user?.role === "admin" || effectiveUser?.role === "management") &&
+      employeeFilter === "all" &&
+      filterableEmployees.length > 0
+    );
+  }, [user?.role, effectiveUser?.role, employeeFilter, filterableEmployees.length]);
 
  const handleRefresh = useCallback(async () => {
   await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"] });
@@ -826,6 +872,13 @@ useEffect(() => {
 
                     <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
 
+                    {showStaffColumn && entry.created_by ? (
+                      <span className="inline-flex items-center gap-1 text-slate-400">
+                        <User className="h-3.5 w-3.5" />
+                        {getEntryStaffName(entry)}
+                      </span>
+                    ) : null}
+
                     <span
                       role="button"
                       tabIndex={0}
@@ -1019,6 +1072,13 @@ useEffect(() => {
                 <div className="mb-1 text-xs text-slate-500">Description</div>
                 <div className="text-sm">{selectedEntry.description || "—"}</div>
               </div>
+
+              {selectedEntry.created_by && (user?.role === "admin" || effectiveUser?.role === "management") ? (
+                <div>
+                  <div className="mb-1 text-xs text-slate-500">Staff</div>
+                  <div className="text-sm">{getEntryStaffName(selectedEntry) || selectedEntry.created_by}</div>
+                </div>
+              ) : null}
 
               <div className="flex justify-end">
                 <Button
