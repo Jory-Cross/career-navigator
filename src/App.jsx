@@ -20,6 +20,7 @@ import { ViewAsProvider } from '@/lib/ViewAsContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AccessDenied from '@/components/AccessDenied';
 import { classifyUserAccess } from '@/lib/AuthContext';
+import { isAdmin } from '@/lib/utils';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -33,7 +34,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 // Admin-only gate for FeaturePermissions page
 const FeaturePermissionsGated = () => {
   const { user } = useAuth();
-  if (user?.role !== 'admin') return <AccessDenied user={user} />;
+  if (!isAdmin(user)) return <AccessDenied user={user} />;
   return <FeaturePermissions />;
 };
 

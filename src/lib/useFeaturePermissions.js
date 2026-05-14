@@ -12,6 +12,7 @@
  */
 import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { isAdmin as checkIsAdmin } from "@/lib/utils";
 
 const cache = {}; // simple in-memory cache keyed by role
 
@@ -20,10 +21,11 @@ export function useFeaturePermissions(user) {
   const [isLoading, setIsLoading] = useState(true);
 
   const role = user?.role;
-  const isAdmin = role === "admin";
+  const isAdmin = checkIsAdmin(user);
 
   useEffect(() => {
     if (!role || isAdmin) {
+      // Admins always see everything — no fetch needed
       // Admins always see everything — no fetch needed
       setIsLoading(false);
       return;

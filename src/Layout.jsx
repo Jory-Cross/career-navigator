@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, EyeOff, LogOut } from "lucide-react";
 import { useFeaturePermissions } from "@/lib/useFeaturePermissions";
-import { cn } from "@/lib/utils";
+import { cn, isAdmin } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useViewAs } from "@/lib/ViewAsContext";
@@ -204,7 +204,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* View As Switcher - Admin only */}
-          {user?.role === 'admin' && (
+          {isAdmin(user) && (
             <ViewAsSwitcher user={user} viewAsUser={viewAsUser} setViewAsUser={setViewAsUser} />
           )}
 
@@ -259,11 +259,11 @@ export default function Layout({ children, currentPageName }) {
                 // While user is still loading, hide everything to avoid flicker
                 if (!user) return false;
                 // Determine if current user is admin (by role OR access_level)
-                const isAdmin = user.role === 'admin' || user.access_level === 'admin';
+                const _isAdmin = isAdmin(user);
                 // Role-based filter
                 if (item.roles) {
                   const allowed = item.roles.some(r => {
-                    if (r === 'admin') return isAdmin;
+                    if (r === 'admin') return _isAdmin;
                     return user.role === r;
                   });
                   if (!allowed) return false;
