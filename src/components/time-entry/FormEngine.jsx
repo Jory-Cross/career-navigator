@@ -8,7 +8,9 @@ import {
 import { getSchemaForEntryType } from "@/lib/formHelpers";
 import { loadVocRehabSchema } from "@/lib/formSchemas";
 
+// Clear cache on module load so stale schemas don't persist across hot reloads
 const schemaCache = new Map();
+schemaCache.clear();
 
 async function resolveSchema(entryTypeCode) {
   const normalizedCode = normalizeEntryTypeCode(entryTypeCode);

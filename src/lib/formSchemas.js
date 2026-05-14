@@ -163,7 +163,6 @@ export async function loadVocRehabSchema(entryTypeCode) {
     const templates = await base44.entities.ReportFieldTemplate.filter({
       entry_type_code: normalizedCode,
       is_active: true,
-      pdf_context: "row",
       is_internal_only: false,
     });
 
