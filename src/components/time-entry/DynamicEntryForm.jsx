@@ -169,13 +169,14 @@ export default function DynamicEntryForm({
   const initialData = useMemo(() => {
     let data;
     if (entry?.id) {
+      // EDIT MODE: load from entry.form_data, don't initialize missing schema fields
+      // This prevents blank strings from overwriting saved form_data
       data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
-    } else {
-      data = buildInitialFormData(normalizedSchema, null);
+      return data;
     }
     
-    // Ensure all schema fields exist in formData (as empty strings if missing)
-    // This prevents uncontrolled textarea/input components
+    // CREATE MODE: initialize all schema fields as empty strings
+    data = buildInitialFormData(normalizedSchema, null);
     const initialized = { ...data };
     if (Array.isArray(normalizedSchema)) {
       for (const field of normalizedSchema) {
@@ -193,7 +194,6 @@ export default function DynamicEntryForm({
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
   const [entryTypeLoading, setEntryTypeLoading] = useState(false);
-  const lastHydratedEntryIdRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -202,32 +202,10 @@ export default function DynamicEntryForm({
     };
   }, []);
 
-  // Only rehydrate on entry.id change to prevent stale overwrites.
-  // If same entry.id and current formData is "richer" than incoming initialData, skip reset.
+  // Only sync formData when entry.id changes (new entry loaded)
   useEffect(() => {
-    // If this is a brand new entry (different from last hydrated), always reset
-    if (entry?.id !== lastHydratedEntryIdRef.current) {
-      lastHydratedEntryIdRef.current = entry?.id;
-      setFormData(initialData);
-      return;
-    }
-
-    // Same entry.id: check if current formData has more fields than initialData
-    // This prevents stale rehydration from wiping user input
-    const currentFieldCount = Object.keys(formData).filter(
-      (key) => formData[key] !== undefined && formData[key] !== null && formData[key] !== ""
-    ).length;
-    const incomingFieldCount = Object.keys(initialData).filter(
-      (key) => initialData[key] !== undefined && initialData[key] !== null && initialData[key] !== ""
-    ).length;
-
-    // If current data is richer, don't overwrite
-    if (currentFieldCount > incomingFieldCount) {
-      return;
-    }
-
     setFormData(initialData);
-  }, [entry?.id, initialData]);
+  }, [entry?.id]);
 
   useEffect(() => {
     let cancelled = false;

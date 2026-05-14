@@ -380,17 +380,31 @@ function buildTopLevelPayload(entryType, formData, schema) {
   };
 }
 
-function mapTemplateFields(schema, formData) {
+function mapTemplateFields(schema, formData, existingEntry = null) {
   const result = {};
   const fields = getSchemaFields(schema);
+  const existingFormData = existingEntry?.form_data || {};
 
   for (const field of fields) {
     const key = field.key;
     if (!key) continue;
     // Only skip fields marked to save at top level; all others go to form_data
     if (field.saveToTopLevel) continue;
-    if (formData[key] !== undefined) {
-      result[key] = formData[key];
+    
+    const value = formData[key];
+    
+    // In EDIT mode: only save if value is non-empty, OR if it's explicitly different from existing
+    if (existingEntry?.id) {
+      // Skip blank/undefined values that would overwrite existing data
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      result[key] = value;
+    } else {
+      // In CREATE mode: save all defined values
+      if (value !== undefined) {
+        result[key] = value;
+      }
     }
   }
 
@@ -415,11 +429,15 @@ export function buildTimeEntryPayload({
     normalizedEndTime,
   } = buildTopLevelPayload(entryType, formData, normalizedSchema);
 
-  const newFormData = mapTemplateFields(normalizedSchema, {
-    ...formData,
-    start_time: normalizedStartTime ?? formData.start_time,
-    end_time: normalizedEndTime ?? formData.end_time,
-  });
+  const newFormData = mapTemplateFields(
+    normalizedSchema,
+    {
+      ...formData,
+      start_time: normalizedStartTime ?? formData.start_time,
+      end_time: normalizedEndTime ?? formData.end_time,
+    },
+    existingEntry
+  );
 
   // On edit: merge existing form_data so fields not currently in the schema
   // (e.g. from a prior schema version) are not silently wiped.
