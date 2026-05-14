@@ -297,6 +297,23 @@ export default function Layout({ children, currentPageName }) {
               );
               })}
               </div>
+              {/* Hardcoded admin-only Permissions link — never filtered */}
+              {user && (user.role === 'admin' || user.access_level === 'admin') && (
+                <Link
+                  to={createPageUrl('FeaturePermissions')}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                    currentPageName === 'FeaturePermissions'
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                  )}
+                >
+                  <Shield className="w-4 h-4" />
+                  Permissions
+                </Link>
+              )}
+
               {/* Logout at bottom of sidebar */}
               <div className="pt-3 mt-3 border-t border-slate-700">
                 <button
