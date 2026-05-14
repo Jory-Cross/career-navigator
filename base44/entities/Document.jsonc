@@ -148,6 +148,83 @@
     "extraction_error": {
       "type": "string",
       "description": "Store extraction/parsing error details when document processing fails."
+    },
+    "job_titles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Job titles extracted from the document."
+    },
+    "resume_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Skills extracted from the resume/document."
+    },
+    "work_history": {
+      "type": "array",
+      "description": "Work history entries extracted from the document.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employer": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "education_history": {
+      "type": "array",
+      "description": "Education history entries extracted from the document.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "institution": {
+            "type": "string"
+          },
+          "degree": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "graduation_year": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "description": "Certifications extracted from the document.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
@@ -155,5 +232,62 @@
     "title",
     "file_url"
   ],
-  "rls": {}
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "management",
+            "employee",
+            "client",
+            "pre_ets",
+            "dspd"
+          ]
+        }
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.org_id": "{{user.data.org_id}}"
+        },
+        {
+          "data.client_id": "{{user.data.linked_client_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.org_id": "{{user.data.org_id}}"
+        },
+        {
+          "data.client_id": "{{user.data.linked_client_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.org_id": "{{user.data.org_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
 }
