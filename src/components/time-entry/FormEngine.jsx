@@ -8,9 +8,9 @@ import {
 import { getSchemaForEntryType } from "@/lib/formHelpers";
 import { loadVocRehabSchema } from "@/lib/formSchemas";
 
-// Clear cache on module load so stale schemas don't persist across hot reloads
 const schemaCache = new Map();
-schemaCache.clear();
+// Increment this version when the schema loading logic changes, to bust stale caches
+const SCHEMA_CACHE_VERSION = 2;
 
 async function resolveSchema(entryTypeCode) {
   const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
@@ -22,7 +22,7 @@ async function resolveSchema(entryTypeCode) {
     );
   }
 
-  const cacheKey = `${normalizedCode}::${config.schemaKey || "default"}`;
+  const cacheKey = `v${SCHEMA_CACHE_VERSION}::${normalizedCode}::${config.schemaKey || "default"}`;
 
   if (schemaCache.has(cacheKey)) {
     return schemaCache.get(cacheKey);
@@ -74,12 +74,12 @@ export default function FormEngine({
 
   const [schema, setSchema] = useState(() => {
     if (!normalizedEntryTypeCode || !config) return [];
-    const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+    const cacheKey = `v${SCHEMA_CACHE_VERSION}::${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
     return schemaCache.get(cacheKey) || [];
   });
   const [loading, setLoading] = useState(() => {
     if (!normalizedEntryTypeCode || !config) return false;
-    const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+    const cacheKey = `v${SCHEMA_CACHE_VERSION}::${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
     return !schemaCache.has(cacheKey);
   });
   const [error, setError] = useState("");
@@ -104,7 +104,7 @@ export default function FormEngine({
         return;
       }
 
-      const cacheKey = `${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
+      const cacheKey = `v${SCHEMA_CACHE_VERSION}::${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
       const cachedSchema = schemaCache.get(cacheKey);
 
       if (cachedSchema) {

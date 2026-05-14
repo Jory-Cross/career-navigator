@@ -155,6 +155,29 @@ export function getSchema(schemaKeyOrEntryType) {
   return cloneSchema(SCHEMA_REGISTRY[resolvedKey] || []);
 }
 
+/**
+ * Fields that are derived from client/org/authorization context and should
+ * never appear as staff-editable form fields. They are populated automatically
+ * from the linked client record, org settings, or service authorization.
+ */
+const CONTEXT_DERIVED_FIELD_KEYS = new Set([
+  "client_name",
+  "client_first_name",
+  "client_last_name",
+  "authorization_number",
+  "auth_number",
+  "service_authorization_number",
+  "vr_counselor_name",
+  "vr_counselor",
+  "crp_company_name",
+  "crp_name",
+  "crp_contact_phone",
+  "crp_phone",
+  "counselor_name",
+  "case_number",
+  "vr_case_number",
+]);
+
 export async function loadVocRehabSchema(entryTypeCode) {
   try {
     const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
@@ -202,6 +225,7 @@ export async function loadVocRehabSchema(entryTypeCode) {
     return templates
       .slice()
       .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .filter((template) => !CONTEXT_DERIVED_FIELD_KEYS.has(String(template.field_key || "").toLowerCase()))
       .map((template) => {
         const fieldKey = template.field_key || "";
         const fieldKeyLower = String(fieldKey).toLowerCase();
