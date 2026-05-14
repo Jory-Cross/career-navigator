@@ -23,6 +23,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { User, Filter, AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
@@ -157,6 +166,8 @@ export default function TimeTracking() {
 const [showNewEntry, setShowNewEntry] = useState(false);
 const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
 const [selectedNewEntryClientId, setSelectedNewEntryClientId] = useState("");
+const [deletingEntry, setDeletingEntry] = useState(null);
+const [isDeleting, setIsDeleting] = useState(false);
 
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
 
@@ -711,13 +722,26 @@ useEffect(() => {
     setEditingEntryTypeCode("");
   }, []);
 
-  const handleDeleteEntry = useCallback(async (entry) => {
-    if (!window.confirm("Delete this time entry? This cannot be undone.")) return;
-    await base44.entities.TimeEntry.delete(entry.id);
-    setSelectedEntry(null);
-    toast.success("Entry deleted");
-    await handleRefresh();
-  }, [handleRefresh]);
+  const handleDeleteEntry = useCallback((entry) => {
+    setDeletingEntry(entry);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deletingEntry?.id) return;
+    setIsDeleting(true);
+    try {
+      await base44.entities.TimeEntry.delete(deletingEntry.id);
+      setSelectedEntry(null);
+      toast.success("Entry deleted");
+      await handleRefresh();
+    } catch (error) {
+      toast.error("Failed to delete entry");
+      console.error("Delete error:", error);
+    } finally {
+      setIsDeleting(false);
+      setDeletingEntry(null);
+    }
+  }, [deletingEntry, handleRefresh]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -997,27 +1021,25 @@ useEffect(() => {
                       Edit
                     </span>
 
-                    {isDuplicate ? (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="inline-flex items-center gap-1 text-red-500 hover:text-red-700"
-                        onClick={(e) => {
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="inline-flex items-center gap-1 text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEntry(entry);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
                           e.stopPropagation();
                           handleDeleteEntry(entry);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeleteEntry(entry);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </span>
-                    ) : null}
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </span>
                   </div>
                 </button>
               );
@@ -1207,16 +1229,14 @@ useEffect(() => {
               ) : null}
 
               <div className="flex justify-between items-center">
-                {duplicateIds.has(selectedEntry?.id) ? (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteEntry(selectedEntry)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete Entry
-                  </Button>
-                ) : <div />}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDeleteEntry(selectedEntry)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete Entry
+                </Button>
                 <Button
                   onClick={() => {
                     const entry = selectedEntry;
@@ -1231,6 +1251,27 @@ useEffect(() => {
           ) : null}
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
+
+      <AlertDialog open={!!deletingEntry} onOpenChange={(open) => !open && setDeletingEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Time Entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this time entry. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-2 justify-end">
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+      </div>
+      );
+      }
