@@ -104,6 +104,7 @@ export async function handleDynamicEntrySave({
     entryType,
     formData,
     schema,
+    existingEntry,
   });
 
   validateBeforeSave(payload);

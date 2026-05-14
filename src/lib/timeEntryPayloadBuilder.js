@@ -433,6 +433,7 @@ export function buildTimeEntryPayload({
   entryType,
   formData = {},
   schema,
+  existingEntry = null,
 }) {
   if (!entryType?.id) {
     throw new Error("❌ buildTimeEntryPayload: entryType.id is required");
@@ -446,11 +447,23 @@ export function buildTimeEntryPayload({
     normalizedEndTime,
   } = buildTopLevelPayload(entryType, formData, normalizedSchema);
 
-  const form_data = mapTemplateFields(normalizedSchema, {
+  const newFormData = mapTemplateFields(normalizedSchema, {
     ...formData,
     start_time: normalizedStartTime ?? formData.start_time,
     end_time: normalizedEndTime ?? formData.end_time,
   });
+
+  // On edit: merge existing form_data so fields not currently in the schema
+  // (e.g. from a prior schema version) are not silently wiped.
+  // User-entered values from formData always win over existing values.
+  const existingFormData =
+    existingEntry?.form_data && typeof existingEntry.form_data === "object"
+      ? existingEntry.form_data
+      : {};
+
+  const form_data = { ...existingFormData, ...newFormData };
+
+  console.log("[buildTimeEntryPayload] form_data to save:", JSON.stringify(form_data, null, 2));
 
   return {
     ...topLevel,

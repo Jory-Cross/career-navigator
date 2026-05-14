@@ -73,6 +73,8 @@ export async function persistTimeEntry(payload, existingEntryId, clientId) {
       throw new Error("❌ Post-update fetch failed: could not retrieve updated entry");
     }
 
+    console.log("[persistTimeEntry] Saved entry.form_data:", JSON.stringify(updated.form_data, null, 2));
+
     return updated;
   }
 

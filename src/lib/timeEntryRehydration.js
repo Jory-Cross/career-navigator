@@ -272,8 +272,11 @@ export function buildFormDataFromEntry(entry, schema) {
       continue;
     }
 
+    // Read from form_data first; fall back to top-level entry field
     if (nestedData[key] !== undefined) {
       result[key] = nestedData[key];
+    } else if (entry?.[key] !== undefined) {
+      result[key] = entry[key];
     }
   }
 
@@ -289,6 +292,8 @@ export function buildFormDataFromEntry(entry, schema) {
   if (entry?.location && hasField(fields, "location") && isEmpty(result.location)) {
     result.location = entry.location;
   }
+
+  console.log("[buildFormDataFromEntry] rehydrated formData:", JSON.stringify(result, null, 2));
 
   return result;
 }
