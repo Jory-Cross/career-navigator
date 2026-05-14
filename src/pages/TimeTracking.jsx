@@ -836,7 +836,7 @@ if (entryTypeFilter !== "all") {
           <h2 className="text-base font-semibold">Filters</h2>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
             <Select value={periodFilter} onValueChange={setPeriodFilter}>
