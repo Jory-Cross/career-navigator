@@ -21,6 +21,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AccessDenied from '@/components/AccessDenied';
 import { classifyUserAccess } from '@/lib/AuthContext';
 import { isAdmin } from '@/lib/utils';
+import SmartLanding from '@/components/SmartLanding';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -40,6 +41,7 @@ const FeaturePermissionsGated = () => {
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
+  const _isAdmin = isAdmin(user);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -104,7 +106,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
+          {_isAdmin ? <MainPage /> : <SmartLanding user={user} />}
         </LayoutWrapper>
       } />
       {Object.entries(Pages).map(([path, Page]) => (
