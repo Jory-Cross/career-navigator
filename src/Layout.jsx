@@ -253,8 +253,8 @@ export default function Layout({ children, currentPageName }) {
             "fixed lg:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-56 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 shadow-2xl transition-transform duration-300 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
-            <nav className="p-3 space-y-0.5 flex flex-col h-full">
-              <div className="flex-1 space-y-0.5">
+            <nav className="p-3 flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0">
               {navItems.filter(item => {
                 // While user is still loading, hide everything to avoid flicker
                 if (!user) return false;
@@ -297,23 +297,6 @@ export default function Layout({ children, currentPageName }) {
               );
               })}
               </div>
-              {/* Hardcoded admin-only Permissions link — never filtered */}
-              {user && (user.role === 'admin' || user.access_level === 'admin') && (
-                <Link
-                  to={createPageUrl('FeaturePermissions')}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                    currentPageName === 'FeaturePermissions'
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-700/50"
-                  )}
-                >
-                  <Shield className="w-4 h-4" />
-                  Permissions
-                </Link>
-              )}
-
               {/* Logout at bottom of sidebar */}
               <div className="pt-3 mt-3 border-t border-slate-700">
                 <button
