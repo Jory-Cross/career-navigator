@@ -380,47 +380,15 @@ function buildTopLevelPayload(entryType, formData, schema) {
   };
 }
 
-function getTopLevelDateKeys(schema) {
-  const fields = getSchemaFields(schema);
-
-  const topLevelDateKeys = new Set([
-    "date",
-    "entry_date",
-    "service_date",
-    "billable_service_date",
-    "coaching_date",
-    "job_dev_date",
-    "development_date",
-    "preets_date",
-    "wsa_date",
-    "admin_date",
-    "misc_date",
-    "eom_month",
-  ]);
-
-  for (const field of fields) {
-    if (
-      field.isDate === true ||
-      (field.type || "").toLowerCase() === "date" ||
-      (field.key || "").toLowerCase().includes("date")
-    ) {
-      topLevelDateKeys.add(field.key);
-    }
-  }
-
-  return topLevelDateKeys;
-}
-
 function mapTemplateFields(schema, formData) {
   const result = {};
   const fields = getSchemaFields(schema);
-  const topLevelDateKeys = getTopLevelDateKeys(schema);
 
   for (const field of fields) {
     const key = field.key;
     if (!key) continue;
+    // Only skip fields marked to save at top level; all others go to form_data
     if (field.saveToTopLevel) continue;
-    if (topLevelDateKeys.has(key)) continue;
     if (formData[key] !== undefined) {
       result[key] = formData[key];
     }
