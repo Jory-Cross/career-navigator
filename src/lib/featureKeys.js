@@ -26,7 +26,7 @@ export const FEATURE_KEYS = {
 // Feature metadata used by the admin permissions UI
 export const FEATURE_DEFINITIONS = [
   { key: "dashboard",       label: "Dashboard",        category: "core" },
-  { key: "clients",         label: "Clients",           category: "core" },
+  { key: "clients",         label: "Clients",           category: "client_management" },
   { key: "time_tracking",   label: "Time Tracking",     category: "core" },
   { key: "calendar",        label: "Calendar",          category: "core" },
   { key: "tasks",           label: "Tasks",             category: "core" },
@@ -35,8 +35,8 @@ export const FEATURE_DEFINITIONS = [
   { key: "documents",       label: "Documents",         category: "clinical" },
   { key: "assessments",     label: "Assessments",       category: "clinical" },
   { key: "recommendations", label: "Recommendations",   category: "clinical" },
-  { key: "pre_ets",         label: "Pre-ETS",           category: "programs" },
-  { key: "dspd",            label: "DSPD",              category: "programs" },
+  { key: "pre_ets",         label: "Pre-ETS",           category: "client_management" },
+  { key: "dspd",            label: "DSPD",              category: "client_management" },
   { key: "employees",       label: "Employees",         category: "admin" },
   { key: "ai_agents",       label: "AI Agents",         category: "admin" },
   { key: "app_analytics",   label: "App Analytics",     category: "admin" },
@@ -44,9 +44,9 @@ export const FEATURE_DEFINITIONS = [
 ];
 
 export const CATEGORY_LABELS = {
-  core:      "Core",
-  reporting: "Reporting",
-  clinical:  "Clinical",
-  programs:  "Programs",
-  admin:     "Admin",
+  core:              "Core",
+  client_management: "Clients / Client Management",
+  reporting:         "Reporting",
+  clinical:          "Clinical",
+  admin:             "Admin",
 };
