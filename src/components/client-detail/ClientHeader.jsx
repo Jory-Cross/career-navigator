@@ -20,44 +20,106 @@ const statusColors = {
 
 export default function ClientHeader({ client, onUpdate, showDetails = true, allowEdit = true, formOnly = false }) {
   const [editing, setEditing] = useState(formOnly);
-const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
+  const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
   const [uploading, setUploading] = useState(false);
   const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
   const [employers, setEmployers] = useState([]);
+  const [saving, setSaving] = useState(false);
+
   const fileInputRef = useRef(null);
   const coverLetterInputRef = useRef(null);
 
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+
   useEffect(() => {
     if (client.client_type === 'pre_ets') {
-      base44.entities.User.list().then(users => {
-        setEmployers(users.filter(u => u.role === 'pre_ets_employer'));
-      }).catch(() => {});
+      base44.entities.User.list()
+        .then(users => {
+          setEmployers(users.filter(u => u.role === 'pre_ets_employer'));
+        })
+        .catch(() => {});
     }
   }, [client.client_type]);
 
-  const startEdit = () => {
+  useEffect(() => {
+    if (formOnly) {
+      setForm({ ...client });
+      dirtyRef.current = false;
+    }
+  }, [client, formOnly]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!dirtyRef.current) return;
+
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  const save = async ({ closeAfterSave = true } = {}) => {
+    if (savingRef.current) return;
+
+    try {
+      savingRef.current = true;
+      setSaving(true);
+
+      const updates = { ...form };
+
+      // Immediately unarchive when status is set back to active
+      if (form.status === "active" && client.is_archived) {
+        updates.is_archived = false;
+      }
+
+      await base44.entities.Client.update(client.id, updates);
+
+      dirtyRef.current = false;
+
+      toast.success("Client updated");
+
+      if (closeAfterSave) {
+        setEditing(false);
+      }
+
+      onUpdate?.();
+    } catch (error) {
+      console.error("Failed to save client", error);
+      toast.error("Failed to save client");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (dirtyRef.current && !savingRef.current) {
+        save({ closeAfterSave: false });
+      }
+    };
+  }, [form]);
+
+  const u = (f, v) => {
+    dirtyRef.current = true;
+
+    setForm((p) => ({
+      ...p,
+      [f]: v
+    }));
+  };
+
+  const cancelEdit = () => {
     setForm({ ...client });
-    setEditing(true);
+    dirtyRef.current = false;
+    setEditing(false);
   };
-
-  const save = async () => {
-    const updates = { ...form };
-    // Immediately unarchive when status is set back to active
-    if (form.status === 'active' && client.is_archived) updates.is_archived = false;
-    await base44.entities.Client.update(client.id, updates);
-dirtyRef.current = false;
-toast.success("Client updated");
-setEditing(false);
-onUpdate();
-  };
-
-  const dirtyRef = useRef(false);
-
-const u = (f, v) => {
-  dirtyRef.current = true;
-  setForm(p => ({ ...p, [f]: v }));
-};
-
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
