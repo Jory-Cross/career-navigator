@@ -181,27 +181,51 @@ export default function DynamicEntryForm({
     return getEntryTypeConfig(normalizedEntryTypeCode);
   }, [normalizedEntryTypeCode]);
 
+  // Helper: find schema fields that represent a "job goal / target role" field
+  const findTargetRoleFields = useCallback((schemaFields) => {
+    return (schemaFields || []).filter((f) => {
+      if (!f?.key) return false;
+      const key = f.key.toLowerCase();
+      const label = (f.label || "").toLowerCase();
+      return (
+        key === "job_goal" ||
+        key === "target_role" ||
+        label === "job goal" ||
+        label.includes("target role")
+      );
+    });
+  }, []);
+
   const initialData = useMemo(() => {
     let data;
     if (entry?.id) {
-  // EDIT MODE: load from entry.form_data, don't initialize missing schema fields
-  // This prevents blank strings from overwriting saved form_data
-  data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
+      // EDIT MODE: load from entry.form_data, don't initialize missing schema fields
+      // This prevents blank strings from overwriting saved form_data
+      data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
 
-  if (!data.job_goal && clientTargetRole) {
-    data.job_goal = clientTargetRole;
-  }
+      if (clientTargetRole) {
+        for (const field of findTargetRoleFields(normalizedSchema)) {
+          if (!data[field.key]) {
+            data[field.key] = clientTargetRole;
+          }
+        }
+      }
 
-  return data;
-}
-    
+      return data;
+    }
+
     // CREATE MODE: initialize all schema fields as empty strings
     data = buildInitialFormData(normalizedSchema, null);
-const initialized = { ...data };
+    const initialized = { ...data };
 
-if (!initialized.job_goal && clientTargetRole) {
-  initialized.job_goal = clientTargetRole;
-}
+    if (clientTargetRole) {
+      for (const field of findTargetRoleFields(normalizedSchema)) {
+        if (!initialized[field.key]) {
+          initialized[field.key] = clientTargetRole;
+        }
+      }
+    }
+
     if (Array.isArray(normalizedSchema)) {
       for (const field of normalizedSchema) {
         if (field?.key && initialized[field.key] === undefined) {
@@ -211,7 +235,7 @@ if (!initialized.job_goal && clientTargetRole) {
     }
     return initialized;
     // Only depend on entry.id and entry to prevent re-rehydration on schema changes
- }, [entry?.id, entry, clientTargetRole]);
+  }, [entry?.id, entry, clientTargetRole]);
 
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
