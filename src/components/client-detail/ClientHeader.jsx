@@ -29,8 +29,9 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
   const fileInputRef = useRef(null);
   const coverLetterInputRef = useRef(null);
 
-  const dirtyRef = useRef(false);
+    const dirtyRef = useRef(false);
   const savingRef = useRef(false);
+  const formRef = useRef(form);
 
   useEffect(() => {
     if (client.client_type === 'pre_ets') {
