@@ -283,11 +283,16 @@ export default function DynamicEntryForm({
   }, [entryTypeCode, normalizedEntryTypeCode, config]);
 
   const handleChange = useCallback((key, value) => {
-    setFormData((prev) => {
-      if (prev[key] === value) return prev;
-      return { ...prev, [key]: value };
-    });
-  }, []);
+  setFormData((prev) => {
+    const next = { ...prev, [key]: value };
+
+    if (key === "development_date") {
+      next.month_year = formatMonthYearFromDate(value);
+    }
+
+    return next;
+  });
+}, []);
 
   const handleSubmit = useCallback(
     async (e) => {
