@@ -1174,9 +1174,13 @@ if (entryTypeFilter !== "all") {
 
     {!newEntryRequiresClient || selectedNewEntryClientId ? (
       <FormEngine
-        entryTypeCode={selectedEntryTypeCode}
-        clientId={selectedNewEntryClientId || null}
-        onSaved={async () => {
+       <FormEngine
+  entryTypeCode={selectedEntryTypeCode}
+  clientId={selectedNewEntryClientId || null}
+  clientTargetRole={
+    clientById[selectedNewEntryClientId]?.target_role || ""
+  }
+  onSaved={async () => {
           await handleRefresh();
           closeNewEntryDialog();
         }}
