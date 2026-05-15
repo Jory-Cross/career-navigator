@@ -45,9 +45,10 @@ const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
     // Immediately unarchive when status is set back to active
     if (form.status === 'active' && client.is_archived) updates.is_archived = false;
     await base44.entities.Client.update(client.id, updates);
-    toast.success("Client updated");
-    setEditing(false);
-    onUpdate();
+dirtyRef.current = false;
+toast.success("Client updated");
+setEditing(false);
+onUpdate();
   };
 
   const dirtyRef = useRef(false);
