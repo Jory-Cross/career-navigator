@@ -142,6 +142,20 @@ export function clearDynamicEntryFormEntryTypeCache() {
   entryTypeCache.clear();
 }
 
+function formatMonthYearFromDate(value) {
+  if (!value || typeof value !== "string") return "";
+
+  const parts = value.split("-");
+  if (parts.length !== 3) return "";
+
+  const year = parts[0];
+  const month = parts[1];
+
+  if (!year || !month) return "";
+
+  return `${month}/${year}`;
+}
+
 export default function DynamicEntryForm({
   entryTypeCode,
   schema,
