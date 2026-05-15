@@ -1173,17 +1173,18 @@ if (entryTypeFilter !== "all") {
     ) : null}
 
     {!newEntryRequiresClient || selectedNewEntryClientId ? (
-      <FormEngine
-       <FormEngine
+     <FormEngine
   entryTypeCode={selectedEntryTypeCode}
   clientId={selectedNewEntryClientId || null}
-  clientTargetRole={clientById[selectedNewEntryClientId]?.target_role || ""}
+  clientTargetRole={
+    clientById[selectedNewEntryClientId]?.target_role || ""
+  }
   onSaved={async () => {
-          await handleRefresh();
-          closeNewEntryDialog();
-        }}
-        onCancel={closeNewEntryDialog}
-      />
+    await handleRefresh();
+    closeNewEntryDialog();
+  }}
+  onCancel={closeNewEntryDialog}
+/>
     ) : null}
   </div>
 )}
