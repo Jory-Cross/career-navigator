@@ -196,7 +196,11 @@ export default function DynamicEntryForm({
     
     // CREATE MODE: initialize all schema fields as empty strings
     data = buildInitialFormData(normalizedSchema, null);
-    const initialized = { ...data };
+const initialized = { ...data };
+
+if (!initialized.job_goal && clientTargetRole) {
+  initialized.job_goal = clientTargetRole;
+}
     if (Array.isArray(normalizedSchema)) {
       for (const field of normalizedSchema) {
         if (field?.key && initialized[field.key] === undefined) {
@@ -206,7 +210,7 @@ export default function DynamicEntryForm({
     }
     return initialized;
     // Only depend on entry.id and entry to prevent re-rehydration on schema changes
-  }, [entry?.id, entry]);
+ }, [entry?.id, entry, clientTargetRole]);
 
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
