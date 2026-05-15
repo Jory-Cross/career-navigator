@@ -123,13 +123,11 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     }
   };
 
-     useEffect(() => {
+       useEffect(() => {
     return () => {
-      if (dirtyRef.current && !savingRef.current) {
-        save({ closeAfterSave: false, showToast: false });
-      }
+      // Save-on-exit disabled because this cleanup fires during typing.
     };
-  }, [form]);
+  }, []);
 
   const u = (f, v) => {
     dirtyRef.current = true;
