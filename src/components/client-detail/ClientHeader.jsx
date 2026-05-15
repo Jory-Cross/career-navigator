@@ -97,7 +97,8 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         updates
       );
 
-      setForm(updatedClient);
+            setForm(updatedClient);
+      formRef.current = updatedClient;
       dirtyRef.current = false;
 
       // Notify parent to re-fetch the client from the server
