@@ -1204,10 +1204,13 @@ if (entryTypeFilter !== "all") {
           </DialogHeader>
 
           {editingEntry && editingEntryTypeCode ? (
-            <FormEngine
-              entry={editingEntry}
-              entryTypeCode={editingEntryTypeCode}
-              onSaved={async (savedEntry) => {
+           <FormEngine
+  entry={editingEntry}
+  entryTypeCode={editingEntryTypeCode}
+  clientTargetRole={
+    clientById[editingEntry?.client_id]?.target_role || ""
+  }
+  onSaved={async (savedEntry) => {
                 if (savedEntry?.id) {
                   // Store override so re-opening from list uses fresh form_data
                   // before React Query refetch completes.
