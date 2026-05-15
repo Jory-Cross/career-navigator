@@ -201,7 +201,7 @@ if (editing || formOnly) {
       <X className="w-4 h-4 mr-1" />
       Cancel
     </Button>
-    <Button size="sm" onClick={save} className="bg-slate-900 hover:bg-slate-800 text-white">
+        <Button size="sm" onClick={() => save()} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-white">
       <Save className="w-4 h-4 mr-1" />
       Save
     </Button>
