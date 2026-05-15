@@ -804,10 +804,17 @@ if (entryTypeFilter !== "all") {
                     key={clientId}
                     type="button"
                     onClick={() => {
-  if (
-    clientId !== "__self__" &&
-    clientById[clientId]
-  ) {
+  if (clientId === "__self__") return;
+
+  const client = clientById[clientId];
+
+  if (!client?.id) {
+    toast.error("Client record not found");
+    return;
+  }
+
+  navigate(`/ClientDetail?id=${client.id}`);
+}}
     navigate(`/ClientDetail?id=${clientId}`);
   }
 }}
