@@ -228,14 +228,15 @@ export default function FormEngine({
       </div>
 
       <DynamicEntryForm
-        entryTypeCode={normalizedEntryTypeCode}
-        schema={schema}
-        entry={entry}
-        clientId={clientId}
-        mode={effectiveMode}
-        onSave={handleSaved}
-        onCancel={onCancel}
-      />
+  entryTypeCode={normalizedEntryTypeCode}
+  schema={schema}
+  entry={entry}
+  clientId={clientId}
+  clientTargetRole={clientTargetRole}
+  mode={effectiveMode}
+  onSave={handleSaved}
+  onCancel={onCancel}
+/>
     </div>
   );
 }
