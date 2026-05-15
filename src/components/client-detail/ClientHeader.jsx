@@ -89,14 +89,10 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         graduation_year: form.graduation_year || ""
       };
 
-      console.log("CLIENT SAVE PAYLOAD", updates);
-
       const updatedClient = await base44.entities.Client.update(
         client.id,
         updates
       );
-
-      console.log("CLIENT SAVE RESPONSE", updatedClient);
 
       setForm(updatedClient);
       dirtyRef.current = false;
