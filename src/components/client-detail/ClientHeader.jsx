@@ -42,11 +42,12 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     }
   }, [client.client_type]);
 
-    useEffect(() => {
-    if (formOnly && !dirtyRef.current && !savingRef.current) {
+     useEffect(() => {
+    if (formOnly) {
       setForm({ ...client });
+      dirtyRef.current = false;
     }
-  }, [client, formOnly]);
+  }, [client?.id, formOnly]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
