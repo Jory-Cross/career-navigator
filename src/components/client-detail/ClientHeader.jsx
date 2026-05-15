@@ -78,18 +78,18 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         first_name: currentForm.first_name || "",
         last_name: currentForm.last_name || "",
         email: currentForm.email || "",
-        phone: currentform.phone || "",
-        address: currentform.address || "",
-        target_role: currentform.target_role || "",
-        industry: currentform.industry || "",
+        phone: currentForm.phone || "",
+        address: currentForm.address || "",
+        target_role: currentForm.target_role || "",
+        industry: currentForm.industry || "",
         location: currentform.location || "",
-        linkedin_url: currentform.linkedin_url || "",
-        status: currentform.status || "active",
-        client_type: currentform.client_type || "job_seeker",
-        assigned_employer_id: currentform.assigned_employer_id || "",
-        notes: currentform.notes || "",
-        school: currentform.school || "",
-        graduation_year: currentform.graduation_year || ""
+        linkedin_url: currentForm.linkedin_url || "",
+        status: currentForm.status || "active",
+        client_type: currentForm.client_type || "job_seeker",
+        assigned_employer_id: currentForm.assigned_employer_id || "",
+        notes: currentForm.notes || "",
+        school: currentForm.school || "",
+        graduation_year: currentForm.graduation_year || ""
       };
 
       const updatedClient = await base44.entities.Client.update(
