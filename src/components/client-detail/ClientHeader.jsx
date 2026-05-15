@@ -64,17 +64,31 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     };
   }, []);
 
-  const save = async ({ closeAfterSave = true } = {}) => {
+    const save = async ({ closeAfterSave = true } = {}) => {
     if (savingRef.current) return;
 
     try {
       savingRef.current = true;
       setSaving(true);
 
-      const updates = { ...form };
+      const updates = {
+        first_name: form.first_name || "",
+        last_name: form.last_name || "",
+        email: form.email || "",
+        phone: form.phone || "",
+        address: form.address || "",
+        target_role: form.target_role || "",
+        industry: form.industry || "",
+        location: form.location || "",
+        linkedin_url: form.linkedin_url || "",
+        status: form.status || "active",
+        client_type: form.client_type || "job_seeker",
+        assigned_employer_id: form.assigned_employer_id || "",
+        notes: form.notes || "",
+        contact_sections: form.contact_sections || []
+      };
 
-      // Immediately unarchive when status is set back to active
-      if (form.status === "active" && client.is_archived) {
+      if (updates.status === "active" && client.is_archived) {
         updates.is_archived = false;
       }
 
