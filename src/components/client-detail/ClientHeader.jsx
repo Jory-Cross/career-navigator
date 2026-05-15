@@ -120,13 +120,19 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     }
   };
 
-  const u = (f, v) => {
+    const u = (f, v) => {
     dirtyRef.current = true;
 
-    setForm((p) => ({
-      ...p,
-      [f]: v
-    }));
+    setForm((p) => {
+      const nextForm = {
+        ...p,
+        [f]: v
+      };
+
+      formRef.current = nextForm;
+
+      return nextForm;
+    });
   };
 
   const cancelEdit = () => {
