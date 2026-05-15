@@ -1206,6 +1206,7 @@ if (entryTypeFilter !== "all") {
            <FormEngine
   entry={editingEntry}
   entryTypeCode={editingEntryTypeCode}
+  clientId={editingEntry?.client_id || null}
   clientTargetRole={
     clientById[editingEntry?.client_id]?.target_role || ""
   }
