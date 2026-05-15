@@ -388,9 +388,48 @@ if (!initialized.job_goal && clientTargetRole) {
       ) : null}
 
       <div className="flex justify-end gap-2 border-t pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
+        <Button
+  type="button"
+  variant="outline"
+  disabled={saving}
+  onClick={async () => {
+    if (
+      hasUnsavedChangesRef.current &&
+      !saving &&
+      entryTypeObj?.id
+    ) {
+      try {
+        setSaving(true);
+
+        await handleDynamicEntrySave({
+          entryType: {
+            id: entryTypeObj.id,
+            code: normalizeEntryTypeCode(
+              entryTypeObj.code || normalizedEntryTypeCode
+            ),
+            name: entryTypeObj?.name,
+          },
+          formData,
+          schema: normalizedSchema,
+          existingEntry: entry,
+          mode,
+          saveEntry: (payload) =>
+            persistTimeEntry(payload, entry?.id ?? null, clientId),
+        });
+      } catch (err) {
+        console.error("[DynamicEntryForm] Auto-save failed:", err);
+      } finally {
+        if (mountedRef.current) {
+          setSaving(false);
+        }
+      }
+    }
+
+    onCancel?.();
+  }}
+>
+  Cancel
+</Button>
 
         <Button type="submit" disabled={saving || entryTypeLoading}>
           {(saving || entryTypeLoading) && (
