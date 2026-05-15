@@ -106,7 +106,9 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         onUpdate();
       }
 
-      toast.success("Client updated");
+           if (showToast) {
+        toast.success("Client updated");
+      }
 
       if (closeAfterSave && !formOnly) {
         setEditing(false);
