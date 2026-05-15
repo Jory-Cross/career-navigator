@@ -64,7 +64,7 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     };
   }, []);
 
-    const save = async ({ closeAfterSave = true } = {}) => {
+      const save = async ({ closeAfterSave = true } = {}) => {
     if (savingRef.current) return;
 
     try {
@@ -84,25 +84,28 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         status: form.status || "active",
         client_type: form.client_type || "job_seeker",
         assigned_employer_id: form.assigned_employer_id || "",
-        notes: form.notes || "",
-        contact_sections: form.contact_sections || []
+        notes: form.notes || ""
       };
 
-      if (updates.status === "active" && client.is_archived) {
-        updates.is_archived = false;
-      }
+      console.log("CLIENT SAVE PAYLOAD", updates);
 
-      await base44.entities.Client.update(client.id, updates);
+      const updatedClient = await base44.entities.Client.update(
+        client.id,
+        updates
+      );
+
+      console.log("CLIENT SAVE RESPONSE", updatedClient);
+
+      setForm(updatedClient);
 
       dirtyRef.current = false;
 
       toast.success("Client updated");
 
-      if (closeAfterSave) {
+      if (closeAfterSave && !formOnly) {
         setEditing(false);
       }
 
-      onUpdate?.();
     } catch (error) {
       console.error("Failed to save client", error);
       toast.error("Failed to save client");
