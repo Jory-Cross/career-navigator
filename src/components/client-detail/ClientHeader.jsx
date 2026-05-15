@@ -121,12 +121,13 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     }
   };
 
-   useEffect(() => {
+     useEffect(() => {
     return () => {
-      // Do not auto-save on every form change.
-      // Save-on-exit will be added only after basic Save is stable.
+      if (dirtyRef.current && !savingRef.current) {
+        save({ closeAfterSave: false, showToast: false });
+      }
     };
-  }, []);
+  }, [form]);
 
   const u = (f, v) => {
     dirtyRef.current = true;
