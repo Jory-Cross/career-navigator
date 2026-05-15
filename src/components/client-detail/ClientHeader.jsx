@@ -64,7 +64,7 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     };
   }, []);
 
-      const save = async ({ closeAfterSave = true } = {}) => {
+        const save = async ({ closeAfterSave = true, showToast = true } = {}) => {
     if (savingRef.current) return;
 
     try {
