@@ -251,10 +251,10 @@ export default function DynamicEntryForm({
     };
   }, []);
 
-  // Only sync formData when entry.id changes (new entry loaded)
+   // Sync form data when initialData changes
   useEffect(() => {
     setFormData(initialData);
-  }, [entry?.id]);
+  }, [initialData]);
 
   useEffect(() => {
     let cancelled = false;
