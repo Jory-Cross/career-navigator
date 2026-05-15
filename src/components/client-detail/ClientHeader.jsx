@@ -119,12 +119,6 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     }
   };
 
-       useEffect(() => {
-    return () => {
-      // Save-on-exit disabled because this cleanup fires during typing.
-    };
-  }, []);
-
   const u = (f, v) => {
     dirtyRef.current = true;
 
