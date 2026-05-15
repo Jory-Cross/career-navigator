@@ -217,6 +217,7 @@ if (!initialized.job_goal && clientTargetRole) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [entryTypeObj, setEntryTypeObj] = useState(null);
+  const hasUnsavedChangesRef = useRef(false);
   const [entryTypeLoading, setEntryTypeLoading] = useState(false);
 
   useEffect(() => {
