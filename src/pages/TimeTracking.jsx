@@ -1040,9 +1040,14 @@ if (entryTypeFilter !== "all") {
     e.preventDefault();
     e.stopPropagation();
 
-    if (clientById[entry.client_id]) {
-      navigate(`/ClientDetail?id=${entry.client_id}`);
+    const client = clientById[entry.client_id];
+
+    if (!client?.id) {
+      toast.error("Client record not found");
+      return;
     }
+
+    navigate(`/ClientDetail?id=${client.id}`);
   }
 }}
                       >
