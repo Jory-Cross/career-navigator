@@ -72,6 +72,8 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
       savingRef.current = true;
       setSaving(true);
 
+         const currentForm = formRef.current || form;
+
       const updates = {
         first_name: form.first_name || "",
         last_name: form.last_name || "",
