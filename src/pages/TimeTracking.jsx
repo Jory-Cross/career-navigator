@@ -1023,12 +1023,17 @@ if (entryTypeFilter !== "all") {
                         role="button"
                         tabIndex={0}
                         className="inline-flex items-center gap-1 hover:text-slate-800"
-                        onClick={(e) => {
+                       onClick={(e) => {
   e.stopPropagation();
 
-  if (clientById[entry.client_id]) {
-    navigate(`/ClientDetail?id=${entry.client_id}`);
+  const client = clientById[entry.client_id];
+
+  if (!client?.id) {
+    toast.error("Client record not found");
+    return;
   }
+
+  navigate(`/ClientDetail?id=${client.id}`);
 }}
                         onKeyDown={(e) => {
   if (e.key === "Enter" || e.key === " ") {
