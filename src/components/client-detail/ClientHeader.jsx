@@ -75,21 +75,21 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
          const currentForm = formRef.current || form;
 
       const updates = {
-        first_name: form.first_name || "",
-        last_name: form.last_name || "",
-        email: form.email || "",
-        phone: form.phone || "",
-        address: form.address || "",
-        target_role: form.target_role || "",
-        industry: form.industry || "",
-        location: form.location || "",
-        linkedin_url: form.linkedin_url || "",
-        status: form.status || "active",
-        client_type: form.client_type || "job_seeker",
-        assigned_employer_id: form.assigned_employer_id || "",
-        notes: form.notes || "",
-        school: form.school || "",
-        graduation_year: form.graduation_year || ""
+        first_name: currentForm.first_name || "",
+        last_name: currentForm.last_name || "",
+        email: currentForm.email || "",
+        phone: currentform.phone || "",
+        address: currentform.address || "",
+        target_role: currentform.target_role || "",
+        industry: currentform.industry || "",
+        location: currentform.location || "",
+        linkedin_url: currentform.linkedin_url || "",
+        status: currentform.status || "active",
+        client_type: currentform.client_type || "job_seeker",
+        assigned_employer_id: currentform.assigned_employer_id || "",
+        notes: currentform.notes || "",
+        school: currentform.school || "",
+        graduation_year: currentform.graduation_year || ""
       };
 
       const updatedClient = await base44.entities.Client.update(
