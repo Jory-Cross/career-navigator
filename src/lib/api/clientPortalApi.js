@@ -445,7 +445,10 @@ export async function getCurrentUser() {
 export async function getClientById(id) {
   if (!id) return null;
   const raw = await base44.entities.Client.get(id);
-  return mapClient(raw);
+  console.log("RAW CLIENT FROM BASE44", { id, target_role: raw?.target_role, notes: raw?.notes, status: raw?.status, client_type: raw?.client_type });
+  const mapped = mapClient(raw);
+  console.log("MAPPED CLIENT USED BY CLIENTDETAIL", { id: mapped?.id, target_role: mapped?.target_role, notes: mapped?.notes });
+  return mapped;
 }
 /**
  * TIME TRACKING SHARED HELPERS

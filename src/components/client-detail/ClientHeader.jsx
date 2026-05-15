@@ -99,8 +99,12 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
       console.log("CLIENT SAVE RESPONSE", updatedClient);
 
       setForm(updatedClient);
-
       dirtyRef.current = false;
+
+      // Notify parent to re-fetch the client from the server
+      if (typeof onUpdate === "function") {
+        onUpdate();
+      }
 
       toast.success("Client updated");
 
