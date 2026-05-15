@@ -161,6 +161,7 @@ export default function DynamicEntryForm({
   schema,
   entry = null,
   clientId = null,
+  clientTargetRole = "",
   mode = "create",
   onSave,
   onCancel,
