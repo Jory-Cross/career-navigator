@@ -215,6 +215,9 @@ function mapClient(raw) {
   if (!raw) return null;
 
   return {
+    // Spread all raw fields first so nothing is lost
+    ...raw,
+    // Then normalize/override specific fields
     id: raw.id,
     first_name: asString(raw.first_name),
     last_name: asString(raw.last_name),
@@ -223,11 +226,20 @@ function mapClient(raw) {
       asString(raw.full_name),
     email: asString(raw.email),
     phone: asString(raw.phone),
+    address: asString(raw.address),
     status: asString(raw.status, "active"),
+    client_type: asString(raw.client_type, "job_seeker"),
+    industry: asString(raw.industry),
+    target_role: asString(raw.target_role),
+    notes: asString(raw.notes),
+    location: asString(raw.location),
+    linkedin_url: asString(raw.linkedin_url),
+    school: asString(raw.school),
+    graduation_year: asString(raw.graduation_year),
     assigned_employee_id: raw.assigned_employee_id ?? raw.employee_id ?? null,
+    assigned_employer_id: raw.assigned_employer_id ?? null,
     created_by: asString(raw.created_by),
     is_archived: Boolean(raw.is_archived) || asString(raw.status) === "archived",
-    client_type: asString(raw.client_type),
     onboarding_status: asString(raw.onboarding_status),
     onboarding_started_date: raw.onboarding_started_date ?? null,
     contacts: asArray(raw.contacts).map(mapContact).filter(Boolean),
