@@ -294,6 +294,8 @@ if (!initialized.job_goal && clientTargetRole) {
   }, [entryTypeCode, normalizedEntryTypeCode, config]);
 
   const handleChange = useCallback((key, value) => {
+  hasUnsavedChangesRef.current = true;
+
   setFormData((prev) => {
     const next = { ...prev, [key]: value };
 
