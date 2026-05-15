@@ -183,11 +183,16 @@ export default function DynamicEntryForm({
   const initialData = useMemo(() => {
     let data;
     if (entry?.id) {
-      // EDIT MODE: load from entry.form_data, don't initialize missing schema fields
-      // This prevents blank strings from overwriting saved form_data
-      data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
-      return data;
-    }
+  // EDIT MODE: load from entry.form_data, don't initialize missing schema fields
+  // This prevents blank strings from overwriting saved form_data
+  data = buildFormDataFromEntry(entry, { fields: normalizedSchema });
+
+  if (!data.job_goal && clientTargetRole) {
+    data.job_goal = clientTargetRole;
+  }
+
+  return data;
+}
     
     // CREATE MODE: initialize all schema fields as empty strings
     data = buildInitialFormData(normalizedSchema, null);
