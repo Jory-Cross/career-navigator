@@ -82,7 +82,7 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         address: currentForm.address || "",
         target_role: currentForm.target_role || "",
         industry: currentForm.industry || "",
-        location: currentform.location || "",
+        location: currentForm.location || "",
         linkedin_url: currentForm.linkedin_url || "",
         status: currentForm.status || "active",
         client_type: currentForm.client_type || "job_seeker",
