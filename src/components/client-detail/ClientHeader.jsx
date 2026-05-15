@@ -65,14 +65,17 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     };
   }, []);
 
-        const save = async ({ closeAfterSave = true, showToast = true } = {}) => {
+          const save = async ({
+    closeAfterSave = true,
+    showToast = true
+  } = {}) => {
     if (savingRef.current) return;
 
     try {
       savingRef.current = true;
       setSaving(true);
 
-         const currentForm = formRef.current || form;
+      const currentForm = formRef.current || form;
 
       const updates = {
         first_name: currentForm.first_name || "",
@@ -97,16 +100,16 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         updates
       );
 
-            setForm(updatedClient);
+      setForm(updatedClient);
       formRef.current = updatedClient;
+
       dirtyRef.current = false;
 
-      // Notify parent to re-fetch the client from the server
       if (typeof onUpdate === "function") {
         onUpdate();
       }
 
-           if (showToast) {
+      if (showToast) {
         toast.success("Client updated");
       }
 
@@ -116,13 +119,26 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
 
     } catch (error) {
       console.error("Failed to save client", error);
-      toast.error("Failed to save client");
+
+      if (showToast) {
+        toast.error("Failed to save client");
+      }
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (dirtyRef.current && !savingRef.current) {
+        save({
+          closeAfterSave: false,
+          showToast: false
+        });
+      }
+    };
+  }, []);
     const u = (f, v) => {
     dirtyRef.current = true;
 
