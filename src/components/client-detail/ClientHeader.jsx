@@ -50,7 +50,12 @@ const [form, setForm] = useState(() => (formOnly ? { ...client } : {}));
     onUpdate();
   };
 
-  const u = (f, v) => setForm(p => ({ ...p, [f]: v }));
+  const dirtyRef = useRef(false);
+
+const u = (f, v) => {
+  dirtyRef.current = true;
+  setForm(p => ({ ...p, [f]: v }));
+};
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
