@@ -815,9 +815,7 @@ if (entryTypeFilter !== "all") {
 
   navigate(`/ClientDetail?id=${client.id}`);
 }}
-    navigate(`/ClientDetail?id=${clientId}`);
-  }
-}}
+    
                     className={cn(
                       "w-full rounded-lg border p-3 text-left transition hover:bg-slate-50",
                       clientId === "__self__" && "cursor-default"
