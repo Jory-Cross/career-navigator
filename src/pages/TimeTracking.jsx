@@ -1342,7 +1342,7 @@ if (entryTypeFilter !== "all") {
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
-      </AlertDialog>
-      </div>
-      );
-      }
+           </AlertDialog>
+    </div>
+  );
+}
