@@ -65,6 +65,14 @@
     "location": {
       "type": "string"
     },
+    "school": {
+      "type": "string",
+      "description": "School name (Pre-ETS clients)"
+    },
+    "graduation_year": {
+      "type": "string",
+      "description": "Graduation year (Pre-ETS clients)"
+    },
     "access_token": {
       "type": "string"
     },
@@ -214,50 +222,5 @@
     "first_name",
     "last_name",
     "email"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "management",
-            "employee"
-          ]
-        }
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.org_id": "{{user.data.org_id}}"
-        },
-        {
-          "id": "{{user.data.linked_client_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.org_id": "{{user.data.org_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
