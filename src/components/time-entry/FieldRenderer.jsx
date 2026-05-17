@@ -95,9 +95,27 @@ function FieldRendererComponent({ field, value, onChange, formData = {} }) {
     formData?.start_time !== undefined &&
     formData?.end_time !== undefined;
 
-  const normalizedOptions = useMemo(() => {
+   const normalizedOptions = useMemo(() => {
     if (field.type !== "select") return [];
-    return normalizeOptions(field.options || []);
+
+    const options = normalizeOptions(field.options || []);
+
+    const looksLikeServiceCodes = options.some((opt) =>
+      /^[A-Za-z]+\d+/.test(String(opt?.label || opt?.value || ""))
+    );
+
+    if (!looksLikeServiceCodes) {
+      return options;
+    }
+
+    return [...options].sort((a, b) => {
+      const getNumber = (option) => {
+        const match = String(option?.label || option?.value || "").match(/\d+/);
+        return match ? Number(match[0]) : 9999;
+      };
+
+      return getNumber(a) - getNumber(b);
+    });
   }, [field.type, field.options]);
 
   const label = field.label || field.key || "Field";
