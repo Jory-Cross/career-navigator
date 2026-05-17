@@ -489,7 +489,37 @@ const currentTaskCount = tasks.filter(
             ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
             : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
         )}
+     
+            {cd.time && !isClientUser && (
+      <button
+        type="button"
+        onClick={() => handleTabChange("time")}
+        className={cn(
+          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+          activeTab === "time"
+            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+        )}
       >
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-semibold">Time</span>
+        </div>
+
+        <div
+          className={cn(
+            "mt-1 text-xs",
+            activeTab === "time"
+              ? "text-slate-200"
+              : "text-slate-500"
+          )}
+        >
+          {timeEntries.length} entries
+        </div>
+      </button>
+    )}
+        
+        >
         <div className="flex items-center gap-2">
           <CheckSquare className="h-4 w-4" />
           <span className="text-sm font-semibold">Tasks</span>
