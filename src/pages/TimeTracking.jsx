@@ -906,10 +906,8 @@ if (entryTypeFilter !== "all") {
               </div>
             </div>
           ))}
-        </div>
-      </Card>
-      
-      {Object.keys(byClient).length > 0 ? (
+                </div>
+        ) : Object.keys(byClient).length > 0 ? (
         <Card className="p-4">
           <h2 className="mb-4 text-base font-semibold">Hours by Client</h2>
 
