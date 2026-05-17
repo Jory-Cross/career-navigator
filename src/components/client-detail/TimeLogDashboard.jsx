@@ -142,6 +142,7 @@ function EmptyState({ message }) {
 
 export default function TimeLogDashboard({
   timeEntries = [],
+  client,
   clientId,
   clients = [],
   onRefresh,
