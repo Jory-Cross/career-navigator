@@ -10,7 +10,7 @@ import { loadVocRehabSchema } from "@/lib/formSchemas";
 
 const schemaCache = new Map();
 // Increment this version when the schema loading logic changes, to bust stale caches
-const SCHEMA_CACHE_VERSION = 2;
+const SCHEMA_CACHE_VERSION = 3;
 
 async function resolveSchema(entryTypeCode) {
   const normalizedCode = normalizeEntryTypeCode(entryTypeCode);

@@ -62,7 +62,7 @@ const BASE_ENTRY_TYPES = [
   {
     code: "admin_time",
     label: "Admin Time",
-    schemaKey: "simple_time",
+    schemaKey: "admin_time",
     category: "simple",
     programType: "internal",
     showInDropdown: true,
