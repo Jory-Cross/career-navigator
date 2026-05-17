@@ -479,7 +479,7 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
-    {cd.tasks && !isEmployed && (
+   {cd.tasks && !isClientUser && (
       <button
         type="button"
         onClick={() => handleTabChange("tasks")}
@@ -630,7 +630,7 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {cd.documents && !isClientUser && (
+        {cd.tasks && !isClientUser && (
           <TabsContent value="documents">
             <DocumentsSection clientId={client.id} refreshKey={documentsRefreshKey} />
           </TabsContent>
