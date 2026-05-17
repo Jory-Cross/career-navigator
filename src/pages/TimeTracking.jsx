@@ -846,6 +846,120 @@ if (entryTypeFilter !== "all") {
 
       {legacyEntries.length > 0 ? <LegacyDataWarning count={legacyEntries.length} /> : null}
 
+      <Card className="p-4">
+        <div className="mb-4 flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-500" />
+          <h2 className="text-base font-semibold">Filters</h2>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Period</label>
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="payroll1">1st–15th</SelectItem>
+                <SelectItem value="payroll2">16th–End of Month</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+          filterableEmployees.length > 0 ? (
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Employee</label>
+              <Select
+                value={employeeFilter}
+                onValueChange={(value) => {
+                  setEmployeeFilter(value);
+                  setClientFilter("all");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {filterableEmployees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.full_name || employee.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Entry Type</label>
+            <Select value={entryTypeFilter} onValueChange={setEntryTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {entryTypes.map((type) => (
+                  <SelectItem key={type.code} value={type.code}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Client</label>
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {clients
+                  .filter((client) => !client.is_archived)
+                  .map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+                        client.full_name ||
+                        client.email ||
+                        "Unknown"}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end text-sm text-slate-500">
+            {periodFilter === "payroll1"
+              ? `Current period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
+                  payrollRanges.payroll1End,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "payroll2"
+              ? `Current period: ${format(payrollRanges.payroll2Start, "MMM d")}–${format(
+                  payrollRanges.payroll2End,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "week"
+              ? `Viewing: ${format(payrollRanges.weekStart, "MMM d")}–${format(
+                  payrollRanges.weekEnd,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "month"
+              ? `Viewing: ${format(payrollRanges.monthStart, "MMM d")}–${format(
+                  payrollRanges.monthEnd,
+                  "MMM d, yyyy"
+                )}`
+              : `Viewing: All Time`}
+          </div>
+        </div>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <div className="text-sm text-slate-500">Total Hours</div>
@@ -863,7 +977,7 @@ if (entryTypeFilter !== "all") {
         </Card>
       </div>
 
-                 <Card className="p-4">
+      <Card className="p-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">
             {summaryView === "day" ? "Hours by Day" : "Hours by Client"}
@@ -966,125 +1080,6 @@ if (entryTypeFilter !== "all") {
             No client hours found
           </div>
         )}
-      </Card>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500">Period</label>
-            <Select value={periodFilter} onValueChange={setPeriodFilter}>
-  <SelectTrigger>
-    <SelectValue />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="payroll1">1st–15th</SelectItem>
-    <SelectItem value="payroll2">16th–End of Month</SelectItem>
-    <SelectItem value="week">This Week</SelectItem>
-    <SelectItem value="month">This Month</SelectItem>
-    <SelectItem value="all">All Time</SelectItem>
-  </SelectContent>
-</Select>
-          </div>
-
-          {(effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-          filterableEmployees.length > 0 ? (
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">Employee</label>
-              <Select
-                value={employeeFilter}
-                onValueChange={(value) => {
-                  setEmployeeFilter(value);
-                  setClientFilter("all");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {filterableEmployees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.full_name || employee.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-<div className="space-y-1">
-  <label className="text-xs text-slate-500">Entry Type</label>
-
-  <Select
-    value={entryTypeFilter}
-    onValueChange={setEntryTypeFilter}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="All Types" />
-    </SelectTrigger>
-
-    <SelectContent>
-      <SelectItem value="all">
-        All Types
-      </SelectItem>
-
-      {entryTypes.map((type) => (
-        <SelectItem
-          key={type.code}
-          value={type.code}
-        >
-          {type.label}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
-          
-          <div className="space-y-1">
-            <label className="text-xs text-slate-500">Client</label>
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Clients</SelectItem>
-                {clients
-                  .filter((client) => !client.is_archived)
-                  .map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
-                        client.full_name ||
-                        client.email ||
-                        "Unknown"}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-         <div className="flex items-end text-sm text-slate-500">
-  {periodFilter === "payroll1"
-    ? `Current period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
-        payrollRanges.payroll1End,
-        "MMM d, yyyy"
-      )}`
-    : periodFilter === "payroll2"
-    ? `Current period: ${format(payrollRanges.payroll2Start, "MMM d")}–${format(
-        payrollRanges.payroll2End,
-        "MMM d, yyyy"
-      )}`
-    : periodFilter === "week"
-    ? `Viewing: ${format(payrollRanges.weekStart, "MMM d")}–${format(
-        payrollRanges.weekEnd,
-        "MMM d, yyyy"
-      )}`
-    : periodFilter === "month"
-    ? `Viewing: ${format(payrollRanges.monthStart, "MMM d")}–${format(
-        payrollRanges.monthEnd,
-        "MMM d, yyyy"
-      )}`
-    : `Viewing: All Time`}
-</div>
-        </div>
       </Card>
 
       {duplicateIds.size > 0 ? (
