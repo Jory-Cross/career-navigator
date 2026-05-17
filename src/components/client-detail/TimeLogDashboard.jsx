@@ -850,7 +850,7 @@ export default function TimeLogDashboard({
                 <SelectTrigger>
                   <SelectValue placeholder="Select entry type" />
                 </SelectTrigger>
-                <SelectContent>
+                                <SelectContent className="max-h-[320px] overflow-y-auto">
                   {entryTypes.map((option) => (
                     <SelectItem key={option.code} value={option.code}>
                       {option.label}
