@@ -15,7 +15,14 @@ Deno.serve(async (req) => {
       is_active: true
     });
 
-    allCodes.sort((a, b) => a.code.localeCompare(b.code));
+    allCodes.sort((a, b) => {
+  const getNumber = (code: string) => {
+    const match = String(code || "").match(/\d+/);
+    return match ? Number(match[0]) : 0;
+  };
+
+  return getNumber(a.code) - getNumber(b.code);
+});
 
     const allOptions = allCodes.map(c => c.display_label);
 
