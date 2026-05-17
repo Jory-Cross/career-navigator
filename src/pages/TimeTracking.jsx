@@ -954,8 +954,13 @@ if (entryTypeFilter !== "all") {
                 );
               })}
           </div>
-        </Card>
-      ) : null}
+                 </div>
+        ) : (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
+            No client hours found
+          </div>
+        )}
+      </Card>
 
       <Card className="p-4">
         <div className="mb-4 flex items-center gap-2">
