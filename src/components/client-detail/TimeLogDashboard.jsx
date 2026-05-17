@@ -32,8 +32,11 @@ import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 const timeLogDashboardApi = {
   async listEmployees() {
     try {
-      const result = await base44.entities.User.filter({ role: "employee" });
-      return Array.isArray(result) ? result : [];
+      const result = await base44.functions.invoke("getOrgUsers", {});
+      const users = result?.data?.users || result?.data || [];
+      return Array.isArray(users)
+        ? users.filter((u) => ["employee", "management", "admin"].includes(u.role))
+        : [];
     } catch (error) {
       console.error("[TimeLogDashboard] Failed to load employees:", error);
       return [];
