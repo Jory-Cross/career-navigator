@@ -879,9 +879,12 @@ export default function TimeLogDashboard({
               onCancel={resetFormState}
             />
           ) : selectedEntryTypeCode ? (
-            <FormEngine
+                       <FormEngine
               key={`create-${clientId || "none"}-${selectedEntryTypeCode}`}
               clientId={clientId || filters.clientId || ""}
+              clientTargetRole={
+                clientById[clientId || filters.clientId]?.target_role || ""
+              }
               entryTypeCode={selectedEntryTypeCode}
               onSaved={async () => {
                 await onRefresh?.();
