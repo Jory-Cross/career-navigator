@@ -106,9 +106,79 @@ const LIFE_SKILLS_SCHEMA = [
   },
 ];
 
+const DSPD_SCHEMA = [
+  {
+    key: "date",
+    label: "Date",
+    type: "date",
+    required: true,
+    isDate: true,
+    saveToTopLevel: true,
+  },
+  {
+    key: "start_time",
+    label: "Clock In",
+    type: "time",
+    required: true,
+    defaultValue: "07:00",
+    saveToTopLevel: true,
+  },
+  {
+    key: "end_time",
+    label: "Clock Out",
+    type: "time",
+    required: true,
+    defaultValue: "07:15",
+    saveToTopLevel: true,
+  },
+  {
+    key: "job_coaching",
+    label: "Job Coaching",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe job coaching activities...",
+  },
+  {
+    key: "individual_support",
+    label: "Individual Support",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe individual support provided...",
+  },
+  {
+    key: "community_outreach",
+    label: "Community Outreach",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe community outreach activities...",
+  },
+  {
+    key: "job_application_process",
+    label: "Job Application Process",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe job application activities...",
+  },
+  {
+    key: "resume_writing",
+    label: "Resume Writing",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe resume writing activities...",
+  },
+  {
+    key: "job_interview_process",
+    label: "Job Interview Process",
+    type: "textarea",
+    required: false,
+    placeholder: "Describe job interview preparation or activities...",
+  },
+];
+
 const SCHEMA_REGISTRY = {
   simple_time: SIMPLE_TIME_SCHEMA,
   life_skills: LIFE_SKILLS_SCHEMA,
+  dspd: DSPD_SCHEMA,
   voc_rehab: [],
 };
 
@@ -124,6 +194,7 @@ const ENTRY_TYPE_TO_SCHEMA_KEY = {
   wsa: "simple_time",
   end_of_month_reporting: "simple_time",
   work_based_learning: "simple_time",
+  dspd: "dspd",
 };
 
 function cloneSchema(schema) {
@@ -271,8 +342,10 @@ export function hasStaticSchema(schemaKeyOrEntryType) {
 export const FORM_SCHEMAS = {
   simple_time: cloneSchema(SIMPLE_TIME_SCHEMA),
   life_skills: cloneSchema(LIFE_SKILLS_SCHEMA),
+  dspd: cloneSchema(DSPD_SCHEMA),
   voc_rehab: [],
 };
 
 export const SIMPLE_TIME_FIELDS = cloneSchema(SIMPLE_TIME_SCHEMA);
 export const LIFE_SKILLS_FIELDS = cloneSchema(LIFE_SKILLS_SCHEMA);
+export const DSPD_FIELDS = cloneSchema(DSPD_SCHEMA);

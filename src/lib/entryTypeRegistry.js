@@ -109,6 +109,20 @@ const BASE_ENTRY_TYPES = [
     active: true,
     group: "time_entry",
   },
+  {
+    code: "dspd",
+    label: "DSPD",
+    schemaKey: "dspd",
+    category: "structured",
+    programType: "dspd",
+    showInDropdown: true,
+    active: true,
+    clientRequired: true,
+    billable: true,
+    reportable: true,
+    payrollEligible: true,
+    group: "time_entry",
+  },
 ];
 
 export const ENTRY_TYPE_ALIASES = {
