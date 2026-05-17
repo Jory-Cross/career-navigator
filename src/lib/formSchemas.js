@@ -267,16 +267,27 @@ export async function loadVocRehabSchema(entryTypeCode) {
 
     let serviceCodes = [];
     try {
-      serviceCodes = await base44.entities.ServiceCode.filter({
-        is_active: true,
-        program_type: "vr",
-      });
+      // For job_coaching, fetch ONLY job_coaching service codes.
+      // For other VR types (job_development, usor96, etc.), fetch all VR codes.
+      const serviceTypeFilter =
+        normalizedCode === "job_coaching"
+          ? { is_active: true, service_type: "job_coaching" }
+          : { is_active: true, program_type: "vr" };
+
+      serviceCodes = await base44.entities.ServiceCode.filter(serviceTypeFilter);
     } catch (error) {
       console.error("[formSchemas] Failed to load service codes:", error);
     }
 
+    // Sort numerically by the number portion of the code (e.g. JC01 < JC02 ... JC15)
+    const sortedCodes = (serviceCodes || []).slice().sort((a, b) => {
+      const numA = parseInt((String(a.code || "").match(/\d+/) || ["0"])[0], 10);
+      const numB = parseInt((String(b.code || "").match(/\d+/) || ["0"])[0], 10);
+      return numA - numB;
+    });
+
     const primaryCodes = toOptionObjects(
-      (serviceCodes || [])
+      sortedCodes
         .filter((code) => code.is_primary)
         .map((code) => ({
           value: code.code,
@@ -285,7 +296,7 @@ export async function loadVocRehabSchema(entryTypeCode) {
     );
 
     const secondaryCodes = toOptionObjects(
-      (serviceCodes || [])
+      sortedCodes
         .filter((code) => code.is_secondary)
         .map((code) => ({
           value: code.code,
