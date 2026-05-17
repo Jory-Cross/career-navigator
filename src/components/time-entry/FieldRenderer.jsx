@@ -127,12 +127,20 @@ function FieldRendererComponent({ field, value, onChange, formData = {} }) {
         {required ? " *" : ""}
       </Label>
 
-      {field.type === "text" ? (
+            {field.type === "text" ? (
         <Input
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="text-sm"
+          readOnly={
+            field.key === "month_year" ||
+            field.label === "Reporting Month/Year"
+          }
+          disabled={
+            field.key === "month_year" ||
+            field.label === "Reporting Month/Year"
+          }
         />
       ) : null}
 
