@@ -315,7 +315,7 @@ const currentTaskCount = tasks.filter(
 
    <Tabs value={activeTab || ""} onValueChange={handleTabChange}>
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-  {cd.details && !isClientUser && !isEmployed && (
+  {cd.details && !isClientUser && (
   <button
     type="button"
      onClick={() => handleTabChange("client_details")}
@@ -580,7 +580,7 @@ const currentTaskCount = tasks.filter(
   </div>
   
        <>
-  {cd.details && !isClientUser && !isEmployed && (
+  {cd.details && !isClientUser && (
     <TabsContent value="client_details">
       <div className="space-y-6">
         <ClientHeader client={client} onUpdate={refreshClient} formOnly />
