@@ -851,8 +851,37 @@ if (entryTypeFilter !== "all") {
         </Card>
       </div>
 
-      <Card className="p-4">
-        <h2 className="mb-4 text-base font-semibold">Hours by Day</h2>
+            <Card className="p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">
+            {summaryView === "day" ? "Hours by Day" : "Hours by Client"}
+          </h2>
+
+          <div className="flex rounded-lg border bg-white p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setSummaryView("day")}
+              className={cn(
+                "rounded-md px-3 py-1",
+                summaryView === "day" ? "bg-slate-900 text-white" : "text-slate-600"
+              )}
+            >
+              By Day
+            </button>
+            <button
+              type="button"
+              onClick={() => setSummaryView("client")}
+              className={cn(
+                "rounded-md px-3 py-1",
+                summaryView === "client" ? "bg-slate-900 text-white" : "text-slate-600"
+              )}
+            >
+              By Client
+            </button>
+          </div>
+        </div>
+
+        {summaryView === "day" ? (
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
           {calendarDays.map((day) => (
