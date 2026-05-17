@@ -850,6 +850,35 @@ if (entryTypeFilter !== "all") {
         </Card>
       </div>
 
+      <Card className="p-4">
+        <h2 className="mb-4 text-base font-semibold">Hours by Day</h2>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+          {calendarDays.map((day) => (
+            <div
+              key={day.date}
+              className={cn(
+                "rounded-lg border p-3 text-sm",
+                day.minutes > 0 ? "bg-slate-50" : "bg-white text-slate-400"
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium">{day.dayLabel}</div>
+                <div>{day.dayNumber}</div>
+              </div>
+
+              <div className="mt-3 text-lg font-semibold text-slate-900">
+                {formatHoursFromMinutes(day.minutes)}
+              </div>
+
+              <div className="text-xs text-slate-500">
+                {day.entries} {day.entries === 1 ? "entry" : "entries"}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      
       {Object.keys(byClient).length > 0 ? (
         <Card className="p-4">
           <h2 className="mb-4 text-base font-semibold">Hours by Client</h2>
