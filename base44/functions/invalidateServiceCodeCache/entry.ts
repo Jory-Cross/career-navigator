@@ -32,7 +32,14 @@ Deno.serve(async (req) => {
       is_active: true
     });
 
-    serviceCodes.sort((a, b) => a.code.localeCompare(b.code));
+    serviceCodes.sort((a, b) => {
+  const getNumber = (code: string) => {
+    const match = String(code || "").match(/\d+/);
+    return match ? Number(match[0]) : 0;
+  };
+
+  return getNumber(a.code) - getNumber(b.code);
+});
     const allOptions = serviceCodes.map(c => c.display_label);
 
     console.log(`[Cache Invalidation] Found ${serviceCodes.length} active codes`);
