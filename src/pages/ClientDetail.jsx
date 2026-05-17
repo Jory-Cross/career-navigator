@@ -593,7 +593,7 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {cd.tasks && !isClientUser && (
+        {cd.documents && !isClientUser && (
           <TabsContent value="documents">
             <DocumentsSection clientId={client.id} refreshKey={documentsRefreshKey} />
           </TabsContent>
