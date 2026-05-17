@@ -605,19 +605,7 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {cd.time && !isClientUser && isEmployed && (
-          <TabsContent value="job_supports">
-            <TimeLogDashboard
-              client={client}
-              clientId={client.id}
-              timeEntries={timeEntries}
-              onRefresh={refreshTimeEntries}
-              mode="job_supports"
-            />
-          </TabsContent>
-        )}
-
-        {cd.time && !isClientUser && !isEmployed && (
+                {cd.time && !isClientUser && (
           <TabsContent value="time">
             <TimeLogDashboard
               client={client}
