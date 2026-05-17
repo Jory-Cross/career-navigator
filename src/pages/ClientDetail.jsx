@@ -60,7 +60,7 @@ function getDefaultTab(client, userRole) {
   const isEmployed = client?.client_type === "employed";
 
   if (isDspd) return "onboarding";
-  if (isEmployed) return "documents";
+  if (isEmployed) return "client_details";
   if (userRole === "client") return "activity";
   return "applications";
 }
