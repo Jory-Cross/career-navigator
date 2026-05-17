@@ -851,7 +851,7 @@ if (entryTypeFilter !== "all") {
         </Card>
       </div>
 
-            <Card className="p-4">
+                 <Card className="p-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">
             {summaryView === "day" ? "Hours by Day" : "Hours by Client"}
@@ -882,35 +882,31 @@ if (entryTypeFilter !== "all") {
         </div>
 
         {summaryView === "day" ? (
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
-          {calendarDays.map((day) => (
-            <div
-              key={day.date}
-              className={cn(
-                "rounded-lg border p-3 text-sm",
-                day.minutes > 0 ? "bg-slate-50" : "bg-white text-slate-400"
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-medium">{day.dayLabel}</div>
-                <div>{day.dayNumber}</div>
-              </div>
-
-              <div className="mt-3 text-lg font-semibold text-slate-900">
-                {formatHoursFromMinutes(day.minutes)}
-              </div>
-
-              <div className="text-xs text-slate-500">
-                {day.entries} {day.entries === 1 ? "entry" : "entries"}
-              </div>
-            </div>
-          ))}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+            {calendarDays.map((day) => (
+              <div
+                key={day.date}
+                className={cn(
+                  "rounded-lg border p-3 text-sm",
+                  day.minutes > 0 ? "bg-slate-50" : "bg-white text-slate-400"
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium">{day.dayLabel}</div>
+                  <div>{day.dayNumber}</div>
                 </div>
-        ) : Object.keys(byClient).length > 0 ? (
-        <Card className="p-4">
-          <h2 className="mb-4 text-base font-semibold">Hours by Client</h2>
 
+                <div className="mt-3 text-lg font-semibold text-slate-900">
+                  {formatHoursFromMinutes(day.minutes)}
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  {day.entries} {day.entries === 1 ? "entry" : "entries"}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : Object.keys(byClient).length > 0 ? (
           <div className="space-y-3">
             {Object.entries(byClient)
               .sort(([, a], [, b]) => b.minutes - a.minutes)
@@ -923,18 +919,17 @@ if (entryTypeFilter !== "all") {
                     key={clientId}
                     type="button"
                     onClick={() => {
-  if (clientId === "__self__") return;
+                      if (clientId === "__self__") return;
 
-  const client = clientById[clientId];
+                      const client = clientById[clientId];
 
-  if (!client?.id) {
-    toast.error("Client record not found");
-    return;
-  }
+                      if (!client?.id) {
+                        toast.error("Client record not found");
+                        return;
+                      }
 
-  navigate(`/ClientDetail?id=${client.id}`);
-}}
-    
+                      navigate(`/ClientDetail?id=${client.id}`);
+                    }}
                     className={cn(
                       "w-full rounded-lg border p-3 text-left transition hover:bg-slate-50",
                       clientId === "__self__" && "cursor-default"
@@ -954,7 +949,6 @@ if (entryTypeFilter !== "all") {
                 );
               })}
           </div>
-                 </div>
         ) : (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
             No client hours found
