@@ -100,6 +100,13 @@ function formatDurationMinutes(minutes) {
   if (!remainder) return `${hours}h`;
   return `${hours}h ${remainder}m`;
 }
+
+function formatHoursFromMinutes(minutes) {
+  const total = Number(minutes || 0);
+  if (!total) return "0h";
+  return `${Math.round((total / 60) * 10) / 10}h`;
+}
+
 function entryTypeRequiresClient(entryTypeCode) {
   const raw = String(entryTypeCode || "").trim().toLowerCase();
   const normalized = normalizeEntryTypeCode(raw);
