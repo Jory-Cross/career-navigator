@@ -861,10 +861,13 @@ export default function TimeLogDashboard({
           ) : null}
 
           {editingEntry ? (
-            <FormEngine
+                       <FormEngine
               key={`edit-${editingEntry.id}-${activeEntryTypeCode}`}
               entry={editingEntry}
               clientId={editingEntry.client_id || clientId}
+              clientTargetRole={
+                clientById[editingEntry.client_id || clientId]?.target_role || ""
+              }
               entryTypeCode={activeEntryTypeCode}
               onSaved={async (savedEntry) => {
                 if (savedEntry?.id) {
