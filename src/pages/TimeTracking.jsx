@@ -653,6 +653,61 @@ if (entryTypeFilter !== "all") {
         grouped[key] = { minutes: 0, entries: 0 };
       }
 
+  const calendarDays = useMemo(() => {
+    const start =
+      periodFilter === "payroll1"
+        ? payrollRanges.payroll1Start
+        : periodFilter === "payroll2"
+        ? payrollRanges.payroll2Start
+        : periodFilter === "week"
+        ? payrollRanges.weekStart
+        : payrollRanges.monthStart;
+
+    const end =
+      periodFilter === "payroll1"
+        ? payrollRanges.payroll1End
+        : periodFilter === "payroll2"
+        ? payrollRanges.payroll2End
+        : periodFilter === "week"
+        ? payrollRanges.weekEnd
+        : payrollRanges.monthEnd;
+
+    const totalsByDate = {};
+
+    for (const entry of filtered) {
+      if (!entry.date) continue;
+
+      if (!totalsByDate[entry.date]) {
+        totalsByDate[entry.date] = {
+          minutes: 0,
+          entries: 0
+        };
+      }
+
+      totalsByDate[entry.date].minutes += Number(entry.duration_minutes || 0);
+      totalsByDate[entry.date].entries += 1;
+    }
+
+    const days = [];
+    const cursor = new Date(start);
+
+    while (cursor <= end) {
+      const dateKey = format(cursor, "yyyy-MM-dd");
+
+      days.push({
+        date: dateKey,
+        dayNumber: format(cursor, "d"),
+        dayLabel: format(cursor, "EEE"),
+        minutes: totalsByDate[dateKey]?.minutes || 0,
+        entries: totalsByDate[dateKey]?.entries || 0
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return days;
+  }, [filtered, periodFilter, payrollRanges]);
+      
       grouped[key].minutes += Number(entry.duration_minutes || 0);
       grouped[key].entries += 1;
     }
