@@ -56,7 +56,14 @@ class ServiceCodeCacheManager {
         is_active: true
       });
 
-      codes.sort((a, b) => a.code.localeCompare(b.code));
+      codes.sort((a, b) => {
+  const getNumber = (code) => {
+    const match = String(code || "").match(/\d+/);
+    return match ? Number(match[0]) : 0;
+  };
+
+  return getNumber(a.code) - getNumber(b.code);
+});
       
       this.serviceCodes = codes;
       this.lastFetch = Date.now();
