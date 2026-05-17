@@ -463,6 +463,13 @@ useEffect(() => {
 
   // clientIds kept for potential future use
 
+  // Merge savedEntryOverrides into timeEntries so the list immediately reflects
+  // saved changes before the React Query refetch completes.
+  const mergedTimeEntries = useMemo(() => {
+    if (Object.keys(savedEntryOverrides).length === 0) return timeEntries;
+    return timeEntries.map((entry) => savedEntryOverrides[entry.id] ?? entry);
+  }, [timeEntries, savedEntryOverrides]);
+
   const scopedTimeEntries = useMemo(() => {
     if (!effectiveUser) return [];
 
@@ -471,9 +478,9 @@ useEffect(() => {
     const visibleEmails = new Set(visibleStaffUsers.map((u) => u.email).filter(Boolean));
 
     // Admin with no viewAs: all fetched entries are already org-scoped, show all
-    if (effectiveUser.role === "admin" && !viewAsUser) return timeEntries;
+    if (effectiveUser.role === "admin" && !viewAsUser) return mergedTimeEntries;
 
-    return timeEntries.filter((entry) => {
+    return mergedTimeEntries.filter((entry) => {
       if (entry.employee_id && visibleIds.has(entry.employee_id)) return true;
       if (entry.staff_id && visibleIds.has(entry.staff_id)) return true;
       if (entry.user_id && visibleIds.has(entry.user_id)) return true;
@@ -482,7 +489,7 @@ useEffect(() => {
       if (entry.staff_email && visibleEmails.has(entry.staff_email)) return true;
       return false;
     });
-  }, [timeEntries, visibleStaffUsers, effectiveUser, viewAsUser]);
+  }, [mergedTimeEntries, visibleStaffUsers, effectiveUser, viewAsUser]);
 
  
  const payrollRanges = useMemo(() => {
