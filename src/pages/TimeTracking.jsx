@@ -161,6 +161,7 @@ export default function TimeTracking() {
   const [clientFilter, setClientFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
+  const [summaryView, setSummaryView] = useState("day");
   
   const [user, setUser] = useState(null);
 
