@@ -106,6 +106,33 @@ const LIFE_SKILLS_SCHEMA = [
   },
 ];
 
+const ADMIN_TIME_SCHEMA = [
+  {
+    key: "date",
+    label: "Date",
+    type: "date",
+    required: true,
+    isDate: true,
+    saveToTopLevel: true,
+  },
+  {
+    key: "admin_hours",
+    label: "Total Hours",
+    type: "number",
+    required: true,
+    isDuration: true,
+    placeholder: "e.g. 1.5",
+  },
+  {
+    key: "description",
+    label: "Description",
+    type: "textarea",
+    required: false,
+    placeholder: "Enter details...",
+    saveToTopLevel: true,
+  },
+];
+
 const DSPD_SCHEMA = [
   {
     key: "date",
@@ -177,6 +204,7 @@ const DSPD_SCHEMA = [
 
 const SCHEMA_REGISTRY = {
   simple_time: SIMPLE_TIME_SCHEMA,
+  admin_time: ADMIN_TIME_SCHEMA,
   life_skills: LIFE_SKILLS_SCHEMA,
   dspd: DSPD_SCHEMA,
   voc_rehab: [],
@@ -188,7 +216,7 @@ const ENTRY_TYPE_TO_SCHEMA_KEY = {
   usor96: "voc_rehab",
   life_skills: "life_skills",
   csb_hours: "life_skills",
-  admin_time: "simple_time",
+  admin_time: "admin_time",
   miscellaneous: "simple_time",
   pre_ets_training: "simple_time",
   wsa: "simple_time",
@@ -352,6 +380,7 @@ export function hasStaticSchema(schemaKeyOrEntryType) {
 
 export const FORM_SCHEMAS = {
   simple_time: cloneSchema(SIMPLE_TIME_SCHEMA),
+  admin_time: cloneSchema(ADMIN_TIME_SCHEMA),
   life_skills: cloneSchema(LIFE_SKILLS_SCHEMA),
   dspd: cloneSchema(DSPD_SCHEMA),
   voc_rehab: [],
