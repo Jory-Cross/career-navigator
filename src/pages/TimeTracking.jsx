@@ -643,7 +643,7 @@ if (entryTypeFilter !== "all") {
 
   return result;
 }, [scopedTimeEntries]);
-  const byClient = useMemo(() => {
+    const byClient = useMemo(() => {
     const grouped = {};
 
     for (const entry of filtered) {
@@ -652,6 +652,13 @@ if (entryTypeFilter !== "all") {
       if (!grouped[key]) {
         grouped[key] = { minutes: 0, entries: 0 };
       }
+
+      grouped[key].minutes += Number(entry.duration_minutes || 0);
+      grouped[key].entries += 1;
+    }
+
+    return grouped;
+  }, [filtered]);
 
   const calendarDays = useMemo(() => {
     const start =
@@ -707,13 +714,6 @@ if (entryTypeFilter !== "all") {
 
     return days;
   }, [filtered, periodFilter, payrollRanges]);
-      
-      grouped[key].minutes += Number(entry.duration_minutes || 0);
-      grouped[key].entries += 1;
-    }
-
-    return grouped;
-  }, [filtered]);
 
   const getClientName = useCallback(
     (id) => {
