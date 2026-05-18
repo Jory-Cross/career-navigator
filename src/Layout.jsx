@@ -119,8 +119,6 @@ export default function Layout({ children, currentPageName }) {
         navigate('/ClientPortal');
       } else if (role === 'pre_ets' && access === 'client_portal' && currentPageName !== 'PreEtsPortal') {
         navigate(createPageUrl('PreEtsPortal'));
-      } else if (role === 'dspd' && access === 'client_portal' && currentPageName !== 'DspdPortal') {
-        navigate(createPageUrl('DspdPortal'));
       } else if (role === 'pre_ets_employer' && access === 'pre_ets_employer_portal' && currentPageName !== 'PreEtsEmployerPortal') {
         navigate('/PreEtsEmployerPortal');
       }
