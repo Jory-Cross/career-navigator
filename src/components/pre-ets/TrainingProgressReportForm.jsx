@@ -50,24 +50,35 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
-  // Auto-populate return_completed_to with manager's email when dialog opens
+  // Auto-populate fields when dialog opens
   useEffect(() => {
     if (!open) return;
+
+    // Prefill employer fields from client record (only for new forms — EMPTY_FORM has no values)
+    const supervisorName = client?.employer_contact_name || client?.employer_name || "";
+    const supervisorAddress = client?.employer_address || "";
+
+    setForm(f => ({
+      ...f,
+      supervisor_name: f.supervisor_name || supervisorName,
+      supervisor_address: f.supervisor_address || supervisorAddress,
+    }));
+
+    // Auto-populate return_completed_to with manager's email
     base44.auth.me().then(async (user) => {
       if (user?.manager_id) {
         try {
           const managers = await base44.entities.User.filter({ id: user.manager_id });
           const manager = managers[0];
           if (manager?.email) {
-            setForm(f => ({ ...f, return_completed_to: manager.email }));
+            setForm(f => ({ ...f, return_completed_to: f.return_completed_to || manager.email }));
           }
         } catch {}
       } else if (user?.email) {
-        // Fallback: use current user's own email
-        setForm(f => ({ ...f, return_completed_to: user.email }));
+        setForm(f => ({ ...f, return_completed_to: f.return_completed_to || user.email }));
       }
     }).catch(() => {});
-  }, [open]);
+  }, [open, client]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 

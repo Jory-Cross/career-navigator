@@ -22,6 +22,15 @@ export default function WBLEFormSection({ clientId, client, user }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  const openNewForm = () => {
+    setFormData({
+      employer_name: client?.employer_name || "",
+      employer_phone: client?.employer_phone || "",
+      employer_address: client?.employer_address || "",
+    });
+    setShowForm(true);
+  };
   const [generatingPdf, setGeneratingPdf] = useState(null);
   const [deletingForm, setDeletingForm] = useState(null);
   const [deletingReport, setDeletingReport] = useState(null);
@@ -142,7 +151,7 @@ export default function WBLEFormSection({ clientId, client, user }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Work Based Learning Experience Forms</CardTitle>
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={openNewForm}>
             <Plus className="w-3.5 h-3.5 mr-1" /> New WBLE Form
           </Button>
         </div>
