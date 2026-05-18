@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, EyeOff, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Clock, Menu, X, BarChart3, Calendar, Mail, ChevronDown, Shield, UserCog, Bot, ListChecks, Building2, GraduationCap, Camera, Loader2, Eye, LogOut } from "lucide-react";
 import { useFeaturePermissions } from "@/lib/useFeaturePermissions";
 import { cn, isAdmin } from "@/lib/utils";
 import { base44 } from "@/api/base44Client";
@@ -20,7 +20,7 @@ const navItems = [
   { name: "Job Seeker",     icon: Users,           page: "Clients",        featureKey: "job_seeker",    indent: true, roles: ["admin", "management", "employee"], param: "?type=job_seeker" },
   { name: "Employed",       icon: Users,           page: "Clients",        featureKey: "employed",      indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
   { name: "Pre-ETS",        icon: GraduationCap,   page: "PreEtsPortal",   featureKey: "pre_ets",       indent: true, roles: ["admin", "management", "employee"] },
-  { name: "DSPD",           icon: Users,           page: "DspdPortal",     featureKey: "dspd",          indent: true, roles: ["admin", "management", "employee"] },
+  { name: "DSPD",           icon: Users,           page: "Clients",        featureKey: "dspd",          indent: true, roles: ["admin", "management", "employee"], param: "?type=dspd" },
   { name: "Employees",      icon: UserCog,         page: "EmployeePortal", featureKey: "employees",     roles: ["admin", "management"] },
   { name: "Calendar",       icon: Calendar,        page: "Calendar",       featureKey: "calendar" },
   { name: "Reports",        icon: BarChart3,       page: "Reports",        featureKey: "reports" },

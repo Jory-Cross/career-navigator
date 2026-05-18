@@ -15,6 +15,8 @@ import {
   Target, CheckCircle2, Calendar, ChevronRight, ArrowLeft,
   ClipboardList, TrendingUp, Trash2
 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -625,8 +627,8 @@ function ClientDetail({ client, onBack, isStaff }) {
 export default function DspdPortal() {
   const [user, setUser] = useState(null);
   const [selfClient, setSelfClient] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const init = async () => {
@@ -707,14 +709,10 @@ export default function DspdPortal() {
     return <div className="flex items-center justify-center h-64 text-slate-500">Access denied.</div>;
   }
 
-  if (selectedClient) {
-    return <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} isStaff={true} />;
-  }
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">DSPD Portal</h1>
+        <h1 className="text-2xl font-bold text-slate-900">DSPD Clients</h1>
         <p className="text-sm text-slate-500 mt-1">Supported Employment — {dspdClients.length} client{dspdClients.length !== 1 ? "s" : ""}</p>
       </div>
 
@@ -729,7 +727,7 @@ export default function DspdPortal() {
           {dspdClients.map(client => (
             <Card
               key={client.id}
-              onClick={() => setSelectedClient(client)}
+              onClick={() => navigate(createPageUrl("ClientDetail") + `?id=${client.id}`)}
               className="border-0 shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               <CardContent className="p-5">
