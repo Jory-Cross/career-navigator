@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import EmployeeCard from "@/components/employees/EmployeeCard";
 import EmployeeDetail from "@/components/employees/EmployeeDetail";
 import AdminHierarchyView from "@/components/employees/AdminHierarchyView";
+import ManagerAssignments from "@/components/employees/ManagerAssignments";
 
 export default function EmployeePortal() {
   const { viewAsUser } = useViewAs();
@@ -85,7 +86,10 @@ export default function EmployeePortal() {
       <InviteEmployeeDialog open={showInvite} onOpenChange={setShowInvite} currentUserRole={user?.role} />
 
       {effectiveUser?.role === 'admin' ? (
-        <AdminHierarchyView allUsers={allUsers} currentUser={effectiveUser} onSelectEmployee={setSelectedEmployeeId} />
+        <>
+          <AdminHierarchyView allUsers={allUsers} currentUser={effectiveUser} onSelectEmployee={setSelectedEmployeeId} />
+          <ManagerAssignments allUsers={allUsers} />
+        </>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {employees.map(emp => (

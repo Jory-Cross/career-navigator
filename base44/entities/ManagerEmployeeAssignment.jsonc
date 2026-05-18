@@ -1,0 +1,26 @@
+{
+  "name": "ManagerEmployeeAssignment",
+  "type": "object",
+  "description": "Maps employees to a manager for Time Tracking visibility.",
+  "properties": {
+    "org_id": {
+      "type": "string"
+    },
+    "manager_user_id": {
+      "type": "string",
+      "description": "User ID of the manager"
+    },
+    "employee_user_id": {
+      "type": "string",
+      "description": "User ID of the employee assigned to this manager"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "manager_user_id",
+    "employee_user_id"
+  ]
+}

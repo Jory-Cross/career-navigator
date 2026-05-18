@@ -215,40 +215,72 @@ const { data: allUsers = [] } = useQuery({
   refetchOnReconnect: false,
 });
 
+// Load active assignments for the current manager (or all, for admin)
+const { data: managerAssignments = [] } = useQuery({
+  queryKey: ["managerAssignments"],
+  queryFn: () => base44.entities.ManagerEmployeeAssignment.filter({ is_active: true }),
+  enabled: !!user && (user.role === "admin" || user.role === "management"),
+  staleTime: 60 * 1000,
+  gcTime: 15 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
+
   const scopedUsers = useMemo(() => {
   return getScopedUsers(allUsers, effectiveUser);
 }, [allUsers, effectiveUser]);
 
+// Build list of employee_ids visible to a manager: ManagerEmployeeAssignment + legacy manager_id fallback.
+// Defined before visibleStaffUsers because visibleStaffUsers depends on it.
+const managedEmployeeIds = useMemo(() => {
+  if (!effectiveUser || effectiveUser.role !== "management") return [];
+  const assignedIds = managerAssignments
+    .filter((a) => a.manager_user_id === effectiveUser.id && a.is_active)
+    .map((a) => a.employee_user_id)
+    .filter(Boolean);
+  const legacyIds = allUsers
+    .filter((u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id)
+    .map((u) => u.id)
+    .filter(Boolean);
+  return [...new Set([...assignedIds, ...legacyIds])];
+}, [allUsers, effectiveUser, managerAssignments]);
+
 // All staff users whose entries are visible to the current user.
-// Mirrors EmployeePortal hierarchy exactly (manager_id based, via getOrgUsers).
 const visibleStaffUsers = useMemo(() => {
   if (!effectiveUser) return [];
 
-  // Admin: all non-archived managers + their employees (same set EmployeePortal shows)
+  // Admin: all non-archived managers + ALL employees (via assignments OR legacy manager_id)
   if (effectiveUser.role === "admin") {
     const managers = allUsers.filter((u) => !u.is_archived && u.role === "management");
     const managerIds = new Set(managers.map((m) => m.id));
-    const employees = allUsers.filter(
+    // Employees via legacy manager_id
+    const legacyEmployees = allUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && managerIds.has(u.manager_id)
     );
-    // Include self (admin) + all managers + all managed employees
+    // Employees via ManagerEmployeeAssignment
+    const assignedEmployeeIds = new Set(managerAssignments.map((a) => a.employee_user_id));
+    const assignedEmployees = allUsers.filter(
+      (u) => !u.is_archived && u.role === "employee" && assignedEmployeeIds.has(u.id)
+    );
     const selfEntry = allUsers.find((u) => u.id === effectiveUser.id) || effectiveUser;
-    return [selfEntry, ...managers, ...employees].filter(
+    return [selfEntry, ...managers, ...legacyEmployees, ...assignedEmployees].filter(
       (u, i, arr) => arr.findIndex((x) => x.id === u.id) === i
     );
   }
 
-  // Management: self + direct reports by manager_id (mirrors EmployeePortal exactly)
+  // Management: self + employees from ManagerEmployeeAssignment (+ legacy manager_id fallback)
   if (effectiveUser.role === "management") {
-    const directReports = allUsers.filter(
-      (u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id
+    const assignedIds = new Set(managedEmployeeIds);
+    const assignedEmployees = allUsers.filter(
+      (u) => !u.is_archived && assignedIds.has(u.id)
     );
-    return [effectiveUser, ...directReports];
+    return [effectiveUser, ...assignedEmployees].filter(
+      (u, i, arr) => arr.findIndex((x) => x.id === u.id) === i
+    );
   }
 
   // Employee: only self
   return [effectiveUser];
-}, [allUsers, effectiveUser]);
+}, [allUsers, effectiveUser, managerAssignments, managedEmployeeIds]);
 
 // Employees shown in the filter dropdown.
 // Admin: all managers + employees. Management: self + direct reports.
@@ -313,18 +345,6 @@ const allClients = useMemo(() => {
   return getScopedClients(rawClients, effectiveUser, scopedUsers);
 }, [rawClients, effectiveUser, scopedUsers]);
   
-  // Build list of employee_ids to include when fetching entries.
-  // For managers: self + direct reports (from getOrgUsers, already safe for non-admins).
-  // For admin: empty (fetch all via list()).
-  // For employees: empty (fetch all owned via list()).
-  const managedEmployeeIds = useMemo(() => {
-    if (!effectiveUser || effectiveUser.role !== "management") return [];
-    return allUsers
-      .filter((u) => !u.is_archived && u.role === "employee" && u.manager_id === effectiveUser.id)
-      .map((u) => u.id)
-      .filter(Boolean);
-  }, [allUsers, effectiveUser]);
-
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeTracking", "entries", effectiveUser?.id, managedEmployeeIds.join(",")],
     queryFn: async () => {
