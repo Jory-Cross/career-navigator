@@ -1,7 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const RESEND_FROM = Deno.env.get('RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
+// RESEND_FROM_EMAIL must be an address on a domain verified at resend.com/domains.
+// If not set or set to a non-owned domain, falls back to Resend's shared test sender
+// (only delivers to the Resend account owner's email in test mode).
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
+const RESEND_FROM = RESEND_FROM_EMAIL && !RESEND_FROM_EMAIL.includes('outlook.com') && !RESEND_FROM_EMAIL.includes('gmail.com') && !RESEND_FROM_EMAIL.includes('yahoo.com') && !RESEND_FROM_EMAIL.includes('hotmail.com')
+  ? RESEND_FROM_EMAIL
+  : 'onboarding@resend.dev';
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
 
 async function sendInviteEmail({ toEmail, inviterName, role, appUrl }) {
