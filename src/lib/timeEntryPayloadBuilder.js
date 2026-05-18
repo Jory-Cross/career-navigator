@@ -145,26 +145,16 @@ function getDurationFieldFromSchema(schema) {
 function normalizeDurationMinutes(formData, schema) {
   if (!formData) return 0;
 
-  // 1) Prefer explicit clock-in/clock-out values
+  // 1) Prefer explicit clock-in/clock-out values (start/end time range)
   const { startTime, endTime } = getClockTimeCandidates(formData);
   const calculatedFromClock = calculateDurationMinutes(startTime, endTime);
   if (calculatedFromClock > 0) {
     return calculatedFromClock;
   }
 
-  // 2) Direct duration_minutes
-  const directDurationMinutes = numberFromAny(formData.duration_minutes);
-  if (directDurationMinutes > 0) {
-    return directDurationMinutes;
-  }
-
-  // 3) Generic duration field in minutes
-  const directDuration = numberFromAny(formData.duration);
-  if (directDuration > 0) {
-    return directDuration;
-  }
-
-  // 4) Schema-based duration field lookup (hours -> convert to minutes)
+  // 2) Schema-based duration field (isDuration:true) — checked BEFORE duration_minutes
+  //    so that a user editing "Hours Spent" always wins over the stale duration_minutes
+  //    echo that rehydration places into formData from the existing entry.
   const durationField = getDurationFieldFromSchema(schema);
   if (durationField) {
     const raw = formData[durationField.key];
@@ -181,6 +171,18 @@ function normalizeDurationMinutes(formData, schema) {
 
       return looksLikeMinutes ? value : value * 60;
     }
+  }
+
+  // 3) Direct duration_minutes in formData (fallback for forms without a schema duration field)
+  const directDurationMinutes = numberFromAny(formData.duration_minutes);
+  if (directDurationMinutes > 0) {
+    return directDurationMinutes;
+  }
+
+  // 4) Generic duration field in minutes
+  const directDuration = numberFromAny(formData.duration);
+  if (directDuration > 0) {
+    return directDuration;
   }
 
   // 5) Legacy split hours/minutes fields
