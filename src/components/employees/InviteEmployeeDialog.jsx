@@ -38,19 +38,32 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
       }
       const res = await base44.functions.invoke('inviteEmployee', payload);
       const data = res.data;
-      if (data?.success === false || data?.error) {
-        toast.error("Invitation failed: " + (data.error || 'Unknown error'));
-        return;
+      if (data?.success) {
+        toast.success(`Invitation sent to ${email.toLowerCase().trim()}`);
+        setEmail("");
+        setRole("employee");
+        setManagerId("");
+        onOpenChange(false);
+      } else {
+        toast.error(data?.error || 'Invitation failed');
       }
-      toast.success(`Invitation sent to ${email.toLowerCase().trim()}`);
-      setEmail("");
-      setRole("employee");
-      setManagerId("");
-      onOpenChange(false);
     } catch (error) {
-      // Surface the actual backend error message
-      const msg = error?.response?.data?.error || error?.message || 'Unknown error';
-      toast.error("Failed to send invitation: " + msg);
+      // Surface the actual backend error — axios puts non-2xx body in error.response.data
+      const backendData = error?.response?.data;
+      const backendMsg = backendData?.error;
+      const pendingSaved = backendData?.pending_saved;
+      if (pendingSaved && backendMsg) {
+        // PendingRoleAssignment was saved but email delivery is restricted for managers.
+        // Show as info/warning — it's not a complete failure, the record exists.
+        toast.warning(backendMsg, { duration: 10000 });
+        setEmail("");
+        setRole("employee");
+        setManagerId("");
+        onOpenChange(false);
+      } else {
+        const msg = backendMsg || error?.message || 'Unknown error';
+        toast.error("Failed to send invitation: " + msg);
+      }
     } finally {
       setSaving(false);
     }
