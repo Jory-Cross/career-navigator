@@ -590,7 +590,7 @@ const currentTaskCount = tasks.filter(
 
         {client.client_type === "pre_ets" && !isClientUser && (
           <TabsContent value="wble_forms">
-            <WBLEFormSection client={client} onRefresh={refreshClient} />
+            <WBLEFormSection client={client} clientId={client.id} user={user} onRefresh={refreshClient} />
           </TabsContent>
         )}
 
