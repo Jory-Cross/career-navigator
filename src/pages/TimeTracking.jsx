@@ -104,7 +104,10 @@ function formatDurationMinutes(minutes) {
 function formatHoursFromMinutes(minutes) {
   const total = Number(minutes || 0);
   if (!total) return "0h";
-  return `${Math.round((total / 60) * 10) / 10}h`;
+  // Keep exact quarter-hour precision (15 min = 0.25h) without rounding
+  const hours = total / 60;
+  // Trim trailing zeros but preserve up to 2 decimal places
+  return `${parseFloat(hours.toFixed(2))}h`;
 }
 
 function entryTypeRequiresClient(entryTypeCode) {
@@ -643,7 +646,7 @@ if (entryTypeFilter !== "all") {
   }, [filtered]);
 
   const totalHours = useMemo(() => {
-    return Math.round((totalMinutes / 60) * 10) / 10;
+    return parseFloat((totalMinutes / 60).toFixed(2));
   }, [totalMinutes]);
 
   const legacyEntries = useMemo(() => {
@@ -1122,7 +1125,7 @@ if (entryTypeFilter !== "all") {
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="font-medium">{displayName}</div>
                       <div className="text-sm text-slate-500">
-                        {Math.round((data.minutes / 60) * 10) / 10}h · {data.entries} sessions
+                        {parseFloat((data.minutes / 60).toFixed(2))}h · {data.entries} sessions
                       </div>
                     </div>
 
