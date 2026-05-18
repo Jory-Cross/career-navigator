@@ -178,6 +178,22 @@
       "type": "string",
       "format": "date"
     },
+    "employer_name": {
+      "type": "string",
+      "description": "Employer / worksite name"
+    },
+    "employer_contact_name": {
+      "type": "string",
+      "description": "Employer contact / supervisor name"
+    },
+    "employer_address": {
+      "type": "string",
+      "description": "Employer / worksite address"
+    },
+    "employer_phone": {
+      "type": "string",
+      "description": "Employer / worksite phone"
+    },
     "vocational_facts_profile": {
       "type": "object",
       "description": "Structured employment facts extracted from assessments and documents by AI preprocessing",

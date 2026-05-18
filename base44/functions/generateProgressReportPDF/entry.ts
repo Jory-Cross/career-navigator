@@ -42,11 +42,20 @@ Deno.serve(async (req) => {
       try { form.getRadioGroup(name).select(value); } catch (e) { console.log(`Radio not found: ${name}`, e.message); }
     };
 
+    // Employer info: prefer report fields, fall back to client record
+    const supervisorName = report.supervisor_name
+      || client.employer_contact_name
+      || client.employer_name
+      || '';
+    const supervisorAddress = report.supervisor_address
+      || client.employer_address
+      || '';
+
     // Fill header fields
     setText('Return Completed Form To', report.return_completed_to);
     setText('ClientEmployee Name', `${client.first_name} ${client.last_name}`);
-    setText('SupervisorEmployer Name', report.supervisor_name);
-    setText('Supervisor Employer Address', report.supervisor_address);
+    setText('SupervisorEmployer Name', supervisorName);
+    setText('Supervisor Employer Address', supervisorAddress);
     setText('From', fmt(report.reporting_period_from));
     setText('To', fmt(report.reporting_period_to));
     setText('Date', fmt(report.signature_date));

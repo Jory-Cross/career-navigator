@@ -92,7 +92,11 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         assigned_employer_id: currentForm.assigned_employer_id || "",
         notes: currentForm.notes || "",
         school: currentForm.school || "",
-        graduation_year: currentForm.graduation_year || ""
+        graduation_year: currentForm.graduation_year || "",
+        employer_name: currentForm.employer_name || "",
+        employer_contact_name: currentForm.employer_contact_name || "",
+        employer_address: currentForm.employer_address || "",
+        employer_phone: currentForm.employer_phone || ""
       };
 
       const updatedClient = await base44.entities.Client.update(
@@ -276,6 +280,15 @@ if (editing || formOnly) {
             </Select>
           </div>
         )}
+      <div className="md:col-span-2 pt-2 border-t">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Employer / Worksite Information</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input className="h-10" value={form.employer_name || ""} onChange={e => u("employer_name", e.target.value)} placeholder="Employer Name" />
+            <Input className="h-10" value={form.employer_contact_name || ""} onChange={e => u("employer_contact_name", e.target.value)} placeholder="Employer Contact Name" />
+            <Input className="h-10" value={form.employer_phone || ""} onChange={e => u("employer_phone", e.target.value)} placeholder="Employer Phone" />
+            <Input className="h-10 md:col-span-1" value={form.employer_address || ""} onChange={e => u("employer_address", e.target.value)} placeholder="Employer Address" />
+          </div>
+        </div>
       <Textarea className="h-24 md:col-span-2" value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
     <div className="pt-4 border-t">
   <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
