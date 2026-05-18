@@ -1,31 +1,15 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+/**
+ * submitAccessRequest — DISABLED
+ *
+ * This app uses invite-only access. Self-service access requests are not permitted.
+ * The only valid approval path is a PendingRoleAssignment created by an admin/manager invite.
+ */
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const { email, full_name, message, client_type } = await req.json();
-
-    if (!email || !full_name) {
-      return Response.json({ error: 'Email and name are required' }, { status: 400 });
-    }
-
-    // Use service role so unregistered users can submit requests
-    const existing = await base44.asServiceRole.entities.AccessRequest.filter({ email, status: 'pending' });
-    if (existing.length > 0) {
-      return Response.json({ success: true, already_exists: true });
-    }
-
-    await base44.asServiceRole.entities.AccessRequest.create({
-      email,
-      full_name,
-      message: message || '',
-      client_type: client_type || 'job_seeker',
-      status: 'pending'
-    });
-
-    return Response.json({ success: true });
-  } catch (error) {
-    console.error('submitAccessRequest error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
-  }
+  console.log('[submitAccessRequest] Blocked — invite-only access is enforced. No self-service requests allowed.');
+  return Response.json(
+    { error: 'Access requests are not accepted. Please contact your manager or administrator for an invitation.' },
+    { status: 403 }
+  );
 });
