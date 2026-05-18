@@ -162,6 +162,7 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
   const [summaryView, setSummaryView] = useState("day");
+  const [selectedDay, setSelectedDay] = useState(null);
   
   const [user, setUser] = useState(null);
 
@@ -534,6 +535,10 @@ useEffect(() => {
       continue;
     }
 
+    if (selectedDay && entry.date !== selectedDay) {
+      continue;
+    }
+
 if (entryTypeFilter !== "all") {
   const entryCode =
     resolvedEntryTypeCodes[entry.id] ||
@@ -610,6 +615,7 @@ if (entryTypeFilter !== "all") {
   resolvedEntryTypeCodes,
   periodFilter,
   payrollRanges,
+  selectedDay,
 ]);
 
   const duplicateIds = useMemo(() => {
@@ -680,6 +686,44 @@ if (entryTypeFilter !== "all") {
     return grouped;
   }, [clients, filtered]);
 
+  // Day-card totals: same as filtered but ignoring the selectedDay restriction,
+  // so cards always show real per-day counts regardless of which day is highlighted.
+  const filteredWithoutDay = useMemo(() => {
+    if (!selectedDay) return filtered;
+    return filtered.concat(
+      scopedTimeEntries.filter((entry) => {
+        // Include only the entries that were excluded solely because of selectedDay
+        if (entry.date !== selectedDay) return false;
+        // Re-apply all other active filters
+        if (
+          (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+          employeeFilter !== "all"
+        ) {
+          const selectedStaff = staffById[employeeFilter];
+          if (!entryBelongsToUser(entry, selectedStaff)) return false;
+        }
+        if (clientFilter !== "all" && entry.client_id !== clientFilter) return false;
+        if (entryTypeFilter !== "all") {
+          const entryCode =
+            resolvedEntryTypeCodes[entry.id] ||
+            getImmediateEntryTypeCode(entry) ||
+            normalizeEntryTypeCode(entry.entry_type_code);
+          if (entryCode !== entryTypeFilter) return false;
+        }
+        const parsedDate = parseDateOnly(entry.date);
+        if (!parsedDate) return false;
+        if (periodFilter === "payroll1") return parsedDate >= payrollRanges.payroll1Start && parsedDate <= payrollRanges.payroll1End;
+        if (periodFilter === "payroll2") return parsedDate >= payrollRanges.payroll2Start && parsedDate <= payrollRanges.payroll2End;
+        if (periodFilter === "week") return isWithinInterval(parsedDate, { start: payrollRanges.weekStart, end: payrollRanges.weekEnd });
+        if (periodFilter === "month") return isWithinInterval(parsedDate, { start: payrollRanges.monthStart, end: payrollRanges.monthEnd });
+        return true;
+      })
+    );
+  }, [
+    selectedDay, filtered, scopedTimeEntries, effectiveUser?.role, employeeFilter, staffById,
+    clientFilter, entryTypeFilter, resolvedEntryTypeCodes, periodFilter, payrollRanges,
+  ]);
+
   const calendarDays = useMemo(() => {
     const start =
       periodFilter === "payroll1"
@@ -701,14 +745,11 @@ if (entryTypeFilter !== "all") {
 
     const totalsByDate = {};
 
-    for (const entry of filtered) {
+    for (const entry of filteredWithoutDay) {
       if (!entry.date) continue;
 
       if (!totalsByDate[entry.date]) {
-        totalsByDate[entry.date] = {
-          minutes: 0,
-          entries: 0
-        };
+        totalsByDate[entry.date] = { minutes: 0, entries: 0 };
       }
 
       totalsByDate[entry.date].minutes += Number(entry.duration_minutes || 0);
@@ -733,7 +774,7 @@ if (entryTypeFilter !== "all") {
     }
 
     return days;
-  }, [filtered, periodFilter, payrollRanges]);
+  }, [filteredWithoutDay, periodFilter, payrollRanges]);
 
   const getClientName = useCallback(
     (id) => {
@@ -863,7 +904,7 @@ if (entryTypeFilter !== "all") {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
-            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); setSelectedDay(null); }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -1017,28 +1058,37 @@ if (entryTypeFilter !== "all") {
 
         {summaryView === "day" ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
-            {calendarDays.map((day) => (
-              <div
-                key={day.date}
-                className={cn(
-                  "rounded-lg border p-3 text-sm",
-                  day.minutes > 0 ? "bg-slate-50" : "bg-white text-slate-400"
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">{day.dayLabel}</div>
-                  <div>{day.dayNumber}</div>
-                </div>
+            {calendarDays.map((day) => {
+              const isSelected = selectedDay === day.date;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => setSelectedDay(isSelected ? null : day.date)}
+                  className={cn(
+                    "rounded-lg border p-3 text-left text-sm transition-all",
+                    isSelected
+                      ? "border-blue-500 bg-blue-600 text-white shadow-md"
+                      : day.minutes > 0
+                      ? "bg-slate-50 hover:border-slate-400 hover:bg-slate-100"
+                      : "bg-white text-slate-400 hover:border-slate-300 hover:bg-slate-50"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium">{day.dayLabel}</div>
+                    <div>{day.dayNumber}</div>
+                  </div>
 
-                <div className="mt-3 text-lg font-semibold text-slate-900">
-                  {formatHoursFromMinutes(day.minutes)}
-                </div>
+                  <div className={cn("mt-3 text-lg font-semibold", isSelected ? "text-white" : "text-slate-900")}>
+                    {formatHoursFromMinutes(day.minutes)}
+                  </div>
 
-                <div className="text-xs text-slate-500">
-                  {day.entries} {day.entries === 1 ? "entry" : "entries"}
-                </div>
-              </div>
-            ))}
+                  <div className={cn("text-xs", isSelected ? "text-blue-100" : "text-slate-500")}>
+                    {day.entries} {day.entries === 1 ? "entry" : "entries"}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : Object.keys(byClient).length > 0 ? (
           <div className="space-y-3">
@@ -1100,6 +1150,19 @@ if (entryTypeFilter !== "all") {
             </div>
           </div>
         </Card>
+      ) : null}
+
+      {selectedDay ? (
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800">
+          <span>Showing entries for <strong>{parseDateOnly(selectedDay) ? format(parseDateOnly(selectedDay), "EEEE, MMM d") : selectedDay}</strong></span>
+          <button
+            type="button"
+            onClick={() => setSelectedDay(null)}
+            className="ml-3 text-blue-600 underline hover:text-blue-800"
+          >
+            Clear day filter
+          </button>
+        </div>
       ) : null}
 
       <Card className="p-4">
