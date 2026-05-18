@@ -1,5 +1,59 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
+const FREE_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com'];
+const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
+const RESEND_FROM = RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
+  ? RESEND_FROM_EMAIL
+  : 'onboarding@resend.dev';
+const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
+
+async function sendClientInviteEmail({ toEmail, inviterName, appUrl }) {
+  const subject = `You've been invited to join the Career Navigator`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+      <h2 style="color: #2563eb; margin-bottom: 8px;">You're invited!</h2>
+      <p style="font-size: 16px; margin-bottom: 16px;">
+        <strong>${inviterName}</strong> has invited you to join the Career Navigator client portal.
+      </p>
+      <p style="margin-bottom: 8px;">To get started:</p>
+      <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
+        <li>Click the link below to open the portal</li>
+        <li>Register or sign in using <strong>exactly this email address: ${toEmail}</strong></li>
+        <li>You will be able to access your account immediately</li>
+      </ol>
+      <a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 24px;">
+        Access Portal →
+      </a>
+      <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        Important: You must use <strong>${toEmail}</strong> to register. Using a different email will not link your account correctly.
+      </p>
+    </div>
+  `;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `Career Navigator <${RESEND_FROM}>`,
+      to: [toEmail],
+      subject,
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Resend API error ${res.status}: ${err}`);
+  }
+
+  return await res.json();
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -60,48 +114,62 @@ Deno.serve(async (req) => {
     // Mark client as in_progress
     await base44.asServiceRole.entities.Client.update(clientId, { onboarding_status: 'in_progress' });
 
-    // ── Attempt email send — tracked separately from assignment creation ──────
-    let emailSent = false;
-    let emailError = null;
+    // ── Call Base44 platform inviteUser ────────────────────────────────────
+    let platformInviteSent = false;
+    let platformInviteError = null;
 
     try {
-      const inviteResult = await base44.users.inviteUser(normalizedEmail, 'user');
-      // inviteUser returns undefined on success; truthy error object on failure
-      // Treat any non-throw as success, but log the raw result
-      console.log(`[inviteClient] inviteUser result for ${normalizedEmail}:`, JSON.stringify(inviteResult ?? 'undefined (expected on success)'));
-      emailSent = true;
+      await base44.users.inviteUser(normalizedEmail, 'user');
+      platformInviteSent = true;
+      console.log(`[inviteClient] Base44 platform invite sent to ${normalizedEmail}`);
     } catch (inviteErr) {
-      emailError = inviteErr?.message || String(inviteErr);
-      console.error(`[inviteClient] inviteUser FAILED for ${normalizedEmail}:`, emailError);
+      platformInviteError = inviteErr?.message || String(inviteErr);
+      console.error(`[inviteClient] Base44 inviteUser failed for ${normalizedEmail}:`, platformInviteError);
     }
 
-    // ── Activity log — always records actual email outcome ───────────────────
+    // ── Send instruction email via Resend (optional — only if API configured) ──
+    let instructionEmailSent = false;
+
+    if (RESEND_API_KEY) {
+      try {
+        await sendClientInviteEmail({
+          toEmail: normalizedEmail,
+          inviterName: user.full_name || user.email,
+          appUrl: APP_URL,
+        });
+        instructionEmailSent = true;
+        console.log(`[inviteClient] Instruction email sent to ${normalizedEmail} via Resend`);
+      } catch (emailErr) {
+        console.error(`[inviteClient] Resend instruction email failed: ${emailErr.message}`);
+      }
+    }
+
+    // ── Activity log — records actual platform invite outcome ──────────────────
     await base44.asServiceRole.entities.Activity.create({
       client_id: clientId,
       org_id,
       activity_type: 'email_sent',
-      title: emailSent ? 'Portal invitation sent' : 'Portal access prepared (email failed)',
-      description: emailSent
-        ? `Invitation email sent to ${normalizedEmail} by ${user.full_name || user.email}`
-        : `PendingRoleAssignment created for ${normalizedEmail} but inviteUser failed: ${emailError}`,
+      title: platformInviteSent ? 'Portal invitation sent' : 'Portal access prepared (platform invite failed)',
+      description: platformInviteSent
+        ? `Invitation sent to ${normalizedEmail} by ${user.full_name || user.email}`
+        : `PendingRoleAssignment created for ${normalizedEmail} but platform invite failed: ${platformInviteError}`,
     });
 
-    if (!emailSent) {
-      // Return 200 with explicit flags — access is prepared, email failed
+    if (!platformInviteSent) {
+      // Return 200 with explicit flags — access is prepared, but platform invite failed
       return Response.json({
-        success: true,
-        email_sent: false,
+        success: false,
         access_prepared: true,
-        email_error: emailError,
-        message: 'Portal access prepared, but email delivery failed.',
-      });
+        platform_invite_error: platformInviteError,
+        message: 'Portal access prepared, but platform invitation failed.',
+      }, { status: 500 });
     }
 
     return Response.json({
       success: true,
-      email_sent: true,
-      access_prepared: true,
       message: 'Invitation sent successfully',
+      platform_invite_sent: platformInviteSent,
+      instruction_email_sent: instructionEmailSent,
     });
 
   } catch (error) {

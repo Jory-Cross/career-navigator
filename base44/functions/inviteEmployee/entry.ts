@@ -163,44 +163,58 @@ Deno.serve(async (req) => {
       console.log(`[inviteEmployee] Created PendingRoleAssignment id=${pendingId}`);
     }
 
-    // ── Send instruction email via Resend ─────────────────────────────────
-    if (!RESEND_API_KEY) {
-      await base44.asServiceRole.entities.PendingRoleAssignment.update(pendingId, { status: 'pending_email_failed' });
-      return Response.json({
-        success: false,
-        error: 'RESEND_API_KEY is not configured. Please set it in app secrets.',
-      }, { status: 500 });
-    }
+    // ── Call Base44 platform inviteUser (creates account admission) ────────────
+    let platformInviteSent = false;
+    let platformInviteError = null;
 
     try {
-      await sendInviteEmail({
-        toEmail: normalizedEmail,
-        inviterName: user.full_name || user.email,
-        role: inviteRole,
-        appUrl: APP_URL,
-      });
-      console.log(`[inviteEmployee] Invite email sent to ${normalizedEmail} via Resend`);
+      await base44.users.inviteUser(normalizedEmail, 'user');
+      platformInviteSent = true;
+      console.log(`[inviteEmployee] Base44 platform invite sent to ${normalizedEmail}`);
+    } catch (inviteErr) {
+      platformInviteError = inviteErr?.message || String(inviteErr);
+      console.error(`[inviteEmployee] Base44 inviteUser failed for ${normalizedEmail}: ${platformInviteError}`);
+    }
 
-      await base44.asServiceRole.entities.PendingRoleAssignment.update(pendingId, {
-        status: 'invite_email_sent',
-      });
+    // ── Send instruction email via Resend (optional — only if API configured) ──
+    let instructionEmailSent = false;
 
-      return Response.json({ success: true, message: `Invitation email sent to ${normalizedEmail}`, pending_id: pendingId });
+    if (RESEND_API_KEY) {
+      try {
+        await sendInviteEmail({
+          toEmail: normalizedEmail,
+          inviterName: user.full_name || user.email,
+          role: inviteRole,
+          appUrl: APP_URL,
+        });
+        instructionEmailSent = true;
+        console.log(`[inviteEmployee] Instruction email sent to ${normalizedEmail} via Resend`);
+      } catch (emailErr) {
+        console.error(`[inviteEmployee] Resend instruction email failed: ${emailErr.message}`);
+      }
+    }
 
-    } catch (emailErr) {
-      console.error(`[inviteEmployee] Resend failed: ${emailErr.message}`);
+    // ── Update PendingRoleAssignment status ─────────────────────────────────
+    const status = platformInviteSent ? 'invite_email_sent' : 'pending_email_failed';
+    await base44.asServiceRole.entities.PendingRoleAssignment.update(pendingId, { status });
 
-      await base44.asServiceRole.entities.PendingRoleAssignment.update(pendingId, {
-        status: 'pending_email_failed',
-      });
-
+    // ── Return result ──────────────────────────────────────────────────────
+    if (!platformInviteSent) {
       return Response.json({
         success: false,
         pending_saved: true,
         pending_id: pendingId,
-        error: `Invitation record saved but email delivery failed: ${emailErr.message}`,
+        error: `Base44 platform invitation failed: ${platformInviteError}`,
       }, { status: 500 });
     }
+
+    return Response.json({
+      success: true,
+      message: `Invitation sent to ${normalizedEmail}`,
+      pending_id: pendingId,
+      platform_invite_sent: platformInviteSent,
+      instruction_email_sent: instructionEmailSent,
+    });
 
   } catch (error) {
     console.error('[inviteEmployee] Unhandled error:', error.message);

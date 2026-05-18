@@ -3,6 +3,60 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 // Invites a Pre-ETS Employer user — grants access ONLY to PreEtsEmployerPortal
 // for a specific assigned Pre-ETS client record.
 
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
+const FREE_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com'];
+const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
+const RESEND_FROM = RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
+  ? RESEND_FROM_EMAIL
+  : 'onboarding@resend.dev';
+const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
+
+async function sendEmployerInviteEmail({ toEmail, inviterName, appUrl }) {
+  const subject = `You've been invited to the Pre-ETS Employer Portal`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+      <h2 style="color: #2563eb; margin-bottom: 8px;">You're invited!</h2>
+      <p style="font-size: 16px; margin-bottom: 16px;">
+        <strong>${inviterName}</strong> has invited you to access the Pre-ETS Employer Portal.
+      </p>
+      <p style="margin-bottom: 8px;">To get started:</p>
+      <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
+        <li>Click the link below to open the portal</li>
+        <li>Register or sign in using <strong>exactly this email address: ${toEmail}</strong></li>
+        <li>You will be able to manage your Pre-ETS assignments immediately</li>
+      </ol>
+      <a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 24px;">
+        Access Employer Portal →
+      </a>
+      <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        Important: You must use <strong>${toEmail}</strong> to register. Using a different email will not link your account correctly.
+      </p>
+    </div>
+  `;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `Pre-ETS Employer Portal <${RESEND_FROM}>`,
+      to: [toEmail],
+      subject,
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Resend API error ${res.status}: ${err}`);
+  }
+
+  return await res.json();
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -90,20 +144,62 @@ Deno.serve(async (req) => {
 
     console.log(`[invitePreEtsEmployer] PendingRoleAssignment upserted: email=${normalizedEmail} role=pre_ets_employer client_id=${clientId}`);
 
-    // Send the platform invitation email as "user" — onUserRegistered upgrades to correct role
-    await base44.users.inviteUser(normalizedEmail, 'user');
-    console.log(`[invitePreEtsEmployer] Invitation email sent to ${normalizedEmail}`);
+    // ── Call Base44 platform inviteUser ────────────────────────────────────
+    let platformInviteSent = false;
+    let platformInviteError = null;
 
-    // Log activity on the client record
+    try {
+      await base44.users.inviteUser(normalizedEmail, 'user');
+      platformInviteSent = true;
+      console.log(`[invitePreEtsEmployer] Base44 platform invite sent to ${normalizedEmail}`);
+    } catch (inviteErr) {
+      platformInviteError = inviteErr?.message || String(inviteErr);
+      console.error(`[invitePreEtsEmployer] Base44 inviteUser failed for ${normalizedEmail}:`, platformInviteError);
+    }
+
+    // ── Send instruction email via Resend (optional — only if API configured) ──
+    let instructionEmailSent = false;
+
+    if (RESEND_API_KEY) {
+      try {
+        await sendEmployerInviteEmail({
+          toEmail: normalizedEmail,
+          inviterName: user.full_name || user.email,
+          appUrl: APP_URL,
+        });
+        instructionEmailSent = true;
+        console.log(`[invitePreEtsEmployer] Instruction email sent to ${normalizedEmail} via Resend`);
+      } catch (emailErr) {
+        console.error(`[invitePreEtsEmployer] Resend instruction email failed: ${emailErr.message}`);
+      }
+    }
+
+    // ── Log activity on the client record ────────────────────────────────────
     await base44.asServiceRole.entities.Activity.create({
       client_id: clientId,
       org_id: user.org_id || null,
       activity_type: 'email_sent',
-      title: 'Pre-ETS Employer portal invitation sent',
-      description: `Employer portal access invitation sent to ${normalizedEmail} by ${user.full_name || user.email}`,
+      title: platformInviteSent ? 'Pre-ETS Employer portal invitation sent' : 'Pre-ETS Employer portal access prepared (platform invite failed)',
+      description: platformInviteSent
+        ? `Employer portal access invitation sent to ${normalizedEmail} by ${user.full_name || user.email}`
+        : `PendingRoleAssignment created for ${normalizedEmail} but platform invite failed: ${platformInviteError}`,
     });
 
-    return Response.json({ success: true, message: 'Pre-ETS Employer invitation sent successfully' });
+    if (!platformInviteSent) {
+      return Response.json({
+        success: false,
+        access_prepared: true,
+        platform_invite_error: platformInviteError,
+        message: 'Employer portal access prepared, but platform invitation failed.',
+      }, { status: 500 });
+    }
+
+    return Response.json({
+      success: true,
+      message: 'Pre-ETS Employer invitation sent successfully',
+      platform_invite_sent: platformInviteSent,
+      instruction_email_sent: instructionEmailSent,
+    });
   } catch (error) {
     console.error('[invitePreEtsEmployer] error:', error);
     return Response.json({ error: error.message, success: false }, { status: 500 });
