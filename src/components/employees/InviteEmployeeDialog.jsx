@@ -32,18 +32,25 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
     setSaving(true);
     try {
       const payload = { email, role };
-      // If admin selected an explicit manager, pass it along
+      // Admins can explicitly assign a manager; managers always become the manager via backend
       if (currentUserRole === 'admin' && managerId && managerId !== 'none') {
         payload.manager_id = managerId;
       }
-      await base44.functions.invoke('inviteEmployee', payload);
+      const res = await base44.functions.invoke('inviteEmployee', payload);
+      const data = res.data;
+      if (data?.success === false || data?.error) {
+        toast.error("Invitation failed: " + (data.error || 'Unknown error'));
+        return;
+      }
       toast.success(`Invitation sent to ${email.toLowerCase().trim()}`);
       setEmail("");
       setRole("employee");
       setManagerId("");
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to send invitation: " + (error.response?.data?.error || error.message));
+      // Surface the actual backend error message
+      const msg = error?.response?.data?.error || error?.message || 'Unknown error';
+      toast.error("Failed to send invitation: " + msg);
     } finally {
       setSaving(false);
     }
