@@ -59,7 +59,7 @@ function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
   const isEmployed = client?.client_type === "employed";
 
-  if (isDspd) return "onboarding";
+  if (isDspd) return "client_details";
   if (isEmployed) return "client_details";
   if (userRole === "client") return "activity";
   return "applications";
@@ -332,7 +332,7 @@ const currentTaskCount = tasks.filter(
     </div>
   </button>
 )}
-    {cd.onboarding && !isClientUser && !isEmployed && (
+    {cd.onboarding && !isClientUser && !isEmployed && !isDspd && (
       <button
         type="button"
         onClick={() => handleTabChange("onboarding")}
@@ -350,7 +350,7 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
-    {cd.intake_packet && !isClientUser && !isEmployed && (
+    {cd.intake_packet && !isClientUser && !isEmployed && !isDspd && (
       <button
         type="button"
         onClick={() => handleTabChange("intake_packet")}
@@ -534,13 +534,13 @@ const currentTaskCount = tasks.filter(
     </TabsContent>
   )}
 
-  {cd.onboarding && !isClientUser && !isEmployed && (
+  {cd.onboarding && !isClientUser && !isEmployed && !isDspd && (
     <TabsContent value="onboarding">
       <OnboardingSection client={client} onRefresh={refreshClient} />
     </TabsContent>
   )}
 
-  {cd.intake_packet && !isClientUser && !isEmployed && (
+  {cd.intake_packet && !isClientUser && !isEmployed && !isDspd && (
     <TabsContent value="intake_packet">
       <IntakePacketPanel client={client} currentUser={user} />
     </TabsContent>
