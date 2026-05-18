@@ -1,11 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-// RESEND_FROM_EMAIL must be an address on a domain verified at resend.com/domains.
-// If not set or set to a non-owned domain, falls back to Resend's shared test sender
-// (only delivers to the Resend account owner's email in test mode).
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
 const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
-const RESEND_FROM = RESEND_FROM_EMAIL && !RESEND_FROM_EMAIL.includes('outlook.com') && !RESEND_FROM_EMAIL.includes('gmail.com') && !RESEND_FROM_EMAIL.includes('yahoo.com') && !RESEND_FROM_EMAIL.includes('hotmail.com')
+// Use the configured from address if it looks like a custom domain (not a free provider).
+// Falls back to Resend's shared test sender otherwise.
+const FREE_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com'];
+const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
+const RESEND_FROM = RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
   ? RESEND_FROM_EMAIL
   : 'onboarding@resend.dev';
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
@@ -80,6 +81,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
 
     console.log(`[inviteEmployee] Caller: ${user.email} (${user.role}) | inviting: ${normalizedEmail} as ${inviteRole}`);
+    console.log(`[inviteEmployee] RESEND_API_KEY present=${!!RESEND_API_KEY} | RESEND_FROM=${RESEND_FROM} | APP_URL=${APP_URL}`);
 
     // ── Resolve org_id ────────────────────────────────────────────────────
     let orgId = user.org_id || null;
@@ -94,7 +96,9 @@ Deno.serve(async (req) => {
     const inviterId = inviterRecord?.id || null;
     console.log(`[inviteEmployee] Resolved inviter id=${inviterId}`);
 
-    const resolvedManagerId = explicitManagerId || inviterId;
+    // Only use inviterId if it's a real UUID-like ID (not a legacy string like '1331')
+    const isValidId = (id) => id && typeof id === 'string' && id.length > 10;
+    const resolvedManagerId = (isValidId(explicitManagerId) ? explicitManagerId : null) || (isValidId(inviterId) ? inviterId : null);
 
     // ── Check if account already exists ───────────────────────────────────
     const existingUser = allUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
