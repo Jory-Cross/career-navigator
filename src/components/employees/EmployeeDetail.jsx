@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Clock, CheckSquare, Link as LinkIcon, Filter, ChevronDown, ChevronRight, Camera, Loader2 } from "lucide-react";
+import EmployeeAccessActions from "@/components/employees/EmployeeAccessActions";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -274,12 +275,17 @@ export default function EmployeeDetail({ employee, currentUser }) {
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-slate-900">{employee.full_name || employee.email}</h2>
             <p className="text-sm text-slate-500">{employee.email}</p>
             <Badge className="mt-1 text-xs bg-purple-100 text-purple-700 border-0">{employee.role}</Badge>
             <p className="text-xs text-slate-400 mt-1">Hover photo to change</p>
           </div>
+        </div>
+
+        {/* Access Actions */}
+        <div className="mt-5">
+          <EmployeeAccessActions employee={employee} currentUser={currentUser} />
         </div>
 
         {/* Stats */}

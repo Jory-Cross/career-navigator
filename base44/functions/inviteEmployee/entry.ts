@@ -13,7 +13,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, role } = await req.json();
+    const body = await req.json();
+    const { email, role, manager_id: explicitManagerId } = body;
 
     if (!email) {
       return Response.json({ error: 'Email is required' }, { status: 400 });
@@ -39,6 +40,9 @@ Deno.serve(async (req) => {
       inviterId = inviterUsers[0].id;
     }
 
+    // Use explicit manager_id if admin is assigning on behalf of a manager; otherwise default to inviter
+    const resolvedManagerId = explicitManagerId || inviterId;
+
     // Check if a User account already exists for this email — if so, update in place
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email: normalizedEmail });
     if (existingUsers && existingUsers.length > 0) {
@@ -48,8 +52,28 @@ Deno.serve(async (req) => {
         role: inviteRole,
         access_level: accessLevel,
         org_id: orgId,
-        manager_id: inviterId,
+        manager_id: resolvedManagerId,
       });
+
+      // Upsert ManagerEmployeeAssignment
+      if (resolvedManagerId) {
+        const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+          manager_user_id: resolvedManagerId,
+          employee_user_id: existingUser.id,
+        });
+        if (!existing || existing.length === 0) {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
+            org_id: orgId,
+            manager_user_id: resolvedManagerId,
+            employee_user_id: existingUser.id,
+            is_active: true,
+          });
+          console.log(`[inviteEmployee] Created ManagerEmployeeAssignment: manager=${resolvedManagerId} employee=${existingUser.id}`);
+        } else {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(existing[0].id, { is_active: true });
+        }
+      }
+
       return Response.json({ success: true, message: 'Existing account updated with new role', linked_existing: true });
     }
 
@@ -63,7 +87,7 @@ Deno.serve(async (req) => {
       console.log(`[inviteEmployee] Updating existing pending assignment ${samePending.id} for ${normalizedEmail}`);
       await base44.asServiceRole.entities.PendingRoleAssignment.update(samePending.id, {
         org_id: orgId,
-        invited_by_id: inviterId,
+        invited_by_id: resolvedManagerId,
         invited_by_name: user.full_name || user.email,
         invited_at: now,
       });
@@ -75,7 +99,7 @@ Deno.serve(async (req) => {
         status: 'pending',
         invited_at: now,
         org_id: orgId,
-        invited_by_id: inviterId,
+        invited_by_id: resolvedManagerId,
         invited_by_name: user.full_name || user.email,
       });
     }
@@ -83,7 +107,7 @@ Deno.serve(async (req) => {
     const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
     await base44.users.inviteUser(normalizedEmail, base44Role);
 
-    console.log(`[inviteEmployee] Invited ${normalizedEmail} as ${inviteRole} for org ${orgId}, manager will be ${inviterId}`);
+    console.log(`[inviteEmployee] Invited ${normalizedEmail} as ${inviteRole} for org ${orgId}, manager will be ${resolvedManagerId}`);
     return Response.json({ success: true, message: 'Invitation sent successfully' });
   } catch (error) {
     console.error('[inviteEmployee] Error:', error);

@@ -83,7 +83,7 @@ export default function EmployeePortal() {
         </Button>
       </div>
 
-      <InviteEmployeeDialog open={showInvite} onOpenChange={setShowInvite} currentUserRole={user?.role} />
+      <InviteEmployeeDialog open={showInvite} onOpenChange={setShowInvite} currentUserRole={user?.role} currentUserId={user?.id} />
 
       {effectiveUser?.role === 'admin' ? (
         <>

@@ -104,6 +104,30 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.User.update(user.id, updateData);
     console.log(`[onUserRegistered] Updated user ${email}:`, updateData);
 
+    // If this is a staff role with a manager link, create/upsert ManagerEmployeeAssignment
+    const staffRoles = ['employee', 'management'];
+    if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
+      try {
+        const existingAssignment = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+          manager_user_id: assignment.invited_by_id,
+          employee_user_id: user.id,
+        });
+        if (!existingAssignment || existingAssignment.length === 0) {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
+            org_id: assignment.org_id,
+            manager_user_id: assignment.invited_by_id,
+            employee_user_id: user.id,
+            is_active: true,
+          });
+          console.log(`[onUserRegistered] Created ManagerEmployeeAssignment: manager=${assignment.invited_by_id} employee=${user.id}`);
+        } else {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(existingAssignment[0].id, { is_active: true });
+        }
+      } catch (assignErr) {
+        console.warn('[onUserRegistered] Could not create ManagerEmployeeAssignment:', assignErr.message);
+      }
+    }
+
     // Mark assignment as accepted — keep for audit trail, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
       status: 'accepted',
