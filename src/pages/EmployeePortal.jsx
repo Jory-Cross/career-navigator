@@ -62,7 +62,7 @@ export default function EmployeePortal() {
         <Button variant="ghost" onClick={() => setSelectedEmployeeId(null)} className="gap-2 text-slate-600">
           <ArrowLeft className="w-4 h-4" /> Back to Employees
         </Button>
-        <EmployeeDetail employee={selectedEmployee} currentUser={user} />
+        <EmployeeDetail employee={selectedEmployee} currentUser={user} onOffboarded={() => setSelectedEmployeeId(null)} />
       </div>
     );
   }

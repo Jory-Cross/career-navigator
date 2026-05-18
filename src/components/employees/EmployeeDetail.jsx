@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Clock, CheckSquare, Link as LinkIcon, Filter, ChevronDown, ChevronRight, Camera, Loader2 } from "lucide-react";
+import { Users, Clock, CheckSquare, Link as LinkIcon, Filter, ChevronDown, ChevronRight, Camera, Loader2, UserX } from "lucide-react";
 import EmployeeAccessActions from "@/components/employees/EmployeeAccessActions";
+import EmployeeOffboardingDialog from "@/components/employees/EmployeeOffboardingDialog";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -184,12 +185,13 @@ function TimeEntriesDrillDown({ timeEntries, clients, timePeriod, setTimePeriod,
   );
 }
 
-export default function EmployeeDetail({ employee, currentUser }) {
+export default function EmployeeDetail({ employee, currentUser, onOffboarded }) {
   const [timePeriod, setTimePeriod] = useState("all");
   const [timeClientFilter, setTimeClientFilter] = useState("all");
   const [expandedClient, setExpandedClient] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(employee.avatar_url || null);
+  const [showOffboarding, setShowOffboarding] = useState(false);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
   const initials = `${employee.full_name?.split(' ')[0]?.[0] || ''}${employee.full_name?.split(' ')[1]?.[0] || ''}`;
@@ -284,9 +286,30 @@ export default function EmployeeDetail({ employee, currentUser }) {
         </div>
 
         {/* Access Actions */}
-        <div className="mt-5">
+        <div className="mt-5 flex items-start justify-between gap-3 flex-wrap">
           <EmployeeAccessActions employee={employee} currentUser={currentUser} />
+          {(currentUser?.role === 'admin' || currentUser?.role === 'management') && (
+            <button
+              onClick={() => setShowOffboarding(true)}
+              className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-lg px-3 py-1.5 transition-colors bg-red-50 hover:bg-red-100 shrink-0"
+            >
+              <UserX className="w-3.5 h-3.5" />
+              Offboard Employee
+            </button>
+          )}
         </div>
+
+        <EmployeeOffboardingDialog
+          open={showOffboarding}
+          onOpenChange={setShowOffboarding}
+          employee={employee}
+          currentUser={currentUser}
+          onComplete={() => {
+            queryClient.invalidateQueries(["clients-for-employee", employee.id]);
+            queryClient.invalidateQueries(["all-users"]);
+            onOffboarded?.();
+          }}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-100">
