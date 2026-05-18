@@ -60,7 +60,9 @@ Deno.serve(async (req) => {
 
     // Find all pending role assignments for this email
     const pending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });
-    const pendingOnly = (pending || []).filter(p => p.status === 'pending');
+    const pendingOnly = (pending || []).filter(p =>
+      p.status === 'pending' || p.status === 'invite_email_sent' || p.status === 'pending_email_failed'
+    );
 
     // Filter to only VALID (complete) assignments
     const validPending = pendingOnly.filter(isValidAssignment);

@@ -54,6 +54,8 @@
       "type": "string",
       "enum": [
         "pending",
+        "invite_email_sent",
+        "pending_email_failed",
         "accepted",
         "expired",
         "revoked"
