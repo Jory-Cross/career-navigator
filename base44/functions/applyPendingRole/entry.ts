@@ -20,8 +20,13 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // List only pending assignments
-    const allPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ status: 'pending' });
+    // List all actionable assignments (pending, sent, or failed-email)
+    const [p1, p2, p3] = await Promise.all([
+      base44.asServiceRole.entities.PendingRoleAssignment.filter({ status: 'pending' }),
+      base44.asServiceRole.entities.PendingRoleAssignment.filter({ status: 'invite_email_sent' }),
+      base44.asServiceRole.entities.PendingRoleAssignment.filter({ status: 'pending_email_failed' }),
+    ]);
+    const allPending = [...(p1 || []), ...(p2 || []), ...(p3 || [])];
     if (!allPending || allPending.length === 0) {
       return Response.json({ skipped: true, message: 'No pending assignments' });
     }
@@ -59,6 +64,28 @@ Deno.serve(async (req) => {
 
       console.log(`[applyPendingRole] Applying role='${assignment.role}' access_level='${assignment.access_level}' to ${user.email}`);
       await base44.asServiceRole.entities.User.update(user.id, updateData);
+
+      // Create ManagerEmployeeAssignment for staff roles with a manager link
+      const staffRoles = ['employee', 'management'];
+      if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
+        try {
+          const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+            manager_user_id: assignment.invited_by_id,
+            employee_user_id: user.id,
+          });
+          if (!existing || existing.length === 0) {
+            await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
+              org_id: assignment.org_id,
+              manager_user_id: assignment.invited_by_id,
+              employee_user_id: user.id,
+              is_active: true,
+            });
+            console.log(`[applyPendingRole] Created ManagerEmployeeAssignment manager=${assignment.invited_by_id} employee=${user.id}`);
+          }
+        } catch (err) {
+          console.warn('[applyPendingRole] ManagerEmployeeAssignment error:', err.message);
+        }
+      }
 
       // Mark as accepted — keep for audit, do NOT delete
       await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
