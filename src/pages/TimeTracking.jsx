@@ -351,9 +351,9 @@ const allClients = useMemo(() => {
       return getAllTimeEntries();
     },
     enabled: !!effectiveUser && (effectiveUser.role !== "management" || allUsers.length > 0 || managedEmployeeIds.length >= 0),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     gcTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: false,
     refetchInterval: false,
   });
@@ -776,7 +776,8 @@ if (entryTypeFilter !== "all") {
  }, [timeEntries]);
 
  const handleRefresh = useCallback(async () => {
-  await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"] });
+  await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"], refetchType: "all" });
+  await queryClient.refetchQueries({ queryKey: ["timeTracking", "entries"] });
 }, [queryClient]);
 
   const handleEditEntry = useCallback(

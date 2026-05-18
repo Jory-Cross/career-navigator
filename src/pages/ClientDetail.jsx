@@ -227,9 +227,9 @@ const currentTaskCount = tasks.filter(
     queryKey: queryKeys.timeEntries(clientId),
     queryFn: () => getTimeEntries(clientId),
     enabled: shouldLoadTime,
-    staleTime: 30 * 1000,
+    staleTime: 0,
     gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   const refreshClient = useCallback(() => {
@@ -245,7 +245,8 @@ const currentTaskCount = tasks.filter(
   }, [queryClient, clientId]);
 
   const refreshTimeEntries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries(clientId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries(clientId), refetchType: "all" });
+    queryClient.refetchQueries({ queryKey: queryKeys.timeEntries(clientId) });
   }, [queryClient, clientId]);
 
   const portalUrl = useMemo(() => `/ClientPortal?id=${clientId}`, [clientId]);
