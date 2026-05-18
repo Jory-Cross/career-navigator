@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
@@ -19,9 +19,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email is required' }, { status: 400 });
     }
 
+    // Normalize email to prevent duplicate accounts
+    const normalizedEmail = email.toLowerCase().trim();
     const inviteRole = role || 'employee';
-    const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
-    await base44.users.inviteUser(email, base44Role);
+    const accessLevel = inviteRole === 'admin' ? 'admin' : 'staff';
+    const now = new Date().toISOString();
 
     // Resolve the inviter's org_id
     let orgId = user.org_id || null;
@@ -37,25 +39,54 @@ Deno.serve(async (req) => {
       inviterId = inviterUsers[0].id;
     }
 
-    // access_level for staff roles
-    const accessLevel = inviteRole === 'admin' ? 'admin' : 'staff';
+    // Check if a User account already exists for this email — if so, update in place
+    const existingUsers = await base44.asServiceRole.entities.User.filter({ email: normalizedEmail });
+    if (existingUsers && existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      console.log(`[inviteEmployee] User already exists for ${normalizedEmail} (id=${existingUser.id}), updating role in place.`);
+      await base44.asServiceRole.entities.User.update(existingUser.id, {
+        role: inviteRole,
+        access_level: accessLevel,
+        org_id: orgId,
+        manager_id: inviterId,
+      });
+      return Response.json({ success: true, message: 'Existing account updated with new role', linked_existing: true });
+    }
 
-    // Store pending role + access_level + org_id so all are applied when they register
-    await base44.asServiceRole.entities.PendingRoleAssignment.create({
-      email,
-      role: inviteRole,
-      access_level: accessLevel,
-      status: 'pending',
-      invited_at: new Date().toISOString(),
-      org_id: orgId,
-      invited_by_id: inviterId,
-      invited_by_name: user.full_name || user.email,
-    });
+    // Upsert PendingRoleAssignment — avoid duplicate pending entries for same email+role
+    const existingPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email: normalizedEmail });
+    const samePending = (existingPending || []).find(p =>
+      p.status === 'pending' && p.role === inviteRole && p.access_level === accessLevel
+    );
 
-    console.log(`Invited ${email} as ${inviteRole} for org ${orgId}, manager will be ${inviterId}`);
+    if (samePending) {
+      console.log(`[inviteEmployee] Updating existing pending assignment ${samePending.id} for ${normalizedEmail}`);
+      await base44.asServiceRole.entities.PendingRoleAssignment.update(samePending.id, {
+        org_id: orgId,
+        invited_by_id: inviterId,
+        invited_by_name: user.full_name || user.email,
+        invited_at: now,
+      });
+    } else {
+      await base44.asServiceRole.entities.PendingRoleAssignment.create({
+        email: normalizedEmail,
+        role: inviteRole,
+        access_level: accessLevel,
+        status: 'pending',
+        invited_at: now,
+        org_id: orgId,
+        invited_by_id: inviterId,
+        invited_by_name: user.full_name || user.email,
+      });
+    }
+
+    const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
+    await base44.users.inviteUser(normalizedEmail, base44Role);
+
+    console.log(`[inviteEmployee] Invited ${normalizedEmail} as ${inviteRole} for org ${orgId}, manager will be ${inviterId}`);
     return Response.json({ success: true, message: 'Invitation sent successfully' });
   } catch (error) {
-    console.error('Error inviting employee:', error);
+    console.error('[inviteEmployee] Error:', error);
     return Response.json({ error: error.message, success: false }, { status: 500 });
   }
 });

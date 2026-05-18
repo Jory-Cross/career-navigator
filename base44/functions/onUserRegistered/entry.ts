@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
     const { data, event } = body;
 
     // Resolve the user — prefer payload data, fallback to entity fetch
+    // (declared with let so we can reassign to canonical account if duplicate detected)
     let user = data;
     if (!user?.email && event?.entity_id) {
       const users = await base44.asServiceRole.entities.User.filter({ id: event.entity_id });
@@ -44,6 +45,18 @@ Deno.serve(async (req) => {
 
     const email = user.email.toLowerCase().trim();
     console.log(`[onUserRegistered] Processing: ${email} (current role=${user.role}, access_level=${user.access_level})`);
+
+    // Duplicate account guard: if multiple User records share this email, skip the newer one
+    const allUsersForEmail = await base44.asServiceRole.entities.User.filter({ email });
+    if (allUsersForEmail.length > 1) {
+      // Sort by created_date ascending — oldest is the canonical account
+      const sorted = allUsersForEmail.sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+      const canonical = sorted[0];
+      if (canonical.id !== user.id) {
+        console.warn(`[onUserRegistered] Duplicate account detected for ${email}. Canonical id=${canonical.id}, this id=${user.id}. Applying pending role to canonical account only.`);
+        user = canonical;
+      }
+    }
 
     // Find all pending role assignments for this email
     const pending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });

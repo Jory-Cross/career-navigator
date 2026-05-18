@@ -31,34 +31,68 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Employer portal invitations can only be linked to Pre-ETS clients' }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const now = new Date().toISOString();
 
-    // Remove any stale pending assignments for this email
-    const existing = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });
-    if (existing && existing.length > 0) {
-      for (const old of existing) {
-        await base44.asServiceRole.entities.PendingRoleAssignment.delete(old.id);
-      }
+    // Check if a User account already exists — if so, update in place (no duplicate)
+    const existingUsers = await base44.asServiceRole.entities.User.filter({ email: normalizedEmail });
+    if (existingUsers && existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      console.log(`[invitePreEtsEmployer] User already exists for ${normalizedEmail} (id=${existingUser.id}), updating role in place.`);
+      await base44.asServiceRole.entities.User.update(existingUser.id, {
+        role: 'pre_ets_employer',
+        access_level: 'pre_ets_employer_portal',
+        org_id: user.org_id || null,
+        linked_client_id: clientId,
+      });
+      await base44.asServiceRole.entities.Activity.create({
+        client_id: clientId,
+        org_id: user.org_id || null,
+        activity_type: 'email_sent',
+        title: 'Pre-ETS Employer portal access updated',
+        description: `Existing account for ${normalizedEmail} updated with employer portal access by ${user.full_name || user.email}`,
+      });
+      return Response.json({ success: true, message: 'Existing account updated with employer portal access', linked_existing: true });
     }
 
-    // Create PendingRoleAssignment with pre_ets_employer role + portal access
-    await base44.asServiceRole.entities.PendingRoleAssignment.create({
-      email,
-      role: 'pre_ets_employer',
-      access_level: 'pre_ets_employer_portal',
-      org_id: user.org_id || null,
-      invited_by_id: user.id,
-      invited_by_name: user.full_name || user.email,
-      invited_at: now,
-      client_id: clientId,
-      status: 'pending',
-    });
+    // Upsert PendingRoleAssignment — avoid duplicate pending entries
+    const existing = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email: normalizedEmail });
+    const existingForClient = (existing || []).find(p =>
+      p.status === 'pending' && p.role === 'pre_ets_employer' && p.client_id === clientId
+    );
 
-    console.log(`[invitePreEtsEmployer] PendingRoleAssignment created: email=${email} role=pre_ets_employer client_id=${clientId}`);
+    if (existingForClient) {
+      console.log(`[invitePreEtsEmployer] Updating existing pending assignment ${existingForClient.id} for ${normalizedEmail}`);
+      await base44.asServiceRole.entities.PendingRoleAssignment.update(existingForClient.id, {
+        access_level: 'pre_ets_employer_portal',
+        org_id: user.org_id || null,
+        invited_by_id: user.id,
+        invited_by_name: user.full_name || user.email,
+        invited_at: now,
+      });
+    } else {
+      // Remove any stale pending assignments for this email (different client/role)
+      for (const old of (existing || [])) {
+        await base44.asServiceRole.entities.PendingRoleAssignment.delete(old.id);
+      }
+      await base44.asServiceRole.entities.PendingRoleAssignment.create({
+        email: normalizedEmail,
+        role: 'pre_ets_employer',
+        access_level: 'pre_ets_employer_portal',
+        org_id: user.org_id || null,
+        invited_by_id: user.id,
+        invited_by_name: user.full_name || user.email,
+        invited_at: now,
+        client_id: clientId,
+        status: 'pending',
+      });
+    }
+
+    console.log(`[invitePreEtsEmployer] PendingRoleAssignment upserted: email=${normalizedEmail} role=pre_ets_employer client_id=${clientId}`);
 
     // Send the platform invitation email as "user" — onUserRegistered upgrades to correct role
-    await base44.users.inviteUser(email, 'user');
-    console.log(`[invitePreEtsEmployer] Invitation email sent to ${email}`);
+    await base44.users.inviteUser(normalizedEmail, 'user');
+    console.log(`[invitePreEtsEmployer] Invitation email sent to ${normalizedEmail}`);
 
     // Log activity on the client record
     await base44.asServiceRole.entities.Activity.create({
@@ -66,7 +100,7 @@ Deno.serve(async (req) => {
       org_id: user.org_id || null,
       activity_type: 'email_sent',
       title: 'Pre-ETS Employer portal invitation sent',
-      description: `Employer portal access invitation sent to ${email} by ${user.full_name || user.email}`,
+      description: `Employer portal access invitation sent to ${normalizedEmail} by ${user.full_name || user.email}`,
     });
 
     return Response.json({ success: true, message: 'Pre-ETS Employer invitation sent successfully' });
