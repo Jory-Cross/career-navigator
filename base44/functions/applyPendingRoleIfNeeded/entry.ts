@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
       return Response.json({ upgraded: false, reason: 'already_assigned' });
     }
 
-    console.log(`[applyPendingRoleIfNeeded] Checking pending assignments for ${email} (role=${currentRole}, access=${currentAccess})`);
+    console.log(`[applyPendingRoleIfNeeded] ── Invite upgrade check ──`);
+    console.log(`[applyPendingRoleIfNeeded] Invited email: ${email} | current role=${currentRole} | access=${currentAccess}`);
 
     // Look up all pending assignments for this email
     const pending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });
@@ -76,7 +77,8 @@ Deno.serve(async (req) => {
       (a, b) => new Date(b.invited_at || b.created_date) - new Date(a.invited_at || a.created_date)
     )[0];
 
-    console.log(`[applyPendingRoleIfNeeded] Applying: role=${assignment.role} access_level=${assignment.access_level} org_id=${assignment.org_id} client_id=${assignment.client_id} to ${email}`);
+    console.log(`[applyPendingRoleIfNeeded] Matching PendingRoleAssignment found: id=${assignment.id} role=${assignment.role} access_level=${assignment.access_level} org_id=${assignment.org_id} invited_by_id=${assignment.invited_by_id}`);
+    console.log(`[applyPendingRoleIfNeeded] Applying role=${assignment.role} access_level=${assignment.access_level} to ${email}`);
 
     const updateData = {
       role: assignment.role,
@@ -123,6 +125,10 @@ Deno.serve(async (req) => {
 
     // Mark the applied assignment as accepted — keep it for audit, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
+
+    console.log(`[applyPendingRoleIfNeeded] ✓ User ${email} upgraded: role=${updateData.role} access_level=${updateData.access_level} org_id=${updateData.org_id}`);
+    console.log(`[applyPendingRoleIfNeeded] ✓ PendingRoleAssignment ${assignment.id} marked accepted`);
+    console.log(`[applyPendingRoleIfNeeded] ► Employee must sign out and back in for session claims to refresh`);
 
     return Response.json({ upgraded: true, applied: updateData });
   } catch (error) {
