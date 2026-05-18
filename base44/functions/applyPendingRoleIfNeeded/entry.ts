@@ -87,15 +87,39 @@ Deno.serve(async (req) => {
     if (assignment.invited_by_id) updateData.manager_id = assignment.invited_by_id;
     if (assignment.client_id) updateData.linked_client_id = assignment.client_id;
 
-    // Find the user record by email to get their id for the update
-    const users = await base44.asServiceRole.entities.User.filter({ email });
-    const userRecord = users?.[0];
-    if (!userRecord) {
-      return Response.json({ error: 'User record not found' }, { status: 404 });
+    // Use the authenticated user's own ID directly — no need to filter by email
+    // (base44.auth.me() already returned the correct user object with their id)
+    const userId = user.id;
+    if (!userId) {
+      return Response.json({ error: 'Could not determine user ID from session' }, { status: 400 });
     }
 
-    await base44.asServiceRole.entities.User.update(userRecord.id, updateData);
-    console.log(`[applyPendingRoleIfNeeded] Updated ${email}:`, updateData);
+    await base44.asServiceRole.entities.User.update(userId, updateData);
+    console.log(`[applyPendingRoleIfNeeded] Updated user id=${userId} email=${email}:`, updateData);
+
+    // Create ManagerEmployeeAssignment for staff roles with a manager link
+    const staffRoles = ['employee', 'management'];
+    if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
+      try {
+        const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+          manager_user_id: assignment.invited_by_id,
+          employee_user_id: userId,
+        });
+        if (!existing || existing.length === 0) {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
+            org_id: assignment.org_id,
+            manager_user_id: assignment.invited_by_id,
+            employee_user_id: userId,
+            is_active: true,
+          });
+          console.log(`[applyPendingRoleIfNeeded] Created ManagerEmployeeAssignment manager=${assignment.invited_by_id} employee=${userId}`);
+        } else {
+          console.log(`[applyPendingRoleIfNeeded] ManagerEmployeeAssignment already exists, skipping.`);
+        }
+      } catch (assignErr) {
+        console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
+      }
+    }
 
     // Mark the applied assignment as accepted — keep it for audit, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });

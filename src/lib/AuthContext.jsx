@@ -130,8 +130,11 @@ export const AuthProvider = ({ children }) => {
         try {
           const result = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
           if (result?.data?.upgraded) {
-            console.log('[Auth] Pending role applied, re-fetching user...');
-            currentUser = await base44.auth.me();
+            console.log('[Auth] Pending role applied — doing hard reload for fresh session...');
+            // Hard reload required: auth session/claims are cached and won't reflect
+            // the DB update until a fresh token is issued on next load.
+            window.location.reload();
+            return; // stop further processing — page will reload
           }
         } catch (upgradeErr) {
           // Non-fatal — if upgrade fails, user stays denied which is correct
