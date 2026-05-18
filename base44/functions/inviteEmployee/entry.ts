@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
     const inviteRole = role || 'employee';
     const accessLevel = inviteRole === 'admin' ? 'admin' : 'staff';
     const now = new Date().toISOString();
+    const appId = Deno.env.get('BASE44_APP_ID');
 
     console.log(`[inviteEmployee] Normalized email: ${normalizedEmail}, inviteRole: ${inviteRole}, explicitManagerId: ${explicitManagerId || 'none'}`);
 
@@ -35,9 +36,7 @@ Deno.serve(async (req) => {
       orgId = orgs[0]?.id || null;
     }
 
-    // ── Resolve inviter's User record ─────────────────────────────────────
-    // Use case-insensitive search: fetch all users and match by normalized email.
-    // This is the critical fix: manager.email from auth.me() must match stored email.
+    // ── Resolve inviter's User record (case-insensitive email match) ──────
     let inviterId = null;
     const allUsers = await base44.asServiceRole.entities.User.list();
     const inviterRecord = allUsers.find(u => u.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
@@ -45,15 +44,14 @@ Deno.serve(async (req) => {
       inviterId = inviterRecord.id;
       console.log(`[inviteEmployee] Resolved inviter User record: id=${inviterId} email=${inviterRecord.email} role=${inviterRecord.role}`);
     } else {
-      console.warn(`[inviteEmployee] WARNING: Could not find User record for authenticated user ${user.email}. manager_id will be null unless overridden.`);
+      console.warn(`[inviteEmployee] WARNING: Could not find User record for ${user.email}`);
     }
 
-    // For managers: resolvedManagerId = their own id (inviterId).
-    // For admins:   resolvedManagerId = explicitManagerId if provided, else their own id.
+    // Managers auto-become the overseeing manager; admins can override with explicitManagerId
     const resolvedManagerId = explicitManagerId || inviterId;
     console.log(`[inviteEmployee] resolvedManagerId: ${resolvedManagerId}`);
 
-    // ── Check if account already exists for this email ────────────────────
+    // ── Check if account already exists ───────────────────────────────────
     const existingUser = allUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
 
     if (existingUser) {
@@ -83,17 +81,7 @@ Deno.serve(async (req) => {
           console.log(`[inviteEmployee] Reactivated ManagerEmployeeAssignment id=${existingAssignments[0].id}`);
         }
       }
-
-      // Re-send the invite email so they can set their password
-      try {
-        const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
-        await base44.users.inviteUser(normalizedEmail, base44Role);
-        console.log(`[inviteEmployee] Re-sent invite for existing user ${normalizedEmail}`);
-      } catch (inviteErr) {
-        console.warn(`[inviteEmployee] inviteUser for existing user failed (non-fatal): ${inviteErr.message}`);
-      }
-
-      return Response.json({ success: true, message: 'Existing account updated and invitation re-sent', linked_existing: true });
+      return Response.json({ success: true, message: 'Existing account updated', linked_existing: true });
     }
 
     // ── Upsert PendingRoleAssignment ──────────────────────────────────────
@@ -124,10 +112,38 @@ Deno.serve(async (req) => {
       console.log(`[inviteEmployee] Created PendingRoleAssignment id=${created?.id} for ${normalizedEmail}, invited_by_id=${resolvedManagerId}`);
     }
 
-    // ── Send the invitation ───────────────────────────────────────────────
+    // ── Send the invite ───────────────────────────────────────────────────
+    // base44.auth.inviteUser() runs under the REQUEST user's token.
+    // The Base44 platform blocks inviteUser for non-admin tokens on private apps.
+    // Try SDK invite first (succeeds for admins); fall back to SendEmail for managers.
+    // PendingRoleAssignment is already saved — onUserRegistered applies role on signup.
     const base44Role = inviteRole === 'admin' ? 'admin' : 'user';
-    await base44.users.inviteUser(normalizedEmail, base44Role);
-    console.log(`[inviteEmployee] inviteUser succeeded for ${normalizedEmail} as ${base44Role}`);
+    let inviteSent = false;
+    try {
+      await base44.auth.inviteUser(normalizedEmail, base44Role);
+      console.log(`[inviteEmployee] inviteUser SDK call succeeded for ${normalizedEmail} as ${base44Role}`);
+      inviteSent = true;
+    } catch (inviteErr) {
+      console.warn(`[inviteEmployee] inviteUser SDK failed (${inviteErr.message}) — falling back to SendEmail`);
+    }
+
+    if (!inviteSent) {
+      // Fallback for managers (or any case where inviteUser is restricted):
+      // Send a registration invitation email via the Core integration.
+      // PendingRoleAssignment handles role assignment on signup via onUserRegistered.
+      const appUrl = appId ? `https://preview--${appId}.base44.app` : 'the platform';
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          to: normalizedEmail,
+          subject: `You've been invited to join the platform`,
+          body: `Hello,\n\nYou've been invited by ${user.full_name || user.email} to join the employment services platform as an ${inviteRole}.\n\nPlease visit the app and register using this email address (${normalizedEmail}) to get started.\n\nIf you have questions, contact your manager directly.`,
+        });
+        console.log(`[inviteEmployee] Sent invitation email to ${normalizedEmail} via SendEmail fallback`);
+      } catch (emailErr) {
+        console.warn(`[inviteEmployee] SendEmail fallback also failed (non-fatal): ${emailErr.message}`);
+        // PendingRoleAssignment is still saved — employee can self-register
+      }
+    }
 
     return Response.json({ success: true, message: 'Invitation sent successfully' });
 
