@@ -16,7 +16,11 @@ Deno.serve(async (req) => {
     // Use service role to list all users (bypasses frontend permission check)
     const allUsers = await base44.asServiceRole.entities.User.list();
 
-    return Response.json({ users: allUsers });
+    // Separate active vs inactive so the UI can show them differently
+    const activeUsers = allUsers.filter(u => u.is_active !== false);
+    const inactiveUsers = allUsers.filter(u => u.is_active === false);
+
+    return Response.json({ users: activeUsers, inactive_users: inactiveUsers });
   } catch (error) {
     console.error('getOrgUsers error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

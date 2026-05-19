@@ -105,8 +105,8 @@ function ManagerSection({ manager, allUsers, allAdmins, currentUser, onSelectEmp
   const [editingAdmin, setEditingAdmin] = useState(false);
   const qc = useQueryClient();
 
-  const employees = allUsers.filter(u => u.role === 'employee' && u.manager_id === manager.id);
-  const allManagers = allUsers.filter(u => u.role === 'management');
+  const employees = allUsers.filter(u => u.role === 'employee' && u.manager_id === manager.id && u.is_active !== false);
+  const allManagers = allUsers.filter(u => u.role === 'management' && u.is_active !== false);
   const managerClientCount = allClients.filter(c => employees.some(e => e.id === c.assigned_employee_id)).length;
 
   const assignAdmin = useMutation({
@@ -181,7 +181,7 @@ function ManagerSection({ manager, allUsers, allAdmins, currentUser, onSelectEmp
               <EmployeeRow
                 key={emp.id}
                 employee={emp}
-                allManagers={allUsers.filter(u => u.role === 'management')}
+                allManagers={allUsers.filter(u => u.role === 'management' && u.is_active !== false)}
                 allClients={allClients}
                 onSelectEmployee={onSelectEmployee}
               />
@@ -194,9 +194,11 @@ function ManagerSection({ manager, allUsers, allAdmins, currentUser, onSelectEmp
 }
 
 export default function AdminHierarchyView({ allUsers, currentUser, onSelectEmployee }) {
-  const allAdmins = allUsers.filter(u => u.role === 'admin');
-  const allManagers = allUsers.filter(u => u.role === 'management');
-  const allEmployees = allUsers.filter(u => u.role === 'employee');
+  // Only show active users in all hierarchy views
+  const activeUsers = allUsers.filter(u => u.is_active !== false);
+  const allAdmins = activeUsers.filter(u => u.role === 'admin');
+  const allManagers = activeUsers.filter(u => u.role === 'management');
+  const allEmployees = activeUsers.filter(u => u.role === 'employee');
 
   // Employees with no manager assigned
   const unassignedEmployees = allEmployees.filter(e => !e.manager_id || !allManagers.find(m => m.id === e.manager_id));

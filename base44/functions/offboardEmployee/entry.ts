@@ -81,10 +81,14 @@ Deno.serve(async (req) => {
     );
 
     // ── 5. Deactivate the employee's app access ───────────────────────────
-    // Set is_active=false — AuthContext will block them on next login.
-    // Do NOT clear role/access_level to preserve audit trail.
-    await base44.asServiceRole.entities.User.update(employee_id, { is_active: false });
-    console.log(`[offboardEmployee] Set is_active=false for user id=${employee_id}`);
+    // Clear access_level so stale JWT sessions can't pass classifyUserAccess
+    // even before the session token expires. is_active=false blocks fresh logins.
+    // role is preserved for audit trail.
+    await base44.asServiceRole.entities.User.update(employee_id, {
+      is_active: false,
+      access_level: null,
+    });
+    console.log(`[offboardEmployee] Set is_active=false + cleared access_level for user id=${employee_id}`);
 
     // ── 6. Revoke all PendingRoleAssignment records for this email ────────
     // This prevents old accepted invites from re-granting access if the user
