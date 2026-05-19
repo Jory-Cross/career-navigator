@@ -214,6 +214,13 @@ export default function ClientPortal() {
     base44.entities.FeaturePermission.filter({ role: permissionRole })
       .then((rows) => {
         console.log(`[ClientPortal] Loaded ${rows.length} permission records for role "${permissionRole}":`, rows);
+        
+        // Log raw record structure for debugging
+        if (rows.length > 0) {
+          console.log("[ClientPortal] RAW FIRST RECORD:", rows[0]);
+          console.log("[ClientPortal] Record keys:", Object.keys(rows[0]));
+        }
+        
         const map = {};
         
         // STRICT DENY-BY-DEFAULT: Initialize all tabs as hidden (false)
@@ -221,13 +228,38 @@ export default function ClientPortal() {
           map[tab.featureKey] = false;
         });
         
-        // Only enable tabs that have explicit visible === true records
+        // Defensively extract field values with fallbacks
         rows.forEach((record) => {
-          if (record.visible === true) {
-            map[record.feature_key] = true;
-            console.log(`[ClientPortal] Enabled tab "${record.feature_key}" (visible: true)`);
+          // Try multiple possible field names for feature_key
+          const featureKey =
+            record.feature_key ||
+            record.featureKey ||
+            record.key ||
+            record.data?.feature_key ||
+            record.data?.featureKey ||
+            record.data?.key;
+          
+          // Try multiple possible field names for visible
+          const visible =
+            record.visible ??
+            record.data?.visible;
+          
+          console.log(`[ClientPortal] Record inspection:`, {
+            featureKey,
+            visible,
+            visible_type: typeof visible,
+            record_keys: Object.keys(record)
+          });
+          
+          if (featureKey) {
+            map[featureKey] = visible === true;
+            if (visible === true) {
+              console.log(`[ClientPortal] ✓ ENABLED tab "${featureKey}" (visible: true)`);
+            } else {
+              console.log(`[ClientPortal] ✗ Tab "${featureKey}" hidden (visible: ${visible})`);
+            }
           } else {
-            console.log(`[ClientPortal] Tab "${record.feature_key}" hidden (visible: ${record.visible})`);
+            console.warn(`[ClientPortal] ⚠ Could not extract featureKey from record:`, record);
           }
         });
         
