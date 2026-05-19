@@ -21,7 +21,7 @@ import {
 
 } from "@/lib/api/clientPortalApi";
 import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSection";
-import ClockInOut from "@/components/preets/ClockInOut";
+import ClockInOut from "@/components/pre-ets/ClockInOut";
 import { base44 } from "@/api/base44Client";
 
 const STAFF_ROLES = ["admin", "management", "employee"];
