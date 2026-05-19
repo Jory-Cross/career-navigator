@@ -24,15 +24,24 @@ import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSec
 import ClockInOut from "@/components/pre-ets/ClockInOut";
 import { base44 } from "@/api/base44Client";
 
+// General portal tab definitions with their feature keys
+const GENERAL_TABS = [
+  { value: "intake",           label: "Intake Forms",    featureKey: "client_portal_intake_forms" },
+  { value: "applications",     label: "Applications",    featureKey: "client_portal_applications" },
+  { value: "recommendations",  label: "Recommendations", featureKey: "client_portal_recommendations" },
+  { value: "tasks",            label: "Tasks",           featureKey: "client_portal_tasks" },
+  { value: "documents",        label: "Documents",       featureKey: "client_portal_documents" },
+];
+
 // Pre-ETS portal tab definitions with their feature keys
 const PRE_ETS_TABS = [
-  { value: "clock",             label: "Clock In/Out",        featureKey: "client_portal_clock_in_out" },
-  { value: "program_checklist", label: "Program Checklist",   featureKey: "client_portal_program_checklist" },
+  { value: "clock",             label: "Clock In/Out",          featureKey: "client_portal_clock_in_out" },
+  { value: "program_checklist", label: "Program Checklist",     featureKey: "client_portal_program_checklist" },
   { value: "iep",               label: "IEP & Transition Plan", featureKey: "client_portal_iep_transition_plan" },
-  { value: "skills",            label: "Skills Exploration",  featureKey: "client_portal_skills_exploration" },
-  { value: "assessments",       label: "Assessments",         featureKey: "client_portal_assessments" },
-  { value: "wble",              label: "WBLE Forms",          featureKey: "client_portal_wble_forms" },
-  { value: "meetings",          label: "Meetings",            featureKey: "client_portal_meetings" },
+  { value: "skills",            label: "Skills Exploration",    featureKey: "client_portal_skills_exploration" },
+  { value: "assessments",       label: "Assessments",           featureKey: "client_portal_assessments" },
+  { value: "wble",              label: "WBLE Forms",            featureKey: "client_portal_wble_forms" },
+  { value: "meetings",          label: "Meetings",              featureKey: "client_portal_meetings" },
 ];
 
 const STAFF_ROLES = ["admin", "management", "employee"];
@@ -62,7 +71,7 @@ export default function ClientPortal() {
   const [client, setClient] = useState(null);
   const [user, setUser] = useState(null);
   const [bootError, setBootError] = useState("");
-  const [preEtsTabPermissions, setPreEtsTabPermissions] = useState(null); // null = not loaded yet
+  const [portalPermissions, setPortalPermissions] = useState(null); // null = not loaded yet
   const [activeTab, setActiveTab] = useState(() => getTabFromUrl());
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -172,29 +181,36 @@ export default function ClientPortal() {
     };
   }, [clientIdFromUrl]);
 
-  // Load Pre-ETS portal tab permissions once client is resolved
+  // Load portal tab permissions for the logged-in user's role (client / pre_ets / dspd)
   useEffect(() => {
-    if (!client) return;
-    const isPreEts = client.client_type === "pre_ets" || client.client_type === "Pre-ETS";
-    if (!isPreEts) return;
+    if (!user || !client) return;
+    const portalRole = user.role; // "client", "pre_ets", "dspd", or staff
 
-    base44.entities.FeaturePermission.filter({ role: "pre_ets" })
+    // Only fetch for client-facing roles; staff viewing the portal see everything
+    if (!["client", "pre_ets", "dspd"].includes(portalRole)) {
+      setPortalPermissions({}); // staff → no restrictions
+      return;
+    }
+
+    const allTabs = [...GENERAL_TABS, ...PRE_ETS_TABS];
+
+    base44.entities.FeaturePermission.filter({ role: portalRole })
       .then((rows) => {
         const map = {};
-        PRE_ETS_TABS.forEach((tab) => {
+        allTabs.forEach((tab) => {
           const record = rows.find((r) => r.feature_key === tab.featureKey);
-          // Default to visible=true if no record exists (opt-out model for portal tabs)
+          // Default to visible=true (opt-out model for portal tabs)
           map[tab.featureKey] = record ? record.visible !== false : true;
         });
-        setPreEtsTabPermissions(map);
+        setPortalPermissions(map);
       })
       .catch(() => {
         // On error, default all tabs to visible
         const map = {};
-        PRE_ETS_TABS.forEach((tab) => { map[tab.featureKey] = true; });
-        setPreEtsTabPermissions(map);
+        allTabs.forEach((tab) => { map[tab.featureKey] = true; });
+        setPortalPermissions(map);
       });
-  }, [client]);
+  }, [user, client]);
 
   /**
    * Queries
@@ -223,25 +239,35 @@ export default function ClientPortal() {
   refetchOnWindowFocus: true,
   refetchInterval: 10 * 1000,
 });
-  // Compute which Pre-ETS tabs are allowed based on permissions
-  const allowedPreEtsTabs = useMemo(() => {
-    if (!preEtsTabPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded yet → allow all
-    return PRE_ETS_TABS.filter((t) => preEtsTabPermissions[t.featureKey] !== false).map((t) => t.value);
-  }, [preEtsTabPermissions]);
+  const isPreEtsClient = client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS";
 
-  // If current tab is a disabled Pre-ETS tab, redirect to first allowed tab or "intake"
+  // Compute which general tabs are allowed
+  const allowedGeneralTabs = useMemo(() => {
+    if (!portalPermissions) return GENERAL_TABS.map((t) => t.value); // not loaded → allow all
+    // For staff viewing a client portal, no restrictions
+    if (user && !["client", "pre_ets", "dspd"].includes(user.role)) return GENERAL_TABS.map((t) => t.value);
+    return GENERAL_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
+  }, [portalPermissions, user]);
+
+  // Compute which Pre-ETS tabs are allowed
+  const allowedPreEtsTabs = useMemo(() => {
+    if (!portalPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded → allow all
+    if (user && !["client", "pre_ets", "dspd"].includes(user.role)) return PRE_ETS_TABS.map((t) => t.value);
+    return PRE_ETS_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
+  }, [portalPermissions, user]);
+
+  // If current tab is hidden, redirect to first allowed tab; if none exist, fall back to "intake"
   useEffect(() => {
-    if (!preEtsTabPermissions) return;
-    const isPreEtsTab = PRE_ETS_TABS.some((t) => t.value === activeTab);
-    if (!isPreEtsTab) return;
-    if (!allowedPreEtsTabs.includes(activeTab)) {
-      const fallback = allowedPreEtsTabs[0] || "intake";
+    if (!portalPermissions) return;
+    const allAllowed = [...allowedGeneralTabs, ...allowedPreEtsTabs];
+    if (!allAllowed.includes(activeTab)) {
+      const fallback = allowedGeneralTabs[0] || allAllowed[0] || "intake";
       setActiveTab(fallback);
       const params = new URLSearchParams(window.location.search);
       params.set("tab", fallback);
       window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
     }
-  }, [preEtsTabPermissions, activeTab, allowedPreEtsTabs]);
+  }, [portalPermissions, activeTab, allowedGeneralTabs, allowedPreEtsTabs]);
 
   const activeTaskCount = useMemo(() => {
   if (!Array.isArray(tasks)) return 0;
@@ -472,37 +498,45 @@ setCompletionNote("");
   }}
 >
                        <TabsList>
-          <TabsTrigger value="intake">Intake Forms</TabsTrigger>
+          {allowedGeneralTabs.includes("intake") && (
+            <TabsTrigger value="intake">Intake Forms</TabsTrigger>
+          )}
 
-          <TabsTrigger value="applications">Applications</TabsTrigger>
+          {allowedGeneralTabs.includes("applications") && (
+            <TabsTrigger value="applications">Applications</TabsTrigger>
+          )}
 
-          <TabsTrigger value="recommendations">
-            <div className="flex items-center gap-2">
-              <span>Recommendations</span>
+          {allowedGeneralTabs.includes("recommendations") && (
+            <TabsTrigger value="recommendations">
+              <div className="flex items-center gap-2">
+                <span>Recommendations</span>
+                {pendingRecommendationCount > 0 && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                    {pendingRecommendationCount}
+                  </span>
+                )}
+              </div>
+            </TabsTrigger>
+          )}
 
-              {pendingRecommendationCount > 0 && (
-                <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-                  {pendingRecommendationCount}
-                </span>
-              )}
-            </div>
-          </TabsTrigger>
+          {allowedGeneralTabs.includes("tasks") && (
+            <TabsTrigger value="tasks">
+              <div className="flex items-center gap-2">
+                <span>Tasks</span>
+                {activeTaskCount > 0 && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                    {activeTaskCount}
+                  </span>
+                )}
+              </div>
+            </TabsTrigger>
+          )}
 
-          <TabsTrigger value="tasks">
-            <div className="flex items-center gap-2">
-              <span>Tasks</span>
+          {allowedGeneralTabs.includes("documents") && (
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+          )}
 
-              {activeTaskCount > 0 && (
-                <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-                  {activeTaskCount}
-                </span>
-              )}
-            </div>
-          </TabsTrigger>
-
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-
-          {(client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS") &&
+          {isPreEtsClient &&
             PRE_ETS_TABS.filter((t) => allowedPreEtsTabs.includes(t.value)).map((t) => (
               <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
             ))
@@ -775,8 +809,7 @@ setCompletionNote("");
             </div>
           )}
         </TabsContent>
-       {(client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS") &&
-  allowedPreEtsTabs.includes("clock") && (
+       {isPreEtsClient && allowedPreEtsTabs.includes("clock") && (
   <TabsContent value="clock" className="space-y-4">
     <ClockInOut
       clientId={client.id}
