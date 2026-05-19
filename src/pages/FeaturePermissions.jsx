@@ -54,7 +54,7 @@ function roleAppliesTo(roleKey, category) {
 // ──────────────────────────────────────────────
 // Sub-component: a single permissions table
 // ──────────────────────────────────────────────
-function PermissionsTable({ grouped, roles, permissions, onToggle, defaultVisible }) {
+function PermissionsTable({ grouped, roles, permissions, onToggle, defaultVisible, savingToggle }) {
   const colCount = roles.length;
 
   return (
@@ -105,15 +105,22 @@ function PermissionsTable({ grouped, roles, permissions, onToggle, defaultVisibl
                 // opt-out model: default to defaultVisible if no record
                 const isVisible = perm !== undefined ? perm.visible : defaultVisible;
 
+                const toggleKey = `${role.key}__${feat.key}`;
+                const isSaving = savingToggle[toggleKey];
+
                 return (
                   <div key={role.key} className="px-4 py-3 flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={isVisible}
                         onCheckedChange={() => onToggle(role.key, feat.key)}
+                        disabled={isSaving}
                       />
-                      <span className={cn("text-xs font-medium", isVisible ? "text-emerald-600" : "text-slate-400")}>
-                        {isVisible ? "On" : "Off"}
+                      <span className={cn(
+                        "text-xs font-medium",
+                        isSaving ? "text-slate-400" : isVisible ? "text-emerald-600" : "text-slate-400"
+                      )}>
+                        {isSaving ? "Saving..." : isVisible ? "On" : "Off"}
                       </span>
                     </div>
                   </div>
@@ -134,6 +141,7 @@ export default function FeaturePermissions() {
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
+  const [savingToggle, setSavingToggle] = useState({}); // { "role__featureKey": true }
 
   useEffect(() => { loadPermissions(); }, []);
 
@@ -163,30 +171,87 @@ export default function FeaturePermissions() {
     }
   }
 
-  function toggle(role, featureKey) {
-    setPermissions((prev) => {
-      const current = prev[role]?.[featureKey];
-      // resolve current visibility; staff defaults false, client-portal defaults true
-      const isClientPortalKey = featureKey.startsWith("client_portal_");
-      const currentVisible = current !== undefined
-        ? current.visible
-        : isClientPortalKey; // default true for portal, false for staff
+  async function toggle(role, featureKey) {
+    // Get current state for rollback
+    const current = permissions[role]?.[featureKey];
+    const isClientPortalKey = featureKey.startsWith("client_portal_");
+    const currentVisible = current !== undefined
+      ? current.visible
+      : isClientPortalKey;
+    
+    const newVisible = !currentVisible;
+    const toggleKey = `${role}__${featureKey}`;
 
-      const newState = !currentVisible;
-      console.log(`[FeaturePermissions] Toggle ${role}/${featureKey}: ${currentVisible} → ${newState}`);
+    // Optimistically update UI
+    setPermissions((prev) => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [featureKey]: {
+          ...(current || {}),
+          visible: newVisible,
+          can_interact: current?.can_interact ?? true,
+        },
+      },
+    }));
 
-      return {
+    // Mark this toggle as saving
+    setSavingToggle((prev) => ({ ...prev, [toggleKey]: true }));
+
+    try {
+      console.log(`[FeaturePermissions] Auto-saving toggle ${role}/${featureKey}: ${currentVisible} → ${newVisible}`);
+
+      // Try to find existing record
+      const allRecords = await base44.entities.FeaturePermission.list();
+      const existingRecord = allRecords.find(
+        (r) => r.role === role && r.feature_key === featureKey
+      );
+
+      const payload = {
+        role,
+        feature_key: featureKey,
+        visible: newVisible,
+        can_interact: current?.can_interact ?? true,
+      };
+
+      // Fetch feature definition to get label and category
+      const allDefs = [...FEATURE_DEFINITIONS, ...CLIENT_PORTAL_FEATURE_DEFINITIONS];
+      const featDef = allDefs.find((f) => f.key === featureKey);
+      if (featDef) {
+        payload.label = featDef.label;
+        payload.category = featDef.category;
+      }
+
+      if (existingRecord) {
+        console.log(`[FeaturePermissions] Updating existing record ${existingRecord.id}`);
+        await base44.entities.FeaturePermission.update(existingRecord.id, payload);
+      } else {
+        console.log(`[FeaturePermissions] Creating new record for ${role}/${featureKey}`);
+        await base44.entities.FeaturePermission.create(payload);
+      }
+
+      bustPermissionsCache();
+      toast.success(`${featureKey} ${newVisible ? "enabled" : "disabled"}`);
+      console.log(`[FeaturePermissions] ✓ Auto-save successful for ${toggleKey}`);
+    } catch (error) {
+      console.error(`[FeaturePermissions] Auto-save failed for ${toggleKey}:`, error);
+      toast.error(`Failed to save ${featureKey}`);
+
+      // Rollback on error
+      setPermissions((prev) => ({
         ...prev,
         [role]: {
           ...prev[role],
           [featureKey]: {
             ...(current || {}),
-            visible: newState,
+            visible: currentVisible,
             can_interact: current?.can_interact ?? true,
           },
         },
-      };
-    });
+      }));
+    } finally {
+      setSavingToggle((prev) => ({ ...prev, [toggleKey]: false }));
+    }
   }
 
   async function saveAll() {
@@ -334,6 +399,7 @@ export default function FeaturePermissions() {
           permissions={permissions}
           onToggle={toggle}
           defaultVisible={false}
+          savingToggle={savingToggle}
         />
       </section>
 
@@ -353,6 +419,7 @@ export default function FeaturePermissions() {
           permissions={permissions}
           onToggle={toggle}
           defaultVisible={true}
+          savingToggle={savingToggle}
         />
       </section>
 
