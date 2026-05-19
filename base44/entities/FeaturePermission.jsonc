@@ -1,7 +1,7 @@
 {
   "name": "FeaturePermission",
   "type": "object",
-  "description": "Controls which features/pages are visible and interactive per staff role.",
+  "description": "Controls which features/pages are visible and interactive per staff role or client portal role.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -12,13 +12,16 @@
       "enum": [
         "admin",
         "management",
-        "employee"
+        "employee",
+        "client",
+        "pre_ets",
+        "dspd"
       ],
-      "description": "Staff role this permission applies to"
+      "description": "Staff role (admin/management/employee) or client portal role (client/pre_ets/dspd)"
     },
     "feature_key": {
       "type": "string",
-      "description": "Unique key for the feature (e.g. time_tracking, clients, documents)"
+      "description": "Unique key for the feature (e.g. time_tracking, clients, client_portal_intake_forms)"
     },
     "label": {
       "type": "string",
@@ -26,7 +29,7 @@
     },
     "category": {
       "type": "string",
-      "description": "Grouping category (e.g. core, clinical, admin)"
+      "description": "Grouping category (e.g. core, clinical, admin, client_portal)"
     },
     "visible": {
       "type": "boolean",

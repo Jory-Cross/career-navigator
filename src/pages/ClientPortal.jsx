@@ -186,8 +186,11 @@ export default function ClientPortal() {
     if (!user || !client) return;
     const portalRole = user.role; // "client", "pre_ets", "dspd", or staff
 
+    console.log("[ClientPortal] Logged-in user role:", portalRole);
+
     // Only fetch for client-facing roles; staff viewing the portal see everything
     if (!["client", "pre_ets", "dspd"].includes(portalRole)) {
+      console.log("[ClientPortal] Staff user detected, skipping permission fetch");
       setPortalPermissions({}); // staff → no restrictions
       return;
     }
@@ -196,15 +199,19 @@ export default function ClientPortal() {
 
     base44.entities.FeaturePermission.filter({ role: portalRole })
       .then((rows) => {
+        console.log(`[ClientPortal] Loaded ${rows.length} permission records for role "${portalRole}":`, rows);
         const map = {};
         allTabs.forEach((tab) => {
           const record = rows.find((r) => r.feature_key === tab.featureKey);
-          // Default to visible=true (opt-out model for portal tabs)
+          // Explicit visible=false means hidden; missing record defaults to true (opt-out model)
           map[tab.featureKey] = record ? record.visible !== false : true;
+          console.log(`[ClientPortal] Tab "${tab.featureKey}": record=${!!record}, visible=${map[tab.featureKey]}`);
         });
+        console.log("[ClientPortal] Final permissions map:", map);
         setPortalPermissions(map);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("[ClientPortal] Permission fetch failed:", error);
         // On error, default all tabs to visible
         const map = {};
         allTabs.forEach((tab) => { map[tab.featureKey] = true; });
@@ -463,6 +470,22 @@ setCompletionNote("");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If all tabs are hidden, show empty state
+  const allAllowedTabs = [...allowedGeneralTabs, ...allowedPreEtsTabs];
+  if (portalPermissions && allAllowedTabs.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-sm w-full rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm space-y-4">
+          <div className="text-4xl">🔒</div>
+          <h2 className="text-lg font-semibold text-slate-800">No Portal Features Enabled</h2>
+          <p className="text-sm text-slate-500">
+            Your administrator has not enabled any portal features at this time. Please contact support if you believe this is an error.
+          </p>
+        </div>
       </div>
     );
   }
@@ -822,6 +845,42 @@ setCompletionNote("");
     />
   </TabsContent>
 )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("program_checklist") && (
+          <TabsContent value="program_checklist" className="space-y-4">
+            <div className="text-sm text-muted-foreground">Program Checklist — Coming Soon</div>
+          </TabsContent>
+        )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("iep") && (
+          <TabsContent value="iep" className="space-y-4">
+            <div className="text-sm text-muted-foreground">IEP & Transition Plan — Coming Soon</div>
+          </TabsContent>
+        )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("skills") && (
+          <TabsContent value="skills" className="space-y-4">
+            <div className="text-sm text-muted-foreground">Skills Exploration — Coming Soon</div>
+          </TabsContent>
+        )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("assessments") && (
+          <TabsContent value="assessments" className="space-y-4">
+            <div className="text-sm text-muted-foreground">Assessments — Coming Soon</div>
+          </TabsContent>
+        )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("wble") && (
+          <TabsContent value="wble" className="space-y-4">
+            <div className="text-sm text-muted-foreground">WBLE Forms — Coming Soon</div>
+          </TabsContent>
+        )}
+
+        {isPreEtsClient && allowedPreEtsTabs.includes("meetings") && (
+          <TabsContent value="meetings" className="space-y-4">
+            <div className="text-sm text-muted-foreground">Meetings — Coming Soon</div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* CREATE APPLICATION */}
