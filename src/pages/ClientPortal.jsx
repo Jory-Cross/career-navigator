@@ -737,7 +737,10 @@ setCompletionNote("");
             </div>
           )}
         </TabsContent>
-       {client?.client_type === "pre_ets" && (
+       {(
+  client?.client_type === "pre_ets" ||
+  client?.client_type === "Pre-ETS"
+) && (
   <TabsContent value="clock" className="space-y-4">
     <ClockInOut
       clientId={client.id}
