@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, RefreshCw, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Mail, RefreshCw, Loader2, CheckCircle2, Clock, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -13,21 +13,22 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
 
   const canManage = currentUser?.role === 'admin' || currentUser?.role === 'management';
 
+  // Determine if employee is inactive/offboarded
+  const isInactive = employee.is_active === false || !employee.access_level || employee.access_level === '';
+
   // Check for a pending invite
   const { data: pendingInvites = [] } = useQuery({
     queryKey: ["pending-invite", employee.email],
     queryFn: async () => {
-      const res = await base44.functions.invoke('getOrgUsers', {});
       const allPending = await base44.entities.PendingRoleAssignment.filter({ email: employee.email.toLowerCase().trim() });
       return allPending || [];
     },
-    enabled: !!employee.email,
+    enabled: !!employee.email && !isInactive,
   });
 
   const hasPendingInvite = pendingInvites.some(p => p.status === 'pending');
 
-  // Determine registration status from presence of full_name or last login
-  // A registered user will have a full_name set (they completed onboarding)
+  // Determine registration status from presence of full_name
   const isRegistered = !!employee.full_name && employee.full_name.trim().length > 0;
 
   const handleResendInvite = async () => {
@@ -61,6 +62,23 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
   };
 
   if (!canManage) return null;
+
+  // Inactive/offboarded: show access removed state, no action buttons
+  if (isInactive) {
+    return (
+      <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Account Access</p>
+          <Badge className="text-[10px] border-0 flex items-center gap-1 bg-red-100 text-red-600">
+            <UserX className="w-3 h-3" /> Access Removed
+          </Badge>
+        </div>
+        <p className="text-[11px] text-slate-400">
+          This employee has been offboarded. Use "Reactivate Employee" to restore access.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -108,7 +126,6 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
             Send Password Reset
           </Button>
         )}
-        {/* Always allow resend regardless of registration in case user lost the email */}
         {isRegistered && (
           <Button
             size="sm"

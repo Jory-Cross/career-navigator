@@ -197,7 +197,7 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
   const initials = `${employee.full_name?.split(' ')[0]?.[0] || ''}${employee.full_name?.split(' ')[1]?.[0] || ''}`;
-  const isInactive = employee.data?.is_active === false;
+  const isInactive = employee.is_active === false || !employee.access_level || employee.access_level === '' || employee.status === 'inactive';
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];

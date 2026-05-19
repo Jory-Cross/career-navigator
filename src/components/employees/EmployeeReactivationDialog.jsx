@@ -53,7 +53,7 @@ export default function EmployeeReactivationDialog({ open, onOpenChange, employe
     }
   };
 
-  const isInactive = employee.data?.is_active === false;
+  const isInactive = employee.is_active === false || !employee.access_level || employee.access_level === '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
