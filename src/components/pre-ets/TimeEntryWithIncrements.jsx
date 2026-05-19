@@ -84,8 +84,11 @@ export default function TimeEntryWithIncrements({
 
     setSaving(true);
     try {
+           const finalEmployeeId = employeeId || clientId;
+
       await base44.entities.TimeEntry.create({
         client_id: clientId,
+        employee_id: finalEmployeeId,
         date,
         start_time: startTime,
         end_time: endTime,
@@ -93,6 +96,7 @@ export default function TimeEntryWithIncrements({
         description: notes || "Work session",
         entry_type_code: "pre_ets_training",
         is_payroll_eligible: true,
+        source: "client_portal",
       });
 
       toast.success(`Time entry saved: ${formatDurationDisplay(durationMinutes)}`);
