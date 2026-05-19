@@ -40,6 +40,14 @@ export const FEATURE_KEYS = {
   CLIENT_SEND_EMAIL:      "client_send_email",
   CLIENT_TEST_ONET:       "client_test_onet",
   CLIENT_ADD_ACTIONS:     "client_add_actions",
+  // Pre-ETS Client Portal tabs
+  CLIENT_PORTAL_CLOCK_IN_OUT:         "client_portal_clock_in_out",
+  CLIENT_PORTAL_PROGRAM_CHECKLIST:    "client_portal_program_checklist",
+  CLIENT_PORTAL_IEP_TRANSITION_PLAN:  "client_portal_iep_transition_plan",
+  CLIENT_PORTAL_SKILLS_EXPLORATION:   "client_portal_skills_exploration",
+  CLIENT_PORTAL_ASSESSMENTS:          "client_portal_assessments",
+  CLIENT_PORTAL_WBLE_FORMS:           "client_portal_wble_forms",
+  CLIENT_PORTAL_MEETINGS:             "client_portal_meetings",
 };
 
 // Feature metadata used by the admin permissions UI
@@ -79,6 +87,14 @@ export const FEATURE_DEFINITIONS = [
   { key: "client_send_email",     label: "Send Email",         category: "client_detail" },
   { key: "client_test_onet",      label: "Test O*NET",         category: "client_detail" },
   { key: "client_add_actions",    label: "Add Actions",        category: "client_detail" },
+  // Pre-ETS Client Portal tabs
+  { key: "client_portal_clock_in_out",        label: "Clock In/Out",           category: "pre_ets_portal" },
+  { key: "client_portal_program_checklist",   label: "Program Checklist",      category: "pre_ets_portal" },
+  { key: "client_portal_iep_transition_plan", label: "IEP & Transition Plan",  category: "pre_ets_portal" },
+  { key: "client_portal_skills_exploration",  label: "Skills Exploration",     category: "pre_ets_portal" },
+  { key: "client_portal_assessments",         label: "Assessments",            category: "pre_ets_portal" },
+  { key: "client_portal_wble_forms",          label: "WBLE Forms",             category: "pre_ets_portal" },
+  { key: "client_portal_meetings",            label: "Meetings",               category: "pre_ets_portal" },
 ];
 
 export const CATEGORY_LABELS = {
@@ -89,4 +105,5 @@ export const CATEGORY_LABELS = {
   clinical:          "Clinical",
   admin:             "Admin",
   client_detail:     "Client Detail Sections & Actions",
+  pre_ets_portal:    "Pre-ETS Client Portal Tabs",
 };

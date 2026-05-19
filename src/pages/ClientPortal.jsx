@@ -24,6 +24,17 @@ import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSec
 import ClockInOut from "@/components/pre-ets/ClockInOut";
 import { base44 } from "@/api/base44Client";
 
+// Pre-ETS portal tab definitions with their feature keys
+const PRE_ETS_TABS = [
+  { value: "clock",             label: "Clock In/Out",        featureKey: "client_portal_clock_in_out" },
+  { value: "program_checklist", label: "Program Checklist",   featureKey: "client_portal_program_checklist" },
+  { value: "iep",               label: "IEP & Transition Plan", featureKey: "client_portal_iep_transition_plan" },
+  { value: "skills",            label: "Skills Exploration",  featureKey: "client_portal_skills_exploration" },
+  { value: "assessments",       label: "Assessments",         featureKey: "client_portal_assessments" },
+  { value: "wble",              label: "WBLE Forms",          featureKey: "client_portal_wble_forms" },
+  { value: "meetings",          label: "Meetings",            featureKey: "client_portal_meetings" },
+];
+
 const STAFF_ROLES = ["admin", "management", "employee"];
 
 function getClientIdFromUrl() {
@@ -51,6 +62,7 @@ export default function ClientPortal() {
   const [client, setClient] = useState(null);
   const [user, setUser] = useState(null);
   const [bootError, setBootError] = useState("");
+  const [preEtsTabPermissions, setPreEtsTabPermissions] = useState(null); // null = not loaded yet
   const [activeTab, setActiveTab] = useState(() => getTabFromUrl());
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -160,6 +172,30 @@ export default function ClientPortal() {
     };
   }, [clientIdFromUrl]);
 
+  // Load Pre-ETS portal tab permissions once client is resolved
+  useEffect(() => {
+    if (!client) return;
+    const isPreEts = client.client_type === "pre_ets" || client.client_type === "Pre-ETS";
+    if (!isPreEts) return;
+
+    base44.entities.FeaturePermission.filter({ role: "pre_ets" })
+      .then((rows) => {
+        const map = {};
+        PRE_ETS_TABS.forEach((tab) => {
+          const record = rows.find((r) => r.feature_key === tab.featureKey);
+          // Default to visible=true if no record exists (opt-out model for portal tabs)
+          map[tab.featureKey] = record ? record.visible !== false : true;
+        });
+        setPreEtsTabPermissions(map);
+      })
+      .catch(() => {
+        // On error, default all tabs to visible
+        const map = {};
+        PRE_ETS_TABS.forEach((tab) => { map[tab.featureKey] = true; });
+        setPreEtsTabPermissions(map);
+      });
+  }, [client]);
+
   /**
    * Queries
    */
@@ -187,6 +223,26 @@ export default function ClientPortal() {
   refetchOnWindowFocus: true,
   refetchInterval: 10 * 1000,
 });
+  // Compute which Pre-ETS tabs are allowed based on permissions
+  const allowedPreEtsTabs = useMemo(() => {
+    if (!preEtsTabPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded yet → allow all
+    return PRE_ETS_TABS.filter((t) => preEtsTabPermissions[t.featureKey] !== false).map((t) => t.value);
+  }, [preEtsTabPermissions]);
+
+  // If current tab is a disabled Pre-ETS tab, redirect to first allowed tab or "intake"
+  useEffect(() => {
+    if (!preEtsTabPermissions) return;
+    const isPreEtsTab = PRE_ETS_TABS.some((t) => t.value === activeTab);
+    if (!isPreEtsTab) return;
+    if (!allowedPreEtsTabs.includes(activeTab)) {
+      const fallback = allowedPreEtsTabs[0] || "intake";
+      setActiveTab(fallback);
+      const params = new URLSearchParams(window.location.search);
+      params.set("tab", fallback);
+      window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+    }
+  }, [preEtsTabPermissions, activeTab, allowedPreEtsTabs]);
+
   const activeTaskCount = useMemo(() => {
   if (!Array.isArray(tasks)) return 0;
 
@@ -446,29 +502,11 @@ setCompletionNote("");
 
           <TabsTrigger value="documents">Documents</TabsTrigger>
 
-          {client?.client_type === "pre_ets" && (
-            <>
-              <TabsTrigger value="clock">Clock In/Out</TabsTrigger>
-              <TabsTrigger value="program_checklist">
-                Program Checklist
-              </TabsTrigger>
-              <TabsTrigger value="iep">
-                IEP & Transition Plan
-              </TabsTrigger>
-              <TabsTrigger value="skills">
-                Skills Exploration
-              </TabsTrigger>
-              <TabsTrigger value="assessments">
-                Assessments
-              </TabsTrigger>
-              <TabsTrigger value="wble">
-                WBLE Forms
-              </TabsTrigger>
-              <TabsTrigger value="meetings">
-                Meetings
-              </TabsTrigger>
-            </>
-          )}
+          {(client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS") &&
+            PRE_ETS_TABS.filter((t) => allowedPreEtsTabs.includes(t.value)).map((t) => (
+              <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
+            ))
+          }
         </TabsList>
 
         <TabsContent value="intake" className="space-y-4">
@@ -737,10 +775,8 @@ setCompletionNote("");
             </div>
           )}
         </TabsContent>
-       {(
-  client?.client_type === "pre_ets" ||
-  client?.client_type === "Pre-ETS"
-) && (
+       {(client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS") &&
+  allowedPreEtsTabs.includes("clock") && (
   <TabsContent value="clock" className="space-y-4">
     <ClockInOut
       clientId={client.id}
