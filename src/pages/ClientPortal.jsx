@@ -212,20 +212,33 @@ export default function ClientPortal() {
       .then((rows) => {
         console.log(`[ClientPortal] Loaded ${rows.length} permission records for role "${permissionRole}":`, rows);
         const map = {};
+        
+        // STRICT DENY-BY-DEFAULT: Initialize all tabs as hidden (false)
         allTabs.forEach((tab) => {
-          const record = rows.find((r) => r.feature_key === tab.featureKey);
-          // Explicit visible=false means hidden; missing record defaults to true (opt-out model)
-          map[tab.featureKey] = record ? record.visible !== false : true;
-          console.log(`[ClientPortal] Tab "${tab.featureKey}": record=${!!record}, visible=${map[tab.featureKey]}`);
+          map[tab.featureKey] = false;
         });
-        console.log("[ClientPortal] Final permissions map:", map);
+        
+        // Only enable tabs that have explicit visible === true records
+        rows.forEach((record) => {
+          if (record.visible === true) {
+            map[record.feature_key] = true;
+            console.log(`[ClientPortal] Enabled tab "${record.feature_key}" (visible: true)`);
+          } else {
+            console.log(`[ClientPortal] Tab "${record.feature_key}" hidden (visible: ${record.visible})`);
+          }
+        });
+        
+        // Log final state for debugging
+        console.log("[ClientPortal] Final permissions map (deny-by-default):", map);
+        const enabledCount = Object.values(map).filter(v => v === true).length;
+        console.log(`[ClientPortal] Total enabled tabs: ${enabledCount}/${allTabs.length}`);
         setPortalPermissions(map);
       })
       .catch((error) => {
         console.error("[ClientPortal] Permission fetch failed:", error);
-        // On error, default all tabs to visible
+        // On error, default ALL tabs to hidden (strict deny)
         const map = {};
-        allTabs.forEach((tab) => { map[tab.featureKey] = true; });
+        allTabs.forEach((tab) => { map[tab.featureKey] = false; });
         setPortalPermissions(map);
       });
   }, [user, client]);
@@ -260,15 +273,21 @@ export default function ClientPortal() {
   const isPreEtsClient = client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS";
 
   // Compute which general tabs are allowed based on permissions
+  // STRICT: only tabs with explicit portalPermissions[key] === true render
   const allowedGeneralTabs = useMemo(() => {
-    if (!portalPermissions) return GENERAL_TABS.map((t) => t.value); // not loaded yet → allow all
-    return GENERAL_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
+    if (!portalPermissions) return []; // not loaded yet → show nothing
+    const allowed = GENERAL_TABS.filter((t) => portalPermissions[t.featureKey] === true).map((t) => t.value);
+    console.log("[ClientPortal] Allowed general tabs:", allowed);
+    return allowed;
   }, [portalPermissions]);
 
   // Compute which Pre-ETS tabs are allowed based on permissions
+  // STRICT: only tabs with explicit portalPermissions[key] === true render
   const allowedPreEtsTabs = useMemo(() => {
-    if (!portalPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded yet → allow all
-    return PRE_ETS_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
+    if (!portalPermissions) return []; // not loaded yet → show nothing
+    const allowed = PRE_ETS_TABS.filter((t) => portalPermissions[t.featureKey] === true).map((t) => t.value);
+    console.log("[ClientPortal] Allowed Pre-ETS tabs:", allowed);
+    return allowed;
   }, [portalPermissions]);
 
   // If current tab is hidden, redirect to first allowed tab; if none exist, fall back to "intake"
@@ -474,7 +493,7 @@ setCompletionNote("");
     return <div className="p-4 text-red-600">{bootError}</div>;
   }
 
-  if (!user || !client) {
+  if (!user || !client || !portalPermissions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
