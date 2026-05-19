@@ -26,6 +26,11 @@
       ],
       "description": "Access level granted via invitation. Blank = denied everywhere."
     },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "False when the user has been deactivated/offboarded. Blocks app access even if role/access_level are set."
+    },
     "org_id": {
       "type": "string",
       "description": "Tenant organization ID"

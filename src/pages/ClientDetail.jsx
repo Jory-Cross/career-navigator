@@ -14,6 +14,7 @@ import {
   Activity,
   Bot,
   User,
+  Archive,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
 import { testOnetConnection } from "@/lib/onet/onetClient";
 import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
 import IntakePacketPanel from "@/components/intake/IntakePacketPanel";
+import ArchiveClientDialog from "@/components/clients/ArchiveClientDialog";
 
 function getClientIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -89,6 +91,7 @@ export default function ClientDetail() {
   const queryClient = useQueryClient();
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
 const [user, setUser] = useState(null);
 const [openAssessmentType, setOpenAssessmentType] = useState(null);
@@ -290,6 +293,17 @@ const currentTaskCount = tasks.filter(
           {cd.send_email && client.email && (
             <Button onClick={() => setShowEmailComposer(true)}>
               Send Email
+            </Button>
+          )}
+
+          {!isClientUser && (user?.role === 'admin' || user?.role === 'management') && !client.is_archived && (
+            <Button
+              variant="outline"
+              onClick={() => setShowArchiveDialog(true)}
+              className="border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              <Archive className="w-4 h-4 mr-2" />
+              Archive
             </Button>
           )}
 
@@ -630,6 +644,16 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
       </Tabs>
+
+      <ArchiveClientDialog
+        open={showArchiveDialog}
+        onOpenChange={setShowArchiveDialog}
+        client={client}
+        onArchived={() => {
+          setShowArchiveDialog(false);
+          refreshClient();
+        }}
+      />
 
       {showEmailComposer && (
         <EmailComposer

@@ -80,7 +80,26 @@ Deno.serve(async (req) => {
       )
     );
 
-    // ── 5. Log offboarding activity on each affected client ───────────────
+    // ── 5. Deactivate the employee's app access ───────────────────────────
+    // Set is_active=false — AuthContext will block them on next login.
+    // Do NOT clear role/access_level to preserve audit trail.
+    await base44.asServiceRole.entities.User.update(employee_id, { is_active: false });
+    console.log(`[offboardEmployee] Set is_active=false for user id=${employee_id}`);
+
+    // ── 6. Revoke all PendingRoleAssignment records for this email ────────
+    // This prevents old accepted invites from re-granting access if the user
+    // signs out and back in (applyPendingRoleIfNeeded skips revoked records).
+    const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.filter({
+      email: employee.email.toLowerCase().trim()
+    });
+    await Promise.allSettled(
+      pendingAssignments.map(p =>
+        base44.asServiceRole.entities.PendingRoleAssignment.update(p.id, { status: 'revoked' })
+      )
+    );
+    console.log(`[offboardEmployee] Revoked ${pendingAssignments.length} PendingRoleAssignment record(s) for ${employee.email}`);
+
+    // ── 7. Log offboarding activity on each affected client ──────────────
     await Promise.allSettled(
       activeClients.map(client =>
         base44.asServiceRole.entities.Activity.create({

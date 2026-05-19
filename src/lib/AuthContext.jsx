@@ -9,6 +9,9 @@ const AuthContext = createContext();
 export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
 
+  // Explicitly deactivated users are blocked regardless of role/access
+  if (user.is_active === false) return 'deactivated';
+
   const role = user.role;
   const access = user.access_level ?? user.data?.access_level;
 
@@ -65,6 +68,14 @@ export const AuthProvider = ({ children }) => {
       const accessClass = classifyUserAccess(currentUser);
       console.log(`[Auth] user=${currentUser.email} role=${currentUser.role} access_level=${currentUser.access_level} → ${accessClass}`);
 
+      if (accessClass === 'deactivated') {
+        // Explicitly deactivated by an admin — block immediately, no invite check
+        setUser(currentUser);
+        setAuthState('deactivated');
+        setIsLoadingAuth(false);
+        return;
+      }
+
       if (accessClass !== 'denied') {
         // User has valid role/access — let them in
         setUser(currentUser);
@@ -79,6 +90,14 @@ export const AuthProvider = ({ children }) => {
       try {
         const result = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
         const data = result?.data;
+
+        if (data?.reason === 'deactivated') {
+          // applyPendingRoleIfNeeded confirmed this user is deactivated
+          setUser(currentUser);
+          setAuthState('deactivated');
+          setIsLoadingAuth(false);
+          return;
+        }
 
         if (data?.upgraded) {
           // Role was applied — need a hard reload to refresh session claims

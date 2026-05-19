@@ -39,6 +39,12 @@ Deno.serve(async (req) => {
     const currentRole = user.role;
     const currentAccess = user.access_level;
 
+    // Block deactivated users — they must never be re-activated by an old invite
+    if (user.is_active === false) {
+      console.log(`[applyPendingRoleIfNeeded] ${email} is deactivated (is_active=false) — blocking upgrade.`);
+      return Response.json({ upgraded: false, reason: 'deactivated' });
+    }
+
     // Only attempt upgrade if the user is in a "default/blank" state
     const needsUpgrade = !currentRole || currentRole === 'user' || !currentAccess;
     if (!needsUpgrade) {

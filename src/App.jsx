@@ -59,6 +59,11 @@ const AuthenticatedApp = () => {
     return null;
   }
 
+  // ── Account deactivated by admin ─────────────────────────────────────────
+  if (authState === 'deactivated') {
+    return <AccessDenied user={user} deactivated />;
+  }
+
   // ── Stale session after invite apply → prompt sign-out/in ────────────────
   if (authState === 'stale_session') {
     return <AccessDenied user={user} forceActivated />;
