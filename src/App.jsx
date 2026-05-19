@@ -85,8 +85,17 @@ const AuthenticatedApp = () => {
     }
 
     // Client portal users: render portal routes ONLY — never mount staff layout
-    if (accessClass === 'client_portal') {
+        if (accessClass === 'client_portal') {
       const ClientPortal = Pages['ClientPortal'];
+
+      if (user?.role === 'pre_ets') {
+        return (
+          <Routes>
+            <Route path="*" element={<PreEtsPortal />} />
+          </Routes>
+        );
+      }
+
       return (
         <Routes>
           <Route path="*" element={ClientPortal ? <ClientPortal /> : null} />
