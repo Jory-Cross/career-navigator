@@ -44,6 +44,9 @@ const PRE_ETS_TABS = [
   { value: "meetings",          label: "Meetings",              featureKey: "client_portal_meetings" },
 ];
 
+// Verify key matching
+console.log("[ClientPortal] PRE_ETS_TABS config:", PRE_ETS_TABS.map(t => ({ value: t.value, featureKey: t.featureKey })));
+
 const STAFF_ROLES = ["admin", "management", "employee"];
 
 function getClientIdFromUrl() {
@@ -501,9 +504,20 @@ setCompletionNote("");
     );
   }
 
-  // If all tabs are hidden, show empty state
+  // Debug logs for permission resolution
+  console.log("[ClientPortal] Permission resolution:", {
+    permissionRole: isPreEtsClient ? "pre_ets" : "client",
+    isPreEtsClient,
+    portalPermissions,
+    allowedGeneralTabs,
+    allowedPreEtsTabs,
+    activeTab
+  });
+
+  // If ALL tabs are hidden (both general and pre-ets), show empty state
   const allAllowedTabs = [...allowedGeneralTabs, ...allowedPreEtsTabs];
   if (portalPermissions && allAllowedTabs.length === 0) {
+    console.log("[ClientPortal] No tabs enabled — showing empty state");
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="max-w-sm w-full rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm space-y-4">
