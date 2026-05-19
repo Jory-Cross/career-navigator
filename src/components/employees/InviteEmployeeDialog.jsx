@@ -39,7 +39,15 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
       const res = await base44.functions.invoke('inviteEmployee', payload);
       const data = res.data;
       if (data?.success) {
-        toast.success(`Invitation sent to ${email.toLowerCase().trim()}`);
+        if (data?.platform_invite_skipped_reason) {
+          // Manager submitted — record saved but platform admission requires an admin
+          toast.warning(
+            `Invitation record saved for ${email.toLowerCase().trim()}. An admin must also send the platform invite so the user can access the app.`,
+            { duration: 12000 }
+          );
+        } else {
+          toast.success(`Invitation sent to ${email.toLowerCase().trim()}`);
+        }
         setEmail("");
         setRole("employee");
         setManagerId("");
@@ -48,22 +56,10 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
         toast.error(data?.error || 'Invitation failed');
       }
     } catch (error) {
-      // Surface the actual backend error — axios puts non-2xx body in error.response.data
       const backendData = error?.response?.data;
       const backendMsg = backendData?.error;
-      const pendingSaved = backendData?.pending_saved;
-      if (pendingSaved && backendMsg) {
-        // PendingRoleAssignment was saved but email delivery is restricted for managers.
-        // Show as info/warning — it's not a complete failure, the record exists.
-        toast.warning(backendMsg, { duration: 10000 });
-        setEmail("");
-        setRole("employee");
-        setManagerId("");
-        onOpenChange(false);
-      } else {
-        const msg = backendMsg || error?.message || 'Unknown error';
-        toast.error("Failed to send invitation: " + msg);
-      }
+      const msg = backendMsg || error?.message || 'Unknown error';
+      toast.error("Failed to send invitation: " + msg);
     } finally {
       setSaving(false);
     }
@@ -126,9 +122,16 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
             </>
           )}
 
-          <p className="text-xs text-slate-500">
-            They'll receive an email invitation to create their account with <strong>{role}</strong> access.
-          </p>
+          {currentUserRole !== 'admin' && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+              <strong>Note:</strong> Because you are not an admin, the person will receive a Resend instruction email but <strong>will not be admitted to the platform</strong> until an admin sends the platform invite. Ask your admin to complete admission via the Employees page.
+            </div>
+          )}
+          {currentUserRole === 'admin' && (
+            <p className="text-xs text-slate-500">
+              They'll receive an email invitation to create their account with <strong>{role}</strong> access.
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

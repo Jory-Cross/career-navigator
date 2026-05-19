@@ -144,17 +144,20 @@ Deno.serve(async (req) => {
 
     console.log(`[invitePreEtsEmployer] PendingRoleAssignment upserted: email=${normalizedEmail} role=pre_ets_employer client_id=${clientId}`);
 
-    // ── Call Base44 platform inviteUser ────────────────────────────────────
+    // ── Call Base44 platform inviteUser via privileged relay ─────────────────
     let platformInviteSent = false;
     let platformInviteError = null;
 
     try {
-      await base44.users.inviteUser(normalizedEmail, 'user');
+      const inviteRes = await base44.asServiceRole.functions.invoke('platformInviteUser', { email: normalizedEmail });
+      if (inviteRes?.success === false) {
+        throw new Error(inviteRes.error || 'platformInviteUser returned success=false');
+      }
       platformInviteSent = true;
-      console.log(`[invitePreEtsEmployer] Base44 platform invite sent to ${normalizedEmail}`);
+      console.log(`[invitePreEtsEmployer] Base44 platform invite sent to ${normalizedEmail} via relay. Result:`, JSON.stringify(inviteRes));
     } catch (inviteErr) {
       platformInviteError = inviteErr?.message || String(inviteErr);
-      console.error(`[invitePreEtsEmployer] Base44 inviteUser failed for ${normalizedEmail}:`, platformInviteError);
+      console.error(`[invitePreEtsEmployer] Base44 platform invite FAILED for ${normalizedEmail}:`, platformInviteError);
     }
 
     // ── Send instruction email via Resend (optional — only if API configured) ──

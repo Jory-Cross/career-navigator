@@ -61,7 +61,12 @@ Deno.serve(async (req) => {
     const normalizedEmail = target.email.toLowerCase().trim();
     const base44Role = target.role === 'admin' ? 'admin' : 'user';
 
-    // Base44's inviteUser re-sends the platform sign-in/setup email regardless of registration status
+    // Base44's inviteUser re-sends the platform sign-in/setup email regardless of registration status.
+    // On private apps, only admin tokens actually succeed — management tokens are silently ignored.
+    if (user.role !== 'admin') {
+      console.warn(`[resendInviteOrReset] WARN: caller role=${user.role} — inviteUser will be silently ignored by Base44 for private apps. Only admins can admit users.`);
+    }
+
     await base44.users.inviteUser(normalizedEmail, base44Role);
 
     console.log(`[resendInviteOrReset] action=${action} for ${normalizedEmail} by ${user.email}`);
