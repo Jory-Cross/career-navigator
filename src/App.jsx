@@ -17,7 +17,7 @@ import AppAnalytics from './pages/AppAnalytics';
 import FeaturePermissions from './pages/FeaturePermissions';
 import { AuthProvider, useAuth, classifyUserAccess } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
-import AccessDenied from '@/components/AccessDenied.jsx';
+import AccessDenied from '@/components/AccessDenied';
 import InvitationRequired from '@/components/InvitationRequired';
 import { isAdmin } from '@/lib/utils';
 import SmartLanding from '@/components/SmartLanding';
