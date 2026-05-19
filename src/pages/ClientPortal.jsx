@@ -415,32 +415,60 @@ setCompletionNote("");
     );
   }}
 >
-               <TabsList>
+                       <TabsList>
           <TabsTrigger value="intake">Intake Forms</TabsTrigger>
+
           <TabsTrigger value="applications">Applications</TabsTrigger>
-         <TabsTrigger value="recommendations">
-  <div className="flex items-center gap-2">
-    <span>Recommendations</span>
 
-    {pendingRecommendationCount > 0 && (
-      <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-        {pendingRecommendationCount}
-      </span>
-    )}
-  </div>
-</TabsTrigger>
+          <TabsTrigger value="recommendations">
+            <div className="flex items-center gap-2">
+              <span>Recommendations</span>
+
+              {pendingRecommendationCount > 0 && (
+                <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {pendingRecommendationCount}
+                </span>
+              )}
+            </div>
+          </TabsTrigger>
+
           <TabsTrigger value="tasks">
-  <div className="flex items-center gap-2">
-    <span>Tasks</span>
+            <div className="flex items-center gap-2">
+              <span>Tasks</span>
 
-    {activeTaskCount > 0 && (
-      <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-        {activeTaskCount}
-      </span>
-    )}
-  </div>
-</TabsTrigger>
+              {activeTaskCount > 0 && (
+                <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {activeTaskCount}
+                </span>
+              )}
+            </div>
+          </TabsTrigger>
+
           <TabsTrigger value="documents">Documents</TabsTrigger>
+
+          {client?.client_type === "pre_ets" && (
+            <>
+              <TabsTrigger value="clock">Clock In/Out</TabsTrigger>
+              <TabsTrigger value="program_checklist">
+                Program Checklist
+              </TabsTrigger>
+              <TabsTrigger value="iep">
+                IEP & Transition Plan
+              </TabsTrigger>
+              <TabsTrigger value="skills">
+                Skills Exploration
+              </TabsTrigger>
+              <TabsTrigger value="assessments">
+                Assessments
+              </TabsTrigger>
+              <TabsTrigger value="wble">
+                WBLE Forms
+              </TabsTrigger>
+              <TabsTrigger value="meetings">
+                Meetings
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="intake" className="space-y-4">
