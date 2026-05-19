@@ -181,25 +181,36 @@ export default function ClientPortal() {
     };
   }, [clientIdFromUrl]);
 
-  // Load portal tab permissions for the logged-in user's role (client / pre_ets / dspd)
+  // Load portal tab permissions based on CLIENT TYPE, not logged-in user role
+  // This ensures staff previewing a client portal sees exactly what the client sees
   useEffect(() => {
     if (!user || !client) return;
-    const portalRole = user.role; // "client", "pre_ets", "dspd", or staff
-
-    console.log("[ClientPortal] Logged-in user role:", portalRole);
-
-    // Only fetch for client-facing roles; staff viewing the portal see everything
-    if (!["client", "pre_ets", "dspd"].includes(portalRole)) {
-      console.log("[ClientPortal] Staff user detected, skipping permission fetch");
-      setPortalPermissions({}); // staff → no restrictions
-      return;
+    
+    const isStaff = STAFF_ROLES.includes(user.role);
+    
+    // Determine which role's permissions to fetch based on CLIENT TYPE
+    // NOT based on logged-in user's role
+    let permissionRole = "client"; // default
+    if (client.client_type === "pre_ets" || client.client_type === "Pre-ETS") {
+      permissionRole = "pre_ets";
+    } else if (client.client_type === "dspd" || client.client_type === "DSPD") {
+      permissionRole = "dspd";
     }
+
+    console.log("[ClientPortal] Bootstrap:", {
+      email: user.email,
+      loggedInUserRole: user.role,
+      isStaff,
+      clientType: client.client_type,
+      permissionRole,
+      accessLevel: user.access_level
+    });
 
     const allTabs = [...GENERAL_TABS, ...PRE_ETS_TABS];
 
-    base44.entities.FeaturePermission.filter({ role: portalRole })
+    base44.entities.FeaturePermission.filter({ role: permissionRole })
       .then((rows) => {
-        console.log(`[ClientPortal] Loaded ${rows.length} permission records for role "${portalRole}":`, rows);
+        console.log(`[ClientPortal] Loaded ${rows.length} permission records for role "${permissionRole}":`, rows);
         const map = {};
         allTabs.forEach((tab) => {
           const record = rows.find((r) => r.feature_key === tab.featureKey);
@@ -248,20 +259,17 @@ export default function ClientPortal() {
 });
   const isPreEtsClient = client?.client_type === "pre_ets" || client?.client_type === "Pre-ETS";
 
-  // Compute which general tabs are allowed
+  // Compute which general tabs are allowed based on permissions
   const allowedGeneralTabs = useMemo(() => {
-    if (!portalPermissions) return GENERAL_TABS.map((t) => t.value); // not loaded → allow all
-    // For staff viewing a client portal, no restrictions
-    if (user && !["client", "pre_ets", "dspd"].includes(user.role)) return GENERAL_TABS.map((t) => t.value);
+    if (!portalPermissions) return GENERAL_TABS.map((t) => t.value); // not loaded yet → allow all
     return GENERAL_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
-  }, [portalPermissions, user]);
+  }, [portalPermissions]);
 
-  // Compute which Pre-ETS tabs are allowed
+  // Compute which Pre-ETS tabs are allowed based on permissions
   const allowedPreEtsTabs = useMemo(() => {
-    if (!portalPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded → allow all
-    if (user && !["client", "pre_ets", "dspd"].includes(user.role)) return PRE_ETS_TABS.map((t) => t.value);
+    if (!portalPermissions) return PRE_ETS_TABS.map((t) => t.value); // not loaded yet → allow all
     return PRE_ETS_TABS.filter((t) => portalPermissions[t.featureKey] !== false).map((t) => t.value);
-  }, [portalPermissions, user]);
+  }, [portalPermissions]);
 
   // If current tab is hidden, redirect to first allowed tab; if none exist, fall back to "intake"
   useEffect(() => {
