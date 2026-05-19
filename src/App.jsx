@@ -15,11 +15,10 @@ import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
 import Agents from './pages/Agents';
 import AppAnalytics from './pages/AppAnalytics';
 import FeaturePermissions from './pages/FeaturePermissions';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { AuthProvider, useAuth, classifyUserAccess } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import AccessDenied from '@/components/AccessDenied';
-import { classifyUserAccess } from '@/lib/AuthContext';
+import AccessDenied from '@/components/AccessDenied.jsx';
+import InvitationRequired from '@/components/InvitationRequired';
 import { isAdmin } from '@/lib/utils';
 import SmartLanding from '@/components/SmartLanding';
 
@@ -39,35 +38,42 @@ const FeaturePermissionsGated = () => {
   return <FeaturePermissions />;
 };
 
+const Spinner = () => (
+  <div className="fixed inset-0 flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+  </div>
+);
+
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
+  const { authState, user, navigateToLogin } = useAuth();
   const _isAdmin = isAdmin(user);
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+  // ── Loading / invite check in progress ───────────────────────────────────
+  if (authState === 'loading' || authState === 'checking_invite') {
+    return <Spinner />;
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
+  // ── Not signed in → redirect to login ────────────────────────────────────
+  if (authState === 'unauthenticated') {
+    navigateToLogin();
+    return null;
   }
 
-  // ── CRITICAL ACCESS GATE ──────────────────────────────────────────────────
-  // Classify access BEFORE rendering any routes or layout.
-  // This prevents the staff sidebar from ever flashing for portal/denied users.
+  // ── Stale session after invite apply → prompt sign-out/in ────────────────
+  if (authState === 'stale_session') {
+    return <AccessDenied user={user} forceActivated />;
+  }
+
+  // ── No matching invite found ──────────────────────────────────────────────
+  if (authState === 'no_invite') {
+    return <InvitationRequired user={user} />;
+  }
+
+  // ── CRITICAL ACCESS GATE — classify confirmed user ────────────────────────
   if (user) {
     const accessClass = classifyUserAccess(user);
 
+    // Still denied even after upgrade check (bad role/access combo)
     if (accessClass === 'denied') {
       return <AccessDenied user={user} />;
     }
@@ -91,13 +97,9 @@ const AuthenticatedApp = () => {
       );
     }
 
-    // Staff/admin: only render routes once classification is confirmed as staff
+    // Shouldn't happen — belt-and-suspenders spinner
     if (accessClass !== 'staff') {
-      return (
-        <div className="fixed inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-        </div>
-      );
+      return <Spinner />;
     }
   }
 

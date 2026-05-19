@@ -163,27 +163,11 @@ Deno.serve(async (req) => {
       console.log(`[inviteEmployee] Created PendingRoleAssignment id=${pendingId}`);
     }
 
-    // ── Call Base44 platform inviteUser ─────────────────────────────────────
-    // IMPORTANT: On a private Base44 app, inviteUser only works when the calling
-    // user token belongs to a platform Admin. Management tokens silently no-op.
-    // This means: if the caller is management (not admin), platform admission will
-    // NOT be created here. An admin must resend the invite via EmployeePortal.
-    let platformInviteSent = false;
-    let platformInviteError = null;
-
-    if (user.role !== 'admin') {
-      platformInviteError = `Caller is role=${user.role} — Base44 private apps only allow admin tokens to admit new users via inviteUser. Platform admission was NOT created. An admin must resend the invite.`;
-      console.warn(`[inviteEmployee] SKIPPED inviteUser: ${platformInviteError}`);
-    } else {
-      try {
-        const result = await base44.users.inviteUser(normalizedEmail, 'user');
-        platformInviteSent = true;
-        console.log(`[inviteEmployee] inviteUser succeeded for ${normalizedEmail}. Result:`, JSON.stringify(result ?? 'undefined'));
-      } catch (inviteErr) {
-        platformInviteError = inviteErr?.message || String(inviteErr);
-        console.error(`[inviteEmployee] inviteUser threw for ${normalizedEmail}: ${platformInviteError}`);
-      }
-    }
+    // ── Platform inviteUser is intentionally NOT called ─────────────────────
+    // The app is public. Users register freely and are gated app-side via
+    // PendingRoleAssignment + applyPendingRoleIfNeeded. No Base44 dashboard
+    // approval is required or used.
+    const platformInviteSent = false; // N/A — public app
 
     // ── Send instruction email via Resend (optional — only if API configured) ──
     let instructionEmailSent = false;
@@ -208,16 +192,11 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.PendingRoleAssignment.update(pendingId, { status });
 
     // ── Return result ──────────────────────────────────────────────────────
-    const callerIsManager = user.role !== 'admin';
-
     return Response.json({
       success: true,
-      message: callerIsManager
-        ? `Invitation record saved for ${normalizedEmail}. NOTE: Platform admission requires an admin to resend the invite.`
-        : `Invitation sent to ${normalizedEmail}`,
+      message: `Invitation record saved for ${normalizedEmail}${instructionEmailSent ? '. Instruction email sent.' : '.'}`,
       pending_id: pendingId,
       platform_invite_sent: platformInviteSent,
-      platform_invite_skipped_reason: callerIsManager ? platformInviteError : null,
       instruction_email_sent: instructionEmailSent,
     });
 

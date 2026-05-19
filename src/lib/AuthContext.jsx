@@ -1,7 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
@@ -12,185 +10,145 @@ export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
 
   const role = user.role;
-  // access_level may be top-level or nested under user.data (view-as mode)
   const access = user.access_level ?? user.data?.access_level;
 
-  // Staff CRM access: explicit staff roles + matching access_level
   if (['admin', 'management', 'employee'].includes(role) && ['staff', 'admin'].includes(access)) {
     return 'staff';
   }
 
-  // Client portal access: client roles + client_portal access_level
   if (['client', 'pre_ets', 'dspd'].includes(role) && access === 'client_portal') {
     return 'client_portal';
   }
 
-  // Pre-ETS Employer portal: restricted to weekly form only
   if (role === 'pre_ets_employer' && access === 'pre_ets_employer_portal') {
     return 'pre_ets_employer_portal';
   }
 
-  // Everything else (role="user", blank access_level, mismatches) → denied
   return 'denied';
 };
 
+// ─── Auth states ──────────────────────────────────────────────────────────────
+// 'loading'          — initial check in progress
+// 'unauthenticated'  — no session / base44.auth.me() returned null
+// 'checking_invite'  — authenticated but no role yet; running applyPendingRoleIfNeeded
+// 'no_invite'        — authenticated, no matching PendingRoleAssignment
+// 'ready'            — authenticated + classified access granted
+// 'denied'           — authenticated, has a role, but classifyUserAccess returned denied
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authState, setAuthState] = useState('loading'); // see states above
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  // Keep these for compatibility with App.jsx consumers
+  const [isLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
-    checkAppState();
+    initAuth();
   }, []);
 
-  const checkAppState = async () => {
+  const initAuth = async () => {
+    setAuthState('loading');
+    setIsLoadingAuth(true);
+
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
+      const currentUser = await base44.auth.me();
+
+      if (!currentUser) {
+        // Not signed in at all — show sign-in screen
+        setUser(null);
+        setAuthState('unauthenticated');
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      const accessClass = classifyUserAccess(currentUser);
+      console.log(`[Auth] user=${currentUser.email} role=${currentUser.role} access_level=${currentUser.access_level} → ${accessClass}`);
+
+      if (accessClass !== 'denied') {
+        // User has valid role/access — let them in
+        setUser(currentUser);
+        setAuthState('ready');
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      // ── Denied: check if they have a pending invite ───────────────────────
+      setAuthState('checking_invite');
+
       try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
+        const result = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
+        const data = result?.data;
+
+        if (data?.upgraded) {
+          // Role was applied — need a hard reload to refresh session claims
+          console.log('[Auth] Pending role applied — reloading...');
+          window.location.reload();
+          return;
         }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
+
+        if (data?.reason === 'already_assigned') {
+          // DB already updated but session claims stale — need sign-out/in
+          // Treat as "activated but stale" — re-fetch user to see if it works
+          const refreshed = await base44.auth.me();
+          const refreshedClass = classifyUserAccess(refreshed);
+          if (refreshedClass !== 'denied') {
+            setUser(refreshed);
+            setAuthState('ready');
+            setIsLoadingAuth(false);
+            return;
           }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
+          // Still denied after refresh — need to re-login
+          setUser(currentUser);
+          setAuthState('stale_session');
+          setIsLoadingAuth(false);
+          return;
         }
-        setIsLoadingPublicSettings(false);
+
+        // No valid pending assignment
+        setUser(currentUser);
+        setAuthState('no_invite');
+        setIsLoadingAuth(false);
+
+      } catch (upgradeErr) {
+        console.warn('[Auth] applyPendingRoleIfNeeded failed:', upgradeErr?.message);
+        setUser(currentUser);
+        setAuthState('no_invite');
         setIsLoadingAuth(false);
       }
+
     } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
+      console.error('[Auth] initAuth error:', error);
+      // Any error fetching the user — treat as unauthenticated
+      setUser(null);
+      setAuthState('unauthenticated');
       setIsLoadingAuth(false);
+      setAuthError({ type: 'unknown', message: error.message });
     }
   };
 
-  const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      let currentUser = await base44.auth.me();
-
-      // ── Invite upgrade path ──────────────────────────────────────────────
-      // If this user has no role/access_level yet (e.g. existed before invite),
-      // attempt to apply any pending role assignment, then re-fetch the user.
-      const needsUpgrade = !currentUser?.role || currentUser.role === 'user' || !currentUser?.access_level;
-      if (needsUpgrade) {
-        try {
-          const result = await base44.functions.invoke('applyPendingRoleIfNeeded', {});
-          if (result?.data?.upgraded) {
-            console.log('[Auth] Pending role applied — doing hard reload for fresh session...');
-            // Hard reload required: auth session/claims are cached and won't reflect
-            // the DB update until a fresh token is issued on next load.
-            window.location.reload();
-            return; // stop further processing — page will reload
-          }
-        } catch (upgradeErr) {
-          // Non-fatal — if upgrade fails, user stays denied which is correct
-          console.warn('[Auth] applyPendingRoleIfNeeded failed:', upgradeErr?.message);
-        }
-      }
-      // ────────────────────────────────────────────────────────────────────
-
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      console.log(`[Auth] user=${currentUser?.email} role=${currentUser?.role} access_level=${currentUser?.access_level} → ${classifyUserAccess(currentUser)}`);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
-    }
-  };
-
-  const logout = (shouldRedirect = true) => {
+  const logout = () => {
     setUser(null);
-    setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
+    setAuthState('unauthenticated');
+    base44.auth.logout(window.location.href);
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      authState,
+      isAuthenticated: authState === 'ready',
       isLoadingAuth,
-      isLoadingPublicSettings,
+      isLoadingPublicSettings, // always false — public app, no gate
       authError,
-      appPublicSettings,
+      appPublicSettings: null,
       logout,
       navigateToLogin,
-      checkAppState,
+      checkAppState: initAuth,
       accessClass: user ? classifyUserAccess(user) : null,
     }}>
       {children}
