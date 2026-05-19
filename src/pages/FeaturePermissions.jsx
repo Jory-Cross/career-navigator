@@ -172,13 +172,16 @@ export default function FeaturePermissions() {
         ? current.visible
         : isClientPortalKey; // default true for portal, false for staff
 
+      const newState = !currentVisible;
+      console.log(`[FeaturePermissions] Toggle ${role}/${featureKey}: ${currentVisible} → ${newState}`);
+
       return {
         ...prev,
         [role]: {
           ...prev[role],
           [featureKey]: {
             ...(current || {}),
-            visible: !currentVisible,
+            visible: newState,
             can_interact: current?.can_interact ?? true,
           },
         },
@@ -195,8 +198,11 @@ export default function FeaturePermissions() {
 
       const allDefs = [...FEATURE_DEFINITIONS, ...CLIENT_PORTAL_FEATURE_DEFINITIONS];
       const ops = [];
+      const savedRecords = [];
 
-      for (const role of ALL_ROLES.map((r) => r.key)) {
+      for (const roleObj of ALL_ROLES) {
+        const role = roleObj.key;
+        
         for (const feat of allDefs) {
           const perm = permissions[role]?.[feat.key];
           // Determine default visibility based on feature type
@@ -215,26 +221,60 @@ export default function FeaturePermissions() {
             can_interact: perm?.can_interact ?? true,
           };
           
+          // Log every feature being saved, especially client portal ones
+          if (isClientPortalFeature) {
+            console.log(`[FeaturePermissions] Saving client portal feature:`, {
+              role,
+              feature_key: feat.key,
+              label: feat.label,
+              visible: currentVisible,
+              action: existingRow ? "UPDATE" : "CREATE"
+            });
+          }
+          
           if (existingRow) {
             // Always update existing rows to match current state
-            ops.push(base44.entities.FeaturePermission.update(existingRow.id, payload));
+            ops.push(
+              base44.entities.FeaturePermission.update(existingRow.id, payload)
+                .then(() => { 
+                  savedRecords.push({ ...payload, id: existingRow.id, action: "UPDATE" });
+                  return existingRow.id;
+                })
+            );
           } else {
             // Create new records for all features with their current visibility
-            ops.push(base44.entities.FeaturePermission.create(payload));
+            ops.push(
+              base44.entities.FeaturePermission.create(payload)
+                .then((created) => { 
+                  savedRecords.push({ ...payload, id: created.id, action: "CREATE" });
+                  return created.id;
+                })
+            );
           }
         }
       }
 
-      console.log(`[FeaturePermissions] Saving ${ops.length} permission records`);
+      console.log(`[FeaturePermissions] Starting save of ${ops.length} permission records`);
       await Promise.all(ops);
+      console.log(`[FeaturePermissions] Successfully saved ${savedRecords.length} records:`, savedRecords);
+      
       bustPermissionsCache();
       
-      // Verify the save for Clock In/Out
-      const clockRecord = await base44.entities.FeaturePermission.filter({ 
-        role: "pre_ets", 
-        feature_key: "client_portal_clock_in_out" 
-      });
-      console.log("[FeaturePermissions] Saved Clock In/Out record:", clockRecord);
+      // Immediately verify the save for Clock In/Out
+      console.log("[FeaturePermissions] Verifying Clock In/Out record...");
+      const allRecords = await base44.entities.FeaturePermission.list();
+      const clockRecords = allRecords.filter(r => 
+        r.role === "pre_ets" && r.feature_key === "client_portal_clock_in_out"
+      );
+      
+      if (clockRecords.length > 0) {
+        console.log("[FeaturePermissions] ✓ FOUND Clock In/Out record:", clockRecords[0]);
+      } else {
+        console.warn("[FeaturePermissions] ✗ Clock In/Out record NOT FOUND after save");
+        console.log("[FeaturePermissions] All pre_ets records:", 
+          allRecords.filter(r => r.role === "pre_ets")
+        );
+      }
       
       toast.success("Permissions saved");
     } catch (e) {
