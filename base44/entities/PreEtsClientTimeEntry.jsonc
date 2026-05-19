@@ -1,0 +1,67 @@
+{
+  "name": "PreEtsClientTimeEntry",
+  "type": "object",
+  "description": "Pre-ETS client program/work hours logged by the client themselves. Separate from staff TimeEntry records.",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "ID of the Pre-ETS client who logged these hours"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Display name of the client"
+    },
+    "org_id": {
+      "type": "string",
+      "description": "Tenant org ID"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time in HH:MM format"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time in HH:MM format"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Total duration in minutes"
+    },
+    "description": {
+      "type": "string",
+      "description": "What the client worked on"
+    },
+    "source": {
+      "type": "string",
+      "default": "client_portal",
+      "description": "Where the entry was created from"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Review status by staff"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email of staff member who approved/rejected"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "client_id",
+    "date",
+    "duration_minutes"
+  ]
+}

@@ -84,19 +84,17 @@ export default function TimeEntryWithIncrements({
 
     setSaving(true);
     try {
-           const finalEmployeeId = employeeId || clientId;
-
-      await base44.entities.TimeEntry.create({
+      // Save to PreEtsClientTimeEntry — NOT staff TimeEntry
+      await base44.entities.PreEtsClientTimeEntry.create({
         client_id: clientId,
-        employee_id: finalEmployeeId,
+        client_name: clientName || "",
         date,
         start_time: startTime,
         end_time: endTime,
         duration_minutes: durationMinutes,
         description: notes || "Work session",
-        entry_type_code: "pre_ets_training",
-        is_payroll_eligible: true,
         source: "client_portal",
+        status: "pending",
       });
 
       toast.success(`Time entry saved: ${formatDurationDisplay(durationMinutes)}`);
