@@ -12,6 +12,7 @@ import OrgSignup from './pages/OrgSignup';
 import OrgDashboard from './pages/OrgDashboard';
 import DspdPortal from './pages/DspdPortal';
 import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
+import PreEtsPortal from './pages/PreEtsPortal';
 import Agents from './pages/Agents';
 import AppAnalytics from './pages/AppAnalytics';
 import FeaturePermissions from './pages/FeaturePermissions';
