@@ -199,7 +199,11 @@ export default function FeaturePermissions() {
       for (const role of ALL_ROLES.map((r) => r.key)) {
         for (const feat of allDefs) {
           const perm = permissions[role]?.[feat.key];
-          if (!perm) continue;
+          // Determine default visibility based on feature type
+          const isClientPortalFeature = feat.key.startsWith("client_portal_");
+          const defaultVisible = isClientPortalFeature ? true : false;
+          const currentVisible = perm !== undefined ? perm.visible : defaultVisible;
+          
           const mapKey = `${role}__${feat.key}`;
           const existingRow = existingMap[mapKey];
           const payload = {
@@ -207,21 +211,34 @@ export default function FeaturePermissions() {
             feature_key: feat.key,
             label: feat.label,
             category: feat.category,
-            visible: perm.visible,
-            can_interact: perm.can_interact,
+            visible: currentVisible,
+            can_interact: perm?.can_interact ?? true,
           };
+          
           if (existingRow) {
+            // Always update existing rows to match current state
             ops.push(base44.entities.FeaturePermission.update(existingRow.id, payload));
           } else {
+            // Create new records for all features with their current visibility
             ops.push(base44.entities.FeaturePermission.create(payload));
           }
         }
       }
 
+      console.log(`[FeaturePermissions] Saving ${ops.length} permission records`);
       await Promise.all(ops);
       bustPermissionsCache();
+      
+      // Verify the save for Clock In/Out
+      const clockRecord = await base44.entities.FeaturePermission.filter({ 
+        role: "pre_ets", 
+        feature_key: "client_portal_clock_in_out" 
+      });
+      console.log("[FeaturePermissions] Saved Clock In/Out record:", clockRecord);
+      
       toast.success("Permissions saved");
     } catch (e) {
+      console.error("[FeaturePermissions] Save error:", e);
       toast.error("Failed to save: " + (e?.message || "Unknown error"));
     } finally {
       setSaving(false);
