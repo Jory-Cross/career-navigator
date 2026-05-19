@@ -46,7 +46,11 @@ function formatDurationDisplay(minutes) {
   return `${hours} hour${hours !== 1 ? "s" : ""} ${mins} minute${mins !== 1 ? "s" : ""}`;
 }
 
-export default function TimeEntryWithIncrements({ clientId, clientName }) {
+export default function TimeEntryWithIncrements({
+  clientId,
+  clientName,
+  employeeId = null,
+}) {
   const timeOptions = useMemo(() => generateTimeOptions(), []);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("");
