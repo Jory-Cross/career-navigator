@@ -737,6 +737,19 @@ setCompletionNote("");
             </div>
           )}
         </TabsContent>
+       {client?.client_type === "pre_ets" && (
+  <TabsContent value="clock" className="space-y-4">
+    <ClockInOut
+      clientId={client.id}
+      clientName={
+        client.full_name ||
+        [client.first_name, client.last_name]
+          .filter(Boolean)
+          .join(" ")
+      }
+    />
+  </TabsContent>
+)}
       </Tabs>
 
       {/* CREATE APPLICATION */}
