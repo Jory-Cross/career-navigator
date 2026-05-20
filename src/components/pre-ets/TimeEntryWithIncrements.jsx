@@ -92,6 +92,15 @@ export default function TimeEntryWithIncrements({
 
   const canSave = startTime && endTime && durationMinutes && !validationError;
 
+  const loadRejectedEntryForCorrection = (entry) => {
+    setDate(entry.date || format(new Date(), "yyyy-MM-dd"));
+    setStartTime(entry.start_time || "");
+    setEndTime(entry.end_time || "");
+    setNotes(entry.description || "");
+    toast.info("Rejected entry loaded. Make corrections and resubmit.");
+  };
+
+  
   const handleSave = async () => {
     if (!canSave) {
       toast.error("Please resolve validation errors");
