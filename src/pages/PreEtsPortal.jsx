@@ -12,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useFeaturePermissions } from "@/lib/useFeaturePermissions";
 import { toast } from "sonner";
 import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
 import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
