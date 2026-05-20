@@ -137,6 +137,7 @@ export default function TimeEntryWithIncrements({
       setStartTime("");
       setEndTime("");
       setNotes("");
+      setCorrectionEntryId(null);
       setShowPreview(false);
     } catch (error) {
       toast.error("Failed to save time entry");
