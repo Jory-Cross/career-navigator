@@ -338,8 +338,10 @@ export default function PreEtsTimeEntries() {
                               </div>
                             </div>
                           </td>
-                        </tr>
+                                               </tr>
                       )}
+
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
