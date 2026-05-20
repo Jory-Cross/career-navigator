@@ -39,7 +39,8 @@ export default function PreEtsPortal() {
   const [uploading, setUploading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const queryClient = useQueryClient();
-
+  const { canView } = useFeaturePermissions(user);
+  
   useEffect(() => {
     loadData();
   }, []);
