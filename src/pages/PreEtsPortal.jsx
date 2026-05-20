@@ -229,6 +229,15 @@ export default function PreEtsPortal() {
     );
   }
 
+    const canViewClock = canView("client_portal_clock_in_out");
+  const canViewChecklist = canView("client_portal_program_checklist");
+  const canViewIep = canView("client_portal_iep_transition_plan");
+  const canViewSkills = canView("client_portal_skills_exploration");
+  const canViewAssessments = canView("client_portal_assessments");
+  const canViewWble = canView("client_portal_wble_forms");
+  const canViewMeetings = canView("client_portal_meetings");
+  const canViewDocuments = canView("client_portal_documents");
+
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
   const completedSteps = onboardingSteps.filter(s => s.status === 'completed').length;
   const totalSteps = onboardingSteps.length || CHECKLIST_ITEMS.length;
