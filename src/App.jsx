@@ -13,6 +13,7 @@ import OrgDashboard from './pages/OrgDashboard';
 import DspdPortal from './pages/DspdPortal';
 import PreEtsEmployerPortal from './pages/PreEtsEmployerPortal';
 import PreEtsPortal from './pages/PreEtsPortal';
+import PreEtsTimeEntries from './pages/PreEtsTimeEntries';
 import Agents from './pages/Agents';
 import AppAnalytics from './pages/AppAnalytics';
 import FeaturePermissions from './pages/FeaturePermissions';
