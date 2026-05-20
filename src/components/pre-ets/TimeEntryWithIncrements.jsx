@@ -132,6 +132,10 @@ export default function TimeEntryWithIncrements({
       }
 
       toast.success(`Time entry saved: ${formatDurationDisplay(durationMinutes)}`);
+
+      await queryClient.invalidateQueries({
+        queryKey: ["preEtsRejectedTimeEntries", clientId],
+      });
       
       // Reset form
       setStartTime("");
