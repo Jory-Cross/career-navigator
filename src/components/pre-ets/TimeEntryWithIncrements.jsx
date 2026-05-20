@@ -58,6 +58,7 @@ export default function TimeEntryWithIncrements({
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [correctionEntryId, setCorrectionEntryId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
