@@ -93,7 +93,8 @@ export default function TimeEntryWithIncrements({
 
   const canSave = startTime && endTime && durationMinutes && !validationError;
 
-  const loadRejectedEntryForCorrection = (entry) => {
+    const loadRejectedEntryForCorrection = (entry) => {
+    setCorrectionEntryId(entry.id);
     setDate(entry.date || format(new Date(), "yyyy-MM-dd"));
     setStartTime(entry.start_time || "");
     setEndTime(entry.end_time || "");
