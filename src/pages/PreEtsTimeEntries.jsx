@@ -236,7 +236,8 @@ export default function PreEtsTimeEntries() {
                   {filteredEntries.map((entry) => {
                     const status = entry.status || "pending";
 
-                    return (
+                                     return (
+                      <React.Fragment key={entry.id}>
                       <tr key={entry.id} className="border-t">
                         <td className="p-3 font-medium">
                           {entry.client_name || "Unknown student"}
