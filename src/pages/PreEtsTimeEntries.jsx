@@ -34,6 +34,10 @@ export default function PreEtsTimeEntries() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
+  const [rejectingEntryId, setRejectingEntryId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [submittingReject, setSubmittingReject] = useState(false);
+
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["preEtsClientTimeEntries"],
     queryFn: async () => {
