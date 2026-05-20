@@ -278,11 +278,11 @@ export default function PreEtsTimeEntries() {
                               Approve
                             </Button>
 
-                            <Button
+                                                        <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateStatus(entry, "rejected")}
-                              disabled={status === "rejected"}
+                              onClick={() => startReject(entry)}
+                              disabled={submittingReject}
                               className="gap-1 text-red-700"
                             >
                               <XCircle className="h-3.5 w-3.5" />
