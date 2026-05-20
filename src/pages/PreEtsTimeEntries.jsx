@@ -68,6 +68,48 @@ export default function PreEtsTimeEntries() {
     );
   }, [filteredEntries]);
 
+  const startReject = (entry) => {
+    setRejectingEntryId(entry.id);
+    setRejectionReason(entry.rejection_reason || "");
+  };
+
+  const cancelReject = () => {
+    setRejectingEntryId(null);
+    setRejectionReason("");
+    setSubmittingReject(false);
+  };
+
+  const submitReject = async (entry) => {
+    const reason = rejectionReason.trim();
+
+    if (!reason) {
+      toast.error("Please enter a rejection reason.");
+      return;
+    }
+
+    try {
+      setSubmittingReject(true);
+
+      await base44.entities.PreEtsClientTimeEntry.update(entry.id, {
+        status: "rejected",
+        rejection_reason: reason,
+        approved_at: null,
+      });
+
+      toast.success("Entry rejected");
+      cancelReject();
+
+      await queryClient.invalidateQueries({
+        queryKey: ["preEtsClientTimeEntries"],
+      });
+    } catch (error) {
+      console.error("Failed to reject Pre-ETS time entry", error);
+      toast.error("Failed to reject entry");
+      setSubmittingReject(false);
+    }
+  };
+
+  
   const updateStatus = async (entry, nextStatus) => {
     try {
       await base44.entities.PreEtsClientTimeEntry.update(entry.id, {
