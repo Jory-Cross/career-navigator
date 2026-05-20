@@ -290,7 +290,55 @@ export default function PreEtsTimeEntries() {
                             </Button>
                           </div>
                         </td>
-                      </tr>
+                                           </tr>
+
+                      {rejectingEntryId === entry.id && (
+                        <tr className="border-t bg-red-50">
+                          <td colSpan={8} className="p-4">
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-sm font-semibold text-red-900">
+                                  Rejection Reason Required
+                                </p>
+
+                                <p className="text-xs text-red-700">
+                                  Explain what needs to be corrected before the
+                                  student resubmits this time entry.
+                                </p>
+                              </div>
+
+                              <textarea
+                                value={rejectionReason}
+                                onChange={(e) =>
+                                  setRejectionReason(e.target.value)
+                                }
+                                placeholder="Enter rejection reason..."
+                                className="min-h-[100px] w-full rounded-md border border-red-200 bg-white p-3 text-sm"
+                              />
+
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={cancelReject}
+                                  disabled={submittingReject}
+                                >
+                                  Cancel
+                                </Button>
+
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => submitReject(entry)}
+                                  disabled={submittingReject}
+                                >
+                                  {submittingReject
+                                    ? "Rejecting..."
+                                    : "Reject Entry"}
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     );
                   })}
                 </tbody>
