@@ -55,9 +55,14 @@ Deno.serve(async (req) => {
     console.log(`[applyPendingRoleIfNeeded] ── Invite upgrade check ──`);
     console.log(`[applyPendingRoleIfNeeded] Invited email: ${email} | current role=${currentRole} | access=${currentAccess}`);
 
-    // Look up all pending assignments for this email
-    const pending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ email });
-    const pendingOnly = (pending || []).filter(p =>
+    // Look up pending assignments case-insensitively.
+    // Some invite records may have been saved with uppercase letters or extra spaces.
+    const allAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
+    const pending = (allAssignments || []).filter(p =>
+      String(p.email || '').toLowerCase().trim() === email
+    );
+
+    const pendingOnly = pending.filter(p =>
       p.status === 'pending' || p.status === 'invite_email_sent' || p.status === 'pending_email_failed'
     );
 
