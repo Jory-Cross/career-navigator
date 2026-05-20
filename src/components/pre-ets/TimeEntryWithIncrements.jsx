@@ -162,6 +162,50 @@ export default function TimeEntryWithIncrements({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+
+            {rejectedEntries.length > 0 && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-900">
+                  Time Entries Needing Correction
+                </p>
+
+                <p className="mt-1 text-xs text-red-700">
+                  Please review the rejection reason, correct the time entry,
+                  and resubmit it for staff approval.
+                </p>
+
+                <div className="mt-3 space-y-3">
+                  {rejectedEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-md border border-red-200 bg-white p-3"
+                    >
+                      <div className="text-xs text-slate-600">
+                        <strong>Date:</strong> {entry.date || "—"} |{" "}
+                        <strong>Start:</strong> {entry.start_time || "—"} |{" "}
+                        <strong>Stop:</strong> {entry.end_time || "—"}
+                      </div>
+
+                      <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-800">
+                        <strong>Reason:</strong>{" "}
+                        {entry.rejection_reason || "No reason provided"}
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => loadRejectedEntryForCorrection(entry)}
+                      >
+                        Correct This Entry
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* Date */}
             <div>
               <Label htmlFor="date" className="text-xs font-medium mb-1.5 block">
