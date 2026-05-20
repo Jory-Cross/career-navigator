@@ -141,8 +141,18 @@ const AuthenticatedApp = () => {
       <Route path="/EmployeePortal" element={<LayoutWrapper currentPageName="EmployeePortal"><EmployeePortal /></LayoutWrapper>} />
       <Route path="/DspdPortal" element={<Navigate to="/Clients?type=dspd" replace />} />
       <Route path="/PreEtsEmployerPortal" element={<PreEtsEmployerPortal />} />
-      <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
-      <Route path="/AppAnalytics" element={<LayoutWrapper currentPageName="AppAnalytics"><AppAnalytics /></LayoutWrapper>} />
+
+<Route
+  path="/PreEtsTimeEntries"
+  element={
+    <LayoutWrapper currentPageName="PreEtsTimeEntries">
+      <PreEtsTimeEntries />
+    </LayoutWrapper>
+  }
+/>
+
+<Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
+<Route path="/AppAnalytics" element={<LayoutWrapper currentPageName="AppAnalytics"><AppAnalytics /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
       <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
