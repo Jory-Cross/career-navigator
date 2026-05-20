@@ -52,6 +52,7 @@ export default function TimeEntryWithIncrements({
   clientName,
   employeeId = null,
 }) {
+  const queryClient = useQueryClient();
   const timeOptions = useMemo(() => generateTimeOptions(), []);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("");
