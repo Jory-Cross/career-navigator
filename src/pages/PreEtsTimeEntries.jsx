@@ -272,7 +272,7 @@ export default function PreEtsTimeEntries() {
                               size="sm"
                               variant="outline"
                               onClick={() => updateStatus(entry, "approved")}
-                              disabled={status === "approved"}
+                              disabled={status === "approved" || status === "rejected"}
                               className="gap-1"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
