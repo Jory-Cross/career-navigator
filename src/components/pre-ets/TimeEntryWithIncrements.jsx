@@ -61,6 +61,20 @@ export default function TimeEntryWithIncrements({
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const { data: rejectedEntries = [] } = useQuery({
+    queryKey: ["preEtsRejectedTimeEntries", clientId],
+    queryFn: async () => {
+      const records = await base44.entities.PreEtsClientTimeEntry.filter({
+        client_id: clientId,
+        status: "rejected",
+      });
+
+      return Array.isArray(records) ? records : [];
+    },
+    enabled: !!clientId,
+    refetchOnMount: "always",
+  });
+  
   const durationMinutes = useMemo(() => calculateDuration(startTime, endTime), [startTime, endTime]);
 
   const validationError = useMemo(() => {
