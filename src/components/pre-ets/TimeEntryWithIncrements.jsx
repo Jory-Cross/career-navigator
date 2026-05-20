@@ -111,8 +111,7 @@ export default function TimeEntryWithIncrements({
 
     setSaving(true);
     try {
-      // Save to PreEtsClientTimeEntry — NOT staff TimeEntry
-      await base44.entities.PreEtsClientTimeEntry.create({
+            const payload = {
         client_id: clientId,
         client_name: clientName || "",
         date,
@@ -122,7 +121,15 @@ export default function TimeEntryWithIncrements({
         description: notes || "Work session",
         source: "client_portal",
         status: "pending",
-      });
+        rejection_reason: null,
+        resubmitted_at: correctionEntryId ? new Date().toISOString() : null,
+      };
+
+      if (correctionEntryId) {
+        await base44.entities.PreEtsClientTimeEntry.update(correctionEntryId, payload);
+      } else {
+        await base44.entities.PreEtsClientTimeEntry.create(payload);
+      }
 
       toast.success(`Time entry saved: ${formatDurationDisplay(durationMinutes)}`);
       
