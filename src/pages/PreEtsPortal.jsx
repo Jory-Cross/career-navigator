@@ -332,17 +332,17 @@ export default function PreEtsPortal() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="tasks" className="space-y-4">
+            <Tabs defaultValue="tasks" className="space-y-4">
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto gap-1">
           <TabsTrigger value="tasks">My Tasks ({pendingTasks.length})</TabsTrigger>
-          <TabsTrigger value="clock">Clock In/Out</TabsTrigger>
-          <TabsTrigger value="checklist">Program Checklist</TabsTrigger>
-          <TabsTrigger value="iep">IEP & Transition Plan</TabsTrigger>
-          <TabsTrigger value="skills">Skills Exploration</TabsTrigger>
-          <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>
-          <TabsTrigger value="wble">WBLE Forms ({wbleForms.length + progressReports.length})</TabsTrigger>
-          <TabsTrigger value="meetings">Meetings ({upcomingMeetings.length})</TabsTrigger>
-          <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
+          {canViewClock && <TabsTrigger value="clock">Clock In/Out</TabsTrigger>}
+          {canViewChecklist && <TabsTrigger value="checklist">Program Checklist</TabsTrigger>}
+          {canViewIep && <TabsTrigger value="iep">IEP & Transition Plan</TabsTrigger>}
+          {canViewSkills && <TabsTrigger value="skills">Skills Exploration</TabsTrigger>}
+          {canViewAssessments && <TabsTrigger value="assessments">Assessments ({assessments.length})</TabsTrigger>}
+          {canViewWble && <TabsTrigger value="wble">WBLE Forms ({wbleForms.length + progressReports.length})</TabsTrigger>}
+          {canViewMeetings && <TabsTrigger value="meetings">Meetings ({upcomingMeetings.length})</TabsTrigger>}
+          {canViewDocuments && <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>}
         </TabsList>
 
         {/* Clock In/Out */}
