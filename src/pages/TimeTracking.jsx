@@ -1311,7 +1311,15 @@ if (entryTypeFilter !== "all") {
                   )}
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{formatDurationMinutes(entry.duration_minutes)}</Badge>
+                                       {isNonAttendance ? (
+                      <Badge className="bg-red-100 text-red-700">
+                        No-show / cancellation
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        {formatDurationMinutes(entry.duration_minutes)}
+                      </Badge>
+                    )}
 
                     {entry.start_time ? (
                       <Badge variant="outline">
