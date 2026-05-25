@@ -179,6 +179,14 @@ export default function TimeTracking() {
 const [showNewEntry, setShowNewEntry] = useState(false);
 const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
 const [selectedNewEntryClientId, setSelectedNewEntryClientId] = useState("");
+const [showNonAttendanceDialog, setShowNonAttendanceDialog] = useState(false);
+const [savingNonAttendance, setSavingNonAttendance] = useState(false);
+const [nonAttendanceForm, setNonAttendanceForm] = useState({
+  client_id: "",
+  date: format(new Date(), "yyyy-MM-dd"),
+  event_type: "no_show",
+  description: "",
+});
 const [deletingEntry, setDeletingEntry] = useState(null);
 const [isDeleting, setIsDeleting] = useState(false);
 
