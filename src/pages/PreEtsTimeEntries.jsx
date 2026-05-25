@@ -445,7 +445,9 @@ export default function PreEtsTimeEntries() {
                           {entry.client_name || "Unknown student"}
                         </td>
                         <td className="p-3">{safeDate(entry.date)}</td>
-                        <td className="p-3">{entry.start_time || "—"}</td>
+                                               <td className="p-3">
+                          {isNonPayableEvent ? "—" : entry.start_time || "—"}
+                        </td>
                         <td className="p-3">{entry.end_time || "—"}</td>
                         <td className="p-3">
                           {formatMinutes(entry.duration_minutes)}
