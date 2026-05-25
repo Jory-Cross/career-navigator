@@ -884,6 +884,17 @@ if (entryTypeFilter !== "all") {
   setSelectedNewEntryClientId("");
 }, []);
 
+ const closeNonAttendanceDialog = useCallback(() => {
+  setShowNonAttendanceDialog(false);
+  setSavingNonAttendance(false);
+  setNonAttendanceForm({
+    client_id: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    event_type: "no_show",
+    description: "",
+  });
+}, []);
+
   const closeEditDialog = useCallback(() => {
     setEditingEntry(null);
     setEditingEntryTypeCode("");
