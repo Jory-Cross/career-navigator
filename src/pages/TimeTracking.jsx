@@ -1435,8 +1435,8 @@ if (entryTypeFilter !== "all") {
                       </Badge>
                     ) : null}
 
-                                       {!isNonAttendance ? (
-                      <Badge variant="outline">
+                                      {!isNonAttendance ? (
+                      <Badge className={entryColors.badge}>
                         {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
                       </Badge>
                     ) : null}
