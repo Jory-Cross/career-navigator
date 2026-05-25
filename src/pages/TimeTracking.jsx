@@ -1750,12 +1750,25 @@ if (entryTypeFilter !== "all") {
                     : `${selectedEntry.duration_minutes || 0} minutes`}
                 </div>
               </div>
-              <div>
-                <div className="mb-1 text-xs text-slate-500">Type</div>
+                           <div>
+                <div className="mb-1 text-xs text-slate-500">
+                  {isSelectedNonAttendance ? "Record Type" : "Type"}
+                </div>
                 <div className="text-sm">
-                  {getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
+                  {isSelectedNonAttendance
+                    ? "Client No-Show / Cancellation"
+                    : getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
                 </div>
               </div>
+
+              {isSelectedNonAttendance ? (
+                <div>
+                  <div className="mb-1 text-xs text-slate-500">Event Type</div>
+                  <div className="text-sm capitalize">
+                    {selectedNonAttendanceLabel}
+                  </div>
+                </div>
+              ) : null}
 
               {selectedEntry.start_time || selectedEntry.end_time ? (
                 <div>
