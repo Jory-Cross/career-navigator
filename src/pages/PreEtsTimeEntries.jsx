@@ -130,6 +130,66 @@ export default function PreEtsTimeEntries() {
     }
   };
 
+  const submitNonPayableEvent = async () => {
+    const client = preEtsClients.find((item) => item.id === eventForm.client_id);
+    const description = eventForm.description.trim();
+
+    if (!client) {
+      toast.error("Please select a student.");
+      return;
+    }
+
+    if (!eventForm.date) {
+      toast.error("Please select a date.");
+      return;
+    }
+
+    if (!description) {
+      toast.error("Please enter a description.");
+      return;
+    }
+
+    try {
+      setSubmittingEvent(true);
+
+      await base44.entities.PreEtsClientTimeEntry.create({
+        client_id: client.id,
+        client_name: `${client.first_name || ""} ${client.last_name || ""}`.trim(),
+        org_id: client.org_id || "",
+        date: eventForm.date,
+        start_time: "",
+        end_time: "",
+        duration_minutes: 0,
+        description,
+        source: "staff_entry",
+        status: "approved",
+        record_type: "non_payable_event",
+        event_type: eventForm.event_type,
+        payable: false,
+        approved_at: new Date().toISOString(),
+      });
+
+      toast.success("Non-payable event added");
+
+      setEventForm({
+        client_id: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        event_type: "no_show",
+        description: "",
+      });
+      setShowAddEvent(false);
+
+      await queryClient.invalidateQueries({
+        queryKey: ["preEtsClientTimeEntries"],
+      });
+    } catch (error) {
+      console.error("Failed to add non-payable Pre-ETS event", error);
+      toast.error("Failed to add event");
+    } finally {
+      setSubmittingEvent(false);
+    }
+  };
+
   
   const updateStatus = async (entry, nextStatus) => {
     try {
