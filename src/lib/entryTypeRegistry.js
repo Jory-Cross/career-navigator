@@ -79,7 +79,7 @@ const BASE_ENTRY_TYPES = [
     active: true,
     group: "time_entry",
   },
-  {
+   {
     code: "pre_ets_training",
     label: "Pre-ETS",
     schemaKey: "simple_time",
@@ -87,6 +87,20 @@ const BASE_ENTRY_TYPES = [
     programType: "vr",
     showInDropdown: true,
     active: true,
+    group: "time_entry",
+  },
+  {
+    code: "client_non_attendance",
+    label: "Client No-Show / Cancellation",
+    schemaKey: "none",
+    category: "staff_record",
+    programType: "internal",
+    showInDropdown: false,
+    active: true,
+    clientRequired: true,
+    billable: false,
+    reportable: false,
+    payrollEligible: false,
     group: "time_entry",
   },
   {
