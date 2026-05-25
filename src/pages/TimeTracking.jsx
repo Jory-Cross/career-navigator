@@ -1334,8 +1334,19 @@ if (entryTypeFilter !== "all") {
                     {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
                   </div>
 
-                  <div className="mb-2 text-sm text-slate-900">
-                    {entry.description || "Session"}
+                                    <div className="mb-2 text-sm text-slate-900">
+                    {isNonAttendance ? (
+                      <div>
+                        <p className="font-medium capitalize">
+                          {nonAttendanceLabel}
+                        </p>
+                        <p className="mt-1 text-slate-600">
+                          {entry.description || "No note entered"}
+                        </p>
+                      </div>
+                    ) : (
+                      entry.description || "Session"
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
