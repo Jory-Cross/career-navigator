@@ -451,8 +451,8 @@ export default function PreEtsTimeEntries() {
                                               <td className="p-3">
                           {isNonPayableEvent ? "—" : entry.end_time || "—"}
                         </td>
-                        <td className="p-3">
-                          {formatMinutes(entry.duration_minutes)}
+                                                <td className="p-3">
+                          {isNonPayableEvent ? "Non-payable" : formatMinutes(entry.duration_minutes)}
                         </td>
                         <td className="p-3">
                           <Badge
