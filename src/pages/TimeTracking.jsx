@@ -1784,8 +1784,9 @@ if (entryTypeFilter !== "all") {
                   Edit
                 </Button>
               </div>
-            </div>
-          ) : null}
+                        </div>
+                );
+              })() : null}
         </DialogContent>
       </Dialog>
 
