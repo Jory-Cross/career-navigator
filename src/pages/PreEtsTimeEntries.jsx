@@ -275,7 +275,7 @@ export default function PreEtsTimeEntries() {
               </SelectContent>
             </Select>
 
-            <Button
+                       <Button
               variant="outline"
               onClick={() =>
                 queryClient.invalidateQueries({
@@ -286,6 +286,14 @@ export default function PreEtsTimeEntries() {
             >
               <RefreshCw className="h-4 w-4" />
               Refresh
+            </Button>
+
+            <Button
+              onClick={() => setShowAddEvent((value) => !value)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Non-Payable Event
             </Button>
           </div>
 
