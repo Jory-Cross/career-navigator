@@ -428,8 +428,15 @@ export default function PreEtsTimeEntries() {
                 </thead>
 
                 <tbody>
-                  {filteredEntries.map((entry) => {
+                                    {filteredEntries.map((entry) => {
                     const status = entry.status || "pending";
+                    const isNonPayableEvent =
+                      entry.record_type === "non_payable_event" ||
+                      entry.payable === false;
+
+                    const eventLabel = entry.event_type
+                      ? entry.event_type.replace(/_/g, " ")
+                      : "non-payable event";
 
                                      return (
                       <React.Fragment key={entry.id}>
