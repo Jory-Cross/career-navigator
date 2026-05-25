@@ -1412,8 +1412,9 @@ if (entryTypeFilter !== "all") {
                   key={entry.id}
                   type="button"
                   onClick={() => handleOpenEntry(entry)}
-                  className={cn(
+                                    className={cn(
                     "w-full rounded-lg border p-4 text-left transition hover:bg-muted/40",
+                    entryColors.card,
                     isDuplicate && "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
                   )}
                 >
