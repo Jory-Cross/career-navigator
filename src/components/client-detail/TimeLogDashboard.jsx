@@ -731,9 +731,16 @@ export default function TimeLogDashboard({
           <EmptyState message="No time entries match the current filters." />
         ) : (
           <div className="space-y-3">
-            {filtered.map((entry) => {
+                       {filtered.map((entry) => {
               const employee = employeeById[entry.employee_id];
               const client = clientById[entry.client_id];
+              const isNonAttendance =
+                getResolvedEntryTypeCode(entry) === "client_non_attendance";
+
+              const nonAttendanceLabel =
+                entry.form_data?.event_label ||
+                entry.form_data?.event_type?.replace(/_/g, " ") ||
+                "No-show / cancellation";
 
               return (
                 <Card key={entry.id} className="p-4">
