@@ -332,7 +332,7 @@ export default function PreEtsPortal() {
       </div>
 
       {/* Main Tabs */}
-            <Tabs defaultValue="tasks" className="space-y-4">
+      <Tabs defaultValue="tasks" className="space-y-4">
         <TabsList className="bg-slate-100 p-1 flex-wrap h-auto gap-1">
           <TabsTrigger value="tasks">My Tasks ({pendingTasks.length})</TabsTrigger>
           {canViewClock && <TabsTrigger value="clock">Clock In/Out</TabsTrigger>}
@@ -345,7 +345,7 @@ export default function PreEtsPortal() {
           {canViewDocuments && <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>}
         </TabsList>
 
-              {/* Clock In/Out */}
+        {/* Clock In/Out */}
         {canViewClock && (
           <TabsContent value="clock">
             <ClockInOut 
@@ -414,7 +414,7 @@ export default function PreEtsPortal() {
           </Card>
         </TabsContent>
 
-                {/* Program Checklist */}
+        {/* Program Checklist */}
         {canViewChecklist && (
           <TabsContent value="checklist">
             <Card className="border-0 shadow-sm">
@@ -464,7 +464,7 @@ export default function PreEtsPortal() {
           </TabsContent>
         )}
 
-               {/* Assessments */}
+        {/* Assessments */}
         {canViewAssessments && (
           <TabsContent value="assessments">
             <Card className="border-0 shadow-sm">
@@ -509,112 +509,197 @@ export default function PreEtsPortal() {
           </TabsContent>
         )}
 
-        v
+        {/* WBLE Forms */}
+        {canViewWble && (
+          <TabsContent value="wble">
+            {isStaff ? (
+              <WBLEFormSection clientId={activeClient?.id} client={activeClient} user={user} />
+            ) : (
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-green-600" /> Work-Based Learning Experience Forms
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {wbleForms.length === 0 && progressReports.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Briefcase className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-sm text-slate-400">No WBLE agreements yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Your counselor will create your WBLE agreement</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {wbleForms.map(form => (
+                        <div key={form.id} className="p-4 bg-green-50 border border-green-100 rounded-lg">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-sm font-semibold text-slate-800">WBLE Agreement</p>
+                                <Badge className={cn("text-xs",
+                                  form.status === 'completed' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                                )}>
+                                  {form.status}
+                                </Badge>
+                              </div>
+                              {form.employer_name && <p className="text-xs text-slate-600">Employer: {form.employer_name}</p>}
+                              <div className="flex gap-4 mt-1 text-xs text-slate-500">
+                                {form.start_date && <span>Start: {format(new Date(form.start_date), "MMM d, yyyy")}</span>}
+                                {form.end_date && <span>End: {format(new Date(form.end_date), "MMM d, yyyy")}</span>}
+                              </div>
+                              {form.trainee_wages && <p className="text-xs text-slate-600 mt-1">Wages: {form.trainee_wages}</p>}
+                            </div>
+                            {form.pdf_url && (
+                              <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="outline">
+                                  <Download className="w-3.5 h-3.5 mr-1" /> PDF
+                                </Button>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {progressReports.map(report => (
+                        <div key={report.id} className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">
+                                Progress Report: {report.reporting_period_from && format(new Date(report.reporting_period_from), "MMM d")} – {report.reporting_period_to && format(new Date(report.reporting_period_to), "MMM d, yyyy")}
+                              </p>
+                              {report.supervisor_name && <p className="text-xs text-slate-500 mt-0.5">Supervisor: {report.supervisor_name}</p>}
+                              <p className="text-xs text-slate-400 mt-0.5">Submitted: {format(new Date(report.created_date), "MMM d, yyyy")}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+                              {report.pdf_url && (
+                                <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
+                                  <Button size="sm" variant="ghost"><Download className="w-3.5 h-3.5" /></Button>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
 
         {/* Meetings */}
-        <TabsContent value="meetings">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-violet-600" /> Appointments & Meetings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {meetings.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">No meetings scheduled</div>
-              ) : (
-                <div className="space-y-3">
-                  {meetings.map(meeting => (
-                    <div key={meeting.id} className={cn(
-                      "p-4 rounded-lg border",
-                      meeting.status === 'cancelled' ? "bg-slate-50 border-slate-200 opacity-60" :
-                      meeting.status === 'completed' ? "bg-slate-50 border-slate-200" :
-                      "bg-violet-50 border-violet-200"
-                    )}>
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
-                          <p className="text-xs text-slate-500 capitalize mt-0.5">{meeting.meeting_type?.replace(/_/g, ' ')}</p>
-                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                            <span>{format(new Date(meeting.start_datetime), "MMM d, yyyy")}</span>
-                            <span>•</span>
-                            <span>{format(new Date(meeting.start_datetime), "h:mm a")}</span>
+        {canViewMeetings && (
+          <TabsContent value="meetings">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="w-4 h-4 text-violet-600" /> Appointments & Meetings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {meetings.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-slate-400">No meetings scheduled</div>
+                ) : (
+                  <div className="space-y-3">
+                    {meetings.map(meeting => (
+                      <div key={meeting.id} className={cn(
+                        "p-4 rounded-lg border",
+                        meeting.status === 'cancelled' ? "bg-slate-50 border-slate-200 opacity-60" :
+                        meeting.status === 'completed' ? "bg-slate-50 border-slate-200" :
+                        "bg-violet-50 border-violet-200"
+                      )}>
+                        <div className="flex items-start gap-3">
+                          <Clock className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-900">{meeting.title}</p>
+                            <p className="text-xs text-slate-500 capitalize mt-0.5">{meeting.meeting_type?.replace(/_/g, ' ')}</p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                              <span>{format(new Date(meeting.start_datetime), "MMM d, yyyy")}</span>
+                              <span>•</span>
+                              <span>{format(new Date(meeting.start_datetime), "h:mm a")}</span>
+                            </div>
+                            {meeting.location && <p className="text-xs text-slate-500 mt-1">📍 {meeting.location}</p>}
                           </div>
-                          {meeting.location && <p className="text-xs text-slate-500 mt-1">📍 {meeting.location}</p>}
+                          <Badge className={cn("text-xs shrink-0",
+                            meeting.status === 'confirmed' ? "bg-green-100 text-green-700" :
+                            meeting.status === 'completed' ? "bg-slate-100 text-slate-600" :
+                            meeting.status === 'cancelled' ? "bg-red-100 text-red-700" :
+                            "bg-blue-100 text-blue-700"
+                          )}>
+                            {meeting.status}
+                          </Badge>
                         </div>
-                        <Badge className={cn("text-xs shrink-0",
-                          meeting.status === 'confirmed' ? "bg-green-100 text-green-700" :
-                          meeting.status === 'completed' ? "bg-slate-100 text-slate-600" :
-                          meeting.status === 'cancelled' ? "bg-red-100 text-red-700" :
-                          "bg-blue-100 text-blue-700"
-                        )}>
-                          {meeting.status}
-                        </Badge>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* IEP Plan */}
-        <TabsContent value="iep">
-          <IEPPlanSection clientId={activeClient?.id} isStaff={isStaff} />
-        </TabsContent>
+        {canViewIep && (
+          <TabsContent value="iep">
+            <IEPPlanSection clientId={activeClient?.id} isStaff={isStaff} />
+          </TabsContent>
+        )}
 
         {/* Skills Exploration */}
-        <TabsContent value="skills">
-          <SkillsExplorationTab clientId={activeClient?.id} isStaff={isStaff} client={activeClient} />
-        </TabsContent>
+        {canViewSkills && (
+          <TabsContent value="skills">
+            <SkillsExplorationTab clientId={activeClient?.id} isStaff={isStaff} client={activeClient} />
+          </TabsContent>
+        )}
 
         {/* Documents */}
-        <TabsContent value="documents">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-slate-600" /> My Documents
-                </CardTitle>
-                <label htmlFor="pre-ets-upload">
-                  <Button size="sm" asChild>
-                    <span className="cursor-pointer">
-                      {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
-                      Upload Document
-                    </span>
-                  </Button>
-                  <input id="pre-ets-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-                </label>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documents.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-400">No documents uploaded yet</div>
-              ) : (
-                <div className="space-y-3">
-                  {documents.map(doc => (
-                    <div key={doc.id} className="p-4 bg-slate-50 rounded-lg flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
-                          <p className="text-xs text-slate-500">
-                            {doc.category} • {format(new Date(doc.created_date), "MMM d, yyyy")}
-                          </p>
-                        </div>
-                      </div>
-                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="ghost"><Download className="w-3.5 h-3.5" /></Button>
-                      </a>
-                    </div>
-                  ))}
+        {canViewDocuments && (
+          <TabsContent value="documents">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-slate-600" /> My Documents
+                  </CardTitle>
+                  <label htmlFor="pre-ets-upload">
+                    <Button size="sm" asChild>
+                      <span className="cursor-pointer">
+                        {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+                        Upload Document
+                      </span>
+                    </Button>
+                    <input id="pre-ets-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                  </label>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardHeader>
+              <CardContent>
+                {documents.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-slate-400">No documents uploaded yet</div>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map(doc => (
+                      <div key={doc.id} className="p-4 bg-slate-50 rounded-lg flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
+                            <p className="text-xs text-slate-500">
+                              {doc.category} • {format(new Date(doc.created_date), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost"><Download className="w-3.5 h-3.5" /></Button>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
