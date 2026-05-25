@@ -732,42 +732,76 @@ if (entryTypeFilter !== "all") {
     return grouped;
   }, [clients, filtered]);
 
-  // Day-card totals: same as filtered but ignoring the selectedDay restriction,
-  // so cards always show real per-day counts regardless of which day is highlighted.
+   // Day-card totals: same filters as the entry list, but ignoring selectedDay
+  // so the calendar cards do not double-count the currently selected day.
   const filteredWithoutDay = useMemo(() => {
-    if (!selectedDay) return filtered;
-    return filtered.concat(
-      scopedTimeEntries.filter((entry) => {
-        // Include only the entries that were excluded solely because of selectedDay
-        if (entry.date !== selectedDay) return false;
-        // Re-apply all other active filters
-        if (
-          (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
-          employeeFilter !== "all"
-        ) {
-          const selectedStaff = staffById[employeeFilter];
-          if (!entryBelongsToUser(entry, selectedStaff)) return false;
-        }
-        if (clientFilter !== "all" && entry.client_id !== clientFilter) return false;
-        if (entryTypeFilter !== "all") {
-          const entryCode =
-            resolvedEntryTypeCodes[entry.id] ||
-            getImmediateEntryTypeCode(entry) ||
-            normalizeEntryTypeCode(entry.entry_type_code);
-          if (entryCode !== entryTypeFilter) return false;
-        }
-        const parsedDate = parseDateOnly(entry.date);
-        if (!parsedDate) return false;
-        if (periodFilter === "payroll1") return parsedDate >= payrollRanges.payroll1Start && parsedDate <= payrollRanges.payroll1End;
-        if (periodFilter === "payroll2") return parsedDate >= payrollRanges.payroll2Start && parsedDate <= payrollRanges.payroll2End;
-        if (periodFilter === "week") return isWithinInterval(parsedDate, { start: payrollRanges.weekStart, end: payrollRanges.weekEnd });
-        if (periodFilter === "month") return isWithinInterval(parsedDate, { start: payrollRanges.monthStart, end: payrollRanges.monthEnd });
-        return true;
-      })
-    );
+    return scopedTimeEntries.filter((entry) => {
+      if (
+        (effectiveUser?.role === "admin" || effectiveUser?.role === "management") &&
+        employeeFilter !== "all"
+      ) {
+        const selectedStaff = staffById[employeeFilter];
+        if (!entryBelongsToUser(entry, selectedStaff)) return false;
+      }
+
+      if (clientFilter !== "all" && entry.client_id !== clientFilter) {
+        return false;
+      }
+
+      if (entryTypeFilter !== "all") {
+        const entryCode =
+          resolvedEntryTypeCodes[entry.id] ||
+          getImmediateEntryTypeCode(entry) ||
+          normalizeEntryTypeCode(entry.entry_type_code);
+
+        if (entryCode !== entryTypeFilter) return false;
+      }
+
+      if (!entry.date) return false;
+
+      const parsedDate = parseDateOnly(entry.date);
+      if (!parsedDate) return false;
+
+      if (periodFilter === "payroll1") {
+        return (
+          parsedDate >= payrollRanges.payroll1Start &&
+          parsedDate <= payrollRanges.payroll1End
+        );
+      }
+
+      if (periodFilter === "payroll2") {
+        return (
+          parsedDate >= payrollRanges.payroll2Start &&
+          parsedDate <= payrollRanges.payroll2End
+        );
+      }
+
+      if (periodFilter === "week") {
+        return isWithinInterval(parsedDate, {
+          start: payrollRanges.weekStart,
+          end: payrollRanges.weekEnd,
+        });
+      }
+
+      if (periodFilter === "month") {
+        return isWithinInterval(parsedDate, {
+          start: payrollRanges.monthStart,
+          end: payrollRanges.monthEnd,
+        });
+      }
+
+      return true;
+    });
   }, [
-    selectedDay, filtered, scopedTimeEntries, effectiveUser?.role, employeeFilter, staffById,
-    clientFilter, entryTypeFilter, resolvedEntryTypeCodes, periodFilter, payrollRanges,
+    scopedTimeEntries,
+    effectiveUser?.role,
+    employeeFilter,
+    staffById,
+    clientFilter,
+    entryTypeFilter,
+    resolvedEntryTypeCodes,
+    periodFilter,
+    payrollRanges,
   ]);
 
   const calendarDays = useMemo(() => {
