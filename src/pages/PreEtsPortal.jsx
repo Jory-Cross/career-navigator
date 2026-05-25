@@ -414,53 +414,55 @@ export default function PreEtsPortal() {
           </Card>
         </TabsContent>
 
-        {/* Program Checklist */}
-        <TabsContent value="checklist">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Star className="w-4 h-4 text-indigo-600" /> Pre-ETS Program Checklist
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {onboardingSteps.length > 0 ? (
-                <div className="space-y-3">
-                  {onboardingSteps.sort((a, b) => (a.order || 0) - (b.order || 0)).map(step => (
-                    <div key={step.id} className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg",
-                      step.status === 'completed' ? "bg-green-50" : "bg-slate-50"
-                    )}>
-                      {step.status === 'completed'
-                        ? <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                        : <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
-                      }
-                      <div className="flex-1">
-                        <p className={cn("text-sm font-medium", step.status === 'completed' && "text-slate-500")}>{step.step_name}</p>
-                        {step.notes && <p className="text-xs text-slate-400 mt-0.5">{step.notes}</p>}
+                {/* Program Checklist */}
+        {canViewChecklist && (
+          <TabsContent value="checklist">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Star className="w-4 h-4 text-indigo-600" /> Pre-ETS Program Checklist
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {onboardingSteps.length > 0 ? (
+                  <div className="space-y-3">
+                    {onboardingSteps.sort((a, b) => (a.order || 0) - (b.order || 0)).map(step => (
+                      <div key={step.id} className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg",
+                        step.status === 'completed' ? "bg-green-50" : "bg-slate-50"
+                      )}>
+                        {step.status === 'completed'
+                          ? <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                          : <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
+                        }
+                        <div className="flex-1">
+                          <p className={cn("text-sm font-medium", step.status === 'completed' && "text-slate-500")}>{step.step_name}</p>
+                          {step.notes && <p className="text-xs text-slate-400 mt-0.5">{step.notes}</p>}
+                        </div>
+                        {step.status === 'completed' && step.completed_date && (
+                          <span className="text-xs text-slate-400">{format(new Date(step.completed_date), "MMM d")}</span>
+                        )}
                       </div>
-                      {step.status === 'completed' && step.completed_date && (
-                        <span className="text-xs text-slate-400">{format(new Date(step.completed_date), "MMM d")}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {CHECKLIST_ITEMS.map(item => (
-                    <div key={item.key} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-700">{item.label}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {CHECKLIST_ITEMS.map(item => (
+                      <div key={item.key} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-700">{item.label}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs capitalize">{item.category.replace(/_/g, ' ')}</Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs capitalize">{item.category.replace(/_/g, ' ')}</Badge>
-                    </div>
-                  ))}
-                  <p className="text-xs text-slate-400 mt-3 text-center">Your counselor will update these as you progress.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                    <p className="text-xs text-slate-400 mt-3 text-center">Your counselor will update these as you progress.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Assessments */}
         <TabsContent value="assessments">
