@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, XCircle, RefreshCw, Plus } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -34,20 +34,11 @@ export default function PreEtsTimeEntries() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-   const [rejectingEntryId, setRejectingEntryId] = useState(null);
+  const [rejectingEntryId, setRejectingEntryId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [submittingReject, setSubmittingReject] = useState(false);
 
-  const [showAddEvent, setShowAddEvent] = useState(false);
-  const [submittingEvent, setSubmittingEvent] = useState(false);
-  const [eventForm, setEventForm] = useState({
-    client_id: "",
-    date: format(new Date(), "yyyy-MM-dd"),
-    event_type: "no_show",
-    description: "",
-  });
-
-   const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = [], isLoading } = useQuery({
     queryKey: ["preEtsClientTimeEntries"],
     queryFn: async () => {
       const records = await base44.entities.PreEtsClientTimeEntry.list();
@@ -55,15 +46,6 @@ export default function PreEtsTimeEntries() {
     },
     staleTime: 30 * 1000,
     refetchOnMount: "always",
-  });
-
-  const { data: preEtsClients = [] } = useQuery({
-    queryKey: ["preEtsClientsForTimeEntries"],
-    queryFn: async () => {
-      const records = await base44.entities.Client.filter({ client_type: "pre_ets" });
-      return Array.isArray(records) ? records : [];
-    },
-    staleTime: 60 * 1000,
   });
 
   const filteredEntries = useMemo(() => {
@@ -79,14 +61,11 @@ export default function PreEtsTimeEntries() {
     });
   }, [entries, statusFilter, search]);
 
-    const totalMinutes = useMemo(() => {
-    return filteredEntries.reduce((sum, entry) => {
-      if (entry.payable === false || entry.record_type === "non_payable_event") {
-        return sum;
-      }
-
-      return sum + Number(entry.duration_minutes || 0);
-    }, 0);
+  const totalMinutes = useMemo(() => {
+    return filteredEntries.reduce(
+      (sum, entry) => sum + Number(entry.duration_minutes || 0),
+      0
+    );
   }, [filteredEntries]);
 
   const startReject = (entry) => {
@@ -127,66 +106,6 @@ export default function PreEtsTimeEntries() {
       console.error("Failed to reject Pre-ETS time entry", error);
       toast.error("Failed to reject entry");
       setSubmittingReject(false);
-    }
-  };
-
-  const submitNonPayableEvent = async () => {
-    const client = preEtsClients.find((item) => item.id === eventForm.client_id);
-    const description = eventForm.description.trim();
-
-    if (!client) {
-      toast.error("Please select a student.");
-      return;
-    }
-
-    if (!eventForm.date) {
-      toast.error("Please select a date.");
-      return;
-    }
-
-    if (!description) {
-      toast.error("Please enter a description.");
-      return;
-    }
-
-    try {
-      setSubmittingEvent(true);
-
-      await base44.entities.PreEtsClientTimeEntry.create({
-        client_id: client.id,
-        client_name: `${client.first_name || ""} ${client.last_name || ""}`.trim(),
-        org_id: client.org_id || "",
-        date: eventForm.date,
-        start_time: "",
-        end_time: "",
-        duration_minutes: 0,
-        description,
-        source: "staff_entry",
-        status: "approved",
-        record_type: "non_payable_event",
-        event_type: eventForm.event_type,
-        payable: false,
-        approved_at: new Date().toISOString(),
-      });
-
-      toast.success("Non-payable event added");
-
-      setEventForm({
-        client_id: "",
-        date: format(new Date(), "yyyy-MM-dd"),
-        event_type: "no_show",
-        description: "",
-      });
-      setShowAddEvent(false);
-
-      await queryClient.invalidateQueries({
-        queryKey: ["preEtsClientTimeEntries"],
-      });
-    } catch (error) {
-      console.error("Failed to add non-payable Pre-ETS event", error);
-      toast.error("Failed to add event");
-    } finally {
-      setSubmittingEvent(false);
     }
   };
 
@@ -275,7 +194,7 @@ export default function PreEtsTimeEntries() {
               </SelectContent>
             </Select>
 
-                       <Button
+            <Button
               variant="outline"
               onClick={() =>
                 queryClient.invalidateQueries({
@@ -287,122 +206,8 @@ export default function PreEtsTimeEntries() {
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
-
-            <Button
-              onClick={() => setShowAddEvent((value) => !value)}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Non-Payable Event
-            </Button>
           </div>
 
-          {showAddEvent && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <div className="mb-3">
-                <p className="text-sm font-semibold text-blue-900">
-                  Add Non-Payable Event
-                </p>
-                <p className="text-xs text-blue-700">
-                  Use this for no-shows, cancellations, transportation issues, or notes that should appear on the student record without counting toward payable hours.
-                </p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-600">
-                    Student
-                  </p>
-                  <Select
-                    value={eventForm.client_id}
-                    onValueChange={(value) =>
-                      setEventForm((form) => ({ ...form, client_id: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select student" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {preEtsClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {`${client.first_name || ""} ${client.last_name || ""}`.trim() || client.email || "Unnamed student"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-600">
-                    Date
-                  </p>
-                  <Input
-                    type="date"
-                    value={eventForm.date}
-                    onChange={(e) =>
-                      setEventForm((form) => ({ ...form, date: e.target.value }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-600">
-                    Event Type
-                  </p>
-                  <Select
-                    value={eventForm.event_type}
-                    onValueChange={(value) =>
-                      setEventForm((form) => ({ ...form, event_type: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select event type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no_show">No show</SelectItem>
-                      <SelectItem value="late_cancellation">Late cancellation</SelectItem>
-                      <SelectItem value="excused_cancellation">Excused cancellation</SelectItem>
-                      <SelectItem value="transportation_issue">Transportation issue</SelectItem>
-                      <SelectItem value="staff_attempted_contact">Staff attempted contact</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <p className="mb-1 text-xs font-medium text-slate-600">
-                  Description
-                </p>
-                <textarea
-                  value={eventForm.description}
-                  onChange={(e) =>
-                    setEventForm((form) => ({ ...form, description: e.target.value }))
-                  }
-                  placeholder="Example: Student did not attend scheduled Pre-ETS activity. Staff attempted contact by phone."
-                  className="min-h-[100px] w-full rounded-md border border-blue-200 bg-white p-3 text-sm"
-                />
-              </div>
-
-              <div className="mt-3 flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddEvent(false)}
-                  disabled={submittingEvent}
-                >
-                  Cancel
-                </Button>
-
-                <Button
-                  onClick={submitNonPayableEvent}
-                  disabled={submittingEvent}
-                >
-                  {submittingEvent ? "Saving..." : "Save Non-Payable Event"}
-                </Button>
-              </div>
-            </div>
-          )}
-          
           {isLoading ? (
             <div className="py-10 text-center text-sm text-slate-500">
               Loading time entries...
@@ -428,15 +233,8 @@ export default function PreEtsTimeEntries() {
                 </thead>
 
                 <tbody>
-                                    {filteredEntries.map((entry) => {
+                  {filteredEntries.map((entry) => {
                     const status = entry.status || "pending";
-                    const isNonPayableEvent =
-                      entry.record_type === "non_payable_event" ||
-                      entry.payable === false;
-
-                    const eventLabel = entry.event_type
-                      ? entry.event_type.replace(/_/g, " ")
-                      : "non-payable event";
 
                                      return (
                       <React.Fragment key={entry.id}>
@@ -445,14 +243,10 @@ export default function PreEtsTimeEntries() {
                           {entry.client_name || "Unknown student"}
                         </td>
                         <td className="p-3">{safeDate(entry.date)}</td>
-                                               <td className="p-3">
-                          {isNonPayableEvent ? "—" : entry.start_time || "—"}
-                        </td>
-                                              <td className="p-3">
-                          {isNonPayableEvent ? "—" : entry.end_time || "—"}
-                        </td>
-                                                <td className="p-3">
-                          {isNonPayableEvent ? "Non-payable" : formatMinutes(entry.duration_minutes)}
+                        <td className="p-3">{entry.start_time || "—"}</td>
+                        <td className="p-3">{entry.end_time || "—"}</td>
+                        <td className="p-3">
+                          {formatMinutes(entry.duration_minutes)}
                         </td>
                         <td className="p-3">
                           <Badge
@@ -469,52 +263,34 @@ export default function PreEtsTimeEntries() {
                             {status}
                           </Badge>
                         </td>
-                                                <td className="max-w-xs p-3 text-slate-600">
-                          {isNonPayableEvent ? (
-                            <div>
-                              <p className="font-medium capitalize text-slate-800">
-                                {eventLabel}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-600">
-                                {entry.description || "—"}
-                              </p>
-                            </div>
-                          ) : (
-                            entry.description || "—"
-                          )}
+                        <td className="max-w-xs p-3 text-slate-600">
+                          {entry.description || "—"}
                         </td>
                         <td className="p-3">
-                                                    <div className="flex justify-end gap-2">
-                            {isNonPayableEvent ? (
-                              <Badge className="bg-slate-100 text-slate-700">
-                                Staff record
-                              </Badge>
-                            ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateStatus(entry, "approved")}
-                                  disabled={status === "approved" || status === "rejected"}
-                                  className="gap-1"
-                                >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  Approve
-                                </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateStatus(entry, "approved")}
+                              disabled={status === "approved" || status === "rejected"}
+                              className="gap-1"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Approve
+                            </Button>
 
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => startReject(entry)}
-                                  disabled={submittingReject || status === "approved"}
-                                  className="gap-1 text-red-700"
-                                >
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  Reject
-                                </Button>
-                              </>
-                            )}
+                                                        <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => startReject(entry)}
+                              disabled={submittingReject || status === "approved"}
+                              className="gap-1 text-red-700"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Reject
+                            </Button>
                           </div>
+                        </td>
                                            </tr>
 
                       {rejectingEntryId === entry.id && (
