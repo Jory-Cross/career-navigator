@@ -1421,6 +1421,129 @@ if (entryTypeFilter !== "all") {
       </Card>
 
       <Dialog
+        open={showNonAttendanceDialog}
+        onOpenChange={(open) => {
+          if (!open) closeNonAttendanceDialog();
+          else setShowNonAttendanceDialog(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>No-Show / Cancellation Record</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Use this to document a client no-show, cancellation, or related staff note. This creates a staff record with 0 hours and does not count toward payroll.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Client</label>
+              <Select
+                value={nonAttendanceForm.client_id}
+                onValueChange={(value) =>
+                  setNonAttendanceForm((form) => ({
+                    ...form,
+                    client_id: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients
+                    .filter((client) => !client.is_archived)
+                    .map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+                          client.full_name ||
+                          client.email ||
+                          "Unknown"}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date</label>
+                <input
+                  type="date"
+                  value={nonAttendanceForm.date}
+                  onChange={(e) =>
+                    setNonAttendanceForm((form) => ({
+                      ...form,
+                      date: e.target.value,
+                    }))
+                  }
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Event Type</label>
+                <Select
+                  value={nonAttendanceForm.event_type}
+                  onValueChange={(value) =>
+                    setNonAttendanceForm((form) => ({
+                      ...form,
+                      event_type: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no_show">No show</SelectItem>
+                    <SelectItem value="late_cancellation">Late cancellation</SelectItem>
+                    <SelectItem value="excused_cancellation">Excused cancellation</SelectItem>
+                    <SelectItem value="transportation_issue">Transportation issue</SelectItem>
+                    <SelectItem value="client_unavailable">Client unavailable</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Note</label>
+              <textarea
+                value={nonAttendanceForm.description}
+                onChange={(e) =>
+                  setNonAttendanceForm((form) => ({
+                    ...form,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Example: Client cancelled 20 minutes before scheduled service. Staff attempted contact and documented cancellation."
+                className="min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t pt-4">
+              <Button
+                variant="outline"
+                onClick={closeNonAttendanceDialog}
+                disabled={savingNonAttendance}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleSaveNonAttendance}
+                disabled={savingNonAttendance}
+              >
+                {savingNonAttendance ? "Saving..." : "Save Record"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog
         open={showNewEntry}
         onOpenChange={(open) => {
           if (!open) closeNewEntryDialog();
