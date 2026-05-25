@@ -1709,7 +1709,16 @@ if (entryTypeFilter !== "all") {
             <DialogTitle>Time Entry Details</DialogTitle>
           </DialogHeader>
 
-          {selectedEntry ? (
+                      {selectedEntry ? (() => {
+                const isSelectedNonAttendance =
+                  selectedEntry.entry_type_code === "client_non_attendance";
+
+                const selectedNonAttendanceLabel =
+                  selectedEntry.form_data?.event_label ||
+                  selectedEntry.form_data?.event_type?.replace(/_/g, " ") ||
+                  "No-show / cancellation";
+
+                return (
             <div className="space-y-4">
               <div>
                 <div className="mb-1 text-xs text-slate-500">Client</div>
