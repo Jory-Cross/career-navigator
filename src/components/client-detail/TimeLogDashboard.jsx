@@ -628,6 +628,17 @@ export default function TimeLogDashboard({
               {hasActiveFilters(filters) ? ` (${activeFilterCount(filters)})` : ""}
             </Button>
 
+                       {clientId ? (
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setShowNonAttendanceDialog(true)}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                No-Show / Cancellation
+              </Button>
+            ) : null}
+
             <Button className="gap-1.5" onClick={handleAddEntry}>
               <Plus className="h-4 w-4" />
               Add Entry
