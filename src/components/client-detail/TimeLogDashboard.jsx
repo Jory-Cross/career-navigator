@@ -165,9 +165,16 @@ export default function TimeLogDashboard({
     payrollEligible: "all",
   });
 
-  const [showForm, setShowForm] = useState(false);
+    const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedEntryTypeCode, setSelectedEntryTypeCode] = useState("");
+  const [showNonAttendanceDialog, setShowNonAttendanceDialog] = useState(false);
+  const [savingNonAttendance, setSavingNonAttendance] = useState(false);
+  const [nonAttendanceForm, setNonAttendanceForm] = useState({
+    date: format(new Date(), "yyyy-MM-dd"),
+    event_type: "no_show",
+    description: "",
+  });
   const [employees, setEmployees] = useState([]);
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
   const [showFilters, setShowFilters] = useState(false);
