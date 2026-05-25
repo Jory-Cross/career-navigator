@@ -1327,9 +1327,11 @@ if (entryTypeFilter !== "all") {
                       </Badge>
                     ) : null}
 
-                    <Badge variant="outline">
-                      {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
-                    </Badge>
+                                       {!isNonAttendance ? (
+                      <Badge variant="outline">
+                        {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
+                      </Badge>
+                    ) : null}
 
                     {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
                   </div>
