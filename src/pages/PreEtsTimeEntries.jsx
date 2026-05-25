@@ -79,11 +79,14 @@ export default function PreEtsTimeEntries() {
     });
   }, [entries, statusFilter, search]);
 
-  const totalMinutes = useMemo(() => {
-    return filteredEntries.reduce(
-      (sum, entry) => sum + Number(entry.duration_minutes || 0),
-      0
-    );
+    const totalMinutes = useMemo(() => {
+    return filteredEntries.reduce((sum, entry) => {
+      if (entry.payable === false || entry.record_type === "non_payable_event") {
+        return sum;
+      }
+
+      return sum + Number(entry.duration_minutes || 0);
+    }, 0);
   }, [filteredEntries]);
 
   const startReject = (entry) => {
