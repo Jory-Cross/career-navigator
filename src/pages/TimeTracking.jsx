@@ -1391,9 +1391,16 @@ if (entryTypeFilter !== "all") {
         ) : (
           <div className="space-y-3">
                         {filtered.map((entry) => {
-              const isDuplicate = duplicateIds.has(entry.id);
+                           const isDuplicate = duplicateIds.has(entry.id);
+              const entryTypeCode =
+                resolvedEntryTypeCodes[entry.id] ||
+                getImmediateEntryTypeCode(entry) ||
+                normalizeEntryTypeCode(entry.entry_type_code);
+
+              const entryColors = getEntryTypeColorClasses(entryTypeCode);
+
               const isNonAttendance =
-                entry.entry_type_code === "client_non_attendance";
+                entryTypeCode === "client_non_attendance";
 
               const nonAttendanceLabel =
                 entry.form_data?.event_label ||
