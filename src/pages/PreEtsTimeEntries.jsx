@@ -34,9 +34,18 @@ export default function PreEtsTimeEntries() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const [rejectingEntryId, setRejectingEntryId] = useState(null);
+   const [rejectingEntryId, setRejectingEntryId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [submittingReject, setSubmittingReject] = useState(false);
+
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [submittingEvent, setSubmittingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({
+    client_id: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    event_type: "no_show",
+    description: "",
+  });
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["preEtsClientTimeEntries"],
