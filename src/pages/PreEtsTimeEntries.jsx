@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, RefreshCw, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
