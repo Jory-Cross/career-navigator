@@ -501,6 +501,67 @@ export default function TimeLogDashboard({
     [onEditEntry, getResolvedEntryTypeCode, savedEntryOverrides]
   );
 
+  const handleSaveNonAttendance = useCallback(async () => {
+    const description = nonAttendanceForm.description.trim();
+
+    if (!clientId) {
+      toast.error("Client could not be identified.");
+      return;
+    }
+
+    if (!nonAttendanceForm.date) {
+      toast.error("Please select a date.");
+      return;
+    }
+
+    if (!description) {
+      toast.error("Please enter a note.");
+      return;
+    }
+
+    try {
+      setSavingNonAttendance(true);
+
+      const currentUser = await base44.auth.me();
+
+      if (!currentUser?.id) {
+        toast.error("Staff user could not be identified.");
+        setSavingNonAttendance(false);
+        return;
+      }
+
+      await timeLogDashboardApi.createTimeEntry({
+        org_id: currentUser.org_id || client?.org_id || "",
+        client_id: clientId,
+        employee_id: currentUser.id,
+        entry_type_code: "client_non_attendance",
+        date: nonAttendanceForm.date,
+        start_time: "",
+        end_time: "",
+        duration_minutes: 0,
+        description,
+        form_data: {
+          event_type: nonAttendanceForm.event_type,
+          event_label: nonAttendanceForm.event_type.replace(/_/g, " "),
+          description,
+          created_from: "client_detail_time_log",
+        },
+        is_billable: false,
+        is_payroll_eligible: false,
+        is_reportable: false,
+        status: "submitted",
+      });
+
+      toast.success("No-show/cancellation record added");
+      resetNonAttendanceDialog();
+      await onRefresh?.();
+    } catch (error) {
+      console.error("[TimeLogDashboard] Failed to save no-show/cancellation record:", error);
+      toast.error("Failed to save record");
+      setSavingNonAttendance(false);
+    }
+  }, [client, clientId, nonAttendanceForm, onRefresh, resetNonAttendanceDialog]);
+  
   const handleDuplicate = useCallback(
     async (entry) => {
       try {
