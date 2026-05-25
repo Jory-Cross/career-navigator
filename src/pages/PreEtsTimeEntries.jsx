@@ -297,6 +297,112 @@ export default function PreEtsTimeEntries() {
             </Button>
           </div>
 
+          {showAddEvent && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-blue-900">
+                  Add Non-Payable Event
+                </p>
+                <p className="text-xs text-blue-700">
+                  Use this for no-shows, cancellations, transportation issues, or notes that should appear on the student record without counting toward payable hours.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-600">
+                    Student
+                  </p>
+                  <Select
+                    value={eventForm.client_id}
+                    onValueChange={(value) =>
+                      setEventForm((form) => ({ ...form, client_id: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select student" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {preEtsClients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {`${client.first_name || ""} ${client.last_name || ""}`.trim() || client.email || "Unnamed student"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-600">
+                    Date
+                  </p>
+                  <Input
+                    type="date"
+                    value={eventForm.date}
+                    onChange={(e) =>
+                      setEventForm((form) => ({ ...form, date: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-600">
+                    Event Type
+                  </p>
+                  <Select
+                    value={eventForm.event_type}
+                    onValueChange={(value) =>
+                      setEventForm((form) => ({ ...form, event_type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select event type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_show">No show</SelectItem>
+                      <SelectItem value="late_cancellation">Late cancellation</SelectItem>
+                      <SelectItem value="excused_cancellation">Excused cancellation</SelectItem>
+                      <SelectItem value="transportation_issue">Transportation issue</SelectItem>
+                      <SelectItem value="staff_attempted_contact">Staff attempted contact</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-medium text-slate-600">
+                  Description
+                </p>
+                <textarea
+                  value={eventForm.description}
+                  onChange={(e) =>
+                    setEventForm((form) => ({ ...form, description: e.target.value }))
+                  }
+                  placeholder="Example: Student did not attend scheduled Pre-ETS activity. Staff attempted contact by phone."
+                  className="min-h-[100px] w-full rounded-md border border-blue-200 bg-white p-3 text-sm"
+                />
+              </div>
+
+              <div className="mt-3 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddEvent(false)}
+                  disabled={submittingEvent}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  onClick={submitNonPayableEvent}
+                  disabled={submittingEvent}
+                >
+                  {submittingEvent ? "Saving..." : "Save Non-Payable Event"}
+                </Button>
+              </div>
+            </div>
+          )}
+          
           {isLoading ? (
             <div className="py-10 text-center text-sm text-slate-500">
               Loading time entries...
