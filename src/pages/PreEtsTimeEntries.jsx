@@ -469,8 +469,19 @@ export default function PreEtsTimeEntries() {
                             {status}
                           </Badge>
                         </td>
-                        <td className="max-w-xs p-3 text-slate-600">
-                          {entry.description || "—"}
+                                                <td className="max-w-xs p-3 text-slate-600">
+                          {isNonPayableEvent ? (
+                            <div>
+                              <p className="font-medium capitalize text-slate-800">
+                                {eventLabel}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-600">
+                                {entry.description || "—"}
+                              </p>
+                            </div>
+                          ) : (
+                            entry.description || "—"
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="flex justify-end gap-2">
