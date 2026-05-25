@@ -871,7 +871,7 @@ export default function TimeLogDashboard({
           <EmptyState message="No time entries match the current filters." />
         ) : (
           <div className="space-y-3">
-                       {            {filtered.map((entry) => {
+                       {filtered.map((entry) => {
               const employee = employeeById[entry.employee_id];
               const client = clientById[entry.client_id];
               const entryTypeCode = getResolvedEntryTypeCode(entry);
