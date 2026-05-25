@@ -1399,25 +1399,31 @@ if (entryTypeFilter !== "all") {
                       </span>
                     ) : null}
 
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="inline-flex items-center gap-1 hover:text-slate-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditEntry(entry);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
+                                        {!isNonAttendance ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1 hover:text-slate-800"
+                        onClick={(e) => {
                           e.stopPropagation();
                           handleEditEntry(entry);
-                        }
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </span>
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleEditEntry(entry);
+                          }
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-slate-400">
+                        Staff record
+                      </span>
+                    )}
 
                     <span
                       role="button"
