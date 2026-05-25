@@ -1148,9 +1148,9 @@ if (entryTypeFilter !== "all") {
           <div className="mt-1 text-2xl font-semibold">{totalHours}h</div>
         </Card>
 
-        <Card className="p-4">
-          <div className="text-sm text-slate-500">Sessions</div>
-          <div className="mt-1 text-2xl font-semibold">{filtered.length}</div>
+               <Card className="p-4">
+          <div className="text-sm text-slate-500">Service Sessions</div>
+          <div className="mt-1 text-2xl font-semibold">{serviceEntries.length}</div>
         </Card>
 
         <Card className="p-4">
