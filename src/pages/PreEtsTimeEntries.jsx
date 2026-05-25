@@ -484,30 +484,37 @@ export default function PreEtsTimeEntries() {
                           )}
                         </td>
                         <td className="p-3">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateStatus(entry, "approved")}
-                              disabled={status === "approved" || status === "rejected"}
-                              className="gap-1"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Approve
-                            </Button>
+                                                    <div className="flex justify-end gap-2">
+                            {isNonPayableEvent ? (
+                              <Badge className="bg-slate-100 text-slate-700">
+                                Staff record
+                              </Badge>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateStatus(entry, "approved")}
+                                  disabled={status === "approved" || status === "rejected"}
+                                  className="gap-1"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Approve
+                                </Button>
 
-                                                        <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => startReject(entry)}
-                              disabled={submittingReject || status === "approved"}
-                              className="gap-1 text-red-700"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              Reject
-                            </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startReject(entry)}
+                                  disabled={submittingReject || status === "approved"}
+                                  className="gap-1 text-red-700"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Reject
+                                </Button>
+                              </>
+                            )}
                           </div>
-                        </td>
                                            </tr>
 
                       {rejectingEntryId === entry.id && (
