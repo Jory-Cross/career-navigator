@@ -1840,7 +1840,7 @@ if (entryTypeFilter !== "all") {
                 </div>
               ) : null}
 
-              <div className="flex justify-between items-center">
+                           <div className="flex justify-between items-center">
                 <Button
                   variant="destructive"
                   size="sm"
@@ -1849,15 +1849,22 @@ if (entryTypeFilter !== "all") {
                   <Trash2 className="h-4 w-4 mr-1" />
                   Delete Entry
                 </Button>
-                <Button
-                  onClick={() => {
-                    const entry = selectedEntry;
-                    setSelectedEntry(null);
-                    handleEditEntry(entry);
-                  }}
-                >
-                  Edit
-                </Button>
+
+                {!isSelectedNonAttendance ? (
+                  <Button
+                    onClick={() => {
+                      const entry = selectedEntry;
+                      setSelectedEntry(null);
+                      handleEditEntry(entry);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                ) : (
+                  <Badge className="bg-slate-100 text-slate-700">
+                    Staff record
+                  </Badge>
+                )}
               </div>
                         </div>
                 );
