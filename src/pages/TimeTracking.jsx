@@ -1290,8 +1290,15 @@ if (entryTypeFilter !== "all") {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((entry) => {
+                        {filtered.map((entry) => {
               const isDuplicate = duplicateIds.has(entry.id);
+              const isNonAttendance =
+                entry.entry_type_code === "client_non_attendance";
+
+              const nonAttendanceLabel =
+                entry.form_data?.event_label ||
+                entry.form_data?.event_type?.replace(/_/g, " ") ||
+                "No-show / cancellation";
 
               return (
                 <button
