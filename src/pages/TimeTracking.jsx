@@ -994,10 +994,21 @@ if (entryTypeFilter !== "all") {
           <p className="text-sm text-slate-500">Log and review time spent with clients</p>
         </div>
 
-        <Button onClick={() => setShowNewEntry(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Entry
-        </Button>
+                <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowNonAttendanceDialog(true)}
+            className="gap-2"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            No-Show / Cancellation
+          </Button>
+
+          <Button onClick={() => setShowNewEntry(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Entry
+          </Button>
+        </div>
       </div>
 
       {legacyEntries.length > 0 ? <LegacyDataWarning count={legacyEntries.length} /> : null}
