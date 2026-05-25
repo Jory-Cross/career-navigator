@@ -1740,11 +1740,16 @@ if (entryTypeFilter !== "all") {
                 <div className="text-sm">{formatLongEntryDate(selectedEntry.date)}</div>
               </div>
 
-              <div>
-                <div className="mb-1 text-xs text-slate-500">Duration</div>
-                <div className="text-sm">{selectedEntry.duration_minutes || 0} minutes</div>
+                           <div>
+                <div className="mb-1 text-xs text-slate-500">
+                  {isSelectedNonAttendance ? "Payroll" : "Duration"}
+                </div>
+                <div className="text-sm">
+                  {isSelectedNonAttendance
+                    ? "Not payroll eligible — 0 minutes"
+                    : `${selectedEntry.duration_minutes || 0} minutes`}
+                </div>
               </div>
-
               <div>
                 <div className="mb-1 text-xs text-slate-500">Type</div>
                 <div className="text-sm">
