@@ -753,17 +753,43 @@ export default function TimeLogDashboard({
                             : "No date"}
                         </span>
 
-                        <Badge variant="secondary">
-                          {getResolvedEntryTypeLabel(entry)}
-                        </Badge>
+                                                {isNonAttendance ? (
+                          <>
+                            <Badge className="bg-red-100 text-red-700">
+                              No-show / cancellation
+                            </Badge>
+                            <Badge variant="outline" className="capitalize">
+                              {nonAttendanceLabel}
+                            </Badge>
+                            <Badge variant="outline">0 min</Badge>
+                          </>
+                        ) : (
+                          <>
+                            <Badge variant="secondary">
+                              {getResolvedEntryTypeLabel(entry)}
+                            </Badge>
 
-                        <Badge variant="outline">
-                          {formatDurationMinutes(entry.duration_minutes)}
-                        </Badge>
+                            <Badge variant="outline">
+                              {formatDurationMinutes(entry.duration_minutes)}
+                            </Badge>
 
-                        {entry.is_reportable ? <Badge>Reportable</Badge> : null}
-                        {entry.is_billable ? <Badge>Billable</Badge> : null}
-                        {entry.is_payroll_eligible ? <Badge>Payroll</Badge> : null}
+                            {entry.is_reportable ? (
+                              <Badge className="bg-blue-600 text-white">
+                                Reportable
+                              </Badge>
+                            ) : null}
+                            {entry.is_billable ? (
+                              <Badge className="bg-blue-600 text-white">
+                                Billable
+                              </Badge>
+                            ) : null}
+                            {entry.is_payroll_eligible ? (
+                              <Badge className="bg-blue-600 text-white">
+                                Payroll
+                              </Badge>
+                            ) : null}
+                          </>
+                        )}
                       </div>
 
                       <div className="text-sm text-muted-foreground">
