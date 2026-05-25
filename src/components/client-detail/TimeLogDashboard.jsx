@@ -907,7 +907,7 @@ export default function TimeLogDashboard({
                           </>
                         ) : (
                           <>
-                            <Badge variant="secondary">
+                            <Badge className={entryColors.badge}>
                               {getResolvedEntryTypeLabel(entry)}
                             </Badge>
 
