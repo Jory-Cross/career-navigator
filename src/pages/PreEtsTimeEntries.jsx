@@ -47,7 +47,7 @@ export default function PreEtsTimeEntries() {
     description: "",
   });
 
-  const { data: entries = [], isLoading } = useQuery({
+   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["preEtsClientTimeEntries"],
     queryFn: async () => {
       const records = await base44.entities.PreEtsClientTimeEntry.list();
@@ -55,6 +55,15 @@ export default function PreEtsTimeEntries() {
     },
     staleTime: 30 * 1000,
     refetchOnMount: "always",
+  });
+
+  const { data: preEtsClients = [] } = useQuery({
+    queryKey: ["preEtsClientsForTimeEntries"],
+    queryFn: async () => {
+      const records = await base44.entities.Client.filter({ client_type: "pre_ets" });
+      return Array.isArray(records) ? records : [];
+    },
+    staleTime: 60 * 1000,
   });
 
   const filteredEntries = useMemo(() => {
