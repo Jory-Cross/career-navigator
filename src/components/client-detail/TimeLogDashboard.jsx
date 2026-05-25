@@ -448,10 +448,20 @@ export default function TimeLogDashboard({
     }
   }, [timeEntries]);
 
-  const resetFormState = useCallback(() => {
+    const resetFormState = useCallback(() => {
     setShowForm(false);
     setEditingEntry(null);
     setSelectedEntryTypeCode("");
+  }, []);
+
+  const resetNonAttendanceDialog = useCallback(() => {
+    setShowNonAttendanceDialog(false);
+    setSavingNonAttendance(false);
+    setNonAttendanceForm({
+      date: format(new Date(), "yyyy-MM-dd"),
+      event_type: "no_show",
+      description: "",
+    });
   }, []);
 
   const resetFilters = useCallback(() => {
