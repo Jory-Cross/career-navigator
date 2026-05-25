@@ -885,7 +885,7 @@ export default function TimeLogDashboard({
                 "No-show / cancellation";
 
               return (
-                <Card key={entry.id} className="p-4">
+                  <Card key={entry.id} className={cn("p-4", entryColors.card)}>
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
