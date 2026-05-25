@@ -828,27 +828,35 @@ export default function TimeLogDashboard({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => handleEditEntry(entry)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit
-                      </Button>
+                                       <div className="flex flex-wrap gap-2">
+                      {isNonAttendance ? (
+                        <Badge className="bg-slate-100 text-slate-700">
+                          Staff record
+                        </Badge>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => handleEditEntry(entry)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => handleDuplicate(entry)}
-                        disabled={isDuplicatingId === entry.id}
-                      >
-                        <Copy className="h-4 w-4" />
-                        {isDuplicatingId === entry.id ? "Duplicating..." : "Duplicate"}
-                      </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => handleDuplicate(entry)}
+                            disabled={isDuplicatingId === entry.id}
+                          >
+                            <Copy className="h-4 w-4" />
+                            {isDuplicatingId === entry.id ? "Duplicating..." : "Duplicate"}
+                          </Button>
+                        </>
+                      )}
 
                       <Button
                         variant="ghost"
