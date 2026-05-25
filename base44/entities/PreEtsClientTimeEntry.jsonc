@@ -40,16 +40,52 @@
       "default": "client_portal",
       "description": "Where the entry was created from"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "approved",
-        "rejected"
-      ],
-      "default": "pending",
-      "description": "Review status by staff"
-    },
+   "status": {
+  "type": "string",
+  "enum": [
+    "pending",
+    "approved",
+    "rejected",
+    "paid"
+  ],
+  "default": "pending",
+  "description": "Review/payment status by staff"
+},
+"record_type": {
+  "type": "string",
+  "enum": [
+    "time_entry",
+    "non_payable_event"
+  ],
+  "default": "time_entry",
+  "description": "Whether this record is a payable time entry or a non-payable event/note"
+},
+"event_type": {
+  "type": "string",
+  "enum": [
+    "no_show",
+    "late_cancellation",
+    "excused_cancellation",
+    "transportation_issue",
+    "staff_attempted_contact",
+    "other"
+  ],
+  "description": "Type of non-payable Pre-ETS event"
+},
+"payable": {
+  "type": "boolean",
+  "default": true,
+  "description": "Whether this record should count toward payable hours"
+},
+"rejection_reason": {
+  "type": "string",
+  "description": "Reason staff rejected the entry"
+},
+"resubmitted_at": {
+  "type": "string",
+  "format": "date-time",
+  "description": "When a rejected entry was corrected and resubmitted"
+},
     "approved_by": {
       "type": "string",
       "description": "Email of staff member who approved/rejected"
