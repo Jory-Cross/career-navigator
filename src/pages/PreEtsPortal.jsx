@@ -464,48 +464,50 @@ export default function PreEtsPortal() {
           </TabsContent>
         )}
 
-        {/* Assessments */}
-        <TabsContent value="assessments">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-blue-600" /> My Assessments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {assessments.length === 0 ? (
-                <div className="text-center py-8">
-                  <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-                  <p className="text-sm text-slate-400">No assessments completed yet</p>
-                  <p className="text-xs text-slate-400 mt-1">Your counselor will assign assessments to complete</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {assessments.map(a => (
-                    <div key={a.id} className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800 capitalize">{a.assessment_type.replace(/_/g, ' ')}</p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Completed {format(new Date(a.created_date), "MMMM d, yyyy")}
-                          </p>
-                          {a.notes && <p className="text-xs text-slate-600 mt-2 bg-white rounded p-2">{a.notes}</p>}
+               {/* Assessments */}
+        {canViewAssessments && (
+          <TabsContent value="assessments">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-600" /> My Assessments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {assessments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm text-slate-400">No assessments completed yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Your counselor will assign assessments to complete</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assessments.map(a => (
+                      <div key={a.id} className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800 capitalize">{a.assessment_type.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Completed {format(new Date(a.created_date), "MMMM d, yyyy")}
+                            </p>
+                            {a.notes && <p className="text-xs text-slate-600 mt-2 bg-white rounded p-2">{a.notes}</p>}
+                          </div>
+                          {a.pdf_url && (
+                            <a href={a.pdf_url} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline">
+                                <Download className="w-3.5 h-3.5 mr-1" /> PDF
+                              </Button>
+                            </a>
+                          )}
                         </div>
-                        {a.pdf_url && (
-                          <a href={a.pdf_url} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" variant="outline">
-                              <Download className="w-3.5 h-3.5 mr-1" /> PDF
-                            </Button>
-                          </a>
-                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* WBLE Forms */}
         <TabsContent value="wble">
