@@ -669,9 +669,24 @@ if (entryTypeFilter !== "all") {
     return ids;
   }, [scopedTimeEntries]);
 
-  const totalMinutes = useMemo(() => {
-    return filtered.reduce((sum, entry) => sum + Number(entry.duration_minutes || 0), 0);
+    const serviceEntries = useMemo(() => {
+    return filtered.filter(
+      (entry) => entry.entry_type_code !== "client_non_attendance"
+    );
   }, [filtered]);
+
+  const staffRecordEntries = useMemo(() => {
+    return filtered.filter(
+      (entry) => entry.entry_type_code === "client_non_attendance"
+    );
+  }, [filtered]);
+
+  const totalMinutes = useMemo(() => {
+    return serviceEntries.reduce(
+      (sum, entry) => sum + Number(entry.duration_minutes || 0),
+      0
+    );
+  }, [serviceEntries]);
 
   const totalHours = useMemo(() => {
     return parseFloat((totalMinutes / 60).toFixed(2));
