@@ -149,6 +149,57 @@ function getImmediateEntryTypeCode(entry) {
   );
 }
 
+function getEntryTypeColorClasses(entryTypeCode) {
+  const code = normalizeEntryTypeCode(entryTypeCode);
+
+  if (code === "client_non_attendance") {
+    return {
+      card: "border-red-200 bg-red-50/50",
+      badge: "bg-red-100 text-red-700 border-red-200",
+    };
+  }
+
+  if (code === "admin_time") {
+    return {
+      card: "border-slate-200 bg-slate-50/70",
+      badge: "bg-slate-100 text-slate-700 border-slate-200",
+    };
+  }
+
+  if (code === "dspd") {
+    return {
+      card: "border-purple-200 bg-purple-50/50",
+      badge: "bg-purple-100 text-purple-700 border-purple-200",
+    };
+  }
+
+  if (code === "job_coaching") {
+    return {
+      card: "border-blue-200 bg-blue-50/50",
+      badge: "bg-blue-100 text-blue-700 border-blue-200",
+    };
+  }
+
+  if (code === "job_development") {
+    return {
+      card: "border-green-200 bg-green-50/50",
+      badge: "bg-green-100 text-green-700 border-green-200",
+    };
+  }
+
+  if (code === "pre_ets_training") {
+    return {
+      card: "border-indigo-200 bg-indigo-50/50",
+      badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    };
+  }
+
+  return {
+    card: "border-slate-200 bg-white",
+    badge: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+}
+
 export default function TimeTracking() {
   const { viewAsUser } = useViewAs();
   const queryClient = useQueryClient();
