@@ -792,10 +792,20 @@ export default function TimeLogDashboard({
                         )}
                       </div>
 
-                      <div className="text-sm text-muted-foreground">
-                        {entry.description || "No description"}
+                                            <div className="text-sm text-muted-foreground">
+                        {isNonAttendance ? (
+                          <div>
+                            <p className="font-medium capitalize text-slate-900">
+                              {nonAttendanceLabel}
+                            </p>
+                            <p className="mt-1">
+                              {entry.description || "No note entered"}
+                            </p>
+                          </div>
+                        ) : (
+                          entry.description || "No description"
+                        )}
                       </div>
-
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         {client && !clientId ? (
                           <span>
