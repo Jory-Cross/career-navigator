@@ -33,13 +33,20 @@ export const FEATURE_KEYS = {
   CLIENT_ASSESSMENTS:     "client_assessments",
   CLIENT_DOCUMENTS:       "client_documents",
   CLIENT_TASKS:           "client_tasks",
-  CLIENT_TIME:            "client_time",
+    CLIENT_TIME:            "client_time",
   CLIENT_ACTIVITY:        "client_activity",
   CLIENT_ASSISTANT:       "client_assistant",
   CLIENT_PORTAL:          "client_portal",
   CLIENT_SEND_EMAIL:      "client_send_email",
   CLIENT_TEST_ONET:       "client_test_onet",
   CLIENT_ADD_ACTIONS:     "client_add_actions",
+
+  // Staff-side Pre-ETS Client Detail sections
+  CLIENT_PRE_ETS_WBLE_FORMS:        "client_pre_ets_wble_forms",
+  CLIENT_PRE_ETS_PROGRAM_CHECKLIST: "client_pre_ets_program_checklist",
+  CLIENT_PRE_ETS_IEP_TRANSITION:    "client_pre_ets_iep_transition",
+  CLIENT_PRE_ETS_SKILLS_EXPLORATION:"client_pre_ets_skills_exploration",
+  CLIENT_PRE_ETS_MEETINGS:          "client_pre_ets_meetings",
   // General Client Portal tabs
   CLIENT_PORTAL_INTAKE_FORMS:     "client_portal_intake_forms",
   CLIENT_PORTAL_APPLICATIONS:     "client_portal_applications",
