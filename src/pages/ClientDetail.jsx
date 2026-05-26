@@ -17,6 +17,9 @@ import {
   Archive,
   Star,
   CheckCircle2,
+  Users,
+  MapPin,
+  Video,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
