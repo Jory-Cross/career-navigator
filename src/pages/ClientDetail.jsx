@@ -638,10 +638,20 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {client.client_type === "pre_ets" && !isClientUser && (
-          <TabsContent value="wble_forms">
-            <WBLEFormSection client={client} clientId={client.id} user={user} onRefresh={refreshClient} />
-          </TabsContent>
+               {client.client_type === "pre_ets" && !isClientUser && (
+          <>
+            <TabsContent value="wble_forms">
+              <WBLEFormSection client={client} clientId={client.id} user={user} onRefresh={refreshClient} />
+            </TabsContent>
+
+            <TabsContent value="iep_transition">
+              <IEPPlanSection clientId={client.id} isStaff={true} />
+            </TabsContent>
+
+            <TabsContent value="skills_exploration">
+              <SkillsExplorationTab clientId={client.id} isStaff={true} client={client} />
+            </TabsContent>
+          </>
         )}
 
         {cd.documents && !isClientUser && (
