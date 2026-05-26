@@ -101,7 +101,7 @@ export default function Calendar() {
     queryFn: () => base44.entities.TimeEntry.list(),
   });
 
-  const { data: clients = [] } = useQuery({
+    const { data: clients = [] } = useQuery({
     queryKey: ['clients', user?.role],
     queryFn: async () => {
       const allClients = await base44.entities.Client.list();
@@ -114,6 +114,21 @@ export default function Calendar() {
     },
     enabled: !!user
   });
+
+  useEffect(() => {
+    if (!showNew) return;
+
+    const urlClientId = getUrlClientId();
+    if (!urlClientId) return;
+
+    const matchingClient = clients.find((c) => c.id === urlClientId);
+    if (!matchingClient) return;
+
+    setForm((prev) => ({
+      ...prev,
+      client_id: prev.client_id || urlClientId,
+    }));
+  }, [showNew, clients]);
 
   const clientIds = clients.map(c => c.id);
 
