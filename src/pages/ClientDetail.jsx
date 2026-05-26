@@ -31,6 +31,7 @@ import {
   getTasks,
   getArchivedTasks,
   getTimeEntries,
+  getOnboardingSteps,
 } from "@/lib/api/clientPortalApi";
 
 import ClientHeader from "@/components/client-detail/ClientHeader";
