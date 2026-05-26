@@ -93,13 +93,20 @@ export const FEATURE_DEFINITIONS = [
   { key: "client_assessments",    label: "Assessments",         category: "client_detail" },
   { key: "client_documents",      label: "Documents",           category: "client_detail" },
   { key: "client_tasks",          label: "Tasks",               category: "client_detail" },
-  { key: "client_time",           label: "Time / Job Supports", category: "client_detail" },
+    { key: "client_time",           label: "Time / Job Supports", category: "client_detail" },
   { key: "client_activity",       label: "Activity",            category: "client_detail" },
   { key: "client_assistant",      label: "Assistant",           category: "client_detail" },
   { key: "client_portal",         label: "Client Portal",       category: "client_detail" },
   { key: "client_send_email",     label: "Send Email",          category: "client_detail" },
   { key: "client_test_onet",      label: "Test O*NET",          category: "client_detail" },
   { key: "client_add_actions",    label: "Add Actions",         category: "client_detail" },
+
+  // Staff-side Pre-ETS Client Detail sections
+  { key: "client_pre_ets_wble_forms",        label: "Pre-ETS WBLE Forms",        category: "client_detail" },
+  { key: "client_pre_ets_program_checklist", label: "Pre-ETS Program Checklist", category: "client_detail" },
+  { key: "client_pre_ets_iep_transition",    label: "Pre-ETS IEP & Transition",  category: "client_detail" },
+  { key: "client_pre_ets_skills_exploration",label: "Pre-ETS Skills Exploration",category: "client_detail" },
+  { key: "client_pre_ets_meetings",          label: "Pre-ETS Meetings",          category: "client_detail" },
 ];
 
 // Client-facing portal feature definitions — used by FeaturePermissions client section
