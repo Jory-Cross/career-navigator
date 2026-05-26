@@ -750,8 +750,8 @@ export default function Calendar() {
         </Card>
       </div>
 
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-lg">
+            <Dialog open={showNew} onOpenChange={setShowNew}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingMeeting ? "Edit Meeting" : "Schedule Meeting"}</DialogTitle>
           </DialogHeader>
