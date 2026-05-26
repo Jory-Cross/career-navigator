@@ -15,6 +15,8 @@ import {
   Bot,
   User,
   Archive,
+  Star,
+  CheckCircle2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
