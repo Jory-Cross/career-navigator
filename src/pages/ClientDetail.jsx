@@ -677,8 +677,95 @@ const currentTaskCount = tasks.filter(
 
                {client.client_type === "pre_ets" && !isClientUser && (
           <>
-            <TabsContent value="wble_forms">
+                       <TabsContent value="wble_forms">
               <WBLEFormSection client={client} clientId={client.id} user={user} onRefresh={refreshClient} />
+            </TabsContent>
+
+            <TabsContent value="program_checklist">
+              <Card className="border-0 shadow-sm">
+                <div className="p-5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-indigo-600" />
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      Pre-ETS Program Checklist
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  {preEtsChecklistSteps.length > 0 ? (
+                    <div className="space-y-3">
+                      {[...preEtsChecklistSteps]
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((step) => (
+                          <div
+                            key={step.id}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg p-3",
+                              step.status === "completed"
+                                ? "bg-green-50"
+                                : "bg-slate-50"
+                            )}
+                          >
+                            {step.status === "completed" ? (
+                              <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                            ) : (
+                              <div className="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300" />
+                            )}
+
+                            <div className="flex-1">
+                              <p
+                                className={cn(
+                                  "text-sm font-medium",
+                                  step.status === "completed" && "text-slate-500"
+                                )}
+                              >
+                                {step.step_name}
+                              </p>
+
+                              {step.notes && (
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  {step.notes}
+                                </p>
+                              )}
+                            </div>
+
+                            {step.status === "completed" && step.completed_date && (
+                              <span className="text-xs text-slate-400">
+                                {format(new Date(step.completed_date), "MMM d")}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {PRE_ETS_CHECKLIST_ITEMS.map((item) => (
+                        <div
+                          key={item.key}
+                          className="flex items-center gap-3 rounded-lg bg-slate-50 p-3"
+                        >
+                          <div className="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300" />
+
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-700">
+                              {item.label}
+                            </p>
+                          </div>
+
+                          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs capitalize text-slate-500">
+                            {item.category.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                      ))}
+
+                      <p className="mt-3 text-center text-xs text-slate-400">
+                        Checklist steps will update as program items are completed.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
             </TabsContent>
 
             <TabsContent value="iep_transition">
