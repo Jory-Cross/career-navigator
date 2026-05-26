@@ -82,42 +82,64 @@ export default function TrainingProgressReportForm({ open, onClose, client }) {
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
+    if (!client?.id) {
+      toast.error("Cannot save progress report because no client is selected.");
+      return;
+    }
+
     if (!form.reporting_period_from || !form.reporting_period_to) {
       toast.error("Please fill in the reporting period dates.");
       return;
     }
+
+    const clientId = client.id;
+
     setSubmitting(true);
     try {
       const user = await base44.auth.me();
+
       const report = await base44.entities.TrainingProgressReport.create({
-        client_id: client.id,
+        client_id: clientId,
+        client_name: `${client?.first_name || ""} ${client?.last_name || ""}`.trim(),
+        employer_id: user?.id || "",
+        employer_email: user?.email || "",
         ...form,
-        submitted_by: user.email,
+        submitted_by: user?.email || "",
       });
 
       // Generate PDF
       try {
-        const { data: pdfData } = await base44.functions.invoke('generateProgressReportPDF', { report_id: report.id });
+        const { data: pdfData } = await base44.functions.invoke("generateProgressReportPDF", {
+          report_id: report.id,
+        });
+
         if (pdfData?.pdf_url) {
-          await base44.entities.TrainingProgressReport.update(report.id, { pdf_url: pdfData.pdf_url });
+          await base44.entities.TrainingProgressReport.update(report.id, {
+            pdf_url: pdfData.pdf_url,
+          });
+
           await base44.entities.Document.create({
-            client_id: client.id,
+            client_id: clientId,
             title: `Training Progress Report (${form.reporting_period_from} – ${form.reporting_period_to})`,
             file_url: pdfData.pdf_url,
-            file_name: 'Training_Progress_Report.pdf',
-            file_type: 'application/pdf',
-            category: 'contract'
+            file_name: "Training_Progress_Report.pdf",
+            file_type: "application/pdf",
+            category: "contract",
+            visibility: "staff",
           });
         }
       } catch (pdfErr) {
-        console.error('PDF generation failed:', pdfErr);
+        console.error("PDF generation failed:", pdfErr);
       }
 
       toast.success("Progress report saved successfully!");
-      queryClient.invalidateQueries({ queryKey: ["training-progress-reports", client.id] });
-      queryClient.invalidateQueries({ queryKey: ["wble-forms", client.id] });
-      queryClient.invalidateQueries({ queryKey: ["employer-wble", client.id] });
+
+      queryClient.invalidateQueries({ queryKey: ["training-progress-reports", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["pre-ets-wble", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["wble-forms", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["employer-wble", clientId] });
+
       onClose();
       setForm({ ...EMPTY_FORM });
     } catch (err) {
