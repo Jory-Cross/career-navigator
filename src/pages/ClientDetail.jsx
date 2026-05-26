@@ -44,6 +44,8 @@ import DocumentsSection from "@/components/client-detail/DocumentsSection";
 import ActivitySection from "@/components/client-detail/ActivitySection";
 import AssessmentSection from "@/components/client-detail/AssessmentSection";
 import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
+import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
+import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
 import EmailComposer from "@/components/EmailComposer";
 import AIAssistantPanel from "@/components/client-detail/AIAssistantPanel";
 import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
