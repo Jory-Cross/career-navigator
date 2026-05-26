@@ -164,10 +164,13 @@ export default function Calendar() {
     return USER_BLOCK_COLORS[colorIdx].bg;
   };
 
-  const openNew = (date) => {
+    const openNew = (date) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientIdFromUrl = urlParams.get("client_id") || "";
+
     setEditingMeeting(null);
     setForm({
-      client_id: "",
+      client_id: clientIdFromUrl,
       title: "",
       description: "",
       meeting_type: "consultation",
@@ -180,7 +183,6 @@ export default function Calendar() {
     });
     setShowNew(true);
   };
-
   const openEdit = (meeting) => {
     setEditingMeeting(meeting);
     setForm({
