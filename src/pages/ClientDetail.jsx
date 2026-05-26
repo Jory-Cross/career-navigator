@@ -945,8 +945,9 @@ const currentTaskCount = tasks.filter(
                     </div>
                   )}
                 </div>
-              </Card>
+                            </Card>
             </TabsContent>
+            )}
           </>
         )}
 
