@@ -263,6 +263,14 @@ const currentTaskCount = tasks.filter(
     staleTime: 10 * 1000,
     refetchOnWindowFocus: true,
   });
+
+  const { data: clientMeetings = [] } = useQuery({
+    queryKey: ["client-detail", "meetings", clientId],
+    queryFn: () => getMeetings(clientId),
+    enabled: !!clientId && client?.client_type === "pre_ets",
+    staleTime: 10 * 1000,
+    refetchOnWindowFocus: true,
+  });
   const refreshClient = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.client(clientId) });
   }, [queryClient, clientId]);
