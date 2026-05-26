@@ -62,6 +62,18 @@ function getClientIdFromUrl() {
   return urlParams.get("id");
 }
 
+const PRE_ETS_CHECKLIST_ITEMS = [
+  { key: "career_exploration", label: "Complete Career Exploration Assessment", category: "assessments" },
+  { key: "job_shadowing", label: "Job Shadowing or Site Visit", category: "work_experience" },
+  { key: "work_readiness", label: "Work Readiness Training Module", category: "training" },
+  { key: "resume_created", label: "Create or Upload Resume", category: "documents" },
+  { key: "self_advocacy", label: "Self-Advocacy Skills Workshop", category: "training" },
+  { key: "wble_signed", label: "Sign WBLE Agreement", category: "work_experience" },
+  { key: "counselor_meeting", label: "Initial Meeting with VR Counselor", category: "meetings" },
+  { key: "goals_set", label: "Set Employment Goals", category: "planning" },
+];
+
+function getDefaultTab(client, userRole) {
 function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
   const isEmployed = client?.client_type === "employed";
