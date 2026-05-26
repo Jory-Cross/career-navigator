@@ -835,13 +835,22 @@ const currentTaskCount = tasks.filter(
             {cd.pre_ets_meetings && (
               <TabsContent value="meetings">
               <Card className="border-0 shadow-sm">
-                <div className="p-5 border-b border-slate-100">
+                                <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-violet-600" />
                     <h3 className="text-sm font-semibold text-slate-800">
                       Meetings
                     </h3>
                   </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => window.open(`/Calendar?client_id=${client.id}`, "_blank")}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Add Meeting
+                  </Button>
                 </div>
 
                 <div className="p-5">
