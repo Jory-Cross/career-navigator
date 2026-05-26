@@ -243,7 +243,7 @@ const currentTaskCount = tasks.filter(
     task.status !== "cancelled"
 ).length;
 
-  const { data: timeEntries = [] } = useQuery({
+    const { data: timeEntries = [] } = useQuery({
     queryKey: queryKeys.timeEntries(clientId),
     queryFn: () => getTimeEntries(clientId),
     enabled: shouldLoadTime,
@@ -252,6 +252,13 @@ const currentTaskCount = tasks.filter(
     refetchOnWindowFocus: true,
   });
 
+  const { data: preEtsChecklistSteps = [] } = useQuery({
+    queryKey: ["client-detail", "pre-ets-checklist", clientId],
+    queryFn: () => getOnboardingSteps(clientId),
+    enabled: !!clientId && client?.client_type === "pre_ets",
+    staleTime: 10 * 1000,
+    refetchOnWindowFocus: true,
+  });
   const refreshClient = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.client(clientId) });
   }, [queryClient, clientId]);
