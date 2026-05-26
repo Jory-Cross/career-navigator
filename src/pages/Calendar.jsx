@@ -33,8 +33,13 @@ export default function Calendar() {
   const [calendarMode, setCalendarMode] = useState("mine"); // "mine" | "team" | "custom"
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [teamUsers, setTeamUsers] = useState([]);
-  const [loadingTeam, setLoadingTeam] = useState(false);
+   const [loadingTeam, setLoadingTeam] = useState(false);
   const queryClient = useQueryClient();
+
+  const getUrlClientId = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("client_id") || urlParams.get("id") || "";
+  };
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
