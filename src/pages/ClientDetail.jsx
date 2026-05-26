@@ -74,7 +74,6 @@ const PRE_ETS_CHECKLIST_ITEMS = [
 ];
 
 function getDefaultTab(client, userRole) {
-function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
   const isEmployed = client?.client_type === "employed";
 
