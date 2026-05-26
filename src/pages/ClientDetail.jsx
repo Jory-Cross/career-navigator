@@ -191,7 +191,7 @@ const handleDocumentsChanged = useCallback(() => {
 
   // Feature-gating for client detail sections (admin always sees all)
   const { canView: cdCanView } = useFeaturePermissions(user);
-  const cd = {
+   const cd = {
     details:       cdCanView("client_details"),
     onboarding:    cdCanView("client_onboarding"),
     intake_packet: cdCanView("client_intake_packet"),
@@ -208,6 +208,12 @@ const handleDocumentsChanged = useCallback(() => {
     send_email:    cdCanView("client_send_email"),
     test_onet:     cdCanView("client_test_onet"),
     add_actions:   cdCanView("client_add_actions"),
+
+    pre_ets_wble_forms:        cdCanView("client_pre_ets_wble_forms"),
+    pre_ets_program_checklist: cdCanView("client_pre_ets_program_checklist"),
+    pre_ets_iep_transition:    cdCanView("client_pre_ets_iep_transition"),
+    pre_ets_skills_exploration:cdCanView("client_pre_ets_skills_exploration"),
+    pre_ets_meetings:          cdCanView("client_pre_ets_meetings"),
   };
 
   const shouldLoadApplications = !!clientId && activeTab === "applications";
