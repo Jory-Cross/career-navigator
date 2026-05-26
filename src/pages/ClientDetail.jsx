@@ -460,22 +460,56 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
-    {client.client_type === "pre_ets" && !isClientUser && (
-      <button
-        type="button"
-        onClick={() => handleTabChange("wble_forms")}
-        className={cn(
-          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-          activeTab === "wble_forms"
-            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          <span className="text-sm font-semibold">WBLE Forms</span>
-        </div>
-      </button>
+        {client.client_type === "pre_ets" && !isClientUser && (
+      <>
+        <button
+          type="button"
+          onClick={() => handleTabChange("wble_forms")}
+          className={cn(
+            "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+            activeTab === "wble_forms"
+              ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+              : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="text-sm font-semibold">WBLE Forms</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("iep_transition")}
+          className={cn(
+            "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+            activeTab === "iep_transition"
+              ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+              : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            <span className="text-sm font-semibold">IEP & Transition</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("skills_exploration")}
+          className={cn(
+            "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+            activeTab === "skills_exploration"
+              ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+              : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            <span className="text-sm font-semibold">Skills Exploration</span>
+          </div>
+        </button>
+      </>
     )}
 
     {cd.documents && !isClientUser && (
