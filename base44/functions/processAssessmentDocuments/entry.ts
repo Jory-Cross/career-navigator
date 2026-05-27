@@ -310,24 +310,24 @@ console.log("VFP FINAL RESULT:", result);
         vocational_facts_last_updated_at: new Date().toISOString(),
       };
 
-     let updateResult = null;
+      let updateResult = null;
 
-if (shouldUpdate) {
-  updateResult = await base44.asServiceRole.entities.Client.update(
-    clientId,
-    profilePayload
-  );
+      if (shouldUpdate) {
+        updateResult = await base44.asServiceRole.entities.Client.update(
+          clientId,
+          profilePayload
+        );
 
-  console.log("VFP SAVE RESULT:", updateResult);
+        console.log("VFP SAVE RESULT:", updateResult);
 
-  console.log(
-    `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}`
-  );
-} else {
-  console.log(
-    `[processAssessmentDocuments] Skipped weaker VFP extraction for client ${clientId}`
-  );
-}
+        console.log(
+          `[processAssessmentDocuments] Profile saved for client ${clientId}, quality: ${result.data_quality_score}, facts: ${newFactCount}`
+        );
+      } else {
+        console.log(
+          `[processAssessmentDocuments] Skipped weaker VFP extraction for client ${clientId}. Existing facts: ${existingFactCount}, new facts: ${newFactCount}`
+        );
+      }
 
       // Log activity
       await base44.asServiceRole.entities.Activity.create({
