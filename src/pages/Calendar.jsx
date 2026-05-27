@@ -353,7 +353,12 @@ export default function Calendar() {
          await Promise.all(promises);
          toast.success(count > 1 ? `${count} recurring meetings scheduled` : "Meeting scheduled");
       }
-      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+            queryClient.invalidateQueries({ queryKey: ['meetings'] });
+
+      if (goToReturnUrlIfPresent()) {
+        return;
+      }
+
       setShowNew(false);
       setEditingMeeting(null);
     } catch (error) {
