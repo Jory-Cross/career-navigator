@@ -1027,16 +1027,20 @@ const currentTaskCount = tasks.filter(
                                 {formatMeetingStatus(meeting.status)}
                               </span>
 
-                              <Button
+                                                           <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
+                                onClick={() => {
+                                  const returnUrl = encodeURIComponent(
+                                    `/ClientDetail?id=${client.id}&tab=meetings`
+                                  );
+
                                   window.open(
-                                    `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}`,
+                                    `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}&return_url=${returnUrl}`,
                                     "_blank"
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 Edit
                               </Button>
