@@ -170,8 +170,8 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
-  const startNewSession = async (useWSA = false, jobApplicationId = null) => {
-    if (!client?.target_role) {
+    const startNewSession = async (useWSA = false, jobApplicationId = null) => {
+    if (!useWSA && !client?.target_role) {
       toast.error("Please set a target role for the client first");
       return;
     }
