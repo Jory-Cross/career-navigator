@@ -576,26 +576,6 @@ const currentTaskCount = tasks.filter(
           </button>
         )}
 
-        {cd.pre_ets_meetings && (
-          <button
-            type="button"
-            onClick={() => handleTabChange("meetings")}
-            className={cn(
-              "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-              activeTab === "meetings"
-                ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-                : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="text-sm font-semibold">Meetings</span>
-            </div>
-            <div className={cn("mt-1 text-xs", activeTab === "meetings" ? "text-slate-200" : "text-slate-500")}>
-              {clientMeetings.length} items
-            </div>
-          </button>
-        )}
       </>
     )}
 
