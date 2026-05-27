@@ -999,10 +999,13 @@ setCompletionNote("");
                             </div>
                           ) : null}
 
-                          {meeting.start_datetime ? (
+                                                  {meeting.start_datetime ? (
                             <div className="text-sm text-muted-foreground">
                               {format(new Date(meeting.start_datetime), "MMM d, yyyy")} •{" "}
                               {format(new Date(meeting.start_datetime), "h:mm a")}
+                              {meeting.end_datetime
+                                ? ` – ${format(new Date(meeting.end_datetime), "h:mm a")}`
+                                : ""}
                             </div>
                           ) : null}
 
