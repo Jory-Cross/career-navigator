@@ -337,15 +337,17 @@ console.log("VFP FINAL RESULT:", result);
         description: `${user.full_name || user.email} extracted employment facts from ${targetDocs.length} documents and ${assessments.length} assessments. Quality score: ${result.data_quality_score}%. ${result.conflicts?.length > 0 ? `⚠️ ${result.conflicts.length} conflict(s) flagged for review.` : ''}`,
       });
 
-            return Response.json({
+      return Response.json({
         success: true,
-        profile: result,
-        metadata: extractionMetadata,
+        profile: returnedProfile,
+        metadata: returnedMetadata,
         documents_processed: targetDocs.length,
         assessments_processed: assessments.length,
-        conflicts_found: result.conflicts?.length || 0,
-        data_quality_score: result.data_quality_score || 0,
-        update_status: shouldUpdate || !existingProfile ? "updated" : "skipped_weaker_profile"
+        conflicts_found: returnedProfile?.conflicts?.length || 0,
+        data_quality_score: returnedProfile?.data_quality_score || returnedMetadata?.data_quality_score || 0,
+        update_status: shouldUpdate ? "updated" : "skipped_weaker_profile",
+        extracted_fact_count: newFactCount,
+        existing_fact_count: existingFactCount,
       });
     }
 
