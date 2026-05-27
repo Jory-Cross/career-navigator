@@ -166,9 +166,13 @@ export default function Calendar() {
 
   const clientIds = clients.map(c => c.id);
 
-  const { data: meetings = [] } = useQuery({
-    queryKey: ['meetings', user?.role, clientIds.join(',')],
+    const { data: meetings = [] } = useQuery({
+    queryKey: ['meetings', user?.role, clientIds.join(','), urlClientId || 'all'],
     queryFn: async () => {
+      if (urlClientId) {
+        return await base44.entities.Meeting.filter({ client_id: urlClientId });
+      }
+
       const allMeetings = await base44.entities.Meeting.list();
       if (!user) return allMeetings;
       if (user.role === 'admin' || user.role === 'management') return allMeetings;
@@ -177,7 +181,7 @@ export default function Calendar() {
       }
       return allMeetings;
     },
-    enabled: !!user && clients.length >= 0
+    enabled: !!user
   });
 
   // Build a map of userId -> color index for team coloring
