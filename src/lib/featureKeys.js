@@ -114,11 +114,12 @@ export const FEATURE_DEFINITIONS = [
 // Client-facing portal feature definitions — used by FeaturePermissions client section
 export const CLIENT_PORTAL_FEATURE_DEFINITIONS = [
   // General portal tabs — applicable to client, pre_ets, dspd
-  { key: "client_portal_intake_forms",    label: "Intake Forms",    category: "general_client_portal" },
+   { key: "client_portal_intake_forms",    label: "Intake Forms",    category: "general_client_portal" },
   { key: "client_portal_applications",    label: "Applications",    category: "general_client_portal" },
   { key: "client_portal_recommendations", label: "Recommendations", category: "general_client_portal" },
   { key: "client_portal_tasks",           label: "Tasks",           category: "general_client_portal" },
   { key: "client_portal_documents",       label: "Documents",       category: "general_client_portal" },
+  { key: "client_portal_meetings",        label: "Meetings",        category: "general_client_portal" },
   // Pre-ETS specific tabs
   { key: "client_portal_clock_in_out",        label: "Clock In/Out",          category: "pre_ets_portal" },
   { key: "client_portal_program_checklist",   label: "Program Checklist",     category: "pre_ets_portal" },
