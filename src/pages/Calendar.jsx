@@ -240,8 +240,25 @@ export default function Calendar() {
       recurrence: "none",
       recurrence_count: 4,
     });
-    setShowNew(true);
+       setShowNew(true);
   };
+
+  useEffect(() => {
+    if (urlNewMeetingOpened) return;
+
+    const clientIdFromUrl = getUrlClientId();
+    const meetingIdFromUrl = getUrlMeetingId();
+
+    if (!clientIdFromUrl || meetingIdFromUrl) return;
+    if (!Array.isArray(clients) || clients.length === 0) return;
+
+    const matchingClient = clients.find((client) => client.id === clientIdFromUrl);
+    if (!matchingClient) return;
+
+    setUrlNewMeetingOpened(true);
+    openNew();
+  }, [clients, urlNewMeetingOpened]);
+
     const openEdit = (meeting) => {
     setEditingMeeting(meeting);
     setForm({
