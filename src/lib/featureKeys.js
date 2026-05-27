@@ -121,13 +121,12 @@ export const CLIENT_PORTAL_FEATURE_DEFINITIONS = [
   { key: "client_portal_documents",       label: "Documents",       category: "general_client_portal" },
   { key: "client_portal_meetings",        label: "Meetings",        category: "general_client_portal" },
   // Pre-ETS specific tabs
-  { key: "client_portal_clock_in_out",        label: "Clock In/Out",          category: "pre_ets_portal" },
+   { key: "client_portal_clock_in_out",        label: "Clock In/Out",          category: "pre_ets_portal" },
   { key: "client_portal_program_checklist",   label: "Program Checklist",     category: "pre_ets_portal" },
   { key: "client_portal_iep_transition_plan", label: "IEP & Transition Plan", category: "pre_ets_portal" },
   { key: "client_portal_skills_exploration",  label: "Skills Exploration",    category: "pre_ets_portal" },
   { key: "client_portal_assessments",         label: "Assessments",           category: "pre_ets_portal" },
   { key: "client_portal_wble_forms",          label: "WBLE Forms",            category: "pre_ets_portal" },
-  { key: "client_portal_meetings",            label: "Meetings",              category: "pre_ets_portal" },
 ];
 
 export const CATEGORY_LABELS = {
