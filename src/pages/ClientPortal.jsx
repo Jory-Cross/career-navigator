@@ -374,6 +374,18 @@ const pendingRecommendationCount = useMemo(() => {
     (rec) => !rec.client_response
   ).length;
 }, [sharedRecommendations]);
+
+const {
+  data: clientMeetings = [],
+  isLoading: clientMeetingsLoading,
+  error: clientMeetingsError,
+} = useQuery({
+  queryKey: ["clientPortal", "meetings", client?.id],
+  queryFn: () => getMeetings(client.id),
+  enabled: !!client?.id && isPreEtsClient && activeTab === "meetings",
+  staleTime: 60 * 1000,
+  refetchOnMount: "always",
+});
   
   /**
    * Helpers
