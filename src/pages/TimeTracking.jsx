@@ -120,13 +120,14 @@ function entryTypeRequiresClient(entryTypeCode) {
     "eom_reporting",
   ]);
 
-  const explicitlyRequiresClient = new Set([
+   const explicitlyRequiresClient = new Set([
     "job_coaching",
     "job_development",
     "life_skills",
     "csb",
     "pre_ets",
     "usor96",
+    "wsa",
   ]);
 
   if (explicitlyRequiresClient.has(raw)) return true;
