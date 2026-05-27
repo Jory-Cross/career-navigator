@@ -80,6 +80,76 @@ const PRE_ETS_CHECKLIST_ITEMS = [
   { key: "goals_set", label: "Set Employment Goals", category: "planning" },
 ];
 
+function normalizeMeetingStatus(status) {
+  return String(status || "scheduled").toLowerCase().trim();
+}
+
+function formatMeetingStatus(status) {
+  return normalizeMeetingStatus(status).replace(/_/g, " ");
+}
+
+function getMeetingCardClassName(status) {
+  const normalized = normalizeMeetingStatus(status);
+
+  if (normalized === "no_show" || normalized === "no show") {
+    return "border-amber-300 bg-amber-50";
+  }
+
+  if (
+    normalized === "late_cancel" ||
+    normalized === "late_cancelled" ||
+    normalized === "late_cancellation" ||
+    normalized === "late cancellation"
+  ) {
+    return "border-orange-300 bg-orange-50";
+  }
+
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "border-red-300 bg-red-50";
+  }
+
+  if (normalized === "completed") {
+    return "border-slate-200 bg-slate-50";
+  }
+
+  if (normalized === "confirmed") {
+    return "border-green-200 bg-green-50";
+  }
+
+  return "border-violet-200 bg-violet-50";
+}
+
+function getMeetingBadgeClassName(status) {
+  const normalized = normalizeMeetingStatus(status);
+
+  if (normalized === "no_show" || normalized === "no show") {
+    return "bg-amber-100 text-amber-800";
+  }
+
+  if (
+    normalized === "late_cancel" ||
+    normalized === "late_cancelled" ||
+    normalized === "late_cancellation" ||
+    normalized === "late cancellation"
+  ) {
+    return "bg-orange-100 text-orange-800";
+  }
+
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "bg-red-100 text-red-800";
+  }
+
+  if (normalized === "completed") {
+    return "bg-slate-100 text-slate-600";
+  }
+
+  if (normalized === "confirmed") {
+    return "bg-green-100 text-green-700";
+  }
+
+  return "bg-blue-100 text-blue-700";
+}
+
 function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
   const isEmployed = client?.client_type === "employed";
