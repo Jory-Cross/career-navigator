@@ -27,7 +27,7 @@ export default function Clients() {
   const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+   const [typeFilter, setTypeFilter] = useState(() => new URLSearchParams(location.search).get("type") || "all");
   const [showArchived, setShowArchived] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [employeeFilter, setEmployeeFilter] = useState("all");
