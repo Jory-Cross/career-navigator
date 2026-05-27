@@ -1109,8 +1109,13 @@ setCompletionNote("");
                           ) : null}
                         </div>
 
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs capitalize text-blue-700">
-                          {meeting.status || "scheduled"}
+                                               <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs capitalize",
+                            getMeetingBadgeClassName(meeting.status)
+                          )}
+                        >
+                          {formatMeetingStatus(meeting.status)}
                         </span>
                       </div>
                     </div>
