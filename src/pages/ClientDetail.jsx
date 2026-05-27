@@ -939,20 +939,36 @@ const currentTaskCount = tasks.filter(
                               )}
                             </div>
 
-                            <span
-                              className={cn(
-                                "shrink-0 rounded-full px-2 py-0.5 text-xs capitalize",
-                                meeting.status === "confirmed"
-                                  ? "bg-green-100 text-green-700"
-                                  : meeting.status === "completed"
-                                  ? "bg-slate-100 text-slate-600"
-                                  : meeting.status === "cancelled"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-blue-100 text-blue-700"
-                              )}
-                            >
-                              {meeting.status || "scheduled"}
-                            </span>
+                                                        <div className="flex shrink-0 flex-col items-end gap-2">
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 text-xs capitalize",
+                                  meeting.status === "confirmed"
+                                    ? "bg-green-100 text-green-700"
+                                    : meeting.status === "completed"
+                                    ? "bg-slate-100 text-slate-600"
+                                    : meeting.status === "cancelled"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-blue-100 text-blue-700"
+                                )}
+                              >
+                                {meeting.status || "scheduled"}
+                              </span>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  window.open(
+                                    `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}`,
+                                    "_blank"
+                                  )
+                                }
+                              >
+                                Edit
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
