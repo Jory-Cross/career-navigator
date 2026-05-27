@@ -31,8 +31,8 @@ const GENERAL_TABS = [
   { value: "recommendations",  label: "Recommendations", featureKey: "client_portal_recommendations" },
   { value: "tasks",            label: "Tasks",           featureKey: "client_portal_tasks" },
   { value: "documents",        label: "Documents",       featureKey: "client_portal_documents" },
+  { value: "meetings",         label: "Meetings",        featureKey: "client_portal_meetings" },
 ];
-
 // Pre-ETS portal tab definitions with their feature keys
 const PRE_ETS_TABS = [
   { value: "clock",             label: "Clock In/Out",          featureKey: "client_portal_clock_in_out" },
