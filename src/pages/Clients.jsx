@@ -32,7 +32,7 @@ export default function Clients() {
   const [showNew, setShowNew] = useState(false);
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const { viewAsUser } = useViewAs();
-  const { orgId } = useOrg();
+   const { orgId, loading: orgLoading } = useOrg();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
