@@ -31,14 +31,20 @@ export default function Calendar() {
   const [editSeriesMode, setEditSeriesMode] = useState("current"); // "current" or "series"
   const [generatingMeet, setGeneratingMeet] = useState(false);
   const [calendarMode, setCalendarMode] = useState("mine"); // "mine" | "team" | "custom"
-  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [teamUsers, setTeamUsers] = useState([]);
-   const [loadingTeam, setLoadingTeam] = useState(false);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [urlMeetingOpened, setUrlMeetingOpened] = useState(false);
   const queryClient = useQueryClient();
 
   const getUrlClientId = () => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get("client_id") || urlParams.get("id") || "";
+  };
+
+  const getUrlMeetingId = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("meeting_id") || "";
   };
 
   useEffect(() => {
