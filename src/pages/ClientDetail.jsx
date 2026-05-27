@@ -918,10 +918,19 @@ const currentTaskCount = tasks.filter(
                   </h3>
                 </div>
 
-                <Button
+                               <Button
                   type="button"
                   size="sm"
-                  onClick={() => window.open(`/Calendar?client_id=${client.id}`, "_blank")}
+                  onClick={() => {
+                    const returnUrl = encodeURIComponent(
+                      `/ClientDetail?id=${client.id}&tab=meetings`
+                    );
+
+                    window.open(
+                      `/Calendar?client_id=${client.id}&return_url=${returnUrl}`,
+                      "_blank"
+                    );
+                  }}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
                   Add Meeting
