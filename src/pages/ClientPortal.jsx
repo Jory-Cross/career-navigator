@@ -18,7 +18,7 @@ import {
   createApplication,
   updateApplication,
   updateTask,
-
+  getMeetings,
 } from "@/lib/api/clientPortalApi";
 import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSection";
 import ClockInOut from "@/components/pre-ets/ClockInOut";
