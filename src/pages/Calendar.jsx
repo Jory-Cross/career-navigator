@@ -42,11 +42,26 @@ export default function Calendar() {
     return urlParams.get("client_id") || urlParams.get("id") || "";
   };
 
-  const getUrlMeetingId = () => {
+   const getUrlMeetingId = () => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get("meeting_id") || "";
   };
 
+  const getReturnUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("return_url") || "";
+  };
+
+  const goToReturnUrlIfPresent = () => {
+    const returnUrl = getReturnUrl();
+
+    if (returnUrl) {
+      window.location.href = returnUrl;
+      return true;
+    }
+
+    return false;
+  };
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
