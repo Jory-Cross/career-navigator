@@ -239,38 +239,69 @@ console.log("VFP FINAL RESULT:", result);
         missing_fields_count: (result.missing_critical_data || []).length
       };
 
-      // Preserve existing profile if newer extraction is weaker
-      const existingProfile = client.vocational_facts_profile;
-      const existingMetadata = client.vocational_facts_metadata;
-     const existingScore =
-  existingMetadata?.data_quality_score || 0;
+      // Preserve existing profile if newer extraction is weaker.
+      // IMPORTANT:
+      // Client.list() may not always include the full vocational_facts_profile payload,
+      // so fetch the full current Client record before deciding whether to overwrite.
+      const currentClientForExisting = await base44.asServiceRole.entities.Client.get(clientId);
 
-const newScore =
-  result?.data_quality_score || 0;
+      const existingProfile = currentClientForExisting?.vocational_facts_profile || null;
+      const existingMetadata = currentClientForExisting?.vocational_facts_metadata || {};
 
-const newFactCount = [
-  ...(result.skills || []),
-  ...(result.interests || []),
-  ...(result.preferred_tasks || []),
-  ...(result.work_environment_preferences || []),
-  ...(result.schedule_availability || []),
-  ...(result.transportation || []),
-  ...(result.social_communication_needs || []),
-  ...(result.sensory_environmental_needs || []),
-  ...(result.physical_restrictions || []),
-  ...(result.support_needs || []),
-  ...(result.job_readiness_level || []),
-  ...(result.employer_preferences || []),
-  ...(result.barriers || []),
-  ...(result.goals || []),
-].length;
+      const countFacts = (profile) => {
+        if (!profile || typeof profile !== "object") return 0;
 
-const shouldUpdate =
-  !existingProfile ||
-  (
-    newScore >= existingScore &&
-    newFactCount > 5
-  );
+        return [
+          ...(profile.skills || []),
+          ...(profile.interests || []),
+          ...(profile.preferred_tasks || []),
+          ...(profile.work_environment_preferences || []),
+          ...(profile.schedule_availability || []),
+          ...(profile.transportation || []),
+          ...(profile.social_communication_needs || []),
+          ...(profile.sensory_environmental_needs || []),
+          ...(profile.physical_restrictions || []),
+          ...(profile.support_needs || []),
+          ...(profile.job_readiness_level || []),
+          ...(profile.employer_preferences || []),
+          ...(profile.barriers || []),
+          ...(profile.goals || []),
+
+          // Include known alias fields used elsewhere in the app.
+          ...(profile.preferred_work_environment || []),
+          ...(profile.schedule_constraints || []),
+          ...(profile.transportation_reliability || []),
+          ...(profile.transportation_limitations || []),
+          ...(profile.communication_style || []),
+          ...(profile.social_tolerance || []),
+          ...(profile.social_supports || []),
+          ...(profile.sensory_limitations || []),
+          ...(profile.accommodation_needs || []),
+          ...(profile.medication_side_effect_flags || []),
+          ...(profile.safety_risk_flags || []),
+          ...(profile.stamina_endurance_concerns || []),
+          ...(profile.benefits_considerations || []),
+          ...(profile.work_goal_themes || []),
+        ].length;
+      };
+
+      const existingScore = existingMetadata?.data_quality_score || existingProfile?.data_quality_score || 0;
+      const newScore = result?.data_quality_score || 0;
+
+      const existingFactCount = countFacts(existingProfile);
+      const newFactCount = countFacts(result);
+
+      const shouldUpdate =
+        newFactCount > 0 &&
+        (
+          !existingProfile ||
+          existingFactCount === 0 ||
+          newScore >= existingScore ||
+          newFactCount >= existingFactCount
+        );
+
+      const returnedProfile = shouldUpdate ? result : existingProfile;
+      const returnedMetadata = shouldUpdate ? extractionMetadata : existingMetadata;
 
       // Save the vocational facts profile to the client record
       const profilePayload = {
