@@ -114,11 +114,10 @@ function entryTypeRequiresClient(entryTypeCode) {
   const raw = String(entryTypeCode || "").trim().toLowerCase();
   const normalized = normalizeEntryTypeCode(raw);
 
-  const noClientRequired = new Set([
+    const noClientRequired = new Set([
     "admin_time",
     "misc",
     "eom_reporting",
-    "wsa",
   ]);
 
   const explicitlyRequiresClient = new Set([
