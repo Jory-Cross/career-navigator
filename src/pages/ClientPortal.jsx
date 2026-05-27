@@ -1056,7 +1056,13 @@ setCompletionNote("");
                       new Date(b.start_datetime || 0)
                   )
                   .map((meeting) => (
-                    <div key={meeting.id} className="rounded border p-4">
+                                       <div
+                      key={meeting.id}
+                      className={cn(
+                        "rounded border p-4",
+                        getMeetingCardClassName(meeting.status)
+                      )}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="font-medium">
