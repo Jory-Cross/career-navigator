@@ -58,10 +58,21 @@ export default function Clients() {
 
       // Admin viewing as someone else — use backend hierarchy enforcement for that user
       // Admin with no viewAs — fetch all directly for speed
-      if (user.role === 'admin' && !viewAsUser) {
-        return orgId
-          ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
-          : await base44.entities.Client.list("-created_date");
+           if (user.role === 'admin' && !viewAsUser) {
+        const validClientTypes = ["job_seeker", "pre_ets", "dspd", "employed"];
+        const shouldFilterByType = validClientTypes.includes(typeFilter);
+
+        if (orgId || shouldFilterByType) {
+          return await base44.entities.Client.filter(
+            {
+              ...(orgId ? { org_id: orgId } : {}),
+              ...(shouldFilterByType ? { client_type: typeFilter } : {})
+            },
+            "-created_date"
+          );
+        }
+
+        return await base44.entities.Client.list("-created_date");
       }
 
       // For all other cases (management, employee, admin-viewing-as),
