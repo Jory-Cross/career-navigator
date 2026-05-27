@@ -942,15 +942,11 @@ const currentTaskCount = tasks.filter(
                           new Date(b.start_datetime || 0)
                       )
                       .map((meeting) => (
-                        <div
+                                               <div
                           key={meeting.id}
                           className={cn(
                             "rounded-lg border p-4",
-                            meeting.status === "cancelled"
-                              ? "border-slate-200 bg-slate-50 opacity-60"
-                              : meeting.status === "completed"
-                              ? "border-slate-200 bg-slate-50"
-                              : "border-violet-200 bg-violet-50"
+                            getMeetingCardClassName(meeting.status)
                           )}
                         >
                           <div className="flex items-start gap-3">
