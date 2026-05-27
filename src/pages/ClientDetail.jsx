@@ -898,17 +898,20 @@ const currentTaskCount = tasks.filter(
                               )}
 
                               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                {meeting.start_datetime && (
-                                  <>
-                                    <span>
-                                      {format(new Date(meeting.start_datetime), "MMM d, yyyy")}
-                                    </span>
-                                    <span>•</span>
-                                    <span>
-                                      {format(new Date(meeting.start_datetime), "h:mm a")}
-                                    </span>
-                                  </>
-                                )}
+                                                                 {meeting.start_datetime && (
+                                    <>
+                                      <span>
+                                        {format(new Date(meeting.start_datetime), "MMM d, yyyy")}
+                                      </span>
+                                      <span>•</span>
+                                      <span>
+                                        {format(new Date(meeting.start_datetime), "h:mm a")}
+                                        {meeting.end_datetime
+                                          ? ` – ${format(new Date(meeting.end_datetime), "h:mm a")}`
+                                          : ""}
+                                      </span>
+                                    </>
+                                  )}
 
                                 {meeting.location && (
                                   <span className="flex items-center gap-1">
