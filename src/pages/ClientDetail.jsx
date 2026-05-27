@@ -918,7 +918,7 @@ const currentTaskCount = tasks.filter(
                   </h3>
                 </div>
 
-                               <Button
+                                              <Button
                   type="button"
                   size="sm"
                   onClick={() => {
@@ -926,10 +926,7 @@ const currentTaskCount = tasks.filter(
                       `/ClientDetail?id=${client.id}&tab=meetings`
                     );
 
-                    window.open(
-                      `/Calendar?client_id=${client.id}&return_url=${returnUrl}`,
-                      "_blank"
-                    );
+                    window.location.href = `/Calendar?client_id=${client.id}&return_url=${returnUrl}`;
                   }}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
