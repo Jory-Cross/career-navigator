@@ -117,7 +117,6 @@ function entryTypeRequiresClient(entryTypeCode) {
     const noClientRequired = new Set([
     "admin_time",
     "misc",
-    "eom_reporting",
   ]);
 
    const explicitlyRequiresClient = new Set([
@@ -128,6 +127,7 @@ function entryTypeRequiresClient(entryTypeCode) {
     "pre_ets",
     "usor96",
     "wsa",
+    "eom_reporting",
   ]);
 
   if (explicitlyRequiresClient.has(raw)) return true;
