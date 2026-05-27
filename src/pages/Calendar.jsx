@@ -830,7 +830,20 @@ export default function Calendar() {
         </Card>
       </div>
 
-            <Dialog open={showNew} onOpenChange={setShowNew}>
+                    <Dialog
+        open={showNew}
+        onOpenChange={(open) => {
+          if (!open && goToReturnUrlIfPresent()) {
+            return;
+          }
+
+          setShowNew(open);
+
+          if (!open) {
+            setEditingMeeting(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingMeeting ? "Edit Meeting" : "Schedule Meeting"}</DialogTitle>
