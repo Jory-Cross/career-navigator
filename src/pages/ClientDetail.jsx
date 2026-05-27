@@ -837,6 +837,132 @@ const currentTaskCount = tasks.filter(
           </>
         )}
 
+               {cd.meetings && !isClientUser && (
+          <TabsContent value="meetings">
+            <Card className="border-0 shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-violet-600" />
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Meetings
+                  </h3>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => window.open(`/Calendar?client_id=${client.id}`, "_blank")}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add Meeting
+                </Button>
+              </div>
+
+              <div className="p-5">
+                {clientMeetings.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-slate-400">
+                    No meetings scheduled
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...clientMeetings]
+                      .sort(
+                        (a, b) =>
+                          new Date(a.start_datetime || 0) -
+                          new Date(b.start_datetime || 0)
+                      )
+                      .map((meeting) => (
+                        <div
+                          key={meeting.id}
+                          className={cn(
+                            "rounded-lg border p-4",
+                            meeting.status === "cancelled"
+                              ? "border-slate-200 bg-slate-50 opacity-60"
+                              : meeting.status === "completed"
+                              ? "border-slate-200 bg-slate-50"
+                              : "border-violet-200 bg-violet-50"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-900">
+                                {meeting.title || "Untitled Meeting"}
+                              </p>
+
+                              {meeting.meeting_type && (
+                                <p className="mt-0.5 text-xs capitalize text-slate-500">
+                                  {meeting.meeting_type.replace(/_/g, " ")}
+                                </p>
+                              )}
+
+                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                {meeting.start_datetime && (
+                                  <>
+                                    <span>
+                                      {format(new Date(meeting.start_datetime), "MMM d, yyyy")}
+                                    </span>
+                                    <span>•</span>
+                                    <span>
+                                      {format(new Date(meeting.start_datetime), "h:mm a")}
+                                    </span>
+                                  </>
+                                )}
+
+                                {meeting.location && (
+                                  <span className="flex items-center gap-1">
+                                    {meeting.location.includes("meet.google.com") ? (
+                                      <a
+                                        href={meeting.location}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-blue-600 underline"
+                                      >
+                                        <Video className="h-3 w-3" />
+                                        Join Meet
+                                      </a>
+                                    ) : (
+                                      <>
+                                        <MapPin className="h-3 w-3" />
+                                        {meeting.location}
+                                      </>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+
+                              {meeting.description && (
+                                <p className="mt-2 text-xs text-slate-600">
+                                  {meeting.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <span
+                              className={cn(
+                                "shrink-0 rounded-full px-2 py-0.5 text-xs capitalize",
+                                meeting.status === "confirmed"
+                                  ? "bg-green-100 text-green-700"
+                                  : meeting.status === "completed"
+                                  ? "bg-slate-100 text-slate-600"
+                                  : meeting.status === "cancelled"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-blue-100 text-blue-700"
+                              )}
+                            >
+                              {meeting.status || "scheduled"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+        )}
+
         {cd.documents && !isClientUser && (
           <TabsContent value="documents">
             <DocumentsSection clientId={client.id} refreshKey={documentsRefreshKey} />
