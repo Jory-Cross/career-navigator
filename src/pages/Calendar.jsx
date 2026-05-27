@@ -130,9 +130,14 @@ export default function Calendar() {
     },
   });
 
-    const { data: clients = [] } = useQuery({
-    queryKey: ['clients', user?.role],
+       const { data: clients = [] } = useQuery({
+    queryKey: ['clients', user?.role, user?.id, urlClientId || 'all'],
     queryFn: async () => {
+      if (urlClientId) {
+        const matchingClients = await base44.entities.Client.filter({ id: urlClientId });
+        return matchingClients || [];
+      }
+
       const allClients = await base44.entities.Client.list();
       if (!user) return allClients;
       if (user.role === 'admin' || user.role === 'management') return allClients;
