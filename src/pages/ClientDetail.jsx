@@ -272,10 +272,10 @@ const currentTaskCount = tasks.filter(
     refetchOnWindowFocus: true,
   });
 
-  const { data: clientMeetings = [] } = useQuery({
+   const { data: clientMeetings = [] } = useQuery({
     queryKey: ["client-detail", "meetings", clientId],
     queryFn: () => getMeetings(clientId),
-    enabled: !!clientId && client?.client_type === "pre_ets",
+    enabled: !!clientId && !!client,
     staleTime: 10 * 1000,
     refetchOnWindowFocus: true,
   });
