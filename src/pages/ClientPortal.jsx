@@ -639,8 +639,12 @@ setCompletionNote("");
             </TabsTrigger>
           )}
 
-          {allowedGeneralTabs.includes("documents") && (
+                  {allowedGeneralTabs.includes("documents") && (
             <TabsTrigger value="documents">Documents</TabsTrigger>
+          )}
+
+          {allowedGeneralTabs.includes("meetings") && (
+            <TabsTrigger value="meetings">Meetings</TabsTrigger>
           )}
 
           {isPreEtsClient &&
