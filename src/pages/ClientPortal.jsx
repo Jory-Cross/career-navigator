@@ -961,9 +961,80 @@ setCompletionNote("");
           </TabsContent>
         )}
 
-        {isPreEtsClient && allowedPreEtsTabs.includes("meetings") && (
+                {isPreEtsClient && allowedPreEtsTabs.includes("meetings") && (
           <TabsContent value="meetings" className="space-y-4">
-            <div className="text-sm text-muted-foreground">Meetings — Coming Soon</div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Meetings</h2>
+            </div>
+
+            {clientMeetingsLoading ? (
+              <div className="text-sm text-muted-foreground">Loading meetings...</div>
+            ) : clientMeetingsError ? (
+              <div className="text-sm text-red-600">Failed to load meetings.</div>
+            ) : clientMeetings.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No meetings scheduled.</div>
+            ) : (
+              <div className="space-y-3">
+                {[...clientMeetings]
+                  .filter((meeting) => meeting.status !== "cancelled")
+                  .sort(
+                    (a, b) =>
+                      new Date(a.start_datetime || 0) -
+                      new Date(b.start_datetime || 0)
+                  )
+                  .map((meeting) => (
+                    <div key={meeting.id} className="rounded border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            {meeting.title || "Untitled Meeting"}
+                          </div>
+
+                          {meeting.meeting_type ? (
+                            <div className="text-sm capitalize text-muted-foreground">
+                              {meeting.meeting_type.replace(/_/g, " ")}
+                            </div>
+                          ) : null}
+
+                          {meeting.start_datetime ? (
+                            <div className="text-sm text-muted-foreground">
+                              {format(new Date(meeting.start_datetime), "MMM d, yyyy")} •{" "}
+                              {format(new Date(meeting.start_datetime), "h:mm a")}
+                            </div>
+                          ) : null}
+
+                          {meeting.location ? (
+                            meeting.location.includes("meet.google.com") ? (
+                              <a
+                                href={meeting.location}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-block text-sm underline"
+                              >
+                                Join Google Meet
+                              </a>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                {meeting.location}
+                              </div>
+                            )
+                          ) : null}
+
+                          {meeting.description ? (
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              {meeting.description}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs capitalize text-blue-700">
+                          {meeting.status || "scheduled"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>
