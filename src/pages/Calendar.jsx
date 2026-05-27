@@ -52,7 +52,7 @@ export default function Calendar() {
     return urlParams.get("return_url") || "";
   };
 
-  const goToReturnUrlIfPresent = () => {
+   const goToReturnUrlIfPresent = () => {
     const returnUrl = getReturnUrl();
 
     if (returnUrl) {
@@ -62,6 +62,8 @@ export default function Calendar() {
 
     return false;
   };
+
+  const urlClientId = getUrlClientId();
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
