@@ -41,7 +41,6 @@ const PRE_ETS_TABS = [
   { value: "skills",            label: "Skills Exploration",    featureKey: "client_portal_skills_exploration" },
   { value: "assessments",       label: "Assessments",           featureKey: "client_portal_assessments" },
   { value: "wble",              label: "WBLE Forms",            featureKey: "client_portal_wble_forms" },
-  { value: "meetings",          label: "Meetings",              featureKey: "client_portal_meetings" },
 ];
 
 // Verify key matching
