@@ -381,7 +381,7 @@ const {
 } = useQuery({
   queryKey: ["clientPortal", "meetings", client?.id],
   queryFn: () => getMeetings(client.id),
-  enabled: !!client?.id && isPreEtsClient && activeTab === "meetings",
+  enabled: !!client?.id && activeTab === "meetings",
   staleTime: 60 * 1000,
   refetchOnMount: "always",
 });
