@@ -394,7 +394,12 @@ export default function Calendar() {
       } else {
         toast.success("Meeting deleted");
       }
-      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+            queryClient.invalidateQueries({ queryKey: ['meetings'] });
+
+      if (goToReturnUrlIfPresent()) {
+        return;
+      }
+
       setShowDeleteConfirm(false);
       setMeetingToDelete(null);
       setLinkedTimeEntry(null);
