@@ -127,17 +127,19 @@ const AuthenticatedApp = () => {
           {_isAdmin ? <MainPage /> : <SmartLanding user={user} />}
         </LayoutWrapper>
       } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
+           {Object.entries(Pages)
+        .filter(([path]) => path !== "PreEtsPortal")
+        .map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            }
+          />
+        ))}
       <Route path="/EmployeePortal" element={<LayoutWrapper currentPageName="EmployeePortal"><EmployeePortal /></LayoutWrapper>} />
       <Route path="/DspdPortal" element={<Navigate to="/Clients?type=dspd" replace />} />
       <Route path="/PreEtsEmployerPortal" element={<PreEtsEmployerPortal />} />
