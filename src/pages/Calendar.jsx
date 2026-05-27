@@ -209,7 +209,7 @@ export default function Calendar() {
     });
     setShowNew(true);
   };
-  const openEdit = (meeting) => {
+    const openEdit = (meeting) => {
     setEditingMeeting(meeting);
     setForm({
       client_id: meeting.client_id,
@@ -230,6 +230,20 @@ export default function Calendar() {
       setShowNew(true);
     }
   };
+
+  useEffect(() => {
+    if (urlMeetingOpened) return;
+    if (!Array.isArray(meetings) || meetings.length === 0) return;
+
+    const meetingIdFromUrl = getUrlMeetingId();
+    if (!meetingIdFromUrl) return;
+
+    const meetingFromUrl = meetings.find((meeting) => meeting.id === meetingIdFromUrl);
+    if (!meetingFromUrl) return;
+
+    setUrlMeetingOpened(true);
+    openEdit(meetingFromUrl);
+  }, [meetings, urlMeetingOpened]);
 
   const generateMeetLink = async () => {
     if (!form.title || !form.start_datetime) {
