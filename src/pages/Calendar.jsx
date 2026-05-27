@@ -119,9 +119,15 @@ export default function Calendar() {
     }
   }, [calendarMode, teamUsers]);
 
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ['timeEntries'],
-    queryFn: () => base44.entities.TimeEntry.list(),
+    const { data: timeEntries = [] } = useQuery({
+    queryKey: ['timeEntries', urlClientId || 'all'],
+    queryFn: async () => {
+      if (urlClientId) {
+        return await base44.entities.TimeEntry.filter({ client_id: urlClientId });
+      }
+
+      return await base44.entities.TimeEntry.list();
+    },
   });
 
     const { data: clients = [] } = useQuery({
