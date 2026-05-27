@@ -52,7 +52,7 @@ export default function Clients() {
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
 
   const { data: clients = [], refetch } = useQuery({
-    queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId],
+       queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId, typeFilter],
     queryFn: async () => {
       if (!user) return [];
 
