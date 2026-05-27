@@ -34,7 +34,8 @@ export default function Calendar() {
    const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [teamUsers, setTeamUsers] = useState([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
-  const [urlMeetingOpened, setUrlMeetingOpened] = useState(false);
+    const [urlMeetingOpened, setUrlMeetingOpened] = useState(false);
+  const [urlNewMeetingOpened, setUrlNewMeetingOpened] = useState(false);
   const queryClient = useQueryClient();
 
   const getUrlClientId = () => {
