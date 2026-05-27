@@ -24,6 +24,7 @@ import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSec
 import ClockInOut from "@/components/pre-ets/ClockInOut";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 // General portal tab definitions with their feature keys
 const GENERAL_TABS = [
   { value: "intake",           label: "Intake Forms",    featureKey: "client_portal_intake_forms" },
