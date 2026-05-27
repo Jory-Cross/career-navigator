@@ -104,7 +104,7 @@ export default function Clients() {
         new Date(b.created_date) - new Date(a.created_date)
       );
     },
-    enabled: !!user && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
+       enabled: !!user && !orgLoading && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
   });
 
   const activeClientsCount = clients.filter(c => !c.is_archived).length;
