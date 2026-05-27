@@ -964,7 +964,7 @@ setCompletionNote("");
           </TabsContent>
         )}
 
-                {isPreEtsClient && allowedPreEtsTabs.includes("meetings") && (
+                      {allowedGeneralTabs.includes("meetings") && (
           <TabsContent value="meetings" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium">Meetings</h2>
