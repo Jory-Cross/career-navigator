@@ -980,7 +980,18 @@ export default function Calendar() {
                   <CheckCircle2 className="w-3 h-3" /> Time Entry Logged
                 </Badge>
               )}
-              <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+                          <Button
+                variant="outline"
+                onClick={() => {
+                  if (goToReturnUrlIfPresent()) {
+                    return;
+                  }
+
+                  setShowNew(false);
+                }}
+              >
+                Cancel
+              </Button>
               <Button onClick={save} disabled={saving}>
                 {saving ? "Saving..." : editingMeeting ? "Update" : "Schedule"}
               </Button>
