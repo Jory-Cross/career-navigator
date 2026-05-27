@@ -1024,7 +1024,7 @@ const currentTaskCount = tasks.filter(
                                 {formatMeetingStatus(meeting.status)}
                               </span>
 
-                                                           <Button
+                                                                                       <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
@@ -1033,10 +1033,7 @@ const currentTaskCount = tasks.filter(
                                     `/ClientDetail?id=${client.id}&tab=meetings`
                                   );
 
-                                  window.open(
-                                    `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}&return_url=${returnUrl}`,
-                                    "_blank"
-                                  );
+                                  window.location.href = `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}&return_url=${returnUrl}`;
                                 }}
                               >
                                 Edit
