@@ -124,13 +124,13 @@ ${structuredResumeSection || 'No structured resume data available'}
 ${assessments.length > 0
   ? assessments.map(a => {
       const responses = Object.entries(a.responses || {})
-        .filter(([k, v]) => v && !k.startsWith("_"))
+        .filter(([k, v]) => v !== null && v !== undefined && v !== "" && !k.startsWith("_"))
         .map(([k, v]) =>
-          `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`
+          `${k.replace(/_/g, " ")}: ${formatAssessmentValueForPrompt(v)}`
         )
         .join("\n");
 
-      return `Assessment: ${a.assessment_type}\n${responses}`;
+      return `Assessment: ${a.assessment_type || a.title || "Unknown Assessment"}\nStatus: ${a.status || "unknown"}\nCompleted: ${a.created_date || a.updated_date || "unknown"}\n${responses}`;
     }).join("\n\n")
   : "No assessment data available"}
 
