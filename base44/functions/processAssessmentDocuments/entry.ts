@@ -194,36 +194,10 @@ console.log("VFP SENDING TO LLM:", {
 }
 });
       
-      let raw =
-  llmResponse?.data ||
-  llmResponse?.result ||
-  llmResponse?.output ||
-  llmResponse ||
-  {};
+           const result = normalizeVocationalProfileResult(llmResponse);
 
-let result = raw;
-
-// If LLM returned string → parse it
-if (typeof raw === "string") {
-  try {
-    result = JSON.parse(raw);
-  } catch (e) {
-    console.error("VFP PARSE FAILED:", raw);
-    result = {};
-  }
-}
-
-// If result is nested under "profile", unwrap it
-if (result?.profile) {
-  result = result.profile;
-}
-
-// Final safety: ensure it's an object
-if (!result || typeof result !== "object") {
-  result = {};
-}
-
-console.log("VFP FINAL RESULT:", result);
+      console.log("VFP FINAL RESULT:", result);
+      console.log("VFP FINAL RESULT KEYS:", Object.keys(result || {}));
 
       console.log("VFP NORMALIZED LLM RESULT:", result);
 
