@@ -26,22 +26,16 @@ Deno.serve(async (req) => {
     if (action === 'extract_from_documents') {
       const { documentIds } = body;
 
-      // Fetch client + all documents + assessments
-      const [allClients, allDocsRaw, assessmentsRaw] = await Promise.all([
-  base44.asServiceRole.entities.Client.list(),
-  base44.asServiceRole.entities.Document.list(),
-  base44.asServiceRole.entities.Assessment.list(),
-]);
+            // Fetch client + documents + assessments for this client.
+      // Use direct client_id filters so VFP extraction matches what the Documents/Assessments UI can see.
+      const [client, allDocsRaw, assessmentsRaw] = await Promise.all([
+        base44.asServiceRole.entities.Client.get(clientId),
+        base44.asServiceRole.entities.Document.filter({ client_id: clientId }),
+        base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }),
+      ]);
 
-const allDocs = (allDocsRaw || []).filter(
-  (d) => d.client_id === clientId || d.clientId === clientId
-);
-
-const assessments = (assessmentsRaw || []).filter(
-  (a) => a.client_id === clientId || a.clientId === clientId
-);
-
-      const client = allClients.find(c => c.id === clientId);
+      const allDocs = allDocsRaw || [];
+      const assessments = assessmentsRaw || [];
       if (!client) {
         return Response.json({ error: 'Client not found' }, { status: 404 });
       }
