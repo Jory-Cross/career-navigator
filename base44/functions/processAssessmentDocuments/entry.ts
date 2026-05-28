@@ -230,12 +230,14 @@ console.log("VFP FINAL RESULT:", result);
       console.log("VFP RAW LLM RESPONSE:", llmResponse);
       
       // Build structured extraction metadata
-      const extractionMetadata = {
+            const extractionMetadata = {
         version: 1,
         extracted_at: new Date().toISOString(),
         extracted_by: user.email,
         source_document_ids: targetDocs.map(d => d.id),
         source_assessment_ids: assessments.map(a => a.id),
+        documents_processed: targetDocs.length,
+        assessments_processed: assessments.length,
         data_quality_score: result.data_quality_score || 0,
         conflicts_count: (result.conflicts || []).length,
         missing_fields_count: (result.missing_critical_data || []).length
