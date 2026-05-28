@@ -628,6 +628,17 @@ const vfp = localProfile || client?.vocational_facts_profile || null;
 
       console.log("VFP EXTRACT RESPONSE:", res);
 
+console.log("VFP EXTRACT SUMMARY:", {
+  update_status: res?.data?.update_status,
+  documents_processed: res?.data?.documents_processed,
+  assessments_processed: res?.data?.assessments_processed,
+  extracted_fact_count: res?.data?.extracted_fact_count,
+  existing_fact_count: res?.data?.existing_fact_count,
+  data_quality_score: res?.data?.data_quality_score,
+  metadata: res?.data?.metadata,
+  missing_critical_data: res?.data?.profile?.missing_critical_data,
+});
+      
       const extractedProfile = res?.data?.profile || null;
       const extractedMetadata = res?.data?.metadata || {};
 
