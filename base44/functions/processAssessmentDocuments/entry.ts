@@ -85,14 +85,22 @@ Deno.serve(async (req) => {
                 `  - ${e.degree || ''} in ${e.field || ''} from ${e.institution || ''} (${e.graduation_year || ''})`
               ).join('\n'));
             }
-            if (d.certifications?.length) {
+                       if (d.certifications?.length) {
               parts.push(`Certifications:\n` + d.certifications.map(c =>
                 `  - ${c.name || ''} (${c.issuer || ''}, ${c.year || ''})`
               ).join('\n'));
             }
-            if (d.extracted_text && !d.job_titles?.length && !d.resume_skills?.length) {
-              // Fall back to raw extracted text only if no structured fields available
-              parts.push(`Raw Text (excerpt):\n${d.extracted_text.slice(0, 3000)}`);
+
+            if (d.ai_summary) {
+              parts.push(`Resume Summary:\n${d.ai_summary}`);
+            }
+
+            if (d.ai_insights) {
+              parts.push(`Resume Insights:\n${d.ai_insights}`);
+            }
+
+            if (d.extracted_text) {
+              parts.push(`Raw Resume Text Excerpt:\n${d.extracted_text.slice(0, 3000)}`);
             }
 
             return parts.join('\n');
