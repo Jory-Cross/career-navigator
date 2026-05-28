@@ -34,17 +34,40 @@ Deno.serve(async (req) => {
         base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }),
       ]);
 
-            const allDocs = allDocsRaw || [];
+                 const allDocs = allDocsRaw || [];
 
-      // Use only the newest active Assessment record per assessment_type.
-      // Older duplicate saves should not feed FACTS extraction or create false conflicts.
-      const latestAssessmentByType = new Map();
+      // Use only the best active Assessment record per assessment_type.
+      // Do NOT blindly choose newest, because a newer duplicate may be an empty draft.
+      // Prefer the record with the most usable response data; use date only as a tie-breaker.
+      const bestAssessmentByType = new Map();
+
+      const countUsableAssessmentResponses = (assessment) => {
+        const responses = assessment?.responses || {};
+        if (!responses || typeof responses !== "object") return 0;
+
+        return Object.entries(responses).filter(([key, value]) => {
+          if (key.startsWith("_")) return false;
+          if (value === null || value === undefined || value === "") return false;
+          if (Array.isArray(value) && value.length === 0) return false;
+          if (
+            typeof value === "object" &&
+            !Array.isArray(value) &&
+            Object.keys(value || {}).length === 0
+          ) {
+            return false;
+          }
+          return true;
+        }).length;
+      };
 
       for (const assessment of assessmentsRaw || []) {
         if (!assessment || assessment.is_archived === true) continue;
 
         const typeKey = assessment.assessment_type || assessment.title || "unknown_assessment";
-        const existing = latestAssessmentByType.get(typeKey);
+        const existing = bestAssessmentByType.get(typeKey);
+
+        const assessmentResponseCount = countUsableAssessmentResponses(assessment);
+        const existingResponseCount = countUsableAssessmentResponses(existing);
 
         const assessmentTime = new Date(
           assessment.updated_date || assessment.created_date || 0
@@ -54,12 +77,29 @@ Deno.serve(async (req) => {
           ? new Date(existing.updated_date || existing.created_date || 0).getTime()
           : 0;
 
-        if (!existing || assessmentTime >= existingTime) {
-          latestAssessmentByType.set(typeKey, assessment);
+        const assessmentIsCompleted = assessment.status === "completed";
+        const existingIsCompleted = existing?.status === "completed";
+
+        const shouldUseAssessment =
+          !existing ||
+          assessmentResponseCount > existingResponseCount ||
+          (
+            assessmentResponseCount === existingResponseCount &&
+            assessmentIsCompleted &&
+            !existingIsCompleted
+          ) ||
+          (
+            assessmentResponseCount === existingResponseCount &&
+            assessmentIsCompleted === existingIsCompleted &&
+            assessmentTime >= existingTime
+          );
+
+        if (shouldUseAssessment) {
+          bestAssessmentByType.set(typeKey, assessment);
         }
       }
 
-      const assessments = Array.from(latestAssessmentByType.values());
+      const assessments = Array.from(bestAssessmentByType.values());
 
       if (!client) {
         return Response.json({ error: 'Client not found' }, { status: 404 });
