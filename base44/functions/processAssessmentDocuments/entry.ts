@@ -34,8 +34,33 @@ Deno.serve(async (req) => {
         base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }),
       ]);
 
-      const allDocs = allDocsRaw || [];
-      const assessments = assessmentsRaw || [];
+            const allDocs = allDocsRaw || [];
+
+      // Use only the newest active Assessment record per assessment_type.
+      // Older duplicate saves should not feed FACTS extraction or create false conflicts.
+      const latestAssessmentByType = new Map();
+
+      for (const assessment of assessmentsRaw || []) {
+        if (!assessment || assessment.is_archived === true) continue;
+
+        const typeKey = assessment.assessment_type || assessment.title || "unknown_assessment";
+        const existing = latestAssessmentByType.get(typeKey);
+
+        const assessmentTime = new Date(
+          assessment.updated_date || assessment.created_date || 0
+        ).getTime();
+
+        const existingTime = existing
+          ? new Date(existing.updated_date || existing.created_date || 0).getTime()
+          : 0;
+
+        if (!existing || assessmentTime >= existingTime) {
+          latestAssessmentByType.set(typeKey, assessment);
+        }
+      }
+
+      const assessments = Array.from(latestAssessmentByType.values());
+
       if (!client) {
         return Response.json({ error: 'Client not found' }, { status: 404 });
       }
