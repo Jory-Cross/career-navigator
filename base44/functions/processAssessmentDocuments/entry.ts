@@ -293,13 +293,35 @@ console.log("VFP FINAL RESULT:", result);
       const existingFactCount = countFacts(existingProfile);
       const newFactCount = countFacts(result);
 
-      const shouldUpdate =
+           const existingDocumentCount =
+        existingMetadata?.documents_processed ||
+        existingMetadata?.source_document_ids?.length ||
+        0;
+
+      const existingAssessmentCount =
+        existingMetadata?.assessments_processed ||
+        existingMetadata?.source_assessment_ids?.length ||
+        0;
+
+      const newDocumentCount = targetDocs.length;
+      const newAssessmentCount = assessments.length;
+
+      const hasBetterSourceCoverage =
+        newDocumentCount > existingDocumentCount ||
+        newAssessmentCount > existingAssessmentCount;
+
+      const isUsableExtraction =
         newFactCount > 0 &&
+        newScore >= 40;
+
+      const shouldUpdate =
+        isUsableExtraction &&
         (
           !existingProfile ||
           existingFactCount === 0 ||
           newScore >= existingScore ||
-          newFactCount >= existingFactCount
+          newFactCount >= existingFactCount ||
+          hasBetterSourceCoverage
         );
 
       const returnedProfile = shouldUpdate ? result : existingProfile;
