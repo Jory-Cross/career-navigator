@@ -947,7 +947,28 @@ export async function getDocuments(clientId) {
 
   const documents = asArray(documentRows).map(mapDocument).filter(Boolean);
 
-    const assessmentDocs = asArray(assessmentRows).map((a) => ({
+     const latestAssessmentByType = new Map();
+
+  for (const assessment of asArray(assessmentRows)) {
+    if (!assessment || assessment.is_archived === true) continue;
+
+    const typeKey = asString(assessment.assessment_type, "assessment");
+    const existing = latestAssessmentByType.get(typeKey);
+
+    const assessmentTime = new Date(
+      assessment.updated_date || assessment.created_date || 0
+    ).getTime();
+
+    const existingTime = existing
+      ? new Date(existing.updated_date || existing.created_date || 0).getTime()
+      : 0;
+
+    if (!existing || assessmentTime >= existingTime) {
+      latestAssessmentByType.set(typeKey, assessment);
+    }
+  }
+
+  const assessmentDocs = Array.from(latestAssessmentByType.values()).map((a) => ({
     id: `assessment-${a.id}`,
     assessment_id: a.id,
     is_assessment: true,
