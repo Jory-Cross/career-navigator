@@ -300,8 +300,29 @@ console.log("VFP SENDING TO LLM:", {
       
            const result = normalizeVocationalProfileResult(llmResponse);
 
-      console.log("VFP FINAL RESULT:", result);
+            console.log("VFP FINAL RESULT:", result);
       console.log("VFP FINAL RESULT KEYS:", Object.keys(result || {}));
+
+      console.log("VFP CATEGORY LENGTHS:", {
+        skills: Array.isArray(result.skills) ? result.skills.length : "not_array",
+        interests: Array.isArray(result.interests) ? result.interests.length : "not_array",
+        preferred_tasks: Array.isArray(result.preferred_tasks) ? result.preferred_tasks.length : "not_array",
+        work_environment_preferences: Array.isArray(result.work_environment_preferences) ? result.work_environment_preferences.length : "not_array",
+        schedule_availability: Array.isArray(result.schedule_availability) ? result.schedule_availability.length : "not_array",
+        transportation: Array.isArray(result.transportation) ? result.transportation.length : "not_array",
+        social_communication_needs: Array.isArray(result.social_communication_needs) ? result.social_communication_needs.length : "not_array",
+        sensory_environmental_needs: Array.isArray(result.sensory_environmental_needs) ? result.sensory_environmental_needs.length : "not_array",
+        physical_restrictions: Array.isArray(result.physical_restrictions) ? result.physical_restrictions.length : "not_array",
+        support_needs: Array.isArray(result.support_needs) ? result.support_needs.length : "not_array",
+        job_readiness_level: Array.isArray(result.job_readiness_level) ? result.job_readiness_level.length : "not_array",
+        employer_preferences: Array.isArray(result.employer_preferences) ? result.employer_preferences.length : "not_array",
+        barriers: Array.isArray(result.barriers) ? result.barriers.length : "not_array",
+        goals: Array.isArray(result.goals) ? result.goals.length : "not_array",
+        document_types_found: Array.isArray(result.document_types_found) ? result.document_types_found.length : "not_array",
+        conflicts: Array.isArray(result.conflicts) ? result.conflicts.length : "not_array",
+        data_quality_score: result.data_quality_score,
+        missing_critical_data: Array.isArray(result.missing_critical_data) ? result.missing_critical_data.length : "not_array",
+      });
 
       console.log("VFP NORMALIZED LLM RESULT:", result);
 
