@@ -427,7 +427,7 @@ console.log("VFP SENDING TO LLM:", {
       return Response.json({
         success: true,
         profile: client.vocational_facts_profile || null,
-        metadata: {
+               metadata: {
           version: metadata.version || 1,
           extracted_at: metadata.extracted_at || null,
           extracted_by: metadata.extracted_by || null,
@@ -435,7 +435,15 @@ console.log("VFP SENDING TO LLM:", {
           conflicts_count: metadata.conflicts_count || 0,
           missing_fields_count: metadata.missing_fields_count || 0,
           source_document_ids: metadata.source_document_ids || [],
-          source_assessment_ids: metadata.source_assessment_ids || []
+          source_assessment_ids: metadata.source_assessment_ids || [],
+          documents_processed:
+            metadata.documents_processed ??
+            metadata.source_document_ids?.length ??
+            0,
+          assessments_processed:
+            metadata.assessments_processed ??
+            metadata.source_assessment_ids?.length ??
+            0,
         },
         last_updated_at: client.vocational_facts_last_updated_at || null,
       });
