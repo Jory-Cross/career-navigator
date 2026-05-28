@@ -449,6 +449,92 @@ console.log("VFP SENDING TO LLM:", {
 // ──────────────────────────────────────────────────────────────────────────────
 // Helper: Flatten profile for AI grounding (job recommendations, coaching)
 // ──────────────────────────────────────────────────────────────────────────────
+
+function formatAssessmentValueForPrompt(value) {
+  if (value === null || value === undefined) return "";
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => formatAssessmentValueForPrompt(item))
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .filter(([_, nestedValue]) => nestedValue !== null && nestedValue !== undefined && nestedValue !== "")
+      .map(([nestedKey, nestedValue]) => {
+        const readableKey = String(nestedKey).replace(/_/g, " ");
+        return `${readableKey}: ${formatAssessmentValueForPrompt(nestedValue)}`;
+      })
+      .join("; ");
+  }
+
+  return String(value);
+}
+
+function normalizeVocationalProfileResult(llmResponse) {
+  let raw =
+    llmResponse?.data ??
+    llmResponse?.result ??
+    llmResponse?.output ??
+    llmResponse ??
+    {};
+
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch (e) {
+      console.error("VFP PARSE FAILED:", raw);
+      raw = {};
+    }
+  }
+
+  let result = raw;
+
+  // Unwrap common response wrappers.
+  for (let i = 0; i < 5; i++) {
+    if (!result || typeof result !== "object") break;
+
+    if (result.profile && typeof result.profile === "object") {
+      result = result.profile;
+      continue;
+    }
+
+    if (result.vocational_facts_profile && typeof result.vocational_facts_profile === "object") {
+      result = result.vocational_facts_profile;
+      continue;
+    }
+
+    if (result.vocational_profile && typeof result.vocational_profile === "object") {
+      result = result.vocational_profile;
+      continue;
+    }
+
+    if (result.facts_profile && typeof result.facts_profile === "object") {
+      result = result.facts_profile;
+      continue;
+    }
+
+    if (result.result && typeof result.result === "object") {
+      result = result.result;
+      continue;
+    }
+
+    break;
+  }
+
+  if (!result || typeof result !== "object") {
+    return {};
+  }
+
+  return result;
+}
+
 function flattenProfileForAI(profile) {
   const flatten = (arr) => {
     if (!arr || arr.length === 0) return [];
