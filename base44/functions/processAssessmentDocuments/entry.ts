@@ -249,15 +249,54 @@ console.log("VFP SENDING TO LLM:", {
   assessments: assessments.length
 });
       
-      const llmResponse = await base44.integrations.Core.InvokeLLM({
+            const llmResponse = await base44.integrations.Core.InvokeLLM({
         prompt: extractionPrompt,
         add_context_from_internet: false,
         model: 'claude_sonnet_4_6',
         response_json_schema: {
-  type: "object",
-  additionalProperties: true
-}
-});
+          type: "object",
+          properties: {
+            skills: { type: "array", items: { type: "object" } },
+            interests: { type: "array", items: { type: "object" } },
+            preferred_tasks: { type: "array", items: { type: "object" } },
+            work_environment_preferences: { type: "array", items: { type: "object" } },
+            schedule_availability: { type: "array", items: { type: "object" } },
+            transportation: { type: "array", items: { type: "object" } },
+            social_communication_needs: { type: "array", items: { type: "object" } },
+            sensory_environmental_needs: { type: "array", items: { type: "object" } },
+            physical_restrictions: { type: "array", items: { type: "object" } },
+            support_needs: { type: "array", items: { type: "object" } },
+            job_readiness_level: { type: "array", items: { type: "object" } },
+            employer_preferences: { type: "array", items: { type: "object" } },
+            barriers: { type: "array", items: { type: "object" } },
+            goals: { type: "array", items: { type: "object" } },
+            document_types_found: { type: "array", items: { type: "string" } },
+            conflicts: { type: "array", items: { type: "object" } },
+            data_quality_score: { type: "number" },
+            missing_critical_data: { type: "array", items: { type: "string" } }
+          },
+          required: [
+            "skills",
+            "interests",
+            "preferred_tasks",
+            "work_environment_preferences",
+            "schedule_availability",
+            "transportation",
+            "social_communication_needs",
+            "sensory_environmental_needs",
+            "physical_restrictions",
+            "support_needs",
+            "job_readiness_level",
+            "employer_preferences",
+            "barriers",
+            "goals",
+            "document_types_found",
+            "conflicts",
+            "data_quality_score",
+            "missing_critical_data"
+          ]
+        }
+      });
       
            const result = normalizeVocationalProfileResult(llmResponse);
 
