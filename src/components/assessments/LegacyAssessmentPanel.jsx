@@ -274,7 +274,7 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
       </html>
     `;
 
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+       const printWindow = window.open("", "_blank");
 
     if (!printWindow) {
       toast.error("Popup blocked. Please allow popups and try again.");
@@ -284,6 +284,7 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
   };
 
   // Interest Profiler uses its own dedicated panel
