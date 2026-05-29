@@ -75,9 +75,11 @@ export default function LegacyAssessmentPanel({
   const isWSA = key === "work_strategy_assessment";
 
   const [responses, setResponses] = useState(existingRecord?.responses || {});
-  const [saving, setSaving] = useState(false);
+   const [saving, setSaving] = useState(false);
   const [uploadingWSA, setUploadingWSA] = useState(false);
   const [downloadingWSA, setDownloadingWSA] = useState(false);
+  const [generatingWSAFields, setGeneratingWSAFields] = useState(false);
+  const [generatingWSAReport, setGeneratingWSAReport] = useState(false);
 
   useEffect(() => {
     setResponses(existingRecord?.responses || {});
