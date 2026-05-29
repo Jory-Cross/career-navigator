@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       try {
         const field = form.getFieldMaybe(pdfFieldName);
         if (field) {
-          field.setText(String(value));
+        field.setText(limitPdfText(value, key));
           console.log(`✓ Set "${key}"`);
         } else {
           console.log(`✗ Field not found: "${pdfFieldName}"`);
