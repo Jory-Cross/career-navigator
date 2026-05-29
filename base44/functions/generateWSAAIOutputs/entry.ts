@@ -132,14 +132,30 @@ RULES:
 - Only include keys from this list: ${Object.keys(WSA_CHAR_LIMITS).join(', ')}
 - Each value must be a plain string, no markdown formatting.
 - Each value must NOT exceed its character limit.
-- Use the available character space well. Do not make fields overly brief.
-- For larger observation/recommendation fields with limits of 700 characters or more, target approximately 65% to 90% of the available character limit when evidence is available.
-- For short fields under 300 characters, keep the answer brief and direct.
-- Preserve important details from current_wsa_responses when they are accurate and appropriate. Do not replace detailed staff-entered content with a shorter generic summary.
-- If a current field already contains useful detail, improve or tighten it only enough to fit the field limit while preserving the key facts, barriers, supports, examples, and vocational implications.
-- Include specific vocational implications when supported by evidence, such as job setting limits, transportation constraints, training needs, support needs, social tolerance, stamina, communication needs, safety concerns, and supervision needs.
-- If evidence is weak or absent for a field, either leave it as an empty string "" or write a brief note like "[Staff: verify with client]".
+
+WORKFLOW:
+- For each WSA field, first think through the full detailed vocational analysis using the client profile, FACTS/VFP, assessments, documents, resume data, uploaded WSA content, and current_wsa_responses.
+- Then compress that detailed analysis into the official WSA field.
+- Do not output the internal full analysis in official_wsa_fields.
+- The compressed field should preserve the most important details, examples, barriers, supports, and vocational implications.
+
+LENGTH EXPECTATIONS:
+- Do not make observation fields overly brief.
+- For observation/recommendation fields with limits of 700 characters or more, use approximately 70% to 95% of the available character limit when evidence is available.
+- For fields under 300 characters, keep the answer brief and direct.
+- Use complete, information-dense sentences.
+- Avoid filler phrases like "Based on the profile" unless absolutely necessary.
+- Avoid generic summaries that could apply to any client.
+
+PRESERVE EXISTING DETAIL:
+- Treat current_wsa_responses as important draft evidence.
+- If a current field already contains useful detail, compress and refine it rather than replacing it with a shorter generic summary.
+- Preserve concrete facts such as scores, ratings, transportation limits, observed behaviors, support people, training needs, work-setting concerns, and specific job-development implications.
+
+CONTENT REQUIREMENTS:
+- Include specific vocational implications when supported by evidence, such as job setting limits, transportation constraints, training needs, support needs, social tolerance, stamina, communication needs, safety concerns, supervision needs, and job-development strategy.
 - Do not invent facts. Only use information from the provided data.
+- If evidence is weak or absent for a field, either leave it as an empty string "" or write a brief note like "[Staff: verify with client]".
 - Do not include greetings or preamble in field values.
 - Keep values professional, factual, and appropriate for a government vocational assessment form.
 - Also include a "staff_should_verify" array of strings listing fields or topics that need staff review, and an "evidence_summary" array of brief strings describing what evidence sources were used.
