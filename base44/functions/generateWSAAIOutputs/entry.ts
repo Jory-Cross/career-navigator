@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     if (mode === 'field_draft' || mode === 'both') {
       const fieldPrompt = `You are a vocational rehabilitation specialist helping complete the Utah DWS Work Strategy Assessment (WSA) for a client.
 
-TASK: Generate concise, professional field values for the official WSA PDF form.
+TASK: First develop a complete detailed vocational analysis for each WSA section internally, then compress that analysis into professional official WSA PDF field values that fit the character limits.
 
 CLIENT AND ASSESSMENT DATA:
 ${contextBlock}
