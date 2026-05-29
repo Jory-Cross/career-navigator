@@ -5,23 +5,43 @@ const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
 // PDF fields in the original Utah WSA form have limited visible space.
 // Keep the full in-app WSA answers unchanged, but trim text before writing into the PDF.
-const DEFAULT_PDF_TEXT_LIMIT = 900;
+const DEFAULT_PDF_TEXT_LIMIT = 950;
 
 const PDF_TEXT_LIMITS = {
-  transportation_observations: 650,
-  computer_skill_observations: 650,
-  natural_support_observations: 650,
-  life_skills_observations: 650,
-  work_assessment_observations: 750,
-  interview_skill_observations: 650,
-  other_observations: 650,
-  current_work_skills: 800,
-  work_skill_development_needs: 800,
-  recommended_supports_on_job: 800,
-  job_development_supports: 800,
-  ongoing_supports: 800,
+  worksite_simulation_location: 180,
+  work_assessment_observations: 900,
+  natural_support_observations: 850,
+  life_skills_observations: 850,
+  transportation_public: 220,
+  transportation_private: 220,
+  transportation_observations: 850,
+  computer_skills_other: 220,
+  computer_skill_observations: 850,
+  interview_skill_observations: 850,
+  other_observations: 850,
+  current_work_skills: 950,
+  work_skill_development_needs: 950,
+  recommended_supports_on_job: 950,
+  job_development_supports: 950,
+  ongoing_supports: 950,
+  behavioral_self_regulation: 850,
+  activities_of_daily_living: 850,
+  family_issues_supports: 850,
+  criminal_background: 850,
+  school_academic: 850,
+  communication_needs: 700,
+  assistive_technology_needs: 700,
+  interpersonal_social_skills: 700,
+  referral_question: 900,
+  jobs_of_interest: 300,
+  life_skills_needed: 300,
+  planned_job_search_hours_week: 80,
+  recommended_target_occupations: 350,
+  industry_targeted_pay_range: 180,
+  job_goal: 350,
+  benefits_other: 350,
+  hours_available_to_work: 250,
 };
-
 function limitPdfText(value, key) {
   if (value === null || value === undefined) return '';
 
