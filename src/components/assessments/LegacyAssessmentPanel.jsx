@@ -43,14 +43,6 @@ const WSA_FIELD_IDS = [
   "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
 ];
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, clientId, onSaved }) {
   const { key, label, questions = [] } = assessmentDef;
@@ -167,37 +159,28 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
       const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
       const form = pdfDoc.getForm();
 
-      // Map CRM response keys → PDF form field names
-      // Keys on the left are the CRM response keys; values are the exact PDF field names.
-      // If a field doesn't exist in the PDF it will be silently skipped.
+      // CRM response key → exact PDF form field name
       const FIELD_MAP = {
         client_name:                    "Client Name",
         address:                        "Address",
         city:                           "City",
         state:                          "State",
         zip:                            "ZIP",
-        crp_referring_to:               "CRP Referring To",
         client_phone:                   "Client Phone",
-        guardian_name_phone:            "Parent Guardian Name and Phone",
-        referral_question:              "Referral Question",
-        extended_services_provider:     "Extended Services Provider",
-        health_insurance:               "Health Insurance",
-        social_security_benefits:       "Social Security Benefits",
-        benefits_planning:              "Benefits Planning",
-        benefits_planning_date:         "Benefits Planning Date",
-        benefits_summary_info:          "Benefits Summary Info",
-        other_services_benefits:        "Other Services Benefits",
-        current_work_skills:            "Current Work Skills",
+        crp_referring_to:               "CRP Referring to",
+        guardian_name_phone:            "Parent/Guardian name and phone",
+        referral_question:              "Referral question",
+        current_work_skills:            "Current Work Skills knowledge skills and abilities",
         work_skill_development_needs:   "Work Skill Development Needs",
-        jobs_of_interest:               "Jobs of Interest",
-        interpersonal_social_skills:    "Interpersonal Social Skills",
-        assistive_technology_needs:     "Assistive Technology Needs",
-        communication_needs:            "Communication Needs",
-        behavioral_self_regulation:     "Behavioral Self Regulation",
-        activities_of_daily_living:     "Activities of Daily Living",
-        family_issues_supports:         "Family Issues Supports",
-        criminal_background:            "Criminal Background",
-        school_academic:                "School Academic",
+        jobs_of_interest:               "Jobs of Interest_1",
+        interpersonal_social_skills:    "informalformal speech",
+        assistive_technology_needs:     "Identified Assistive Technology Needs glasses UCAT device etc",
+        communication_needs:            "Communication Needs interpreter etc",
+        behavioral_self_regulation:     "BehavioralSelfregulation",
+        activities_of_daily_living:     "Activities of Daily Living hygiene meal prep etc",
+        family_issues_supports:         "Family IssuesSupports",
+        criminal_background:            "Criminal Background expungement etc",
+        school_academic:                "SchoolAcademic can include behavioral information",
         worksite_simulation_location:   "Worksite Simulation Location",
         work_assessment_observations:   "Work Assessment Observations",
         natural_support_observations:   "Natural Support Observations",
@@ -215,14 +198,20 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
         ongoing_supports:               "Ongoing Supports",
         job_goal:                       "Job Goal",
         industry_targeted_pay_range:    "Industry Targeted Pay Range",
-        benefits_other:                 "Benefits Other",
         hours_available_to_work:        "Hours Available To Work",
         crp_name:                       "CRP Name",
         assigned_employment_specialist: "Assigned Employment Specialist",
         acre_certified:                 "ACRE Certified",
+        extended_services_provider:     "Extended Services Provider",
+        social_security_benefits:       "Social Security Benefits",
+        benefits_planning:              "Benefits Planning",
+        benefits_planning_date:         "Benefits Planning Date",
+        benefits_summary_info:          "Benefits Summary Info",
+        other_services_benefits:        "Other Services Benefits",
+        benefits_other:                 "Benefits Other",
       };
 
-      // Checkbox/radio field mappings (response value → checkbox field name)
+      // Checkbox field mappings: response value → PDF checkbox field name
       const CHECKBOX_MAP = {
         guardianship: {
           "Yes": "Guardianship Yes",
@@ -239,6 +228,9 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
         computer_skills_other: {
           "Yes": "Computer Skills Other Yes",
           "No":  "Computer Skills Other No",
+        },
+        health_insurance: {
+          "Parent's Insurance": "Parents Insurance",
         },
       };
 
@@ -294,7 +286,7 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "updated-wsa.pdf";
+      a.download = "Updated-WSA.pdf";
       a.click();
       URL.revokeObjectURL(url);
       toast.success("WSA PDF downloaded successfully.");
