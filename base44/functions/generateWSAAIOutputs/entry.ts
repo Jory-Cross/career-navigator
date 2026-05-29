@@ -282,12 +282,16 @@ RULES:
     "evidence_summary": ["..."]
   }
 - official_wsa_fields must only use the exact WSA field keys.
-- official_wsa_fields must be compressed from detailed_wsa_fields whenever detailed_wsa_fields has content.
+- official_wsa_fields must be created from detailed_wsa_fields whenever detailed_wsa_fields has content.
+- Do not create a new short summary if the detailed field text already fits the character limit.
+- If the detailed field text fits within the listed character limit, copy the detailed field text into official_wsa_fields with only minor cleanup.
+- Only condense a field when the detailed field text is too long for that field's character limit.
+- When condensing, condense only enough to fit the character limit. Do not over-shorten.
+- For fields with 700+ character limits, preserve as much of the detailed field as possible and aim to use most of the available space when the detailed content is long enough.
+- For fields under 300 characters, preserve the clearest concrete facts and remove only extra wording needed to fit.
 - Do not turn detailed content into vague generic summaries.
-- Preserve the most important facts, barriers, supports, examples, and vocational implications.
+- Preserve concrete details, examples, ratings, scores, barriers, supports, transportation limits, training needs, support needs, and vocational implications.
 - Do not exceed the listed character limits.
-- For fields with 700+ character limits, use the available space well when there is enough detail.
-- For fields under 300 characters, keep the answer brief and direct.
 - Do not invent facts.
 - No greetings.
 - Plain professional text only.`;
