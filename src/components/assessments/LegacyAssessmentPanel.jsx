@@ -347,11 +347,9 @@ export default function LegacyAssessmentPanel({
     }
   }
 
-  function handleDownloadWSAReport() {
-    const reportHtml = responses?._detailed_wsa_report_html;
-
-    if (!reportHtml) {
-      toast.error("Generate the detailed WSA report before downloading.");
+    function downloadHtmlDocument({ html, title, fileName, description }) {
+    if (!html) {
+      toast.error("Generate the AI WSA reports before downloading.");
       return;
     }
 
@@ -359,7 +357,7 @@ export default function LegacyAssessmentPanel({
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Detailed Work Strategy Assessment Report</title>
+  <title>${title}</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -402,6 +400,11 @@ export default function LegacyAssessmentPanel({
       margin-bottom: 4px;
     }
 
+    section {
+      page-break-inside: avoid;
+      margin-bottom: 22px;
+    }
+
     .meta {
       color: #4b5563;
       font-size: 13px;
@@ -416,9 +419,9 @@ export default function LegacyAssessmentPanel({
   </style>
 </head>
 <body>
-  <h1>Detailed Work Strategy Assessment Report</h1>
-  <div class="meta">Generated from CRM assessment data for staff review.</div>
-  ${reportHtml}
+  <h1>${title}</h1>
+  <div class="meta">${description}</div>
+  ${html}
 </body>
 </html>`;
 
@@ -427,13 +430,33 @@ export default function LegacyAssessmentPanel({
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = "Detailed-WSA-Report.html";
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-    toast.success("Detailed WSA report downloaded");
+    toast.success(`${title} downloaded`);
+  }
+
+  function handleDownloadFullDetailedWSA() {
+    downloadHtmlDocument({
+      html: responses?._full_detailed_wsa_html,
+      title: "Full Detailed Work Strategy Assessment",
+      fileName: "Full-Detailed-WSA.html",
+      description:
+        "This document uses the exact same fields as the official WSA form, but is not limited by the PDF field character limits.",
+    });
+  }
+
+  function handleDownloadSupplementalWSAReport() {
+    downloadHtmlDocument({
+      html: responses?._supplemental_wsa_report_html,
+      title: "Supplemental WSA Narrative Report",
+      fileName: "Supplemental-WSA-Narrative-Report.html",
+      description:
+        "This supplemental report provides broader narrative analysis for staff review. It does not replace the full detailed WSA fields.",
+    });
   }
   
   return (
