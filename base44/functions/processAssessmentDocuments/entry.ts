@@ -209,6 +209,11 @@ Analyze everything above and extract a structured vocational facts profile. For 
 3. Only flag a conflict when two sources make a direct factual contradiction that cannot both be true.
 
 Do NOT flag normal preference refinement, increased specificity, or context differences as conflicts.
+Do NOT treat a field labeled "Current / Most Recent Role" as proof that the client is currently employed.
+That field may mean the client's most recent job title, even if the job already ended.
+Only flag an employment-date conflict if one source explicitly says the client is currently employed and another source explicitly says the same job has ended.
+If the resume lists an end date and an assessment lists the same role as "current / most recent," preserve the role/work history fact and add staff verification only if needed; do not add it to conflicts.
+
 
 Examples that should NOT be conflicts:
 - "Prefers indoors only" and "prefers a mix of indoor/outdoor" should be treated as a preference to verify, not a conflict, unless both are clearly final confirmed answers.
