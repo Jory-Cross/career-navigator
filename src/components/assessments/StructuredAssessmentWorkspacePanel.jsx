@@ -53,9 +53,29 @@ export default function StructuredAssessmentWorkspacePanel({
   }, [existingRecord?.id]);
 
   // Field change handler — mark dirty, update state
-  const handleChange = useCallback((id, value) => {
+   const handleChange = useCallback((id, value) => {
     setIsDirty(true);
-    setResponses((prev) => ({ ...prev, [id]: value }));
+
+    setResponses((prev) => {
+      const next = { ...prev, [id]: value };
+
+      // Barriers to Employment: if sensory/environmental barriers are marked "No",
+      // clear hidden follow-up answers so stale data does not continue feeding FACTS.
+      if (id === "sensory_barrier_present" && value === "no") {
+        delete next.sensory_barrier_types;
+        delete next.sensory_barrier_severity;
+        delete next.sensory_barrier_history;
+        delete next.sensory_accommodation_tried;
+        delete next.sensory_accommodation_outcome;
+      }
+
+      // If accommodations were not tried, clear the hidden accommodation outcome.
+      if (id === "sensory_accommodation_tried" && value === "no") {
+        delete next.sensory_accommodation_outcome;
+      }
+
+      return next;
+    });
   }, []);
 
   // ── Core save (mirrors doSave in IntakeSectionForm) ───────────────────────
