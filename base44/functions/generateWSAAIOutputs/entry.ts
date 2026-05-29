@@ -116,7 +116,78 @@ Deno.serve(async (req) => {
 
     // Build prompts based on mode
     if (mode === 'field_draft' || mode === 'both') {
-      const fieldPrompt = `You are a vocational rehabilitation specialist helping complete the Utah DWS Work Strategy Assessment (WSA) for a client.
+      // Check if a detailed report already exists to use as primary source
+      const existingDetailedReport = current_wsa_responses && current_wsa_responses._detailed_wsa_report_html;
+      const hasDetailedReport = existingDetailedReport && existingDetailedReport.trim().length > 200;
+
+      let fieldPrompt;
+
+      if (hasDetailedReport) {
+        // PRIMARY PATH: Compress the detailed report into official WSA fields
+        fieldPrompt = `You are a vocational rehabilitation specialist helping complete the Utah DWS Work Strategy Assessment (WSA) for a client.
+
+TASK: Compress the provided detailed WSA narrative report into official WSA PDF field values that fit the character limits.
+
+DETAILED WSA REPORT (PRIMARY SOURCE — use this as your main reference):
+${existingDetailedReport}
+
+BACKUP CONTEXT (use only to fill gaps not covered by the detailed report):
+${contextBlock}
+
+STRICT CHARACTER LIMITS FOR EACH FIELD (do not exceed):
+${wsaCharLimitsText}
+
+RULES:
+- Return ONLY valid JSON. No markdown. No code fences. No extra text.
+- The JSON must have a single key "official_wsa_fields" containing an object with WSA field keys.
+- Only include keys from this list: ${Object.keys(WSA_CHAR_LIMITS).join(', ')}
+- Each value must be a plain string, no markdown formatting.
+- Each value must NOT exceed its character limit.
+
+COMPRESSION WORKFLOW:
+- Read the detailed WSA report section by section.
+- For each official WSA field, find the matching section(s) in the detailed report.
+- Compress those section details into the official WSA field, preserving the most important facts, examples, ratings, scores, barriers, supports, and vocational implications.
+- The official_wsa_fields should be a shortened/compressed version of the detailed report — not a brand-new generic summary.
+- Do not replace detailed report content with vague or generic statements.
+- Use the backup context only to fill in information that is missing from the detailed report.
+
+LENGTH EXPECTATIONS:
+- For observation/recommendation fields with limits of 700 characters or more, use approximately 70% to 95% of the available character limit when the detailed report contains enough information.
+- For fields under 300 characters, keep the answer brief and direct.
+- Use complete, information-dense sentences.
+- Avoid filler phrases like "Based on the profile" unless absolutely necessary.
+
+PRESERVE FROM THE DETAILED REPORT:
+- Specific ratings, scores, test results, and observed behaviors.
+- Transportation limits, distances, or barriers.
+- Training needs and skill gaps.
+- Family/natural supports and their roles.
+- Self-regulation needs, communication needs, and social skill notes.
+- ADL/life-skill concerns.
+- Computer skill levels or limitations.
+- Job-development concerns, placement considerations, and strategy notes.
+- Support needs and staff verification flags.
+- Safety concerns.
+
+CONTENT REQUIREMENTS:
+- Do not invent facts. Only use information from the provided data.
+- If evidence is weak or absent for a field, either leave it as an empty string "" or write a brief note like "[Staff: verify with client]".
+- Do not include greetings or preamble in field values.
+- Do not include markdown formatting in field values.
+- Keep values professional, factual, and appropriate for a government vocational assessment form.
+- Also include a "staff_should_verify" array of strings listing fields or topics that need staff review, and an "evidence_summary" array of brief strings describing what evidence sources were used.
+
+Return JSON like:
+{
+  "official_wsa_fields": { ... },
+  "staff_should_verify": ["...", "..."],
+  "evidence_summary": ["...", "..."]
+}`;
+        console.log('Generating official_wsa_fields from detailed report (compression mode)...');
+      } else {
+        // FALLBACK PATH: Generate fields directly from raw context
+        fieldPrompt = `You are a vocational rehabilitation specialist helping complete the Utah DWS Work Strategy Assessment (WSA) for a client.
 
 TASK: First develop a complete detailed vocational analysis for each WSA section internally, then compress that analysis into professional official WSA PDF field values that fit the character limits.
 
@@ -165,8 +236,9 @@ Return JSON like:
   "staff_should_verify": ["...", "..."],
   "evidence_summary": ["...", "..."]
 }`;
+        console.log('Generating official_wsa_fields from raw context (no detailed report found)...');
+      }
 
-      console.log('Generating official_wsa_fields...');
       const fieldResult = await base44.integrations.Core.InvokeLLM({
         prompt: fieldPrompt,
         response_json_schema: {
