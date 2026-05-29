@@ -516,14 +516,24 @@ export default function LegacyAssessmentPanel({
                 AI Detailed Report
               </Button>
 
+                            <Button
+                type="button"
+                variant="outline"
+                disabled={!responses?._full_detailed_wsa_html}
+                onClick={handleDownloadFullDetailedWSA}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Full Detailed WSA
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
-                disabled={!responses?._detailed_wsa_report_html}
-                onClick={handleDownloadWSAReport}
+                disabled={!responses?._supplemental_wsa_report_html}
+                onClick={handleDownloadSupplementalWSAReport}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download Detailed Report
+                Download Supplemental Report
               </Button>
 
               <Button
