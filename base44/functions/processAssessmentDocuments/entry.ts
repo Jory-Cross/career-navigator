@@ -256,7 +256,7 @@ Extract the following 14 categories:
 
 Also identify:
 - document_types_found: What types of documents were analyzed (e.g., "Vocational Evaluation", "IEP", "Resume")
-- conflicts: Any factual conflicts between sources (each conflict as: {topic, source_a, value_a, source_b, value_b})
+- conflicts: Only direct factual contradictions between sources that cannot both be true and require staff review before recommendations should rely on the fact. Do not include preference refinements, different levels of specificity, or "staff should verify" items as conflicts. Each conflict should be: {topic, source_a, value_a, source_b, value_b}
 - data_quality_score: 0-100 rating of how complete and usable this profile is
 - missing_critical_data: List of important data categories with no information found`;
 
