@@ -135,10 +135,139 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
       toast.success("WSA data extracted and pre-filled!", { id: "wsa-extract" });
     } catch (err) {
       toast.error("Failed to extract PDF: " + err.message, { id: "wsa-extract" });
-    } finally {
-      setExtracting(false);
-      e.target.value = "";
+      const handleWSAExport = () => {
+    const printableRows = questions
+      .map((q) => {
+        if (q.type === "section") {
+          return `
+            <tr>
+              <td colspan="2" class="section">
+                ${escapeHtml(q.label.replace(/──\s*/g, "").replace(/\s*──/g, ""))}
+              </td>
+            </tr>
+          `;
+        }
+
+        const value = responses[q.id];
+
+        if (value === undefined || value === null || value === "") {
+          return "";
+        }
+
+        return `
+          <tr>
+            <td class="label">${escapeHtml(q.label)}</td>
+            <td class="answer">${escapeHtml(value)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const notesRow = notes
+      ? `
+        <tr>
+          <td class="label">Additional Notes</td>
+          <td class="answer">${escapeHtml(notes)}</td>
+        </tr>
+      `
+      : "";
+
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Updated Work Strategy Assessment</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #0f172a;
+              margin: 32px;
+              line-height: 1.4;
+            }
+            h1 {
+              font-size: 22px;
+              margin-bottom: 4px;
+            }
+            .subtitle {
+              color: #475569;
+              margin-bottom: 24px;
+              font-size: 13px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            td {
+              border: 1px solid #cbd5e1;
+              padding: 10px;
+              vertical-align: top;
+              font-size: 13px;
+            }
+            .section {
+              background: #e2e8f0;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #334155;
+              letter-spacing: 0.04em;
+            }
+            .label {
+              width: 35%;
+              font-weight: 700;
+              background: #f8fafc;
+            }
+            .answer {
+              white-space: pre-wrap;
+            }
+            .actions {
+              margin-bottom: 20px;
+            }
+            button {
+              padding: 8px 12px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+              background: white;
+              cursor: pointer;
+              font-weight: 600;
+            }
+            @media print {
+              .actions {
+                display: none;
+              }
+              body {
+                margin: 18px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="actions">
+            <button onclick="window.print()">Print / Save as PDF</button>
+          </div>
+
+          <h1>Updated Work Strategy Assessment</h1>
+          <div class="subtitle">
+            Generated from CRM saved WSA answers.
+          </div>
+
+          <table>
+            ${printableRows}
+            ${notesRow}
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups and try again.");
+      return;
     }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   // Interest Profiler uses its own dedicated panel
