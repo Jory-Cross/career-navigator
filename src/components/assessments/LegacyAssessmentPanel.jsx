@@ -314,13 +314,26 @@ export default function LegacyAssessmentPanel({
             <div key={question.id} className="space-y-2">
               <Label htmlFor={question.id}>{question.label}</Label>
 
-              {question.type === "textarea" ? (
-                <Textarea
-                  id={question.id}
-                  value={value}
-                  rows={4}
-                  onChange={(event) => updateResponse(question.id, event.target.value)}
-                />
+                            {question.type === "textarea" ? (
+                <div className="space-y-1">
+                  <Textarea
+                    id={question.id}
+                    value={value}
+                    rows={4}
+                    maxLength={characterLimit}
+                    onChange={(event) => updateResponse(question.id, event.target.value)}
+                  />
+
+                  {characterLimit ? (
+                    <div
+                      className={`text-right text-xs ${
+                        isNearLimit ? "font-semibold text-amber-700" : "text-slate-500"
+                      }`}
+                    >
+                      {characterCount} / {characterLimit} characters
+                    </div>
+                  ) : null}
+                </div>
               ) : question.type === "select" ? (
                 <select
                   id={question.id}
