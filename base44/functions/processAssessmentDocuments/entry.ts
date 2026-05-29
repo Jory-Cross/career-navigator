@@ -206,7 +206,23 @@ ${docList || 'None'}
 Analyze everything above and extract a structured vocational facts profile. For each category:
 1. Extract all relevant facts from structured assessments AND any document content visible to you
 2. Note the SOURCE of each fact (e.g., "from Career Goals assessment", "from Skills Audit", "from resume", "from staff notes")
-3. If two sources CONFLICT on the same topic, do NOT pick one — flag it in the conflicts array
+3. Only flag a conflict when two sources make a direct factual contradiction that cannot both be true.
+
+Do NOT flag normal preference refinement, increased specificity, or context differences as conflicts.
+
+Examples that should NOT be conflicts:
+- "Prefers indoors only" and "prefers a mix of indoor/outdoor" should be treated as a preference to verify, not a conflict, unless both are clearly final confirmed answers.
+- "Prefers very quiet" and "can tolerate moderate background noise" should be treated as a sensory/noise preference range, not a conflict.
+- "Needs support with transportation" and "uses public transit" can both be true.
+- "No concern documented" and "concern documented elsewhere" should be treated as missing/limited information unless one source explicitly denies a confirmed concern.
+
+When data differs but may both be true, do NOT add it to conflicts. Instead:
+- preserve the more specific fact in the relevant category,
+- include wording like "staff should verify",
+- and add it to missing_critical_data only if it affects job matching.
+
+Only use the conflicts array for direct contradictions that require staff review before recommendations should rely on the fact.
+
 4. Convert all extracted information into clear, usable, plain-language facts.
 
 DO NOT return labels like "WSA — other observations" or "Career Goals Assessment".
