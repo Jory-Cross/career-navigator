@@ -305,17 +305,30 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
               <p className="text-xs text-blue-600 mt-0.5">AI will extract the details and pre-fill the fields below.</p>
             </div>
             <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleWSAUpload} />
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-blue-300 text-blue-700 hover:bg-blue-100"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={extracting}
-            >
-              {extracting
-                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Extracting...</>
-                : <><Upload className="w-3.5 h-3.5 mr-1.5" />Upload WSA PDF</>}
-            </Button>
+                    <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={handleWSAExport}
+                disabled={extracting}
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Print / Save WSA
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={extracting}
+              >
+                {extracting
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Extracting...</>
+                  : <><Upload className="w-3.5 h-3.5 mr-1.5" />Upload WSA PDF</>}
+              </Button>
+            </div>
           </div>
         </div>
       )}
