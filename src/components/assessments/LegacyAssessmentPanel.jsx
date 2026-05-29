@@ -42,6 +42,15 @@ const WSA_FIELD_IDS = [
   "benefits_other","hours_available_to_work","crp_name","assigned_employment_specialist","acre_certified"
 ];
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, clientId, onSaved }) {
   const { key, label, questions = [] } = assessmentDef;
   const isInterestProfiler = key === "interest_profiler";
