@@ -245,6 +245,94 @@ export default function LegacyAssessmentPanel({
     }
   }
 
+  async function handleGenerateWSAFieldDraft() {
+    if (!clientId) {
+      toast.error("Client is missing. WSA fields cannot be generated.");
+      return;
+    }
+
+    setGeneratingWSAFields(true);
+
+    try {
+      const { data } = await base44.functions.invoke("generateWSAAIOutputs", {
+        client_id: clientId,
+        mode: "field_draft",
+        current_wsa_responses: responses,
+      });
+
+      if (!data?.success) {
+        throw new Error(data?.error || "WSA field draft generation failed.");
+      }
+
+      const officialFields = data.official_wsa_fields || {};
+
+      if (!Object.keys(officialFields).length) {
+        toast.error("AI did not return WSA field values.");
+        return;
+      }
+
+      const nextResponses = {
+        ...responses,
+        ...officialFields,
+        _wsa_ai_evidence_summary: data.evidence_summary || [],
+        _wsa_ai_staff_should_verify: data.staff_should_verify || [],
+        _wsa_ai_fields_generated_at: new Date().toISOString(),
+      };
+
+      setResponses(nextResponses);
+
+      toast.success("AI filled the WSA editor fields. Review before saving.");
+    } catch (error) {
+      console.error("WSA AI field draft failed:", error);
+      toast.error(`WSA AI field draft failed: ${error.message || "Unknown error"}`);
+    } finally {
+      setGeneratingWSAFields(false);
+    }
+  }
+
+  async function handleGenerateWSAReport() {
+    if (!clientId) {
+      toast.error("Client is missing. WSA report cannot be generated.");
+      return;
+    }
+
+    setGeneratingWSAReport(true);
+
+    try {
+      const { data } = await base44.functions.invoke("generateWSAAIOutputs", {
+        client_id: clientId,
+        mode: "detailed_report",
+        current_wsa_responses: responses,
+      });
+
+      if (!data?.success) {
+        throw new Error(data?.error || "WSA detailed report generation failed.");
+      }
+
+      if (!data.detailed_wsa_report_html) {
+        toast.error("AI did not return a detailed WSA report.");
+        return;
+      }
+
+      const nextResponses = {
+        ...responses,
+        _detailed_wsa_report_html: data.detailed_wsa_report_html,
+        _wsa_report_evidence_summary: data.evidence_summary || [],
+        _wsa_report_staff_should_verify: data.staff_should_verify || [],
+        _wsa_report_generated_at: new Date().toISOString(),
+      };
+
+      setResponses(nextResponses);
+
+      toast.success("Detailed WSA report generated. Save the assessment to keep it.");
+    } catch (error) {
+      console.error("WSA detailed report failed:", error);
+      toast.error(`WSA detailed report failed: ${error.message || "Unknown error"}`);
+    } finally {
+      setGeneratingWSAReport(false);
+    }
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
