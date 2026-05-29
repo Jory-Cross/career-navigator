@@ -348,12 +348,25 @@ export default function LegacyAssessmentPanel({
                     </option>
                   ))}
                 </select>
-              ) : (
-                <Input
-                  id={question.id}
-                  value={value}
-                  onChange={(event) => updateResponse(question.id, event.target.value)}
-                />
+                           ) : (
+                <div className="space-y-1">
+                  <Input
+                    id={question.id}
+                    value={value}
+                    maxLength={characterLimit}
+                    onChange={(event) => updateResponse(question.id, event.target.value)}
+                  />
+
+                  {characterLimit ? (
+                    <div
+                      className={`text-right text-xs ${
+                        isNearLimit ? "font-semibold text-amber-700" : "text-slate-500"
+                      }`}
+                    >
+                      {characterCount} / {characterLimit} characters
+                    </div>
+                  ) : null}
+                </div>
               )}
             </div>
           );
