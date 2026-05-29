@@ -41,7 +41,7 @@ const SECTION_SENSORY = defineSection({
       implications: [
         defineImplication({ type: IMPLICATION_TYPE.ENVIRONMENTAL, description: "Presence of sensory barriers gates environmental constraint filtering" }),
       ],
-      conditionals: [
+           conditionals: [
         defineConditional({
           showWhen: ["yes"],
           question: defineQuestion({
@@ -63,6 +63,69 @@ const SECTION_SENSORY = defineSection({
             implications: [
               defineImplication({ type: IMPLICATION_TYPE.ENVIRONMENTAL, description: "Specific sensory triggers for hard constraint filtering in recommendation engine" }),
               defineImplication({ type: IMPLICATION_TYPE.RECOMMENDATION, description: "Eliminates job settings that include identified triggers" }),
+            ],
+          }),
+        }),
+
+        defineConditional({
+          showWhen: ["yes"],
+          question: defineQuestion({
+            id: "sensory_barrier_severity",
+            label: "How severely do sensory/environmental conditions limit the client's ability to work? (1 = minor inconvenience, 5 = cannot sustain work in affected settings)",
+            type: QUESTION_TYPES.SCALE,
+            scaleConfig: { min: 1, max: 5, minLabel: "Minor inconvenience", maxLabel: "Cannot sustain work" },
+            evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+            evidenceWeight: "high",
+            implications: [
+              defineImplication({ type: IMPLICATION_TYPE.ENVIRONMENTAL, description: "Severity score weights how restrictive environmental constraints should be in job matching" }),
+            ],
+          }),
+        }),
+
+        defineConditional({
+          showWhen: ["yes"],
+          question: defineQuestion({
+            id: "sensory_barrier_history",
+            label: "Describe specific work situations where sensory or environmental conditions caused problems, absences, or job loss",
+            type: QUESTION_TYPES.EXAMPLES,
+            placeholder: "Be specific — what the trigger was, what happened, and the outcome for employment",
+            examplePrompts: [
+              "left a warehouse job due to forklift noise",
+              "fired from restaurant — could not tolerate food smells",
+              "performance declined in open-plan office due to noise",
+              "had to quit outdoor job due to heat sensitivity",
+            ],
+            evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+            evidenceWeight: "high",
+            implications: [
+              defineImplication({ type: IMPLICATION_TYPE.RECOMMENDATION, description: "Historical sensory job loss is strongest evidence for eliminating those environments", flag: REVIEW_FLAG_PRIORITY.HIGH }),
+            ],
+          }),
+        }),
+
+        defineConditional({
+          showWhen: ["yes"],
+          question: defineQuestion({
+            id: "sensory_accommodation_tried",
+            label: "Has the client tried any accommodations for sensory issues at work? (e.g. headphones, sunglasses, reassignment)",
+            type: QUESTION_TYPES.YES_NO,
+            evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+            evidenceWeight: "medium",
+            conditionals: [
+              defineConditional({
+                showWhen: ["yes"],
+                question: defineQuestion({
+                  id: "sensory_accommodation_outcome",
+                  label: "Describe what was tried and whether it helped",
+                  type: QUESTION_TYPES.NARRATIVE,
+                  placeholder: "e.g. Noise-canceling headphones reduced issues enough to sustain retail work, but manager would not allow consistent use. Reassignment to back-stocking removed noise trigger entirely and client thrived…",
+                  evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+                  evidenceWeight: "high",
+                  implications: [
+                    defineImplication({ type: IMPLICATION_TYPE.SUPPORT, description: "Accommodation history informs what to request from next employer", flag: REVIEW_FLAG_PRIORITY.MEDIUM }),
+                  ],
+                }),
+              }),
             ],
           }),
         }),
