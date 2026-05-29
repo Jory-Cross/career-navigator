@@ -132,13 +132,17 @@ RULES:
 - Only include keys from this list: ${Object.keys(WSA_CHAR_LIMITS).join(', ')}
 - Each value must be a plain string, no markdown formatting.
 - Each value must NOT exceed its character limit.
-- Preserve any already-entered staff values in current_wsa_responses where they are accurate and appropriate — do not overwrite good existing data.
+- Use the available character space well. Do not make fields overly brief.
+- For larger observation/recommendation fields with limits of 700 characters or more, target approximately 65% to 90% of the available character limit when evidence is available.
+- For short fields under 300 characters, keep the answer brief and direct.
+- Preserve important details from current_wsa_responses when they are accurate and appropriate. Do not replace detailed staff-entered content with a shorter generic summary.
+- If a current field already contains useful detail, improve or tighten it only enough to fit the field limit while preserving the key facts, barriers, supports, examples, and vocational implications.
+- Include specific vocational implications when supported by evidence, such as job setting limits, transportation constraints, training needs, support needs, social tolerance, stamina, communication needs, safety concerns, and supervision needs.
 - If evidence is weak or absent for a field, either leave it as an empty string "" or write a brief note like "[Staff: verify with client]".
 - Do not invent facts. Only use information from the provided data.
 - Do not include greetings or preamble in field values.
 - Keep values professional, factual, and appropriate for a government vocational assessment form.
 - Also include a "staff_should_verify" array of strings listing fields or topics that need staff review, and an "evidence_summary" array of brief strings describing what evidence sources were used.
-
 Return JSON like:
 {
   "official_wsa_fields": { ... },
