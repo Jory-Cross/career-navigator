@@ -185,9 +185,10 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
         work_assessment_observations:   "Work Assessment Observations",
         natural_support_observations:   "Natural Support Observations",
         life_skills_observations:       "Life Skills Observations",
-        transportation_observations:    "Transportation Observations",
-        computer_skill_observations:    "Computer Skill Observations",
-        interview_skill_observations:   "Interview Skill Observations",
+        transportation_observations:    "Transportation Assessment Observations",
+        computer_skill_observations:    "Computer Skill Assessment Observations",
+        interview_skill_observations:   "Interview Skill Assessment Observations",
+        computer_skills_other:          "Other skills (text)",
         other_observations:             "Other Observations",
         planned_job_search_hours_week:  "Planned Job Search Hours Per Week",
         life_skills_needed:             "Life Skills Needed",
@@ -216,18 +217,6 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
         guardianship: {
           "Yes": "Guardianship Yes",
           "No":  "Guardianship No",
-        },
-        transportation_public: {
-          "Yes": "Transportation Public Yes",
-          "No":  "Transportation Public No",
-        },
-        transportation_private: {
-          "Yes": "Transportation Private Yes",
-          "No":  "Transportation Private No",
-        },
-        computer_skills_other: {
-          "Yes": "Computer Skills Other Yes",
-          "No":  "Computer Skills Other No",
         },
         health_insurance: {
           "Parent's Insurance": "Parents Insurance",
@@ -270,6 +259,30 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
           // skip silently
         }
       });
+
+      // Transportation public: fill text field + check "Public" checkbox
+      if (responses.transportation_public) {
+        try {
+          const tf = "Public Transportation Options (text)";
+          if (fieldNames.has(tf)) form.getTextField(tf).setText(String(responses.transportation_public));
+        } catch { /* skip */ }
+        try {
+          const cb = "Public";
+          if (fieldNames.has(cb)) form.getCheckBox(cb).check();
+        } catch { /* skip */ }
+      }
+
+      // Transportation private: fill text field + check "Private transportation" checkbox
+      if (responses.transportation_private) {
+        try {
+          const tf = "Private Transportation Options (text)";
+          if (fieldNames.has(tf)) form.getTextField(tf).setText(String(responses.transportation_private));
+        } catch { /* skip */ }
+        try {
+          const cb = "Private transportation";
+          if (fieldNames.has(cb)) form.getCheckBox(cb).check();
+        } catch { /* skip */ }
+      }
 
       // Append notes to any "Additional Notes" field if present
       if (notes) {
