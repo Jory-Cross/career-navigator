@@ -22,6 +22,31 @@ function countAnsweredQuestions(questions, responses) {
   }).length;
 }
 
+const DEFAULT_WSA_FIELD_LIMIT = 700;
+
+const WSA_FIELD_LIMITS = {
+  worksite_simulation_location: 120,
+  work_assessment_observations: 500,
+  natural_support_observations: 450,
+  life_skills_observations: 450,
+  transportation_public: 160,
+  transportation_private: 160,
+  transportation_observations: 450,
+  computer_skills_other: 160,
+  computer_skill_observations: 450,
+  interview_skill_observations: 450,
+  other_observations: 450,
+  current_work_skills: 600,
+  work_skill_development_needs: 600,
+  recommended_supports_on_job: 600,
+  job_development_supports: 600,
+  ongoing_supports: 600,
+};
+
+function getWSAFieldLimit(questionId) {
+  return WSA_FIELD_LIMITS[questionId] || DEFAULT_WSA_FIELD_LIMIT;
+}
+
 export default function LegacyAssessmentPanel({
   assessmentDef,
   existingRecord,
