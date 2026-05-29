@@ -304,7 +304,11 @@ export default function LegacyAssessmentPanel({
             );
           }
 
-          const value = responses?.[question.id] ?? "";
+                   const value = responses?.[question.id] ?? "";
+          const characterLimit = isWSA ? getWSAFieldLimit(question.id) : undefined;
+          const characterCount = String(value || "").length;
+          const isNearLimit =
+            characterLimit && characterCount >= Math.floor(characterLimit * 0.9);
 
           return (
             <div key={question.id} className="space-y-2">
