@@ -362,6 +362,34 @@ export default function LegacyAssessmentPanel({
                 />
               </label>
 
+                           <Button
+                type="button"
+                variant="outline"
+                disabled={generatingWSAFields || saving}
+                onClick={handleGenerateWSAFieldDraft}
+              >
+                {generatingWSAFields ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                AI Fill WSA Fields
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={generatingWSAReport || saving}
+                onClick={handleGenerateWSAReport}
+              >
+                {generatingWSAReport ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                AI Detailed Report
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
