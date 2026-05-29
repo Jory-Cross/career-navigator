@@ -36,325 +36,317 @@ const WSA_CHAR_LIMITS = {
   hours_available_to_work: 250,
 };
 
-const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS).join(', ');
-const wsaCharLimitsText = Object.entries(WSA_CHAR_LIMITS)
-  .map(([k, v]) => `${k}: max ${v} chars`)
-  .join('\n');
+const WSA_FIELD_LABELS = {
+  worksite_simulation_location: 'Worksite Simulation Location',
+  work_assessment_observations: 'Work Assessment Observations',
+  natural_support_observations: 'Natural Support Assessment Observations',
+  life_skills_observations: 'Life Skills Observations',
+  transportation_public: 'Public Transportation Options',
+  transportation_private: 'Private Transportation Options',
+  transportation_observations: 'Transportation Assessment Observations',
+  computer_skills_other: 'Computer Skills - Other',
+  computer_skill_observations: 'Computer Skill Assessment Observations',
+  interview_skill_observations: 'Interview Skill Assessment Observations',
+  other_observations: 'Other Observations',
+  current_work_skills: 'Current Work Skills, Knowledge, Skills, and Abilities',
+  work_skill_development_needs: 'Work Skill Development Needs',
+  recommended_supports_on_job: 'Recommended Supports on the Job',
+  job_development_supports: 'Joint VR/CRP Recommendations for Job Development Supports',
+  ongoing_supports: 'Joint VR/CRP Recommendations for Ongoing Supports',
+  behavioral_self_regulation: 'Behavioral / Self-Regulation',
+  activities_of_daily_living: 'Activities of Daily Living',
+  family_issues_supports: 'Family Issues / Supports',
+  criminal_background: 'Criminal Background',
+  school_academic: 'School / Academic Information',
+  communication_needs: 'Communication Needs',
+  assistive_technology_needs: 'Identified Assistive Technology Needs',
+  interpersonal_social_skills: 'Interpersonal / Social Skills',
+  referral_question: 'Referral Question',
+  jobs_of_interest: 'Jobs of Interest',
+  life_skills_needed: 'Life Skills Needed',
+  planned_job_search_hours_week: 'Planned Job Search Hours per Week',
+  recommended_target_occupations: 'Recommended Target Occupations',
+  industry_targeted_pay_range: 'Industry Targeted Pay Range',
+  job_goal: 'Job Goal',
+  benefits_other: 'Benefits / Other',
+  hours_available_to_work: 'Hours Available to Work',
+};
 
-Deno.serve(async (req) => {
+const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS);
+
+function safeString(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    return JSON.stringify(value);
+  } catch (_error) {
+    return String(value);
+  }
+}
 
-    const { client_id, mode, current_wsa_responses } = await req.json();
+function escapeHtml(value) {
+  return safeString(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
-    if (!client_id) return Response.json({ success: false, error: 'client_id is required' }, { status: 400 });
-    if (!mode || !['field_draft', 'detailed_report', 'both'].includes(mode)) {
-      return Response.json({ success: false, error: 'mode must be field_draft, detailed_report, or both' }, { status: 400 });
+function truncateForPrompt(value, maxLength) {
+  const limit = maxLength || 8000;
+  const text = safeString(value).trim();
+
+  if (text.length <= limit) return text;
+
+  return text.slice(0, limit).trim() + '... [truncated for AI context]';
+}
+
+function clampOfficialText(value, maxLength) {
+  const text = safeString(value).replace(/\s+/g, ' ').trim();
+
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+
+  const suffix = '... [see detailed WSA]';
+  const sliceLength = Math.max(0, maxLength - suffix.length);
+
+  return text.slice(0, sliceLength).trimEnd() + suffix;
+}
+
+function normalizeObject(value) {
+  const output = {};
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return output;
+  }
+
+  for (const key of WSA_FIELD_KEYS) {
+    if (value[key] !== undefined && value[key] !== null) {
+      output[key] = safeString(value[key]).trim();
+    }
+  }
+
+  return output;
+}
+
+function mergeUniqueStrings(target, values) {
+  if (!Array.isArray(values)) return;
+
+  for (const item of values) {
+    const text = safeString(item).trim();
+
+    if (text && !target.includes(text)) {
+      target.push(text);
+    }
+  }
+}
+
+function stripUnsafeHtml(html) {
+  return safeString(html)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+function buildDetailedWsaHtml(detailedFields) {
+  const sections = WSA_FIELD_KEYS.map((key) => {
+    const label = WSA_FIELD_LABELS[key] || key;
+    const value = detailedFields[key] || '';
+
+    if (value) {
+      return [
+        '<section>',
+        '<h2>' + escapeHtml(label) + '</h2>',
+        '<p>' + escapeHtml(value).replace(/\n/g, '<br />') + '</p>',
+        '</section>',
+      ].join('\n');
     }
 
-    // Load client
-    const client = await base44.asServiceRole.entities.Client.get(client_id);
-    if (!client) return Response.json({ success: false, error: 'Client not found' }, { status: 404 });
+    return [
+      '<section>',
+      '<h2>' + escapeHtml(label) + '</h2>',
+      '<p><em>No detailed information available for this field. Staff should verify if needed.</em></p>',
+      '</section>',
+    ].join('\n');
+  }).join('\n');
 
-    // Load assessments and documents in parallel
-    const [assessments, documents] = await Promise.all([
-      base44.asServiceRole.entities.Assessment.filter({ client_id }),
-      base44.asServiceRole.entities.Document.filter({ client_id }),
-    ]);
+  return [
+    '<div class="detailed-wsa-fields">',
+    '<h1>Full Detailed Work Strategy Assessment</h1>',
+    '<p><em>This detailed WSA uses the same fields as the official WSA form, but is not limited by the PDF field character limits.</em></p>',
+    sections,
+    '</div>',
+  ].join('\n');
+}
 
-    // Build context summary
-    const clientName = `${client.first_name || ''} ${client.last_name || ''}`.trim();
-    const vfp = client.vocational_facts_profile || null;
+async function generateDetailedFields(base44, contextBlock) {
+  const fieldLabelsText = WSA_FIELD_KEYS
+    .map((key) => key + ': ' + (WSA_FIELD_LABELS[key] || key))
+    .join('\n');
 
-    const assessmentSummaries = (assessments || []).map(a => ({
-      type: a.assessment_type,
-      responses: a.responses,
-      notes: a.notes,
-      completed_by: a.completed_by,
-      date: a.created_date,
-    }));
+  const prompt = `You are a vocational rehabilitation specialist drafting a Full Detailed Work Strategy Assessment.
 
-    const documentSummaries = (documents || [])
-      .filter(d => d.ai_summary || d.extracted_text || d.title)
-      .map(d => ({
-        title: d.title,
-        category: d.category,
-        summary: d.ai_summary || '',
-        extracted_text: d.extracted_text ? d.extracted_text.slice(0, 800) : '',
-        skills: d.resume_skills || [],
-        job_titles: d.job_titles || [],
-        work_history: d.work_history || [],
-      }));
+TASK:
+Generate detailed_wsa_fields using the exact same field keys as the official WSA/PDF.
 
-    const contextBlock = JSON.stringify({
-      client: {
-        name: clientName,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        client_type: client.client_type,
-        target_role: client.target_role,
-        industry: client.industry,
-        school: client.school,
-        graduation_year: client.graduation_year,
-        case_number: client.case_number,
-        notes: client.notes,
-        employer_name: client.employer_name,
-        workplace_name: client.workplace_name,
+This is the FULL DETAILED WSA.
+It must use the same fields as the official WSA.
+It is NOT character limited.
+It should provide complete detailed content for each WSA field when supported by evidence.
+
+CLIENT, FACTS, ASSESSMENTS, DOCUMENTS, AND CURRENT WSA DATA:
+${contextBlock}
+
+EXACT WSA FIELD KEYS AND LABELS:
+${fieldLabelsText}
+
+RULES:
+- Return ONLY valid JSON.
+- No markdown.
+- No code fences.
+- The JSON must contain:
+  {
+    "detailed_wsa_fields": { ... },
+    "staff_should_verify": ["..."],
+    "evidence_summary": ["..."]
+  }
+- detailed_wsa_fields must only use the exact WSA field keys listed above.
+- Do not create broad narrative sections inside detailed_wsa_fields.
+- Do not invent facts.
+- Use FACTS/VFP, assessments, documents, current WSA responses, uploaded WSA content, resume data, and staff/client notes when available.
+- Preserve concrete details, examples, scores, ratings, transportation barriers, support needs, training needs, behavior/self-regulation details, communication needs, family/natural supports, computer skills, ADL/life skills, criminal/background concerns, school/academic information, job goals, target occupations, job development supports, and ongoing supports when supported by evidence.
+- Each field should be written as a complete detailed WSA field response.
+- If evidence is weak or unavailable for a field, write a staff-verification note rather than inventing information.
+- Professional vocational rehabilitation tone.
+- This content will become the long HTML WSA document and will later be compressed into the official WSA PDF fields.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        detailed_wsa_fields: { type: 'object' },
+        staff_should_verify: { type: 'array', items: { type: 'string' } },
+        evidence_summary: { type: 'array', items: { type: 'string' } },
       },
-      vocational_facts_profile: vfp,
-      assessments: assessmentSummaries,
-      documents: documentSummaries,
-      current_wsa_responses: current_wsa_responses || {},
-    }, null, 2);
+    },
+  });
 
-    let detailed_wsa_fields = null;
-    let official_wsa_fields = null;
-    let supplemental_wsa_report_html = null;
-    const staff_should_verify = [];
-    const evidence_summary = [];
+  return {
+    detailed_wsa_fields: normalizeObject(result && result.detailed_wsa_fields),
+    staff_should_verify: Array.isArray(result && result.staff_should_verify)
+      ? result.staff_should_verify
+      : [],
+    evidence_summary: Array.isArray(result && result.evidence_summary)
+      ? result.evidence_summary
+      : [],
+  };
+}
 
-    // ─── STEP 1: Generate detailed_wsa_fields (needed for detailed_report and both modes, or as fallback for field_draft) ───
-    const needDetailedFields = mode === 'detailed_report' || mode === 'both';
-    const existingDetailedFields = current_wsa_responses && current_wsa_responses._detailed_wsa_fields;
-    const hasExistingDetailedFields = existingDetailedFields && typeof existingDetailedFields === 'object' &&
-      Object.keys(existingDetailedFields).length > 0;
+async function generateOfficialFields(base44, detailedFields, contextBlock) {
+  const limitsText = Object.entries(WSA_CHAR_LIMITS)
+    .map(([key, value]) => key + ': max ' + value + ' chars')
+    .join('\n');
 
-    if (needDetailedFields || (mode === 'field_draft' && !hasExistingDetailedFields)) {
-      const detailedFieldsPrompt = `You are a vocational rehabilitation specialist completing the Utah DWS Work Strategy Assessment (WSA) for a client.
+  const detailedFieldsBlock = JSON.stringify(detailedFields, null, 2);
 
-TASK: Generate a full detailed WSA answer for each official WSA field key. These are the same fields as the official Utah WSA PDF form, but with NO character limits — write complete, thorough answers for each field.
+  const prompt = `You are a vocational rehabilitation specialist completing the official Utah DWS Work Strategy Assessment PDF fields.
 
-CLIENT AND ASSESSMENT DATA:
+TASK:
+Compress detailed_wsa_fields into official_wsa_fields.
+
+The official_wsa_fields must use the same exact field keys as detailed_wsa_fields.
+The official_wsa_fields must fit the official WSA PDF character limits.
+
+DETAILED WSA FIELDS TO COMPRESS PRIMARY SOURCE:
+${detailedFieldsBlock}
+
+BACKUP CONTEXT:
 ${contextBlock}
 
-RULES:
-- Return ONLY valid JSON. No markdown. No code fences. No extra text.
-- The JSON must have a single key "detailed_wsa_fields" containing an object keyed by WSA field names.
-- Only use these exact field keys: ${WSA_FIELD_KEYS}
-- Each value must be a plain string — no markdown, no HTML, no bullet symbols.
-- There are NO character limits. Write complete, detailed answers.
-- Do not use broad narrative report sections. Every answer must directly address its specific WSA field.
-
-FIELD COVERAGE REQUIREMENTS:
-- work_assessment_observations: Detailed observations of work skills, pace, quality, task completion, and work behaviors observed or reported.
-- natural_support_observations: Who provides natural support, their relationship, availability, reliability, and vocational implications.
-- life_skills_observations: ADL and life skill performance relevant to employment readiness.
-- transportation_public: Public transportation access, ability, barriers, current use.
-- transportation_private: Private vehicle access, driver status, barriers.
-- transportation_observations: Full transportation analysis including barriers, solutions, and vocational impact.
-- computer_skills_other: Specific computer skill level, programs used, limitations.
-- computer_skill_observations: Detailed computer skill analysis and employment implications.
-- interview_skill_observations: Communication, presentation, interview readiness observations.
-- other_observations: Any other relevant vocational observations not captured elsewhere.
-- current_work_skills: Specific transferable skills, work history, demonstrated competencies.
-- work_skill_development_needs: Specific skill gaps, training needs, and learning considerations.
-- recommended_supports_on_job: Specific on-the-job supports, accommodations, and strategies.
-- job_development_supports: Job development strategy, employer approach, placement considerations.
-- ongoing_supports: Long-term support needs post-placement.
-- behavioral_self_regulation: Self-regulation, emotional regulation, stress tolerance, behavioral concerns.
-- activities_of_daily_living: ADL independence level, personal care, daily living skills relevant to work.
-- family_issues_supports: Family dynamics, supports, barriers, natural support network.
-- criminal_background: Criminal history concerns, disclosure needs, employer considerations.
-- school_academic: Academic history, educational level, learning considerations.
-- communication_needs: Communication style, barriers, accommodations needed.
-- assistive_technology_needs: Assistive technology currently used or potentially needed.
-- interpersonal_social_skills: Social skill level, workplace relationship considerations, peer interaction.
-- referral_question: What specific vocational questions this WSA was meant to answer.
-- jobs_of_interest: Jobs the client has expressed interest in.
-- life_skills_needed: Specific life skills that need development for employment success.
-- planned_job_search_hours_week: How many hours per week the client plans to job search.
-- recommended_target_occupations: Specific occupations recommended based on assessment findings.
-- industry_targeted_pay_range: Target industry and pay range based on skills and goals.
-- job_goal: The client's stated and assessed vocational goal.
-- benefits_other: Benefits considerations, SSI/SSDI concerns, work incentives.
-- hours_available_to_work: How many hours per week the client is available to work and any restrictions.
-- worksite_simulation_location: Where the worksite simulation or assessment was conducted.
-
-EVIDENCE GUIDANCE:
-- Use FACTS/VFP, assessment responses, uploaded documents, resume data, staff notes, and current_wsa_responses as evidence.
-- Preserve specific details: scores, ratings, dates, transportation distances, support names, training programs, behavioral examples, medical/disability considerations when stated.
-- Do not invent facts. If evidence is absent for a field, write a brief note like "[Staff: verify with client]" or leave as empty string.
-- Do not include greetings or preamble.
-
-Also include:
-- "staff_should_verify": array of strings for fields or topics needing staff review.
-- "evidence_summary": array of strings describing what evidence sources were used.
-
-Return JSON like:
-{
-  "detailed_wsa_fields": { ... },
-  "staff_should_verify": ["...", "..."],
-  "evidence_summary": ["...", "..."]
-}`;
-
-      console.log('Generating detailed_wsa_fields...');
-      const detailedResult = await base44.integrations.Core.InvokeLLM({
-        prompt: detailedFieldsPrompt,
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            detailed_wsa_fields: { type: 'object' },
-            staff_should_verify: { type: 'array', items: { type: 'string' } },
-            evidence_summary: { type: 'array', items: { type: 'string' } },
-          },
-        },
-      });
-
-      if (detailedResult && detailedResult.detailed_wsa_fields) {
-        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
-        if (detailedResult.staff_should_verify) staff_should_verify.push(...detailedResult.staff_should_verify);
-        if (detailedResult.evidence_summary) evidence_summary.push(...detailedResult.evidence_summary);
-      }
-    } else if (mode === 'field_draft' && hasExistingDetailedFields) {
-      // Use the already-saved detailed_wsa_fields from current_wsa_responses
-      detailed_wsa_fields = existingDetailedFields;
-      console.log('Using existing detailed_wsa_fields from current_wsa_responses...');
-    }
-
-    // ─── STEP 2: Generate official_wsa_fields (field_draft and both modes) ───
-    if (mode === 'field_draft' || mode === 'both') {
-      const sourceDetailedFields = detailed_wsa_fields || existingDetailedFields;
-      const hasDetailedFieldsForCompression = sourceDetailedFields && Object.keys(sourceDetailedFields).length > 0;
-
-      let officialPrompt;
-
-      if (hasDetailedFieldsForCompression) {
-        officialPrompt = `You are a vocational rehabilitation specialist completing the Utah DWS Work Strategy Assessment (WSA) for a client.
-
-TASK: Compress the provided detailed WSA field answers into official WSA PDF field values that fit the strict character limits.
-
-DETAILED WSA FIELDS (PRIMARY SOURCE — compress these into official_wsa_fields):
-${JSON.stringify(sourceDetailedFields, null, 2)}
-
-BACKUP CONTEXT (use only to fill gaps not in the detailed fields):
-${contextBlock}
-
-STRICT CHARACTER LIMITS FOR EACH FIELD (do not exceed):
-${wsaCharLimitsText}
+STRICT CHARACTER LIMITS:
+${limitsText}
 
 RULES:
-- Return ONLY valid JSON. No markdown. No code fences. No extra text.
-- The JSON must have a single key "official_wsa_fields" containing an object with WSA field keys.
-- Only use these exact field keys: ${WSA_FIELD_KEYS}
-- Each value must be a plain string — no markdown formatting, no HTML.
-- Each value must NOT exceed its character limit.
-
-COMPRESSION WORKFLOW:
-- For each official WSA field, read the matching detailed_wsa_fields value.
-- Compress it into the character limit, preserving the most important facts, barriers, supports, ratings, scores, examples, and vocational implications.
-- official_wsa_fields must be a compressed version of detailed_wsa_fields — not a vague generic summary.
-- Use backup context only to fill gaps absent from the detailed fields.
-
-LENGTH EXPECTATIONS:
-- For fields with limits of 700 characters or more, use approximately 70–95% of available space when the detailed field has enough content.
-- For fields under 300 characters, keep it brief and direct.
-- Use information-dense sentences. Avoid filler phrases.
-
-CONTENT REQUIREMENTS:
-- Do not invent facts.
-- Preserve: scores, ratings, transportation barriers, training needs, support names/roles, behavioral examples, communication needs, ADL concerns, computer skill limits, job development strategy, safety concerns.
-- If evidence is absent, leave as "" or "[Staff: verify with client]".
-- No greetings. No preamble. No markdown in values.
-- Also include "staff_should_verify" and "evidence_summary" arrays.
-
-Return JSON like:
-{
-  "official_wsa_fields": { ... },
-  "staff_should_verify": ["...", "..."],
-  "evidence_summary": ["...", "..."]
-}`;
-        console.log('Generating official_wsa_fields by compressing detailed_wsa_fields...');
-      } else {
-        officialPrompt = `You are a vocational rehabilitation specialist helping complete the Utah DWS Work Strategy Assessment (WSA) for a client.
-
-TASK: Develop a detailed vocational analysis for each WSA section internally, then compress it into official WSA PDF field values that fit the character limits.
-
-CLIENT AND ASSESSMENT DATA:
-${contextBlock}
-
-STRICT CHARACTER LIMITS FOR EACH FIELD (do not exceed):
-${wsaCharLimitsText}
-
-RULES:
-- Return ONLY valid JSON. No markdown. No code fences. No extra text.
-- The JSON must have a single key "official_wsa_fields" containing an object with WSA field keys.
-- Only use these exact field keys: ${WSA_FIELD_KEYS}
-- Each value must be a plain string, no markdown formatting.
-- Each value must NOT exceed its character limit.
-
-WORKFLOW:
-- For each WSA field, analyze the full available evidence, then compress into the official field.
-- Preserve the most important details, examples, barriers, supports, and vocational implications.
-
-LENGTH EXPECTATIONS:
-- For observation/recommendation fields with limits of 700 characters or more, use approximately 70–95% of the available limit when evidence supports it.
+- Return ONLY valid JSON.
+- No markdown.
+- No code fences.
+- The JSON must contain:
+  {
+    "official_wsa_fields": { ... },
+    "staff_should_verify": ["..."],
+    "evidence_summary": ["..."]
+  }
+- official_wsa_fields must only use the exact WSA field keys.
+- official_wsa_fields must be compressed from detailed_wsa_fields whenever detailed_wsa_fields has content.
+- Do not turn detailed content into vague generic summaries.
+- Preserve the most important facts, barriers, supports, examples, and vocational implications.
+- Do not exceed the listed character limits.
+- For fields with 700+ character limits, use the available space well when there is enough detail.
 - For fields under 300 characters, keep the answer brief and direct.
-- Use complete, information-dense sentences.
-
-CONTENT REQUIREMENTS:
-- Treat current_wsa_responses as important draft evidence.
-- Preserve concrete facts: scores, ratings, transportation limits, observed behaviors, support people, training needs, work-setting concerns, job-development implications.
 - Do not invent facts.
-- If evidence is absent, leave as "" or "[Staff: verify with client]".
-- No greetings. No preamble. No markdown in values.
-- Also include "staff_should_verify" and "evidence_summary" arrays.
+- No greetings.
+- Plain professional text only.`;
 
-Return JSON like:
-{
-  "official_wsa_fields": { ... },
-  "staff_should_verify": ["...", "..."],
-  "evidence_summary": ["...", "..."]
-}`;
-        console.log('Generating official_wsa_fields from raw context (no detailed fields available)...');
-      }
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        official_wsa_fields: { type: 'object' },
+        staff_should_verify: { type: 'array', items: { type: 'string' } },
+        evidence_summary: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  });
 
-      const officialResult = await base44.integrations.Core.InvokeLLM({
-        prompt: officialPrompt,
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            official_wsa_fields: { type: 'object' },
-            staff_should_verify: { type: 'array', items: { type: 'string' } },
-            evidence_summary: { type: 'array', items: { type: 'string' } },
-          },
-        },
-      });
+  const rawOfficialFields = normalizeObject(result && result.official_wsa_fields);
+  const officialFields = {};
 
-      if (officialResult && officialResult.official_wsa_fields) {
-        // Enforce char limits as a safety clamp
-        const raw = officialResult.official_wsa_fields;
-        const clamped = {};
-        for (const key of Object.keys(WSA_CHAR_LIMITS)) {
-          if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '') {
-            const val = String(raw[key]);
-            const limit = WSA_CHAR_LIMITS[key];
-            clamped[key] = val.length <= limit ? val : val.slice(0, limit - 20).trimEnd() + '... [see report]';
-          }
-        }
-        official_wsa_fields = clamped;
-        if (officialResult.staff_should_verify) staff_should_verify.push(...officialResult.staff_should_verify);
-        if (officialResult.evidence_summary) evidence_summary.push(...officialResult.evidence_summary);
-      }
-    }
+  for (const key of WSA_FIELD_KEYS) {
+    const limit = WSA_CHAR_LIMITS[key];
+    officialFields[key] = clampOfficialText(rawOfficialFields[key] || '', limit);
+  }
 
-    // ─── STEP 3: Generate supplemental_wsa_report_html (detailed_report and both modes) ───
-    if (mode === 'detailed_report' || mode === 'both') {
-      const reportPrompt = `You are a vocational rehabilitation specialist writing a supplemental narrative Work Strategy Assessment (WSA) report for a Utah DWS client file.
+  return {
+    official_wsa_fields: officialFields,
+    staff_should_verify: Array.isArray(result && result.staff_should_verify)
+      ? result.staff_should_verify
+      : [],
+    evidence_summary: Array.isArray(result && result.evidence_summary)
+      ? result.evidence_summary
+      : [],
+  };
+}
 
-TASK: Write a detailed HTML narrative report covering broader vocational rehabilitation context. This is a supplemental add-on report — not the field-by-field WSA form itself.
+async function generateSupplementalReport(base44, contextBlock, detailedFields) {
+  const prompt = `You are a vocational rehabilitation specialist writing a supplemental narrative Work Strategy Assessment report for a Utah DWS client file.
 
-CLIENT AND ASSESSMENT DATA:
+This supplemental report is an ADD-ON report.
+It does not replace the Full Detailed WSA fields.
+It may use broader narrative sections for staff review and analysis.
+
+CLIENT, FACTS, ASSESSMENTS, DOCUMENTS, AND CURRENT WSA DATA:
 ${contextBlock}
+
+FULL DETAILED WSA FIELDS:
+${truncateForPrompt(detailedFields, 12000)}
 
 REQUIREMENTS:
-- Return ONLY clean HTML. No markdown. No script tags. No style tags. No external links. No unsafe HTML.
+- Return ONLY clean HTML.
+- No markdown.
+- No script tags.
+- No style tags.
+- No external links.
+- No unsafe HTML.
 - Use <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em> tags appropriately.
 - Structure the report with these sections:
   1. Client Overview
-  2. Evidence Reviewed (list all sources used)
+  2. Evidence Reviewed
   3. Vocational Skills & Work History Analysis
   4. Functional Capabilities & Limitations
   5. Work Environment & Behavioral Observations
@@ -363,35 +355,202 @@ REQUIREMENTS:
   8. Interpersonal & Communication Skills
   9. Job Development Recommendations
   10. Ongoing Support Recommendations
-  11. Staff Verification Items (list anything that needs staff follow-up or cannot be confirmed from the data)
-- Be thorough and analytical. Use complete sentences and professional language.
-- Do not invent facts. Only reference information present in the provided data.
+  11. Staff Verification Items
+- Be thorough and analytical.
+- Use complete sentences and professional language.
+- Do not invent facts.
+- Only reference information present in the provided data.
 - Do not include a greeting or closing salutation.
 - Do not include today's date or report generation metadata.
 
-Return ONLY the HTML content (starting with <h2> or <div>).`;
+Return ONLY the HTML content starting with <h2> or <div>.`;
 
-      console.log('Generating supplemental_wsa_report_html...');
-      supplemental_wsa_report_html = await base44.integrations.Core.InvokeLLM({
-        prompt: reportPrompt,
-      });
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt,
+  });
+
+  return stripUnsafeHtml(result);
+}
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+
+    if (!user) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`generateWSAAIOutputs complete. mode=${mode}`);
+    const body = await req.json();
+    const client_id = body && body.client_id;
+    const mode = body && body.mode;
+    const current_wsa_responses = body && body.current_wsa_responses ? body.current_wsa_responses : {};
+
+    if (!client_id) {
+      return Response.json({ success: false, error: 'client_id is required' }, { status: 400 });
+    }
+
+    if (!mode || !['field_draft', 'detailed_report', 'both'].includes(mode)) {
+      return Response.json(
+        { success: false, error: 'mode must be field_draft, detailed_report, or both' },
+        { status: 400 }
+      );
+    }
+
+    const client = await base44.asServiceRole.entities.Client.get(client_id);
+
+    if (!client) {
+      return Response.json({ success: false, error: 'Client not found' }, { status: 404 });
+    }
+
+    const results = await Promise.all([
+      base44.asServiceRole.entities.Assessment.filter({ client_id }),
+      base44.asServiceRole.entities.Document.filter({ client_id }),
+    ]);
+
+    const assessments = results[0] || [];
+    const documents = results[1] || [];
+
+    const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ');
+
+    const assessmentSummaries = assessments.map((assessment) => ({
+      type: assessment.assessment_type,
+      status: assessment.status,
+      responses: assessment.responses,
+      notes: assessment.notes,
+      completed_by: assessment.completed_by,
+      date: assessment.updated_date || assessment.created_date,
+    }));
+
+    const documentSummaries = documents
+      .filter((document) => document.ai_summary || document.extracted_text || document.title)
+      .map((document) => ({
+        title: document.title,
+        category: document.category || document.document_type || document.type,
+        summary: document.ai_summary || document.summary || '',
+        extracted_text: document.extracted_text ? document.extracted_text.slice(0, 1500) : '',
+        skills: document.resume_skills || [],
+        job_titles: document.job_titles || [],
+        work_history: document.work_history || [],
+        education_history: document.education_history || [],
+        certifications: document.certifications || [],
+      }));
+
+    const contextBlock = JSON.stringify(
+      {
+        client: {
+          name: clientName,
+          email: client.email,
+          phone: client.phone,
+          address: client.address,
+          client_type: client.client_type,
+          target_role: client.target_role,
+          job_goal: client.job_goal || client.employment_goal,
+          industry: client.industry,
+          school: client.school,
+          graduation_year: client.graduation_year,
+          case_number: client.case_number,
+          notes: client.notes,
+          employer_name: client.employer_name,
+          workplace_name: client.workplace_name,
+        },
+        vocational_facts_profile:
+          client.vocational_facts_profile ||
+          client.vocational_profile ||
+          client.facts_profile ||
+          null,
+        vocational_facts_metadata:
+          client.vocational_facts_metadata ||
+          client.facts_metadata ||
+          null,
+        assessments: assessmentSummaries,
+        documents: documentSummaries,
+        current_wsa_responses: current_wsa_responses,
+      },
+      null,
+      2
+    );
+
+    let detailed_wsa_fields = null;
+    let official_wsa_fields = null;
+    let full_detailed_wsa_html = null;
+    let supplemental_wsa_report_html = null;
+
+    const staff_should_verify = [];
+    const evidence_summary = [];
+
+    if (mode === 'detailed_report' || mode === 'both') {
+      console.log('Generating full detailed WSA fields...');
+      const detailedResult = await generateDetailedFields(base44, contextBlock);
+
+      detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+      mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
+      mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
+
+      full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
+
+      console.log('Generating supplemental WSA narrative report...');
+      supplemental_wsa_report_html = await generateSupplementalReport(
+        base44,
+        contextBlock,
+        detailed_wsa_fields
+      );
+    }
+
+    if (mode === 'field_draft') {
+      const existingDetailedFields = normalizeObject(current_wsa_responses._detailed_wsa_fields);
+
+      if (Object.keys(existingDetailedFields).length > 0) {
+        detailed_wsa_fields = existingDetailedFields;
+      } else {
+        console.log('No saved detailed_wsa_fields found. Generating detailed WSA fields before compression...');
+        const detailedResult = await generateDetailedFields(base44, contextBlock);
+
+        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+        full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
+
+        mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
+        mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
+      }
+    }
+
+    if ((mode === 'field_draft' || mode === 'both') && detailed_wsa_fields) {
+      console.log('Compressing detailed WSA fields into official WSA fields...');
+      const officialResult = await generateOfficialFields(base44, detailed_wsa_fields, contextBlock);
+
+      official_wsa_fields = officialResult.official_wsa_fields;
+      mergeUniqueStrings(staff_should_verify, officialResult.staff_should_verify);
+      mergeUniqueStrings(evidence_summary, officialResult.evidence_summary);
+    }
+
+    console.log('generateWSAAIOutputs complete. mode=' + mode);
+
     return Response.json({
       success: true,
-      mode,
+      mode: mode,
       detailed_wsa_fields: detailed_wsa_fields || null,
+      full_detailed_wsa_html: full_detailed_wsa_html || null,
       official_wsa_fields: official_wsa_fields || null,
       supplemental_wsa_report_html: supplemental_wsa_report_html || null,
-      // Compatibility alias: keep detailed_wsa_report_html pointing to supplemental until frontend is updated
-      detailed_wsa_report_html: supplemental_wsa_report_html || null,
-      staff_should_verify,
-      evidence_summary,
-    });
 
+      // Backward compatibility for the current frontend until it is updated.
+      detailed_wsa_report_html: supplemental_wsa_report_html || full_detailed_wsa_html || null,
+
+      staff_should_verify: staff_should_verify,
+      evidence_summary: evidence_summary,
+    });
   } catch (error) {
-    console.error('generateWSAAIOutputs error:', error.message, error.stack);
-    return Response.json({ success: false, error: error.message }, { status: 500 });
+    const message = error && error.message ? error.message : 'Failed to generate WSA AI outputs';
+    const stack = error && error.stack ? error.stack : '';
+
+    console.error('generateWSAAIOutputs error:', message, stack);
+
+    return Response.json(
+      {
+        success: false,
+        error: message,
+      },
+      { status: 500 }
+    );
   }
 });
