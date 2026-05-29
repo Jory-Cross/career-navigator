@@ -24,6 +24,7 @@ import { Loader2, Upload, Download, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import InterestProfilerPanel from "./InterestProfilerPanel";
+import { PDFDocument } from "pdf-lib";
 
 const WSA_FIELD_IDS = [
   "crp_referring_to","guardianship","guardian_name_phone","referral_question",
@@ -151,140 +152,158 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
     }
   };
 
-  const handleWSAExport = () => {
-    const printableRows = questions
-      .map((q) => {
-        if (q.type === "section") {
-          return `
-            <tr>
-              <td colspan="2" class="section">
-                ${escapeHtml(q.label.replace(/──\s*/g, "").replace(/\s*──/g, ""))}
-              </td>
-            </tr>
-          `;
-        }
+  const [exporting, setExporting] = useState(false);
 
-        const value = responses[q.id];
-
-        if (value === undefined || value === null || value === "") {
-          return "";
-        }
-
-        return `
-          <tr>
-            <td class="label">${escapeHtml(q.label)}</td>
-            <td class="answer">${escapeHtml(value)}</td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    const notesRow = notes
-      ? `
-        <tr>
-          <td class="label">Additional Notes</td>
-          <td class="answer">${escapeHtml(notes)}</td>
-        </tr>
-      `
-      : "";
-
-    const html = `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Updated Work Strategy Assessment</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              color: #0f172a;
-              margin: 32px;
-              line-height: 1.4;
-            }
-            h1 {
-              font-size: 22px;
-              margin-bottom: 4px;
-            }
-            .subtitle {
-              color: #475569;
-              margin-bottom: 24px;
-              font-size: 13px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            td {
-              border: 1px solid #cbd5e1;
-              padding: 10px;
-              vertical-align: top;
-              font-size: 13px;
-            }
-            .section {
-              background: #e2e8f0;
-              font-weight: 700;
-              text-transform: uppercase;
-              color: #334155;
-              letter-spacing: 0.04em;
-            }
-            .label {
-              width: 35%;
-              font-weight: 700;
-              background: #f8fafc;
-            }
-            .answer {
-              white-space: pre-wrap;
-            }
-            .actions {
-              margin-bottom: 20px;
-            }
-            button {
-              padding: 8px 12px;
-              border: 1px solid #94a3b8;
-              border-radius: 6px;
-              background: white;
-              cursor: pointer;
-              font-weight: 600;
-            }
-            @media print {
-              .actions {
-                display: none;
-              }
-              body {
-                margin: 18px;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="actions">
-            <button onclick="window.print()">Print / Save as PDF</button>
-          </div>
-
-          <h1>Updated Work Strategy Assessment</h1>
-          <div class="subtitle">
-            Generated from CRM saved WSA answers.
-          </div>
-
-          <table>
-            ${printableRows}
-            ${notesRow}
-          </table>
-        </body>
-      </html>
-    `;
-
-       const printWindow = window.open("", "_blank");
-
-    if (!printWindow) {
-      toast.error("Popup blocked. Please allow popups and try again.");
+  const handleWSAExport = async () => {
+    const pdfUrl = responses._uploaded_pdf_url;
+    if (!pdfUrl) {
+      toast.error("Please upload the WSA PDF first before exporting.");
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
+    setExporting(true);
+    try {
+      const pdfBytes = await fetch(pdfUrl).then((r) => r.arrayBuffer());
+      const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+      const form = pdfDoc.getForm();
+
+      // Map CRM response keys → PDF form field names
+      // Keys on the left are the CRM response keys; values are the exact PDF field names.
+      // If a field doesn't exist in the PDF it will be silently skipped.
+      const FIELD_MAP = {
+        client_name:                    "Client Name",
+        address:                        "Address",
+        city:                           "City",
+        state:                          "State",
+        zip:                            "ZIP",
+        crp_referring_to:               "CRP Referring To",
+        client_phone:                   "Client Phone",
+        guardian_name_phone:            "Parent Guardian Name and Phone",
+        referral_question:              "Referral Question",
+        extended_services_provider:     "Extended Services Provider",
+        health_insurance:               "Health Insurance",
+        social_security_benefits:       "Social Security Benefits",
+        benefits_planning:              "Benefits Planning",
+        benefits_planning_date:         "Benefits Planning Date",
+        benefits_summary_info:          "Benefits Summary Info",
+        other_services_benefits:        "Other Services Benefits",
+        current_work_skills:            "Current Work Skills",
+        work_skill_development_needs:   "Work Skill Development Needs",
+        jobs_of_interest:               "Jobs of Interest",
+        interpersonal_social_skills:    "Interpersonal Social Skills",
+        assistive_technology_needs:     "Assistive Technology Needs",
+        communication_needs:            "Communication Needs",
+        behavioral_self_regulation:     "Behavioral Self Regulation",
+        activities_of_daily_living:     "Activities of Daily Living",
+        family_issues_supports:         "Family Issues Supports",
+        criminal_background:            "Criminal Background",
+        school_academic:                "School Academic",
+        worksite_simulation_location:   "Worksite Simulation Location",
+        work_assessment_observations:   "Work Assessment Observations",
+        natural_support_observations:   "Natural Support Observations",
+        life_skills_observations:       "Life Skills Observations",
+        transportation_observations:    "Transportation Observations",
+        computer_skill_observations:    "Computer Skill Observations",
+        interview_skill_observations:   "Interview Skill Observations",
+        other_observations:             "Other Observations",
+        planned_job_search_hours_week:  "Planned Job Search Hours Per Week",
+        life_skills_needed:             "Life Skills Needed",
+        life_skills_hours_requested:    "Life Skills Hours Requested",
+        recommended_target_occupations: "Recommended Target Occupations",
+        recommended_supports_on_job:    "Recommended Supports On Job",
+        job_development_supports:       "Job Development Supports",
+        ongoing_supports:               "Ongoing Supports",
+        job_goal:                       "Job Goal",
+        industry_targeted_pay_range:    "Industry Targeted Pay Range",
+        benefits_other:                 "Benefits Other",
+        hours_available_to_work:        "Hours Available To Work",
+        crp_name:                       "CRP Name",
+        assigned_employment_specialist: "Assigned Employment Specialist",
+        acre_certified:                 "ACRE Certified",
+      };
+
+      // Checkbox/radio field mappings (response value → checkbox field name)
+      const CHECKBOX_MAP = {
+        guardianship: {
+          "Yes": "Guardianship Yes",
+          "No":  "Guardianship No",
+        },
+        transportation_public: {
+          "Yes": "Transportation Public Yes",
+          "No":  "Transportation Public No",
+        },
+        transportation_private: {
+          "Yes": "Transportation Private Yes",
+          "No":  "Transportation Private No",
+        },
+        computer_skills_other: {
+          "Yes": "Computer Skills Other Yes",
+          "No":  "Computer Skills Other No",
+        },
+      };
+
+      const fields = form.getFields();
+      const fieldNames = new Set(fields.map((f) => f.getName()));
+
+      // Fill text fields
+      Object.entries(FIELD_MAP).forEach(([responseKey, pdfFieldName]) => {
+        const val = responses[responseKey];
+        if (!val || !fieldNames.has(pdfFieldName)) return;
+        try {
+          const field = form.getField(pdfFieldName);
+          const fieldType = field.constructor.name;
+          if (fieldType === "PDFTextField") {
+            field.setText(String(val));
+          }
+        } catch {
+          // field type mismatch or missing — skip silently
+        }
+      });
+
+      // Fill checkbox/radio fields
+      Object.entries(CHECKBOX_MAP).forEach(([responseKey, valueToFieldName]) => {
+        const val = responses[responseKey];
+        if (!val) return;
+        const targetFieldName = valueToFieldName[val];
+        if (!targetFieldName || !fieldNames.has(targetFieldName)) return;
+        try {
+          const field = form.getField(targetFieldName);
+          const fieldType = field.constructor.name;
+          if (fieldType === "PDFCheckBox") {
+            field.check();
+          } else if (fieldType === "PDFTextField") {
+            field.setText(String(val));
+          }
+        } catch {
+          // skip silently
+        }
+      });
+
+      // Append notes to any "Additional Notes" field if present
+      if (notes) {
+        ["Additional Notes", "Notes"].forEach((name) => {
+          if (!fieldNames.has(name)) return;
+          try {
+            form.getTextField(name).setText(notes);
+          } catch { /* skip */ }
+        });
+      }
+
+      const filledBytes = await pdfDoc.save();
+      const blob = new Blob([filledBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "updated-wsa.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("WSA PDF downloaded successfully.");
+    } catch (err) {
+      console.error("WSA export failed:", err);
+      toast.error("Failed to fill PDF: " + (err?.message || "Unknown error"));
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Interest Profiler uses its own dedicated panel
@@ -328,10 +347,11 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
                 variant="outline"
                 className="border-blue-300 text-blue-700 hover:bg-blue-100"
                 onClick={handleWSAExport}
-                disabled={extracting}
+                disabled={extracting || exporting}
               >
-                <Download className="w-3.5 h-3.5 mr-1.5" />
-                Print / Save WSA
+                {exporting
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Exporting...</>
+                  : <><Download className="w-3.5 h-3.5 mr-1.5" />Download Filled WSA</>}
               </Button>
 
               <Button
