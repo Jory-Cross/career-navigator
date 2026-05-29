@@ -652,9 +652,34 @@ function normalizeVocationalProfileResult(llmResponse) {
 
   let result = raw;
 
+  const looksLikeVocationalProfile = (value) => {
+    if (!value || typeof value !== "object") return false;
+
+    return (
+      Array.isArray(value.skills) ||
+      Array.isArray(value.interests) ||
+      Array.isArray(value.preferred_tasks) ||
+      Array.isArray(value.work_environment_preferences) ||
+      Array.isArray(value.schedule_availability) ||
+      Array.isArray(value.transportation) ||
+      Array.isArray(value.social_communication_needs) ||
+      Array.isArray(value.sensory_environmental_needs) ||
+      Array.isArray(value.physical_restrictions) ||
+      Array.isArray(value.support_needs) ||
+      Array.isArray(value.job_readiness_level) ||
+      Array.isArray(value.employer_preferences) ||
+      Array.isArray(value.barriers) ||
+      Array.isArray(value.goals)
+    );
+  };
+
   // Unwrap common response wrappers.
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     if (!result || typeof result !== "object") break;
+
+    if (looksLikeVocationalProfile(result)) {
+      break;
+    }
 
     if (result.profile && typeof result.profile === "object") {
       result = result.profile;
@@ -676,8 +701,34 @@ function normalizeVocationalProfileResult(llmResponse) {
       continue;
     }
 
+    if (result.vocational_facts && typeof result.vocational_facts === "object") {
+      result = result.vocational_facts;
+      continue;
+    }
+
+    if (result.facts && typeof result.facts === "object") {
+      result = result.facts;
+      continue;
+    }
+
+    if (result.profile_data && typeof result.profile_data === "object") {
+      result = result.profile_data;
+      continue;
+    }
+
     if (result.result && typeof result.result === "object") {
       result = result.result;
+      continue;
+    }
+
+    const keys = Object.keys(result);
+
+    if (
+      keys.length === 1 &&
+      result[keys[0]] &&
+      typeof result[keys[0]] === "object"
+    ) {
+      result = result[keys[0]];
       continue;
     }
 
