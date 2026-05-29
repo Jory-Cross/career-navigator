@@ -332,6 +332,95 @@ export default function LegacyAssessmentPanel({
       setGeneratingWSAReport(false);
     }
   }
+
+  function handleDownloadWSAReport() {
+    const reportHtml = responses?._detailed_wsa_report_html;
+
+    if (!reportHtml) {
+      toast.error("Generate the detailed WSA report before downloading.");
+      return;
+    }
+
+    const htmlDocument = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Detailed Work Strategy Assessment Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      color: #111827;
+      line-height: 1.5;
+      margin: 40px;
+      max-width: 900px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      border-bottom: 2px solid #111827;
+      padding-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-top: 28px;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      color: #1f2937;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    ul {
+      margin-top: 6px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      color: #4b5563;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    @media print {
+      body {
+        margin: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Detailed Work Strategy Assessment Report</h1>
+  <div class="meta">Generated from CRM assessment data for staff review.</div>
+  ${reportHtml}
+</body>
+</html>`;
+
+    const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Detailed-WSA-Report.html";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+    toast.success("Detailed WSA report downloaded");
+  }
   
   return (
     <div className="space-y-6">
