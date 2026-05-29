@@ -484,7 +484,7 @@ console.log("VFP SENDING TO LLM:", {
         description: `${user.full_name || user.email} extracted employment facts from ${targetDocs.length} documents and ${assessments.length} assessments. Quality score: ${result.data_quality_score}%. ${result.conflicts?.length > 0 ? `⚠️ ${result.conflicts.length} conflict(s) flagged for review.` : ''}`,
       });
 
-      return Response.json({
+          return Response.json({
         success: true,
         profile: returnedProfile,
         metadata: returnedMetadata,
@@ -495,6 +495,7 @@ console.log("VFP SENDING TO LLM:", {
         update_status: shouldUpdate ? "updated" : "skipped_weaker_profile",
         extracted_fact_count: newFactCount,
         existing_fact_count: existingFactCount,
+        debug_category_lengths: debugCategoryLengths,
       });
     }
 
