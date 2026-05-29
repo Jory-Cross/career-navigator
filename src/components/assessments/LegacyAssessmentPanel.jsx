@@ -112,30 +112,46 @@ export default function LegacyAssessmentPanel({ assessmentDef, existingRecord, c
     }
   };
 
-  const handleWSAUpload = async (e) => {
+   const handleWSAUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setExtracting(true);
     toast.loading("Extracting data from PDF...", { id: "wsa-extract" });
+
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
       setResponses((prev) => ({ ...prev, _uploaded_pdf_url: file_url }));
+
       const schemaProperties = {};
-      WSA_FIELD_IDS.forEach((id) => { schemaProperties[id] = { type: "string" }; });
+      WSA_FIELD_IDS.forEach((id) => {
+        schemaProperties[id] = { type: "string" };
+      });
+
       const extracted = await base44.integrations.Core.InvokeLLM({
         prompt: `Extract all filled-in fields from this Utah DWS Work Strategy Assessment (WSA) PDF. Return only non-empty values.`,
         file_urls: [file_url],
         response_json_schema: { type: "object", properties: schemaProperties },
       });
+
       const merged = { ...responses, _uploaded_pdf_url: file_url };
-      Object.entries(extracted).forEach(([k, val]) => {
+
+      Object.entries(extracted || {}).forEach(([k, val]) => {
         if (val && val.trim?.() !== "") merged[k] = val;
       });
+
       setResponses(merged);
       toast.success("WSA data extracted and pre-filled!", { id: "wsa-extract" });
     } catch (err) {
       toast.error("Failed to extract PDF: " + err.message, { id: "wsa-extract" });
-      const handleWSAExport = () => {
+    } finally {
+      setExtracting(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleWSAExport = () => {
     const printableRows = questions
       .map((q) => {
         if (q.type === "section") {
