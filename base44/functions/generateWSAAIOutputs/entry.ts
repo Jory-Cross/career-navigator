@@ -64,7 +64,7 @@ const WSA_FIELD_LABELS = {
   referral_question: 'Referral Question',
   jobs_of_interest: 'Jobs of Interest',
   life_skills_needed: 'Life Skills Needed',
-  planned_job_search_hours_week: 'Planned Job Search Hours per Week',
+    planned_job_search_hours_week: 'Planned CRP / Job Coach Job Development Hours per Week',
   recommended_target_occupations: 'Recommended Target Occupations',
   industry_targeted_pay_range: 'Industry Targeted Pay Range',
   job_goal: 'Job Goal',
