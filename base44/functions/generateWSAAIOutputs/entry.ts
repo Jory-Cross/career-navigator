@@ -291,6 +291,25 @@ RULES:
 - For fields under 300 characters, preserve the clearest concrete facts and remove only extra wording needed to fit.
 - Do not turn detailed content into vague generic summaries.
 - Preserve concrete details, examples, ratings, scores, barriers, supports, transportation limits, training needs, support needs, and vocational implications.
+
+FIELD RELATIONSHIP RULES:
+- Some WSA fields are short label/detail fields paired with a larger observation field.
+- For short option/detail fields, keep the answer brief and factual.
+- Put the deeper explanation, impact, barriers, examples, and vocational implications into the matching observation field.
+
+Transportation-specific rules:
+- transportation_public should be a brief option description only, such as "Paratransit; requires advance scheduling."
+- transportation_private should be a brief option description only, such as "Family backup transportation when available."
+- transportation_observations should contain the detailed transportation analysis, including reliability, schedule limits, early morning/overnight availability, mid-shift travel limits, attendance concerns, commute/geography limits, and placement implications when supported by evidence.
+
+Computer skills rules:
+- computer_skills_other should briefly list the specific skill/test result, such as typing speed, 10-key, or other skill.
+- computer_skill_observations should contain the detailed analysis of computer ability, online application needs, typing limitations, training needs, and job implications.
+
+Life skills rules:
+- life_skills_needed should briefly list the life skill area(s) needed.
+- life_skills_observations should contain the detailed explanation, functional impact, and support/training implications.
+
 - Do not exceed the listed character limits.
 - Do not invent facts.
 - No greetings.
