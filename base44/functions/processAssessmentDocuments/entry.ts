@@ -220,6 +220,7 @@ Examples that should NOT be conflicts:
 - "Prefers very quiet" and "can tolerate moderate background noise" should be treated as a sensory/noise preference range, not a conflict.
 - "Needs support with transportation" and "uses public transit" can both be true.
 - "No concern documented" and "concern documented elsewhere" should be treated as missing/limited information unless one source explicitly denies a confirmed concern.
+- "Current / Most Recent Role: Cashier" and a resume showing cashier work ended in January 2026 should not be treated as a conflict. It means cashier may be the most recent role, not necessarily a current active job.
 
 When data differs but may both be true, do NOT add it to conflicts. Instead:
 - preserve the more specific fact in the relevant category,
