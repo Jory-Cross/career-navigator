@@ -3,11 +3,34 @@ import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
-// Helper to set checkbox field values
-function setCheckboxValue(fields, fieldName, value) {
-  if (fields[fieldName]) {
-    fields[fieldName].setValue(value === true || value === 'Yes' ? 'Yes' : '');
-  }
+// PDF fields in the original Utah WSA form have limited visible space.
+// Keep the full in-app WSA answers unchanged, but trim text before writing into the PDF.
+const DEFAULT_PDF_TEXT_LIMIT = 900;
+
+const PDF_TEXT_LIMITS = {
+  transportation_observations: 650,
+  computer_skill_observations: 650,
+  natural_support_observations: 650,
+  life_skills_observations: 650,
+  work_assessment_observations: 750,
+  interview_skill_observations: 650,
+  other_observations: 650,
+  current_work_skills: 800,
+  work_skill_development_needs: 800,
+  recommended_supports_on_job: 800,
+  job_development_supports: 800,
+  ongoing_supports: 800,
+};
+
+function limitPdfText(value, key) {
+  if (value === null || value === undefined) return '';
+
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  const limit = PDF_TEXT_LIMITS[key] || DEFAULT_PDF_TEXT_LIMIT;
+
+  if (text.length <= limit) return text;
+
+  return `${text.slice(0, Math.max(0, limit - 24)).trim()}... [truncated for PDF]`;
 }
 
 Deno.serve(async (req) => {
