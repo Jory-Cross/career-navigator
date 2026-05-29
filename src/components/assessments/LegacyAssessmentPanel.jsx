@@ -465,7 +465,7 @@ export default function LegacyAssessmentPanel({
                 AI Fill WSA Fields
               </Button>
 
-              <Button
+                           <Button
                 type="button"
                 variant="outline"
                 disabled={generatingWSAReport || saving}
@@ -477,6 +477,16 @@ export default function LegacyAssessmentPanel({
                   <FileText className="mr-2 h-4 w-4" />
                 )}
                 AI Detailed Report
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!responses?._detailed_wsa_report_html}
+                onClick={handleDownloadWSAReport}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Detailed Report
               </Button>
 
               <Button
