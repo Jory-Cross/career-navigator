@@ -290,7 +290,7 @@ export default function LegacyAssessmentPanel({
     }
   }
 
-  async function handleGenerateWSAReport() {
+    async function handleGenerateWSAReport() {
     if (!clientId) {
       toast.error("Client is missing. WSA report cannot be generated.");
       return;
@@ -309,14 +309,28 @@ export default function LegacyAssessmentPanel({
         throw new Error(data?.error || "WSA detailed report generation failed.");
       }
 
-      if (!data.detailed_wsa_report_html) {
-        toast.error("AI did not return a detailed WSA report.");
+      if (!data.full_detailed_wsa_html && !data.detailed_wsa_fields) {
+        toast.error("AI did not return the full detailed WSA.");
         return;
       }
 
       const nextResponses = {
         ...responses,
-        _detailed_wsa_report_html: data.detailed_wsa_report_html,
+
+        // Full Detailed WSA: exact same fields as the official WSA, no character limits.
+        _detailed_wsa_fields: data.detailed_wsa_fields || {},
+        _full_detailed_wsa_html: data.full_detailed_wsa_html || "",
+
+        // Supplemental narrative report: broader add-on report for staff review.
+        _supplemental_wsa_report_html: data.supplemental_wsa_report_html || "",
+
+        // Backward compatibility with the older frontend/report button.
+        _detailed_wsa_report_html:
+          data.supplemental_wsa_report_html ||
+          data.full_detailed_wsa_html ||
+          data.detailed_wsa_report_html ||
+          "",
+
         _wsa_report_evidence_summary: data.evidence_summary || [],
         _wsa_report_staff_should_verify: data.staff_should_verify || [],
         _wsa_report_generated_at: new Date().toISOString(),
@@ -324,7 +338,7 @@ export default function LegacyAssessmentPanel({
 
       setResponses(nextResponses);
 
-      toast.success("Detailed WSA report generated. Save the assessment to keep it.");
+      toast.success("Full detailed WSA and supplemental report generated. Save the assessment to keep them.");
     } catch (error) {
       console.error("WSA detailed report failed:", error);
       toast.error(`WSA detailed report failed: ${error.message || "Unknown error"}`);
