@@ -69,6 +69,7 @@ export default function LegacyAssessmentPanel({
   existingRecord,
   clientId,
   onSaved,
+  onRegisterLeaveSave,
 }) {
   const { key, label, questions = [] } = assessmentDef;
   const isInterestProfiler = key === "interest_profiler";
