@@ -385,9 +385,11 @@ export default function LegacyAssessmentPanel({
         _wsa_report_generated_at: new Date().toISOString(),
       };
 
-      setResponses(nextResponses);
+            setResponses(nextResponses);
+      latestResponsesRef.current = nextResponses;
+      wsaDirtyRef.current = true;
 
-      toast.success("Full detailed WSA and supplemental report generated. Save the assessment to keep them.");
+      toast.success("Full detailed WSA and supplemental report generated. Changes will save when you leave this assessment.");
     } catch (error) {
       console.error("WSA detailed report failed:", error);
       toast.error(`WSA detailed report failed: ${error.message || "Unknown error"}`);
