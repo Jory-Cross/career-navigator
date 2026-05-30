@@ -186,12 +186,13 @@ export default function WorkPerformanceSupportObservationPanel({
           </Badge>
         </div>
 
-        <StructuredAssessmentWorkspacePanel
+               <StructuredAssessmentWorkspacePanel
           key={selectedRecord.id}
           clientId={clientId}
           assessment={observationDefinition}
           existingRecord={selectedRecord}
           onSaved={handleSaved}
+          onClose={handleReturnToHistory}
         />
       </div>
     );
