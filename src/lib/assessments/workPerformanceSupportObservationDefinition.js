@@ -412,12 +412,293 @@ const SECTION_OBSERVATION_CONTEXT = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase A begins with Section 1
-// Additional approved sections will be added after this file is verified.
+// Section 2: Task Instructions and Learning
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_TASK_INSTRUCTIONS_LEARNING = defineSection({
+  id: "task_instructions_learning",
+  label: "Task Instructions & Learning",
+  description:
+    "Document how work tasks were introduced or taught, how the client responded to instruction, and what learning strategies were effective during this observation.",
+  guidance:
+    "This section documents instruction and observed learning response only. Do not make final conclusions about job fit, overall work performance, accommodation need, retention risk, or ongoing support level from this section alone. Prompting levels for ongoing job-task performance will be documented in the task-performance section.",
+  questions: [
+    defineQuestion({
+      id: "task_familiarity_at_start",
+      label: "How familiar was the client with the observed task at the start of this observation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "New task - not previously attempted",
+        "Previously introduced but not routine",
+        "Previously practiced task",
+        "Routine or familiar task",
+        "Known task with changed expectations or conditions",
+        "Unable to determine",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Clarifies whether observed learning occurred on a new, practiced, routine, or changed job task.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "instruction_provider",
+      label: "Who provided instruction or task guidance during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Employment specialist/job coach",
+        "Supervisor",
+        "Coworker/natural support",
+        "Trainer/instructor",
+        "Client already knew task - no new instruction provided",
+        "Other",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "medium",
+    }),
+
+    defineQuestion({
+      id: "instruction_methods_used",
+      label: "Which instruction or teaching methods were used?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Verbal explanation",
+        "Demonstration/modeling",
+        "Written instructions",
+        "Visual checklist or visual cue",
+        "Task breakdown into smaller steps",
+        "Repeated practice",
+        "Side-by-side coaching",
+        "Technology-based instruction or reminder",
+        "Natural coworker/supervisor instruction",
+        "No instruction needed during observation",
+        "Other",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies teaching methods used during observed work-task learning for later review of effective support strategies.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "instruction_complexity",
+      label: "How complex were the instructions or task sequence being taught?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Single simple step",
+        "Short predictable multi-step sequence",
+        "Longer structured multi-step sequence",
+        "Complex task requiring judgment or problem solving",
+        "Variable task with changing instructions",
+        "Unable to determine",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "instructions_given_notes",
+      label: "Describe the actual instructions or teaching provided during this observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the task directions, demonstrations, written or visual materials, step-by-step teaching, practice opportunities, or natural supports provided.",
+      guidance:
+        "Record what was taught and how it was taught. Include enough detail to understand the learning demand placed on the client.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "initial_understanding_after_instruction",
+      label: "After initial instruction, how did the client demonstrate understanding of the task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Demonstrated understanding and began task appropriately",
+        "Demonstrated partial understanding and needed clarification",
+        "Needed instruction repeated or broken into smaller steps",
+        "Needed demonstration before beginning",
+        "Did not demonstrate understanding during the observation",
+        "No new instruction was provided",
+        "Not observed",
+      ],
+      guidance:
+        "Rate the initial learning response only. Ongoing prompt levels for task performance will be recorded in the next section.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "clarification_or_reteaching_needed",
+      label: "How much clarification or reteaching was needed while the client was learning the task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "None needed",
+        "One clarification or brief reminder",
+        "Occasional reteaching",
+        "Repeated reteaching",
+        "Continuous teaching throughout the observation",
+        "No new learning demand was observed",
+        "Unable to determine",
+      ],
+      guidance:
+        "Document the frequency of reteaching needed for learning. Do not use this field as the ongoing task-performance prompt rating.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether task learning required clarification, repeated teaching, or continuous instruction during this observation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "learning_strategies_that_helped",
+      label: "Which learning strategies appeared helpful during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Verbal explanation",
+        "Demonstration/modeling",
+        "Visual cue or checklist",
+        "Written directions",
+        "Breaking task into smaller steps",
+        "Practice and repetition",
+        "Immediate corrective feedback",
+        "Reduced distractions during learning",
+        "Extra processing time",
+        "Coworker or supervisor natural support",
+        "No specific strategy identified",
+        "Other",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies observed teaching strategies that may warrant continued evaluation in future work observations.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "retention_during_observation",
+      label: "During this observation, how well did the client retain the task steps after instruction or practice?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Retained task steps during the observation",
+        "Retained most steps but needed occasional review",
+        "Repeatedly forgot or missed previously taught steps",
+        "Unable to retain the task steps during the observation",
+        "Task was too brief to evaluate retention",
+        "No new instruction was provided",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "response_to_correction",
+      label: "How did the client respond to correction or feedback during task learning?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Accepted feedback and adjusted performance",
+        "Accepted feedback but needed repeated explanation",
+        "Accepted feedback but needed additional practice",
+        "Became frustrated, stressed, or discouraged",
+        "Resisted or did not apply feedback",
+        "No correction or feedback was needed",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "adaptation_to_change_or_new_instruction",
+      label: "How did the client respond when instructions, steps, or task expectations changed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Adjusted to change without difficulty",
+        "Adjusted after clarification or practice",
+        "Needed significant reteaching after change",
+        "Struggled or became distressed with change",
+        "No change in instruction or expectation occurred",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "learning_support_effectiveness",
+      label: "Describe which teaching approaches were effective or ineffective for this client during the observed task.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe what helped the client understand, learn, remember, or adapt to the task. Include any teaching methods that were attempted but did not appear helpful.",
+      guidance:
+        "Document observed effectiveness only. Avoid making broader support recommendations until supported by additional observations and later sections.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides observed evidence regarding effective or ineffective instructional strategies for later support planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "change_from_prior_observation_learning",
+      label: "Compared with a prior observation of this task or similar work, how has the client's learning response changed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Improved learning or retention",
+        "Similar learning response",
+        "Needed more teaching or reteaching",
+        "Needed less teaching or reteaching",
+        "Different task - comparison not appropriate",
+        "No prior observation available",
+        "Unable to determine",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "medium",
+    }),
+
+    defineQuestion({
+      id: "task_instruction_learning_notes",
+      label: "Additional observed evidence about task instruction and learning",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document additional examples, client comments, supervisor input, learning barriers, successful teaching moments, or limits of what could be observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "medium",
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase A currently includes Sections 1 and 2
+// Section 3 will add task-performance and ongoing prompt-level measurement.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_OBSERVATION_CONTEXT,
+  SECTION_TASK_INSTRUCTIONS_LEARNING,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
