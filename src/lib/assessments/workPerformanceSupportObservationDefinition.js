@@ -1020,15 +1020,389 @@ const SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase A currently includes Sections 1, 2, and 3
-// A separate future task-analysis module will support reusable employed-client
-// job routines, ordered task steps, and repeated step-level prompt scoring.
+// Section 4: Physical Demands, Stamina, Endurance, and Support Needs
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS = defineSection({
+  id: "physical_demands_stamina_supports",
+  label: "Physical Demands, Stamina, Endurance & Support Needs",
+  description:
+    "Document physical work demands actually performed during this observation and the client's observable stamina, endurance, recovery needs, and physical supports used.",
+  guidance:
+    "Document observed functional performance only. Do not diagnose medical conditions or assume why difficulty occurred. Record what was physically required, what was observed, what supports were used, and what may require further verification.",
+  questions: [
+    defineQuestion({
+      id: "physical_activity_observed",
+      label: "Which physical activities did the client actually perform during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Sitting",
+        "Standing",
+        "Walking",
+        "Bending",
+        "Stooping",
+        "Kneeling or crouching",
+        "Reaching",
+        "Lifting",
+        "Carrying",
+        "Pushing or pulling",
+        "Climbing stairs",
+        "Fine motor work",
+        "Repetitive hand or arm motion",
+        "Outdoor movement",
+        "Position changes",
+        "No meaningful physical demand observed",
+        "Other",
+      ],
+      guidance:
+        "Select physical activities actually performed by the client, not only demands that existed in the worksite.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies the physical work activities connected to observed stamina, tolerance, and support evidence.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "time_on_task_or_activity_duration",
+      label: "Approximately how long was the client engaged in the physically demanding activity or work task?",
+      type: QUESTION_TYPES.SHORT_TEXT,
+      placeholder:
+        "Example: stood for 25 minutes; walked intermittently for 45 minutes; lifted boxes during a 20-minute stocking task",
+      guidance:
+        "Include duration and relevant activity context when known. This helps interpret observed endurance and recovery needs.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "standing_tolerance_observed",
+      label: "What standing tolerance was observed during the work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Standing demand not part of observed task",
+        "Tolerated standing demand without observed difficulty",
+        "Tolerated standing demand with minor signs of fatigue or discomfort",
+        "Needed a brief rest, position change, or support to continue standing task",
+        "Standing difficulty reduced pace, quality, or task participation",
+        "Unable to continue standing portion of task",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Rate observable response to standing demand only. Do not infer a medical cause.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed standing tolerance relevant to work-task compatibility and further verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "walking_mobility_tolerance_observed",
+      label: "What walking or workplace-mobility tolerance was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Walking or mobility demand not part of observed task",
+        "Tolerated walking or movement demand without observed difficulty",
+        "Tolerated movement demand with minor slowing or fatigue",
+        "Needed a brief rest, support, or route adjustment to continue",
+        "Mobility difficulty reduced pace, quality, or task participation",
+        "Unable to continue movement portion of task",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observed response to workplace movement, walking, or route demands.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed mobility tolerance relevant to task access, endurance, and workplace-demand review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "lifting_carrying_tolerance_observed",
+      label: "What lifting, carrying, pushing, or pulling tolerance was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Lifting, carrying, pushing, or pulling not part of observed task",
+        "Completed physical handling demand safely without observed difficulty",
+        "Completed demand with minor slowing, effort, or fatigue",
+        "Needed instruction, modification, or support to safely complete demand",
+        "Physical handling difficulty reduced pace, quality, or participation",
+        "Unable to complete physical handling demand",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document only the physical handling activity actually observed and the client's observable response.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed response to material-handling demands relevant to work-task planning and safety review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "bending_reaching_repetitive_motion_tolerance",
+      label: "What response was observed to bending, reaching, repetitive movement, or fine motor demands?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "These demands were not part of the observed task",
+        "Completed demands without observed difficulty",
+        "Completed demands with minor slowing, effort, or fatigue",
+        "Needed brief rest, repositioning, modification, or support",
+        "Difficulty reduced pace, accuracy, quality, or task participation",
+        "Unable to complete the required demand",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Use notes below to clarify which specific demand was present and what was observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "fatigue_or_endurance_observed",
+      label: "How did fatigue or endurance affect observed work performance?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No observable fatigue affecting performance",
+        "Mild fatigue observed but task performance remained functional",
+        "Fatigue appeared to slow pace or reduce efficiency",
+        "Fatigue appeared to affect quality, accuracy, or persistence",
+        "Fatigue required break, modification, or support to continue",
+        "Fatigue prevented continuation or completion of task",
+        "Observation was too brief to evaluate endurance",
+        "Not observed",
+      ],
+      guidance:
+        "Record observable performance impact only. Do not infer medical cause.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether observable fatigue or endurance needs affected work performance and may require further support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "pain_discomfort_or_physical_distress_observed",
+      label: "Was observable pain, discomfort, or physical distress reported or observed during the task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No pain, discomfort, or physical distress reported or observed",
+        "Client reported minor discomfort without observable effect on performance",
+        "Observable discomfort or client report appeared to slow performance",
+        "Discomfort required rest, repositioning, modification, or support",
+        "Discomfort significantly limited task participation or completion",
+        "Client reported concern but impact on performance was unclear",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Record client report and observable impact when present. Do not make a medical conclusion or identify a cause unless already verified elsewhere.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed or reported physical discomfort affecting work-task participation for later verification and support planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "breaks_or_recovery_needed",
+      label: "What break or recovery support was needed during the observed physical activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No break or recovery support needed",
+        "Used normally scheduled break only",
+        "Needed brief unscheduled rest or position change",
+        "Needed multiple breaks or extended recovery time",
+        "Needed modified task demand or reduced physical activity",
+        "Could not resume task after rest or modification",
+        "Observation was too brief to evaluate",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed break, recovery, or task-modification needs related to physical work demands.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "physical_safety_concerns_observed",
+      label: "Document any physical, ergonomic, mobility, or task-safety concerns observed.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: unsafe lifting posture, instability while carrying materials, difficulty navigating stairs, overfilled cart, repeated reaching above shoulder level, fatigue affecting safe task completion, or no concerns observed.",
+      guidance:
+        "Record specific observed behaviors or conditions. Include when no physical safety concern was observed if safety was evaluated.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies observed physical or ergonomic safety concerns requiring review, modification, training, or further verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "physical_supports_or_modifications_used",
+      label: "Which physical supports, modifications, or strategies were used or tried during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "None used or needed",
+        "Seated work option",
+        "Sit/stand position change",
+        "Scheduled break",
+        "Additional brief rest break",
+        "Reduced lifting or carrying demand",
+        "Cart, dolly, or transport aid",
+        "Modified work height or reach demand",
+        "Reduced repetitive movement",
+        "Adjusted work pace",
+        "Task rotation",
+        "Ergonomic instruction or safe-lifting guidance",
+        "Mobility or route modification",
+        "Personal protective equipment",
+        "Other",
+        "Not observed",
+      ],
+      guidance:
+        "Select supports or modifications actually used or tried during the observation, not possibilities that were not tested.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies physical-support strategies tried during observed work activity for later effectiveness review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "effectiveness_of_physical_supports",
+      label: "Describe the effectiveness of any physical supports, modifications, breaks, or strategies used.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe what was used, why it was used, whether it improved safety, stamina, pace, quality, comfort, or participation, and whether additional verification is needed.",
+      guidance:
+        "Record observed results only. If no support was used or evaluated, state that clearly.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides observed evidence about whether physical-support strategies appeared effective during the work task.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "physical_demands_strengths_observed",
+      label: "What physical-performance or stamina strengths were observed during this task?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as tolerating standing demands, safely carrying materials, maintaining functional stamina, completing repetitive tasks, using safe movement strategies, or recovering appropriately after activity.",
+      guidance:
+        "Document observed strengths tied to the physical work activity performed.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed physical-work strengths relevant to FACTS/VFP and later vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "physical_demands_concerns_observed",
+      label: "What physical-demand, stamina, endurance, or recovery concerns were observed?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as reduced pace after standing, difficulty carrying items, repeated need for rest, task limitation caused by fatigue, safety concerns, or areas requiring additional observation.",
+      guidance:
+        "Record functional evidence only and identify what still requires further evaluation or verification.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed physical-demand concerns that may affect vocational planning or require additional evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "physical_demands_vocational_implications",
+      label: "What are the vocational implications of the observed physical-demand and stamina evidence?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how the observed evidence may inform FACTS/VFP, additional situational assessment, job exploration, physical-demand matching, support review, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning without making medical conclusions or unsupported job-fit determinations.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed physical-demand and stamina evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase B currently includes Section 4
+// Sections 1–3 remain verified and unchanged.
+// Future Sections 5 and 6 will add environmental/sensory and
+// communication/social/supervision observation evidence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_OBSERVATION_CONTEXT,
   SECTION_TASK_INSTRUCTIONS_LEARNING,
   SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS,
+  SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
