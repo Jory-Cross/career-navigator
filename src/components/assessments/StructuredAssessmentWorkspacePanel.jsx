@@ -179,13 +179,14 @@ export default function StructuredAssessmentWorkspacePanel({
   }, [doSave]);
 
   // ── "Save & Close" button (cancel) — save then notify parent
-  const handleCancel = useCallback(async () => {
+   const handleCancel = useCallback(async () => {
     if (isDirtyRef.current) {
       await doSave(responsesRef.current, false).catch(() => {});
       setIsDirty(false);
     }
-    onSaved?.();
-  }, [doSave, onSaved]);
+    await onSaved?.();
+    onClose?.();
+  }, [doSave, onSaved, onClose]);
 
   const status = !existingRecord
     ? "not_started"
