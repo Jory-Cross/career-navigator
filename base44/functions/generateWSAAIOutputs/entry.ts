@@ -528,10 +528,13 @@ Deno.serve(async (req) => {
       ...current_wsa_responses,
     };
 
-       // These fields must not be inferred from prior AI output.
-    // They are completed only through verified staff entry or final staff/client selection.
+          // These fields must not be inferred from prior AI output.
+    // They are completed only through verified staff entry,
+    // final staff/client selection, or VR close-out completion.
     delete sourceWsaResponses.planned_job_search_hours_week;
     delete sourceWsaResponses.recommended_target_occupations;
+    delete sourceWsaResponses.job_development_supports;
+    delete sourceWsaResponses.ongoing_supports;
 
     if (sourceWsaResponses._detailed_wsa_fields) {
       sourceWsaResponses._detailed_wsa_fields = {
@@ -540,8 +543,9 @@ Deno.serve(async (req) => {
 
       delete sourceWsaResponses._detailed_wsa_fields.planned_job_search_hours_week;
       delete sourceWsaResponses._detailed_wsa_fields.recommended_target_occupations;
+      delete sourceWsaResponses._detailed_wsa_fields.job_development_supports;
+      delete sourceWsaResponses._detailed_wsa_fields.ongoing_supports;
     }
-
     const contextBlock = JSON.stringify(
       {
         client: {
