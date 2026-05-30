@@ -151,12 +151,13 @@ export default function WorkPerformanceSupportObservationPanel({
           </Badge>
         </div>
 
-        <StructuredAssessmentWorkspacePanel
+                <StructuredAssessmentWorkspacePanel
           key={`new-observation-${newObservationSession}`}
           clientId={clientId}
           assessment={observationDefinition}
           existingRecord={null}
           onSaved={handleSaved}
+          onClose={handleReturnToHistory}
         />
       </div>
     );
