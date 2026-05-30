@@ -1777,10 +1777,443 @@ const SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase B currently includes Sections 4 and 5
-// Sections 1–4 remain verified and unchanged.
-// Future Section 6 will add communication/social/supervision observation
-// evidence.
+// Section 6: Communication, Social Interaction, Supervision, and Workplace
+// Relationship Supports
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS = defineSection({
+  id: "communication_social_supervision_supports",
+  label: "Communication, Social Interaction, Supervision & Workplace Relationship Supports",
+  description:
+    "Document workplace communication and interaction demands actually present during this observation, the client's observable response, and any communication or relationship supports used.",
+  guidance:
+    "Document interaction demand present, observable response, support tried, effect on work participation, and supported vocational implication. Do not diagnose communication or social conditions. Do not treat a preference for limited interaction as a barrier unless functional impact is observed or separately verified.",
+  questions: [
+    defineQuestion({
+      id: "communication_social_demands_observed",
+      label: "Which communication or social interaction demands were actually present during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Receiving task instructions",
+        "Receiving correction or feedback",
+        "Asking questions or requesting clarification",
+        "Requesting help or communicating a need",
+        "Reporting task completion or a problem",
+        "Working near coworkers",
+        "Cooperating on a shared task",
+        "Supervisor check-in or monitoring",
+        "Customer or public interaction",
+        "Responding to unexpected social contact",
+        "Break-room or informal workplace interaction",
+        "No meaningful communication or social demand observed",
+        "Other",
+      ],
+      guidance:
+        "Select only communication or social demands actually experienced by the client during the observed work activity or visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies workplace communication and interaction demands directly connected to the observed response evidence.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "understanding_workplace_directions_observed",
+      label: "How did the client respond to workplace directions or instructions from staff, a supervisor, or a coworker?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Workplace-direction demand not present during observed task",
+        "Received and followed directions appropriately without support",
+        "Followed directions after brief cue or clarification",
+        "Needed repeated support, coaching, or clarification to follow directions",
+        "Difficulty understanding or responding to directions reduced task pace, quality, or participation",
+        "Difficulty responding to directions caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable response to ordinary workplace directions. Section 2 records task teaching and learning; this field records workplace communication response.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether workplace directions required communication support, clarification, or repeated coaching during observed performance.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "expressing_needs_or_asking_for_help_observed",
+      label: "How did the client communicate questions, uncertainty, needs, or requests for help during the observation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No opportunity or need to ask for help or communicate a need was observed",
+        "Communicated questions or needs appropriately without support",
+        "Communicated questions or needs after a brief cue or reminder",
+        "Needed repeated prompting or coaching to communicate a need",
+        "Did not communicate a need, and task participation or safety was affected",
+        "Communication difficulty caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable communication of work-related needs, confusion, help requests, or task problems.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed self-advocacy or help-seeking support needs relevant to workplace participation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "supervisor_interaction_observed",
+      label: "How did the client respond to supervisor or job-coach interaction and oversight?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Supervisor or job-coach interaction demand not present during observed task",
+        "Responded appropriately to supervision without support",
+        "Responded appropriately with brief cue, reassurance, or clarification",
+        "Needed repeated coaching, redirection, or support during supervisory interaction",
+        "Supervisory interaction difficulty reduced task pace, quality, or participation",
+        "Supervisory interaction difficulty caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document response to interaction or oversight, not the amount of supervision present. Supervision level in the setting was captured in Section 1.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed response to workplace supervision relevant to future support and job-environment planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "coworker_interaction_observed",
+      label: "How did the client respond to coworker interaction or shared work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Coworker interaction or shared-task demand not present",
+        "Interacted or worked alongside coworkers appropriately without support",
+        "Interacted appropriately with brief cue, reassurance, or clarification",
+        "Needed repeated coaching, redirection, or support during coworker interaction",
+        "Coworker-interaction difficulty reduced task pace, quality, or participation",
+        "Coworker-interaction difficulty caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable response to coworker interaction or shared work activity when it occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed coworker-interaction response relevant to workplace environment and support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "customer_public_interaction_observed",
+      label: "How did the client respond to customer or public interaction, when applicable?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Customer or public interaction demand not present",
+        "Interacted appropriately with customers or the public without support",
+        "Interacted appropriately with brief cue, reassurance, or clarification",
+        "Needed repeated coaching, redirection, or support during customer interaction",
+        "Customer-interaction difficulty reduced task pace, quality, or participation",
+        "Customer-interaction difficulty caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observed response only when customer or public interaction occurred during the work activity.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed response to customer-facing work demands relevant to job exploration and support verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "response_to_feedback_or_redirection_observed",
+      label: "How did the client respond to workplace feedback, correction, or redirection during task performance?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Feedback, correction, or redirection was not needed during observed task",
+        "Accepted and used feedback appropriately without support",
+        "Accepted and used feedback after brief clarification or reassurance",
+        "Needed repeated explanation, coaching, or redirection to apply feedback",
+        "Response to feedback reduced task pace, quality, or participation",
+        "Response to feedback caused distress, withdrawal, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document workplace interaction response to feedback during performance. Section 2 records response to correction while learning a task.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed support needs related to receiving and applying workplace feedback or redirection.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "social_boundaries_and_workplace_behavior_observed",
+      label: "What workplace social-boundary or professional-behavior response was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No meaningful workplace-boundary demand observed",
+        "Demonstrated appropriate workplace boundaries and behavior without support",
+        "Demonstrated appropriate behavior with brief cue or reminder",
+        "Needed repeated coaching or redirection regarding workplace boundaries or behavior",
+        "Boundary or behavior concern reduced task participation or affected workplace interaction",
+        "Boundary or behavior concern created conflict, safety concern, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Consider observable workplace behavior such as personal space, turn-taking, topic appropriateness, professionalism, or respect for roles. Record only what was observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "communication_effect_on_task_performance",
+      label: "Overall, how did communication or social-interaction demands affect the client's observed work participation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No observable communication or social-interaction effect on work participation",
+        "Communication or interaction demands were present but performance remained functional",
+        "Communication or interaction demands caused mild discomfort or hesitation without significant performance impact",
+        "Communication or interaction demands required brief support or adjustment to maintain performance",
+        "Communication or interaction demands reduced pace, accuracy, quality, focus, or participation",
+        "Communication or interaction demands significantly interfered with task completion or workplace stability",
+        "Observation did not include meaningful communication or social demands",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Summarize overall observable effect on work participation. Use narrative fields to identify which interactions affected performance and how.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the observed effect of workplace communication and interaction demands on work participation for later vocational planning.",
+        }),
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies whether communication or relationship-support strategies require additional evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "communication_social_response_examples",
+      label: "Describe specific examples of the client's communication or social-interaction response during the observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Client followed supervisor instruction appropriately but did not report that supplies were missing until prompted; after one reminder, client requested replacement materials and resumed the task.",
+      guidance:
+        "Document the interaction demand, observable response, effect on work participation, and any support provided.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Provides specific observed evidence linking workplace interaction demands to functional work participation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "communication_supports_or_strategies_used",
+      label: "Which communication, social-interaction, or supervisory supports were used or tried during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "None used or needed",
+        "Simple or direct instructions",
+        "One-step instructions",
+        "Extra processing time",
+        "Written directions",
+        "Visual cue or checklist",
+        "Modeling appropriate workplace communication",
+        "Prompting client to ask for clarification",
+        "Prompting client to request help or communicate a need",
+        "Prompting client to report task completion or a problem",
+        "Job-coach mediation",
+        "Supervisor education or clarification",
+        "Reduced customer or public interaction",
+        "Reduced coworker interaction",
+        "Predictable supervisor check-in routine",
+        "Private feedback instead of public correction",
+        "Break or recovery time after interaction",
+        "Other",
+        "Not observed",
+      ],
+      guidance:
+        "Select only communication or relationship-support strategies actually used or tested during the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies workplace communication or relationship-support strategies tried during observed work participation for later effectiveness review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "effectiveness_of_communication_supports",
+      label: "Describe the effectiveness of communication, interaction, or supervisory supports used during the observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe what was tried, what interaction demand it addressed, whether communication or work participation improved, and what may require additional observation.",
+      guidance:
+        "Record observed results only. If no communication support was used or evaluated, state that clearly.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides observed evidence about whether communication or relationship-support strategies appeared effective during work participation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "supervisor_or_coworker_input_obtained",
+      label: "What supervisor, coworker, or worksite input was obtained during this observation, if any?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document verifiable feedback provided by a supervisor, coworker, or employer representative about communication, interaction, task participation, or support needs. State if no input was obtained.",
+      guidance:
+        "Identify the source of the input and separate worksite report from staff observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves worksite-reported communication or interaction evidence for later verification and vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_reported_communication_preferences_or_concerns",
+      label: "What communication or workplace-interaction preferences, concerns, or reactions did the client report?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own report about supervisor communication, working near others, customer interaction, asking for help, receiving feedback, or preferred communication supports. State if no client report was obtained.",
+      guidance:
+        "Separate client report from staff observation. Client preference is valuable evidence but should not be treated as observed work-performance impact unless supported by what occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported workplace communication and interaction preferences for later exploration and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "communication_social_strengths_observed",
+      label: "What communication, social-interaction, or supervisory-response strengths were observed during the work activity?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as following directions, asking appropriate questions, accepting feedback, communicating a problem, working respectfully near coworkers, or appropriately interacting with supervisors or customers.",
+      guidance:
+        "Document strengths tied to actual workplace interaction demands observed during this visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed workplace communication and interaction strengths relevant to FACTS/VFP and later vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "communication_social_concerns_observed",
+      label: "What communication, social-interaction, supervisory-response, or workplace-relationship concerns were observed?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as not asking for help when needed, difficulty receiving feedback, distress during interaction, repeated need for communication prompts, boundary concerns, or customer/coworker demands requiring additional evaluation.",
+      guidance:
+        "Record functional evidence only and identify what still requires further observation or verification.",
+      evidenceCategory: EVIDENCE_CATEGORY.SOCIAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed workplace communication or interaction concerns that may affect vocational planning or require additional assessment.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "communication_social_vocational_implications",
+      label: "What are the vocational implications of the communication and workplace-interaction evidence observed during this visit?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how observed communication or interaction evidence may inform FACTS/VFP, additional situational assessment, work-environment exploration, support review, job matching, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning without making diagnoses or unsupported job-fit conclusions.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed workplace communication and interaction evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase B currently includes Sections 4, 5, and 6
+// Sections 1–5 remain verified and unchanged.
+// Future Phase C sections will add safety/self-regulation, supports and
+// accommodations, job-fit/retention, and summary/follow-up evidence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -1789,6 +2222,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS,
   SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS,
   SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS,
+  SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
