@@ -274,6 +274,12 @@ function QuestionInput({ question, value, onChange, disabled }) {
       return <YesNo question={question} value={value} onChange={onChange} disabled={disabled} />;
     case QUESTION_TYPES.SCALE:
       return <Scale question={question} value={value} onChange={onChange} disabled={disabled} />;
+    case QUESTION_TYPES.SHORT_TEXT:
+      return <ShortTextField question={question} value={value} onChange={onChange} disabled={disabled} />;
+    case QUESTION_TYPES.DATE:
+      return <DateField question={question} value={value} onChange={onChange} disabled={disabled} />;
+    case QUESTION_TYPES.NUMBER:
+      return <NumberField question={question} value={value} onChange={onChange} disabled={disabled} />;
     case QUESTION_TYPES.EXAMPLES:
       return <ExamplesField question={question} value={value} onChange={onChange} disabled={disabled} />;
     case QUESTION_TYPES.NARRATIVE:
