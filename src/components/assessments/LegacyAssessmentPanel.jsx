@@ -185,6 +185,10 @@ export default function LegacyAssessmentPanel({
         savedRecord = await base44.entities.Assessment.create(payload);
       }
 
+            latestResponsesRef.current = responses;
+      existingRecordIdRef.current = savedRecord?.id || existingRecordIdRef.current;
+      wsaDirtyRef.current = false;
+
       if (showToast) {
         toast.success("Assessment saved");
       }
