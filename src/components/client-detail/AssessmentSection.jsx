@@ -176,7 +176,7 @@ const ALL_ASSESSMENTS = [
     sections: WORK_ENVIRONMENT_TOLERANCE_SECTIONS,
     meta: WORK_ENVIRONMENT_TOLERANCE_META,
   },
-  {
+    {
     key: "barriers_to_employment",
     label: "Barriers to Employment",
     emoji: "🚧",
@@ -185,6 +185,17 @@ const ALL_ASSESSMENTS = [
     available: true,
     sections: BARRIERS_TO_EMPLOYMENT_SECTIONS,
     meta: BARRIERS_TO_EMPLOYMENT_META,
+  },
+  {
+    key: "work_performance_support_observation",
+    label: "Work Performance & Support Observation",
+    emoji: "📝",
+    description: "Repeatable worksite observations, job coaching, retention, and ongoing support review",
+    type: "structured",
+    available: true,
+    sections: WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS,
+    meta: WORK_PERFORMANCE_SUPPORT_OBSERVATION_META,
+    repeatable: true,
   },
   {
     key: "transportation",
