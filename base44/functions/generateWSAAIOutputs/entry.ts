@@ -243,10 +243,13 @@ RULES:
 
     const detailedFields = normalizeObject(result && result.detailed_wsa_fields);
 
-  // This value cannot be generated from client evidence or inferred by AI.
-  // It requires verified staff/program entry.
+  // These values cannot be finalized from AI-generated evidence alone.
+  // They require verified staff/program entry or staff/client final selection.
   detailedFields.planned_job_search_hours_week =
     PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE;
+
+  detailedFields.recommended_target_occupations =
+    RECOMMENDED_TARGET_OCCUPATIONS_STAFF_NOTE;
 
   const staffShouldVerify = Array.isArray(result && result.staff_should_verify)
     ? result.staff_should_verify
@@ -254,6 +257,10 @@ RULES:
 
   if (!staffShouldVerify.includes(PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE)) {
     staffShouldVerify.push(PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE);
+  }
+
+  if (!staffShouldVerify.includes(RECOMMENDED_TARGET_OCCUPATIONS_STAFF_NOTE)) {
+    staffShouldVerify.push(RECOMMENDED_TARGET_OCCUPATIONS_STAFF_NOTE);
   }
 
   return {
