@@ -16,6 +16,10 @@ import {
   BARRIERS_TO_EMPLOYMENT_SECTIONS,
   BARRIERS_TO_EMPLOYMENT_META,
 } from "@/lib/assessments/barriersToEmploymentDefinition";
+import {
+  WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS,
+  WORK_PERFORMANCE_SUPPORT_OBSERVATION_META,
+} from "@/lib/assessments/workPerformanceSupportObservationDefinition";
 
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
