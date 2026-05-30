@@ -500,9 +500,19 @@ Deno.serve(async (req) => {
       ...current_wsa_responses,
     };
 
-    // This field must never be inferred from client availability, goals, or prior AI output.
-    // It is populated only by staff after verifying planned CRP/job coach support hours.
+       // These fields must not be inferred from prior AI output.
+    // They are completed only through verified staff entry or final staff/client selection.
     delete sourceWsaResponses.planned_job_search_hours_week;
+    delete sourceWsaResponses.recommended_target_occupations;
+
+    if (sourceWsaResponses._detailed_wsa_fields) {
+      sourceWsaResponses._detailed_wsa_fields = {
+        ...sourceWsaResponses._detailed_wsa_fields,
+      };
+
+      delete sourceWsaResponses._detailed_wsa_fields.planned_job_search_hours_week;
+      delete sourceWsaResponses._detailed_wsa_fields.recommended_target_occupations;
+    }
 
     const contextBlock = JSON.stringify(
       {
