@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Loader2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StructuredAssessmentWorkspacePanel from "@/components/assessments/StructuredAssessmentWorkspacePanel";
+import WorkPerformanceSupportObservationPanel from "@/components/assessments/WorkPerformanceSupportObservationPanel";
 import LegacyAssessmentPanel from "@/components/assessments/LegacyAssessmentPanel";
 
 import {
