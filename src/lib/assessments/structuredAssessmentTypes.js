@@ -25,10 +25,19 @@ export const QUESTION_TYPES = {
   /** Numeric scale with labeled anchors (e.g. 1–5, 1–10) */
   SCALE: "scale",
 
+  /** Short single-line text field for names, job roles, worksites, and brief values */
+  SHORT_TEXT: "short_text",
+
+  /** Calendar date field for observation dates, employment dates, and follow-up dates */
+  DATE: "date",
+
+  /** Numeric field for duration, hours, measurable quantities, and similar numeric responses */
+  NUMBER: "number",
+
   /** Free-text narrative — primary evidence carrier */
   NARRATIVE: "narrative",
 
-  /** Short free-text with structured example prompts */
+  /** Long free-text with structured example prompts */
   EXAMPLES: "examples",
 
   /** Conditional follow-up rendered only when a parent answer matches */
@@ -37,7 +46,6 @@ export const QUESTION_TYPES = {
   /** Visual section divider — no data stored */
   SECTION_HEADER: "section_header",
 };
-
 // ── Evidence Categories ───────────────────────────────────────────────────────
 
 export const EVIDENCE_CATEGORY = {
