@@ -2210,10 +2210,457 @@ const SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase B currently includes Sections 4, 5, and 6
-// Sections 1–5 remain verified and unchanged.
-// Future Phase C sections will add safety/self-regulation, supports and
-// accommodations, job-fit/retention, and summary/follow-up evidence.
+// Section 7: Safety, Self-Regulation, Stress Response, and Workplace Stability
+// Supports
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS = defineSection({
+  id: "safety_regulation_stability_supports",
+  label: "Safety, Self-Regulation, Stress Response & Workplace Stability Supports",
+  description:
+    "Document observable safety behavior, hazard awareness, response to stress or unexpected work demands, recovery, and supports used to maintain safe and stable work participation.",
+  guidance:
+    "Record what actually occurred during this work observation: the safety or stability demand present, the observable response, any risk or performance effect, support used, and observed effectiveness. Do not diagnose mental health or behavioral conditions, and do not label the client as unsafe based only on history or unverified concern.",
+  questions: [
+    defineQuestion({
+      id: "safety_regulation_demands_observed",
+      label: "Which safety, self-regulation, stress-response, or workplace-stability demands were actually present during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Following workplace safety rules",
+        "Using personal protective equipment",
+        "Using equipment, machinery, or tools",
+        "Navigating workplace hazards",
+        "Handling materials or products safely",
+        "Responding to correction or redirection",
+        "Working under time pressure",
+        "Managing frustration with difficulty or errors",
+        "Managing unexpected change or interrupted routine",
+        "Managing customer, coworker, or supervisor stress",
+        "Returning to task after stress or disruption",
+        "No meaningful safety or regulation demand observed",
+        "Other",
+      ],
+      guidance:
+        "Select only demands actually present during the client's observed work participation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies the safety, regulation, or workplace-stability demands connected to observed work participation evidence.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "following_safety_instructions_observed",
+      label: "How did the client respond to workplace safety instructions, precautions, or personal protective equipment expectations?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Safety-instruction or precaution demand not present during observed task",
+        "Followed safety instructions and precautions appropriately without support",
+        "Followed safety instructions after a brief cue or reminder",
+        "Needed repeated instruction, modeling, or redirection to follow safety expectations",
+        "Difficulty following safety expectations created a concern but task continued with support",
+        "Difficulty following safety expectations required stopping or modifying the task",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable response to safety expectations actually present during the task.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed support needs related to following workplace safety instructions or precautions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "hazard_awareness_observed",
+      label: "What hazard awareness was observed during the work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No meaningful hazard-recognition opportunity occurred",
+        "Recognized and responded to hazards appropriately without support",
+        "Recognized or responded to hazards after a brief cue or reminder",
+        "Needed repeated prompts, modeling, or coaching to recognize or respond to hazards",
+        "Did not recognize a hazard until staff intervened",
+        "Hazard-awareness concern required stopping or modifying the task",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Record response to hazards or unsafe situations that were actually observable during the task.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed hazard-awareness support needs requiring later safety, training, or workplace-support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safe_task_behavior_observed",
+      label: "What level of safe task behavior was observed during the work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Completed observed task safely without support",
+        "Completed task safely with a brief reminder or cue",
+        "Completed task with repeated safety prompting or coaching",
+        "Unsafe behavior occurred but task continued after correction or modification",
+        "Unsafe behavior required staff intervention or stopping the task",
+        "Task did not provide a meaningful opportunity to evaluate safety",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Rate observed safe task behavior, including tool use, movement, materials, work procedures, or risk response when applicable.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed safe-work behavior evidence relevant to vocational planning and support verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "stressors_or_triggers_observed",
+      label: "Which work-related stressors, triggers, or challenging demands were observed during this visit?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Task difficulty",
+        "Making an error",
+        "Correction or redirection",
+        "Unexpected task change",
+        "Interrupted routine",
+        "Time pressure or productivity expectation",
+        "Customer interaction",
+        "Coworker interaction",
+        "Supervisor interaction",
+        "Environmental or sensory demand",
+        "Physical fatigue or discomfort",
+        "Equipment or tool difficulty",
+        "Unclear instruction",
+        "No observable stressor or trigger",
+        "Other",
+      ],
+      guidance:
+        "Select demands that occurred during this observation and were relevant to the client's observable response.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies observed workplace stressors or challenging demands relevant to work participation and future support verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "stress_response_observed",
+      label: "What observable response to stress, frustration, pressure, correction, change, or task difficulty occurred?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No observable stress response affecting work participation",
+        "Showed mild stress or frustration but continued work independently",
+        "Needed brief reassurance, redirection, clarification, or support to continue",
+        "Needed repeated support or a break to return to work participation",
+        "Stress response reduced pace, accuracy, quality, focus, or participation",
+        "Stress response caused withdrawal, escalation, shutdown, conflict, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable work-participation impact. Do not infer a diagnosis or cause beyond what occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether observed workplace stress response required support, recovery time, or further stability review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "unexpected_change_transition_response_observed",
+      label: "How did the client respond to unexpected changes, transitions, interruptions, or changes in routine?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No meaningful change, transition, interruption, or routine disruption occurred",
+        "Adjusted to the change or transition without support",
+        "Adjusted after a brief cue, explanation, or reassurance",
+        "Needed repeated support, preparation, or redirection to adjust",
+        "Change or transition reduced work participation, pace, quality, or focus",
+        "Change or transition caused distress, withdrawal, escalation, or inability to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document response only when a change, transition, or interruption actually occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed support needs related to transitions, interrupted routine, or unexpected workplace change.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "self_regulation_or_recovery_observed",
+      label: "How did the client regulate, recover, or return to work participation after stress, frustration, disruption, or difficulty?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No meaningful regulation or recovery demand occurred",
+        "Regulated or recovered independently and continued task participation",
+        "Recovered after brief reassurance, redirection, or problem-solving support",
+        "Recovered after a break, reduced demand, or repeated staff support",
+        "Returned to task only partially or with significantly reduced participation",
+        "Did not return to task participation during the observation",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observed recovery and return-to-task behavior when stress or disruption occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed recovery or return-to-task support needs relevant to workplace stability planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "workplace_stability_effect_on_participation",
+      label: "Overall, how did safety, stress-response, or self-regulation demands affect observed work participation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No observable safety or stability effect on work participation",
+        "Demands were present but work participation remained functional",
+        "Demands required brief support or adjustment to maintain participation",
+        "Demands reduced pace, accuracy, quality, focus, or participation",
+        "Demands required significant support, break, modification, or safety intervention",
+        "Demands significantly interfered with safe task completion or workplace stability",
+        "Observation did not include meaningful safety or regulation demands",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Summarize overall observable effect on work participation and safe workplace functioning.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes observed workplace-stability impact relevant to later vocational planning and job-support verification.",
+        }),
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies whether safety or regulation supports may require further evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safety_or_regulation_incident_details",
+      label: "Describe any safety concern, near miss, stress-response event, withdrawal, escalation, shutdown, or workplace-stability concern observed.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document what happened, what demand or event preceded it, observable response, effect on safety or work participation, staff response, and whether the client returned to task.",
+      guidance:
+        "Record specific factual observations. State clearly if no incident or safety/stability concern occurred during the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Preserves specific observed safety or workplace-stability evidence requiring review, follow-up, or verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safety_regulation_supports_used",
+      label: "Which safety, self-regulation, stress-response, or workplace-stability supports were used or tried during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "None used or needed",
+        "Safety instruction or reminder",
+        "Demonstration or modeling of safe task behavior",
+        "Personal protective equipment",
+        "Task modification",
+        "Environmental adjustment",
+        "Reduced task pace or demand",
+        "Predictable routine or advance warning",
+        "Break or recovery space",
+        "Calm verbal reassurance",
+        "Redirection to task",
+        "Problem-solving support",
+        "Private feedback",
+        "Job-coach mediation",
+        "Supervisor support",
+        "Removal from unsafe situation",
+        "Crisis or safety response",
+        "Other",
+        "Not observed",
+      ],
+      guidance:
+        "Select only supports or risk-reduction strategies actually used or tested during the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies safety or workplace-stability strategies used during observed work participation for later effectiveness review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "effectiveness_of_safety_regulation_supports",
+      label: "Describe the effectiveness of safety, self-regulation, stress-response, or workplace-stability supports used during the observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe what was used, what concern or demand it addressed, whether safety or work participation improved, whether the client recovered or returned to task, and what requires further verification.",
+      guidance:
+        "Record observed results only. If no support was used or evaluated, state that clearly.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides observed evidence about whether safety, regulation, or workplace-stability supports appeared effective during work participation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_reported_stressors_or_effective_strategies",
+      label: "What stressors, warning signs, coping strategies, or helpful supports did the client report during or after this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own report about stressors, frustration, unexpected change, safety concerns, helpful breaks, preferred support, calming strategies, or what helped them return to work. State if no client report was obtained.",
+      guidance:
+        "Separate client report from staff observation. Client report is valuable evidence but should not be treated as observed impact unless supported by what occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported workplace stressors and effective strategies for later vocational exploration and support verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "supervisor_or_staff_safety_stability_input",
+      label: "What supervisor, worksite, or staff input was obtained regarding safety, stress response, regulation, or workplace stability?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document verifiable input from a supervisor, coworker, employer representative, or supporting staff. Identify the source and state if no input was obtained.",
+      guidance:
+        "Separate reported input from direct observation and avoid treating unverified concern as confirmed functional evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves worksite- or staff-reported workplace stability information for later review and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safety_regulation_strengths_observed",
+      label: "What safety, self-regulation, recovery, or workplace-stability strengths were observed during this visit?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as following safety expectations, identifying hazards, accepting redirection, remaining regulated under demand, using a coping strategy, recovering after frustration, or returning to task appropriately.",
+      guidance:
+        "Document strengths tied to actual safety or stability demands observed during this visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed workplace safety and stability strengths relevant to FACTS/VFP and later vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safety_regulation_concerns_observed",
+      label: "What safety, self-regulation, stress-response, or workplace-stability concerns were observed?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as missed safety steps, unsafe behavior, difficulty recognizing hazards, significant stress response, inability to recover, leaving task, escalation, or areas requiring further evaluation.",
+      guidance:
+        "Record observable functional evidence only and identify what remains to be evaluated or verified.",
+      evidenceCategory: EVIDENCE_CATEGORY.SAFETY,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed safety or workplace-stability concerns that may affect vocational planning or require additional assessment.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "safety_regulation_vocational_implications",
+      label: "What are the vocational implications of the observed safety, stress-response, and workplace-stability evidence?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how observed safety or stability evidence may inform FACTS/VFP, additional situational assessment, safety training, environmental review, job exploration, support planning, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning without making diagnostic assumptions or unsupported job-fit conclusions.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed workplace safety and stability evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase C currently includes Section 7
+// Sections 1–6 remain verified and unchanged.
+// Future Sections 8–10 will add support effectiveness, job fit/retention,
+// and summary/follow-up evidence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -2223,6 +2670,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS,
   SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS,
   SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS,
+  SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
