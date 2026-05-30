@@ -393,11 +393,12 @@ Recommended target occupations rule:
     officialFields[key] = clampOfficialText(rawOfficialFields[key] || '', limit);
   }
 
-    // Do not allow AI to create or carry forward unsupported final planning values.
-  // Staff enters verified CRP/job coach hours after AI drafting.
-  // Staff/client enter finalized top 3 occupational targets after exploration and review.
+      // Do not allow AI to create or carry forward official planning values
+  // that must be completed by staff, the client/staff team, or VR.
   officialFields.planned_job_search_hours_week = '';
   officialFields.recommended_target_occupations = '';
+  officialFields.job_development_supports = '';
+  officialFields.ongoing_supports = '';
 
   return {
     official_wsa_fields: officialFields,
