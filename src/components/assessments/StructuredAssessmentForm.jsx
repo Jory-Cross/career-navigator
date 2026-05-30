@@ -92,14 +92,18 @@ export default function StructuredAssessmentForm({
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        {sections.map((section, i) => (
+                {sections.map((section, i) => (
           <SectionPanel
             key={section.id}
             section={section}
             responses={responses}
             onChange={onChange}
             disabled={disabled || saving}
-            defaultOpen={i === 0}
+            defaultOpen={
+              assessmentType === "work_performance_support_observation"
+                ? false
+                : i === 0
+            }
           />
         ))}
       </div>
