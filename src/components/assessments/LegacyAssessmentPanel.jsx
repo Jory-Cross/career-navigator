@@ -74,17 +74,54 @@ export default function LegacyAssessmentPanel({
   const isInterestProfiler = key === "interest_profiler";
   const isWSA = key === "work_strategy_assessment";
 
-  const [responses, setResponses] = useState(existingRecord?.responses || {});
-   const [saving, setSaving] = useState(false);
+    const [responses, setResponses] = useState(existingRecord?.responses || {});
+  const [saving, setSaving] = useState(false);
   const [uploadingWSA, setUploadingWSA] = useState(false);
   const [downloadingWSA, setDownloadingWSA] = useState(false);
   const [generatingWSAFields, setGeneratingWSAFields] = useState(false);
   const [generatingWSAReport, setGeneratingWSAReport] = useState(false);
 
+  const latestResponsesRef = useRef(existingRecord?.responses || {});
+  const existingRecordIdRef = useRef(existingRecord?.id || null);
+  const wsaDirtyRef = useRef(false);
+
   useEffect(() => {
-    setResponses(existingRecord?.responses || {});
+    const savedResponses = existingRecord?.responses || {};
+
+    setResponses(savedResponses);
+    latestResponsesRef.current = savedResponses;
+    existingRecordIdRef.current = existingRecord?.id || null;
+    wsaDirtyRef.current = false;
   }, [existingRecord?.id]);
 
+  useEffect(() => {
+    return () => {
+      if (!isWSA || !wsaDirtyRef.current || !clientId) {
+        return;
+      }
+
+      const payload = {
+        client_id: clientId,
+        assessment_type: key,
+        status: "in_progress",
+        responses: latestResponsesRef.current,
+      };
+
+      if (existingRecordIdRef.current) {
+        base44.entities.Assessment
+          .update(existingRecordIdRef.current, payload)
+          .catch((error) => {
+            console.error("WSA save-on-exit update failed:", error);
+          });
+      } else {
+        base44.entities.Assessment
+          .create(payload)
+          .catch((error) => {
+            console.error("WSA save-on-exit create failed:", error);
+          });
+      }
+    };
+  }, [isWSA, clientId, key]);
   const answeredCount = useMemo(
     () => countAnsweredQuestions(questions, responses),
     [questions, responses]
