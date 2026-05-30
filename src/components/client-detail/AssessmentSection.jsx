@@ -342,9 +342,10 @@ function AssessmentCard({ assessment, record, isActive, onClick }) {
 
 export default function AssessmentSection({ clientId, client, openAssessmentType, onOpenAssessmentTypeHandled }) {
   const resolvedClientId = clientId || client?.id || "";
-  const [activeKey, setActiveKey] = useState(null);
+    const [activeKey, setActiveKey] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const formPanelRef = useRef(null);
+  const leaveSaveRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: assessments = [], isLoading } = useQuery({
