@@ -142,11 +142,21 @@ export default function LegacyAssessmentPanel({
     );
   }
 
-  function updateResponse(questionId, value) {
-    setResponses((previous) => ({
-      ...previous,
-      [questionId]: value,
-    }));
+   function updateResponse(questionId, value) {
+    setResponses((previous) => {
+      const nextResponses = {
+        ...previous,
+        [questionId]: value,
+      };
+
+      latestResponsesRef.current = nextResponses;
+
+      if (isWSA) {
+        wsaDirtyRef.current = true;
+      }
+
+      return nextResponses;
+    });
   }
 
   async function saveAssessment(status = "completed", options = {}) {
