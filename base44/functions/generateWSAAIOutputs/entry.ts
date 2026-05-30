@@ -74,6 +74,9 @@ const WSA_FIELD_LABELS = {
 
 const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS);
 
+const PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE =
+  '[Staff entry required: enter planned CRP/job coach job-development support hours per week from verified plan or authorization.]';
+
 function safeString(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
