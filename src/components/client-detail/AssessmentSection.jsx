@@ -414,12 +414,18 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     // Legacy panel
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <LegacyAssessmentPanel
+                <LegacyAssessmentPanel
           key={activeKey}
           assessmentDef={activeAssessment}
           existingRecord={activeRecord}
           clientId={resolvedClientId}
-          onSaved={() => { handleSaved(); onClose?.(); }}
+          onRegisterLeaveSave={(saveFunction) => {
+            leaveSaveRef.current = saveFunction;
+          }}
+          onSaved={async () => {
+            await handleSaved();
+            onClose?.();
+          }}
         />
       </div>
     );
