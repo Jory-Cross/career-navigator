@@ -415,6 +415,20 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const renderRightPanel = (onClose) => {
     if (!activeAssessment || !activeAssessment.available) return null;
 
+      if (activeAssessment.key === "work_performance_support_observation") {
+      return (
+        <WorkPerformanceSupportObservationPanel
+          clientId={resolvedClientId}
+          records={assessments.filter(
+            (record) =>
+              record.assessment_type ===
+              WORK_PERFORMANCE_SUPPORT_OBSERVATION_META.assessment_type
+          )}
+          onSaved={handleSaved}
+        />
+      );
+    }
+
     if (activeAssessment.type === "structured") {
       return (
         <StructuredAssessmentWorkspacePanel
@@ -426,7 +440,6 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
         />
       );
     }
-
     // Legacy panel
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
