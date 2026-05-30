@@ -3476,10 +3476,380 @@ const SECTION_JOB_FIT_RETENTION_SUSTAINABILITY = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase C currently includes Sections 7, 8, and 9
-// Sections 1–8 remain verified and unchanged.
-// Future Section 10 will add observation summary, follow-up, and evidence
-// disposition fields.
+// Section 10: Observation Summary, Verified Evidence, Follow-Up, and
+// FACTS/VFP Relevance
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_OBSERVATION_SUMMARY_FOLLOW_UP = defineSection({
+  id: "observation_summary_follow_up",
+  label: "Observation Summary, Verified Evidence, Follow-Up & FACTS/VFP Relevance",
+  description:
+    "Summarize the strongest evidence from this dated observation, identify what remains uncertain, record follow-up needed, and identify which future planning areas may use the verified evidence.",
+  guidance:
+    "Summarize what was observed and distinguish verified observation evidence from client report, worksite report, and items requiring additional verification. This section does not automatically push evidence into FACTS/VFP, generate recommendations, complete official WSA VR-controlled fields, establish long-term support hours, or decide service outcomes.",
+  questions: [
+    defineQuestion({
+      id: "observation_completion_status",
+      label: "What is the completion status of this observation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Completed observation with sufficient evidence for this visit",
+        "Completed observation but additional verification is needed",
+        "Partial observation - task or visit ended before sufficient evidence was gathered",
+        "Observation completed primarily for monitoring or follow-up",
+        "Observation could not be meaningfully completed",
+        "Other",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Clarifies whether this observation produced sufficient evidence for the visit or requires additional observation and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "overall_observation_summary",
+      label: "Provide a brief integrated summary of what occurred and what was learned during this observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Summarize the task or work activity observed, setting, client participation, key performance evidence, supports used, relevant client or worksite input, and the most important next consideration.",
+      guidance:
+        "Provide a concise integrated summary of this visit. Do not repeat every response from earlier sections unless needed to explain the primary findings.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Provides an integrated dated-observation summary for later FACTS/VFP, planning, recommendation, and support-review consideration.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "verified_strengths_from_observation",
+      label: "What are the strongest verified vocational strengths demonstrated during this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document directly observed strengths such as task completion, effective learning, independent performance, tolerated demands, safe behavior, successful communication, support use, engagement, or natural-support response.",
+      guidance:
+        "Record only strengths supported by this observation. Identify the task or demand connected to each strength when possible.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures the strongest directly observed vocational strengths from this visit for later evidence-based planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "verified_support_needs_from_observation",
+      label: "What are the strongest verified support needs demonstrated during this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document supports supported by observation, such as prompting, instruction method, visual cue, environmental adjustment, physical-demand modification, communication support, safety strategy, recovery support, or natural-support need.",
+      guidance:
+        "Record needs evidenced during this observation and connect each need to the task, demand, or performance impact observed. Do not finalize long-term accommodations or service levels here.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Captures verified support-need evidence from the observation for later collaborative review and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "verified_barriers_or_concerns_from_observation",
+      label: "What functional barriers, concerns, or cautions were directly supported by this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observed concerns such as task-sequencing difficulty, physical stamina limits, environmental response, communication difficulty, safety concern, regulation/stability issue, high support need, or uncertainty about sustainability.",
+      guidance:
+        "Record observable functional evidence only. Avoid diagnostic labels or conclusions not supported by what occurred during this visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observation-supported functional concerns requiring consideration, additional evaluation, or support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "verified_preferences_or_client_perspective",
+      label: "What client-reported preferences, concerns, interests, or perspectives should be preserved from this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own report about tasks, work environment, support preferences, stressors, interest in similar work, desire to continue, concerns, or preferred next steps. State if no client input was obtained.",
+      guidance:
+        "Record this as client-reported evidence and separate it from direct staff observation or worksite report.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported perspective relevant to collaborative vocational planning and later verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "evidence_requiring_additional_verification",
+      label: "Which findings, concerns, or possible implications require additional verification before being treated as confirmed?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document evidence requiring additional observation, corroboration, client confirmation, worksite input, support testing, environmental comparison, safety review, or assessment data before conclusions are made.",
+      guidance:
+        "Use this field to prevent premature conclusions from one visit or limited evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies findings that require further observation or corroboration before being used for longer-term planning or decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "follow_up_actions_recommended",
+      label: "Which follow-up actions are appropriate based on this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "No immediate follow-up identified from this observation",
+        "Complete another observation of a similar task",
+        "Observe different tasks in the same work environment",
+        "Observe similar tasks in a different work environment",
+        "Evaluate a specific support or accommodation strategy again",
+        "Evaluate natural workplace supports",
+        "Gather additional client input or preferences",
+        "Gather supervisor or employer input",
+        "Gather additional assessment evidence",
+        "Review evidence in FACTS/VFP",
+        "Review evidence during job recommendation or career exploration process",
+        "Review evidence for current employment retention or support planning",
+        "Review evidence for later WSA draft preparation",
+        "Address an observed safety or stability concern",
+        "Other",
+      ],
+      guidance:
+        "Select next steps supported by this observation. These are follow-up actions for review, not final service, placement, recommendation, or accommodation decisions.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies observation-supported follow-up actions for further evidence gathering, planning, support review, or safety response.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "follow_up_details_and_responsibility",
+      label: "Describe the recommended follow-up, who should complete it, and why it is needed.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Employment specialist should complete a second observation of a similar stocking task using the visual checklist to determine whether accuracy improvement persists with reduced prompting.",
+      guidance:
+        "Specify the action, responsible person or role when known, the evidence question being addressed, and why the follow-up is needed.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides actionable follow-up detail tied to unanswered evidence questions or support-verification needs.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "recommended_timeframe_for_follow_up",
+      label: "When should additional observation, verification, or review occur?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No follow-up timeframe identified",
+        "Before drawing vocational conclusions",
+        "During the next planned observation",
+        "Within 1 week",
+        "Within 30 days",
+        "At the next employment-support review",
+        "During retention or support-fading review",
+        "After additional assessment information is available",
+        "Other",
+      ],
+      guidance:
+        "Select the timeframe supported by the observation and the urgency of follow-up needed.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "medium",
+    }),
+
+    defineQuestion({
+      id: "evidence_relevant_to_facts_vfp",
+      label: "Which evidence domains from this observation may be relevant to FACTS/VFP review later?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Observed task-performance strength",
+        "Observed task-performance concern",
+        "Instruction or learning strategy evidence",
+        "Prompting or job-coaching support evidence",
+        "Physical-demand or stamina evidence",
+        "Environmental or sensory-response evidence",
+        "Communication or social-interaction evidence",
+        "Safety, self-regulation, or workplace-stability evidence",
+        "Support or accommodation effectiveness evidence",
+        "Natural workplace support evidence",
+        "Client-reported preference or concern",
+        "Job-fit or retention indicator",
+        "No FACTS/VFP-relevant evidence identified from this observation",
+        "Other",
+      ],
+      guidance:
+        "Select verified evidence domains that may later be considered during FACTS/VFP extraction or review. This field does not automatically write or update FACTS/VFP.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies observation evidence domains that may later be considered for FACTS/VFP review without automatically updating the profile.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "evidence_relevant_to_recommendations_or_job_exploration",
+      label: "How may this observation evidence be relevant to job exploration or later recommendation review?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Use as evidence supporting exploration of similar tasks or work environments",
+        "Use as evidence identifying work demands to avoid or evaluate carefully",
+        "Use as evidence identifying supports to verify during job exploration",
+        "Use as evidence requiring additional observation before recommending job directions",
+        "Relevant to current-job review only, not new job exploration",
+        "No recommendation or job-exploration relevance identified",
+        "Other",
+      ],
+      guidance:
+        "Select how verified evidence may later inform job exploration or recommendation review. This does not generate or approve a job recommendation.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies how observed evidence may inform later career exploration or recommendation review while preserving staff and client decision-making.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "evidence_relevant_to_wsa_drafting",
+      label: "How may this observation be relevant to later Work Strategy Assessment draft preparation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Relevant to later AI-assisted WSA draft preparation",
+        "Relevant only after additional verification",
+        "Relevant to supplemental narrative analysis only",
+        "Not relevant to WSA draft preparation",
+        "Not applicable - employed-client ongoing observation",
+        "Unable to determine",
+      ],
+      guidance:
+        "This field records possible future WSA relevance only. It does not automatically fill official WSA fields or override fields reserved for staff or VR completion.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies possible WSA-drafting relevance while preserving verification and human-controlled WSA field boundaries.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "evidence_relevant_to_current_employment_support_review",
+      label: "How may this observation be relevant to support review for a currently employed client?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Relevant to job-coaching support review",
+        "Relevant to retention monitoring",
+        "Relevant to support continuation review",
+        "Relevant to evaluation of support fading",
+        "Relevant to natural-support evaluation",
+        "Relevant to workplace accommodation or support discussion",
+        "Not applicable - pre-employment observation",
+        "No current-employment support-review relevance identified",
+        "Other",
+      ],
+      guidance:
+        "Select employed-client support-review relevance only when applicable. This does not establish service hours, accommodation decisions, or support-fading outcomes.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies possible current-employment support-review use of observation evidence without making final support or service decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "observation_limitations",
+      label: "What limitations affect interpretation of this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document what could not be evaluated, tasks not completed, limited observation duration, unusual conditions, incomplete input, unclear expectations, supports not tested, or reasons conclusions should remain cautious.",
+      guidance:
+        "Record limits on the evidence so later users do not overinterpret the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves limitations that must be considered before using this observation in vocational planning or recommendation review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "final_observer_notes",
+      label: "Additional final observer notes",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document any additional information needed to understand this observation that was not captured in the sections above.",
+      guidance:
+        "Use only for relevant additional documentation. Avoid repeating information already adequately recorded.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "medium",
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Completed ten-section Work Performance & Support
+// Observation definition
+// Sections 1–9 remain verified and unchanged.
+// Section 10 adds final observation summary, evidence relevance, and follow-up
+// documentation without automatically updating downstream systems.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -3492,6 +3862,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS,
   SECTION_SUPPORTS_ACCOMMODATIONS_EFFECTIVENESS,
   SECTION_JOB_FIT_RETENTION_SUSTAINABILITY,
+  SECTION_OBSERVATION_SUMMARY_FOLLOW_UP,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
