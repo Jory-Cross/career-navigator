@@ -2657,10 +2657,455 @@ const SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase C currently includes Section 7
-// Sections 1–6 remain verified and unchanged.
-// Future Sections 8–10 will add support effectiveness, job fit/retention,
-// and summary/follow-up evidence.
+// Section 8: Supports, Accommodations, Job Coaching Strategies, and Natural
+// Support Effectiveness
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_SUPPORTS_ACCOMMODATIONS_EFFECTIVENESS = defineSection({
+  id: "supports_accommodations_effectiveness",
+  label: "Supports, Accommodations, Job Coaching Strategies & Natural Support Effectiveness",
+  description:
+    "Document supports, accommodations, job-coaching strategies, and natural workplace supports actually used or tested during this observation, along with their observed effectiveness.",
+  guidance:
+    "Document observational support evidence only: the observed need, the support or accommodation tried, who provided it, the observable effect, client or worksite input, and the direction for later review. This section must not determine final accommodation plans, final support hours, service discontinuation, or the official WSA Joint VR/CRP Recommendations fields.",
+  questions: [
+    defineQuestion({
+      id: "supports_accommodations_used_during_observation",
+      label: "Which supports, accommodations, or job-coaching strategies were actually used or tried during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "None used or needed",
+        "Verbal instruction or reminder",
+        "Visual cue or checklist",
+        "Written instructions",
+        "Demonstration or modeling",
+        "Task breakdown into smaller steps",
+        "Repetition or additional practice",
+        "Extra processing time",
+        "Job-coach redirection",
+        "Job-coach reassurance",
+        "Problem-solving support",
+        "Task modification",
+        "Adjusted work pace",
+        "Break or recovery space",
+        "Environmental adjustment",
+        "Physical-demand modification",
+        "Safety instruction or risk-reduction support",
+        "Communication support",
+        "Supervisor support",
+        "Coworker or natural support",
+        "Technology-based reminder or support",
+        "Personal protective equipment",
+        "Other",
+        "Not observed",
+      ],
+      guidance:
+        "Select only supports, accommodations, or strategies actually used, provided, or tested during this observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies supports and accommodations actually used during observed work participation for later effectiveness review and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "primary_support_need_addressed",
+      label: "Which observed work-participation needs were the supports or accommodations intended to address?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Learning a new task",
+        "Task initiation",
+        "Sequencing or remembering steps",
+        "Accuracy or quality",
+        "Pace or productivity",
+        "Error recognition or correction",
+        "Physical stamina or endurance",
+        "Environmental or sensory tolerance",
+        "Communication or asking for help",
+        "Coworker or customer interaction",
+        "Supervision or feedback response",
+        "Safety or hazard awareness",
+        "Stress response or self-regulation",
+        "Transition or unexpected change",
+        "Workplace stability or retention",
+        "No specific support need identified",
+        "Other",
+      ],
+      guidance:
+        "Select needs supported by evidence from this observation. Do not select a need solely because it may be relevant generally.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Links tested supports to the observed work-participation needs they were intended to address.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "job_coach_support_intensity_observed",
+      label: "What overall level of direct job-coach or staff support was required during the observed task or work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No direct job-coach support needed during observed task",
+        "Brief check-in or monitoring only",
+        "Occasional cue, reminder, or clarification",
+        "Repeated prompts, coaching, or redirection",
+        "Frequent active support throughout task",
+        "Continuous one-to-one support required during task",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Rate the observed intensity of direct job-coach or staff support during this visit only. Do not use this field to establish ongoing service hours.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed direct-support intensity without making a final ongoing-support or service-hour determination.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "support_delivery_context_notes",
+      label: "Describe the support or accommodation provided, who provided it, what task or demand it addressed, and why it was used.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Employment specialist provided a visual checklist after the client missed the final quality-check step during shelf stocking. Supervisor then used the same checklist during a second attempt.",
+      guidance:
+        "Include enough detail to connect the support to the observed work demand and the performance evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides context needed to interpret support-effectiveness evidence and determine what requires continued evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "natural_supports_available_observed",
+      label: "Which natural workplace supports were available or observed during this visit?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Supervisor available for routine check-in",
+        "Supervisor provided instruction or feedback",
+        "Coworker available for questions",
+        "Coworker modeled or assisted with task",
+        "Written workplace procedure or checklist",
+        "Naturally predictable task routine",
+        "Worksite equipment or setup supported performance",
+        "Scheduled break or routine supported participation",
+        "No natural support identified during observation",
+        "Natural support availability not evaluated",
+        "Other",
+      ],
+      guidance:
+        "Natural supports are ordinary workplace resources or interactions available without relying only on job-coach intervention.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies workplace-based natural supports that may contribute to task participation and later support planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "natural_support_effectiveness_observed",
+      label: "What effectiveness of natural workplace supports was observed during this visit?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Natural supports were available and effective without job-coach involvement",
+        "Natural supports were effective with brief job-coach facilitation",
+        "Natural supports were partially effective but additional support was needed",
+        "Natural supports were available but did not adequately address the observed need",
+        "Natural support was attempted but created confusion or concern",
+        "No natural supports were available or observed",
+        "Natural support effectiveness was not evaluated",
+        "Unable to determine during this observation",
+      ],
+      guidance:
+        "Rate only natural supports that were actually available, used, or observed during this visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether observed natural supports appeared effective or require additional evaluation before relying on them.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "natural_support_examples_notes",
+      label: "Describe specific natural support interactions or workplace resources and the observed outcome.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Supervisor gave the routine end-of-task reminder already used with all staff; client responded and completed cleanup without job-coach prompting.",
+      guidance:
+        "Document who or what provided natural support, what occurred, and what effect was observed on work participation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides specific evidence regarding natural-support availability and effectiveness in the observed work context.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_response_to_supports_observed",
+      label: "How did the client respond to the supports, accommodations, or job-coaching strategies used during this observation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No support or accommodation was used during observed task",
+        "Accepted and used support effectively without difficulty",
+        "Accepted support and improved participation after brief clarification",
+        "Used support inconsistently or needed repeated coaching to use it",
+        "Support appeared to cause frustration, confusion, discomfort, or reduced participation",
+        "Client declined or did not use support when offered",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable response to supports actually offered or used. Client preference may also be recorded in the narrative field below.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed client response to tested support strategies for later vocational and support-planning review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "overall_support_effectiveness_observed",
+      label: "Overall, what effect did the tested supports or accommodations have on observed work participation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No support was used or needed during observed task",
+        "Support improved independence or reduced prompt need",
+        "Support improved task initiation, sequencing, accuracy, or quality",
+        "Support improved pace, endurance, environmental tolerance, communication, safety, or stability",
+        "Support helped partially but additional modification or evaluation is needed",
+        "Support had no clear observable effect during this visit",
+        "Support appeared ineffective or created concern",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Summarize the observed effect of supports tried during this visit only. Use narrative fields to identify which supports led to which effects.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Summarizes observed support effectiveness for later continued-use, modification, fading, or additional-evaluation review.",
+        }),
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Provides support-effectiveness evidence relevant to FACTS/VFP and future vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "effective_supports_to_continue_evaluating",
+      label: "Which supports or accommodations appeared helpful and should continue to be evaluated?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the support, observed need addressed, evidence of benefit, and whether it should be tried again or verified in another task or observation.",
+      guidance:
+        "Record supports that appeared helpful based on observed evidence. This is not a final accommodation or service-plan decision.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies support strategies showing observed benefit that warrant continued evaluation or verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "ineffective_or_problematic_supports_observed",
+      label: "Which supports or accommodations appeared ineffective, problematic, or in need of adjustment?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document any strategy that did not help, was not used successfully, caused confusion or discomfort, created a concern, or should be modified before being tried again.",
+      guidance:
+        "Record only strategies actually attempted or offered during the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies tested strategies that may require modification, replacement, or additional verification before further use.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_reported_support_preferences_or_concerns",
+      label: "What support, accommodation, or job-coaching preferences or concerns did the client report?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own report about supports that helped, supports they prefer, supports they did not like, privacy concerns, comfort with natural supports, or strategies they want tried again. State if no client report was obtained.",
+      guidance:
+        "Separate client report from staff observation. Client preference is important but should not be recorded as observed effectiveness unless supported by what occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported support and accommodation preferences for later collaborative vocational planning and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "employer_supervisor_input_on_supports",
+      label: "What employer, supervisor, coworker, or worksite input was obtained about support feasibility or effectiveness?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document verifiable worksite input about available natural supports, feasible accommodations, observed support benefit, workplace concerns, or strategies to evaluate further. Identify the source and state if no input was obtained.",
+      guidance:
+        "Separate reported worksite input from direct observation. Do not treat unverified input as confirmed effectiveness evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves worksite-reported support feasibility and effectiveness information for later review and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "support_change_compared_with_prior_observation",
+      label: "Compared with a prior observation of this task or similar work, how did the client's observed support need change?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Needed less support than previously observed",
+        "Needed a similar level of support",
+        "Needed more support than previously observed",
+        "Different task or setting - comparison not appropriate",
+        "No prior comparable observation available",
+        "Support need was not evaluated during this observation",
+        "Unable to determine",
+      ],
+      guidance:
+        "Compare only when the prior observation involved a comparable task or demand.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents observed change in support need over comparable observations for later support-progress review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "support_continuation_fading_increase_review",
+      label: "Based on this observation, which support directions should be reviewed later by staff and the client?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Continue current support strategy for further observation",
+        "Continue support strategy because it appeared effective",
+        "Modify support strategy and reevaluate",
+        "Increase support or training for further evaluation",
+        "Begin evaluating whether support can be faded",
+        "Support appeared unnecessary for this observed task",
+        "Evaluate natural support replacement for job-coach support",
+        "Additional observation needed before deciding",
+        "No support direction identified during this observation",
+        "Other",
+      ],
+      guidance:
+        "Select directions for later review only. This field does not finalize accommodations, support hours, service changes, or official WSA recommendations.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies observation-supported directions for later collaborative review of support continuation, change, increase, natural support use, or possible fading.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "support_follow_up_or_verification_needed",
+      label: "What follow-up, additional observation, or verification is needed before support decisions are made?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document follow-up needed, such as trying the support during another task, confirming employer feasibility, reviewing client preference, evaluating natural supports, observing support fading, checking safety, or gathering additional evidence.",
+      guidance:
+        "State what must still be learned or verified before decisions are made.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies follow-up needed before making longer-term support, accommodation, or job-coaching decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "support_effectiveness_vocational_implications",
+      label: "What are the vocational implications of the observed support and accommodation effectiveness evidence?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how tested-support evidence may inform FACTS/VFP, additional situational assessment, job exploration, workplace-support review, retention planning, natural-support evaluation, or later recommendation decisions.",
+      guidance:
+        "Connect observed support evidence to vocational planning without finalizing accommodation plans, ongoing support hours, service decisions, or official WSA joint recommendations.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed support and accommodation effectiveness for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase C currently includes Sections 7 and 8
+// Sections 1–7 remain verified and unchanged.
+// Future Sections 9 and 10 will add job-fit/retention and
+// summary/follow-up evidence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -2671,6 +3116,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS,
   SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS,
   SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS,
+  SECTION_SUPPORTS_ACCOMMODATIONS_EFFECTIVENESS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
