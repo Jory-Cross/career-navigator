@@ -692,13 +692,343 @@ const SECTION_TASK_INSTRUCTIONS_LEARNING = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase A currently includes Sections 1 and 2
-// Section 3 will add task-performance and ongoing prompt-level measurement.
+// Section 3: Task Performance, Pace, Accuracy, Quality, and Support Progress
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS = defineSection({
+  id: "task_performance_support_progress",
+  label: "Task Performance, Pace, Accuracy, Quality & Support Progress",
+  description:
+    "Document the client's observed performance on the specific work task or activity completed during this dated observation.",
+  guidance:
+    "This section captures performance evidence from the task or work activity observed during this visit. Use it to document functional vocational evidence for FACTS/VFP and later planning. It is not the reusable ongoing employed-client task-analysis tool. Detailed recurring job-duty plans and step-by-step prompt ratings will be built separately once actual employed job responsibilities are known.",
+  questions: [
+    defineQuestion({
+      id: "primary_task_evaluated",
+      label: "What was the primary task or work activity evaluated during this observation?",
+      type: QUESTION_TYPES.SHORT_TEXT,
+      placeholder:
+        "Example: collecting laundry, stocking shelves, folding towels, cleaning tables, sorting supplies",
+      guidance:
+        "Enter the main observed task being evaluated in this section.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies the primary work task connected to the task-performance evidence documented in this observation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "additional_tasks_evaluated",
+      label: "Were any additional tasks observed or evaluated during this visit?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "List any additional tasks observed and provide brief context about the client's participation or performance.",
+      guidance:
+        "Use this field for additional observed activities. The primary rating questions below should focus on the main task unless otherwise explained in notes.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "medium",
+    }),
+
+    defineQuestion({
+      id: "task_initiation",
+      label: "How did the client begin the primary observed task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Initiated task independently after assignment or expected cue",
+        "Initiated after a gesture or visual cue",
+        "Initiated after an indirect verbal prompt",
+        "Initiated after a direct verbal prompt",
+        "Initiated after modeling or demonstration",
+        "Required physical assistance to begin",
+        "Did not initiate task during the observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document how the client began the observed task, not how the task was initially taught.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents the level of support required for initiation of the observed work task.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "overall_prompt_level_for_observed_tasks",
+      label: "What was the highest level of prompt or assistance required for the primary observed task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "I - Independent",
+        "G - Gesture",
+        "IV - Indirect Verbal",
+        "V - Verbal",
+        "M - Model",
+        "PA - Physical Assistance",
+        "Unable to determine",
+        "Not observed",
+      ],
+      guidance:
+        "Select the highest level of support required during performance of the primary task. Use the next narrative field to identify which part of the task required that support and whether performance varied across steps.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Summarizes the highest observed prompt or assistance level required during performance of the evaluated task.",
+        }),
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Provides observed task-support evidence for later vocational planning and support verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "prompt_level_examples",
+      label: "Describe where prompting or assistance was required during the observed task.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Client independently located the cart and collected items, but needed a verbal reminder to verify all bins were checked before returning to the laundry area.",
+      guidance:
+        "Describe the specific part of the task where support was needed. If support level differed across parts of the task, document those differences here.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides specific observed evidence about where task prompting or assistance was needed.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "task_sequence_completion",
+      label: "How well did the client complete the task steps in the expected order?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Completed steps in expected order independently",
+        "Completed steps in order with occasional support",
+        "Completed steps in order with repeated support",
+        "Completed some steps but missed or reordered important steps",
+        "Unable to complete the task sequence",
+        "Task did not require a sequence of steps",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "task_completion_level",
+      label: "What level of task completion was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Completed task independently",
+        "Completed task with minimal support",
+        "Completed task with moderate support",
+        "Completed task with substantial support",
+        "Partially completed task",
+        "Unable to complete task",
+        "Task was started but observation ended before completion",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents observed task-completion evidence relevant to vocational functioning and future evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "work_pace_observed",
+      label: "How did the client's work pace compare with the expectation of the observed task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Met expected pace independently",
+        "Met expected pace with support or reminders",
+        "Completed task at a slower pace but remained functional",
+        "Pace was substantially slower than task expectation",
+        "Worked too quickly and quality or safety was affected",
+        "Pace expectation was not established",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents whether the observed work pace appeared compatible with the task expectation during this observation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "accuracy_quality_observed",
+      label: "What level of accuracy or work quality was observed on the primary task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Accurate work meeting task expectations",
+        "Generally accurate with minor correctable errors",
+        "Completed task with repeated quality errors",
+        "Quality concerns significantly affected task completion",
+        "Unable to assess quality because task was incomplete",
+        "Quality standard was not clear",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "error_awareness_and_correction",
+      label: "How did the client respond to errors or quality issues during task performance?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Identified and corrected errors independently",
+        "Corrected errors after gesture or visual cue",
+        "Corrected errors after indirect verbal prompt",
+        "Corrected errors after direct verbal instruction",
+        "Corrected errors after modeling or demonstration",
+        "Required physical assistance to correct error",
+        "Did not recognize or correct error during observation",
+        "No errors observed",
+        "Not observed",
+      ],
+      guidance:
+        "Document observed response to actual errors or quality issues. Do not assume error awareness when no error occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents the support required for error recognition or correction during observed task performance.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "persistence_and_follow_through",
+      label: "How did the client persist with and follow through on the observed task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Remained engaged and completed the task",
+        "Remained engaged with occasional redirection or encouragement",
+        "Needed repeated redirection or encouragement to continue",
+        "Stopped task and required significant support to resume",
+        "Did not resume or complete task after difficulty",
+        "Observation was too brief to evaluate",
+        "Not observed",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "support_or_training_needed_from_observation",
+      label: "What additional instruction, support, practice, or verification appears needed based on this observed task?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observed needs such as additional task practice, visual supports to evaluate, safety review, task-sequencing instruction, pace monitoring, quality checking, or additional observation before drawing conclusions.",
+      guidance:
+        "Base this entry only on observed performance evidence. Do not create final employment recommendations from a single observation unless verified through the broader process.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies support or training areas indicated by observed task-performance evidence for later review and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "task_performance_strengths_observed",
+      label: "What work-performance strengths were observed during this task?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as independent task initiation, accurate completion, consistent pace, persistence, safe work habits, response to feedback, or successful use of learned strategies.",
+      guidance:
+        "Record observed strengths rather than general impressions.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed work-performance strengths relevant to FACTS/VFP and later career planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "task_performance_concerns_observed",
+      label: "What work-performance concerns, difficulties, or barriers were observed during this task?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as missed steps, need for repeated prompts, poor quality, slow pace, safety concerns, difficulty correcting errors, frustration, or incomplete performance.",
+      guidance:
+        "Document observable functional evidence and avoid conclusions not supported by what occurred during this observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed functional work-performance concerns requiring consideration or later verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "task_performance_vocational_implications",
+      label: "What are the vocational implications of the task-performance evidence observed during this visit?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how the observed task evidence may inform FACTS/VFP, further situational assessment, training needs, job exploration, workplace-support review, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning while identifying any conclusions that still require additional observation or verification.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed task-performance evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase A currently includes Sections 1, 2, and 3
+// A separate future task-analysis module will support reusable employed-client
+// job routines, ordered task steps, and repeated step-level prompt scoring.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_OBSERVATION_CONTEXT,
   SECTION_TASK_INSTRUCTIONS_LEARNING,
+  SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
