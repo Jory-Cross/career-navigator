@@ -3102,10 +3102,384 @@ const SECTION_SUPPORTS_ACCOMMODATIONS_EFFECTIVENESS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase C currently includes Sections 7 and 8
-// Sections 1–7 remain verified and unchanged.
-// Future Sections 9 and 10 will add job-fit/retention and
-// summary/follow-up evidence.
+// Section 9: Job Fit, Work-Role Sustainability, Retention Indicators, and
+// Continued Evaluation Needs
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_JOB_FIT_RETENTION_SUSTAINABILITY = defineSection({
+  id: "job_fit_retention_sustainability",
+  label: "Job Fit, Work-Role Sustainability, Retention Indicators & Continued Evaluation Needs",
+  description:
+    "Document observation-supported indicators about possible task or job-direction fit, sustainability of current work participation, retention strengths or concerns, and what requires further evaluation.",
+  guidance:
+    "This section may be used during exploration, situational assessment, trial work, placement, current employment, retention review, or support fading. Document observed task, environment, support, client-input, and worksite-input evidence. Do not make a final job-fit, placement, employment-continuation, or service decision from a single observation.",
+  questions: [
+    defineQuestion({
+      id: "job_fit_context_at_observation",
+      label: "What job-fit or retention context applies to this observation?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Pre-employment exploration or discovery",
+        "Situational assessment of possible work direction",
+        "Trial work experience",
+        "Job-placement fit review",
+        "New employment stabilization",
+        "Current employment retention review",
+        "Ongoing support review",
+        "Support-fading review",
+        "Unable to determine",
+        "Other",
+      ],
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies whether observed fit and sustainability evidence applies to exploration, placement, current employment, retention, or support-fading review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "observed_role_or_task_match",
+      label: "Based on this observation, what functional match was observed between the client and the role or task demands evaluated?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Observed task demands appeared compatible with demonstrated abilities and supports used",
+        "Observed task demands appeared generally compatible but additional observation is needed",
+        "Observed task demands may be compatible with specific supports or modifications to evaluate",
+        "Mixed evidence - some task demands appeared compatible and others raised concerns",
+        "Observed task demands raised significant concerns requiring caution or alternate exploration",
+        "Observation was too limited to evaluate role or task match",
+        "Not applicable or not observed",
+      ],
+      guidance:
+        "Base this rating on task-performance evidence from this observation only. This is not a final job-fit determination.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes observed task-demand compatibility evidence for later vocational planning, verification, and recommendation review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "observed_environment_match",
+      label: "Based on this observation, what match was observed between the client and the work-environment conditions experienced?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Observed environment appeared compatible with work participation",
+        "Observed environment appeared generally compatible but additional observation is needed",
+        "Observed environment may be workable with supports or modifications to evaluate",
+        "Mixed evidence - some conditions were tolerated and others raised concerns",
+        "Observed environment raised significant concerns requiring caution or alternate exploration",
+        "Observation was too limited to evaluate environmental match",
+        "Not applicable or not observed",
+      ],
+      guidance:
+        "Base this rating on environmental conditions actually experienced and the client's observable response during this visit.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes observation-supported work-environment compatibility evidence for later job exploration and support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "observed_support_feasibility_for_role",
+      label: "What does this observation indicate about the feasibility of the supports needed for this role, task, or setting?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No meaningful support need identified during observed task",
+        "Observed support need appeared manageable in this setting",
+        "Observed support appeared helpful but requires further evaluation",
+        "Natural workplace support may be feasible but requires verification",
+        "Observed support need may require significant modification or ongoing job-coach involvement",
+        "Observed support need raised concern about sustainability in this role or setting",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Rate the observed feasibility of supports only. This field does not establish accommodations, ongoing support hours, or final service decisions.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether observed support needs appeared manageable, require further evaluation, or raise sustainability concerns in the role or setting.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_interest_engagement_in_observed_work",
+      label: "What client engagement or interest in the observed work activity was demonstrated or reported during this visit?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Client showed engagement and reported interest in similar work",
+        "Client showed engagement; interest was not discussed or verified",
+        "Client participated appropriately but interest was unclear",
+        "Client reported limited interest despite functional participation",
+        "Client appeared disengaged or reluctant during observed work",
+        "Client stated the work, task, or environment was not preferred",
+        "Observation was too limited to evaluate",
+        "Not observed",
+      ],
+      guidance:
+        "Distinguish observed engagement from client-reported interest. Use the client narrative field below for details.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves observation-supported engagement or interest evidence relevant to collaborative career exploration and retention review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "employer_or_worksite_expectation_alignment",
+      label: "How did the observed performance align with known employer or worksite expectations for the role or task?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Observed performance appeared aligned with known task or worksite expectations",
+        "Observed performance appeared generally aligned but additional observation is needed",
+        "Observed performance may align with support, modification, or additional training to evaluate",
+        "Mixed evidence - some expectations were met and others raised concerns",
+        "Observed performance raised significant concern about meeting known expectations",
+        "Employer or worksite expectations were not available or not clear",
+        "Observation was not conducted in a real worksite setting",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Rate only when task or workplace expectations were known or observable. Do not assume employer standards when they were not established.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Documents alignment between observed performance and known workplace expectations for later fit or retention review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "job_fit_strength_indicators_observed",
+      label: "What specific observed evidence supports further exploration of this work direction or continued sustainability in this role?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as successful task performance, effective supports, tolerated work environment, positive supervision response, safe work behavior, client interest, natural supports, or sustained participation.",
+      guidance:
+        "Tie each strength indicator to what occurred during this observation. Do not make a final fit conclusion.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures specific observation-supported fit or retention strengths for FACTS/VFP and later vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "job_fit_concern_indicators_observed",
+      label: "What specific observed evidence requires caution, additional assessment, or support review for this work direction or current role?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as task-performance difficulty, physical-demand mismatch, environmental response, communication demands, safety or stability concerns, high support need, limited interest, or unclear sustainability.",
+      guidance:
+        "Record concerns supported by this observation and identify what must be verified before any decision is made.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observation-supported cautions or sustainability concerns requiring further evaluation before job-fit or retention decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "retention_risk_or_stability_indicators_observed",
+      label: "Which retention or workplace-stability indicators were observed or identified during this visit?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Consistent task participation",
+        "Demonstrated ability to use effective supports",
+        "Positive response to supervision or feedback",
+        "Worksite natural support identified",
+        "Client expressed interest in continuing similar work",
+        "Physical-demand concern requiring review",
+        "Environmental or sensory concern requiring review",
+        "Communication or social-demand concern requiring review",
+        "Safety or self-regulation concern requiring review",
+        "Pace, quality, or productivity concern requiring review",
+        "High job-coach support need observed",
+        "Employer or supervisor concern reported",
+        "Client concern or dissatisfaction reported",
+        "Transportation or schedule issue identified during discussion",
+        "No meaningful retention indicator evaluated",
+        "Other",
+      ],
+      guidance:
+        "Select indicators supported by observation or clearly identified report during this visit. Do not infer long-term risk without evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies observation-supported strengths or concerns relevant to retention monitoring and continued-support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "retention_supports_to_evaluate",
+      label: "What supports or strategies may need continued evaluation to support retention or sustainability in this role or work direction?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document supports to evaluate further, such as job-coach strategy, natural support, task instruction, pace adjustment, environmental modification, stamina support, communication routine, safety strategy, schedule review, or additional observation.",
+      guidance:
+        "Identify supports requiring continued testing or review. Do not finalize a long-term support plan here.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies retention-related support strategies that require continued observation or verification before longer-term decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_reported_job_fit_or_retention_perspective",
+      label: "What did the client report about the role, tasks, work environment, supports, or desire to continue similar work?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own perspective about interest, satisfaction, concerns, preferred tasks, difficult demands, helpful supports, willingness to continue, or desire to explore alternatives. State if no client input was obtained.",
+      guidance:
+        "Separate client report from staff observation. Client perspective is important for planning but is not by itself an observed performance conclusion.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported job-fit and retention perspective for collaborative vocational decision-making and later verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "employer_supervisor_job_fit_or_retention_input",
+      label: "What employer, supervisor, coworker, or worksite input was obtained about task match, performance, sustainability, or retention concerns?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document verifiable worksite input about performance, expectations, strengths, concerns, support feasibility, attendance, retention, or sustainability. Identify the source and state if no input was obtained.",
+      guidance:
+        "Separate reported worksite input from direct observation and do not treat unverified statements as confirmed functional evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves worksite-reported fit or retention information for later review, corroboration, and vocational planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "recommended_next_vocational_direction_from_observation",
+      label: "Which next vocational directions are supported for later review based on this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Continue exploring similar tasks or occupational areas",
+        "Repeat observation in a similar setting for more evidence",
+        "Observe in a different environment or task demand",
+        "Evaluate specific support or accommodation strategy further",
+        "Gather client preference and interest information",
+        "Gather employer or supervisor input",
+        "Use evidence in FACTS/VFP and recommendation review",
+        "Use evidence for current-job retention or support review",
+        "Consider alternate task or work-environment exploration",
+        "Insufficient evidence to identify a direction",
+        "Other",
+      ],
+      guidance:
+        "Select evidence-supported directions for later staff/client review. This does not finalize placement, employment continuation, or recommendation decisions.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies observation-supported next directions for vocational exploration, retention review, or additional evidence gathering.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "job_fit_retention_verification_needed",
+      label: "What additional evidence or verification is needed before job-fit, sustainability, or retention decisions are made?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document what needs to be verified, such as additional observation, different tasks, support effectiveness, natural support availability, client preference, worksite expectation, schedule, transportation, safety, stamina, environmental tolerance, or supervisor feedback.",
+      guidance:
+        "State clearly what remains unknown or requires corroboration before decisions are made.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies verification needed before making job-fit, retention, or longer-term support decisions.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "job_fit_retention_vocational_implications",
+      label: "What are the vocational implications of the observed job-fit, sustainability, and retention evidence?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how the observation-supported fit and retention evidence may inform FACTS/VFP, further situational assessment, career exploration, current-job support review, retention planning, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning while preserving staff/client decision-making and identifying conclusions that still require verification.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed job-fit, sustainability, and retention evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase C currently includes Sections 7, 8, and 9
+// Sections 1–8 remain verified and unchanged.
+// Future Section 10 will add observation summary, follow-up, and evidence
+// disposition fields.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -3117,6 +3491,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_COMMUNICATION_SOCIAL_SUPERVISION_SUPPORTS,
   SECTION_SAFETY_REGULATION_STABILITY_SUPPORTS,
   SECTION_SUPPORTS_ACCOMMODATIONS_EFFECTIVENESS,
+  SECTION_JOB_FIT_RETENTION_SUSTAINABILITY,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
