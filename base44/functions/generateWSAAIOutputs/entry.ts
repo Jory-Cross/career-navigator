@@ -468,6 +468,14 @@ Deno.serve(async (req) => {
         certifications: document.certifications || [],
       }));
 
+        const sourceWsaResponses = {
+      ...current_wsa_responses,
+    };
+
+    // This field must never be inferred from client availability, goals, or prior AI output.
+    // It is populated only by staff after verifying planned CRP/job coach support hours.
+    delete sourceWsaResponses.planned_job_search_hours_week;
+
     const contextBlock = JSON.stringify(
       {
         client: {
@@ -497,12 +505,11 @@ Deno.serve(async (req) => {
           null,
         assessments: assessmentSummaries,
         documents: documentSummaries,
-        current_wsa_responses: current_wsa_responses,
+        current_wsa_responses: sourceWsaResponses,
       },
       null,
       2
     );
-
     let detailed_wsa_fields = null;
     let official_wsa_fields = null;
     let full_detailed_wsa_html = null;
