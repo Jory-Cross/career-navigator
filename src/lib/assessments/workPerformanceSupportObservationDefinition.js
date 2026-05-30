@@ -1392,10 +1392,395 @@ const SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Phase B currently includes Section 4
-// Sections 1–3 remain verified and unchanged.
-// Future Sections 5 and 6 will add environmental/sensory and
-// communication/social/supervision observation evidence.
+// Section 5: Work Environment, Sensory Tolerance, Distraction, and
+// Environmental Support Needs
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS = defineSection({
+  id: "environmental_sensory_supports",
+  label: "Work Environment, Sensory Tolerance, Distraction & Environmental Support Needs",
+  description:
+    "Document the environmental conditions the client actually experienced during the observed task and any observable effect on work participation, pace, quality, focus, or support needs.",
+  guidance:
+    "Section 1 records conditions present in the setting. This section records the client's observable response to environmental demands during the task. Document observed functional evidence and client-reported concerns when available. Do not diagnose sensory conditions or conclude job incompatibility from preference or exposure alone.",
+  questions: [
+    defineQuestion({
+      id: "environmental_conditions_experienced_during_task",
+      label: "Which environmental conditions did the client actually experience while performing the observed task?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "Quiet setting",
+        "Moderate background noise",
+        "Loud noise",
+        "Sudden or unpredictable sounds",
+        "Crowded work area",
+        "Close proximity to coworkers",
+        "Customer or public interaction",
+        "Frequent interruptions",
+        "Multiple competing visual activities",
+        "Bright or harsh lighting",
+        "Dim lighting",
+        "Strong smells or cleaning products",
+        "Temperature exposure",
+        "Outdoor conditions",
+        "Machinery or powered equipment",
+        "Alarms, buzzers, or operational signals",
+        "Material or texture exposure",
+        "Repetitive or low-stimulation environment",
+        "No meaningful environmental demand observed",
+        "Other",
+      ],
+      guidance:
+        "Select only conditions directly experienced by the client during work participation, not all possible conditions at the site.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.ENVIRONMENTAL,
+          description:
+            "Identifies environmental demands directly connected to observed task participation and tolerance evidence.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "noise_tolerance_observed",
+      label: "What response to noise or unexpected sound was observed during the work activity?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Noise or unexpected sound demand not present during observed task",
+        "Tolerated noise demand without observable difficulty",
+        "Tolerated noise with mild distraction or discomfort",
+        "Needed brief support, redirection, or adjustment due to noise",
+        "Noise reduced pace, accuracy, quality, or task participation",
+        "Noise caused the client to stop, withdraw, or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document the client's observable response to sound demands that occurred during the task.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.ENVIRONMENTAL,
+          description:
+            "Documents observed response to worksite noise or unexpected sound for later environmental-support and job-demand review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "visual_lighting_tolerance_observed",
+      label: "What response to lighting, visual activity, or visual distraction was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Lighting or visual-distraction demand not present during observed task",
+        "Tolerated visual demand without observable difficulty",
+        "Tolerated visual demand with mild distraction or discomfort",
+        "Needed brief support, redirection, or environmental adjustment",
+        "Visual demand reduced pace, accuracy, quality, or task participation",
+        "Visual demand caused the client to stop, withdraw, or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable response to lighting conditions, visual movement, clutter, or competing visual activity.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "crowding_proximity_tolerance_observed",
+      label: "What response to crowding, close proximity, customer presence, or shared workspace demands was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Crowding or proximity demand not present during observed task",
+        "Tolerated proximity demand without observable difficulty",
+        "Tolerated demand with mild discomfort or distraction",
+        "Needed brief support, redirection, space, or adjustment",
+        "Proximity demand reduced pace, accuracy, quality, or task participation",
+        "Proximity demand caused the client to stop, withdraw, or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document environmental response to working near others or the public. Communication and social-performance evidence will be captured separately in Section 6.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.ENVIRONMENTAL,
+          description:
+            "Documents observed response to shared-space or public-facing environmental demands without independently rating social skill.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "interruption_distraction_tolerance_observed",
+      label: "What response to interruptions, distractions, or task switching was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Interruption, distraction, or task-switching demand not present",
+        "Maintained task focus without observable difficulty",
+        "Returned to task after mild distraction without significant difficulty",
+        "Needed brief redirection, reminder, or adjustment to return to task",
+        "Distraction reduced pace, accuracy, quality, or task completion",
+        "Distraction or interruption caused the client to stop or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document observable task-focus response to environmental interruptions or competing demands.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Documents whether environmental distraction or interruption created an observable need for support, redirection, or task adjustment.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "smell_temperature_material_tolerance_observed",
+      label: "What response to smells, temperature, material textures, cleaning products, or similar exposure was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "These environmental exposures were not present during observed task",
+        "Tolerated exposure without observable difficulty",
+        "Tolerated exposure with mild discomfort or hesitation",
+        "Needed brief support, protective barrier, or environmental adjustment",
+        "Exposure reduced pace, accuracy, quality, or task participation",
+        "Exposure caused the client to stop, withdraw, or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Record observable response or client report related to exposure during the task. Do not infer intolerance when no response was observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+    }),
+
+    defineQuestion({
+      id: "machinery_equipment_environment_tolerance_observed",
+      label: "What response to machinery, powered equipment, alarms, or operational worksite stimulation was observed?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "Machinery, equipment, alarm, or operational stimulation not present",
+        "Tolerated demand without observable difficulty",
+        "Tolerated demand with mild distraction, hesitation, or discomfort",
+        "Needed brief support, instruction, redirection, or adjustment",
+        "Demand reduced pace, accuracy, quality, or task participation",
+        "Demand caused the client to stop, withdraw, or become unable to continue",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Document response to the environmental stimulation associated with equipment or operations. Task-safety concerns should also be documented when applicable.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.ENVIRONMENTAL,
+          description:
+            "Documents observed response to operational worksite stimulation relevant to environmental-demand and support review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_effect_on_task_performance",
+      label: "Overall, how did environmental demands affect the client's observed task performance?",
+      type: QUESTION_TYPES.MULTIPLE_CHOICE,
+      options: [
+        "No observable environmental effect on task performance",
+        "Environmental demands were present but performance remained functional",
+        "Environmental demands caused mild distraction or discomfort without significant performance impact",
+        "Environmental demands required brief support or adjustment to maintain performance",
+        "Environmental demands reduced pace, accuracy, quality, focus, or participation",
+        "Environmental demands significantly interfered with task completion",
+        "Observation did not include meaningful environmental demands",
+        "Unable to determine during this observation",
+        "Not observed",
+      ],
+      guidance:
+        "Summarize overall observable performance impact. Use narrative fields to identify which conditions affected performance and how.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the observed effect of environmental demands on work performance for later vocational planning and verification.",
+        }),
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies whether environmental supports or modifications may require additional evaluation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_response_examples",
+      label: "Describe specific examples of the client's response to environmental conditions during the task.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: Client continued stocking with moderate background noise but lost place when a loud cart alarm occurred; returned to task after one verbal redirection.",
+      guidance:
+        "Document observable behavior, client report when provided, environmental condition present, and any effect on task performance.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.ENVIRONMENTAL,
+          description:
+            "Provides specific observed evidence linking environmental exposure to functional work response.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_supports_or_modifications_used",
+      label: "Which environmental supports, modifications, or strategies were used or tried during this observation?",
+      type: QUESTION_TYPES.SELECT_ALL,
+      options: [
+        "None used or needed",
+        "Quieter work area",
+        "Reduced interruptions",
+        "Reduced visual stimulation or visual barrier",
+        "Adjusted lighting",
+        "Increased distance from customers or coworkers",
+        "Headphones or hearing protection",
+        "Gloves or material barrier",
+        "Modified exposure to smells or cleaning products",
+        "Temperature adjustment",
+        "Advance warning of noise, changes, or transitions",
+        "Predictable routine or structured workflow",
+        "Break or recovery space",
+        "Job-coach redirection or reassurance",
+        "Task change or temporary removal from demand",
+        "Other",
+        "Not observed",
+      ],
+      guidance:
+        "Select only supports or environmental changes actually used or tested during the observation.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies environmental-support strategies tried during observed work participation for later effectiveness review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "effectiveness_of_environmental_supports",
+      label: "Describe the effectiveness of environmental supports, modifications, or strategies used during the observation.",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe what was tried, what environmental demand it addressed, whether task participation or regulation improved, and what may require additional observation.",
+      guidance:
+        "Record observed results only. If no environmental support was used or evaluated, state that clearly.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Provides observed evidence about whether environmental-support strategies appeared effective during work participation.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "client_reported_environmental_preferences_or_concerns",
+      label: "What environmental preferences, concerns, or reactions did the client report during or after this observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document the client's own report about noise, lighting, people nearby, smells, temperature, equipment, interruptions, or environmental preferences. State if no client report was obtained.",
+      guidance:
+        "Separate client report from staff observation. Client-reported preference or concern is valuable evidence but should not be treated as observed performance impact unless supported by what occurred.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported environmental preferences and concerns for later vocational exploration and verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_strengths_observed",
+      label: "What environmental tolerance or coping strengths were observed during the work activity?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable strengths such as maintaining task focus despite background noise, adapting to normal interruptions, working successfully near others, tolerating materials, or using a support strategy effectively.",
+      guidance:
+        "Document strengths connected to actual environmental conditions experienced during the task.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed environmental-tolerance strengths relevant to FACTS/VFP and later job-environment planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_concerns_observed",
+      label: "What environmental tolerance, distraction, or sensory-response concerns were observed?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document observable concerns such as reduced focus with interruptions, stopping work due to noise, avoidance of smells or materials, difficulty working near others, or environmental demands requiring additional evaluation.",
+      guidance:
+        "Record functional evidence only and identify what still requires further observation or verification.",
+      evidenceCategory: EVIDENCE_CATEGORY.ENVIRONMENTAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures observed environmental-demand concerns that may affect vocational planning or require additional assessment.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "environmental_vocational_implications",
+      label: "What are the vocational implications of the environmental-response evidence observed during this visit?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Describe how observed environmental response may inform FACTS/VFP, additional situational assessment, work-environment exploration, support review, job matching, or later recommendation decisions.",
+      guidance:
+        "Connect observed evidence to vocational planning without making diagnoses or unsupported job-fit conclusions.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Summarizes the vocational relevance of observed environmental-response evidence for later planning and recommendation review.",
+        }),
+      ],
+    }),
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Definition — Phase B currently includes Sections 4 and 5
+// Sections 1–4 remain verified and unchanged.
+// Future Section 6 will add communication/social/supervision observation
+// evidence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
@@ -1403,6 +1788,7 @@ export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS = [
   SECTION_TASK_INSTRUCTIONS_LEARNING,
   SECTION_TASK_PERFORMANCE_SUPPORT_PROGRESS,
   SECTION_PHYSICAL_DEMANDS_STAMINA_SUPPORTS,
+  SECTION_ENVIRONMENTAL_SENSORY_SUPPORTS,
 ];
 
 export const WORK_PERFORMANCE_SUPPORT_OBSERVATION_META = {
