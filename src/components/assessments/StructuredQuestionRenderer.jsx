@@ -169,6 +169,49 @@ function Scale({ question, value, onChange, disabled }) {
   );
 }
 
+function ShortTextField({ question, value, onChange, disabled }) {
+  return (
+    <Input
+      type="text"
+      value={value || ""}
+      onChange={(e) => onChange(question.id, e.target.value)}
+      placeholder={question.placeholder || ""}
+      disabled={disabled}
+      className="text-sm"
+    />
+  );
+}
+
+function DateField({ question, value, onChange, disabled }) {
+  return (
+    <Input
+      type="date"
+      value={value || ""}
+      onChange={(e) => onChange(question.id, e.target.value)}
+      disabled={disabled}
+      className="text-sm max-w-[240px]"
+    />
+  );
+}
+
+function NumberField({ question, value, onChange, disabled }) {
+  return (
+    <Input
+      type="number"
+      value={value ?? ""}
+      onChange={(e) =>
+        onChange(
+          question.id,
+          e.target.value === "" ? "" : Number(e.target.value)
+        )
+      }
+      placeholder={question.placeholder || ""}
+      disabled={disabled}
+      className="text-sm max-w-[240px]"
+    />
+  );
+}
+
 function NarrativeField({ question, value, onChange, disabled }) {
   return (
     <Textarea
