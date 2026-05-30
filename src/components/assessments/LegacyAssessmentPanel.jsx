@@ -326,7 +326,9 @@ export default function LegacyAssessmentPanel({
         _wsa_ai_fields_generated_at: new Date().toISOString(),
       };
 
-      setResponses(nextResponses);
+            setResponses(nextResponses);
+      latestResponsesRef.current = nextResponses;
+      wsaDirtyRef.current = true;
 
       toast.success("AI filled the WSA editor fields. Review before saving.");
     } catch (error) {
