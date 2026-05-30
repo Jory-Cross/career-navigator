@@ -327,11 +327,11 @@ Life skills rules:
 - life_skills_observations should contain the detailed explanation, functional impact, and support/training implications.
 
 Job development hours rule:
-- planned_job_search_hours_week means the number of hours per week the CRP, job coach, or employment specialist plans to provide job development/job-search support.
+- planned_job_search_hours_week means the number of hours per week the CRP, job coach, or employment specialist plans to provide job-development/job-search support.
 - It does NOT mean the number of hours the client is available to work.
 - It does NOT mean the number of hours the client personally plans to job search.
-- Keep this field brief, such as "Up to 4 hours/week of CRP job development support" or "3–5 hours/week of job coach job-development support."
-
+- Do not calculate, recommend, estimate, or invent a number for this field.
+- This value requires verified staff/program entry and will be left blank in the official AI draft.
 - Do not exceed the listed character limits.
 - Do not invent facts.
 - No greetings.
