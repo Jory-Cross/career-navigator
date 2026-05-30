@@ -341,6 +341,13 @@ Job development hours rule:
 - It does NOT mean the number of hours the client personally plans to job search.
 - Do not calculate, recommend, estimate, or invent a number for this field.
 - This value requires verified staff/program entry and will be left blank in the official AI draft.
+
+Recommended target occupations rule:
+- recommended_target_occupations means the finalized top 3 occupational targets selected after realistic job exploration and staff/client review.
+- AI recommendations may support future job exploration, but AI must not finalize this WSA field independently.
+- Do not invent, recommend, summarize, or carry forward target occupations into the official WSA field.
+- This value will remain blank in the official AI draft until staff/client finalize the top 3 occupational targets.
+
 - Do not exceed the listed character limits.
 - Do not invent facts.
 - No greetings.
