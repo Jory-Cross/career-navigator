@@ -359,8 +359,29 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const activeAssessment = ALL_ASSESSMENTS.find((a) => a.key === activeKey);
   const activeRecord = activeKey ? getRecord(activeKey) : null;
 
-  const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+    const handleSaved = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+  };
+
+  const handleAssessmentSelection = async (assessmentKey) => {
+    const nextKey = activeKey === assessmentKey ? null : assessmentKey;
+    const isLeavingWSA =
+      activeKey === "work_strategy_assessment" &&
+      nextKey !== "work_strategy_assessment";
+
+    if (isLeavingWSA && leaveSaveRef.current) {
+      const saved = await leaveSaveRef.current();
+
+      if (!saved) {
+        return;
+      }
+    }
+
+    setActiveKey(nextKey);
+
+    if (formPanelRef.current) {
+      formPanelRef.current.scrollTop = 0;
+    }
   };
 
   // Handle external trigger (e.g. AI Job Search → open Interest Profiler)
