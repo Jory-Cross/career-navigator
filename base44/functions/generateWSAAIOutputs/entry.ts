@@ -366,9 +366,11 @@ Job development hours rule:
     officialFields[key] = clampOfficialText(rawOfficialFields[key] || '', limit);
   }
 
-  // Do not allow AI to create or carry forward an unsupported job-coach-hours value.
-  // Staff enters the verified CRP/job coach job-development hours after AI drafting.
+    // Do not allow AI to create or carry forward unsupported final planning values.
+  // Staff enters verified CRP/job coach hours after AI drafting.
+  // Staff/client enter finalized top 3 occupational targets after exploration and review.
   officialFields.planned_job_search_hours_week = '';
+  officialFields.recommended_target_occupations = '';
 
   return {
     official_wsa_fields: officialFields,
