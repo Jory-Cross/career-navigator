@@ -239,11 +239,24 @@ RULES:
     },
   });
 
+    const detailedFields = normalizeObject(result && result.detailed_wsa_fields);
+
+  // This value cannot be generated from client evidence or inferred by AI.
+  // It requires verified staff/program entry.
+  detailedFields.planned_job_search_hours_week =
+    PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE;
+
+  const staffShouldVerify = Array.isArray(result && result.staff_should_verify)
+    ? result.staff_should_verify
+    : [];
+
+  if (!staffShouldVerify.includes(PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE)) {
+    staffShouldVerify.push(PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE);
+  }
+
   return {
-    detailed_wsa_fields: normalizeObject(result && result.detailed_wsa_fields),
-    staff_should_verify: Array.isArray(result && result.staff_should_verify)
-      ? result.staff_should_verify
-      : [],
+    detailed_wsa_fields: detailedFields,
+    staff_should_verify: staffShouldVerify,
     evidence_summary: Array.isArray(result && result.evidence_summary)
       ? result.evidence_summary
       : [],
