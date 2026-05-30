@@ -85,9 +85,6 @@ const JOB_DEVELOPMENT_SUPPORTS_VR_NOTE =
 
 const ONGOING_SUPPORTS_VR_NOTE =
   '[Leave blank for VR completion during the close-out meeting.]';
-
-const RECOMMENDED_TARGET_OCCUPATIONS_STAFF_NOTE =
-  '[Staff/client selection required: enter the finalized top 3 occupational targets after realistic job exploration and review.]';
 function safeString(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
