@@ -479,9 +479,8 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
               assessment={assessment}
               record={getRecord(assessment.key)}
               isActive={activeKey === assessment.key}
-              onClick={() => {
-                setActiveKey(activeKey === assessment.key ? null : assessment.key);
-                if (formPanelRef.current) formPanelRef.current.scrollTop = 0;
+                           onClick={() => {
+                handleAssessmentSelection(assessment.key);
               }}
             />
           ))}
