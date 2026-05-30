@@ -352,10 +352,14 @@ Job development hours rule:
   const rawOfficialFields = normalizeObject(result && result.official_wsa_fields);
   const officialFields = {};
 
-  for (const key of WSA_FIELD_KEYS) {
+   for (const key of WSA_FIELD_KEYS) {
     const limit = WSA_CHAR_LIMITS[key];
     officialFields[key] = clampOfficialText(rawOfficialFields[key] || '', limit);
   }
+
+  // Do not allow AI to create or carry forward an unsupported job-coach-hours value.
+  // Staff enters the verified CRP/job coach job-development hours after AI drafting.
+  officialFields.planned_job_search_hours_week = '';
 
   return {
     official_wsa_fields: officialFields,
