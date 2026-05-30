@@ -27,6 +27,7 @@ export default function StructuredAssessmentWorkspacePanel({
   assessment,
   existingRecord,
   onSaved,
+  onClose,
 }) {
   const { sections, meta } = assessment;
 
