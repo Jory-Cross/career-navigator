@@ -95,32 +95,59 @@ export default function LegacyAssessmentPanel({
     wsaDirtyRef.current = false;
   }, [existingRecord?.id]);
 
-  useEffect(() => {
-    return () => {
-      if (!isWSA || !wsaDirtyRef.current || !clientId) {
-        return;
-      }
+    async function saveWSADraftOnExit() {
+    if (!isWSA || !wsaDirtyRef.current || !clientId) {
+      return true;
+    }
 
-      const payload = {
-        client_id: clientId,
-        assessment_type: key,
-        status: "in_progress",
-        responses: latestResponsesRef.current,
-      };
+    const payload = {
+      client_id: clientId,
+      assessment_type: key,
+      status: "in_progress",
+      responses: latestResponsesRef.current,
+    };
+
+    try {
+      let savedRecord;
 
       if (existingRecordIdRef.current) {
-        base44.entities.Assessment
-          .update(existingRecordIdRef.current, payload)
-          .catch((error) => {
-            console.error("WSA save-on-exit update failed:", error);
-          });
+        savedRecord = await base44.entities.Assessment.update(
+          existingRecordIdRef.current,
+          payload
+        );
       } else {
-        base44.entities.Assessment
-          .create(payload)
-          .catch((error) => {
-            console.error("WSA save-on-exit create failed:", error);
-          });
+        savedRecord = await base44.entities.Assessment.create(payload);
       }
+
+      existingRecordIdRef.current =
+        savedRecord?.id || existingRecordIdRef.current;
+      wsaDirtyRef.current = false;
+
+      await onSaved?.();
+
+      return true;
+    } catch (error) {
+      console.error("WSA save-on-exit failed:", error);
+      toast.error("WSA changes could not be saved.");
+      return false;
+    }
+  }
+
+  useEffect(() => {
+    if (!isWSA || !onRegisterLeaveSave) {
+      return;
+    }
+
+    onRegisterLeaveSave(saveWSADraftOnExit);
+
+    return () => {
+      onRegisterLeaveSave(null);
+    };
+  }, [isWSA, onRegisterLeaveSave, clientId, key]);
+
+  useEffect(() => {
+    return () => {
+      saveWSADraftOnExit();
     };
   }, [isWSA, clientId, key]);
   const answeredCount = useMemo(
