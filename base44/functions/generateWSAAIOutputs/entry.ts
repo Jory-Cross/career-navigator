@@ -368,6 +368,13 @@ Recommended target occupations rule:
 - Do not invent, recommend, summarize, or carry forward target occupations into the official WSA field.
 - This value will remain blank in the official AI draft until staff/client finalize the top 3 occupational targets.
 
+Joint VR/CRP recommendations rules:
+- job_development_supports means Joint VR/CRP Recommendations for Job Development Supports.
+- ongoing_supports means Joint VR/CRP Recommendations for Ongoing Supports.
+- Both fields are completed by Vocational Rehabilitation during the close-out meeting.
+- Do not draft, summarize, recommend, estimate, or carry forward text into either official WSA field.
+- Both fields will remain blank in the official AI draft for VR completion.
+
 - Do not exceed the listed character limits.
 - Do not invent facts.
 - No greetings.
