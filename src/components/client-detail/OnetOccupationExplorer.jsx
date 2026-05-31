@@ -276,14 +276,15 @@ console.log("OCCUPATION TECHNOLOGY", technology.value);
             </p>
           </div>
 
-          <DetailSection title="Overview">
-            <p>
-              {overview?.description ||
-                overview?.career?.description ||
-                overview?.summary ||
-                "No overview description returned."}
-            </p>
-          </DetailSection>
+         <DetailSection title="Overview">
+  <p>
+    {overview?.what_they_do ||
+      overview?.description ||
+      overview?.career?.description ||
+      overview?.summary ||
+      "No overview description returned."}
+  </p>
+</DetailSection>
 
           <DetailSection title="Job Zone / Preparation Level">
             <pre className="whitespace-pre-wrap text-xs">
