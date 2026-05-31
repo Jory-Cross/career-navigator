@@ -539,13 +539,16 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   }
 
   // ── CAUTION / VERIFY FIRST ────────────────────────────────────────────
-  if (
+ if (
+  (
     conflictScore >= 3 ||
     envFitLevel === "caution" ||
     (moderateConstraints.length >= 2 && confidenceLevel === "low") ||
     (unknownFactors.length >= 3 && moderateConstraints.length >= 1) ||
     (transportationUnknowns && matchesAny(jobText, ["travel", "commute", "multiple sites", "mobile"]))
-  ) {
+  ) &&
+  !verifiedWorkHistoryMatch
+) {
     priority = "caution";
     const causeList = [...concerns, ...conflictReasons].slice(0, 2).join("; ");
     reason = `Has fit concerns or unknowns requiring verification. ${causeList}.`;
