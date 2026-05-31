@@ -448,7 +448,11 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   //   - Match score >= 55
   //   - Strong corroboration (>= 3 sources)
   //   - At least one meaningful positive signal beyond interest profiler
-  const hasPositiveCorroboration = workHistoryMatch || goalMatch || evidenceTier === "strong";
+   const hasPositiveCorroboration =
+    verifiedWorkHistoryMatch ||
+    workHistoryMatch ||
+    goalMatch ||
+    evidenceTier === "strong";
   if (
     (evidenceTier === "strong" || evidenceTier === "moderate") &&
     (envFitLevel === "strong_fit" || (envFitLevel === "possible_fit" && moderateConstraints.length <= 1)) &&
