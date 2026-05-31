@@ -373,26 +373,89 @@ if (normalizedAnswers.length < 30) {
 }
 
 // 🔥 ALWAYS TRY O*NET FIRST (via backend proxy)
+// Retrieve Interest Profiler career matches, then attach each occupation's
+// official O*NET Job Zone preparation details before scoring and saving.
 try {
-  const response = await base44.functions.invoke("onetProxy", {
-  path: "/mnm/interestprofiler/careers",
-  params: {
+  const raw = await getInterestProfilerCareers({
     answers: normalizedAnswers,
-  },
-});
+  });
 
-  const raw = response?.data?.data;
+  const rawCareerItems = toArray(
+    raw?.career || raw?.careers || raw?.items
+  );
 
-  const careers = toArray(
-  raw?.career || raw?.careers || raw?.items
-).map((item, index) =>
-  normalizeOnetCareerItem(
-    item,
-    index,
-    profileKeywords,
-    getConflictKeywords(profile)
-  )
-);
+  const careers = await Promise.all(
+    rawCareerItems.map(async (item, index) => {
+      const normalizedCareer = normalizeOnetCareerItem(
+        item,
+        index,
+        profileKeywords,
+        getConflictKeywords(profile)
+      );
+
+      const emptyJobZoneData = {
+        job_zone: null,
+        job_zone_title: null,
+        job_zone_education: null,
+        job_zone_related_experience: null,
+        job_zone_training: null,
+        job_zone_examples: null,
+        job_zone_svp_range: null,
+      };
+
+      if (
+        !normalizedCareer.onet_code ||
+        normalizedCareer.onet_code.startsWith("ONET-")
+      ) {
+        return {
+          ...normalizedCareer,
+          ...emptyJobZoneData,
+        };
+      }
+
+      try {
+        const jobZoneData = await getOnetOccupationJobZone(
+          normalizedCareer.onet_code
+        );
+
+        const parsedJobZone = Number(jobZoneData?.code);
+
+        return {
+          ...normalizedCareer,
+          job_zone: Number.isFinite(parsedJobZone) ? parsedJobZone : null,
+          job_zone_title: jobZoneData?.title || null,
+          job_zone_education: jobZoneData?.education || null,
+          job_zone_related_experience:
+            jobZoneData?.related_experience || null,
+          job_zone_training: jobZoneData?.job_training || null,
+          job_zone_examples: jobZoneData?.job_zone_examples || null,
+          job_zone_svp_range: jobZoneData?.svp_range || null,
+        };
+      } catch (jobZoneError) {
+        console.warn(
+          "[getOnetRecommendations] Could not load Job Zone for:",
+          normalizedCareer.title,
+          normalizedCareer.onet_code,
+          jobZoneError
+        );
+
+        return {
+          ...normalizedCareer,
+          ...emptyJobZoneData,
+        };
+      }
+    })
+  );
+
+  console.log(
+    "[getOnetRecommendations] O*NET careers with Job Zones:",
+    careers.map((career) => ({
+      title: career.title,
+      onet_code: career.onet_code,
+      job_zone: career.job_zone,
+      job_zone_title: career.job_zone_title,
+    }))
+  );
 
   if (careers.length > 0) {
     return {
