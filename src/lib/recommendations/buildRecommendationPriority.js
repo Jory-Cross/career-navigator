@@ -445,10 +445,11 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     (evidenceTier === "strong" || evidenceTier === "moderate") &&
     (envFitLevel === "strong_fit" || (envFitLevel === "possible_fit" && moderateConstraints.length <= 1)) &&
     (confidenceLevel === "high" || confidenceLevel === "medium") &&
-    matchScore >= 55 &&
+        matchScore >= 55 &&
     conflictScore < 3 &&
     corroborationScore >= 3 &&
-    hasPositiveCorroboration
+    hasPositiveCorroboration &&
+    (jobZone === null || jobZone <= 2 || hasVerifiedPreparationSupport)
   ) {
     priority = "strong_target";
     reason = `Strong candidate for job search. ${positiveSignals.slice(0, 2).join(", ")}.`;
