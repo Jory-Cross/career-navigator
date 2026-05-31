@@ -295,11 +295,41 @@ export default function OnetOccupationExplorer({ clientId, client }) {
   </p>
 </DetailSection>
 
-          <DetailSection title="Job Zone / Preparation Level">
-            <pre className="whitespace-pre-wrap text-xs">
-              {JSON.stringify(jobZone, null, 2)}
-            </pre>
-          </DetailSection>
+         <DetailSection title="Job Zone / Preparation Level">
+  <div className="space-y-2 text-xs leading-relaxed">
+    <p className="font-semibold text-slate-800">
+      {jobZone?.title || `Job Zone ${jobZone?.code || ""}`}
+    </p>
+
+    {jobZone?.education && (
+      <p>
+        <span className="font-semibold">Education: </span>
+        {jobZone.education}
+      </p>
+    )}
+
+    {jobZone?.related_experience && (
+      <p>
+        <span className="font-semibold">Related Experience: </span>
+        {jobZone.related_experience}
+      </p>
+    )}
+
+    {jobZone?.job_training && (
+      <p>
+        <span className="font-semibold">Job Training: </span>
+        {jobZone.job_training}
+      </p>
+    )}
+
+    {jobZone?.svp_range && (
+      <p>
+        <span className="font-semibold">SVP Range: </span>
+        {jobZone.svp_range}
+      </p>
+    )}
+  </div>
+</DetailSection>
 
           <DetailSection title="Tasks">
             {tasks.length > 0 ? (
