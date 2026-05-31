@@ -393,14 +393,9 @@ try {
         getConflictKeywords(profile)
       );
 
-      const emptyJobZoneData = {
+            const emptyJobZoneData = {
         job_zone: null,
         job_zone_title: null,
-        job_zone_education: null,
-        job_zone_related_experience: null,
-        job_zone_training: null,
-        job_zone_examples: null,
-        job_zone_svp_range: null,
       };
 
       if (
