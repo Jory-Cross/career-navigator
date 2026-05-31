@@ -24,12 +24,18 @@ async function onetRequest(path, params = {}) {
   return response.data.data;
 }
 
+// ── O*NET Interest Profiler ───────────────────────────────────────────────────
+
 export async function getInterestProfilerQuestions({ start = 1, end = 60 } = {}) {
-  return onetRequest("/ip/questions", { start, end });
+  return onetRequest("/mnm/interestprofiler/questions", { start, end });
 }
 
 export async function getInterestProfilerResults(answers) {
-  return onetRequest("/ip/results", { answers });
+  return onetRequest("/mnm/interestprofiler/results", { answers });
+}
+
+export async function getInterestProfilerJobZones() {
+  return onetRequest("/mnm/interestprofiler/job_zones");
 }
 
 export async function getInterestProfilerCareers({ answers, scores, jobZone } = {}) {
@@ -37,15 +43,69 @@ export async function getInterestProfilerCareers({ answers, scores, jobZone } = 
 
   if (answers) params.answers = answers;
   if (scores) params.scores = scores;
-  if (jobZone) params.job_zone = jobZone;
 
-  return onetRequest("/ip/careers", params);
+  // O*NET Web Services v2 expects the Job Zone filter as "zone".
+  if (jobZone) params.zone = jobZone;
+
+  return onetRequest("/mnm/interestprofiler/careers", params);
 }
 
-export async function getOnetOccupationDetails(code) {
+// ── O*NET Occupation Details ──────────────────────────────────────────────────
+// These functions support later recommendation review and the career-targeted
+// Skills Audit. They do not yet change recommendation ranking on their own.
+
+export async function getOnetOccupationOverview(code) {
   if (!code) return null;
 
-  return onetRequest(`/careers/${code}/report`);
+  return onetRequest(`/mnm/careers/${code}`);
+}
+
+export async function getOnetOccupationSkills(code) {
+  if (!code) return null;
+
+  return onetRequest(`/mnm/careers/${code}/skills`);
+}
+
+export async function getOnetOccupationEducation(code) {
+  if (!code) return null;
+
+  return onetRequest(`/mnm/careers/${code}/education`);
+}
+
+export async function getOnetOccupationTechnology(code) {
+  if (!code) return null;
+
+  return onetRequest(`/mnm/careers/${code}/technology`);
+}
+
+export async function getOnetOccupationJobZone(code) {
+  if (!code) return null;
+
+  return onetRequest(`/online/occupations/${code}/details/job_zone`);
+}
+
+export async function getOnetOccupationTasks(code) {
+  if (!code) return null;
+
+  return onetRequest(`/online/occupations/${code}/details/tasks`);
+}
+
+export async function getOnetOccupationDetailedSkills(code) {
+  if (!code) return null;
+
+  return onetRequest(`/online/occupations/${code}/details/skills`);
+}
+
+export async function getOnetOccupationTechnologySkills(code) {
+  if (!code) return null;
+
+  return onetRequest(`/online/occupations/${code}/details/technology_skills`);
+}
+
+// Temporary compatibility function for future callers that need a career
+// overview. No existing app file currently calls this function.
+export async function getOnetOccupationDetails(code) {
+  return getOnetOccupationOverview(code);
 }
 
 export function buildOnetRecommendationProfile({
