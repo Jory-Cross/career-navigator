@@ -376,13 +376,58 @@ if (normalizedAnswers.length < 30) {
 // Retrieve Interest Profiler career matches, then attach each occupation's
 // official O*NET Job Zone preparation details before scoring and saving.
 try {
-  const raw = await getInterestProfilerCareers({
-    answers: normalizedAnswers,
-  });
+  // Primary recommendation list = realistic near-term preparation levels only.
+  // For clients without separately verified advanced preparation evidence,
+  // request O*NET Interest Profiler matches from Job Zones 1 and 2 only.
+  const [zone1Raw, zone2Raw] = await Promise.all([
+    getInterestProfilerCareers({
+      answers: normalizedAnswers,
+      jobZone: 1,
+    }),
+    getInterestProfilerCareers({
+      answers: normalizedAnswers,
+      jobZone: 2,
+    }),
+  ]);
 
-  const rawCareerItems = toArray(
-    raw?.career || raw?.careers || raw?.items
+  const zone1Items = toArray(
+    zone1Raw?.career || zone1Raw?.careers || zone1Raw?.items
   );
+
+  const zone2Items = toArray(
+    zone2Raw?.career || zone2Raw?.careers || zone2Raw?.items
+  );
+
+  // Interleave Zone 1 and Zone 2 results so neither preparation level
+  // crowds out the other, remove duplicates, and retain a safe display size.
+  const interleavedCareerItems = [];
+  const maxZoneResults = Math.max(zone1Items.length, zone2Items.length);
+
+  for (let index = 0; index < maxZoneResults; index += 1) {
+    if (zone1Items[index]) interleavedCareerItems.push(zone1Items[index]);
+    if (zone2Items[index]) interleavedCareerItems.push(zone2Items[index]);
+  }
+
+  const seenCareerKeys = new Set();
+
+  const rawCareerItems = interleavedCareerItems
+    .filter((item) => {
+      const key = String(
+        item?.code ||
+        item?.onet_code ||
+        item?.soc_code ||
+        item?.occupation_code ||
+        item?.title ||
+        item?.career_title ||
+        ""
+      ).trim();
+
+      if (!key || seenCareerKeys.has(key)) return false;
+
+      seenCareerKeys.add(key);
+      return true;
+    })
+    .slice(0, 20);
 
   const careers = await Promise.all(
     rawCareerItems.map(async (item, index) => {
