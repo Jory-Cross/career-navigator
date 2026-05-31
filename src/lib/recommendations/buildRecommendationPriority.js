@@ -230,9 +230,19 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   const transportationUnknowns = context.transportationUnknowns || false;
   const scheduleConstraints = context.scheduleConstraints || [];
   const clientGoals = context.clientGoals || [];
-  const workHistory = context.workHistory || [];
+   const workHistory = context.workHistory || [];
   const licensingBurden = context.licensingBurden || "none";
   const trainingBurden = context.trainingBurden || "none";
+
+  // O*NET Job Zone / preparation-level safeguard.
+  // A higher Job Zone may only be treated as a near-term target when verified
+  // preparation evidence is deliberately supplied by FACTS/VFP logic.
+  const parsedJobZone = Number(job.job_zone);
+  const jobZone = Number.isFinite(parsedJobZone) ? parsedJobZone : null;
+  const jobZoneTitle = job.job_zone_title || (jobZone ? `Job Zone ${jobZone}` : "");
+
+  const hasVerifiedPreparationSupport =
+    context.hasVerifiedPreparationSupport === true;
 
   const jobText = safeLower(`${job.title || ""} ${job.description || ""}`);
 
