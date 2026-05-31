@@ -1,16 +1,17 @@
 /**
  * Skills Audit — Structured Assessment Definition
  *
- * Structured skills-evidence assessment for:
- * - documenting client-reported and observed work skills
- * - preserving the source and strength of skill evidence
- * - identifying training and skill-development needs
- * - supporting later FACTS/VFP and recommendation review
+ * Practical structured skills review for:
+ * - identifying tasks and work skills the client can do
+ * - documenting skills seen in work, school, home, volunteer, or training settings
+ * - identifying supports and training that may help
+ * - identifying task areas worth exploring for employment
+ * - supporting later FACTS/VFP and job-recommendation review
  *
  * This assessment is different from the Work Performance & Support
- * Observation. The Skills Audit documents current skills and evidence
- * across sources. The observation assessment documents performance during
- * a specific dated worksite observation.
+ * Observation. The Skills Audit summarizes known or reported skills across
+ * settings. The observation assessment documents performance during a
+ * specific dated worksite observation.
  *
  * assessment_type: "skills_audit"
  */
@@ -25,233 +26,253 @@ import {
 } from "./structuredAssessmentSchema";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Section 1: Skills Assessment Context and Evidence Sources
+// Section 1: Skills to Review and Current Work Abilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SECTION_SKILLS_CONTEXT_EVIDENCE_SOURCES = defineSection({
-  id: "skills_context_evidence_sources",
-  label: "Skills Assessment Context & Evidence Sources",
+const SECTION_SKILLS_TO_REVIEW = defineSection({
+  id: "skills_to_review",
+  label: "Skills to Review & Current Work Abilities",
   description:
-    "Document why the Skills Audit is being completed, what work direction is being considered, and what sources support the skills information recorded in this assessment.",
+    "Identify the client's current skills, tasks they have experience with, areas staff have observed, and work tasks worth exploring further.",
   guidance:
-    "This section establishes the evidence context for the Skills Audit. Record client-reported skills, directly observed skills, and documentation reviewed separately. A claimed or reported skill should not be treated as verified ability unless supported by observation, documentation, or other reliable evidence.",
+    "Keep this section practical. Record what the client can do, what they have done before, what staff have observed, and what still needs practice or further evaluation. A reported skill can be documented even when it still needs observation.",
   questions: [
     defineQuestion({
-      id: "skills_audit_purpose",
-      label: "What is the primary purpose of this Skills Audit?",
-      type: QUESTION_TYPES.MULTIPLE_CHOICE,
-      options: [
-        "Initial vocational exploration",
-        "Preparing for job recommendations",
-        "Identifying strengths for job search",
-        "Identifying skill-development needs",
-        "Reviewing readiness for a specific job direction",
-        "Supporting Work Strategy Assessment development",
-        "Current employment support or retention review",
-        "Updating previously known skills evidence",
-        "Other",
-      ],
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-      implications: [
-        defineImplication({
-          type: IMPLICATION_TYPE.VOCATIONAL,
-          description:
-            "Identifies how the skills evidence may later be used in vocational exploration, job recommendations, WSA drafting, or employment-support review.",
-        }),
-      ],
-    }),
-
-    defineQuestion({
-      id: "skills_audit_context",
-      label: "What is the client's current employment or vocational exploration context?",
-      type: QUESTION_TYPES.MULTIPLE_CHOICE,
-      options: [
-        "Not employed - beginning exploration",
-        "Not employed - actively identifying job directions",
-        "Preparing for job search",
-        "Participating in situational or community-based assessment",
-        "Trial work or work experience",
-        "Newly employed",
-        "Currently employed - support or retention review",
-        "Currently employed - exploring advancement or different work",
-        "Unable to determine",
-        "Other",
-      ],
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-    }),
-
-    defineQuestion({
-      id: "skills_audit_completed_by",
-      label: "Who is completing or contributing to this Skills Audit?",
+      id: "skill_areas_to_evaluate",
+      label: "Which skill areas should be reviewed for this client?",
       type: QUESTION_TYPES.SELECT_ALL,
       options: [
-        "Client",
-        "Employment specialist",
-        "Job coach",
-        "Vocational rehabilitation counselor",
-        "Parent, guardian, or family support",
-        "Employer or supervisor",
-        "Teacher or transition staff",
-        "Other support provider",
+        "Basic work skills and following directions",
+        "Cleaning or custodial tasks",
+        "Laundry or linen tasks",
+        "Stocking, sorting, or organizing",
+        "Food preparation or kitchen support",
+        "Packaging, assembly, or production tasks",
+        "Warehouse or material-handling tasks",
+        "Office or administrative tasks",
+        "Computer or data-entry tasks",
+        "Customer service or public interaction",
+        "Groundskeeping or outdoor tasks",
+        "Communication and workplace behavior",
+        "Safety and use of tools or equipment",
         "Other",
       ],
       guidance:
-        "Select all individuals who contributed information to this audit. Use the narrative evidence fields below to clarify the source of specific skill information.",
+        "Select the work-skill areas that are relevant to the client or are being considered for exploration.",
       evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "medium",
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies the skill and task areas to review for vocational exploration and later planning.",
+        }),
+      ],
     }),
 
     defineQuestion({
-      id: "skills_evidence_sources_used",
-      label: "Which evidence sources were used when completing this Skills Audit?",
+      id: "tasks_client_can_currently_do",
+      label: "What work-related tasks can the client currently do?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: sorts clothing by color, wipes tables, stocks lightweight items, uses a phone calculator, follows a short checklist, enters basic information on a computer.",
+      guidance:
+        "List practical tasks the client can currently complete based on client report, staff knowledge, or observation. Clarify when a task still needs to be observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures currently identified work-task skills for later job exploration and skill verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "tasks_from_work_school_home_volunteer_or_training",
+      label: "What tasks has the client done before at work, school, home, volunteer activities, or training?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: cleaned classrooms at school, folded laundry at home, stocked food pantry shelves as a volunteer, used a register during prior employment, completed food preparation training.",
+      guidance:
+        "Include where the task was completed and whether the client reports the experience or it is documented or observed.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies past task experience that may transfer into employment or require further skills verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "tasks_client_feels_comfortable_doing",
+      label: "What tasks does the client say they feel comfortable or confident doing?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Document tasks the client reports liking, feeling comfortable doing, or wanting to use in a job.",
+      guidance:
+        "This is the client's perspective. It is important for exploration, but it should not be treated as verified skill performance unless supported by observation or documentation.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Preserves client-reported task comfort and confidence for collaborative work exploration.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "staff_observed_successful_tasks",
+      label: "What work-related tasks have staff directly observed the client doing successfully?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: During a community observation, client correctly sorted supplies into bins using a visual checklist and one reminder.",
+      guidance:
+        "Document the actual task observed, what the client completed successfully, and any support used.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures direct skill evidence that may later inform FACTS/VFP and job-exploration review.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "tools_equipment_or_technology_client_can_use",
+      label: "What tools, equipment, or technology can the client use or has experience using?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: broom and mop, laundry machines, stocking cart, basic hand tools, smartphone apps, keyboard and mouse, email, word processing, calculator, cash register.",
+      guidance:
+        "Record equipment or technology experience and note when actual skill level or safe use still needs evaluation.",
+      evidenceCategory: EVIDENCE_CATEGORY.FUNCTIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Identifies tool, equipment, and technology experience relevant to possible work tasks and later verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "training_certifications_or_completed_learning",
+      label: "What training, certifications, classes, or completed learning may support the client's work skills?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: food handler permit, CPR training, school transition program, custodial training, computer class, workplace safety training, driver's license, or no known training yet.",
+      guidance:
+        "Include completed or reported training and identify when documentation still needs to be obtained or verified.",
+      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.VOCATIONAL,
+          description:
+            "Captures training and credential information that may support vocational planning or require verification.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "skills_needing_practice_training_or_observation",
+      label: "Which skills need more practice, training, support, or observation?",
+      type: QUESTION_TYPES.NARRATIVE,
+      placeholder:
+        "Example: needs practice using a checklist consistently, has not yet been observed completing multi-step cleaning tasks, may need training with customer greetings, or needs additional computer keyboard practice.",
+      guidance:
+        "Identify skills that are developing, unverified, or may require additional teaching or support.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
+      evidenceWeight: "high",
+      implications: [
+        defineImplication({
+          type: IMPLICATION_TYPE.SUPPORT,
+          description:
+            "Identifies skill-development and verification needs for later training, assessment, or support planning.",
+        }),
+      ],
+    }),
+
+    defineQuestion({
+      id: "supports_or_strategies_that_help_skill_performance",
+      label: "What supports or strategies appear to help the client learn or perform work tasks?",
       type: QUESTION_TYPES.SELECT_ALL,
       options: [
-        "Client self-report",
-        "Employment specialist or job-coach observation",
-        "Work Performance & Support Observation",
-        "Resume",
-        "Prior employment history",
-        "Training record",
-        "Certification or credential document",
-        "School or transition documentation",
-        "Employer or supervisor report",
-        "Family or support-provider report",
-        "Other assessment results",
-        "Work sample or completed task",
-        "No supporting evidence available yet",
+        "No support identified yet",
+        "Verbal instruction",
+        "One-step directions",
+        "Demonstration or modeling",
+        "Visual checklist or picture cue",
+        "Written instructions",
+        "Repetition or practice",
+        "Extra processing time",
+        "Reminders or redirection",
+        "Reduced distractions",
+        "Adjusted work pace",
+        "Breaks or recovery time",
+        "Adaptive equipment or technology",
+        "Supervisor or coworker support",
+        "Job-coach support",
+        "Needs further observation before identifying helpful supports",
         "Other",
       ],
       guidance:
-        "Select sources actually reviewed or relied upon in this assessment. Later sections should distinguish verified evidence from skills requiring further confirmation.",
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
+        "Select strategies already reported as helpful or observed as helpful. Use later sections to add detailed evidence.",
+      evidenceCategory: EVIDENCE_CATEGORY.SUPPORT,
       evidenceWeight: "high",
       implications: [
         defineImplication({
-          type: IMPLICATION_TYPE.VOCATIONAL,
+          type: IMPLICATION_TYPE.SUPPORT,
           description:
-            "Identifies the evidence sources supporting skill claims and observed abilities documented in this assessment.",
+            "Identifies supports or learning strategies that may warrant additional evaluation during skill development or work exploration.",
         }),
       ],
     }),
 
     defineQuestion({
-      id: "jobs_or_task_areas_being_considered",
-      label: "Which jobs, occupational areas, or work-task areas are being considered during this Skills Audit?",
+      id: "task_areas_worth_exploring_further",
+      label: "Which work tasks or job areas appear worth exploring further based on current skills information?",
       type: QUESTION_TYPES.NARRATIVE,
       placeholder:
-        "Example: custodial work, stocking and inventory, laundry services, office support, food preparation, groundskeeping, customer service, warehouse tasks, computer-based work, or no specific direction identified yet.",
+        "Example: explore custodial tasks because client reports comfort cleaning and staff observed accurate table cleaning; evaluate stocking further because sorting strength is present but pace is unknown.",
       guidance:
-        "Document job directions or task areas being considered. It is acceptable to state that the client is still exploring and no target area has been selected.",
+        "Identify areas for exploration only. Do not treat this as a final job recommendation or job-fit decision.",
       evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
       evidenceWeight: "high",
       implications: [
         defineImplication({
           type: IMPLICATION_TYPE.VOCATIONAL,
           description:
-            "Connects skills evidence to possible work-task areas or occupational directions being explored.",
+            "Identifies possible work-task directions for additional exploration based on available skills evidence.",
         }),
       ],
     }),
 
     defineQuestion({
-      id: "client_reported_skills_or_experience",
-      label: "What skills, abilities, or relevant experience does the client report having?",
+      id: "skills_information_sources_or_next_verification_needed",
+      label: "Where did this skills information come from, and what still needs to be checked or observed?",
       type: QUESTION_TYPES.NARRATIVE,
       placeholder:
-        "Document skills or experience the client identifies, including work tasks, household activities, volunteer activities, school activities, technology use, hobbies with transferable skills, or previous employment experience.",
+        "Example: Client reported prior laundry experience; staff observed sorting skills during assessment; need to observe ability to use washer/dryer safely and complete the full sequence.",
       guidance:
-        "Record this as client-reported evidence unless it is verified elsewhere. Do not treat self-report alone as demonstrated performance.",
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-      implications: [
-        defineImplication({
-          type: IMPLICATION_TYPE.VOCATIONAL,
-          description:
-            "Preserves client-reported skills and experience for later verification and vocational exploration.",
-        }),
-      ],
-    }),
-
-    defineQuestion({
-      id: "staff_observed_skills_or_evidence",
-      label: "What work-related skills or abilities have staff directly observed?",
-      type: QUESTION_TYPES.NARRATIVE,
-      placeholder:
-        "Document directly observed skills and the context in which they were seen. Example: client accurately sorted supplies during a community-based observation using a visual checklist with one reminder.",
-      guidance:
-        "Identify what was directly observed, where it was observed, and any supports needed. Avoid general conclusions that are not supported by specific evidence.",
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-      implications: [
-        defineImplication({
-          type: IMPLICATION_TYPE.VOCATIONAL,
-          description:
-            "Captures direct observed evidence of work-related skills for later FACTS/VFP and vocational planning review.",
-        }),
-      ],
-    }),
-
-    defineQuestion({
-      id: "resume_training_or_documented_skill_evidence",
-      label: "What skills are supported by resumes, training records, certifications, school records, employer reports, or other documentation?",
-      type: QUESTION_TYPES.NARRATIVE,
-      placeholder:
-        "Document the skill, the source supporting it, and any limits on interpretation. Example: food handler certification documented; prior cashier experience listed on resume but current accuracy and customer-interaction skill not yet observed.",
-      guidance:
-        "Identify documented skill evidence separately from direct observation and client report.",
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-      implications: [
-        defineImplication({
-          type: IMPLICATION_TYPE.VOCATIONAL,
-          description:
-            "Preserves documented skill and credential evidence while identifying what may still require functional verification.",
-        }),
-      ],
-    }),
-
-    defineQuestion({
-      id: "skill_evidence_current_verification_status",
-      label: "What is the overall verification status of currently available skills evidence?",
-      type: QUESTION_TYPES.MULTIPLE_CHOICE,
-      options: [
-        "Strong direct observation and/or documentation is available for key skills",
-        "Some skills are supported by evidence and others require verification",
-        "Most skills are currently client-reported and require verification",
-        "Documentation exists but functional performance still requires observation",
-        "Insufficient information is available to identify current work skills",
-        "Unable to determine",
-      ],
-      guidance:
-        "Rate the strength of the evidence available now, not the client's potential ability.",
+        "Briefly identify sources and remaining verification needs in plain language. This prevents reported skills from being mistaken for demonstrated skills.",
       evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
       evidenceWeight: "high",
       implications: [
         defineImplication({
           type: IMPLICATION_TYPE.SUPPORT,
           description:
-            "Identifies whether additional observation, documentation review, or assessment is needed before relying on skill evidence in vocational planning.",
-        }),
-      ],
-    }),
-
-    defineQuestion({
-      id: "skills_evidence_limitations_or_unknowns",
-      label: "What limitations, missing information, or unknowns affect interpretation of the client's current skills?",
-      type: QUESTION_TYPES.NARRATIVE,
-      placeholder:
-        "Document information still needed, such as lack of direct observation, unclear skill level, outdated work history, unverified certification, limited work sample, unknown support need, or task areas not yet evaluated.",
-      guidance:
-        "Use this field to prevent unverified claims from being treated as confirmed skills evidence.",
-      evidenceCategory: EVIDENCE_CATEGORY.VOCATIONAL,
-      evidenceWeight: "high",
-      implications: [
-        defineImplication({
-          type: IMPLICATION_TYPE.SUPPORT,
-          description:
-            "Identifies additional evidence or assessment needed before using uncertain skill information in job planning or recommendations.",
+            "Preserves the source and verification needs for skills information before it is used in later vocational planning.",
         }),
       ],
     }),
@@ -259,20 +280,19 @@ const SECTION_SKILLS_CONTEXT_EVIDENCE_SOURCES = defineSection({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exported Definition — Initial build includes Section 1 only
-// Additional structured skill-evidence sections will be added and verified
-// incrementally before downstream FACTS/VFP or recommendation integration.
+// Exported Definition — Initial simplified build includes Section 1 only
+// Additional practical skills sections will be added and verified incrementally.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SKILLS_AUDIT_SECTIONS = [
-  SECTION_SKILLS_CONTEXT_EVIDENCE_SOURCES,
+  SECTION_SKILLS_TO_REVIEW,
 ];
 
 export const SKILLS_AUDIT_META = {
   assessment_type: "skills_audit",
   label: "Skills Audit",
   description:
-    "Structured skills-evidence assessment for work abilities, training needs, verification status, and vocational planning relevance.",
+    "Practical structured review of current work skills, task experience, supports, training needs, and areas for further exploration.",
   version: 1,
   repeatable: false,
 };
