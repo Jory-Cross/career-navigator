@@ -415,16 +415,10 @@ try {
 
         const parsedJobZone = Number(jobZoneData?.code);
 
-        return {
+               return {
           ...normalizedCareer,
           job_zone: Number.isFinite(parsedJobZone) ? parsedJobZone : null,
           job_zone_title: jobZoneData?.title || null,
-          job_zone_education: jobZoneData?.education || null,
-          job_zone_related_experience:
-            jobZoneData?.related_experience || null,
-          job_zone_training: jobZoneData?.job_training || null,
-          job_zone_examples: jobZoneData?.job_zone_examples || null,
-          job_zone_svp_range: jobZoneData?.svp_range || null,
         };
       } catch (jobZoneError) {
         console.warn(
