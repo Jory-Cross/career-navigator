@@ -321,8 +321,12 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   if (interestProfileMatch === "strong") positiveSignals.push("Aligns with interests (corroborated)");
   else if (interestProfileMatch === "moderate") concerns.push("Interest match present but not corroborated");
 
-  // Work history
+   // Work history
   if (workHistoryMatch) positiveSignals.push("Matches past work experience");
+
+  if (verifiedWorkHistoryMatch) {
+    positiveSignals.push("Verified successful work history in this occupation");
+  }
 
   // Goals
   if (goalMatch) positiveSignals.push("Aligns with stated goals");
