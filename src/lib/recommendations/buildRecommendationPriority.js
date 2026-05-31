@@ -372,8 +372,42 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   let reason = "";
   let staffAction = "Do not prioritize right now";
 
-  // ── CAUTION: severe conflicts override everything except poor_fit ──────
-  // Severe conflict (5+) → always caution, regardless of interest match
+   // ── HIGH-PREPARATION JOB ZONE SAFEGUARD ────────────────────────────────
+  // Job Zone 4–5 occupations require substantial preparation. Unless verified
+  // client evidence supports that level, they cannot be near-term targets.
+  if (jobZone >= 4 && !hasVerifiedPreparationSupport) {
+    const zoneLabel = jobZoneTitle || `Job Zone ${jobZone}`;
+
+    if (
+      conflictScore >= 3 ||
+      hardConstraints.length > 0 ||
+      envFitLevel === "poor_fit" ||
+      envFitLevel === "caution"
+    ) {
+      priority = "low_priority";
+      reason = `${zoneLabel} requires substantial preparation not verified in the client profile, and fit concerns are also present.`;
+      staffAction = "Do not prioritize as a near-term target";
+      return {
+        priority_level: priority,
+        priority_reason: reason,
+        priority_factors: priorityFactors,
+        staff_action: staffAction,
+      };
+    }
+
+    priority = "stretch";
+    reason = `${zoneLabel} requires substantial preparation not verified in the client profile. Keep as a longer-term exploration option only.`;
+    staffAction = "Explore only as a long-term developmental goal";
+    return {
+      priority_level: priority,
+      priority_reason: reason,
+      priority_factors: priorityFactors,
+      staff_action: staffAction,
+    };
+  }
+
+  // ── CAUTION: severe conflicts override remaining options ───────────────
+  // Severe conflict (5+) → caution, regardless of interest match
   if (conflictScore >= 5 || hardConstraints.length >= 2) {
     priority = "caution";
     reason = `Significant functional or environmental conflicts detected. ${conflictReasons.slice(0, 2).join("; ")}.`;
