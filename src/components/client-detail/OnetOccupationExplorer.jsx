@@ -330,6 +330,14 @@ const saveInterestedOccupation = async () => {
       Green Occupation
     </p>
   )}
+            <Button
+  size="sm"
+  className="mt-3"
+  onClick={saveInterestedOccupation}
+  disabled={savingInterest}
+>
+  {savingInterest ? "Saving..." : "Interested"}
+</Button>
 </div>
 
          <DetailSection title="Overview">
