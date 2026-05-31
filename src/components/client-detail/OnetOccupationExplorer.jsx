@@ -161,11 +161,12 @@ export default function OnetOccupationExplorer({ clientId, client }) {
 );
   const education = occupationDetails?.education;
   const technology = asArray(
-    occupationDetails?.technology?.category ||
-    occupationDetails?.technology?.technology ||
-    occupationDetails?.technology?.example ||
-    occupationDetails?.technology?.element
-  );
+  occupationDetails?.technology?.category ||
+  occupationDetails?.technology?.technology ||
+  occupationDetails?.technology?.example ||
+  occupationDetails?.technology?.element ||
+  occupationDetails?.technology
+);
   const jobZone = occupationDetails?.jobZone;
 
   return (
