@@ -164,14 +164,14 @@ function compactRecommendationForStorage(job = {}) {
        // Recommendation scoring and concise visible reasoning
     match_score: job.match_score ?? null,
     fit_score: job.fit_score ?? null,
-    match_reason: compactStoredText(job.match_reason || "", 100),
-    matched_keywords: compactStoredList(job.matched_keywords, 3, 40),
-    fit_strengths: compactStoredList(job.fit_strengths, 1, 70),
-    fit_concerns: compactStoredList(job.fit_concerns, 1, 70),
-    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 90),
-    constraint_codes: compactStoredList(job.constraint_codes, 3, 40),
+    match_reason: compactStoredText(job.match_reason || "", 90),
+    matched_keywords: [],
+    fit_strengths: [],
+    fit_concerns: [],
+    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 70),
+    constraint_codes: [],
     confidence_level: job.confidence_level || "low",
-    confidence_reason: compactStoredText(job.confidence_reason || "", 110),
+    confidence_reason: compactStoredText(job.confidence_reason || "", 80),
 
     // Staff and client review workflow fields
     status: job.status || null,
@@ -184,53 +184,48 @@ function compactRecommendationForStorage(job = {}) {
     client_responded_at: job.client_responded_at || null,
     client_response_notes: job.client_response_notes || "",
 
-    // Visible Why This Recommendation panel — compact persisted summary
+    // Persist only the summary needed to render the saved explanation panel.
+    // Detailed evidence arrays are generated live but are not duplicated into
+    // every saved occupation record because they exceed Base44 field limits.
     grounding: grounding
       ? {
-          supported_by: compactStoredList(grounding.supported_by, 1, 60),
-          supporting_sources: compactStoredList(grounding.supporting_sources, 1, 70),
-          confidence_factors: compactStoredList(grounding.confidence_factors, 1, 70),
-          concern_factors: compactStoredList(grounding.concern_factors, 1, 70),
-          missing_data_factors: compactStoredList(grounding.missing_data_factors, 1, 70),
-          grounding_summary: compactStoredText(grounding.grounding_summary || "", 110),
-          staff_review_flags: compactStoredList(grounding.staff_review_flags, 1, 70),
+          supported_by: [],
+          supporting_sources: [],
+          confidence_factors: [],
+          concern_factors: [],
+          missing_data_factors: [],
+          grounding_summary: compactStoredText(grounding.grounding_summary || "", 90),
+          staff_review_flags: [],
         }
       : null,
 
-    // Visible Environmental Fit and Staff Should Verify panels — compact persisted summary
+    // Persist only environmental fit status and summary.
     constraint_fit: constraintFit
       ? {
           overall_fit_level: constraintFit.overall_fit_level || "unknown",
-          hard_constraints: compactStoredList(constraintFit.hard_constraints, 1, 70),
-          moderate_constraints: compactStoredList(constraintFit.moderate_constraints, 1, 70),
-          soft_preferences: compactStoredList(constraintFit.soft_preferences, 1, 70),
-          unknowns: compactStoredList(constraintFit.unknowns, 1, 70),
+          hard_constraints: [],
+          moderate_constraints: [],
+          soft_preferences: [],
+          unknowns: [],
           environmental_fit_summary: compactStoredText(
             constraintFit.environmental_fit_summary || "",
-            110
+            90
           ),
-          occupation_notes: compactStoredList(constraintFit.occupation_notes, 1, 70),
-          occupation_profile_label: compactStoredText(
-            constraintFit.occupation_profile_label || "",
-            60
-          ),
-          staff_verification_needed: compactStoredList(
-            constraintFit.staff_verification_needed,
-            1,
-            70
-          ),
+          occupation_notes: [],
+          occupation_profile_label: "",
+          staff_verification_needed: [],
         }
       : null,
 
-    // Visible Recommendation Priority panel — compact persisted summary
+    // Persist the priority decision and short staff action.
     priority: priority
       ? {
           priority_level: priority.priority_level || "unknown",
-          priority_reason: compactStoredText(priority.priority_reason || "", 110),
-          priority_factors: compactStoredList(priority.priority_factors, 1, 80),
-          staff_action: compactStoredText(priority.staff_action || "", 90),
+          priority_reason: compactStoredText(priority.priority_reason || "", 90),
+          priority_factors: [],
+          staff_action: compactStoredText(priority.staff_action || "", 70),
         }
-      : null,  
+      : null,
   };
 }
 
