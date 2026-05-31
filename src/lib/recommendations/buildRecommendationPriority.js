@@ -337,9 +337,20 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     concerns.push("Schedule constraints may conflict");
   }
 
-  // Licensing/training
+    // Licensing/training
   if (licensingBurden === "high") negativeSignals.push("High licensing/training burden");
   else if (licensingBurden === "moderate") concerns.push("Moderate licensing required");
+
+  // O*NET Job Zone / preparation-level burden
+  if (jobZone >= 4 && !hasVerifiedPreparationSupport) {
+    negativeSignals.push(
+      `${jobZoneTitle || `Job Zone ${jobZone}`} requires substantial preparation not verified in the client profile`
+    );
+  } else if (jobZone === 3 && !hasVerifiedPreparationSupport) {
+    concerns.push(
+      `${jobZoneTitle || "Job Zone 3"} requires preparation that should be verified before prioritizing`
+    );
+  }
 
   // Unknown factors
   if (unknownFactors.length >= 4) concerns.push("Multiple unknowns present");
