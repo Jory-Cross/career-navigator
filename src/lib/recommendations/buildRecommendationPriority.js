@@ -538,8 +538,8 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
   }
 
-  // ── CAUTION / VERIFY FIRST ────────────────────────────────────────────
- if (
+// ── CAUTION / VERIFY FIRST ────────────────────────────────────────────
+if (
   (
     conflictScore >= 3 ||
     envFitLevel === "caution" ||
@@ -549,14 +549,27 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   ) &&
   !verifiedWorkHistoryMatch
 ) {
-    priority = "caution";
-    const causeList = [...concerns, ...conflictReasons].slice(0, 2).join("; ");
-    reason = `Has fit concerns or unknowns requiring verification. ${causeList}.`;
-    staffAction = "Verify concerns before presenting to client";
-    return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
-  }
+  priority = "caution";
+  const causeList = [...concerns, ...conflictReasons].slice(0, 2).join("; ");
+  reason = `Has fit concerns or unknowns requiring verification. ${causeList}.`;
+  staffAction = "Verify concerns before presenting to client";
+  return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
+}
 
-  // ── LOW PRIORITY (default) ────────────────────────────────────────────
+// ── VERIFIED WORK HISTORY FALLBACK ─────────────────────────────────────
+if (
+  verifiedWorkHistoryMatch &&
+  hardConstraints.length === 0 &&
+  envFitLevel !== "poor_fit" &&
+  (jobZone === null || jobZone <= 2 || hasVerifiedPreparationSupport)
+) {
+  priority = "explore_further";
+  reason = "Documented successful work history supports this as a practical job-search option. Staff should verify current supports and workplace conditions.";
+  staffAction = "Discuss with client and verify supports before targeting";
+  return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
+}
+
+// ── LOW PRIORITY (default) ────────────────────────────────────────────
   priority = "low_priority";
   reason = conflictReasons.length > 0
     ? `Conflicts or weak fit make this a low-priority option. ${conflictReasons[0]}.`
