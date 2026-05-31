@@ -153,11 +153,12 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     occupationDetails?.tasks?.element
   );
   const skills = asArray(
-    occupationDetails?.skills?.group ||
-    occupationDetails?.skills?.skill ||
-    occupationDetails?.skills?.skills ||
-    occupationDetails?.skills?.element
-  );
+  occupationDetails?.skills?.group ||
+  occupationDetails?.skills?.skill ||
+  occupationDetails?.skills?.skills ||
+  occupationDetails?.skills?.element ||
+  occupationDetails?.skills
+);
   const education = occupationDetails?.education;
   const technology = asArray(
     occupationDetails?.technology?.category ||
