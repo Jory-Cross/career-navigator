@@ -502,7 +502,7 @@ try {
 
   const seenCareerKeys = new Set();
 
-  const rawCareerItems = interleavedCareerItems
+   const rawCareerItems = [...verifiedCareerItems, ...interleavedCareerItems]
     .filter((item) => {
       const key = String(
         item?.code ||
