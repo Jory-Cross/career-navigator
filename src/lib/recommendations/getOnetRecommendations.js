@@ -192,6 +192,13 @@ function getVerifiedWorkHistoryTargets(profile = {}) {
       .filter((title) => title.length >= 3 && title.length <= 80)
   ).slice(0, 5);
 }
+
+function normalizeOnetCareerItem(
+  item = {},
+  index = 0,
+  profileKeywords = [],
+  conflicts = []
+) {
   const title =
     item.title ||
     item.career_title ||
