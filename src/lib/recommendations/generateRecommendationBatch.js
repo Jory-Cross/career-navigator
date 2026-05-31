@@ -151,27 +151,16 @@ function compactRecommendationForStorage(job = {}) {
   const priority = job.priority || null;
 
   return {
-    // Occupation identity and O*NET preparation information
+        // Minimum persisted occupation identity and O*NET preparation information
     onet_code: job.onet_code || null,
     title: job.title || job.job_title || "Untitled Recommendation",
-    source_url: job.source_url || job.href || null,
-    bright_outlook: !!job.bright_outlook,
-    green: !!job.green,
-    apprenticeship: !!job.apprenticeship,
     job_zone: job.job_zone ?? null,
     job_zone_title: job.job_zone_title || null,
 
-        // Recommendation scoring and concise visible reasoning
+    // Minimum persisted scoring/status information
     match_score: job.match_score ?? null,
     fit_score: job.fit_score ?? null,
-    match_reason: compactStoredText(job.match_reason || "", 55),
-    matched_keywords: [],
-    fit_strengths: [],
-    fit_concerns: [],
-    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 40),
-    constraint_codes: [],
     confidence_level: job.confidence_level || "low",
-    confidence_reason: compactStoredText(job.confidence_reason || "", 45),
 
     // Staff and client review workflow fields
     status: job.status || null,
@@ -184,35 +173,23 @@ function compactRecommendationForStorage(job = {}) {
     client_responded_at: job.client_responded_at || null,
     client_response_notes: job.client_response_notes || "",
 
-       // Persist only the summary needed to render the saved explanation panel.
-    // RecommendationCardPanels safely defaults omitted evidence arrays to [].
-    grounding: grounding
-      ? {
-          grounding_summary: compactStoredText(
-            grounding.grounding_summary || "",
-            45
-          ),
-        }
-      : null,
-
-    // Persist only environmental fit status and summary.
-    // Omitted constraint detail arrays render as empty after reload.
+    // Persist environmental-fit decision and one short summary.
     constraint_fit: constraintFit
       ? {
           overall_fit_level: constraintFit.overall_fit_level || "unknown",
           environmental_fit_summary: compactStoredText(
             constraintFit.environmental_fit_summary || "",
-            45
+            35
           ),
         }
       : null,
 
-    // Persist the priority decision and short staff action.
+    // Persist priority decision and staff action.
     priority: priority
       ? {
           priority_level: priority.priority_level || "unknown",
-          priority_reason: compactStoredText(priority.priority_reason || "", 45),
-          staff_action: compactStoredText(priority.staff_action || "", 45),
+          priority_reason: compactStoredText(priority.priority_reason || "", 35),
+          staff_action: compactStoredText(priority.staff_action || "", 35),
         }
       : null,
   };
