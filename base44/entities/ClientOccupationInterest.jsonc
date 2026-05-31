@@ -1,0 +1,50 @@
+{
+  "name": "ClientOccupationInterest",
+  "type": "object",
+  "description": "Stores O*NET occupations that a client or staff member marks as Interested from the O*NET Occupation Explorer.",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "ID of the client this interest is associated with"
+    },
+    "onet_code": {
+      "type": "string",
+      "description": "O*NET occupation code (e.g. 15-1252.00)"
+    },
+    "occupation_title": {
+      "type": "string",
+      "description": "Title of the O*NET occupation"
+    },
+    "occupation_description": {
+      "type": "string",
+      "description": "Full description of the O*NET occupation"
+    },
+    "job_zone_code": {
+      "type": "number",
+      "description": "O*NET Job Zone number (1-5)"
+    },
+    "job_zone_title": {
+      "type": "string",
+      "description": "Human-readable Job Zone title"
+    },
+    "source": {
+      "type": "string",
+      "default": "onet_explorer",
+      "description": "Source where this interest was marked"
+    },
+    "status": {
+      "type": "string",
+      "default": "interested",
+      "description": "Current status of the interest (e.g. interested, exploring, dismissed)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about this occupation interest"
+    }
+  },
+  "required": [
+    "client_id",
+    "onet_code",
+    "occupation_title"
+  ]
+}
