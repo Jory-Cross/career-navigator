@@ -128,6 +128,10 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         getOnetOccupationJobZone(code),
       ]);
 
+console.log("OCCUPATION OVERVIEW", overview);
+console.log("OCCUPATION SKILLS", skills);
+console.log("OCCUPATION TECHNOLOGY", technology);
+      
       setOccupationDetails({
         code,
         overview: overview.status === "fulfilled" ? overview.value : null,
