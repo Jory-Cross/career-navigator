@@ -623,7 +623,7 @@ const recommendationsWithConstraints = processed
     return (b.match_score || 0) - (a.match_score || 0);
   });
 
-      const aiCoachText = await generateJobCoachResponse({
+          const aiCoachText = await generateJobCoachResponse({
     recommendations: recommendationsWithConstraints,
     profile: {
       ...profile,
@@ -637,6 +637,15 @@ const recommendationsWithConstraints = processed
       },
     },
   });
+
+  const recommendationsForStorage =
+    recommendationsWithConstraints.map(compactRecommendationForStorage);
+
+  console.log(
+    "RECOMMENDATION STORAGE PAYLOAD SIZE:",
+    JSON.stringify(recommendationsForStorage).length
+  );
+
   const localBatch = {
     client_id: client?.id,
     recommended_job_fields_json: JSON.stringify(recommendationsWithConstraints),
