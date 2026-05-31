@@ -101,6 +101,61 @@ function resolveConfidenceLevel({
   };
 }
 
+// ── SAVED RECOMMENDATION PAYLOAD COMPACTION ──────────────────────────────────
+// Recommendation generation uses rich analysis objects while processing.
+// Base44 stores the final recommendation array in a JSON text field with a
+// limited maximum size. Save only the nested fields currently rendered by the
+// recommendation review cards while preserving all standard top-level fields,
+// including O*NET code and Job Zone.
+
+function compactRecommendationForStorage(job = {}) {
+  const grounding = job.grounding || null;
+  const constraintFit = job.constraint_fit || null;
+  const priority = job.priority || null;
+
+  return {
+    ...job,
+
+    grounding: grounding
+      ? {
+          supported_by: grounding.supported_by || [],
+          supporting_sources: grounding.supporting_sources || [],
+          confidence_factors: grounding.confidence_factors || [],
+          concern_factors: grounding.concern_factors || [],
+          missing_data_factors: grounding.missing_data_factors || [],
+          grounding_summary: grounding.grounding_summary || "",
+          staff_review_flags: grounding.staff_review_flags || [],
+        }
+      : null,
+
+    constraint_fit: constraintFit
+      ? {
+          overall_fit_level: constraintFit.overall_fit_level || "unknown",
+          hard_constraints: constraintFit.hard_constraints || [],
+          moderate_constraints: constraintFit.moderate_constraints || [],
+          soft_preferences: constraintFit.soft_preferences || [],
+          unknowns: constraintFit.unknowns || [],
+          environmental_fit_summary:
+            constraintFit.environmental_fit_summary || "",
+          occupation_notes: constraintFit.occupation_notes || [],
+          occupation_profile_label:
+            constraintFit.occupation_profile_label || null,
+          staff_verification_needed:
+            constraintFit.staff_verification_needed || [],
+        }
+      : null,
+
+    priority: priority
+      ? {
+          priority_level: priority.priority_level || "unknown",
+          priority_reason: priority.priority_reason || "",
+          priority_factors: priority.priority_factors || [],
+          staff_action: priority.staff_action || "",
+        }
+      : null,
+  };
+}
+
 export async function generateRecommendationBatch({
   client,
   resumes = [],
