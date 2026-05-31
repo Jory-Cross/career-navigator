@@ -20,6 +20,10 @@ import {
   WORK_PERFORMANCE_SUPPORT_OBSERVATION_SECTIONS,
   WORK_PERFORMANCE_SUPPORT_OBSERVATION_META,
 } from "@/lib/assessments/workPerformanceSupportObservationDefinition";
+import {
+  SKILLS_AUDIT_SECTIONS,
+  SKILLS_AUDIT_META,
+} from "@/lib/assessments/skillsAuditDefinition";
 
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
