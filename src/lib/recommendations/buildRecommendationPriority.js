@@ -511,12 +511,16 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
   }
 
-  // Also treat moderate-conflict + interest-aligned jobs as stretch
+    // Also treat moderate-conflict + interest-aligned jobs as stretch.
+  // Exception: documented successful work history is stronger evidence
+  // than broad inferred conflicts.
   if (
-    conflictScore >= 2 && conflictScore < 5 &&
+    conflictScore >= 2 &&
+    conflictScore < 5 &&
     interestProfileMatch !== "weak" &&
     matchScore >= 30 &&
-    hardConstraints.length === 0
+    hardConstraints.length === 0 &&
+    !verifiedWorkHistoryMatch
   ) {
     priority = "stretch";
     reason = `Career interest exists but environmental/functional conflicts need to be addressed first. ${conflictReasons.slice(0, 1).join("")}`;
