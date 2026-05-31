@@ -61,6 +61,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
   const [occupationDetails, setOccupationDetails] = useState(null);
   const [searching, setSearching] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [savingInterest, setSavingInterest] = useState(false);
   const [error, setError] = useState("");
 
   const runSearch = async () => {
