@@ -401,9 +401,77 @@ if (normalizedAnswers.length < 30) {
 // Retrieve Interest Profiler career matches, then attach each occupation's
 // official O*NET Job Zone preparation details before scoring and saving.
 try {
-  // Primary recommendation list = realistic near-term preparation levels only.
-  // For clients without separately verified advanced preparation evidence,
-  // request O*NET Interest Profiler matches from Job Zones 1 and 2 only.
+  // Verified prior occupations must be considered directly rather than
+  // depending on Interest Profiler results to happen to return them.
+  const verifiedWorkHistoryTargets = getVerifiedWorkHistoryTargets(profile);
+
+  const verifiedSearchResults = await Promise.all(
+    verifiedWorkHistoryTargets.map(async (target) => {
+      try {
+        const raw = await searchOnetCareersByKeyword(target, {
+          start: 1,
+          end: 3,
+        });
+
+        const items = toArray(
+          raw?.career || raw?.careers || raw?.items
+        );
+
+        const normalizedTarget = safeLower(target);
+
+        const bestMatch =
+          items.find((item) => {
+            const itemTitle = safeLower(
+              item?.title ||
+              item?.career_title ||
+              item?.name ||
+              item?.occupation_title
+            );
+
+            return (
+              itemTitle === normalizedTarget ||
+              itemTitle.includes(normalizedTarget) ||
+              normalizedTarget.includes(itemTitle)
+            );
+          }) || items[0];
+
+        if (!bestMatch) return null;
+
+        return {
+          ...bestMatch,
+          _candidate_source: "verified-work-history",
+          _verified_work_history_match: true,
+          _verified_target_term: target,
+        };
+      } catch (error) {
+        console.warn(
+          "[getOnetRecommendations] Could not search verified work-history target:",
+          target,
+          error
+        );
+
+        return null;
+      }
+    })
+  );
+
+  const verifiedCareerItems = verifiedSearchResults.filter(Boolean);
+
+  console.log(
+    "[getOnetRecommendations] Verified work-history career candidates:",
+    verifiedCareerItems.map((item) => ({
+      target: item._verified_target_term,
+      title:
+        item.title ||
+        item.career_title ||
+        item.name ||
+        item.occupation_title ||
+        null,
+    }))
+  );
+
+  // Interest Profiler remains useful for discovering additional realistic
+  // options, but it no longer controls the entire candidate pool.
   const [zone1Raw, zone2Raw] = await Promise.all([
     getInterestProfilerCareers({
       answers: normalizedAnswers,
@@ -422,7 +490,6 @@ try {
   const zone2Items = toArray(
     zone2Raw?.career || zone2Raw?.careers || zone2Raw?.items
   );
-
   // Interleave Zone 1 and Zone 2 results so neither preparation level
   // crowds out the other, remove duplicates, and retain a safe display size.
   const interleavedCareerItems = [];
