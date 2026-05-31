@@ -148,6 +148,36 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     }
   };
 
+const saveInterestedOccupation = async () => {
+  if (!clientId || !occupationDetails || !selectedOccupation) {
+    toast.error("Client or occupation information is missing.");
+    return;
+  }
+
+  setSavingInterest(true);
+
+  try {
+    await base44.entities.ClientOccupationInterest.create({
+      client_id: clientId,
+      onet_code: occupationDetails.code,
+      occupation_title: overview?.title || getOccupationTitle(selectedOccupation),
+      occupation_description: overview?.what_they_do || "",
+      job_zone_code: jobZone?.code || null,
+      job_zone_title: jobZone?.title || "",
+      source: "onet_explorer",
+      status: "interested",
+      notes: "",
+    });
+
+    toast.success("Occupation marked as Interested.");
+  } catch (err) {
+    console.error("Failed to save interested occupation:", err);
+    toast.error("Failed to save interested occupation.");
+  } finally {
+    setSavingInterest(false);
+  }
+};
+  
   const overview = occupationDetails?.overview;
   const tasks = asArray(
     occupationDetails?.tasks?.task ||
