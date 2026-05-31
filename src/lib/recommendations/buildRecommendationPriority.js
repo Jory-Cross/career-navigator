@@ -420,12 +420,15 @@ export function buildRecommendationPriority(job = {}, context = {}) {
 
   // ── CAUTION: severe conflicts override remaining options ───────────────
   // Severe conflict (5+) → caution, regardless of interest match
-  if (conflictScore >= 5 || hardConstraints.length >= 2) {
-    priority = "caution";
-    reason = `Significant functional or environmental conflicts detected. ${conflictReasons.slice(0, 2).join("; ")}.`;
-    staffAction = "Verify fit concerns before presenting to client";
-    return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
-  }
+  if (
+  (conflictScore >= 5 || hardConstraints.length >= 2) &&
+  !verifiedWorkHistoryMatch
+) {
+  priority = "caution";
+  reason = `Significant functional or environmental conflicts detected. ${conflictReasons.slice(0, 2).join("; ")}.`;
+  staffAction = "Verify fit concerns before presenting to client";
+  return { priority_level: priority, priority_reason: reason, priority_factors: priorityFactors, staff_action: staffAction };
+}
 
   // ── LOW PRIORITY: poor environmental fit ──────────────────────────────
   if (envFitLevel === "poor_fit" && conflictScore >= 3) {
