@@ -376,7 +376,7 @@ constraintProfile.constraints.forEach((constraint) => {
 
   const riskText = `${job.title || ""} ${job.match_reason || ""}`.toLowerCase();
 
-  if (
+    if (
     riskText.includes("customer") ||
     riskText.includes("cashier") ||
     riskText.includes("retail") ||
@@ -388,7 +388,13 @@ constraintProfile.constraints.forEach((constraint) => {
         "limited_customer_contact"
       )
     ) {
-      score = 0;
+      if (hasVerifiedWorkHistoryMatch) {
+        fitConcerns.push(
+          "This occupation involves customer contact, but it is preserved because the client has documented prior work history in this role."
+        );
+      } else {
+        score = 0;
+      }
     }
   }
 
