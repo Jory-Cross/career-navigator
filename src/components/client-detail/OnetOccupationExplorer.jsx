@@ -128,9 +128,9 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         getOnetOccupationJobZone(code),
       ]);
 
-console.log("OCCUPATION OVERVIEW", overview);
-console.log("OCCUPATION SKILLS", skills);
-console.log("OCCUPATION TECHNOLOGY", technology);
+console.log("OCCUPATION OVERVIEW", overview.value);
+console.log("OCCUPATION SKILLS", skills.value);
+console.log("OCCUPATION TECHNOLOGY", technology.value);
       
       setOccupationDetails({
         code,
