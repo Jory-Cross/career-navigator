@@ -50,21 +50,15 @@ const ALL_ASSESSMENTS = [
       { id: "development_areas", label: "Areas for Development", type: "textarea" },
     ],
   },
-  {
+    {
     key: "skills_audit",
     label: "Skills Audit",
     emoji: "🔧",
-    description: "Technical skills, soft skills, certifications, tools & skill gaps",
-    type: "legacy",
+    description: "Structured work-skill evidence, verification status, training needs & vocational relevance",
+    type: "structured",
     available: true,
-    questions: [
-      { id: "technical_skills", label: "Technical Skills", type: "textarea" },
-      { id: "soft_skills", label: "Soft Skills", type: "textarea" },
-      { id: "certifications", label: "Certifications", type: "textarea" },
-      { id: "tools_software", label: "Tools & Software Proficiency", type: "textarea" },
-      { id: "languages", label: "Languages", type: "text" },
-      { id: "skill_gaps", label: "Identified Skill Gaps", type: "textarea" },
-    ],
+    sections: SKILLS_AUDIT_SECTIONS,
+    meta: SKILLS_AUDIT_META,
   },
   {
     key: "job_search_readiness",
