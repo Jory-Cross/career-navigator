@@ -885,7 +885,14 @@ const validJobCount = jobs.filter(
   assessmentCount={client?.vocational_facts_assessment_count}
 />
 )}
-           
+
+{activeTab === 'explorer' && (
+  <OnetOccupationExplorer
+    clientId={resolvedClientId}
+    client={client}
+  />
+)}
+      
       {activeTab === 'search' && (
         <div className="space-y-4">
           {recommendationFreshness.isOutdated && (
