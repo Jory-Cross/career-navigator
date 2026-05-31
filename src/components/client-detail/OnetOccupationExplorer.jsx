@@ -412,14 +412,31 @@ export default function OnetOccupationExplorer({ clientId, client }) {
 </DetailSection>
 
           <DetailSection title="Technology">
-            {technology.length > 0 ? (
-              <pre className="whitespace-pre-wrap text-xs">
-                {JSON.stringify(technology.slice(0, 8), null, 2)}
-              </pre>
-            ) : (
-              <p className="text-xs text-slate-500">No technology returned.</p>
-            )}
-          </DetailSection>
+  {technology.length > 0 ? (
+    <div className="space-y-3">
+      {technology.map((group, groupIndex) => (
+        <div key={group?.code || groupIndex}>
+          <p className="text-xs font-semibold text-slate-800">
+            {group?.title || "Technology Category"}
+          </p>
+
+          {asArray(group?.example).length > 0 && (
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-slate-600">
+              {asArray(group.example).map((item, itemIndex) => (
+                <li key={`${item?.title || "tech"}-${itemIndex}`}>
+                  {item?.title || JSON.stringify(item)}
+                  {item?.hot_technology ? " — Hot technology" : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-xs text-slate-500">No technology returned.</p>
+  )}
+</DetailSection>
         </div>
       )}
     </div>
