@@ -648,7 +648,7 @@ const recommendationsWithConstraints = processed
 
   const localBatch = {
     client_id: client?.id,
-    recommended_job_fields_json: JSON.stringify(recommendationsWithConstraints),
+     recommended_job_fields_json: JSON.stringify(recommendationsForStorage),
     summary: {
       ...(result?.onet_summary || {}),
       constraints: constraintProfile.constraints,
