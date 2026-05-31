@@ -161,17 +161,17 @@ function compactRecommendationForStorage(job = {}) {
     job_zone: job.job_zone ?? null,
     job_zone_title: job.job_zone_title || null,
 
-       // Recommendation scoring and concise visible reasoning
+        // Recommendation scoring and concise visible reasoning
     match_score: job.match_score ?? null,
     fit_score: job.fit_score ?? null,
-    match_reason: compactStoredText(job.match_reason || "", 90),
+    match_reason: compactStoredText(job.match_reason || "", 55),
     matched_keywords: [],
     fit_strengths: [],
     fit_concerns: [],
-    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 70),
+    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 40),
     constraint_codes: [],
     confidence_level: job.confidence_level || "low",
-    confidence_reason: compactStoredText(job.confidence_reason || "", 80),
+    confidence_reason: compactStoredText(job.confidence_reason || "", 45),
 
     // Staff and client review workflow fields
     status: job.status || null,
@@ -194,7 +194,7 @@ function compactRecommendationForStorage(job = {}) {
           confidence_factors: [],
           concern_factors: [],
           missing_data_factors: [],
-          grounding_summary: compactStoredText(grounding.grounding_summary || "", 90),
+          grounding_summary: compactStoredText(grounding.grounding_summary || "", 45),
           staff_review_flags: [],
         }
       : null,
@@ -209,7 +209,7 @@ function compactRecommendationForStorage(job = {}) {
           unknowns: [],
           environmental_fit_summary: compactStoredText(
             constraintFit.environmental_fit_summary || "",
-            90
+            45
           ),
           occupation_notes: [],
           occupation_profile_label: "",
@@ -221,9 +221,9 @@ function compactRecommendationForStorage(job = {}) {
     priority: priority
       ? {
           priority_level: priority.priority_level || "unknown",
-          priority_reason: compactStoredText(priority.priority_reason || "", 90),
+          priority_reason: compactStoredText(priority.priority_reason || "", 45),
           priority_factors: [],
-          staff_action: compactStoredText(priority.staff_action || "", 70),
+          staff_action: compactStoredText(priority.staff_action || "", 45),
         }
       : null,
   };
