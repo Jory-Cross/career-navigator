@@ -675,9 +675,37 @@ const recommendationsWithConstraints = processed
   const recommendationsForStorage =
     recommendationsWithConstraints.map(compactRecommendationForStorage);
 
-  console.log(
+    console.log(
     "RECOMMENDATION STORAGE PAYLOAD SIZE:",
     JSON.stringify(recommendationsForStorage).length
+  );
+
+  const storageFieldSizeBreakdown = recommendationsForStorage.reduce(
+    (totals, recommendation) => {
+      Object.entries(recommendation).forEach(([key, value]) => {
+        const fieldSize = JSON.stringify(value ?? null).length;
+        totals[key] = (totals[key] || 0) + fieldSize;
+      });
+      return totals;
+    },
+    {}
+  );
+
+  console.log(
+    "RECOMMENDATION STORAGE FIELD SIZE BREAKDOWN:",
+    Object.entries(storageFieldSizeBreakdown)
+      .sort((a, b) => b[1] - a[1])
+      .map(([field, size]) => ({ field, size }))
+  );
+
+  console.log(
+    "FIRST STORED RECOMMENDATION FIELD SIZE BREAKDOWN:",
+    Object.entries(recommendationsForStorage[0] || {})
+      .map(([field, value]) => ({
+        field,
+        size: JSON.stringify(value ?? null).length,
+      }))
+      .sort((a, b) => b.size - a.size)
   );
 
   const localBatch = {
