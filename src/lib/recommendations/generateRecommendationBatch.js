@@ -349,7 +349,10 @@ if (result?.error) {
     Number(job.fit_score) ||
     0;
 
-  let score = baseScore;
+    let score = baseScore;
+
+  const hasVerifiedWorkHistoryMatch =
+    job.verified_work_history_match === true;
 
  // Severity-based scoring
 constraintProfile.constraints.forEach((constraint) => {
