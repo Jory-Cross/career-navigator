@@ -161,17 +161,17 @@ function compactRecommendationForStorage(job = {}) {
     job_zone: job.job_zone ?? null,
     job_zone_title: job.job_zone_title || null,
 
-    // Recommendation scoring and concise visible reasoning
+       // Recommendation scoring and concise visible reasoning
     match_score: job.match_score ?? null,
     fit_score: job.fit_score ?? null,
-    match_reason: compactStoredText(job.match_reason || "", 140),
-    matched_keywords: compactStoredList(job.matched_keywords, 4, 60),
-    fit_strengths: compactStoredList(job.fit_strengths, 2, 100),
-    fit_concerns: compactStoredList(job.fit_concerns, 1, 120),
-    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 160),
-    constraint_codes: compactStoredList(job.constraint_codes, 4, 60),
+    match_reason: compactStoredText(job.match_reason || "", 100),
+    matched_keywords: compactStoredList(job.matched_keywords, 3, 40),
+    fit_strengths: compactStoredList(job.fit_strengths, 1, 70),
+    fit_concerns: compactStoredList(job.fit_concerns, 1, 70),
+    not_fit_reasons: compactStoredList(job.not_fit_reasons, 1, 90),
+    constraint_codes: compactStoredList(job.constraint_codes, 3, 40),
     confidence_level: job.confidence_level || "low",
-    confidence_reason: compactStoredText(job.confidence_reason || "", 180),
+    confidence_reason: compactStoredText(job.confidence_reason || "", 110),
 
     // Staff and client review workflow fields
     status: job.status || null,
@@ -184,53 +184,53 @@ function compactRecommendationForStorage(job = {}) {
     client_responded_at: job.client_responded_at || null,
     client_response_notes: job.client_response_notes || "",
 
-    // Visible Why This Recommendation panel — concise saved copy
+    // Visible Why This Recommendation panel — compact persisted summary
     grounding: grounding
       ? {
-          supported_by: compactStoredList(grounding.supported_by, 2, 90),
-          supporting_sources: compactStoredList(grounding.supporting_sources, 1, 120),
-          confidence_factors: compactStoredList(grounding.confidence_factors, 1, 120),
-          concern_factors: compactStoredList(grounding.concern_factors, 1, 120),
-          missing_data_factors: compactStoredList(grounding.missing_data_factors, 1, 120),
-          grounding_summary: compactStoredText(grounding.grounding_summary || "", 180),
-          staff_review_flags: compactStoredList(grounding.staff_review_flags, 1, 120),
+          supported_by: compactStoredList(grounding.supported_by, 1, 60),
+          supporting_sources: compactStoredList(grounding.supporting_sources, 1, 70),
+          confidence_factors: compactStoredList(grounding.confidence_factors, 1, 70),
+          concern_factors: compactStoredList(grounding.concern_factors, 1, 70),
+          missing_data_factors: compactStoredList(grounding.missing_data_factors, 1, 70),
+          grounding_summary: compactStoredText(grounding.grounding_summary || "", 110),
+          staff_review_flags: compactStoredList(grounding.staff_review_flags, 1, 70),
         }
       : null,
 
-    // Visible Environmental Fit and Staff Should Verify panels — concise saved copy
+    // Visible Environmental Fit and Staff Should Verify panels — compact persisted summary
     constraint_fit: constraintFit
       ? {
           overall_fit_level: constraintFit.overall_fit_level || "unknown",
-          hard_constraints: compactStoredList(constraintFit.hard_constraints, 1, 120),
-          moderate_constraints: compactStoredList(constraintFit.moderate_constraints, 1, 120),
-          soft_preferences: compactStoredList(constraintFit.soft_preferences, 1, 120),
-          unknowns: compactStoredList(constraintFit.unknowns, 1, 120),
+          hard_constraints: compactStoredList(constraintFit.hard_constraints, 1, 70),
+          moderate_constraints: compactStoredList(constraintFit.moderate_constraints, 1, 70),
+          soft_preferences: compactStoredList(constraintFit.soft_preferences, 1, 70),
+          unknowns: compactStoredList(constraintFit.unknowns, 1, 70),
           environmental_fit_summary: compactStoredText(
             constraintFit.environmental_fit_summary || "",
-            180
+            110
           ),
-          occupation_notes: compactStoredList(constraintFit.occupation_notes, 1, 120),
+          occupation_notes: compactStoredList(constraintFit.occupation_notes, 1, 70),
           occupation_profile_label: compactStoredText(
             constraintFit.occupation_profile_label || "",
-            100
+            60
           ),
           staff_verification_needed: compactStoredList(
             constraintFit.staff_verification_needed,
             1,
-            120
+            70
           ),
         }
       : null,
 
-    // Visible Recommendation Priority panel — concise saved copy
+    // Visible Recommendation Priority panel — compact persisted summary
     priority: priority
       ? {
           priority_level: priority.priority_level || "unknown",
-          priority_reason: compactStoredText(priority.priority_reason || "", 180),
-          priority_factors: compactStoredList(priority.priority_factors, 2, 120),
-          staff_action: compactStoredText(priority.staff_action || "", 140),
+          priority_reason: compactStoredText(priority.priority_reason || "", 110),
+          priority_factors: compactStoredList(priority.priority_factors, 1, 80),
+          staff_action: compactStoredText(priority.staff_action || "", 90),
         }
-      : null,
+      : null,  
   };
 }
 
