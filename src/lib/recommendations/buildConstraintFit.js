@@ -662,12 +662,54 @@ export function buildConstraintFit(job = {}, context = {}) {
   // ── OCCUPATIONAL ENVIRONMENT OVERLAY ──────────────────────────────────────
   // Compares O*NET-style job environment profile against VFP evidence.
   const envOverlay = evalJobEnvironmentOverlay(job, vfp, scoreEvidenceList, matchesAny);
-  merge({
+   merge({
     soft: envOverlay.soft,
     moderate: envOverlay.moderate,
     unknowns: envOverlay.unknowns,
     verify: envOverlay.verify,
   });
+
+  // Verified prior success in the same occupation is stronger evidence than
+  // broad inferred preference or support-planning concerns.
+  //
+  // For an occupation the client has already performed successfully, preserve
+  // setting-specific sensory or any hard/safety-level concerns, but do not
+  // classify ordinary support, readiness, or accommodation-planning needs as
+  // evidence that the occupation itself is a poor recommendation.
+  const hasVerifiedWorkHistoryMatch =
+    job?.verified_work_history_match === true;
+
+  if (hasVerifiedWorkHistoryMatch && hard.length === 0) {
+    const supportPlanningModerateConcerns = moderate.filter((concern) =>
+      matchesAny(concern, [
+        "documented job coaching or on-site support need",
+        "client is in an exploratory stage",
+        "documented barriers with functional impact",
+      ])
+    );
+
+    for (let index = moderate.length - 1; index >= 0; index -= 1) {
+      if (
+        matchesAny(moderate[index], [
+          "documented job coaching or on-site support need",
+          "client is in an exploratory stage",
+          "documented barriers with functional impact",
+        ])
+      ) {
+        moderate.splice(index, 1);
+      }
+    }
+
+    if (supportPlanningModerateConcerns.length > 0) {
+      verify.push(
+        "This occupation is supported by documented prior work history. Confirm current accessibility, job-coaching, time-management, and workplace support needs for a similar placement."
+      );
+    }
+
+    soft.push(
+      "Documented successful work history in this occupation provides direct evidence of potential fit."
+    );
+  }
 
   // Assess overall evidence quality from key VFP domains to calibrate fit level
   const allVfpEvidence = [
