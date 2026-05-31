@@ -50,6 +50,19 @@ export async function getInterestProfilerCareers({ answers, scores, jobZone } = 
   return onetRequest("/mnm/interestprofiler/careers", params);
 }
 
+// Search for an occupation explicitly identified in verified work history
+// or current career goals. These candidates are later merged with Interest
+// Profiler suggestions so validated work success is not lost.
+export async function searchOnetCareersByKeyword(keyword, { start = 1, end = 5 } = {}) {
+  if (!keyword) return null;
+
+  return onetRequest("/mnm/search", {
+    keyword,
+    start,
+    end,
+  });
+}
+
 // ── O*NET Occupation Details ──────────────────────────────────────────────────
 // These functions support later recommendation review and the career-targeted
 // Skills Audit. They do not yet change recommendation ranking on their own.
