@@ -184,36 +184,26 @@ function compactRecommendationForStorage(job = {}) {
     client_responded_at: job.client_responded_at || null,
     client_response_notes: job.client_response_notes || "",
 
-    // Persist only the summary needed to render the saved explanation panel.
-    // Detailed evidence arrays are generated live but are not duplicated into
-    // every saved occupation record because they exceed Base44 field limits.
+       // Persist only the summary needed to render the saved explanation panel.
+    // RecommendationCardPanels safely defaults omitted evidence arrays to [].
     grounding: grounding
       ? {
-          supported_by: [],
-          supporting_sources: [],
-          confidence_factors: [],
-          concern_factors: [],
-          missing_data_factors: [],
-          grounding_summary: compactStoredText(grounding.grounding_summary || "", 45),
-          staff_review_flags: [],
+          grounding_summary: compactStoredText(
+            grounding.grounding_summary || "",
+            45
+          ),
         }
       : null,
 
     // Persist only environmental fit status and summary.
+    // Omitted constraint detail arrays render as empty after reload.
     constraint_fit: constraintFit
       ? {
           overall_fit_level: constraintFit.overall_fit_level || "unknown",
-          hard_constraints: [],
-          moderate_constraints: [],
-          soft_preferences: [],
-          unknowns: [],
           environmental_fit_summary: compactStoredText(
             constraintFit.environmental_fit_summary || "",
             45
           ),
-          occupation_notes: [],
-          occupation_profile_label: "",
-          staff_verification_needed: [],
         }
       : null,
 
@@ -222,7 +212,6 @@ function compactRecommendationForStorage(job = {}) {
       ? {
           priority_level: priority.priority_level || "unknown",
           priority_reason: compactStoredText(priority.priority_reason || "", 45),
-          priority_factors: [],
           staff_action: compactStoredText(priority.staff_action || "", 45),
         }
       : null,
