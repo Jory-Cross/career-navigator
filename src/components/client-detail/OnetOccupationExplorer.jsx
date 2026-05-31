@@ -348,14 +348,30 @@ export default function OnetOccupationExplorer({ clientId, client }) {
           </DetailSection>
 
           <DetailSection title="Skills">
-            {skills.length > 0 ? (
-              <pre className="whitespace-pre-wrap text-xs">
-                {JSON.stringify(skills.slice(0, 6), null, 2)}
-              </pre>
-            ) : (
-              <p className="text-xs text-slate-500">No skills returned.</p>
-            )}
-          </DetailSection>
+  {skills.length > 0 ? (
+    <div className="space-y-3">
+      {skills.map((group, groupIndex) => (
+        <div key={group?.id || groupIndex}>
+          <p className="text-xs font-semibold text-slate-800">
+            {group?.name || "Skill Group"}
+          </p>
+
+          {asArray(group?.element).length > 0 && (
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-slate-600">
+              {asArray(group.element).map((item, itemIndex) => (
+                <li key={item?.id || itemIndex}>
+                  {item?.name || JSON.stringify(item)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-xs text-slate-500">No skills returned.</p>
+  )}
+</DetailSection>
 
           <DetailSection title="Education / Training">
             <pre className="whitespace-pre-wrap text-xs">
