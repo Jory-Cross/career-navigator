@@ -691,21 +691,24 @@ const recommendationsWithConstraints = processed
     {}
   );
 
-  console.log(
-    "RECOMMENDATION STORAGE FIELD SIZE BREAKDOWN:",
+   console.log(
+    "RECOMMENDATION STORAGE FIELD SIZE BREAKDOWN TEXT:",
     Object.entries(storageFieldSizeBreakdown)
       .sort((a, b) => b[1] - a[1])
-      .map(([field, size]) => ({ field, size }))
+      .map(([field, size]) => `${field}: ${size}`)
+      .join(" | ")
   );
 
   console.log(
-    "FIRST STORED RECOMMENDATION FIELD SIZE BREAKDOWN:",
+    "FIRST STORED RECOMMENDATION FIELD SIZE BREAKDOWN TEXT:",
     Object.entries(recommendationsForStorage[0] || {})
       .map(([field, value]) => ({
         field,
         size: JSON.stringify(value ?? null).length,
       }))
       .sort((a, b) => b.size - a.size)
+      .map(({ field, size }) => `${field}: ${size}`)
+      .join(" | ")
   );
 
   const localBatch = {
