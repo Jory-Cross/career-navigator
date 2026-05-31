@@ -373,11 +373,43 @@ export default function OnetOccupationExplorer({ clientId, client }) {
   )}
 </DetailSection>
 
-          <DetailSection title="Education / Training">
-            <pre className="whitespace-pre-wrap text-xs">
-              {JSON.stringify(education, null, 2)}
-            </pre>
-          </DetailSection>
+         <DetailSection title="Education / Training">
+  <div className="space-y-2 text-xs leading-relaxed">
+    {education?.job_zone?.education && (
+      <p>
+        <span className="font-semibold">Typical Education: </span>
+        {education.job_zone.education}
+      </p>
+    )}
+
+    {education?.job_zone?.experience && (
+      <p>
+        <span className="font-semibold">Experience: </span>
+        {education.job_zone.experience}
+      </p>
+    )}
+
+    {education?.job_zone?.training && (
+      <p>
+        <span className="font-semibold">Training: </span>
+        {education.job_zone.training}
+      </p>
+    )}
+
+    {asArray(education?.education_usually_needed).length > 0 && (
+      <div>
+        <p className="font-semibold text-slate-800">
+          Education Usually Needed:
+        </p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">
+          {asArray(education.education_usually_needed).map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</DetailSection>
 
           <DetailSection title="Technology">
             {technology.length > 0 ? (
