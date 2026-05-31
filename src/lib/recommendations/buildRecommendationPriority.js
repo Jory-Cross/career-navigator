@@ -262,7 +262,11 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     : "weak";
 
   // Work history match
-  const workHistoryMatch = workHistory.length > 0 && matchesAny(jobText, workHistory);
+    const workHistoryMatch = workHistory.length > 0 && matchesAny(jobText, workHistory);
+
+  // Direct verified occupation match from resume/work history candidate injection.
+  const verifiedWorkHistoryMatch =
+    job.verified_work_history_match === true;
 
   // Goal alignment
   const goalMatch = clientGoals.some((g) => matchesAny(jobText, [g]));
