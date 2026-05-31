@@ -114,42 +114,76 @@ function compactRecommendationForStorage(job = {}) {
   const priority = job.priority || null;
 
   return {
-    ...job,
+    // Occupation identity and O*NET preparation information
+    onet_code: job.onet_code || null,
+    title: job.title || job.job_title || "Untitled Recommendation",
+    source_url: job.source_url || job.href || null,
+    bright_outlook: !!job.bright_outlook,
+    green: !!job.green,
+    apprenticeship: !!job.apprenticeship,
+    job_zone: job.job_zone ?? null,
+    job_zone_title: job.job_zone_title || null,
 
+    // Recommendation scoring and visible reasoning
+    match_score: job.match_score ?? null,
+    fit_score: job.fit_score ?? null,
+    match_reason: job.match_reason || "",
+    matched_keywords: (job.matched_keywords || []).slice(0, 6),
+    fit_strengths: (job.fit_strengths || []).slice(0, 3),
+    fit_concerns: (job.fit_concerns || []).slice(0, 3),
+    not_fit_reasons: (job.not_fit_reasons || []).slice(0, 3),
+    constraint_codes: (job.constraint_codes || []).slice(0, 6),
+    confidence_level: job.confidence_level || "low",
+    confidence_reason: job.confidence_reason || "",
+
+    // Staff and client review workflow fields
+    status: job.status || null,
+    review_notes: job.review_notes || "",
+    reviewed_by: job.reviewed_by || null,
+    reviewed_at: job.reviewed_at || null,
+    reviewed_by_staff: !!job.reviewed_by_staff,
+    shared_with_client: !!job.shared_with_client,
+    client_response: job.client_response || null,
+    client_responded_at: job.client_responded_at || null,
+    client_response_notes: job.client_response_notes || "",
+
+    // Visible Why This Recommendation panel
     grounding: grounding
       ? {
-          supported_by: grounding.supported_by || [],
-          supporting_sources: grounding.supporting_sources || [],
-          confidence_factors: grounding.confidence_factors || [],
-          concern_factors: grounding.concern_factors || [],
-          missing_data_factors: grounding.missing_data_factors || [],
+          supported_by: (grounding.supported_by || []).slice(0, 4),
+          supporting_sources: (grounding.supporting_sources || []).slice(0, 4),
+          confidence_factors: (grounding.confidence_factors || []).slice(0, 3),
+          concern_factors: (grounding.concern_factors || []).slice(0, 3),
+          missing_data_factors: (grounding.missing_data_factors || []).slice(0, 3),
           grounding_summary: grounding.grounding_summary || "",
-          staff_review_flags: grounding.staff_review_flags || [],
+          staff_review_flags: (grounding.staff_review_flags || []).slice(0, 4),
         }
       : null,
 
+    // Visible Environmental Fit and Staff Should Verify panels
     constraint_fit: constraintFit
       ? {
           overall_fit_level: constraintFit.overall_fit_level || "unknown",
-          hard_constraints: constraintFit.hard_constraints || [],
-          moderate_constraints: constraintFit.moderate_constraints || [],
-          soft_preferences: constraintFit.soft_preferences || [],
-          unknowns: constraintFit.unknowns || [],
+          hard_constraints: (constraintFit.hard_constraints || []).slice(0, 3),
+          moderate_constraints: (constraintFit.moderate_constraints || []).slice(0, 3),
+          soft_preferences: (constraintFit.soft_preferences || []).slice(0, 3),
+          unknowns: (constraintFit.unknowns || []).slice(0, 3),
           environmental_fit_summary:
             constraintFit.environmental_fit_summary || "",
-          occupation_notes: constraintFit.occupation_notes || [],
+          occupation_notes: (constraintFit.occupation_notes || []).slice(0, 3),
           occupation_profile_label:
             constraintFit.occupation_profile_label || null,
           staff_verification_needed:
-            constraintFit.staff_verification_needed || [],
+            (constraintFit.staff_verification_needed || []).slice(0, 4),
         }
       : null,
 
+    // Visible Recommendation Priority panel
     priority: priority
       ? {
           priority_level: priority.priority_level || "unknown",
           priority_reason: priority.priority_reason || "",
-          priority_factors: priority.priority_factors || [],
+          priority_factors: (priority.priority_factors || []).slice(0, 6),
           staff_action: priority.staff_action || "",
         }
       : null,
