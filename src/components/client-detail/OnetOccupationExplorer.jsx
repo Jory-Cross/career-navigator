@@ -263,8 +263,21 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         </div>
       )}
 
-      {occupationDetails && selectedOccupation && (
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+     {occupationDetails && selectedOccupation && (
+  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+
+    <div className="flex justify-between items-center">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setSelectedOccupation(null);
+          setOccupationDetails(null);
+        }}
+      >
+        Back to Results
+      </Button>
+    </div>
           <div>
   <h4 className="text-xl font-semibold text-slate-900">
     {overview?.title || getOccupationTitle(selectedOccupation)}
