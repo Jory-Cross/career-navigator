@@ -327,12 +327,21 @@ if (
 
     matched_keywords: matchedKeywords,
 
-    match_reason:
-      matchedKeywords.length > 0
+       match_reason:
+      item._verified_work_history_match === true
+        ? `Included because the client has documented prior work history in ${item._verified_target_term || title}.`
+        : matchedKeywords.length > 0
         ? `Matched using profile themes: ${matchedKeywords.join(", ")}`
         : "Matched from O*NET Interest Profiler RIASEC career results.",
 
-    source: "onet-interest-profiler",
+    source:
+      item._candidate_source || "onet-interest-profiler",
+
+    verified_work_history_match:
+      item._verified_work_history_match === true,
+
+    verified_target_term:
+      item._verified_target_term || null,
   };
 }
 
