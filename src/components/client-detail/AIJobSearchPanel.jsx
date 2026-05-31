@@ -18,6 +18,7 @@ import JobCard from "./JobCard";
 import VocationalFactsPanel from "./VocationalFactsPanel";
 import JobSearchFilters from "./JobSearchFilters";
 import RecommendationBatchReview from "./RecommendationBatchReview";
+import OnetOccupationExplorer from "./OnetOccupationExplorer";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestRecommendationBatch";
 const safeArray = (value) => Array.isArray(value) ? value : [];
