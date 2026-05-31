@@ -148,6 +148,30 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     }
   };
 
+
+  
+  const overview = occupationDetails?.overview;
+  const tasks = asArray(
+    occupationDetails?.tasks?.task ||
+    occupationDetails?.tasks?.tasks ||
+    occupationDetails?.tasks?.element
+  );
+  const skills = asArray(
+  occupationDetails?.skills?.group ||
+  occupationDetails?.skills?.skill ||
+  occupationDetails?.skills?.skills ||
+  occupationDetails?.skills?.element ||
+  occupationDetails?.skills
+);
+  const education = occupationDetails?.education;
+  const technology = asArray(
+  occupationDetails?.technology?.category ||
+  occupationDetails?.technology?.technology ||
+  occupationDetails?.technology?.example ||
+  occupationDetails?.technology?.element ||
+  occupationDetails?.technology
+);
+  const jobZone = occupationDetails?.jobZone;
 const saveInterestedOccupation = async () => {
   if (!clientId || !occupationDetails || !selectedOccupation) {
     toast.error("Client or occupation information is missing.");
@@ -177,30 +201,8 @@ const saveInterestedOccupation = async () => {
     setSavingInterest(false);
   }
 };
-  
-  const overview = occupationDetails?.overview;
-  const tasks = asArray(
-    occupationDetails?.tasks?.task ||
-    occupationDetails?.tasks?.tasks ||
-    occupationDetails?.tasks?.element
-  );
-  const skills = asArray(
-  occupationDetails?.skills?.group ||
-  occupationDetails?.skills?.skill ||
-  occupationDetails?.skills?.skills ||
-  occupationDetails?.skills?.element ||
-  occupationDetails?.skills
-);
-  const education = occupationDetails?.education;
-  const technology = asArray(
-  occupationDetails?.technology?.category ||
-  occupationDetails?.technology?.technology ||
-  occupationDetails?.technology?.example ||
-  occupationDetails?.technology?.element ||
-  occupationDetails?.technology
-);
-  const jobZone = occupationDetails?.jobZone;
 
+  
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div>
