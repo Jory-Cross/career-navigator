@@ -171,12 +171,27 @@ function buildProfileText(profile = {}) {
   ]);
 }
 
-function normalizeOnetCareerItem(
-  item = {},
-  index = 0,
-  profileKeywords = [],
-  conflicts = []
-) {
+function getVerifiedWorkHistoryTargets(profile = {}) {
+  return uniqueStrings(
+    toArray(profile.job_titles)
+      .map((item) => {
+        if (typeof item === "string") return item;
+
+        if (item && typeof item === "object") {
+          return (
+            item.title ||
+            item.job_title ||
+            item.occupation_title ||
+            item.position ||
+            ""
+          );
+        }
+
+        return "";
+      })
+      .filter((title) => title.length >= 3 && title.length <= 80)
+  ).slice(0, 5);
+}
   const title =
     item.title ||
     item.career_title ||
