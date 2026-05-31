@@ -699,7 +699,7 @@ const recommendationsWithConstraints = processed
       .join(" | ")
   );
 
-  console.log(
+    console.log(
     "FIRST STORED RECOMMENDATION FIELD SIZE BREAKDOWN TEXT:",
     Object.entries(recommendationsForStorage[0] || {})
       .map(([field, value]) => ({
@@ -708,6 +708,36 @@ const recommendationsWithConstraints = processed
       }))
       .sort((a, b) => b.size - a.size)
       .map(({ field, size }) => `${field}: ${size}`)
+      .join(" | ")
+  );
+
+  const nestedStorageSizeBreakdown = recommendationsForStorage.reduce(
+    (totals, recommendation) => {
+      Object.entries(recommendation.grounding || {}).forEach(([key, value]) => {
+        const field = `grounding.${key}`;
+        totals[field] = (totals[field] || 0) + JSON.stringify(value ?? null).length;
+      });
+
+      Object.entries(recommendation.constraint_fit || {}).forEach(([key, value]) => {
+        const field = `constraint_fit.${key}`;
+        totals[field] = (totals[field] || 0) + JSON.stringify(value ?? null).length;
+      });
+
+      Object.entries(recommendation.priority || {}).forEach(([key, value]) => {
+        const field = `priority.${key}`;
+        totals[field] = (totals[field] || 0) + JSON.stringify(value ?? null).length;
+      });
+
+      return totals;
+    },
+    {}
+  );
+
+  console.log(
+    "NESTED RECOMMENDATION STORAGE FIELD SIZE BREAKDOWN TEXT:",
+    Object.entries(nestedStorageSizeBreakdown)
+      .sort((a, b) => b[1] - a[1])
+      .map(([field, size]) => `${field}: ${size}`)
       .join(" | ")
   );
 
