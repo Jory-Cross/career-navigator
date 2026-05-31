@@ -477,16 +477,19 @@ export function buildRecommendationPriority(job = {}, context = {}) {
   //   - Conflict score < 4 (not severe)
   //   - No hard constraints
   //   - Not too many unknowns
-  if (
-    (evidenceTier === "moderate" || evidenceTier === "strong") &&
-    (envFitLevel === "possible_fit" || envFitLevel === "strong_fit" || envFitLevel === "unknown") &&
-    (confidenceLevel === "medium" || confidenceLevel === "high") &&
-    matchScore >= 40 &&
-    conflictScore < 4 &&
-    moderateConstraints.length <= 2 &&
-    hardConstraints.length === 0 &&
-    concerns.length <= 3
-  ) {
+ if (
+  (evidenceTier === "moderate" || evidenceTier === "strong") &&
+  (envFitLevel === "possible_fit" || envFitLevel === "strong_fit" || envFitLevel === "unknown") &&
+  (confidenceLevel === "medium" || confidenceLevel === "high") &&
+  matchScore >= 40 &&
+  conflictScore < 4 &&
+  moderateConstraints.length <= 2 &&
+  hardConstraints.length === 0 &&
+  (
+    concerns.length <= 3 ||
+    verifiedWorkHistoryMatch
+  )
+) {
     priority = "explore_further";
     const clarifyOn = [...concerns, ...conflictReasons].slice(0, 2).join(", ");
     reason = `Potentially useful option. ${clarifyOn ? `Needs clarification on: ${clarifyOn}` : "Discuss career fit with client"}.`;
