@@ -430,9 +430,14 @@ if (insights.includes("needs low-stress, low-pressure work") &&
 if (insights.includes("avoid customer-facing roles") &&
     (jobText.includes("customer") || jobText.includes("cashier") ||
      jobText.includes("retail") || jobText.includes("sales"))) {
-  score = Math.max(0, score - 40);
+  if (hasVerifiedWorkHistoryMatch) {
+    fitConcerns.push(
+      "Current customer-contact preferences should be reviewed against the client's demonstrated experience in this occupation."
+    );
+  } else {
+    score = Math.max(0, score - 40);
+  }
 }
-
 // Physical limitation (WSA) — standing/labor
 if (insights.includes("limited tolerance for prolonged standing or physical work") &&
     (jobText.includes("labor") || jobText.includes("warehouse") ||
