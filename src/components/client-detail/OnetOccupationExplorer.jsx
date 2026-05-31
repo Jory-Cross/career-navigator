@@ -264,13 +264,26 @@ export default function OnetOccupationExplorer({ clientId, client }) {
       {occupationDetails && selectedOccupation && (
         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div>
-            <h4 className="text-base font-semibold text-slate-900">
-              {getOccupationTitle(selectedOccupation)}
-            </h4>
-            <p className="mt-0.5 text-xs text-slate-500">
-              O*NET Code: {occupationDetails.code}
-            </p>
-          </div>
+  <h4 className="text-xl font-semibold text-slate-900">
+    {overview?.title || getOccupationTitle(selectedOccupation)}
+  </h4>
+
+  <p className="mt-1 text-sm text-slate-600">
+    O*NET Code: {occupationDetails.code}
+  </p>
+
+  {overview?.bright_outlook && (
+    <p className="mt-2 text-xs font-medium text-green-700">
+      Bright Outlook Occupation
+    </p>
+  )}
+
+  {overview?.green && (
+    <p className="mt-1 text-xs font-medium text-emerald-700">
+      Green Occupation
+    </p>
+  )}
+</div>
 
          <DetailSection title="Overview">
   <p>
