@@ -387,11 +387,15 @@ export function buildRecommendationPriority(job = {}, context = {}) {
     const zoneLabel = jobZoneTitle || `Job Zone ${jobZone}`;
 
     if (
-      conflictScore >= 3 ||
-      hardConstraints.length > 0 ||
-      envFitLevel === "poor_fit" ||
-      envFitLevel === "caution"
-    ) {
+  (
+    conflictScore >= 3 ||
+    envFitLevel === "caution" ||
+    (moderateConstraints.length >= 2 && confidenceLevel === "low") ||
+    (unknownFactors.length >= 3 && moderateConstraints.length >= 1) ||
+    (transportationUnknowns && matchesAny(jobText, ["travel", "commute", "multiple sites", "mobile"]))
+  ) &&
+  !verifiedWorkHistoryMatch
+) {
       priority = "low_priority";
       reason = `${zoneLabel} requires substantial preparation not verified in the client profile, and fit concerns are also present.`;
       staffAction = "Do not prioritize as a near-term target";
