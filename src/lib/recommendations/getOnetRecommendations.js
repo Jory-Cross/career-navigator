@@ -573,21 +573,27 @@ try {
     })
   );
 
+   const realisticCareers = careers.filter(
+    (career) => career.job_zone === 1 || career.job_zone === 2
+  );
+
   console.log(
     "[getOnetRecommendations] O*NET careers with Job Zones:",
-    careers.map((career) => ({
+    realisticCareers.map((career) => ({
       title: career.title,
       onet_code: career.onet_code,
       job_zone: career.job_zone,
       job_zone_title: career.job_zone_title,
+      source: career.source,
+      verified_work_history_match: career.verified_work_history_match,
     }))
   );
 
-  if (careers.length > 0) {
+  if (realisticCareers.length > 0) {
     return {
       source: "onet-live",
-      items: careers,
-      onet_summary: buildOnetSummary(careers),
+      items: realisticCareers,
+      onet_summary: buildOnetSummary(realisticCareers),
     };
   }
 } catch (err) {
