@@ -186,7 +186,20 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         scores: interestProfilerProfile?.scores || undefined,
       });
 
-      console.log("[O*NET Interest Careers Response]", data);
+           console.log("[O*NET Interest Careers Response]", data);
+
+      console.log(
+        "[O*NET Career Titles]",
+        (data?.career || []).map((career) => ({
+          title:
+            career?.title ||
+            career?.name ||
+            career?.occupation_title,
+          code:
+            career?.code ||
+            career?.onet_code,
+        }))
+      );
       const careers =
         data?.career ||
         data?.careers ||
