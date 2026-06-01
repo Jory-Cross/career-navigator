@@ -1337,8 +1337,13 @@ const validJobCount = jobs.filter(
           No interested occupations have been saved yet.
         </p>
       </Card>
-    ) : (
-      interestedOccupations.map((occupation) => (
+   ) : (
+  [...new Map(
+    interestedOccupations.map((occupation) => [
+      occupation.onet_code,
+      occupation
+    ])
+  ).values()].map((occupation) => (
         <Card key={occupation.id} className="p-4">
           <div className="space-y-2">
             <div className="font-medium">
