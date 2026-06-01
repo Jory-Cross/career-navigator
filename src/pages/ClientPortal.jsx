@@ -30,7 +30,8 @@ import { cn } from "@/lib/utils";
 const GENERAL_TABS = [
   { value: "intake",           label: "Intake Forms",    featureKey: "client_portal_intake_forms" },
   { value: "applications",     label: "Applications",    featureKey: "client_portal_applications" },
-  { value: "recommendations",  label: "Recommendations", featureKey: "client_portal_recommendations" },
+    { value: "recommendations",  label: "Recommendations", featureKey: "client_portal_recommendations" },
+  { value: "occupation_explorer", label: "Occupation Explorer", featureKey: "client_portal_occupation_explorer" },
   { value: "tasks",            label: "Tasks",           featureKey: "client_portal_tasks" },
   { value: "documents",        label: "Documents",       featureKey: "client_portal_documents" },
   { value: "meetings",         label: "Meetings",        featureKey: "client_portal_meetings" },
