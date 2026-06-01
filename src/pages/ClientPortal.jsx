@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/clientPortalApi";
 import ClientPortalIntakeSection from "@/components/intake/ClientPortalIntakeSection";
 import ClockInOut from "@/components/pre-ets/ClockInOut";
+import OnetOccupationExplorer from "@/components/client-detail/OnetOccupationExplorer";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
