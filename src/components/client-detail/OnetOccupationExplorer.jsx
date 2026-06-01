@@ -182,10 +182,18 @@ const saveInterestedOccupation = async () => {
 
   try {
     const existing =
-      await base44.entities.ClientOccupationInterest.filter({
-        client_id: clientId,
-        onet_code: occupationDetails.code,
-      });
+  await base44.entities.ClientOccupationInterest.filter({
+    client_id: clientId,
+  });
+
+console.log(
+  "INTEREST CHECK",
+  {
+    clientId,
+    onetCode: occupationDetails.code,
+    existing,
+  }
+);
 
     if (existing && existing.length > 0) {
       toast.success("Already marked as Interested.");
