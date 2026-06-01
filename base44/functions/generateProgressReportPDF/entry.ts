@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, StandardFonts } from 'npm:pdf-lib@1.17.1';
 
 const TEMPLATE_URL = 'https://jobs.utah.gov/usor/vr/employer/info/usor72.pdf';
 
