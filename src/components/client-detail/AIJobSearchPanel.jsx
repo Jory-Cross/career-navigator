@@ -1345,30 +1345,44 @@ const validJobCount = jobs.filter(
     ])
   ).values()].map((occupation) => (
         <Card key={occupation.id} className="p-4">
-          <div className="space-y-2">
-            <div className="font-medium">
-              {occupation.occupation_title}
-            </div>
+  <div className="space-y-2">
+    <div className="font-medium">
+      {occupation.occupation_title}
+    </div>
 
-            {occupation.onet_code && (
-              <div className="text-xs text-slate-500">
-                O*NET Code: {occupation.onet_code}
-              </div>
-            )}
+    {occupation.onet_code && (
+      <div className="text-xs text-slate-500">
+        O*NET Code: {occupation.onet_code}
+      </div>
+    )}
 
-            {occupation.job_zone_title && (
-              <div className="text-xs text-blue-700">
-                {occupation.job_zone_title}
-              </div>
-            )}
+    {occupation.job_zone_title && (
+      <div className="text-xs text-blue-700">
+        {occupation.job_zone_title}
+      </div>
+    )}
 
-            {occupation.occupation_description && (
-              <div className="text-xs text-slate-600">
-                {occupation.occupation_description}
-              </div>
-            )}
-          </div>
-        </Card>
+    {occupation.occupation_description && (
+      <div className="text-xs text-slate-600">
+        {occupation.occupation_description}
+      </div>
+    )}
+
+    <Button
+      size="sm"
+      variant="outline"
+      className="mt-2"
+      onClick={() => {
+        console.log(
+          "OPEN OCCUPATION DETAILS",
+          occupation.onet_code
+        );
+      }}
+    >
+      View Details
+    </Button>
+  </div>
+</Card>
       ))
     )}
   </div>
