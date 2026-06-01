@@ -81,6 +81,21 @@ Deno.serve(async (req) => {
     setText('Changes - Explanation', report.training_schedule_changes_explain);
     setText('Addtional hours needed', report.additional_hours_needed);
 
+    // Signature field is not a fillable PDF field, so draw typed signature onto the signature line
+    if (report.supervisor_signature) {
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      firstPage.drawText(report.supervisor_signature, {
+        x: 215,
+        y: 170,
+        size: 11,
+        font,
+        maxWidth: 240,
+      });
+    }
+    
     // Flatten so it looks clean when downloaded
     form.flatten();
 
