@@ -67,11 +67,15 @@ export default function OnetOccupationExplorer({ clientId, client }) {
   const [results, setResults] = useState([]);
   const [selectedOccupation, setSelectedOccupation] = useState(null);
   const [occupationDetails, setOccupationDetails] = useState(null);
-  const [searching, setSearching] = useState(false);
+    const [searching, setSearching] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [savingInterest, setSavingInterest] = useState(false);
+  const [interestJobZones, setInterestJobZones] = useState([]);
+  const [selectedInterestJobZone, setSelectedInterestJobZone] = useState("");
+  const [loadingInterestJobZones, setLoadingInterestJobZones] = useState(false);
+  const [loadingInterestCareers, setLoadingInterestCareers] = useState(false);
+  const [interestCareerResults, setInterestCareerResults] = useState([]);
   const [error, setError] = useState("");
-
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
