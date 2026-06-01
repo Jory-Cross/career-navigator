@@ -269,7 +269,8 @@ useEffect(() => {
   if (!resolvedClientId) return;
   loadSavedRecs();
   loadLatestBatch();
-
+loadInterestedOccupations();
+  
   refreshInterestProfilerStatus();
 
   base44.functions
