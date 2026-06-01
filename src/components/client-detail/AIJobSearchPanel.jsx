@@ -1410,29 +1410,238 @@ const validJobCount = jobs.filter(
 {activeTab === 'interested' && (
   <div className="space-y-3">
 
-    {selectedInterestedOccupation && (
-      <Card className="p-4 border-blue-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-semibold">
-              {selectedInterestedOccupation.occupation_title}
-            </div>
+       <Dialog
+      open={!!selectedInterestedOccupation}
+      onOpenChange={(open) => {
+        if (!open) {
+          setSelectedInterestedOccupation(null);
+          setSelectedInterestedOccupationDetails(null);
+          setLoadingInterestedOccupationDetails(false);
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {selectedInterestedOccupation?.occupation_title || "Occupation Details"}
+          </DialogTitle>
+        </DialogHeader>
 
-            <div className="text-xs text-slate-500">
-              O*NET Code: {selectedInterestedOccupation.onet_code}
-            </div>
+        {loadingInterestedOccupationDetails ? (
+          <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading O*NET occupation details...
           </div>
+        ) : selectedInterestedOccupationDetails ? (() => {
+          const overview = selectedInterestedOccupationDetails.overview;
+          const tasks = asArray(
+            selectedInterestedOccupationDetails.tasks?.task ||
+            selectedInterestedOccupationDetails.tasks?.tasks ||
+            selectedInterestedOccupationDetails.tasks?.element
+          );
+          const skills = asArray(
+            selectedInterestedOccupationDetails.skills?.group ||
+            selectedInterestedOccupationDetails.skills?.skill ||
+            selectedInterestedOccupationDetails.skills?.skills ||
+            selectedInterestedOccupationDetails.skills?.element ||
+            selectedInterestedOccupationDetails.skills
+          );
+          const education = selectedInterestedOccupationDetails.education;
+          const technology = asArray(
+            selectedInterestedOccupationDetails.technology?.category ||
+            selectedInterestedOccupationDetails.technology?.technology ||
+            selectedInterestedOccupationDetails.technology?.example ||
+            selectedInterestedOccupationDetails.technology?.element ||
+            selectedInterestedOccupationDetails.technology
+          );
+          const jobZone = selectedInterestedOccupationDetails.jobZone;
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setSelectedInterestedOccupation(null)}
-          >
-            Close
-          </Button>
-        </div>
-      </Card>
-    )}
+          return (
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-xl font-semibold text-slate-900">
+                  {overview?.title || selectedInterestedOccupation?.occupation_title}
+                </h4>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  O*NET Code: {selectedInterestedOccupationDetails.code}
+                </p>
+
+                {overview?.bright_outlook && (
+                  <p className="mt-2 text-xs font-medium text-green-700">
+                    Bright Outlook Occupation
+                  </p>
+                )}
+
+                {overview?.green && (
+                  <p className="mt-1 text-xs font-medium text-emerald-700">
+                    Green Occupation
+                  </p>
+                )}
+              </div>
+
+              <DetailSection title="Overview">
+                <p>
+                  {overview?.what_they_do ||
+                    overview?.description ||
+                    overview?.career?.description ||
+                    overview?.summary ||
+                    selectedInterestedOccupation?.occupation_description ||
+                    "No overview description returned."}
+                </p>
+              </DetailSection>
+
+              <DetailSection title="Job Zone / Preparation Level">
+                <div className="space-y-2 text-xs leading-relaxed">
+                  <p className="font-semibold text-slate-800">
+                    {jobZone?.title ||
+                      selectedInterestedOccupation?.job_zone_title ||
+                      `Job Zone ${jobZone?.code || selectedInterestedOccupation?.job_zone_code || ""}`}
+                  </p>
+
+                  {jobZone?.education && (
+                    <p>
+                      <span className="font-semibold">Education: </span>
+                      {jobZone.education}
+                    </p>
+                  )}
+
+                  {jobZone?.related_experience && (
+                    <p>
+                      <span className="font-semibold">Related Experience: </span>
+                      {jobZone.related_experience}
+                    </p>
+                  )}
+
+                  {jobZone?.job_training && (
+                    <p>
+                      <span className="font-semibold">Job Training: </span>
+                      {jobZone.job_training}
+                    </p>
+                  )}
+
+                  {jobZone?.svp_range && (
+                    <p>
+                      <span className="font-semibold">SVP Range: </span>
+                      {jobZone.svp_range}
+                    </p>
+                  )}
+                </div>
+              </DetailSection>
+
+              <DetailSection title="Tasks">
+                {tasks.length > 0 ? (
+                  <ul className="list-disc space-y-1 pl-5 text-xs">
+                    {tasks.slice(0, 12).map((task, index) => (
+                      <li key={index}>
+                        {task?.statement || task?.title || task?.name || JSON.stringify(task)}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-500">No tasks returned.</p>
+                )}
+              </DetailSection>
+
+              <DetailSection title="Skills">
+                {skills.length > 0 ? (
+                  <div className="space-y-3">
+                    {skills.map((group, groupIndex) => (
+                      <div key={group?.id || groupIndex}>
+                        <p className="text-xs font-semibold text-slate-800">
+                          {group?.name || "Skill Group"}
+                        </p>
+
+                        {asArray(group?.element).length > 0 && (
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                            {asArray(group.element).map((item, itemIndex) => (
+                              <li key={item?.id || itemIndex}>
+                                {item?.name || JSON.stringify(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No skills returned.</p>
+                )}
+              </DetailSection>
+
+              <DetailSection title="Education / Training">
+                <div className="space-y-2 text-xs leading-relaxed">
+                  {education?.job_zone?.education && (
+                    <p>
+                      <span className="font-semibold">Typical Education: </span>
+                      {education.job_zone.education}
+                    </p>
+                  )}
+
+                  {education?.job_zone?.experience && (
+                    <p>
+                      <span className="font-semibold">Experience: </span>
+                      {education.job_zone.experience}
+                    </p>
+                  )}
+
+                  {education?.job_zone?.training && (
+                    <p>
+                      <span className="font-semibold">Training: </span>
+                      {education.job_zone.training}
+                    </p>
+                  )}
+
+                  {asArray(education?.education_usually_needed).length > 0 && (
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        Education Usually Needed:
+                      </p>
+                      <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">
+                        {asArray(education.education_usually_needed).map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+
+              <DetailSection title="Technology">
+                {technology.length > 0 ? (
+                  <div className="space-y-3">
+                    {technology.map((group, groupIndex) => (
+                      <div key={group?.code || groupIndex}>
+                        <p className="text-xs font-semibold text-slate-800">
+                          {group?.title || "Technology Category"}
+                        </p>
+
+                        {asArray(group?.example).length > 0 && (
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                            {asArray(group.example).map((item, itemIndex) => (
+                              <li key={`${item?.title || "tech"}-${itemIndex}`}>
+                                {item?.title || JSON.stringify(item)}
+                                {item?.hot_technology ? " — Hot technology" : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No technology returned.</p>
+                )}
+              </DetailSection>
+            </div>
+          );
+        })() : (
+          <p className="text-sm text-slate-500">
+            No occupation details loaded.
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
     <Card className="p-4">
       <h4 className="text-sm font-semibold">
         Interested Occupations
