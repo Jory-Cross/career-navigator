@@ -216,9 +216,10 @@ export default function TimeTracking() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
   const [summaryView, setSummaryView] = useState("day");
-  const [selectedDay, setSelectedDay] = useState(null);
+const [selectedDay, setSelectedDay] = useState(null);
+const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   
-  const [user, setUser] = useState(null);
+const [user, setUser] = useState(null);
 
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
