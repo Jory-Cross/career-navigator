@@ -107,6 +107,42 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     loadInterestJobZones();
   }, []);
 
+   const loadInterestCareersForZone = async (jobZone) => {
+    if (!jobZone) {
+      toast.error("Select a Job Zone first.");
+      return;
+    }
+
+    setSelectedInterestJobZone(jobZone);
+    setLoadingInterestCareers(true);
+    setError("");
+    setInterestCareerResults([]);
+
+    try {
+      const data = await getInterestProfilerCareers({
+        jobZone,
+      });
+
+      const careers =
+        data?.career ||
+        data?.careers ||
+        data?.occupation ||
+        data?.occupations ||
+        data?.results ||
+        [];
+
+      const normalized = Array.isArray(careers) ? careers : [careers];
+
+      setInterestCareerResults(normalized.filter(Boolean));
+    } catch (err) {
+      console.error("Failed to load O*NET suggested careers:", err);
+      setError(err?.message || "Failed to load O*NET suggested careers.");
+      toast.error("Failed to load O*NET suggested careers.");
+    } finally {
+      setLoadingInterestCareers(false);
+    }
+  };
+
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
