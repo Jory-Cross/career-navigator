@@ -327,6 +327,96 @@ if (
         </p>
       </div>
 
+            <Card className="space-y-3 bg-blue-50 p-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">
+            Suggested Occupations by O*NET Job Zone
+          </p>
+          <p className="mt-1 text-xs text-slate-600">
+            Choose a preparation level to view O*NET suggested occupations. Open details, then mark any occupation as Interested.
+          </p>
+        </div>
+
+        {loadingInterestJobZones ? (
+          <div className="flex items-center gap-2 text-xs text-blue-700">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading Job Zones...
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {interestJobZones.map((zone, index) => {
+              const zoneValue =
+                String(zone?.code || zone?.value || zone?.id || index + 1);
+
+              const zoneLabel =
+                zone?.title ||
+                zone?.name ||
+                `Job Zone ${zoneValue}`;
+
+              return (
+                <Button
+                  key={`${zoneValue}-${index}`}
+                  size="sm"
+                  variant={selectedInterestJobZone === zoneValue ? "default" : "outline"}
+                  onClick={() => loadInterestCareersForZone(zoneValue)}
+                  disabled={loadingInterestCareers}
+                >
+                  {zoneLabel}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+
+        {loadingInterestCareers && (
+          <div className="flex items-center gap-2 text-xs text-blue-700">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading suggested occupations...
+          </div>
+        )}
+
+        {interestCareerResults.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-slate-600">
+              Suggested Occupations
+            </p>
+
+            {interestCareerResults.map((item, index) => {
+              const title = getOccupationTitle(item);
+              const code = getOccupationCode(item);
+
+              return (
+                <Card key={`interest-${code || title}-${index}`} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {title}
+                      </p>
+
+                      {code && (
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {code}
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={() => loadOccupationDetails(item)}
+                      disabled={loadingDetails}
+                    >
+                      View Details
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="flex gap-2">
         <Input
           value={query}
