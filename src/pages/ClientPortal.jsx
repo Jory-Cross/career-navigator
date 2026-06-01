@@ -869,6 +869,13 @@ setCompletionNote("");
           )}
         </TabsContent>
         
+               <TabsContent value="occupation_explorer" className="space-y-4">
+          <OnetOccupationExplorer
+            clientId={client.id}
+            client={client}
+          />
+        </TabsContent>
+
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Tasks</h2>
