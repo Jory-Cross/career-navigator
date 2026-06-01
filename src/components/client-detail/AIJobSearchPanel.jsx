@@ -1371,18 +1371,20 @@ const validJobCount = jobs.filter(
     )}
 
     <Button
-      size="sm"
-      variant="outline"
-      className="mt-2"
-      onClick={() => {
-        console.log(
-          "OPEN OCCUPATION DETAILS",
-          occupation.onet_code
-        );
-      }}
-    >
-      View Details
-    </Button>
+  size="sm"
+  variant="outline"
+  className="mt-2"
+  onClick={() => {
+    setSelectedInterestedOccupation(occupation);
+
+    console.log(
+      "OPEN OCCUPATION DETAILS",
+      occupation.onet_code
+    );
+  }}
+>
+  View Details
+</Button>
   </div>
 </Card>
       ))
