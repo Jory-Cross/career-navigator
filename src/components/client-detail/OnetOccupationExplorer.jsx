@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  searchOnetCareersByKeyword,
+   searchOnetCareersByKeyword,
+  getInterestProfilerJobZones,
+  getInterestProfilerCareers,
   getOnetOccupationOverview,
   getOnetOccupationTasks,
   getOnetOccupationSkills,
