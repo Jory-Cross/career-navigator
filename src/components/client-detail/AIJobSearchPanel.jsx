@@ -27,6 +27,15 @@ import RecommendationBatchReview from "./RecommendationBatchReview";
 import OnetOccupationExplorer from "./OnetOccupationExplorer";
 import SourceProvenancePanel from "@/components/shared/SourceProvenancePanel";
 import { loadLatestRecommendationBatch } from "@/lib/recommendations/loadLatestRecommendationBatch";
+import {
+  getOnetOccupationOverview,
+  getOnetOccupationTasks,
+  getOnetOccupationSkills,
+  getOnetOccupationEducation,
+  getOnetOccupationTechnology,
+  getOnetOccupationJobZone,
+} from "@/lib/onet/onetClient";
+
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
