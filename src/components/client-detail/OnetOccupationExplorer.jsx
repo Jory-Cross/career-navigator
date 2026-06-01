@@ -91,9 +91,19 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         data?.items ||
         [];
 
-      const normalized = Array.isArray(zones) ? zones : [zones];
+            const normalized = Array.isArray(zones) ? zones : [zones];
 
-      setInterestJobZones(normalized.filter(Boolean));
+      const fallbackZones = [
+        { code: "1", title: "Job Zone 1" },
+        { code: "2", title: "Job Zone 2" },
+        { code: "3", title: "Job Zone 3" },
+        { code: "4", title: "Job Zone 4" },
+        { code: "5", title: "Job Zone 5" },
+      ];
+
+      const cleanZones = normalized.filter(Boolean);
+
+      setInterestJobZones(cleanZones.length > 0 ? cleanZones : fallbackZones);
     } catch (err) {
       console.error("Failed to load O*NET job zones:", err);
       setError(err?.message || "Failed to load O*NET job zones.");
