@@ -536,8 +536,9 @@ if (
   )}
 </DetailSection>
           </div>
-        </DialogContent>
+               </DialogContent>
       </Dialog>
+      )}
     </div>
   );
 }
