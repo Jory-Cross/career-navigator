@@ -195,7 +195,12 @@ console.log(
   }
 );
 
-    if (existing && existing.length > 0) {
+   if (
+  existing.some(
+    (item) =>
+      item.onet_code === occupationDetails.code
+  )
+) {
       toast.success("Already marked as Interested.");
       return;
     }
