@@ -333,6 +333,22 @@ useEffect(() => {
     }
   }, [resolvedClientId]);
 
+const loadInterestedOccupations = async () => {
+  try {
+    const occupations =
+      await base44.entities.ClientOccupationInterest.filter({
+        client_id: resolvedClientId,
+      });
+
+    setInterestedOccupations(occupations || []);
+  } catch (err) {
+    console.error(
+      "Failed to load interested occupations:",
+      err
+    );
+  }
+};
+  
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
     try {
