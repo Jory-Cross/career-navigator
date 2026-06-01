@@ -1393,34 +1393,7 @@ const validJobCount = jobs.filter(
 )}
       
 {activeTab === 'saved' && (
-  <>
-    {selectedInterestedOccupation && (
-      <Card className="p-4 mb-4 border-blue-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-semibold">
-              {selectedInterestedOccupation.occupation_title}
-            </h4>
-
-            <p className="text-xs text-slate-500">
-              O*NET Code: {selectedInterestedOccupation.onet_code}
-            </p>
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              setSelectedInterestedOccupation(null)
-            }
-          >
-            Close
-          </Button>
-        </div>
-      </Card>
-    )}
-
-    <RecommendationBatchReview
+        <RecommendationBatchReview
           recs={
   recommendationBatch?.recommendations?.length
     ? recommendationBatch.recommendations.map((job, index) => {
