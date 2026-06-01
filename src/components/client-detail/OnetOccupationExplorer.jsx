@@ -103,6 +103,10 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     }
   };
 
+    useEffect(() => {
+    loadInterestJobZones();
+  }, []);
+
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
