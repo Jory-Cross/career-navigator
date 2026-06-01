@@ -39,6 +39,26 @@ import {
 const safeArray = (value) => Array.isArray(value) ? value : [];
 const safeString = (value) => typeof value === "string" ? value.trim() : "";
 
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function DetailSection({ title, children }) {
+  if (!children) return null;
+
+  return (
+    <Card className="p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {title}
+      </p>
+      <div className="mt-2 text-sm text-slate-700">
+        {children}
+      </div>
+    </Card>
+  );
+}
+
 const hasCompletedInterestProfiler = (assessment) => {
   const type = safeString(assessment?.assessment_type).toLowerCase();
   const title = safeString(assessment?.title || assessment?.name).toLowerCase();
