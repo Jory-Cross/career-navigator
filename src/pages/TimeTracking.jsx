@@ -1125,7 +1125,20 @@ if (entryTypeFilter !== "all") {
           <h2 className="text-base font-semibold">Filters</h2>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Month</label>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setSelectedDay(null);
+              }}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+          </div>
+
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
             <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); setSelectedDay(null); }}>
