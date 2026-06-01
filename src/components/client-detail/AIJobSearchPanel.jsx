@@ -391,6 +391,52 @@ const loadInterestedOccupations = async () => {
     );
   }
 };
+
+const loadInterestedOccupationDetails = async (occupation) => {
+  const code = occupation?.onet_code;
+
+  if (!code) {
+    toast.error("This interested occupation does not have an O*NET code.");
+    return;
+  }
+
+  setSelectedInterestedOccupation(occupation);
+  setSelectedInterestedOccupationDetails(null);
+  setLoadingInterestedOccupationDetails(true);
+
+  try {
+    const [
+      overview,
+      tasks,
+      skills,
+      education,
+      technology,
+      jobZone,
+    ] = await Promise.allSettled([
+      getOnetOccupationOverview(code),
+      getOnetOccupationTasks(code),
+      getOnetOccupationSkills(code),
+      getOnetOccupationEducation(code),
+      getOnetOccupationTechnology(code),
+      getOnetOccupationJobZone(code),
+    ]);
+
+    setSelectedInterestedOccupationDetails({
+      code,
+      overview: overview.status === "fulfilled" ? overview.value : null,
+      tasks: tasks.status === "fulfilled" ? tasks.value : null,
+      skills: skills.status === "fulfilled" ? skills.value : null,
+      education: education.status === "fulfilled" ? education.value : null,
+      technology: technology.status === "fulfilled" ? technology.value : null,
+      jobZone: jobZone.status === "fulfilled" ? jobZone.value : null,
+    });
+  } catch (err) {
+    console.error("Failed to load interested occupation details:", err);
+    toast.error("Failed to load occupation details.");
+  } finally {
+    setLoadingInterestedOccupationDetails(false);
+  }
+};
   
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
