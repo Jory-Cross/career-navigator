@@ -1319,6 +1319,56 @@ const validJobCount = jobs.filter(
         </div>
       )}
 
+{activeTab === 'interested' && (
+  <div className="space-y-3">
+    <Card className="p-4">
+      <h4 className="text-sm font-semibold">
+        Interested Occupations
+      </h4>
+
+      <p className="text-xs text-slate-500 mt-1">
+        Occupations selected by the client or staff from the O*NET Occupation Explorer.
+      </p>
+    </Card>
+
+    {interestedOccupations.length === 0 ? (
+      <Card className="p-4">
+        <p className="text-sm text-slate-500">
+          No interested occupations have been saved yet.
+        </p>
+      </Card>
+    ) : (
+      interestedOccupations.map((occupation) => (
+        <Card key={occupation.id} className="p-4">
+          <div className="space-y-2">
+            <div className="font-medium">
+              {occupation.occupation_title}
+            </div>
+
+            {occupation.onet_code && (
+              <div className="text-xs text-slate-500">
+                O*NET Code: {occupation.onet_code}
+              </div>
+            )}
+
+            {occupation.job_zone_title && (
+              <div className="text-xs text-blue-700">
+                {occupation.job_zone_title}
+              </div>
+            )}
+
+            {occupation.occupation_description && (
+              <div className="text-xs text-slate-600">
+                {occupation.occupation_description}
+              </div>
+            )}
+          </div>
+        </Card>
+      ))
+    )}
+  </div>
+)}
+      
       {activeTab === 'saved' && (
         <RecommendationBatchReview
           recs={
