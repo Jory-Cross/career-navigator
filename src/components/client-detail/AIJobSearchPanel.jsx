@@ -1323,6 +1323,30 @@ const validJobCount = jobs.filter(
 
 {activeTab === 'interested' && (
   <div className="space-y-3">
+
+    {selectedInterestedOccupation && (
+      <Card className="p-4 border-blue-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-semibold">
+              {selectedInterestedOccupation.occupation_title}
+            </div>
+
+            <div className="text-xs text-slate-500">
+              O*NET Code: {selectedInterestedOccupation.onet_code}
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setSelectedInterestedOccupation(null)}
+          >
+            Close
+          </Button>
+        </div>
+      </Card>
+    )}
     <Card className="p-4">
       <h4 className="text-sm font-semibold">
         Interested Occupations
