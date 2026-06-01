@@ -392,9 +392,19 @@ export default function DynamicEntryForm({
     ]
   );
 
-  return (
+   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+      {normalizedSchema.map((field) => (
+        <FieldRenderer
+          key={field.key}
+          field={field}
+          value={formData[field.key]}
+          onChange={(value) => handleChange(field.key, value)}
+          formData={formData}
+        />
+      ))}
+
+      <div className="space-y-2">
         <label className="text-sm font-medium">Note</label>
         <textarea
           value={formData.description || ""}
@@ -403,6 +413,7 @@ export default function DynamicEntryForm({
           className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
       </div>
+
       {error ? (
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
