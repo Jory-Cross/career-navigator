@@ -114,9 +114,53 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     }
   };
 
-    useEffect(() => {
+      useEffect(() => {
     loadInterestJobZones();
-  }, []);
+
+    async function loadInterestProfilerProfile() {
+      if (!clientId) return;
+
+      try {
+        const assessments = base44.entities.Assessment?.filter
+          ? await base44.entities.Assessment.filter({
+              client_id: clientId,
+            })
+          : [];
+
+        const interestProfiler = (assessments || []).find((assessment) => {
+          const type = String(assessment?.assessment_type || "").toLowerCase();
+          const title = String(assessment?.title || assessment?.name || "").toLowerCase();
+
+          return (
+            type === "interest_profiler" ||
+            type.includes("interest_profiler") ||
+            title.includes("interest profiler")
+          );
+        });
+
+        const responses = interestProfiler?.responses || {};
+        const answers =
+          responses.answerString ||
+          responses.answer_string ||
+          (Array.isArray(responses.answers) ? responses.answers.join("") : "");
+
+        const scores =
+          responses.riasec_score_string ||
+          responses.score_string ||
+          responses.scores_string ||
+          "";
+
+        setInterestProfilerProfile({
+          answers,
+          scores,
+        });
+      } catch (err) {
+        console.error("Failed to load Interest Profiler profile:", err);
+      }
+    }
+
+    loadInterestProfilerProfile();
+  }, [clientId]);
 
    const loadInterestCareersForZone = async (jobZone) => {
     if (!jobZone) {
