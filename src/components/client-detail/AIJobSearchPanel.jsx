@@ -1689,18 +1689,11 @@ const validJobCount = jobs.filter(
       </div>
     )}
 
-    <Button
+   <Button
   size="sm"
   variant="outline"
   className="mt-2"
-  onClick={() => {
-    setSelectedInterestedOccupation(occupation);
-
-    console.log(
-      "OPEN OCCUPATION DETAILS",
-      occupation.onet_code
-    );
-  }}
+  onClick={() => loadInterestedOccupationDetails(occupation)}
 >
   View Details
 </Button>
