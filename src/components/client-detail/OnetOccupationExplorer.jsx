@@ -337,15 +337,16 @@ if (
         </div>
       )}
 
-           <Dialog
-        open={!!occupationDetails && !!selectedOccupation}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedOccupation(null);
-            setOccupationDetails(null);
-          }
-        }}
-      >
+                {occupationDetails && selectedOccupation && (
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedOccupation(null);
+              setOccupationDetails(null);
+            }
+          }}
+        >
         <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
