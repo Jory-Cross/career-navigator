@@ -181,10 +181,22 @@ const saveInterestedOccupation = async () => {
   setSavingInterest(true);
 
   try {
+    const existing =
+      await base44.entities.ClientOccupationInterest.filter({
+        client_id: clientId,
+        onet_code: occupationDetails.code,
+      });
+
+    if (existing && existing.length > 0) {
+      toast.success("Already marked as Interested.");
+      return;
+    }
+
     await base44.entities.ClientOccupationInterest.create({
       client_id: clientId,
       onet_code: occupationDetails.code,
-      occupation_title: overview?.title || getOccupationTitle(selectedOccupation),
+      occupation_title:
+        overview?.title || getOccupationTitle(selectedOccupation),
       occupation_description: overview?.what_they_do || "",
       job_zone_code: jobZone?.code || null,
       job_zone_title: jobZone?.title || "",
@@ -201,7 +213,6 @@ const saveInterestedOccupation = async () => {
     setSavingInterest(false);
   }
 };
-
   
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
