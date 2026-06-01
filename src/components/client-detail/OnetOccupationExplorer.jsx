@@ -337,21 +337,21 @@ if (
         </div>
       )}
 
-     {occupationDetails && selectedOccupation && (
-  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-
-    <div className="flex justify-between items-center">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          setSelectedOccupation(null);
-          setOccupationDetails(null);
+           <Dialog
+        open={!!occupationDetails && !!selectedOccupation}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedOccupation(null);
+            setOccupationDetails(null);
+          }
         }}
       >
-        Back to Results
-      </Button>
-    </div>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {overview?.title || getOccupationTitle(selectedOccupation)}
+            </DialogTitle>
+          </DialogHeader>
           <div>
   <h4 className="text-xl font-semibold text-slate-900">
     {overview?.title || getOccupationTitle(selectedOccupation)}
