@@ -577,21 +577,26 @@ useEffect(() => {
 
  
  const payrollRanges = useMemo(() => {
-  const now = new Date();
-  const nowYear = now.getFullYear();
-  const nowMonth = now.getMonth();
+  const [selectedYearRaw, selectedMonthRaw] = selectedMonth.split("-");
+  const selectedYear = Number(selectedYearRaw);
+  const selectedMonthIndex = Number(selectedMonthRaw) - 1;
+
+  const safeBaseDate =
+    Number.isFinite(selectedYear) && Number.isFinite(selectedMonthIndex)
+      ? new Date(selectedYear, selectedMonthIndex, 1)
+      : new Date();
 
   return {
-    payroll1Start: new Date(nowYear, nowMonth, 1),
-    payroll1End: new Date(nowYear, nowMonth, 15, 23, 59, 59),
-    payroll2Start: new Date(nowYear, nowMonth, 16),
-    payroll2End: new Date(nowYear, nowMonth + 1, 0, 23, 59, 59),
-    weekStart: startOfWeek(now),
-    weekEnd: endOfWeek(now),
-    monthStart: startOfMonth(now),
-    monthEnd: endOfMonth(now),
+    payroll1Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 1),
+    payroll1End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 15, 23, 59, 59),
+    payroll2Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 16),
+    payroll2End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth() + 1, 0, 23, 59, 59),
+    weekStart: startOfWeek(new Date()),
+    weekEnd: endOfWeek(new Date()),
+    monthStart: startOfMonth(safeBaseDate),
+    monthEnd: endOfMonth(safeBaseDate),
   };
-}, []);
+}, [selectedMonth]);
 
   const filteredClientIds = useMemo(() => {
   const result = [];
