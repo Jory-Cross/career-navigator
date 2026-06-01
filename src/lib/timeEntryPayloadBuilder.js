@@ -284,6 +284,11 @@ function getDescriptionValue(formData) {
     formData.preets_activity ??
     formData.wsa_tasks_completed ??
     formData.eom_services_provided ??
+    formData.notes ??
+    formData.note ??
+    formData.comments ??
+    formData.comment ??
+    formData.observations ??
     null
   );
 }
