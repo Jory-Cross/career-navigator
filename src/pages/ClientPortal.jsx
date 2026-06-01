@@ -686,7 +686,7 @@ setCompletionNote("");
             <TabsTrigger value="applications">Applications</TabsTrigger>
           )}
 
-          {allowedGeneralTabs.includes("recommendations") && (
+                   {allowedGeneralTabs.includes("recommendations") && (
             <TabsTrigger value="recommendations">
               <div className="flex items-center gap-2">
                 <span>Recommendations</span>
@@ -696,6 +696,12 @@ setCompletionNote("");
                   </span>
                 )}
               </div>
+            </TabsTrigger>
+          )}
+
+          {allowedGeneralTabs.includes("occupation_explorer") && (
+            <TabsTrigger value="occupation_explorer">
+              Occupation Explorer
             </TabsTrigger>
           )}
 
