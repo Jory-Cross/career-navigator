@@ -96,8 +96,23 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Flatten so it looks clean when downloaded
+       // Flatten so it looks clean when downloaded
     form.flatten();
+
+    // Signature line is not a fillable PDF field, so draw typed signature after flattening
+    if (report.supervisor_signature) {
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      firstPage.drawText(report.supervisor_signature, {
+        x: 345,
+        y: 109,
+        size: 11,
+        font,
+        maxWidth: 250,
+      });
+    }
 
     const pdfBytes = await pdfDoc.save();
     const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
