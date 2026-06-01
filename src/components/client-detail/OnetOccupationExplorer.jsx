@@ -162,7 +162,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     loadInterestProfilerProfile();
   }, [clientId]);
 
-   const loadInterestCareersForZone = async (jobZone) => {
+      const loadInterestCareersForZone = async (jobZone) => {
     if (!jobZone) {
       toast.error("Select a Job Zone first.");
       return;
@@ -174,32 +174,13 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     setInterestCareerResults([]);
 
     try {
-                 console.log("[O*NET Interest Careers Request]", {
-        jobZone,
-        answers: interestProfilerProfile?.answers || "",
-        scores: interestProfilerProfile?.scores || "",
-      });
+      const targetZone = Number(jobZone);
 
       const data = await getInterestProfilerCareers({
-        jobZone,
         answers: interestProfilerProfile?.answers || undefined,
         scores: interestProfilerProfile?.scores || undefined,
       });
 
-           console.log("[O*NET Interest Careers Response]", data);
-
-      console.log(
-        "[O*NET Career Titles]",
-        (data?.career || []).map((career) => ({
-          title:
-            career?.title ||
-            career?.name ||
-            career?.occupation_title,
-          code:
-            career?.code ||
-            career?.onet_code,
-        }))
-      );
       const careers =
         data?.career ||
         data?.careers ||
@@ -210,7 +191,48 @@ export default function OnetOccupationExplorer({ clientId, client }) {
 
       const normalized = Array.isArray(careers) ? careers : [careers];
 
-      setInterestCareerResults(normalized.filter(Boolean));
+      const careersWithVerifiedZones = await Promise.all(
+        normalized.filter(Boolean).map(async (career) => {
+          const code = getOccupationCode(career);
+
+          if (!code) {
+            return {
+              ...career,
+              verified_job_zone: null,
+              verified_job_zone_title: "",
+            };
+          }
+
+          try {
+            const zoneData = await getOnetOccupationJobZone(code);
+            const verifiedZone = Number(zoneData?.code);
+
+            return {
+              ...career,
+              verified_job_zone: Number.isFinite(verifiedZone) ? verifiedZone : null,
+              verified_job_zone_title: zoneData?.title || "",
+            };
+          } catch (zoneError) {
+            console.warn("Could not verify O*NET Job Zone:", {
+              code,
+              career,
+              zoneError,
+            });
+
+            return {
+              ...career,
+              verified_job_zone: null,
+              verified_job_zone_title: "",
+            };
+          }
+        })
+      );
+
+      const matchingCareers = careersWithVerifiedZones.filter(
+        (career) => career.verified_job_zone === targetZone
+      );
+
+      setInterestCareerResults(matchingCareers);
     } catch (err) {
       console.error("Failed to load O*NET suggested careers:", err);
       setError(err?.message || "Failed to load O*NET suggested careers.");
