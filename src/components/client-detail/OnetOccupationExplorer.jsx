@@ -195,10 +195,20 @@ console.log(
   }
 );
 
-   if (
+   console.log(
+  "INTEREST RECORDS",
+  existing.map((item) => ({
+    id: item.id,
+    onet_code: item.onet_code,
+    occupation_title: item.occupation_title,
+  }))
+);
+
+if (
   existing.some(
     (item) =>
-      item.onet_code === occupationDetails.code
+      String(item.onet_code).trim() ===
+      String(occupationDetails.code).trim()
   )
 ) {
       toast.success("Already marked as Interested.");
