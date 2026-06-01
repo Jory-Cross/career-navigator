@@ -225,6 +225,8 @@ const [filters, setFilters] = useState({});
 const [hasInterestProfilerAssessment, setHasInterestProfilerAssessment] = useState(false);
 const [interestProfilerRequiredMessage, setInterestProfilerRequiredMessage] = useState("");
 
+const [selectedInterestedOccupation, setSelectedInterestedOccupation] =
+  useState(null);
 const refreshInterestProfilerStatus = useCallback(async () => {
   if (!resolvedClientId) return false;
 
