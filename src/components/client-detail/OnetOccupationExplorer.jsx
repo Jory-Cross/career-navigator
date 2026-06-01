@@ -74,7 +74,8 @@ export default function OnetOccupationExplorer({ clientId, client }) {
   const [selectedInterestJobZone, setSelectedInterestJobZone] = useState("");
   const [loadingInterestJobZones, setLoadingInterestJobZones] = useState(false);
   const [loadingInterestCareers, setLoadingInterestCareers] = useState(false);
-  const [interestCareerResults, setInterestCareerResults] = useState([]);
+   const [interestCareerResults, setInterestCareerResults] = useState([]);
+  const [interestProfilerProfile, setInterestProfilerProfile] = useState(null);
   const [error, setError] = useState("");
     const loadInterestJobZones = async () => {
     setLoadingInterestJobZones(true);
