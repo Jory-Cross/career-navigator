@@ -174,11 +174,19 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     setInterestCareerResults([]);
 
     try {
-           const data = await getInterestProfilerCareers({
+                 console.log("[O*NET Interest Careers Request]", {
+        jobZone,
+        answers: interestProfilerProfile?.answers || "",
+        scores: interestProfilerProfile?.scores || "",
+      });
+
+      const data = await getInterestProfilerCareers({
         jobZone,
         answers: interestProfilerProfile?.answers || undefined,
         scores: interestProfilerProfile?.scores || undefined,
       });
+
+      console.log("[O*NET Interest Careers Response]", data);
       const careers =
         data?.career ||
         data?.careers ||
