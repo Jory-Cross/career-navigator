@@ -880,6 +880,16 @@ const validJobCount = jobs.filter(
 >
   <Search className="w-3.5 h-3.5 mr-1" /> Explorer
 </Button>
+
+<Button
+  size="sm"
+  variant={activeTab === 'interested' ? 'default' : 'outline'}
+  className="h-8 text-xs"
+  onClick={() => setActiveTab('interested')}
+>
+  <BookmarkPlus className="w-3.5 h-3.5 mr-1" />
+  Interested
+</Button>
     
         <Button
       size="sm"
