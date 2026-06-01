@@ -532,8 +532,8 @@ if (
     <p className="text-xs text-slate-500">No technology returned.</p>
   )}
 </DetailSection>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
