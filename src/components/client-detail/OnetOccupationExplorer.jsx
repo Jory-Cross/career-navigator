@@ -351,8 +351,10 @@ if (
             <DialogTitle>
               {overview?.title || getOccupationTitle(selectedOccupation)}
             </DialogTitle>
-          </DialogHeader>
-          <div>
+                    </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
   <h4 className="text-xl font-semibold text-slate-900">
     {overview?.title || getOccupationTitle(selectedOccupation)}
   </h4>
