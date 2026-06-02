@@ -242,15 +242,20 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         (career) => !career.cached_occupation
       );
 
-      console.log("O*NET Interest Profiler grouped by local OnetOccupation catalog", {
+           const zoneCounts = {};
+
+      careersWithCachedZones.forEach((career) => {
+        const zone = career.verified_job_zone || "missing";
+        zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
+      });
+
+      console.log("O*NET Interest Profiler Zone Distribution", {
         selectedZone: targetZone,
         totalCareers: allCareers.length,
         catalogRecordsLoaded: cachedOccupations?.length || 0,
         matchedCareers: filteredCareers.length,
         missingCatalogMatches: missingCatalogMatches.length,
-        missingCodes: missingCatalogMatches.map((career) =>
-          getOccupationCode(career)
-        ),
+        zoneCounts,
       });
 
       setInterestCareerResults(filteredCareers);
