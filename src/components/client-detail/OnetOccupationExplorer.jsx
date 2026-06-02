@@ -196,6 +196,11 @@ export default function OnetOccupationExplorer({ clientId, client }) {
           data?.results ||
           [];
 
+        console.log(
+          "FIRST CAREER SAMPLE",
+          careers?.[0]
+        );
+        
         const normalized = Array.isArray(careers) ? careers : [careers];
 
         allCareers.push(...normalized.filter(Boolean));
