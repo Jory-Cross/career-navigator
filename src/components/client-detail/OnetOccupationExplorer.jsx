@@ -474,12 +474,11 @@ if (
           </div>
         )}
 
-        {interestCareerResults.length > 0 && (
+               {interestCareerResults.length > 0 ? (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-600">
               Suggested Occupations
             </p>
-
             {interestCareerResults.map((item, index) => {
               const title = getOccupationTitle(item);
               const code = getOccupationCode(item);
