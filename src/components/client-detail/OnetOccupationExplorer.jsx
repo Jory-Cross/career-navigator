@@ -180,6 +180,8 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         scores: interestProfilerProfile?.scores || undefined,
       });
 
+      console.log("O*NET CAREERS RESPONSE", data);
+      
       const careers =
         data?.career ||
         data?.careers ||
