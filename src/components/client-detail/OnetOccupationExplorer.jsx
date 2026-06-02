@@ -162,7 +162,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     loadInterestProfilerProfile();
   }, [clientId]);
 
-      const loadInterestCareersForZone = async (jobZone) => {
+            const loadInterestCareersForZone = async (jobZone) => {
     if (!jobZone) {
       toast.error("Select a Job Zone first.");
       return;
@@ -206,87 +206,51 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         end += 20;
       } while (total && allCareers.length < total);
 
-      const careersWithCachedZones = [];
+      const cachedOccupations =
+        await base44.entities.OnetOccupation.list("onet_code", 1500);
 
-      for (const career of allCareers) {
-        const code = getOccupationCode(career);
+      const occupationCatalogByCode = new Map();
 
-        if (!code) {
-          careersWithCachedZones.push({
-            ...career,
-            verified_job_zone: null,
-            verified_job_zone_title: "",
-          });
-          continue;
-        }
-
-        let cachedOccupation = null;
-
-        try {
-          const cachedResults = await base44.entities.OnetOccupation.filter({
-            onet_code: code,
-          });
-
-          cachedOccupation = Array.isArray(cachedResults)
-            ? cachedResults[0]
-            : null;
-        } catch (cacheError) {
-          console.warn("Failed to read OnetOccupation cache", code, cacheError);
-        }
-
-        if (cachedOccupation?.job_zone) {
-          careersWithCachedZones.push({
-            ...career,
-            verified_job_zone: Number(cachedOccupation.job_zone),
-            verified_job_zone_title: cachedOccupation.job_zone_title || "",
-          });
-          continue;
-        }
-
-        try {
-          const zoneData = await getOnetOccupationJobZone(code);
-          const verifiedZone = Number(zoneData?.code || 0);
-          const verifiedZoneTitle = zoneData?.title || "";
-
-          if (verifiedZone) {
-            try {
-              await base44.entities.OnetOccupation.create({
-                onet_code: code,
-                title: getOccupationTitle(career),
-                job_zone: String(verifiedZone),
-                job_zone_title: verifiedZoneTitle,
-                source: "onet_live_lookup",
-                last_verified_at: new Date().toISOString(),
-              });
-            } catch (saveError) {
-              console.warn("Failed to save OnetOccupation cache", code, saveError);
-            }
-          }
-
-          careersWithCachedZones.push({
-            ...career,
-            verified_job_zone: verifiedZone || null,
-            verified_job_zone_title: verifiedZoneTitle,
-          });
-        } catch (zoneError) {
-          console.warn("Failed to verify Job Zone", code, zoneError);
-
-          careersWithCachedZones.push({
-            ...career,
-            verified_job_zone: null,
-            verified_job_zone_title: "",
-          });
+      for (const occupation of cachedOccupations || []) {
+        if (occupation?.onet_code) {
+          occupationCatalogByCode.set(
+            String(occupation.onet_code).trim(),
+            occupation
+          );
         }
       }
+
+      const careersWithCachedZones = allCareers.map((career) => {
+        const code = String(getOccupationCode(career) || "").trim();
+        const cachedOccupation = occupationCatalogByCode.get(code);
+
+        return {
+          ...career,
+          verified_job_zone: cachedOccupation?.job_zone
+            ? Number(cachedOccupation.job_zone)
+            : null,
+          verified_job_zone_title: cachedOccupation?.job_zone_title || "",
+          cached_occupation: cachedOccupation || null,
+        };
+      });
 
       const filteredCareers = careersWithCachedZones.filter(
         (career) => career.verified_job_zone === targetZone
       );
 
-      console.log("O*NET Interest Profiler grouped by cached Job Zone", {
+      const missingCatalogMatches = careersWithCachedZones.filter(
+        (career) => !career.cached_occupation
+      );
+
+      console.log("O*NET Interest Profiler grouped by local OnetOccupation catalog", {
         selectedZone: targetZone,
         totalCareers: allCareers.length,
+        catalogRecordsLoaded: cachedOccupations?.length || 0,
         matchedCareers: filteredCareers.length,
+        missingCatalogMatches: missingCatalogMatches.length,
+        missingCodes: missingCatalogMatches.map((career) =>
+          getOccupationCode(career)
+        ),
       });
 
       setInterestCareerResults(filteredCareers);
@@ -298,6 +262,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
       setLoadingInterestCareers(false);
     }
   };
+
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
