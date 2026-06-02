@@ -188,11 +188,6 @@ export default function OnetOccupationExplorer({ clientId, client }) {
           end,
         });
 
-        console.log(
-  "FIRST CAREER SAMPLE",
-  careers?.[0]
-);
-
         const careers =
           data?.career ||
           data?.careers ||
