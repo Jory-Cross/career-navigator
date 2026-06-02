@@ -174,14 +174,14 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     setInterestCareerResults([]);
 
     try {
-         const allCareers = [];
+      const targetZone = Number(jobZone);
+      const allCareers = [];
       let start = 1;
       let end = 20;
       let total = null;
 
       do {
         const data = await getInterestProfilerCareers({
-          jobZone,
           answers: interestProfilerProfile?.answers || undefined,
           scores: interestProfilerProfile?.scores || undefined,
           start,
@@ -196,67 +196,98 @@ export default function OnetOccupationExplorer({ clientId, client }) {
           data?.results ||
           [];
 
-        console.log(
-          "FIRST CAREER SAMPLE",
-          careers?.[0]
-        );
-        
         const normalized = Array.isArray(careers) ? careers : [careers];
 
         allCareers.push(...normalized.filter(Boolean));
 
-        total = Number(data?.total || 0);
+        total = Number(data?.total || allCareers.length || 0);
 
         start += 20;
         end += 20;
       } while (total && allCareers.length < total);
 
-            const careersWithVerifiedZones = [];
+      const careersWithCachedZones = [];
 
       for (const career of allCareers) {
-        const code =
-          career?.code ||
-          career?.onet_code ||
-          career?.occupation_code ||
-          career?.onet_soc_code;
+        const code = getOccupationCode(career);
 
         if (!code) {
-          careersWithVerifiedZones.push({
+          careersWithCachedZones.push({
             ...career,
             verified_job_zone: null,
+            verified_job_zone_title: "",
+          });
+          continue;
+        }
+
+        let cachedOccupation = null;
+
+        try {
+          const cachedResults = await base44.entities.OnetOccupation.filter({
+            onet_code: code,
+          });
+
+          cachedOccupation = Array.isArray(cachedResults)
+            ? cachedResults[0]
+            : null;
+        } catch (cacheError) {
+          console.warn("Failed to read OnetOccupation cache", code, cacheError);
+        }
+
+        if (cachedOccupation?.job_zone) {
+          careersWithCachedZones.push({
+            ...career,
+            verified_job_zone: Number(cachedOccupation.job_zone),
+            verified_job_zone_title: cachedOccupation.job_zone_title || "",
           });
           continue;
         }
 
         try {
           const zoneData = await getOnetOccupationJobZone(code);
+          const verifiedZone = Number(zoneData?.code || 0);
+          const verifiedZoneTitle = zoneData?.title || "";
 
-          careersWithVerifiedZones.push({
+          if (verifiedZone) {
+            try {
+              await base44.entities.OnetOccupation.create({
+                onet_code: code,
+                title: getOccupationTitle(career),
+                job_zone: String(verifiedZone),
+                job_zone_title: verifiedZoneTitle,
+                source: "onet_live_lookup",
+                last_verified_at: new Date().toISOString(),
+              });
+            } catch (saveError) {
+              console.warn("Failed to save OnetOccupation cache", code, saveError);
+            }
+          }
+
+          careersWithCachedZones.push({
             ...career,
-            verified_job_zone: Number(zoneData?.code || 0),
-            verified_job_zone_title: zoneData?.title || "",
+            verified_job_zone: verifiedZone || null,
+            verified_job_zone_title: verifiedZoneTitle,
           });
-        } catch (err) {
-          console.warn("Failed to verify Job Zone", code, err);
+        } catch (zoneError) {
+          console.warn("Failed to verify Job Zone", code, zoneError);
 
-          careersWithVerifiedZones.push({
+          careersWithCachedZones.push({
             ...career,
             verified_job_zone: null,
+            verified_job_zone_title: "",
           });
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
-      const filteredCareers = careersWithVerifiedZones.filter(
-        (career) => career.verified_job_zone === Number(jobZone)
+      const filteredCareers = careersWithCachedZones.filter(
+        (career) => career.verified_job_zone === targetZone
       );
 
-      console.log(
-        `Verified Zone ${jobZone}:`,
-        filteredCareers.length,
-        "occupations"
-      );
+      console.log("O*NET Interest Profiler grouped by cached Job Zone", {
+        selectedZone: targetZone,
+        totalCareers: allCareers.length,
+        matchedCareers: filteredCareers.length,
+      });
 
       setInterestCareerResults(filteredCareers);
     } catch (err) {
@@ -267,7 +298,6 @@ export default function OnetOccupationExplorer({ clientId, client }) {
       setLoadingInterestCareers(false);
     }
   };
-
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
