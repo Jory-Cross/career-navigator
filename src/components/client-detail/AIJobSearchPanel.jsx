@@ -262,10 +262,18 @@ const [interestProfilerRequiredMessage, setInterestProfilerRequiredMessage] = us
 
 const [selectedInterestedOccupation, setSelectedInterestedOccupation] =
   useState(null);
+
 const [selectedInterestedOccupationDetails, setSelectedInterestedOccupationDetails] =
   useState(null);
+
 const [loadingInterestedOccupationDetails, setLoadingInterestedOccupationDetails] =
   useState(false);
+
+const [occupationReviewNotes, setOccupationReviewNotes] =
+  useState("");
+
+const [occupationReviewStatus, setOccupationReviewStatus] =
+  useState("interested");
 
 const refreshInterestProfilerStatus = useCallback(async () => {
   if (!resolvedClientId) return false;
