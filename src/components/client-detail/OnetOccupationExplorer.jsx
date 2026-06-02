@@ -208,7 +208,51 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         end += 20;
       } while (total && allCareers.length < total);
 
-      setInterestCareerResults(allCareers);
+            const careersWithVerifiedZones = await Promise.all(
+        allCareers.map(async (career) => {
+          const code =
+            career?.code ||
+            career?.onet_code ||
+            career?.occupation_code ||
+            career?.onet_soc_code;
+
+          if (!code) {
+            return {
+              ...career,
+              verified_job_zone: null,
+            };
+          }
+
+          try {
+            const zoneData = await getOnetOccupationJobZone(code);
+
+            return {
+              ...career,
+              verified_job_zone: Number(zoneData?.code || 0),
+              verified_job_zone_title: zoneData?.title || "",
+            };
+          } catch (err) {
+            console.warn("Failed to verify Job Zone", code, err);
+
+            return {
+              ...career,
+              verified_job_zone: null,
+            };
+          }
+        })
+      );
+
+      const filteredCareers = careersWithVerifiedZones.filter(
+        (career) => career.verified_job_zone === Number(jobZone)
+      );
+
+      console.log(
+        `Verified Zone ${jobZone}:`,
+        filteredCareers.length,
+        "occupations"
+      );
+
+      setInterestCareerResults(filteredCareers);
     } catch (err) {
       console.error("Failed to load O*NET suggested careers:", err);
       setError(err?.message || "Failed to load O*NET suggested careers.");
