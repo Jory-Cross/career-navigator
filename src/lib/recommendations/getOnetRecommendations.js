@@ -1,7 +1,7 @@
 import { buildOnetSummary } from "@/lib/recommendations/buildOnetSummary";
+import { base44 } from "@/api/base44Client";
 import {
   getInterestProfilerCareers,
-  getOnetOccupationJobZone,
   searchOnetCareersByKeyword,
 } from "@/lib/onet/onetClient";
 function toArray(value) {
