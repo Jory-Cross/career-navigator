@@ -1,0 +1,42 @@
+{
+  "name": "EmailTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Template name"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "follow_up",
+        "interview_scheduling",
+        "application_update",
+        "networking",
+        "welcome",
+        "check_in",
+        "general"
+      ],
+      "default": "general",
+      "description": "Template category"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Email subject line"
+    },
+    "body": {
+      "type": "string",
+      "description": "Email body content"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether template is active"
+    }
+  },
+  "required": [
+    "name",
+    "subject",
+    "body"
+  ]
+}

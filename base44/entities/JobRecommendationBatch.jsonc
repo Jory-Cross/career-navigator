@@ -108,6 +108,41 @@
       "type": "boolean",
       "default": false,
       "description": "Soft-delete flag"
+    },
+    "resume_skills_json": {
+      "type": "string"
+    },
+    "wsa_json": {
+      "type": "string"
+    },
+    "riasec_scores_json": {
+      "type": "string"
+    },
+    "assessment_summary_json": {
+      "type": "string"
+    },
+    "top_strengths_json": {
+      "type": "string"
+    },
+    "top_barriers_json": {
+      "type": "string"
+    },
+    "recommended_job_fields_json": {
+      "type": "string"
+    },
+    "recommendation_explanation": {
+      "type": "string"
+    },
+    "ai_coach_summary": {
+      "type": "string",
+      "description": "AI Job Coach guidance text for this recommendation batch"
+    },
+    "confidence_score": {
+      "type": "number"
+    },
+    "last_recommendation_run_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [

@@ -1,0 +1,132 @@
+{
+  "name": "TrainingProgressReport",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Associated client ID"
+    },
+    "return_completed_to": {
+      "type": "string",
+      "description": "Return completed form to"
+    },
+    "supervisor_name": {
+      "type": "string"
+    },
+    "supervisor_address": {
+      "type": "string"
+    },
+    "reporting_period_from": {
+      "type": "string",
+      "format": "date"
+    },
+    "reporting_period_to": {
+      "type": "string",
+      "format": "date"
+    },
+    "was_late": {
+      "type": "boolean",
+      "default": false
+    },
+    "late_how_often": {
+      "type": "string"
+    },
+    "had_absences": {
+      "type": "boolean",
+      "default": false
+    },
+    "absences_how_often": {
+      "type": "string"
+    },
+    "quality_of_work": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "rate_of_progress": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "ability_get_along": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "personal_appearance": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "rate_of_task_completion": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "attitude": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Poor"
+      ]
+    },
+    "comments": {
+      "type": "string"
+    },
+    "training_schedule_changes": {
+      "type": "boolean",
+      "default": false
+    },
+    "training_schedule_changes_explain": {
+      "type": "string"
+    },
+    "additional_hours_needed": {
+      "type": "string"
+    },
+    "supervisor_signature": {
+      "type": "string"
+    },
+    "signature_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "supervisor_title": {
+      "type": "string"
+    },
+    "submitted_by": {
+      "type": "string",
+      "description": "Email of employer who submitted"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "Generated PDF URL"
+    }
+  },
+  "required": [
+    "client_id",
+    "reporting_period_from",
+    "reporting_period_to"
+  ]
+}

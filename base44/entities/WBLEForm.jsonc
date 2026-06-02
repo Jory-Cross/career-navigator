@@ -1,0 +1,89 @@
+{
+  "name": "WBLEForm",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Associated client ID"
+    },
+    "vr_counselor_name": {
+      "type": "string"
+    },
+    "vr_office_address": {
+      "type": "string"
+    },
+    "vr_office_phone": {
+      "type": "string"
+    },
+    "vr_fax": {
+      "type": "string"
+    },
+    "vr_email": {
+      "type": "string"
+    },
+    "employer_name": {
+      "type": "string"
+    },
+    "employer_address": {
+      "type": "string"
+    },
+    "employer_phone": {
+      "type": "string"
+    },
+    "employer_fax": {
+      "type": "string"
+    },
+    "employer_trainer": {
+      "type": "string"
+    },
+    "employer_email": {
+      "type": "string"
+    },
+    "pre_ets_specialist_name": {
+      "type": "string"
+    },
+    "pre_ets_office_address": {
+      "type": "string"
+    },
+    "pre_ets_office_phone": {
+      "type": "string"
+    },
+    "pre_ets_fax": {
+      "type": "string"
+    },
+    "pre_ets_email": {
+      "type": "string"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "trainee_wages": {
+      "type": "string",
+      "description": "Payment amount and schedule"
+    },
+    "training_fee": {
+      "type": "string",
+      "description": "Negotiated training fee"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "Generated PDF URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "client_id"
+  ]
+}

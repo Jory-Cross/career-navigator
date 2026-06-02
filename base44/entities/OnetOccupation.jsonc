@@ -1,0 +1,36 @@
+{
+  "name": "OnetOccupation",
+  "type": "object",
+  "description": "Master cached O*NET occupation catalog used to store occupation metadata such as Job Zone so the app does not repeatedly call O*NET for the same occupation.",
+  "properties": {
+    "onet_code": {
+      "type": "string",
+      "description": "O*NET occupation code, such as 43-1011.00"
+    },
+    "title": {
+      "type": "string",
+      "description": "O*NET occupation title"
+    },
+    "job_zone": {
+      "type": "number",
+      "description": "Verified O*NET Job Zone number, 1 through 5"
+    },
+    "job_zone_title": {
+      "type": "string",
+      "description": "Verified O*NET Job Zone title"
+    },
+    "source": {
+      "type": "string",
+      "default": "onet",
+      "description": "Source of the occupation metadata"
+    },
+    "last_verified_at": {
+      "type": "string",
+      "description": "Date/time this occupation metadata was last verified from O*NET"
+    }
+  },
+  "required": [
+    "onet_code",
+    "title"
+  ]
+}

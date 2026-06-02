@@ -1,0 +1,111 @@
+{
+  "name": "InterviewSession",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Associated client ID"
+    },
+    "job_application_id": {
+      "type": "string",
+      "description": "Related job application (optional)"
+    },
+    "target_role": {
+      "type": "string",
+      "description": "Role being prepared for"
+    },
+    "industry": {
+      "type": "string",
+      "description": "Industry context"
+    },
+    "questions": {
+      "type": "array",
+      "description": "Generated interview questions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "realtimeFeedback": {
+            "type": "array",
+            "description": "Real-time coaching tips as user types",
+            "items": {
+              "type": "object",
+              "properties": {
+                "point": {
+                  "type": "string"
+                },
+                "suggestion": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "session_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of practice session"
+    },
+    "session_type": {
+      "type": "string",
+      "enum": [
+        "practice",
+        "WSA"
+      ],
+      "description": "Type of interview session"
+    },
+    "overall_feedback": {
+      "type": "string",
+      "description": "Overall session feedback"
+    },
+    "improvement_tips": {
+      "type": "array",
+      "description": "Personalized improvement tips",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Session tags (role, company, etc)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "User notes about the session"
+    },
+    "company": {
+      "type": "string",
+      "description": "Company name if from job application"
+    },
+    "skills_assessed": {
+      "type": "array",
+      "description": "Skills demonstrated in this session",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "client_id",
+    "target_role"
+  ]
+}

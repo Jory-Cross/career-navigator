@@ -1,0 +1,50 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Notification title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Notification message"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "success",
+        "urgent"
+      ],
+      "default": "info",
+      "description": "Notification type"
+    },
+    "related_client_id": {
+      "type": "string",
+      "description": "Related client ID"
+    },
+    "related_entity_type": {
+      "type": "string",
+      "description": "Related entity type (e.g., JobApplication, Task)"
+    },
+    "related_entity_id": {
+      "type": "string",
+      "description": "Related entity ID"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether notification has been read"
+    },
+    "action_url": {
+      "type": "string",
+      "description": "URL to navigate to when clicked"
+    }
+  },
+  "required": [
+    "title",
+    "message"
+  ]
+}

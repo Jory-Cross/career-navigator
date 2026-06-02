@@ -40,25 +40,16 @@
       "default": "client_portal",
       "description": "Where the entry was created from"
     },
-  "status": {
-  "type": "string",
-  "enum": [
-    "pending",
-    "approved",
-    "rejected"
-  ],
-  "default": "pending",
-  "description": "Review status by staff"
-},
-"rejection_reason": {
-  "type": "string",
-  "description": "Reason staff rejected the entry"
-},
-"resubmitted_at": {
-  "type": "string",
-  "format": "date-time",
-  "description": "When a rejected entry was corrected and resubmitted"
-},
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Review status by staff"
+    },
     "approved_by": {
       "type": "string",
       "description": "Email of staff member who approved/rejected"

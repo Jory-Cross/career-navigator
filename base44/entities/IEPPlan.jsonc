@@ -1,0 +1,63 @@
+{
+  "name": "IEPPlan",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Associated client ID"
+    },
+    "school_name": {
+      "type": "string",
+      "description": "Name of school"
+    },
+    "grade_level": {
+      "type": "string",
+      "description": "Current grade level"
+    },
+    "counselor_name": {
+      "type": "string",
+      "description": "VR / school counselor name"
+    },
+    "counselor_email": {
+      "type": "string",
+      "description": "Counselor email"
+    },
+    "disability_category": {
+      "type": "string",
+      "description": "Disability classification"
+    },
+    "iep_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Most recent IEP date"
+    },
+    "next_review_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Next IEP review date"
+    },
+    "post_secondary_goals": {
+      "type": "string",
+      "description": "Post-secondary employment/education goals"
+    },
+    "transition_goals": {
+      "type": "string",
+      "description": "Transition planning goals"
+    },
+    "accommodation_notes": {
+      "type": "string",
+      "description": "Workplace and learning accommodations needed"
+    },
+    "strengths": {
+      "type": "string",
+      "description": "Student strengths and interests"
+    },
+    "areas_of_support": {
+      "type": "string",
+      "description": "Areas requiring additional support"
+    }
+  },
+  "required": [
+    "client_id"
+  ]
+}

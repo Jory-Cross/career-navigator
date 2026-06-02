@@ -1,0 +1,43 @@
+{
+  "name": "AccessRequest",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Requester's email address"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Requester's full name"
+    },
+    "message": {
+      "type": "string",
+      "description": "Optional message from the requester"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "denied"
+      ],
+      "default": "pending",
+      "description": "Request status"
+    },
+    "client_type": {
+      "type": "string",
+      "enum": [
+        "job_seeker",
+        "pre_ets",
+        "dspd",
+        "employed"
+      ],
+      "default": "job_seeker",
+      "description": "Intended client type"
+    }
+  },
+  "required": [
+    "email",
+    "full_name"
+  ]
+}
