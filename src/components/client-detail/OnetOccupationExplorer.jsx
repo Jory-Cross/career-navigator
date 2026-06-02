@@ -162,111 +162,139 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     loadInterestProfilerProfile();
   }, [clientId]);
 
-               const loadInterestCareersForZone = async (jobZone) => {
-    if (!jobZone) {
-      toast.error("Select a Job Zone first.");
-      return;
+  const loadInterestCareersForZone = async (jobZone) => {
+  if (!jobZone) {
+    toast.error("Select a Job Zone first.");
+    return;
+  }
+
+  setSelectedInterestJobZone(jobZone);
+  setLoadingInterestCareers(true);
+  setError("");
+  setInterestCareerResults([]);
+
+  try {
+    const targetZone = Number(jobZone);
+    const allCareers = [];
+    let start = 1;
+    let end = 20;
+    let total = null;
+
+    do {
+      const data = await getInterestProfilerCareers({
+        answers: interestProfilerProfile?.answers || undefined,
+        scores: interestProfilerProfile?.scores || undefined,
+        start,
+        end,
+      });
+
+      const careers =
+        data?.career ||
+        data?.careers ||
+        data?.occupation ||
+        data?.occupations ||
+        data?.results ||
+        [];
+
+      const normalized = Array.isArray(careers) ? careers : [careers];
+
+      allCareers.push(...normalized.filter(Boolean));
+
+      total = Number(data?.total || allCareers.length || 0);
+
+      start += 20;
+      end += 20;
+    } while (total && allCareers.length < total);
+
+    const cachedOccupations =
+      await base44.entities.OnetOccupation.list("onet_code", 1500);
+
+    const occupationCatalogByCode = new Map();
+
+    for (const occupation of cachedOccupations || []) {
+      const code = String(occupation?.onet_code || "").trim();
+
+      if (code) {
+        occupationCatalogByCode.set(code, occupation);
+      }
     }
 
-    setSelectedInterestJobZone(jobZone);
-    setLoadingInterestCareers(true);
-    setError("");
-    setInterestCareerResults([]);
+    const careersWithCachedZones = allCareers.map((career) => {
+      const code = String(getOccupationCode(career) || "").trim();
+      const cachedOccupation = occupationCatalogByCode.get(code);
 
-    try {
-      const targetZone = Number(jobZone);
-      const allCareers = [];
-      let start = 1;
-      let end = 20;
-      let total = null;
+      return {
+        ...career,
+        verified_job_zone: cachedOccupation?.job_zone
+          ? Number(cachedOccupation.job_zone)
+          : null,
+        verified_job_zone_title:
+          cachedOccupation?.job_zone_title || "",
+        cached_occupation: cachedOccupation || null,
+      };
+    });
 
-      do {
-        const data = await getInterestProfilerCareers({
-          answers: interestProfilerProfile?.answers || undefined,
-          scores: interestProfilerProfile?.scores || undefined,
-          start,
-          end,
+    const filteredCareers = careersWithCachedZones.filter(
+      (career) => career.verified_job_zone === targetZone
+    );
+
+    const missingCatalogMatches = careersWithCachedZones.filter(
+      (career) => !career.cached_occupation
+    );
+
+    const zoneCounts = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      missing: 0,
+    };
+
+    const zoneExamples = {
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+      missing: [],
+    };
+
+    careersWithCachedZones.forEach((career) => {
+      const zone = career.verified_job_zone || "missing";
+
+      zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
+
+      if (zoneExamples[zone] && zoneExamples[zone].length < 5) {
+        zoneExamples[zone].push({
+          code: getOccupationCode(career),
+          title: getOccupationTitle(career),
         });
-
-        const careers =
-          data?.career ||
-          data?.careers ||
-          data?.occupation ||
-          data?.occupations ||
-          data?.results ||
-          [];
-
-        const normalized = Array.isArray(careers) ? careers : [careers];
-
-        allCareers.push(...normalized.filter(Boolean));
-
-        total = Number(data?.total || allCareers.length || 0);
-
-        start += 20;
-        end += 20;
-      } while (total && allCareers.length < total);
-
-      const cachedOccupations =
-        await base44.entities.OnetOccupation.list("onet_code", 1500);
-
-      const occupationCatalogByCode = new Map();
-
-      for (const occupation of cachedOccupations || []) {
-        if (occupation?.onet_code) {
-          occupationCatalogByCode.set(
-            String(occupation.onet_code).trim(),
-            occupation
-          );
-        }
       }
+    });
 
-      const careersWithCachedZones = allCareers.map((career) => {
-        const code = String(getOccupationCode(career) || "").trim();
-        const cachedOccupation = occupationCatalogByCode.get(code);
-
-        return {
-          ...career,
-          verified_job_zone: cachedOccupation?.job_zone
-            ? Number(cachedOccupation.job_zone)
-            : null,
-          verified_job_zone_title: cachedOccupation?.job_zone_title || "",
-          cached_occupation: cachedOccupation || null,
-        };
-      });
-
-      const filteredCareers = careersWithCachedZones.filter(
-        (career) => career.verified_job_zone === targetZone
-      );
-
-      const missingCatalogMatches = careersWithCachedZones.filter(
-        (career) => !career.cached_occupation
-      );
-
-      const zoneCounts = {};
-
-      careersWithCachedZones.forEach((career) => {
-        const zone = career.verified_job_zone || "missing";
-        zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
-      });
-
-      console.log("O*NET Interest Profiler Zone Distribution", {
+    console.log(
+      "O*NET Interest Profiler grouped by local OnetOccupation catalog",
+      {
         selectedZone: targetZone,
         totalCareers: allCareers.length,
         catalogRecordsLoaded: cachedOccupations?.length || 0,
         matchedCareers: filteredCareers.length,
         missingCatalogMatches: missingCatalogMatches.length,
         zoneCounts,
-      });
+        zoneExamples,
+      }
+    );
 
-      setInterestCareerResults(filteredCareers);
-    } catch (err) {
-      console.error("Failed to load O*NET suggested careers:", err);
-      setError(err?.message || "Failed to load O*NET suggested careers.");
-      toast.error("Failed to load O*NET suggested careers.");
-    } finally {
-      setLoadingInterestCareers(false);
-    }
-  };
+    setInterestCareerResults(filteredCareers);
+  } catch (err) {
+    console.error("Failed to load O*NET suggested careers:", err);
+    setError(err?.message || "Failed to load O*NET suggested careers.");
+    toast.error("Failed to load O*NET suggested careers.");
+  } finally {
+    setLoadingInterestCareers(false);
+  }
+};
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
