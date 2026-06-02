@@ -408,9 +408,17 @@ const loadInterestedOccupationDetails = async (occupation) => {
     return;
   }
 
-  setSelectedInterestedOccupation(occupation);
+   setSelectedInterestedOccupation(occupation);
   setSelectedInterestedOccupationDetails(null);
   setLoadingInterestedOccupationDetails(true);
+
+  setOccupationReviewNotes(
+    occupation?.staff_review_notes || ""
+  );
+
+  setOccupationReviewStatus(
+    occupation?.review_status || "interested"
+  );
 
   try {
     const [
