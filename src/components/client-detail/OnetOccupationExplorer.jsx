@@ -211,39 +211,42 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         end += 20;
       } while (total && allCareers.length < total);
 
-            const careersWithVerifiedZones = await Promise.all(
-        allCareers.map(async (career) => {
-          const code =
-            career?.code ||
-            career?.onet_code ||
-            career?.occupation_code ||
-            career?.onet_soc_code;
+            const careersWithVerifiedZones = [];
 
-          if (!code) {
-            return {
-              ...career,
-              verified_job_zone: null,
-            };
-          }
+      for (const career of allCareers) {
+        const code =
+          career?.code ||
+          career?.onet_code ||
+          career?.occupation_code ||
+          career?.onet_soc_code;
 
-          try {
-            const zoneData = await getOnetOccupationJobZone(code);
+        if (!code) {
+          careersWithVerifiedZones.push({
+            ...career,
+            verified_job_zone: null,
+          });
+          continue;
+        }
 
-            return {
-              ...career,
-              verified_job_zone: Number(zoneData?.code || 0),
-              verified_job_zone_title: zoneData?.title || "",
-            };
-          } catch (err) {
-            console.warn("Failed to verify Job Zone", code, err);
+        try {
+          const zoneData = await getOnetOccupationJobZone(code);
 
-            return {
-              ...career,
-              verified_job_zone: null,
-            };
-          }
-        })
-      );
+          careersWithVerifiedZones.push({
+            ...career,
+            verified_job_zone: Number(zoneData?.code || 0),
+            verified_job_zone_title: zoneData?.title || "",
+          });
+        } catch (err) {
+          console.warn("Failed to verify Job Zone", code, err);
+
+          careersWithVerifiedZones.push({
+            ...career,
+            verified_job_zone: null,
+          });
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
 
       const filteredCareers = careersWithVerifiedZones.filter(
         (career) => career.verified_job_zone === Number(jobZone)
