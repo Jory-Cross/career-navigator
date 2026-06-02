@@ -453,6 +453,54 @@ const loadInterestedOccupationDetails = async (occupation) => {
     setLoadingInterestedOccupationDetails(false);
   }
 };
+
+const saveOccupationReview = async () => {
+  if (!selectedInterestedOccupation?.id) {
+    toast.error("No occupation selected.");
+    return;
+  }
+
+  try {
+    await base44.entities.ClientOccupationInterest.update(
+      selectedInterestedOccupation.id,
+      {
+        status: occupationReviewStatus,
+        notes: occupationReviewNotes,
+      }
+    );
+
+    setInterestedOccupations((current) =>
+      current.map((item) =>
+        item.id === selectedInterestedOccupation.id
+          ? {
+              ...item,
+              status: occupationReviewStatus,
+              notes: occupationReviewNotes,
+            }
+          : item
+      )
+    );
+
+    setSelectedInterestedOccupation((current) =>
+      current
+        ? {
+            ...current,
+            status: occupationReviewStatus,
+            notes: occupationReviewNotes,
+          }
+        : current
+    );
+
+    toast.success("Occupation review saved.");
+  } catch (err) {
+    console.error(
+      "Failed to save occupation review:",
+      err
+    );
+
+    toast.error("Failed to save occupation review.");
+  }
+};
   
   const loadSavedRecs = async () => {
     setLoadingSaved(true);
