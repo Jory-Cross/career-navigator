@@ -190,48 +190,9 @@ export default function OnetOccupationExplorer({ clientId, client }) {
 
       const normalized = Array.isArray(careers) ? careers : [careers];
 
-      const careersWithVerifiedZones = await Promise.all(
-        normalized.filter(Boolean).map(async (career) => {
-          const code = getOccupationCode(career);
-
-          if (!code) {
-            return {
-              ...career,
-              verified_job_zone: null,
-              verified_job_zone_title: "",
-            };
-          }
-
-          try {
-            const zoneData = await getOnetOccupationJobZone(code);
-            const verifiedZone = Number(zoneData?.code);
-
-            return {
-              ...career,
-              verified_job_zone: Number.isFinite(verifiedZone) ? verifiedZone : null,
-              verified_job_zone_title: zoneData?.title || "",
-            };
-          } catch (zoneError) {
-            console.warn("Could not verify O*NET Job Zone:", {
-              code,
-              career,
-              zoneError,
-            });
-
-            return {
-              ...career,
-              verified_job_zone: null,
-              verified_job_zone_title: "",
-            };
-          }
-        })
+            setInterestCareerResults(
+        normalized.filter(Boolean)
       );
-
-      const matchingCareers = careersWithVerifiedZones.filter(
-        (career) => career.verified_job_zone === targetZone
-      );
-
-      setInterestCareerResults(matchingCareers);
     } catch (err) {
       console.error("Failed to load O*NET suggested careers:", err);
       setError(err?.message || "Failed to load O*NET suggested careers.");
