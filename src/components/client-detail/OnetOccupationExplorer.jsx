@@ -174,9 +174,8 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     setInterestCareerResults([]);
 
     try {
-      const targetZone = Number(jobZone);
-
-      const data = await getInterestProfilerCareers({
+           const data = await getInterestProfilerCareers({
+        jobZone,
         answers: interestProfilerProfile?.answers || undefined,
         scores: interestProfilerProfile?.scores || undefined,
       });
