@@ -1466,27 +1466,75 @@ const validJobCount = jobs.filter(
 
           return (
             <div className="space-y-3">
-              <div>
-                <h4 className="text-xl font-semibold text-slate-900">
-                  {overview?.title || selectedInterestedOccupation?.occupation_title}
-                </h4>
+             <div className="space-y-3">
+  <div>
+    <h4 className="text-xl font-semibold text-slate-900">
+      {overview?.title || selectedInterestedOccupation?.occupation_title}
+    </h4>
 
-                <p className="mt-1 text-sm text-slate-600">
-                  O*NET Code: {selectedInterestedOccupationDetails.code}
-                </p>
+    <p className="mt-1 text-sm text-slate-600">
+      O*NET Code: {selectedInterestedOccupationDetails.code}
+    </p>
 
-                {overview?.bright_outlook && (
-                  <p className="mt-2 text-xs font-medium text-green-700">
-                    Bright Outlook Occupation
-                  </p>
-                )}
+    {overview?.bright_outlook && (
+      <p className="mt-2 text-xs font-medium text-green-700">
+        Bright Outlook Occupation
+      </p>
+    )}
 
-                {overview?.green && (
-                  <p className="mt-1 text-xs font-medium text-emerald-700">
-                    Green Occupation
-                  </p>
-                )}
-              </div>
+    {overview?.green && (
+      <p className="mt-1 text-xs font-medium text-emerald-700">
+        Green Occupation
+      </p>
+    )}
+  </div>
+
+  <Card className="border-blue-200 bg-blue-50 p-3">
+    <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">
+      Staff Review Status
+    </p>
+
+    <div className="mt-2 flex flex-wrap gap-2">
+      {[
+        "interested",
+        "exploring",
+        "target_occupation",
+        "staff_concern",
+        "not_pursuing",
+      ].map((status) => (
+        <Button
+          key={status}
+          size="sm"
+          variant={
+            occupationReviewStatus === status
+              ? "default"
+              : "outline"
+          }
+          onClick={() => setOccupationReviewStatus(status)}
+        >
+          {status
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())}
+        </Button>
+      ))}
+    </div>
+  </Card>
+
+  <Card className="p-3">
+    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      Staff Review Notes
+    </p>
+
+    <Textarea
+      className="mt-2"
+      placeholder="Document why this occupation is or is not a good target, concerns, supports needed, accommodations, training needs, transportation issues, client feedback, etc."
+      value={occupationReviewNotes}
+      onChange={(e) =>
+        setOccupationReviewNotes(e.target.value)
+      }
+    />
+  </Card>
+</div>
 
               <DetailSection title="Overview">
                 <p>
