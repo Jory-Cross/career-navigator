@@ -38,14 +38,22 @@ export async function getInterestProfilerJobZones() {
   return onetRequest("/mnm/interestprofiler/job_zones");
 }
 
-export async function getInterestProfilerCareers({ answers, scores, jobZone } = {}) {
+export async function getInterestProfilerCareers({
+  answers,
+  scores,
+  jobZone,
+  start = 1,
+  end = 20,
+} = {}) {
   const params = {};
 
   if (answers) params.answers = answers;
   if (scores) params.scores = scores;
 
-  // O*NET Web Services v2 expects the Job Zone filter as "zone".
   if (jobZone) params.job_zone = jobZone;
+
+  params.start = start;
+  params.end = end;
 
   return onetRequest("/mnm/interestprofiler/careers", params);
 }
