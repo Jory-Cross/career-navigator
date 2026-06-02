@@ -188,7 +188,10 @@ export default function OnetOccupationExplorer({ clientId, client }) {
           end,
         });
 
-        console.log("O*NET CAREERS RESPONSE", data);
+        console.log(
+  "FIRST CAREER SAMPLE",
+  careers?.[0]
+);
 
         const careers =
           data?.career ||
