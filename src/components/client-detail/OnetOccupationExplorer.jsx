@@ -174,27 +174,41 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     setInterestCareerResults([]);
 
     try {
-           const data = await getInterestProfilerCareers({
-        jobZone,
-        answers: interestProfilerProfile?.answers || undefined,
-        scores: interestProfilerProfile?.scores || undefined,
-      });
+         const allCareers = [];
+      let start = 1;
+      let end = 20;
+      let total = null;
 
-      console.log("O*NET CAREERS RESPONSE", data);
-      
-      const careers =
-        data?.career ||
-        data?.careers ||
-        data?.occupation ||
-        data?.occupations ||
-        data?.results ||
-        [];
+      do {
+        const data = await getInterestProfilerCareers({
+          jobZone,
+          answers: interestProfilerProfile?.answers || undefined,
+          scores: interestProfilerProfile?.scores || undefined,
+          start,
+          end,
+        });
 
-      const normalized = Array.isArray(careers) ? careers : [careers];
+        console.log("O*NET CAREERS RESPONSE", data);
 
-            setInterestCareerResults(
-        normalized.filter(Boolean)
-      );
+        const careers =
+          data?.career ||
+          data?.careers ||
+          data?.occupation ||
+          data?.occupations ||
+          data?.results ||
+          [];
+
+        const normalized = Array.isArray(careers) ? careers : [careers];
+
+        allCareers.push(...normalized.filter(Boolean));
+
+        total = Number(data?.total || 0);
+
+        start += 20;
+        end += 20;
+      } while (total && allCareers.length < total);
+
+      setInterestCareerResults(allCareers);
     } catch (err) {
       console.error("Failed to load O*NET suggested careers:", err);
       setError(err?.message || "Failed to load O*NET suggested careers.");
