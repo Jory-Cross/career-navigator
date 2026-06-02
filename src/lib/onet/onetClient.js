@@ -45,7 +45,7 @@ export async function getInterestProfilerCareers({ answers, scores, jobZone } = 
   if (scores) params.scores = scores;
 
   // O*NET Web Services v2 expects the Job Zone filter as "zone".
-  if (jobZone) params.zone = jobZone;
+  if (jobZone) params.job_zone = jobZone;
 
   return onetRequest("/mnm/interestprofiler/careers", params);
 }
