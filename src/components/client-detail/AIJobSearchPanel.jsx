@@ -1577,19 +1577,28 @@ const validJobCount = jobs.filter(
   </Card>
 
   <Card className="p-3">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-      Staff Review Notes
-    </p>
+  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    Staff Review Notes
+  </p>
 
-    <Textarea
-      className="mt-2"
-      placeholder="Document why this occupation is or is not a good target, concerns, supports needed, accommodations, training needs, transportation issues, client feedback, etc."
-      value={occupationReviewNotes}
-      onChange={(e) =>
-        setOccupationReviewNotes(e.target.value)
-      }
-    />
-  </Card>
+  <Textarea
+    className="mt-2"
+    placeholder="Document why this occupation is or is not a good target, concerns, supports needed, accommodations, training needs, transportation issues, client feedback, etc."
+    value={occupationReviewNotes}
+    onChange={(e) =>
+      setOccupationReviewNotes(e.target.value)
+    }
+  />
+
+  <div className="mt-3 flex justify-end">
+    <Button
+      onClick={saveOccupationReview}
+      size="sm"
+    >
+      Save Review
+    </Button>
+  </div>
+</Card>
 </div>
 
               <DetailSection title="Overview">
