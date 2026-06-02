@@ -528,58 +528,69 @@ try {
     })
     .slice(0, 20);
 
-  const careers = await Promise.all(
-    rawCareerItems.map(async (item, index) => {
-      const normalizedCareer = normalizeOnetCareerItem(
-        item,
-        index,
-        profileKeywords,
-        getConflictKeywords(profile)
+    const cachedOccupations =
+    await base44.entities.OnetOccupation.list("onet_code", 1500);
+
+  const occupationCatalogByCode = new Map();
+
+  for (const occupation of cachedOccupations || []) {
+    const code = String(occupation?.onet_code || "").trim();
+
+    if (code) {
+      occupationCatalogByCode.set(code, occupation);
+    }
+  }
+
+  const careers = rawCareerItems.map((item, index) => {
+    const normalizedCareer = normalizeOnetCareerItem(
+      item,
+      index,
+      profileKeywords,
+      getConflictKeywords(profile)
+    );
+
+    const emptyJobZoneData = {
+      job_zone: null,
+      job_zone_title: null,
+    };
+
+    if (
+      !normalizedCareer.onet_code ||
+      normalizedCareer.onet_code.startsWith("ONET-")
+    ) {
+      return {
+        ...normalizedCareer,
+        ...emptyJobZoneData,
+      };
+    }
+
+    const cachedOccupation = occupationCatalogByCode.get(
+      String(normalizedCareer.onet_code || "").trim()
+    );
+
+    if (!cachedOccupation) {
+      console.warn(
+        "[getOnetRecommendations] Missing local OnetOccupation catalog match:",
+        {
+          title: normalizedCareer.title,
+          onet_code: normalizedCareer.onet_code,
+        }
       );
 
-            const emptyJobZoneData = {
-        job_zone: null,
-        job_zone_title: null,
+      return {
+        ...normalizedCareer,
+        ...emptyJobZoneData,
       };
+    }
 
-      if (
-        !normalizedCareer.onet_code ||
-        normalizedCareer.onet_code.startsWith("ONET-")
-      ) {
-        return {
-          ...normalizedCareer,
-          ...emptyJobZoneData,
-        };
-      }
+    const parsedJobZone = Number(cachedOccupation.job_zone);
 
-      try {
-        const jobZoneData = await getOnetOccupationJobZone(
-          normalizedCareer.onet_code
-        );
-
-        const parsedJobZone = Number(jobZoneData?.code);
-
-               return {
-          ...normalizedCareer,
-          job_zone: Number.isFinite(parsedJobZone) ? parsedJobZone : null,
-          job_zone_title: jobZoneData?.title || null,
-        };
-      } catch (jobZoneError) {
-        console.warn(
-          "[getOnetRecommendations] Could not load Job Zone for:",
-          normalizedCareer.title,
-          normalizedCareer.onet_code,
-          jobZoneError
-        );
-
-        return {
-          ...normalizedCareer,
-          ...emptyJobZoneData,
-        };
-      }
-    })
-  );
-
+    return {
+      ...normalizedCareer,
+      job_zone: Number.isFinite(parsedJobZone) ? parsedJobZone : null,
+      job_zone_title: cachedOccupation.job_zone_title || null,
+    };
+  });
    const realisticCareers = careers.filter(
     (career) => career.job_zone === 1 || career.job_zone === 2
   );
