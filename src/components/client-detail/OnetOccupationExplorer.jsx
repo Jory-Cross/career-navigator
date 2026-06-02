@@ -162,7 +162,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
     loadInterestProfilerProfile();
   }, [clientId]);
 
-            const loadInterestCareersForZone = async (jobZone) => {
+               const loadInterestCareersForZone = async (jobZone) => {
     if (!jobZone) {
       toast.error("Select a Job Zone first.");
       return;
@@ -242,7 +242,7 @@ export default function OnetOccupationExplorer({ clientId, client }) {
         (career) => !career.cached_occupation
       );
 
-           const zoneCounts = {};
+      const zoneCounts = {};
 
       careersWithCachedZones.forEach((career) => {
         const zone = career.verified_job_zone || "missing";
@@ -267,7 +267,6 @@ export default function OnetOccupationExplorer({ clientId, client }) {
       setLoadingInterestCareers(false);
     }
   };
-
   const runSearch = async () => {
     const trimmedQuery = query.trim();
 
