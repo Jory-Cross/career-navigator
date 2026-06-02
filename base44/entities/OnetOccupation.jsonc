@@ -11,6 +11,10 @@
       "type": "string",
       "description": "O*NET occupation title"
     },
+    "description": {
+      "type": "string",
+      "description": "O*NET occupation description"
+    },
     "job_zone": {
       "type": "number",
       "description": "Verified O*NET Job Zone number, 1 through 5"
@@ -18,6 +22,16 @@
     "job_zone_title": {
       "type": "string",
       "description": "Verified O*NET Job Zone title"
+    },
+    "bright_outlook": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this occupation has a Bright Outlook tag from O*NET"
+    },
+    "green": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this occupation has a Green tag from O*NET"
     },
     "source": {
       "type": "string",
