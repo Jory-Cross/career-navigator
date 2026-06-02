@@ -428,11 +428,11 @@ if (
 
             <Card className="space-y-3 bg-blue-50 p-3">
         <div>
-          <p className="text-sm font-semibold text-slate-800">
-            Suggested Occupations by O*NET Job Zone
+                    <p className="text-sm font-semibold text-slate-800">
+            O*NET Interest Profiler Occupations
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            Choose a preparation level to view O*NET suggested occupations. Open details, then mark any occupation as Interested.
+            These occupations come from the client's completed Interest Profiler and are grouped by verified O*NET Job Zone / preparation level.
           </p>
         </div>
 
