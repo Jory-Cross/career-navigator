@@ -2,26 +2,6 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
 const ONET_BASE_URL = "https://api-v2.onetcenter.org";
 
-async function onetFetch(path, params, apiKey) {
-  const url = new URL(`${ONET_BASE_URL}${path}`);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
-    });
-  }
-  console.log("[syncOnetOccupations] GET", url.toString());
-  const res = await fetch(url.toString(), {
-    headers: { Accept: "application/json", "X-API-Key": apiKey },
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    console.error("[syncOnetOccupations] O*NET error", res.status, text.slice(0, 300));
-    return null;
-  }
-  try { return JSON.parse(text); } catch { return null; }
-}
-
-// Job Zone number → title mapping
 const JOB_ZONE_TITLES = {
   1: "Little or No Preparation Needed",
   2: "Some Preparation Needed",
@@ -35,72 +15,104 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user) return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "admin") return Response.json({ success: false, error: "Forbidden: Admin access required" }, { status: 403 });
+    if (!user) {
+      return Response.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== "admin") {
+      return Response.json(
+        { success: false, error: "Admin access required" },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json().catch(() => ({}));
-    const action = body.action || "preview"; // "preview" or "execute"
-    const limit = Math.min(Number(body.limit) || 25, 500);
-    const start = Number(body.start) || 1;
+    const action = body.action || "diagnose";
+    const start = Number(body.start || 1);
+    const limit = Math.min(Number(body.limit || 25), 100);
+    const end = start + limit - 1;
 
-    const apiKey = Deno.env.get("ONET_API_KEY") || Deno.env.get("VITE_ONET_API_KEY");
+    const apiKey =
+      Deno.env.get("ONET_API_KEY") ||
+      Deno.env.get("VITE_ONET_API_KEY");
+
     if (!apiKey) {
-      console.error("[syncOnetOccupations] Missing ONET_API_KEY");
-      return Response.json({ success: false, error: "Missing O*NET API key" }, { status: 500 });
+      return Response.json(
+        { success: false, error: "Missing O*NET API key" },
+        { status: 500 }
+      );
     }
 
-    console.log(`[syncOnetOccupations] action=${action} start=${start} limit=${limit}`);
-
-    // ── Step 1: Fetch occupation list ─────────────────────────────────────
-    const listData = await onetFetch("/occupations", { start, end: start + limit - 1 }, apiKey);
-    if (!listData) {
-      return Response.json({ success: false, error: "Failed to fetch occupation list from O*NET" }, { status: 500 });
+    if (!["diagnose", "preview", "execute"].includes(action)) {
+      return Response.json(
+        {
+          success: false,
+          error: "Invalid action. Use diagnose, preview, or execute.",
+        },
+        { status: 400 }
+      );
     }
 
-    const occupations = listData.occupation || [];
-    console.log(`[syncOnetOccupations] Fetched ${occupations.length} occupations from list (total available: ${listData.total})`);
+    const listData = await onetFetch(apiKey, "/online/occupations", {
+      start,
+      end,
+    });
+
+    const occupations = normalizeOccupations(listData);
+
+    if (action === "diagnose") {
+      return Response.json({
+        success: true,
+        action,
+        endpoint_tested: "/online/occupations",
+        start,
+        end,
+        total_available: listData?.total || null,
+        raw_keys: listData && typeof listData === "object"
+          ? Object.keys(listData)
+          : [],
+        occupation_count: occupations.length,
+        sample: occupations.slice(0, 10).map((occupation) => ({
+          onet_code: occupation.code,
+          title: occupation.title,
+          raw_keys: Object.keys(occupation || {}),
+        })),
+        note: "Diagnose only. No records written and no detail/job-zone endpoints called.",
+      });
+    }
+
+    const existingRecords =
+      await base44.asServiceRole.entities.OnetOccupation.list();
+
+    const existingByCode = new Map();
+
+    for (const record of existingRecords || []) {
+      if (record?.onet_code) {
+        existingByCode.set(record.onet_code, record);
+      }
+    }
 
     const summary = {
+      action,
+      endpoint_used: "/online/occupations",
+      start,
+      end,
+      total_available: listData?.total || null,
       scanned: occupations.length,
-      total_available: listData.total || 0,
       created: 0,
       updated: 0,
       skipped: 0,
       failed: 0,
       failures: [],
-      preview_mode: action === "preview",
+      sample: [],
     };
 
-    if (action === "preview") {
-      // Return first 10 as sample without writing anything
-      const sample = occupations.slice(0, 10).map(o => ({
-        onet_code: o.code,
-        title: o.title,
-      }));
-      return Response.json({
-        success: true,
-        summary: { ...summary, note: "Preview mode — no records written." },
-        sample,
-      });
-    }
-
-    // ── Step 2: Load existing OnetOccupation records for dedup ────────────
-    let existingMap = {};
-    try {
-      const existing = await base44.asServiceRole.entities.OnetOccupation.list();
-      for (const rec of existing) {
-        if (rec.onet_code) existingMap[rec.onet_code] = rec;
-      }
-      console.log(`[syncOnetOccupations] Loaded ${existing.length} existing OnetOccupation records`);
-    } catch (e) {
-      console.error("[syncOnetOccupations] Failed to load existing records:", e.message);
-      return Response.json({ success: false, error: "Failed to load existing OnetOccupation records: " + e.message }, { status: 500 });
-    }
-
-    // ── Step 3: Enrich each occupation ────────────────────────────────────
-    for (const occ of occupations) {
-      const onet_code = occ.code;
-      const title = occ.title;
+    for (const occupation of occupations) {
+      const onet_code = occupation?.code || occupation?.onet_code;
+      const title = occupation?.title || occupation?.name;
 
       if (!onet_code || !title) {
         summary.skipped++;
@@ -108,80 +120,158 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Fetch occupation details for description + job zone
-        const detailData = await onetFetch(`/occupations/${onet_code}`, {}, apiKey);
-        const jobZoneData = await onetFetch(`/occupations/${onet_code}/details/job_zone`, {}, apiKey);
+        const detailData = await onetFetch(
+          apiKey,
+          `/online/occupations/${onet_code}`,
+          {}
+        );
 
-        // Description
-        let description = null;
-        if (detailData?.description) {
-          description = detailData.description;
-        }
+        const jobZoneData = await onetFetch(
+          apiKey,
+          `/online/occupations/${onet_code}/summary/job_zone`,
+          {}
+        );
 
-        // Job Zone
-        let job_zone = null;
-        let job_zone_title = null;
-        if (jobZoneData?.job_zone) {
-          const zoneNum = Number(jobZoneData.job_zone);
-          if (!isNaN(zoneNum)) {
-            job_zone = zoneNum;
-            job_zone_title = JOB_ZONE_TITLES[zoneNum] || null;
-          }
-        }
-
-        // Bright Outlook
-        let bright_outlook = false;
-        if (detailData?.tags) {
-          bright_outlook = Array.isArray(detailData.tags)
-            ? detailData.tags.some(t => typeof t === "string" && t.toLowerCase().includes("bright_outlook"))
-            : String(detailData.tags).toLowerCase().includes("bright_outlook");
-        }
-
-        // Green
-        let green = false;
-        if (detailData?.tags) {
-          green = Array.isArray(detailData.tags)
-            ? detailData.tags.some(t => typeof t === "string" && t.toLowerCase().includes("green"))
-            : String(detailData.tags).toLowerCase().includes("green");
-        }
-
+        const jobZoneNumber = getJobZoneNumber(jobZoneData);
         const payload = {
           onet_code,
           title,
-          ...(description !== null && { description }),
-          ...(job_zone !== null && { job_zone }),
-          ...(job_zone_title !== null && { job_zone_title }),
-          bright_outlook,
-          green,
-          last_verified_at: new Date().toISOString(),
-          source: "onet",
+          description: getDescription(detailData),
+          job_zone: jobZoneNumber,
+          job_zone_title:
+            getJobZoneTitle(jobZoneData) ||
+            JOB_ZONE_TITLES[jobZoneNumber] ||
+            "",
+          bright_outlook: getBooleanTag(detailData, "bright"),
+          green: getBooleanTag(detailData, "green"),
+          last_synced_at: new Date().toISOString(),
         };
 
-        const existing = existingMap[onet_code];
+        if (action === "preview") {
+          summary.sample.push({
+            mode: existingByCode.has(onet_code) ? "update" : "create",
+            ...payload,
+          });
+          continue;
+        }
 
-        if (existing) {
-          await base44.asServiceRole.entities.OnetOccupation.update(existing.id, payload);
+        const existing = existingByCode.get(onet_code);
+
+        if (existing?.id) {
+          await base44.asServiceRole.entities.OnetOccupation.update(
+            existing.id,
+            payload
+          );
           summary.updated++;
-          console.log(`[syncOnetOccupations] Updated: ${onet_code} ${title}`);
         } else {
           await base44.asServiceRole.entities.OnetOccupation.create(payload);
           summary.created++;
-          console.log(`[syncOnetOccupations] Created: ${onet_code} ${title}`);
         }
-      } catch (err) {
-        const msg = err?.message || String(err);
-        console.error(`[syncOnetOccupations] Failed for ${onet_code}: ${msg}`);
+      } catch (error) {
         summary.failed++;
-        summary.failures.push({ onet_code, title, error: msg });
+        summary.failures.push({
+          onet_code,
+          title,
+          error: error?.message || String(error),
+        });
       }
     }
 
-    console.log("[syncOnetOccupations] Done:", JSON.stringify(summary));
-    return Response.json({ success: true, summary });
-
+    return Response.json({
+      success: true,
+      summary,
+      note:
+        action === "preview"
+          ? "Preview only. No records written."
+          : "Execute complete.",
+    });
   } catch (error) {
-    const message = error?.message || "Unexpected error";
-    console.error("[syncOnetOccupations] Unexpected error:", message);
-    return Response.json({ success: false, error: message }, { status: 500 });
+    return Response.json(
+      {
+        success: false,
+        error: error?.message || "Unexpected error",
+      },
+      { status: 500 }
+    );
   }
 });
+
+async function onetFetch(apiKey, path, params = {}) {
+  const url = new URL(`${ONET_BASE_URL}${path}`);
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  console.log("[syncOnetOccupations] GET", url.toString());
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "X-API-Key": apiKey,
+    },
+  });
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `O*NET request failed ${response.status}: ${text || response.statusText}`
+    );
+  }
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch (_error) {
+    return text;
+  }
+}
+
+function normalizeOccupations(data) {
+  const occupations =
+    data?.occupation ||
+    data?.occupations ||
+    data?.career ||
+    data?.careers ||
+    data?.results ||
+    [];
+
+  return Array.isArray(occupations) ? occupations : [occupations].filter(Boolean);
+}
+
+function getDescription(detailData) {
+  return (
+    detailData?.description ||
+    detailData?.summary ||
+    detailData?.occupation?.description ||
+    ""
+  );
+}
+
+function getJobZoneNumber(jobZoneData) {
+  const raw =
+    jobZoneData?.job_zone ||
+    jobZoneData?.code ||
+    jobZoneData?.value ||
+    jobZoneData?.zone ||
+    jobZoneData?.title;
+
+  const match = String(raw || "").match(/[1-5]/);
+  return match ? Number(match[0]) : null;
+}
+
+function getJobZoneTitle(jobZoneData) {
+  return (
+    jobZoneData?.job_zone_title ||
+    jobZoneData?.title ||
+    jobZoneData?.name ||
+    ""
+  );
+}
+
+function getBooleanTag(data, keyword) {
+  const text = JSON.stringify(data || "").toLowerCase();
+  return text.includes(keyword.toLowerCase());
+}
