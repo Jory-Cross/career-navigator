@@ -148,13 +148,23 @@ export default function InterviewPrepSection({ client }) {
     setShowSessionNotes(false);
   };
 
-  const reviewSession = (session) => {
+   const reviewSession = (session) => {
+    const questions = Array.isArray(session.questions) ? session.questions : [];
+    const firstUnansweredIndex = questions.findIndex((q) => !q.answer);
+
+    const shouldContinueSession =
+      !session.overall_feedback && firstUnansweredIndex !== -1;
+
+    const startingIndex = shouldContinueSession ? firstUnansweredIndex : 0;
+    const startingQuestion = questions[startingIndex];
+
     setCurrentSession(session);
-    setCurrentQuestionIdx(0);
-    setReviewMode(true);
+    setCurrentQuestionIdx(startingIndex);
+    setReviewMode(!shouldContinueSession);
     setShowSession(true);
     setIsWSA(session.session_type === "WSA");
     setSessionNotes(session.notes || "");
+    setAnswer(shouldContinueSession ? startingQuestion?.answer || "" : "");
   };
 
   const handleDeleteSession = async (e, sessionId) => {
