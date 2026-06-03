@@ -224,31 +224,44 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
-  const generateOverallFeedback = async (questionsToScore) => {
+    const generateOverallFeedback = async (questionsToScore) => {
+    if (!currentSession?.id) {
+      toast.error("Interview session is missing");
+      return;
+    }
+
     try {
-      const result = await generateInterviewOverallFeedback(questionsToScore);
+      const safeQuestions = Array.isArray(questionsToScore)
+        ? questionsToScore
+        : currentSession.questions || [];
+
+      const result = await generateInterviewOverallFeedback(safeQuestions);
 
       const updatedSession = await updateInterviewSession(currentSession.id, {
-        overall_feedback: result.overall_feedback,
-        improvement_tips: result.improvement_tips,
+        questions: safeQuestions,
+        overall_feedback: result?.overall_feedback || "",
+        improvement_tips: Array.isArray(result?.improvement_tips)
+          ? result.improvement_tips
+          : [],
         notes: sessionNotes,
       });
 
       const avg = Math.round(
-        questionsToScore.reduce((sum, q) => sum + (q.score || 0), 0) /
-          Math.max(questionsToScore.length, 1)
+        safeQuestions.reduce((sum, q) => sum + (q.score || 0), 0) /
+          Math.max(safeQuestions.length, 1)
       );
 
       await createActivity({
         client_id: client.id,
         activity_type: "interview_prep",
         title: `${isWSA ? "WSA" : "Practice"} Interview Completed`,
-        description: `Completed interview session with ${questionsToScore.length} questions. Average score: ${avg}%`,
+        description: `Completed interview session with ${safeQuestions.length} questions. Average score: ${avg}%`,
       });
 
       setCurrentSession(updatedSession);
       toast.success("Session completed!");
       await loadData();
+      closeSessionDialog();
     } catch (error) {
       console.error("Failed to generate overall feedback:", error);
       toast.error("Failed to generate feedback");
