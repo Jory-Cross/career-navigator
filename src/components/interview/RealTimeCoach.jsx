@@ -1,22 +1,38 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Lightbulb, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 export default function RealTimeCoach({ answer, question, isAnalyzing }) {
   const [coachTips, setCoachTips] = useState([]);
   const [coaching, setCoaching] = useState(false);
+  const lastAnalyzedAnswerRef = useRef("");
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!answer.trim() || coaching) return;
+    const cleanAnswer = answer.trim();
+
+    if (!cleanAnswer || isAnalyzing) {
+      setCoaching(false);
+      return;
+    }
+
+    if (cleanAnswer === lastAnalyzedAnswerRef.current) {
+      return;
+    }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
     const timer = setTimeout(async () => {
+      if (requestId !== requestIdRef.current) return;
+
       setCoaching(true);
+
       try {
-        // Get real-time feedback for current answer progress
         const prompt = `You are an interview coach. The candidate is currently typing their answer to this question:
 
 Question: ${question}
-Current Answer: "${answer}"
+Current Answer: "${cleanAnswer}"
 
 Provide 2-3 brief, actionable coaching tips focused on:
 - Clarity and structure
@@ -36,24 +52,29 @@ Keep tips short (1-2 sentences each). Format as a list of key points.`;
                   type: "object",
                   properties: {
                     point: { type: "string" },
-                    suggestion: { type: "string" }
-                  }
-                }
-              }
-            }
-          }
+                    suggestion: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
         });
 
-        setCoachTips(result.tips || []);
+        if (requestId === requestIdRef.current) {
+          lastAnalyzedAnswerRef.current = cleanAnswer;
+          setCoachTips(result?.tips || []);
+        }
       } catch (error) {
         // Silently fail for real-time feedback
       } finally {
-        setCoaching(false);
+        if (requestId === requestIdRef.current) {
+          setCoaching(false);
+        }
       }
-    }, 2000); // Debounce: wait 2 seconds after user stops typing
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [answer, question, coaching]);
+  }, [answer, question, isAnalyzing]);
 
   if (coachTips.length === 0 && !coaching) return null;
 
