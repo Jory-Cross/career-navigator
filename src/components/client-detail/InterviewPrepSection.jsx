@@ -268,11 +268,16 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
-    const submitAnswer = async () => {
+     const submitAnswer = async () => {
     const cleanAnswer = answer.trim();
 
     if (!cleanAnswer) {
       toast.error("Please provide an answer");
+      return;
+    }
+
+    if (!currentSession?.id || !Array.isArray(currentSession.questions)) {
+      toast.error("Interview session is not ready yet");
       return;
     }
 
@@ -298,28 +303,45 @@ export default function InterviewPrepSection({ client }) {
         score: result?.score ?? null,
       };
 
-      setCurrentSession((prev) => ({
-        ...prev,
+      const sessionPayload = {
+        client_id: currentSession.client_id || client.id,
+        job_application_id: currentSession.job_application_id || null,
+        target_role: currentSession.target_role || client.target_role || "WSA Interview",
+        industry: currentSession.industry || client.industry || "",
+        company: currentSession.company || "",
         questions: updatedQuestions,
-      }));
+        session_date:
+          currentSession.session_date || new Date().toISOString().split("T")[0],
+        session_type: currentSession.session_type || (isWSA ? "WSA" : "practice"),
+        overall_feedback: currentSession.overall_feedback || "",
+        improvement_tips: Array.isArray(currentSession.improvement_tips)
+          ? currentSession.improvement_tips
+          : [],
+        notes: sessionNotes || currentSession.notes || "",
+        tags: Array.isArray(currentSession.tags) ? currentSession.tags : [],
+      };
 
-      await updateInterviewSession(currentSession.id, {
-        questions: updatedQuestions,
-      });
+      const updatedSession = await updateInterviewSession(
+        currentSession.id,
+        sessionPayload
+      );
 
-      const isLastQuestion =
-        currentQuestionIdx >= updatedQuestions.length - 1;
+      setCurrentSession(updatedSession);
+
+      const isLastQuestion = currentQuestionIdx >= updatedQuestions.length - 1;
 
       if (!isLastQuestion) {
         setAnswer("");
         setCurrentQuestionIdx((prev) => prev + 1);
+        toast.success("Answer saved");
         return;
       }
 
-      await generateOverallFeedback(updatedQuestions);
+      setAnswer("");
+      toast.success("Final answer saved");
     } catch (error) {
       console.error("Failed to analyze answer:", error);
-      toast.error("Failed to analyze answer");
+      toast.error("Failed to save answer");
     } finally {
       setAnalyzingAnswer(false);
     }
