@@ -587,9 +587,29 @@ export default function InterviewPrepSection({ client }) {
                       >
                         Next Question
                       </Button>
-                    ) : (
-                      <Button onClick={() => generateOverallFeedback(currentSession.questions)}>
-                        Finish Session
+                                        ) : (
+                      <Button
+                        onClick={async () => {
+                          if (analyzingAnswer) return;
+
+                          setAnalyzingAnswer(true);
+
+                          try {
+                            await generateOverallFeedback(currentSession.questions);
+                          } finally {
+                            setAnalyzingAnswer(false);
+                          }
+                        }}
+                        disabled={analyzingAnswer}
+                      >
+                        {analyzingAnswer ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Finishing...
+                          </>
+                        ) : (
+                          "Finish Session"
+                        )}
                       </Button>
                     )}
                   </div>
