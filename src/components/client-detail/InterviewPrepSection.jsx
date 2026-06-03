@@ -255,43 +255,55 @@ export default function InterviewPrepSection({ client }) {
     }
   };
 
-  const submitAnswer = async () => {
-    if (!answer.trim()) {
+    const submitAnswer = async () => {
+    const cleanAnswer = answer.trim();
+
+    if (!cleanAnswer) {
       toast.error("Please provide an answer");
       return;
     }
+
+    if (analyzingAnswer) return;
 
     setAnalyzingAnswer(true);
 
     try {
       const question = currentSession.questions[currentQuestionIdx];
+
       const result = await analyzeInterviewAnswer({
         question: question.question,
         category: question.category,
-        answer,
+        answer: cleanAnswer,
       });
 
       const updatedQuestions = [...currentSession.questions];
+
       updatedQuestions[currentQuestionIdx] = {
         ...updatedQuestions[currentQuestionIdx],
-        answer,
-        feedback: result.feedback,
-        score: result.score,
+        answer: cleanAnswer,
+        feedback: result?.feedback || "",
+        score: result?.score ?? null,
       };
 
-      const updatedSession = await updateInterviewSession(currentSession.id, {
+      setCurrentSession((prev) => ({
+        ...prev,
+        questions: updatedQuestions,
+      }));
+
+      await updateInterviewSession(currentSession.id, {
         questions: updatedQuestions,
       });
 
-      setCurrentSession(updatedSession);
+      const isLastQuestion =
+        currentQuestionIdx >= updatedQuestions.length - 1;
 
-      if (currentQuestionIdx < updatedQuestions.length - 1) {
-        setCurrentQuestionIdx((prev) => prev + 1);
+      if (!isLastQuestion) {
         setAnswer("");
-        toast.success("Answer submitted!");
-      } else {
-        await generateOverallFeedback(updatedQuestions);
+        setCurrentQuestionIdx((prev) => prev + 1);
+        return;
       }
+
+      await generateOverallFeedback(updatedQuestions);
     } catch (error) {
       console.error("Failed to analyze answer:", error);
       toast.error("Failed to analyze answer");
