@@ -234,7 +234,7 @@ export default function InterviewPrepSection({ client }) {
                 return (
                   <div
                     key={session.id}
-                    onClick={() => reviewSession(session)}
+                    onClick={() => openSession(session)}
                     className="cursor-pointer rounded-lg border border-slate-200 p-3 transition-colors hover:bg-slate-50"
                   >
                     <div className="flex items-start justify-between gap-3">
