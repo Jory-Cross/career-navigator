@@ -136,19 +136,259 @@ export default function InterviewPrepSection({ client }) {
     return Math.round(total / sessions.length);
   }, [sessions]);
 
-                       <Button
-                        onClick={() => finishSession(currentSession.questions)}
-                        disabled={analyzingAnswer}
-                      >
-                        {analyzingAnswer ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Finishing...
-                          </>
-                        ) : (
-                          "Finish Session"
-                        )}
-                      </Button>
+  const closeSessionDialog = () => {
+    setShowSession(false);
+    setGenerating(false);
+    setReviewMode(false);
+    setCurrentSession(null);
+    setCurrentQuestionIdx(0);
+    setAnswer("");
+    setAnalyzingAnswer(false);
+    setSessionNotes("");
+    setShowSessionNotes(false);
+  };
+
+  const buildFullSessionPayload = (session, questions, extra = {}) => {
+    return {
+      client_id: session.client_id || client.id,
+      job_application_id: session.job_application_id || null,
+      target_role: session.target_role || client.target_role || "WSA Interview",
+      industry: session.industry || client.industry || "",
+      company: session.company || "",
+      questions: Array.isArray(questions) ? questions : [],
+      session_date: session.session_date || new Date().toISOString().split("T")[0],
+      session_type: session.session_type || (isWSA ? "WSA" : "practice"),
+      notes: sessionNotes || session.notes || "",
+      tags: Array.isArray(session.tags) ? session.tags : [],
+      ...extra,
+    };
+  };
+
+  const openSession = (session) => {
+    const questions = Array.isArray(session.questions) ? session.questions : [];
+    const firstUnansweredIndex = questions.findIndex((q) => !q.answer);
+
+    const shouldContinueSession =
+      !session.overall_feedback && firstUnansweredIndex !== -1;
+
+    const startingIndex = shouldContinueSession ? firstUnansweredIndex : 0;
+    const startingQuestion = questions[startingIndex];
+
+    setCurrentSession(session);
+    setCurrentQuestionIdx(startingIndex);
+    setReviewMode(!shouldContinueSession);
+    setShowSession(true);
+    setIsWSA(session.session_type === "WSA");
+    setSessionNotes(session.notes || "");
+    setAnswer(startingQuestion?.answer || "");
+  };
+
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+
+    try {
+      await deleteInterviewSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      toast.success("Session deleted");
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      toast.error("Failed to delete session");
+    }
+  };
+
+  const startNewSession = async (useWSA = false, jobApplicationId = null) => {
+    if (!useWSA && !client?.target_role) {
+      toast.error("Please set a target role for the client first");
+      return;
+    }
+
+    setGenerating(true);
+    setShowSession(true);
+    setReviewMode(false);
+    setIsWSA(useWSA);
+    setCurrentQuestionIdx(0);
+    setAnswer("");
+    setSessionNotes("");
+    setShowSessionNotes(false);
+
+    try {
+      const jobApp = jobApplicationId
+        ? applications.find((a) => a.id === jobApplicationId)
+        : null;
+
+      let questions;
+
+      if (useWSA) {
+        questions = WSA_QUESTIONS.map(buildQuestionState);
+      } else {
+        const generated = await generateInterviewQuestions({
+          client,
+          jobApplication: jobApp || null,
+        });
+        questions = (Array.isArray(generated) ? generated : []).map(buildQuestionState);
+      }
+
+      const session = await createInterviewSession({
+        client_id: client.id,
+        job_application_id: jobApplicationId || null,
+        target_role: jobApp?.position || client.target_role || "WSA Interview",
+        industry: jobApp?.location || client.industry || "",
+        company: jobApp?.company || "",
+        questions,
+        session_date: new Date().toISOString().split("T")[0],
+        session_type: useWSA ? "WSA" : "practice",
+        notes: "",
+      });
+
+      setCurrentSession(session);
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      toast.error("Failed to start session");
+      setShowSession(false);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const finishSession = async (questionsToSave) => {
+    if (!currentSession?.id) {
+      toast.error("Interview session is missing");
+      return;
+    }
+
+    if (analyzingAnswer) return;
+
+    setAnalyzingAnswer(true);
+
+    try {
+      const safeQuestions = Array.isArray(questionsToSave)
+        ? questionsToSave
+        : currentSession.questions || [];
+
+      let feedbackResult = null;
+
+      try {
+        feedbackResult = await generateInterviewOverallFeedback(safeQuestions);
+      } catch (feedbackError) {
+        console.error("Overall feedback failed, saving session anyway:", feedbackError);
+      }
+
+      const completedPayload = buildFullSessionPayload(currentSession, safeQuestions, {
+        overall_feedback:
+          feedbackResult?.overall_feedback ||
+          currentSession.overall_feedback ||
+          "WSA interview completed and saved.",
+        improvement_tips: Array.isArray(feedbackResult?.improvement_tips)
+          ? feedbackResult.improvement_tips
+          : Array.isArray(currentSession.improvement_tips)
+          ? currentSession.improvement_tips
+          : [],
+      });
+
+      const updatedSession = await updateInterviewSession(
+        currentSession.id,
+        completedPayload
+      );
+
+      const avg = Math.round(
+        safeQuestions.reduce((sum, q) => sum + (q.score || 0), 0) /
+          Math.max(safeQuestions.length, 1)
+      );
+
+      try {
+        await createActivity({
+          client_id: client.id,
+          activity_type: "interview_prep",
+          title: `${isWSA ? "WSA" : "Practice"} Interview Completed`,
+          description: `Completed interview session with ${safeQuestions.length} questions. Average score: ${avg}%`,
+        });
+      } catch (activityError) {
+        console.error("Activity creation failed:", activityError);
+      }
+
+      setCurrentSession(updatedSession);
+      toast.success("Session saved and completed");
+      await loadData();
+      closeSessionDialog();
+    } catch (error) {
+      console.error("Failed to finish session:", error);
+      toast.error("Failed to save and finish session");
+    } finally {
+      setAnalyzingAnswer(false);
+    }
+  };
+
+  const generateOverallFeedback = async (questionsToScore) => {
+    await finishSession(questionsToScore);
+  };
+
+  const submitAnswer = async () => {
+    const cleanAnswer = answer.trim();
+
+    if (!cleanAnswer) {
+      toast.error("Please provide an answer");
+      return;
+    }
+
+    if (!currentSession?.id || !Array.isArray(currentSession.questions)) {
+      toast.error("Interview session is not ready yet");
+      return;
+    }
+
+    if (analyzingAnswer) return;
+
+    setAnalyzingAnswer(true);
+
+    try {
+      const question = currentSession.questions[currentQuestionIdx];
+
+      const result = await analyzeInterviewAnswer({
+        question: question.question,
+        category: question.category,
+        answer: cleanAnswer,
+      });
+
+      const updatedQuestions = [...currentSession.questions];
+
+      updatedQuestions[currentQuestionIdx] = {
+        ...updatedQuestions[currentQuestionIdx],
+        answer: cleanAnswer,
+        feedback: result?.feedback || "",
+        score: result?.score ?? null,
+      };
+
+      const updatedPayload = buildFullSessionPayload(currentSession, updatedQuestions, {
+        overall_feedback: currentSession.overall_feedback || "",
+        improvement_tips: Array.isArray(currentSession.improvement_tips)
+          ? currentSession.improvement_tips
+          : [],
+      });
+
+      const updatedSession = await updateInterviewSession(
+        currentSession.id,
+        updatedPayload
+      );
+
+      setCurrentSession(updatedSession);
+
+      const isLastQuestion = currentQuestionIdx >= updatedQuestions.length - 1;
+
+      if (!isLastQuestion) {
+        setAnswer(updatedQuestions[currentQuestionIdx + 1]?.answer || "");
+        setCurrentQuestionIdx((prev) => prev + 1);
+        toast.success("Answer saved");
+        return;
+      }
+
+      setAnswer("");
+      toast.success("Final answer saved. Click Finish Session to close it out.");
+    } catch (error) {
+      console.error("Failed to analyze answer:", error);
+      toast.error("Failed to save answer");
+    } finally {
+      setAnalyzingAnswer(false);
+    }
+  };
 
   return (
     <>
@@ -420,24 +660,16 @@ export default function InterviewPrepSection({ client }) {
                       <Button
                         onClick={() => {
                           setCurrentQuestionIdx((prev) => prev + 1);
-                          setAnswer("");
+                          setAnswer(
+                            currentSession.questions[currentQuestionIdx + 1]?.answer || ""
+                          );
                         }}
                       >
                         Next Question
                       </Button>
-                                        ) : (
+                    ) : (
                       <Button
-                        onClick={async () => {
-                          if (analyzingAnswer) return;
-
-                          setAnalyzingAnswer(true);
-
-                          try {
-                            await generateOverallFeedback(currentSession.questions);
-                          } finally {
-                            setAnalyzingAnswer(false);
-                          }
-                        }}
+                        onClick={() => finishSession(currentSession.questions)}
                         disabled={analyzingAnswer}
                       >
                         {analyzingAnswer ? (
