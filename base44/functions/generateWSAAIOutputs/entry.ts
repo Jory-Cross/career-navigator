@@ -617,7 +617,10 @@ Deno.serve(async (req) => {
           questions,
         };
       });
-        const sourceWsaResponses = {
+           const interviewSkillObservationOverride =
+      buildInterviewSkillObservationFromWsaInterview(interviewSessionSummaries);
+
+    const sourceWsaResponses = {
       ...current_wsa_responses,
     };
 
