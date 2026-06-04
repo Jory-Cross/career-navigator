@@ -519,7 +519,7 @@ Deno.serve(async (req) => {
       date: assessment.updated_date || assessment.created_date,
     }));
 
-    const documentSummaries = documents
+       const documentSummaries = documents
       .filter((document) => document.ai_summary || document.extracted_text || document.title)
       .map((document) => ({
         title: document.title,
@@ -533,6 +533,24 @@ Deno.serve(async (req) => {
         certifications: document.certifications || [],
       }));
 
+    const interviewSessionSummaries = interviewSessions
+      .filter((session) => session.session_type === 'WSA')
+      .map((session) => ({
+        session_type: session.session_type,
+        target_role: session.target_role,
+        session_date: session.session_date || session.updated_date || session.created_date,
+        overall_feedback: session.overall_feedback || '',
+        notes: session.notes || '',
+        questions: Array.isArray(session.questions)
+          ? session.questions.map((q) => ({
+              question: q.question || '',
+              category: q.category || '',
+              answer: q.answer || '',
+              feedback: q.feedback || '',
+              score: q.score || null,
+            }))
+          : [],
+      }));
         const sourceWsaResponses = {
       ...current_wsa_responses,
     };
