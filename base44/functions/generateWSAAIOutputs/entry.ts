@@ -498,13 +498,15 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Client not found' }, { status: 404 });
     }
 
-    const results = await Promise.all([
+       const results = await Promise.all([
       base44.asServiceRole.entities.Assessment.filter({ client_id }),
       base44.asServiceRole.entities.Document.filter({ client_id }),
+      base44.asServiceRole.entities.InterviewSession.filter({ client_id }),
     ]);
 
     const assessments = results[0] || [];
     const documents = results[1] || [];
+    const interviewSessions = results[2] || [];
 
     const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ');
 
