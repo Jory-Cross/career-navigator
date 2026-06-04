@@ -641,41 +641,44 @@ Deno.serve(async (req) => {
     }
 
 
-    const contextBlock = JSON.stringify(
-      {
-        client: {
-          name: clientName,
-          email: client.email,
-          phone: client.phone,
-          address: client.address,
-          client_type: client.client_type,
-          target_role: client.target_role,
-          job_goal: client.job_goal || client.employment_goal,
-          industry: client.industry,
-          school: client.school,
-          graduation_year: client.graduation_year,
-          case_number: client.case_number,
-          notes: client.notes,
-          employer_name: client.employer_name,
-          workplace_name: client.workplace_name,
-        },
-        vocational_facts_profile:
-          client.vocational_facts_profile ||
-          client.vocational_profile ||
-          client.facts_profile ||
-          null,
-        vocational_facts_metadata:
-          client.vocational_facts_metadata ||
-          client.facts_metadata ||
-          null,
-        assessments: assessmentSummaries,
-           documents: documentSummaries,
-        wsa_interview_sessions: interviewSessionSummaries,
-        current_wsa_responses: sourceWsaResponses,
+    const contextPayload = {
+      client: {
+        name: clientName,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        client_type: client.client_type,
+        target_role: client.target_role,
+        job_goal: client.job_goal || client.employment_goal,
+        industry: client.industry,
+        school: client.school,
+        graduation_year: client.graduation_year,
+        case_number: client.case_number,
+        notes: client.notes,
+        employer_name: client.employer_name,
+        workplace_name: client.workplace_name,
       },
-      null,
-      2
+      vocational_facts_profile:
+        client.vocational_facts_profile ||
+        client.vocational_profile ||
+        client.facts_profile ||
+        null,
+      vocational_facts_metadata:
+        client.vocational_facts_metadata ||
+        client.facts_metadata ||
+        null,
+      assessments: assessmentSummaries,
+      documents: documentSummaries,
+      wsa_interview_sessions: interviewSessionSummaries,
+      current_wsa_responses: sourceWsaResponses,
+    };
+
+    console.log(
+      'WSA DEBUG context wsa_interview_sessions:',
+      JSON.stringify(contextPayload.wsa_interview_sessions, null, 2)
     );
+
+    const contextBlock = JSON.stringify(contextPayload, null, 2);
     let detailed_wsa_fields = null;
     let official_wsa_fields = null;
     let full_detailed_wsa_html = null;
