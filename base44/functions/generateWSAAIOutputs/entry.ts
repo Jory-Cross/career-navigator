@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// v2 - fix: added required arrays to both InvokeLLM response_json_schema calls
 const WSA_CHAR_LIMITS = {
   worksite_simulation_location: 180,
   work_assessment_observations: 900,
@@ -292,18 +293,10 @@ RULES:
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
-    response_json_schema: {
-      type: 'object',
-      properties: {
-        detailed_wsa_fields: { type: 'object' },
-        staff_should_verify: { type: 'array', items: { type: 'string' } },
-        evidence_summary: { type: 'array', items: { type: 'string' } },
-      },
-      required: ['detailed_wsa_fields', 'staff_should_verify', 'evidence_summary'],
-    },
   });
 
-    const detailedFields = normalizeObject(result && result.detailed_wsa_fields);
+  const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+  const detailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
 
     // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
@@ -319,8 +312,8 @@ RULES:
   detailedFields.ongoing_supports =
     ONGOING_SUPPORTS_VR_NOTE;
 
-  const staffShouldVerify = Array.isArray(result && result.staff_should_verify)
-    ? result.staff_should_verify
+  const staffShouldVerify = Array.isArray(parsed && parsed.staff_should_verify)
+    ? parsed.staff_should_verify
     : [];
 
   if (!staffShouldVerify.includes(PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE)) {
@@ -342,8 +335,8 @@ RULES:
   return {
     detailed_wsa_fields: detailedFields,
     staff_should_verify: staffShouldVerify,
-    evidence_summary: Array.isArray(result && result.evidence_summary)
-      ? result.evidence_summary
+    evidence_summary: Array.isArray(parsed && parsed.evidence_summary)
+      ? parsed.evidence_summary
       : [],
   };
 }
@@ -438,18 +431,10 @@ Joint VR/CRP recommendations rules:
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
-    response_json_schema: {
-      type: 'object',
-      properties: {
-        official_wsa_fields: { type: 'object' },
-        staff_should_verify: { type: 'array', items: { type: 'string' } },
-        evidence_summary: { type: 'array', items: { type: 'string' } },
-      },
-      required: ['official_wsa_fields', 'staff_should_verify', 'evidence_summary'],
-    },
   });
 
-  const rawOfficialFields = normalizeObject(result && result.official_wsa_fields);
+  const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+  const rawOfficialFields = normalizeObject(parsed && parsed.official_wsa_fields);
   const officialFields = {};
 
    for (const key of WSA_FIELD_KEYS) {
@@ -466,11 +451,11 @@ Joint VR/CRP recommendations rules:
 
   return {
     official_wsa_fields: officialFields,
-    staff_should_verify: Array.isArray(result && result.staff_should_verify)
-      ? result.staff_should_verify
+    staff_should_verify: Array.isArray(parsed && parsed.staff_should_verify)
+      ? parsed.staff_should_verify
       : [],
-    evidence_summary: Array.isArray(result && result.evidence_summary)
-      ? result.evidence_summary
+    evidence_summary: Array.isArray(parsed && parsed.evidence_summary)
+      ? parsed.evidence_summary
       : [],
   };
 }
