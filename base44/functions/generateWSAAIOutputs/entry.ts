@@ -596,7 +596,14 @@ Deno.serve(async (req) => {
       delete sourceWsaResponses._detailed_wsa_fields.recommended_target_occupations;
       delete sourceWsaResponses._detailed_wsa_fields.job_development_supports;
       delete sourceWsaResponses._detailed_wsa_fields.ongoing_supports;
+
+      if (interviewSessionSummaries.length > 0) {
+        delete sourceWsaResponses._detailed_wsa_fields.interview_skill_observations;
+      }
+
     }
+
+
     const contextBlock = JSON.stringify(
       {
         client: {
