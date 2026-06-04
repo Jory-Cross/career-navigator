@@ -700,7 +700,13 @@ Deno.serve(async (req) => {
       console.log('Generating full detailed WSA fields...');
       const detailedResult = await generateDetailedFields(base44, contextBlock);
 
-      detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+            detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+
+      if (interviewSkillObservationOverride) {
+        detailed_wsa_fields.interview_skill_observations =
+          interviewSkillObservationOverride;
+      }
+
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
       mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
 
