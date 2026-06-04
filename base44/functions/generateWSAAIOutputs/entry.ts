@@ -724,7 +724,13 @@ Deno.serve(async (req) => {
       console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
       const detailedResult = await generateDetailedFields(base44, contextBlock);
 
-      detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+            detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+
+      if (interviewSkillObservationOverride) {
+        detailed_wsa_fields.interview_skill_observations =
+          interviewSkillObservationOverride;
+      }
+
       full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
 
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
