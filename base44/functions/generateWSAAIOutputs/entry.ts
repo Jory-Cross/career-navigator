@@ -194,6 +194,52 @@ function buildDetailedWsaHtml(detailedFields) {
   ].join('\n');
 }
 
+function buildInterviewSkillObservationFromWsaInterview(interviewSessions) {
+  const wsaSessions = Array.isArray(interviewSessions) ? interviewSessions : [];
+
+  const answeredQuestions = wsaSessions.flatMap((session) =>
+    Array.isArray(session.questions)
+      ? session.questions.filter((q) => safeString(q.answer).trim())
+      : []
+  );
+
+  if (answeredQuestions.length === 0) {
+    return '';
+  }
+
+  const scores = answeredQuestions
+    .map((q) => Number(q.score))
+    .filter((score) => Number.isFinite(score));
+
+  const averageScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+      : null;
+
+  const lowScores = scores.filter((score) => score < 60).length;
+  const completedCount = answeredQuestions.length;
+
+  const scoreSentence =
+    averageScore !== null
+      ? ` Average interview response score was approximately ${averageScore}%.`
+      : '';
+
+  const supportSentence =
+    lowScores > 0 || (averageScore !== null && averageScore < 70)
+      ? 'The client would benefit from continued interview preparation, including mock interview practice, STAR-method training, support developing more specific examples, and coaching on how to describe work history, strengths, and areas for growth.'
+      : 'The client demonstrates a developing foundation for interview participation and would benefit from continued practice to strengthen confidence, detail, and consistency.';
+
+  return [
+    `The client completed a WSA interview practice session with ${completedCount} answered interview question${completedCount === 1 ? '' : 's'}.`,
+    scoreSentence,
+    'Responses show the client can participate in structured interview questions and communicate basic job interests, but answers were often brief and would be stronger with more specific examples, clearer explanation of skills, and better connection to the target job.',
+    supportSentence,
+    'Recommended training includes mock interview practice, communication-skills coaching, customer-service interview preparation, STAR-method response practice, and guided preparation for common employer questions. Vocationally, the client may be able to participate in interviews with preparation, but should receive support before employer-facing interviews to improve confidence, clarity, and ability to explain relevant experience.'
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 async function generateDetailedFields(base44, contextBlock) {
   const fieldLabelsText = WSA_FIELD_KEYS
     .map((key) => key + ': ' + (WSA_FIELD_LABELS[key] || key))
