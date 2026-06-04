@@ -275,20 +275,17 @@ RULES:
 - Do not create broad narrative sections inside detailed_wsa_fields.
 - Do not invent facts.
 - Use FACTS/VFP, assessments, documents, current WSA responses, uploaded WSA content, resume data, and staff/client notes when available.
+- For every WSA field, review all relevant evidence across FACTS/VFP, assessments, documents, WSA interview sessions, resume/work history, staff/client notes, current WSA responses, and uploaded WSA content.
+- Generate a current synthesized evaluation for each field. Do not simply reuse old WSA text when newer, stronger, or more specific evidence is available.
+- Treat prior AI-generated WSA text as low-priority context only. It may be used if still accurate, but it must not override newer client evidence, assessment responses, interview responses, staff notes, documents, or FACTS/VFP details.
+- If new evidence conflicts with older WSA text, prioritize the newer, more specific, more vocationally relevant evidence and mention staff should verify the conflict when appropriate.
+- Do not say information is missing, unknown, or not completed if relevant evidence exists elsewhere in the provided client profile.
 - Preserve concrete details, examples, scores, ratings, transportation barriers, support needs, training needs, behavior/self-regulation details, communication needs, family/natural supports, computer skills, ADL/life skills, criminal/background concerns, school/academic information, job goals, target occupations, job development supports, and ongoing supports when supported by evidence.
 - WSA interview sessions are vocational assessment evidence, not just interview practice notes.
-- If wsa_interview_sessions contains completed answers, use those answers and feedback as evidence for interview_skill_observations.
-- For interview_skill_observations, write a brief professional vocational evaluation covering:
-  1. overall interview performance,
-  2. communication strengths,
-  3. areas needing improvement,
-  4. supports needed,
-  5. recommended training,
-  6. vocational implications for employer interaction.
-- Use interview answers and feedback to identify needs such as mock interview practice, STAR method training, confidence-building, help explaining work history, help describing strengths/weaknesses, employer-question preparation, and customer-service communication practice when supported by evidence.
-- Do not say the client has not completed mock interview practice if WSA interview session data exists.
+- Use completed WSA interview answers, feedback, scores, and overall feedback as evidence for interview_skill_observations, communication_needs, interpersonal_social_skills, current_work_skills, work_skill_development_needs, recommended_supports_on_job, and any other relevant field.
+- For interview_skill_observations, synthesize all interview-related evidence into a brief professional vocational evaluation covering overall interview readiness, communication strengths, areas needing improvement, supports needed, recommended training, and vocational implications for employer interaction.
 - Do not simply restate interview coaching feedback. Convert it into professional WSA assessment observations.
-- Each field should be written as a complete detailed WSA field response.
+- Each field should be written as a complete detailed WSA field response based on the best current evidence.
 - If evidence is weak or unavailable for a field, write a staff-verification note rather than inventing information.
 - Professional vocational rehabilitation tone.
 - This content will become the long HTML WSA document and will later be compressed into the official WSA PDF fields.`;
@@ -617,13 +614,9 @@ Deno.serve(async (req) => {
           questions,
         };
       });
-           const interviewSkillObservationOverride =
-      buildInterviewSkillObservationFromWsaInterview(interviewSessionSummaries);
-
     const sourceWsaResponses = {
       ...current_wsa_responses,
     };
-
           // These fields must not be inferred from prior AI output.
     // They are completed only through verified staff entry,
     // final staff/client selection, or VR close-out completion.
@@ -700,12 +693,7 @@ Deno.serve(async (req) => {
       console.log('Generating full detailed WSA fields...');
       const detailedResult = await generateDetailedFields(base44, contextBlock);
 
-            detailed_wsa_fields = detailedResult.detailed_wsa_fields;
-
-      if (interviewSkillObservationOverride) {
-        detailed_wsa_fields.interview_skill_observations =
-          interviewSkillObservationOverride;
-      }
+      detailed_wsa_fields = detailedResult.detailed_wsa_fields;
 
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
       mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
@@ -724,15 +712,9 @@ Deno.serve(async (req) => {
       console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
       const detailedResult = await generateDetailedFields(base44, contextBlock);
 
-            detailed_wsa_fields = detailedResult.detailed_wsa_fields;
-
-      if (interviewSkillObservationOverride) {
-        detailed_wsa_fields.interview_skill_observations =
-          interviewSkillObservationOverride;
-      }
+       detailed_wsa_fields = detailedResult.detailed_wsa_fields;
 
       full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
-
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
       mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
     }
