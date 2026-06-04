@@ -333,10 +333,15 @@ export default function LegacyAssessmentPanel({
     setGeneratingWSAFields(true);
 
     try {
+      // Strip large internal AI blobs before sending — they bloat the payload and cause timeouts
+      const responsesForAI = Object.fromEntries(
+        Object.entries(responses).filter(([k]) => !k.startsWith('_'))
+      );
+
       const { data } = await base44.functions.invoke("generateWSAAIOutputs", {
         client_id: clientId,
         mode: "field_draft",
-        current_wsa_responses: responses,
+        current_wsa_responses: responsesForAI,
       });
 
       if (!data?.success) {
@@ -380,10 +385,15 @@ export default function LegacyAssessmentPanel({
     setGeneratingWSAReport(true);
 
     try {
+      // Strip large internal AI blobs before sending — they bloat the payload and cause timeouts
+      const responsesForAI = Object.fromEntries(
+        Object.entries(responses).filter(([k]) => !k.startsWith('_'))
+      );
+
       const { data } = await base44.functions.invoke("generateWSAAIOutputs", {
         client_id: clientId,
         mode: "detailed_report",
-        current_wsa_responses: responses,
+        current_wsa_responses: responsesForAI,
       });
 
       if (!data?.success) {
