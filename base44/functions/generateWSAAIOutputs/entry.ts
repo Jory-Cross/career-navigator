@@ -230,6 +230,18 @@ RULES:
 - Do not invent facts.
 - Use FACTS/VFP, assessments, documents, current WSA responses, uploaded WSA content, resume data, and staff/client notes when available.
 - Preserve concrete details, examples, scores, ratings, transportation barriers, support needs, training needs, behavior/self-regulation details, communication needs, family/natural supports, computer skills, ADL/life skills, criminal/background concerns, school/academic information, job goals, target occupations, job development supports, and ongoing supports when supported by evidence.
+- WSA interview sessions are vocational assessment evidence, not just interview practice notes.
+- If wsa_interview_sessions contains completed answers, use those answers and feedback as evidence for interview_skill_observations.
+- For interview_skill_observations, write a brief professional vocational evaluation covering:
+  1. overall interview performance,
+  2. communication strengths,
+  3. areas needing improvement,
+  4. supports needed,
+  5. recommended training,
+  6. vocational implications for employer interaction.
+- Use interview answers and feedback to identify needs such as mock interview practice, STAR method training, confidence-building, help explaining work history, help describing strengths/weaknesses, employer-question preparation, and customer-service communication practice when supported by evidence.
+- Do not say the client has not completed mock interview practice if WSA interview session data exists.
+- Do not simply restate interview coaching feedback. Convert it into professional WSA assessment observations.
 - Each field should be written as a complete detailed WSA field response.
 - If evidence is weak or unavailable for a field, write a staff-verification note rather than inventing information.
 - Professional vocational rehabilitation tone.
@@ -635,22 +647,16 @@ Deno.serve(async (req) => {
     }
 
     if (mode === 'field_draft') {
-      const existingDetailedFields = normalizeObject(current_wsa_responses._detailed_wsa_fields);
+      console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
+      const detailedResult = await generateDetailedFields(base44, contextBlock);
 
-      if (Object.keys(existingDetailedFields).length > 0) {
-        detailed_wsa_fields = existingDetailedFields;
-      } else {
-        console.log('No saved detailed_wsa_fields found. Generating detailed WSA fields before compression...');
-        const detailedResult = await generateDetailedFields(base44, contextBlock);
+      detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+      full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
 
-        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
-        full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
-
-        mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
-        mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
-      }
+      mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
+      mergeUniqueStrings(evidence_summary, detailedResult.evidence_summary);
     }
-
+    
     if ((mode === 'field_draft' || mode === 'both') && detailed_wsa_fields) {
       console.log('Compressing detailed WSA fields into official WSA fields...');
       const officialResult = await generateOfficialFields(base44, detailed_wsa_fields, contextBlock);
