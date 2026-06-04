@@ -1272,23 +1272,44 @@ For each question, categorize it (e.g., Behavioral, Technical, Situational).`;
 }
 
 export async function analyzeInterviewAnswer({ question, category, answer }) {
-  const prompt = `You are an interview coach.
+  const prompt = `You are an employment interview coach helping a job seeker improve their answer.
 
-Evaluate this candidate's answer to the interview question.
+Use plain, supportive, client-friendly language.
+Do not write a long paragraph.
+Do not use markdown symbols like ** or ###.
+Do not be harsh or overly clinical.
+Keep the feedback easy to read.
 
-Question: ${question}
-Category: ${category}
-Answer: ${answer}
+Interview Question:
+${question}
 
-Provide:
-1. A score from 0-100
-2. Detailed feedback on:
-- Clarity and structure
-- Relevance to the question
-- Use of specific examples and keywords
-- Areas for improvement
+Question Category:
+${category}
 
-Be constructive and specific.`;
+Candidate Answer:
+${answer}
+
+Return feedback in this exact structure:
+
+What You Did Well:
+- Give 2 to 3 short positive points.
+
+How To Improve:
+- Give 2 to 4 simple, specific suggestions.
+
+Example of a Stronger Answer:
+Write one improved example answer the candidate could use. Keep it realistic and simple.
+
+Interview Tip:
+Give one practical interview tip related to this question.
+
+Why This Score Was Given:
+Explain the score in 1 to 2 plain-English sentences.
+
+Next Goal:
+Give one specific thing the candidate should work on for the next answer.
+
+Also provide a score from 0-100.`;
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
@@ -1306,7 +1327,6 @@ Be constructive and specific.`;
     feedback: asString(result?.feedback),
   };
 }
-
 export async function generateInterviewOverallFeedback(questions = []) {
   const prompt = `Based on these interview practice responses, provide:
 1. Overall performance summary
