@@ -299,6 +299,7 @@ RULES:
         staff_should_verify: { type: 'array', items: { type: 'string' } },
         evidence_summary: { type: 'array', items: { type: 'string' } },
       },
+      required: ['detailed_wsa_fields', 'staff_should_verify', 'evidence_summary'],
     },
   });
 
@@ -444,6 +445,7 @@ Joint VR/CRP recommendations rules:
         staff_should_verify: { type: 'array', items: { type: 'string' } },
         evidence_summary: { type: 'array', items: { type: 'string' } },
       },
+      required: ['official_wsa_fields', 'staff_should_verify', 'evidence_summary'],
     },
   });
 
