@@ -546,14 +546,9 @@ Deno.serve(async (req) => {
       }));
 
     const interviewSessionSummaries = interviewSessions
-      .filter((session) => session.session_type === 'WSA')
-      .map((session) => ({
-        session_type: session.session_type,
-        target_role: session.target_role,
-        session_date: session.session_date || session.updated_date || session.created_date,
-        overall_feedback: session.overall_feedback || '',
-        notes: session.notes || '',
-        questions: Array.isArray(session.questions)
+      .filter((session) => safeString(session.session_type).toLowerCase() === 'wsa')
+      .map((session) => {
+        const questions = Array.isArray(session.questions)
           ? session.questions.map((q) => ({
               question: q.question || '',
               category: q.category || '',
@@ -561,8 +556,21 @@ Deno.serve(async (req) => {
               feedback: q.feedback || '',
               score: q.score || null,
             }))
-          : [],
-      }));
+          : [];
+
+        const answeredQuestions = questions.filter((q) => safeString(q.answer).trim());
+
+        return {
+          session_type: session.session_type,
+          target_role: session.target_role || '',
+          session_date: session.session_date || session.updated_date || session.created_date || '',
+          completed: answeredQuestions.length > 0,
+          answered_question_count: answeredQuestions.length,
+          overall_feedback: session.overall_feedback || '',
+          notes: session.notes || '',
+          questions,
+        };
+      });
         const sourceWsaResponses = {
       ...current_wsa_responses,
     };
