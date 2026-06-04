@@ -601,7 +601,8 @@ Deno.serve(async (req) => {
           client.facts_metadata ||
           null,
         assessments: assessmentSummaries,
-        documents: documentSummaries,
+           documents: documentSummaries,
+        wsa_interview_sessions: interviewSessionSummaries,
         current_wsa_responses: sourceWsaResponses,
       },
       null,
