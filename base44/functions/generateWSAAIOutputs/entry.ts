@@ -625,9 +625,7 @@ Deno.serve(async (req) => {
     delete sourceWsaResponses.job_development_supports;
     delete sourceWsaResponses.ongoing_supports;
 
-    if (interviewSessionSummaries.length > 0) {
-      delete sourceWsaResponses.interview_skill_observations;
-    }
+    delete sourceWsaResponses.interview_skill_observations;
 
     if (sourceWsaResponses._detailed_wsa_fields) {
       sourceWsaResponses._detailed_wsa_fields = {
@@ -639,10 +637,7 @@ Deno.serve(async (req) => {
       delete sourceWsaResponses._detailed_wsa_fields.job_development_supports;
       delete sourceWsaResponses._detailed_wsa_fields.ongoing_supports;
 
-      if (interviewSessionSummaries.length > 0) {
-        delete sourceWsaResponses._detailed_wsa_fields.interview_skill_observations;
-      }
-
+      delete sourceWsaResponses._detailed_wsa_fields.interview_skill_observations;
     }
 
 
