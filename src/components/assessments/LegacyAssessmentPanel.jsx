@@ -216,7 +216,7 @@ export default function LegacyAssessmentPanel({
         client_id: clientId,
         assessment_type: key,
         status,
-        responses: stripLargeWSABlobs(responses),
+        responses: stripLargeWSABlobs(latestResponsesRef.current),
       };
 
       let savedRecord;
