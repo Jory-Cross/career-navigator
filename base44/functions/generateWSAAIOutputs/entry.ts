@@ -519,14 +519,37 @@ Deno.serve(async (req) => {
 
     const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ');
 
-    const assessmentSummaries = assessments.map((assessment) => ({
-      type: assessment.assessment_type,
-      status: assessment.status,
-      responses: assessment.responses,
-      notes: assessment.notes,
-      completed_by: assessment.completed_by,
-      date: assessment.updated_date || assessment.created_date,
-    }));
+    // Strip large AI-generated HTML blobs and internal metadata keys from assessment responses
+    // before including them in the LLM context block. These blobs can be 50-100KB each and
+    // will cause the InvokeLLM call to fail with a payload-too-large / timeout error.
+    const ASSESSMENT_CONTEXT_STRIP_KEYS = new Set([
+      '_full_detailed_wsa_html',
+      '_supplemental_wsa_report_html',
+      '_detailed_wsa_report_html',
+      '_detailed_wsa_fields',
+      '_wsa_ai_evidence_summary',
+      '_wsa_ai_staff_should_verify',
+      '_wsa_ai_fields_generated_at',
+      '_wsa_report_evidence_summary',
+      '_wsa_report_staff_should_verify',
+      '_wsa_report_generated_at',
+    ]);
+
+    const assessmentSummaries = assessments.map((assessment) => {
+      const responses = assessment.responses
+        ? Object.fromEntries(
+            Object.entries(assessment.responses).filter(([k]) => !ASSESSMENT_CONTEXT_STRIP_KEYS.has(k))
+          )
+        : {};
+      return {
+        type: assessment.assessment_type,
+        status: assessment.status,
+        responses,
+        notes: assessment.notes,
+        completed_by: assessment.completed_by,
+        date: assessment.updated_date || assessment.created_date,
+      };
+    });
 
        const documentSummaries = documents
       .filter((document) => document.ai_summary || document.extracted_text || document.title)
@@ -568,9 +591,10 @@ Deno.serve(async (req) => {
           questions,
         };
       });
-    const sourceWsaResponses = {
-      ...current_wsa_responses,
-    };
+    // Also strip large blobs from the current WSA responses passed by the frontend.
+    const sourceWsaResponses = Object.fromEntries(
+      Object.entries(current_wsa_responses).filter(([k]) => !ASSESSMENT_CONTEXT_STRIP_KEYS.has(k))
+    );
           // These fields must not be inferred from prior AI output.
     // They are completed only through verified staff entry,
     // final staff/client selection, or VR close-out completion.
