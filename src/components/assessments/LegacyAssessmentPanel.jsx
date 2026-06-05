@@ -274,7 +274,7 @@ export default function LegacyAssessmentPanel({
         client_id: clientId,
         assessment_type: key,
         status: "in_progress",
-        responses: nextResponses,
+        responses: stripLargeWSABlobs(nextResponses),
       };
 
       if (existingRecord?.id) {
