@@ -341,122 +341,83 @@ RULES:
   };
 }
 
+// Staff/VR-only fields that must always be blanked regardless of detailed content.
+const STAFF_VR_ONLY_KEYS = new Set([
+  'planned_job_search_hours_week',
+  'recommended_target_occupations',
+  'job_development_supports',
+  'ongoing_supports',
+]);
+
 async function generateOfficialFields(base44, detailedFields, contextBlock) {
-  const limitsText = Object.entries(WSA_CHAR_LIMITS)
-    .map(([key, value]) => key + ': max ' + value + ' chars')
-    .join('\n');
+  // Pass 1: copy every field that already fits within its character limit.
+  // Only fields that are OVER the limit are sent to the LLM for compression.
+  const officialFields = {};
+  const overLimitFields = {};
 
-  const detailedFieldsBlock = JSON.stringify(detailedFields, null, 2);
+  for (const key of WSA_FIELD_KEYS) {
+    if (STAFF_VR_ONLY_KEYS.has(key)) {
+      officialFields[key] = '';
+      continue;
+    }
+    const limit = WSA_CHAR_LIMITS[key];
+    const text = safeString(detailedFields[key]).replace(/\s+/g, ' ').trim();
+    if (text.length <= limit) {
+      // Fits — copy verbatim, no LLM needed.
+      officialFields[key] = text;
+    } else {
+      // Over limit — needs compression.
+      overLimitFields[key] = text;
+    }
+  }
 
-  const prompt = `You are a vocational rehabilitation specialist completing the official Utah DWS Work Strategy Assessment PDF fields.
+  // Pass 2: if any fields are over-limit, compress only those via LLM.
+  if (Object.keys(overLimitFields).length > 0) {
+    const limitsText = Object.entries(overLimitFields)
+      .map(([key]) => key + ': max ' + WSA_CHAR_LIMITS[key] + ' chars')
+      .join('\n');
+
+    const overLimitBlock = JSON.stringify(overLimitFields, null, 2);
+
+    const prompt = `You are a vocational rehabilitation specialist completing the official Utah DWS Work Strategy Assessment PDF fields.
 
 TASK:
-Compress detailed_wsa_fields into official_wsa_fields.
+The following WSA fields are too long for the official PDF character limits.
+Condense ONLY these fields so they fit within their character limits.
+Do not rewrite fields that are not listed here.
 
-The official_wsa_fields must use the same exact field keys as detailed_wsa_fields.
-The official_wsa_fields must fit the official WSA PDF character limits.
+FIELDS TO CONDENSE:
+${overLimitBlock}
 
-DETAILED WSA FIELDS TO COMPRESS PRIMARY SOURCE:
-${detailedFieldsBlock}
-
-BACKUP CONTEXT:
-${contextBlock}
-
-STRICT CHARACTER LIMITS:
+STRICT CHARACTER LIMITS (these are the ONLY fields you must return):
 ${limitsText}
 
 RULES:
 - Return ONLY valid JSON.
-- No markdown.
-- No code fences.
-- The JSON must contain:
-  {
-    "official_wsa_fields": { ... },
-    "staff_should_verify": ["..."],
-    "evidence_summary": ["..."]
-  }
-- official_wsa_fields must only use the exact WSA field keys.
-- official_wsa_fields must be created from detailed_wsa_fields whenever detailed_wsa_fields has content.
-- Do not create a new short summary if the detailed field text already fits the character limit.
-- If the detailed field text fits within the listed character limit, copy the detailed field text into official_wsa_fields with only minor cleanup.
-- Only condense a field when the detailed field text is too long for that field's character limit.
-- When condensing, condense only enough to fit the character limit. Do not over-shorten.
-- For fields with 700+ character limits, preserve as much of the detailed field as possible and aim to use most of the available space when the detailed content is long enough.
-- For fields under 300 characters, preserve the clearest concrete facts and remove only extra wording needed to fit.
+- No markdown, no code fences.
+- The JSON must contain: { "official_wsa_fields": { ... } }
+- Only include the field keys listed above in official_wsa_fields.
+- Condense only enough to fit within the character limit. Do not over-shorten.
+- Preserve concrete details, examples, ratings, scores, barriers, supports, training needs, and vocational implications.
 - Do not turn detailed content into vague generic summaries.
-- Preserve concrete details, examples, ratings, scores, barriers, supports, transportation limits, training needs, support needs, and vocational implications.
-
-FIELD RELATIONSHIP RULES:
-- Some WSA fields are short label/detail fields paired with a larger observation field.
-- For short option/detail fields, keep the answer brief and factual.
-- Put the deeper explanation, impact, barriers, examples, and vocational implications into the matching observation field.
-
-Transportation-specific rules:
-- transportation_public should be a brief option description only, such as "Paratransit; requires advance scheduling."
-- transportation_private should be a brief option description only, such as "Family backup transportation when available."
-- transportation_observations should contain the detailed transportation analysis, including reliability, schedule limits, early morning/overnight availability, mid-shift travel limits, attendance concerns, commute/geography limits, and placement implications when supported by evidence.
-
-Computer skills rules:
-- computer_skills_other should briefly list the specific skill/test result, such as typing speed, 10-key, or other skill.
-- computer_skill_observations should contain the detailed analysis of computer ability, online application needs, typing limitations, training needs, and job implications.
-
-Life skills rules:
-- life_skills_needed should briefly list the life skill area(s) needed.
-- life_skills_observations should contain the detailed explanation, functional impact, and support/training implications.
-
-Job development hours rule:
-- planned_job_search_hours_week means the number of hours per week the CRP, job coach, or employment specialist plans to provide job-development/job-search support.
-- It does NOT mean the number of hours the client is available to work.
-- It does NOT mean the number of hours the client personally plans to job search.
-- Do not calculate, recommend, estimate, or invent a number for this field.
-- This value requires verified staff/program entry and will be left blank in the official AI draft.
-
-Recommended target occupations rule:
-- recommended_target_occupations means the finalized top 3 occupational targets selected after realistic job exploration and staff/client review.
-- AI recommendations may support future job exploration, but AI must not finalize this WSA field independently.
-- Do not invent, recommend, summarize, or carry forward target occupations into the official WSA field.
-- This value will remain blank in the official AI draft until staff/client finalize the top 3 occupational targets.
-
-Joint VR/CRP recommendations rules:
-- job_development_supports means Joint VR/CRP Recommendations for Job Development Supports.
-- ongoing_supports means Joint VR/CRP Recommendations for Ongoing Supports.
-- Both fields are completed by Vocational Rehabilitation during the close-out meeting.
-- Do not draft, summarize, recommend, estimate, or carry forward text into either official WSA field.
-- Both fields will remain blank in the official AI draft for VR completion.
-
 - Do not exceed the listed character limits.
 - Do not invent facts.
-- No greetings.
 - Plain professional text only.`;
 
-  const result = await base44.integrations.Core.InvokeLLM({
-    prompt,
-  });
+    const result = await base44.integrations.Core.InvokeLLM({ prompt });
+    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+    const compressed = normalizeObject(parsed && parsed.official_wsa_fields);
 
-  const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-  const rawOfficialFields = normalizeObject(parsed && parsed.official_wsa_fields);
-  const officialFields = {};
-
-   for (const key of WSA_FIELD_KEYS) {
-    const limit = WSA_CHAR_LIMITS[key];
-    officialFields[key] = clampOfficialText(rawOfficialFields[key] || '', limit);
+    for (const key of Object.keys(overLimitFields)) {
+      const limit = WSA_CHAR_LIMITS[key];
+      officialFields[key] = clampOfficialText(compressed[key] || overLimitFields[key], limit);
+    }
   }
-
-      // Do not allow AI to create or carry forward official planning values
-  // that must be completed by staff, the client/staff team, or VR.
-  officialFields.planned_job_search_hours_week = '';
-  officialFields.recommended_target_occupations = '';
-  officialFields.job_development_supports = '';
-  officialFields.ongoing_supports = '';
 
   return {
     official_wsa_fields: officialFields,
-    staff_should_verify: Array.isArray(parsed && parsed.staff_should_verify)
-      ? parsed.staff_should_verify
-      : [],
-    evidence_summary: Array.isArray(parsed && parsed.evidence_summary)
-      ? parsed.evidence_summary
-      : [],
+    staff_should_verify: [],
+    evidence_summary: [],
   };
 }
 
