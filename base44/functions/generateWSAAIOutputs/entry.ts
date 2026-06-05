@@ -286,6 +286,9 @@ RULES:
 - Use completed WSA interview answers, feedback, scores, and overall feedback as evidence for interview_skill_observations, communication_needs, interpersonal_social_skills, current_work_skills, work_skill_development_needs, recommended_supports_on_job, and any other relevant field.
 - For interview_skill_observations, synthesize all interview-related evidence into a brief professional vocational evaluation covering overall interview readiness, communication strengths, areas needing improvement, supports needed, recommended training, and vocational implications for employer interaction.
 - Do not simply restate interview coaching feedback. Convert it into professional WSA assessment observations.
+- CRITICAL interview session rule: If wsa_interview_sessions contains any session with answered_question_count > 0, the client HAS participated in structured interview practice. Do NOT state or imply that the client has not participated in mock interviews or interview practice. The completed WSA interview session IS the mock interview evidence.
+- For interview_skill_observations specifically: describe the client's actual performance during the completed WSA interview session — what they did well, what they struggled with, scores if available, and what the responses indicate about their interview readiness. Do not mention absence of mock interview experience if a completed session exists.
+- A self-reported confidence rating (e.g. "6 out of 10") is supplementary context only. It must not be the primary basis for interview_skill_observations when completed InterviewSession evidence is available.
 - Each field should be written as a complete detailed WSA field response based on the best current evidence.
 - If evidence is weak or unavailable for a field, write a staff-verification note rather than inventing information.
 - Professional vocational rehabilitation tone.
