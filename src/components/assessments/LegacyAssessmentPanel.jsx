@@ -100,11 +100,15 @@ export default function LegacyAssessmentPanel({
       return true;
     }
 
+    const responsesToSave = Object.fromEntries(
+      Object.entries(latestResponsesRef.current).filter(([k]) => !k.startsWith('_'))
+    );
+
     const payload = {
       client_id: clientId,
       assessment_type: key,
       status: "in_progress",
-      responses: latestResponsesRef.current,
+      responses: responsesToSave,
     };
 
     try {
@@ -198,11 +202,15 @@ export default function LegacyAssessmentPanel({
     setSaving(true);
 
     try {
+      const responsesToSave = Object.fromEntries(
+        Object.entries(responses).filter(([k]) => !k.startsWith('_'))
+      );
+
       const payload = {
         client_id: clientId,
         assessment_type: key,
         status,
-        responses,
+        responses: responsesToSave,
       };
 
       let savedRecord;
