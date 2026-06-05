@@ -64,6 +64,20 @@ function getWSAFieldLimit(questionId) {
   return WSA_FIELD_LIMITS[questionId] || DEFAULT_WSA_FIELD_LIMIT;
 }
 
+// Strip large HTML blobs that would exceed entity payload limits.
+// Normal WSA field values, metadata arrays, and uploaded file URLs are preserved.
+const WSA_LARGE_HTML_BLOB_KEYS = new Set([
+  '_full_detailed_wsa_html',
+  '_supplemental_wsa_report_html',
+  '_detailed_wsa_report_html',
+]);
+
+function stripLargeWSABlobs(responses) {
+  return Object.fromEntries(
+    Object.entries(responses).filter(([k]) => !WSA_LARGE_HTML_BLOB_KEYS.has(k))
+  );
+}
+
 export default function LegacyAssessmentPanel({
   assessmentDef,
   existingRecord,
@@ -100,15 +114,11 @@ export default function LegacyAssessmentPanel({
       return true;
     }
 
-    const responsesToSave = Object.fromEntries(
-      Object.entries(latestResponsesRef.current).filter(([k]) => !k.startsWith('_'))
-    );
-
     const payload = {
       client_id: clientId,
       assessment_type: key,
       status: "in_progress",
-      responses: responsesToSave,
+      responses: stripLargeWSABlobs(latestResponsesRef.current),
     };
 
     try {
@@ -202,15 +212,11 @@ export default function LegacyAssessmentPanel({
     setSaving(true);
 
     try {
-      const responsesToSave = Object.fromEntries(
-        Object.entries(responses).filter(([k]) => !k.startsWith('_'))
-      );
-
       const payload = {
         client_id: clientId,
         assessment_type: key,
         status,
-        responses: responsesToSave,
+        responses: stripLargeWSABlobs(responses),
       };
 
       let savedRecord;
