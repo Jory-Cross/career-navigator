@@ -349,6 +349,7 @@ export default function LegacyAssessmentPanel({
       }
 
       const officialFields = data.official_wsa_fields || {};
+      console.log("WSA UI DEBUG official interview field:", officialFields.interview_skill_observations);
 
       if (!Object.keys(officialFields).length) {
         toast.error("AI did not return WSA field values.");
