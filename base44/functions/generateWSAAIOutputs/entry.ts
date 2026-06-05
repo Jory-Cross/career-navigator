@@ -695,9 +695,12 @@ Deno.serve(async (req) => {
 
     if (mode === 'field_draft') {
       console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
+      console.log('DEBUG interview_sessions_in_context count:', interviewSessionSummaries.length);
       const detailedResult = await generateDetailedFields(base44, contextBlock);
 
        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
+
+      console.log('DEBUG detailedResult.detailed_wsa_fields.interview_skill_observations:', detailed_wsa_fields && detailed_wsa_fields.interview_skill_observations);
 
       full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
@@ -709,6 +712,7 @@ Deno.serve(async (req) => {
       const officialResult = await generateOfficialFields(base44, detailed_wsa_fields, contextBlock);
 
       official_wsa_fields = officialResult.official_wsa_fields;
+      console.log('DEBUG officialResult.official_wsa_fields.interview_skill_observations:', official_wsa_fields && official_wsa_fields.interview_skill_observations);
       mergeUniqueStrings(staff_should_verify, officialResult.staff_should_verify);
       mergeUniqueStrings(evidence_summary, officialResult.evidence_summary);
     }
