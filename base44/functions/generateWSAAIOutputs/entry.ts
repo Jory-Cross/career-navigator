@@ -414,6 +414,9 @@ RULES:
     }
   }
 
+  console.log('DEBUG generateOfficialFields INPUT detailedFields.interview_skill_observations:', JSON.stringify(detailedFields.interview_skill_observations));
+  console.log('DEBUG generateOfficialFields OUTPUT officialFields.interview_skill_observations:', JSON.stringify(officialFields.interview_skill_observations));
+
   return {
     official_wsa_fields: officialFields,
     staff_should_verify: [],
