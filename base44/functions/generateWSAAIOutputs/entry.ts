@@ -306,27 +306,33 @@ FIELDS WHERE WET EVIDENCE IS ALLOWED:
 - interpersonal_social_skills: Use customer_interaction_comfort, coworker_comfort, supervision_style_preference, and related narratives.
 - assistive_technology_needs: Use any sensory accommodation or AT needs from WET.
 
-WORK ENVIRONMENT TOLERANCE AS OBSERVED ASSESSMENT EVIDENCE:
-The WET assessment IS the structured start-of-service work assessment for this client. Its responses represent observed and assessed functional tolerances, not just self-reported preferences. Use WET responses as direct evidence for these fields:
+CRITICAL — SOURCE MAPPING FOR WSA FIELDS:
 
-- work_assessment_observations:
-  Treat the completed WET responses as structured assessment findings. Summarize what was assessed and documented:
-  - Observed/reported sensory tolerances (noise, lighting, smells, crowding)
-  - Assessed pace, routine, and multitasking capacity
-  - Observed social/customer interaction tolerance
-  - Documented stress responses and overstimulation patterns
-  - Assessed best-fit work conditions
-  Write this as a professional vocational assessment summary — e.g., "The Work Environment Tolerance Assessment conducted at start of services documented the following observations: [findings]..."
-  Do NOT describe these as preferences or speculation. Write them as assessment findings.
-  Do NOT invent a specific worksite name (Winegar's, a grocery store, etc.) unless it is explicitly named in the WET responses or another assessment/document.
-  If WET responses are sparse or absent, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation or situational assessment, including skills demonstrated, areas of difficulty, and vocational implications.]"
+SOURCE: Work Performance & Support Observation (assessment_type = "work_performance_support_observation")
+Use this assessment's responses as the primary evidence for:
+- worksite_simulation_location: Only populate from a specific employer name, facility, or site that is explicitly named in the Work Performance & Support Observation record. Do NOT infer or invent a location from any other source. If no explicit location is documented in this assessment, write: "[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]"
+- work_assessment_observations: Summarize what was directly observed during the work performance assessment — tasks attempted, skills demonstrated, areas of difficulty, supervisor or staff observations, pace, accuracy, behavior, and vocational implications. Do NOT use WET data here. Do NOT invent a worksite name (e.g., Winegar's, cashier simulation, cash handling) unless the Work Performance & Support Observation record explicitly names it. If this assessment is absent or sparse, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation, including skills demonstrated, areas of difficulty, and vocational implications.]"
+- current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
+- work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
+- recommended_supports_on_job: When support needs were directly observed during the work performance assessment, use that evidence as primary. WET preferred supports may supplement.
 
-- worksite_simulation_location:
-  Only populate if a specific real employer, facility, or site name is explicitly documented in the WET responses, assessment notes, staff notes, or documents (e.g., "assessment conducted at ABC Thrift Store, 123 Main St").
-  Do NOT infer or invent a location from environmental preferences, past work history, or general descriptions.
-  If no explicit location is documented, write: "[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]"
+SOURCE: Work Environment Tolerance (assessment_type = "work_environment_tolerance")
+Use WET responses as structured tolerance and functional capacity evidence for:
+- behavioral_self_regulation: overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, past_stress_job_narrative.
+- other_observations: ideal vs. avoid environment synthesis, sensory triggers, stress recovery strategies, preferred supports, environmental red flags. Write these as documented tolerance findings, not observed worksite performance.
+- recommended_supports_on_job: preferred_supports_at_work, break/quiet space needs, written instructions needs, sensory accommodation needs.
+- communication_needs: phone_communication, phone_difficulty_detail, conflict_tolerance.
+- interpersonal_social_skills: customer_interaction_comfort, coworker_comfort, supervision_style_preference.
+- assistive_technology_needs: sensory or AT accommodation needs documented in WET.
 
-If work_environment_tolerance_profile is null or sparse, rely on other available evidence for the allowed fields and note that WET data was not available.`;
+STRICT PROHIBITION:
+- NEVER use WET overwhelm_triggers, past_stress_job_narrative, or any WET narrative containing words like "check out," "line," "customers," or "cashier" as evidence for worksite_simulation_location or work_assessment_observations.
+- WET narratives describe self-reported past experiences and tolerance assessments — they are NOT worksite simulation observations and must NEVER be interpreted as such.
+- Do NOT infer a worksite name (Winegar's, a grocery store, a warehouse, a cashier station, etc.) from any WET field. A phrase like "a long line of people needing to check out" in overwhelm_triggers is a stress tolerance example, not a worksite simulation record.
+- Do NOT describe cash handling, transaction processing, or cashier tasks as observed worksite performance unless the Work Performance & Support Observation explicitly documents those tasks.
+
+If work_environment_tolerance_profile is null or sparse, rely on other available evidence for the WET-allowed fields and note that WET data was not available.
+If no Work Performance & Support Observation exists for this client, use the staff-entry placeholder text for worksite_simulation_location and work_assessment_observations.`;
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
