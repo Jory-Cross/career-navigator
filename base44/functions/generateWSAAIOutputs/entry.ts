@@ -295,29 +295,22 @@ RULES:
 - This content will become the long HTML WSA document and will later be compressed into the official WSA PDF fields.
 
 CRITICAL — WORK ENVIRONMENT TOLERANCE INTEGRATION:
-The context includes a "work_environment_tolerance_profile" block. This is structured evidence from the Work Environment Tolerance Assessment (WET). You MUST integrate it into the following fields:
+The context includes a "work_environment_tolerance_profile" block. This is structured evidence from the Work Environment Tolerance Assessment (WET). Follow these rules exactly:
 
-- work_assessment_observations:
-  Do NOT describe worksite simulation performance alone.
-  Synthesize: (1) worksite/simulation performance evidence, (2) WET findings — specifically noise/sensory tolerance, pace tolerance, routine needs, customer interaction comfort, stress triggers, and overwhelm signs, (3) functional vocational implications of how these factors affect workplace success.
-  Example synthesis: "During the worksite simulation, [performance observations]. The client's Work Environment Tolerance profile indicates [sensory/noise/pace findings], which [supports/complicates] placement in [environment type]. [Specific WET evidence — e.g., strong preference for routine, low noise tolerance, difficulty with fast pace] suggests [vocational implication]."
+FIELDS WHERE WET EVIDENCE IS ALLOWED:
+- behavioral_self_regulation: Use overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, past_stress_job_narrative as primary evidence.
+- other_observations: Include WET findings — ideal vs. avoid environment synthesis, specific sensory triggers, stress recovery strategies, preferred supports, environmental red flags. Do NOT describe these as observed performance.
+- recommended_supports_on_job: Use preferred_supports_at_work, break_quiet_detail, written_instructions_detail, sensory accommodation needs.
+- work_skill_development_needs: Use pace tolerance, multitasking ability, interruptions tolerance, written instructions need, task switching tolerance as functional evidence.
+- communication_needs: Use phone_communication, phone_difficulty_detail, conflict_tolerance.
+- interpersonal_social_skills: Use customer_interaction_comfort, coworker_comfort, supervision_style_preference, and related narratives.
+- assistive_technology_needs: Use any sensory accommodation or AT needs from WET.
 
-- other_observations:
-  Include relevant WET findings not captured elsewhere — such as ideal vs. avoid environment synthesis, specific sensory triggers, stress recovery strategies, preferred supports, and any red-flag patterns from the stress/overstimulation section.
+FIELDS WHERE WET EVIDENCE IS STRICTLY PROHIBITED:
+- worksite_simulation_location: This field documents the name and address of the ACTUAL on-site/situational/community-based worksite where a real work assessment was conducted. Only populate this field if an assessment record, document, or staff note explicitly names a real worksite location (e.g., a specific employer, facility, or community site). Do NOT use WET preferences, past work history, or general environmental preferences. If no actual worksite location is documented, write: "[Staff entry required: enter the name and address of the actual worksite simulation location where the on-site assessment was conducted.]"
+- work_assessment_observations: This field documents what was OBSERVED during an actual on-site/situational/community-based work assessment. Only populate from evidence that explicitly describes real observed performance at a real worksite — staff observation notes, worksite assessment records, or documented simulation results. Do NOT infer from WET preferences, past work history, or general vocational assessments. Do NOT describe past employment history as if it were a current worksite simulation. Do NOT invent or assume a worksite (e.g., Winegar's, a grocery store, a warehouse) unless explicitly documented. If no on-site/situational work assessment evidence exists, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation, including skills demonstrated, areas of difficulty, supervisor feedback, and vocational implications.]"
 
-- worksite_simulation_location:
-  If WET data reveals strong environmental constraints (e.g., cannot tolerate retail noise, food smells, fast pace), note how the simulation setting relates to or diverges from the client's actual environmental tolerances.
-
-- communication_needs, interpersonal_social_skills, recommended_supports_on_job:
-  Use WET social/customer interaction, supervision style, phone communication, and conflict tolerance data to strengthen these fields.
-
-- behavioral_self_regulation:
-  Use WET overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, and past_stress_job_narrative as primary evidence.
-
-- current_work_skills and work_skill_development_needs:
-  Reference WET pace tolerance, multitasking ability, interruptions tolerance, written instructions need, and task switching tolerance as functional capability evidence.
-
-If work_environment_tolerance_profile is null or sparse, rely on other available evidence and note that WET data was not available.`;
+If work_environment_tolerance_profile is null or sparse, rely on other available evidence for the allowed fields and note that WET data was not available.`;
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
