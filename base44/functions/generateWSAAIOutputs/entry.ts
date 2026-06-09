@@ -306,9 +306,25 @@ FIELDS WHERE WET EVIDENCE IS ALLOWED:
 - interpersonal_social_skills: Use customer_interaction_comfort, coworker_comfort, supervision_style_preference, and related narratives.
 - assistive_technology_needs: Use any sensory accommodation or AT needs from WET.
 
-FIELDS WHERE WET EVIDENCE IS STRICTLY PROHIBITED:
-- worksite_simulation_location: This field documents the name and address of the ACTUAL on-site/situational/community-based worksite where a real work assessment was conducted. Only populate this field if an assessment record, document, or staff note explicitly names a real worksite location (e.g., a specific employer, facility, or community site). Do NOT use WET preferences, past work history, or general environmental preferences. If no actual worksite location is documented, write: "[Staff entry required: enter the name and address of the actual worksite simulation location where the on-site assessment was conducted.]"
-- work_assessment_observations: This field documents what was OBSERVED during an actual on-site/situational/community-based work assessment. Only populate from evidence that explicitly describes real observed performance at a real worksite — staff observation notes, worksite assessment records, or documented simulation results. Do NOT infer from WET preferences, past work history, or general vocational assessments. Do NOT describe past employment history as if it were a current worksite simulation. Do NOT invent or assume a worksite (e.g., Winegar's, a grocery store, a warehouse) unless explicitly documented. If no on-site/situational work assessment evidence exists, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation, including skills demonstrated, areas of difficulty, supervisor feedback, and vocational implications.]"
+WORK ENVIRONMENT TOLERANCE AS OBSERVED ASSESSMENT EVIDENCE:
+The WET assessment IS the structured start-of-service work assessment for this client. Its responses represent observed and assessed functional tolerances, not just self-reported preferences. Use WET responses as direct evidence for these fields:
+
+- work_assessment_observations:
+  Treat the completed WET responses as structured assessment findings. Summarize what was assessed and documented:
+  - Observed/reported sensory tolerances (noise, lighting, smells, crowding)
+  - Assessed pace, routine, and multitasking capacity
+  - Observed social/customer interaction tolerance
+  - Documented stress responses and overstimulation patterns
+  - Assessed best-fit work conditions
+  Write this as a professional vocational assessment summary — e.g., "The Work Environment Tolerance Assessment conducted at start of services documented the following observations: [findings]..."
+  Do NOT describe these as preferences or speculation. Write them as assessment findings.
+  Do NOT invent a specific worksite name (Winegar's, a grocery store, etc.) unless it is explicitly named in the WET responses or another assessment/document.
+  If WET responses are sparse or absent, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation or situational assessment, including skills demonstrated, areas of difficulty, and vocational implications.]"
+
+- worksite_simulation_location:
+  Only populate if a specific real employer, facility, or site name is explicitly documented in the WET responses, assessment notes, staff notes, or documents (e.g., "assessment conducted at ABC Thrift Store, 123 Main St").
+  Do NOT infer or invent a location from environmental preferences, past work history, or general descriptions.
+  If no explicit location is documented, write: "[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]"
 
 If work_environment_tolerance_profile is null or sparse, rely on other available evidence for the allowed fields and note that WET data was not available.`;
 
