@@ -292,7 +292,32 @@ RULES:
 - Each field should be written as a complete detailed WSA field response based on the best current evidence.
 - If evidence is weak or unavailable for a field, write a staff-verification note rather than inventing information.
 - Professional vocational rehabilitation tone.
-- This content will become the long HTML WSA document and will later be compressed into the official WSA PDF fields.`;
+- This content will become the long HTML WSA document and will later be compressed into the official WSA PDF fields.
+
+CRITICAL — WORK ENVIRONMENT TOLERANCE INTEGRATION:
+The context includes a "work_environment_tolerance_profile" block. This is structured evidence from the Work Environment Tolerance Assessment (WET). You MUST integrate it into the following fields:
+
+- work_assessment_observations:
+  Do NOT describe worksite simulation performance alone.
+  Synthesize: (1) worksite/simulation performance evidence, (2) WET findings — specifically noise/sensory tolerance, pace tolerance, routine needs, customer interaction comfort, stress triggers, and overwhelm signs, (3) functional vocational implications of how these factors affect workplace success.
+  Example synthesis: "During the worksite simulation, [performance observations]. The client's Work Environment Tolerance profile indicates [sensory/noise/pace findings], which [supports/complicates] placement in [environment type]. [Specific WET evidence — e.g., strong preference for routine, low noise tolerance, difficulty with fast pace] suggests [vocational implication]."
+
+- other_observations:
+  Include relevant WET findings not captured elsewhere — such as ideal vs. avoid environment synthesis, specific sensory triggers, stress recovery strategies, preferred supports, and any red-flag patterns from the stress/overstimulation section.
+
+- worksite_simulation_location:
+  If WET data reveals strong environmental constraints (e.g., cannot tolerate retail noise, food smells, fast pace), note how the simulation setting relates to or diverges from the client's actual environmental tolerances.
+
+- communication_needs, interpersonal_social_skills, recommended_supports_on_job:
+  Use WET social/customer interaction, supervision style, phone communication, and conflict tolerance data to strengthen these fields.
+
+- behavioral_self_regulation:
+  Use WET overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, and past_stress_job_narrative as primary evidence.
+
+- current_work_skills and work_skill_development_needs:
+  Reference WET pace tolerance, multitasking ability, interruptions tolerance, written instructions need, and task switching tolerance as functional capability evidence.
+
+If work_environment_tolerance_profile is null or sparse, rely on other available evidence and note that WET data was not available.`;
 
   const result = await base44.integrations.Core.InvokeLLM({
     prompt,
@@ -619,6 +644,66 @@ Deno.serve(async (req) => {
     }
 
 
+    // Extract Work Environment Tolerance Assessment (WET) data as a dedicated block
+    // so the LLM can synthesize it into work_assessment_observations, other_observations,
+    // worksite_simulation_location, and vocational implications fields.
+    const wetAssessment = assessments.find(a => a.assessment_type === 'work_environment_tolerance');
+    const wetResponses = wetAssessment && wetAssessment.responses
+      ? Object.fromEntries(
+          Object.entries(wetAssessment.responses).filter(([k]) => !ASSESSMENT_CONTEXT_STRIP_KEYS.has(k))
+        )
+      : null;
+
+    const workEnvironmentToleranceProfile = wetResponses ? {
+      // Section 1: General Work Environment Preference
+      setting_preference: wetResponses.setting_preference || null,
+      environment_noise_level: wetResponses.environment_noise_level || null,
+      routine_vs_variety: wetResponses.routine_vs_variety || null,
+      routine_importance_narrative: wetResponses.routine_importance_narrative || null,
+      independent_vs_team: wetResponses.independent_vs_team || null,
+      // Section 2: Sensory Tolerance
+      noise_tolerance_scale: wetResponses.noise_tolerance_scale || null,
+      noise_sensitivity_detail: wetResponses.noise_sensitivity_detail || null,
+      lighting_tolerance: wetResponses.lighting_tolerance || null,
+      lighting_detail: wetResponses.lighting_detail || null,
+      sensory_triggers_select: wetResponses.sensory_triggers_select || null,
+      sensory_triggers_narrative: wetResponses.sensory_triggers_narrative || null,
+      sensory_examples_history: wetResponses.sensory_examples_history || null,
+      // Section 3: Social & Customer Interaction
+      customer_interaction_comfort: wetResponses.customer_interaction_comfort || null,
+      customer_avoidance_detail: wetResponses.customer_avoidance_detail || null,
+      coworker_comfort: wetResponses.coworker_comfort || null,
+      coworker_conflict_narrative: wetResponses.coworker_conflict_narrative || null,
+      supervision_style_preference: wetResponses.supervision_style_preference || null,
+      supervision_issues_narrative: wetResponses.supervision_issues_narrative || null,
+      phone_communication: wetResponses.phone_communication || null,
+      phone_difficulty_detail: wetResponses.phone_difficulty_detail || null,
+      conflict_tolerance: wetResponses.conflict_tolerance || null,
+      // Section 4: Pace, Multitasking & Routine
+      fast_pace_tolerance: wetResponses.fast_pace_tolerance || null,
+      pace_struggle_narrative: wetResponses.pace_struggle_narrative || null,
+      multitasking_ability: wetResponses.multitasking_ability || null,
+      interruptions_tolerance: wetResponses.interruptions_tolerance || null,
+      interruption_impact_narrative: wetResponses.interruption_impact_narrative || null,
+      written_instructions_need: wetResponses.written_instructions_need || null,
+      written_instructions_detail: wetResponses.written_instructions_detail || null,
+      task_switching_tolerance: wetResponses.task_switching_tolerance || null,
+      // Section 5: Stress & Overstimulation Recovery
+      overwhelm_triggers: wetResponses.overwhelm_triggers || null,
+      overwhelm_signs: wetResponses.overwhelm_signs || null,
+      overwhelm_signs_detail: wetResponses.overwhelm_signs_detail || null,
+      recovery_strategies: wetResponses.recovery_strategies || null,
+      break_or_quiet_space_needed: wetResponses.break_or_quiet_space_needed || null,
+      break_quiet_detail: wetResponses.break_quiet_detail || null,
+      past_stress_job_impact: wetResponses.past_stress_job_impact || null,
+      past_stress_job_narrative: wetResponses.past_stress_job_narrative || null,
+      // Section 6: Best-Fit Work Conditions
+      ideal_environment_narrative: wetResponses.ideal_environment_narrative || null,
+      environments_to_avoid: wetResponses.environments_to_avoid || null,
+      preferred_supports_at_work: wetResponses.preferred_supports_at_work || null,
+      staff_followup_flags: wetResponses.staff_followup_flags || null,
+    } : null;
+
     const contextPayload = {
       client: {
         name: clientName,
@@ -636,6 +721,7 @@ Deno.serve(async (req) => {
         employer_name: client.employer_name,
         workplace_name: client.workplace_name,
       },
+      work_environment_tolerance_profile: workEnvironmentToleranceProfile,
       vocational_facts_profile:
         client.vocational_facts_profile ||
         client.vocational_profile ||
