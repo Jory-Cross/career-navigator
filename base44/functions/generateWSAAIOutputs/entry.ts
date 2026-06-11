@@ -311,7 +311,9 @@ CRITICAL — SOURCE MAPPING FOR WSA FIELDS:
 SOURCE: Work Performance & Support Observation (assessment_type = "work_performance_support_observation")
 Use this assessment's responses as the primary evidence for:
 - worksite_simulation_location: STRICT RULE — Use the value from the context field "worksite_simulation_location_resolved" verbatim. Do not modify it, supplement it, or replace it. Do NOT infer, derive, or construct a location from any other source. This field has already been resolved by the server.
-- work_assessment_observations: Summarize what was directly observed during the work performance assessment — tasks attempted, skills demonstrated, areas of difficulty, supervisor or staff observations, pace, accuracy, behavior, and vocational implications. Do NOT use WET data here. Do NOT invent a worksite name (e.g., Winegar's, cashier simulation, cash handling) unless the Work Performance & Support Observation record explicitly names it. If this assessment is absent or sparse, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation, including skills demonstrated, areas of difficulty, and vocational implications.]"
+- work_assessment_observations: STRICT RULE — This field is controlled by two context fields:
+  1. If context field "work_assessment_observations_resolved" is NOT "__WPSO_CONTENT_PRESENT__", use that value verbatim. Do not modify, supplement, or replace it.
+  2. If "work_assessment_observations_resolved" IS "__WPSO_CONTENT_PRESENT__", synthesize ONLY from the context field "wpso_observation_text". Do not use any other source. Do NOT use WET data. Do NOT use client profile fields. Do NOT use documents. Do NOT use interview sessions. Do NOT use work history. Do NOT infer, assume, or fabricate ANY physical activity (standing, walking, carrying, lifting, laundry, cashier tasks, etc.) unless it is explicitly stated in wpso_observation_text. Do NOT name a worksite or employer not explicitly documented in wpso_observation_text.
 - current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
 - work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
 - recommended_supports_on_job: When support needs were directly observed during the work performance assessment, use that evidence as primary. WET preferred supports may supplement.
@@ -342,18 +344,30 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   const detailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
 
-  // worksite_simulation_location: always hard-override with the pre-resolved value.
-  // The LLM must never determine this field — it is set entirely by server-side logic
-  // based on the three-case rule (no assessment / no location / has location).
-  // Extract the resolved value from the context block we passed to the LLM.
+  // worksite_simulation_location + work_assessment_observations: always hard-override.
+  // The LLM must never determine these fields — they are resolved entirely by server-side logic.
   let resolvedWorksiteLocation = wpsoExplicitLocation;
+  let resolvedWorkAssessmentObservations = null;
   try {
     const ctx = JSON.parse(contextBlock);
     if (ctx && ctx.worksite_simulation_location_resolved) {
       resolvedWorksiteLocation = ctx.worksite_simulation_location_resolved;
     }
-  } catch (_e) { /* leave as wpsoExplicitLocation */ }
+    if (ctx && ctx.work_assessment_observations_resolved) {
+      if (ctx.work_assessment_observations_resolved !== '__WPSO_CONTENT_PRESENT__') {
+        // Placeholder case — use verbatim
+        resolvedWorkAssessmentObservations = ctx.work_assessment_observations_resolved;
+      }
+      // If '__WPSO_CONTENT_PRESENT__', allow the LLM-generated value through (it was
+      // synthesized only from wpso_observation_text injected into the prompt).
+    }
+  } catch (_e) { /* leave as defaults */ }
+
   detailedFields.worksite_simulation_location = resolvedWorksiteLocation || 'Work Performance & Support Observation assessment has not been completed. Complete the Work Performance & Support Observation assessment before generating this section of the WSA.';
+
+  if (resolvedWorkAssessmentObservations !== null) {
+    detailedFields.work_assessment_observations = resolvedWorkAssessmentObservations;
+  }
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
@@ -711,6 +725,89 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── work_assessment_observations: pre-resolve from WP&SO only ────────────
+    // Same hard-guard pattern as worksite_simulation_location.
+    // The LLM must NEVER generate this field — it is resolved here from WP&SO fields only.
+    // Sources: overall_observation_summary, tasks_attempted, task_context_notes,
+    //          primary_task_evaluated, task_performance_strengths_observed,
+    //          task_performance_concerns_observed, task_performance_vocational_implications,
+    //          overall_prompt_level_for_observed_tasks, prompt_level_examples,
+    //          observation_duration_minutes, job_role_observed.
+    // Prohibited sources: WET, client profile, documents, interview sessions, work history.
+    let workAssessmentObservationsResolved;
+    if (!wpsoAssessment) {
+      workAssessmentObservationsResolved = 'Work Performance & Support Observation assessment has not been completed. Complete the Work Performance & Support Observation assessment before generating this section of the WSA.';
+    } else {
+      const wr = wpsoAssessment.responses || {};
+
+      // Collect only literal WP&SO observation fields — no inference, no fabrication.
+      const wpsoObservationFields = [
+        wr.overall_observation_summary,
+        wr.tasks_attempted,
+        wr.task_context_notes,
+        wr.primary_task_evaluated,
+        wr.task_performance_strengths_observed,
+        wr.task_performance_concerns_observed,
+        wr.task_performance_vocational_implications,
+        wr.prompt_level_examples,
+        wr.support_or_training_needed_from_observation,
+        wr.overall_observation_summary,
+        wr.verified_strengths_from_observation,
+        wr.verified_support_needs_from_observation,
+        wr.verified_barriers_or_concerns_from_observation,
+      ]
+        .map(v => safeString(v).trim())
+        .filter(v => v && v.length > 2 && !v.startsWith('['));
+
+      // Also include select/multiple-choice fields as readable labels
+      const wpsoLabelFields = [
+        wr.observation_purpose,
+        wr.observation_type,
+        wr.job_role_observed,
+        wr.overall_prompt_level_for_observed_tasks,
+        wr.task_initiation,
+        wr.task_completion_level,
+        wr.work_pace_observed,
+        wr.accuracy_quality_observed,
+        wr.fatigue_or_endurance_observed,
+        wr.observation_duration_minutes ? `Observation duration: ${wr.observation_duration_minutes} minutes` : null,
+      ]
+        .map(v => safeString(v).trim())
+        .filter(v => v && v.length > 1 && !v.startsWith('['));
+
+      const allWpsoText = [...wpsoLabelFields, ...wpsoObservationFields].join('\n\n').trim();
+
+      if (!allWpsoText) {
+        workAssessmentObservationsResolved = 'Work Performance & Support Observation assessment does not contain sufficient observed work performance information. Staff must complete the observation section before generating this portion of the WSA.';
+      } else {
+        // Has content — mark for LLM synthesis using ONLY this pre-extracted text.
+        workAssessmentObservationsResolved = '__WPSO_CONTENT_PRESENT__';
+      }
+    }
+
+    // Store the raw WP&SO observation text so the LLM can use it for synthesis
+    // when content is present. When absent/incomplete, the hard-guard placeholder is injected.
+    const wpsoObservationTextForLLM = workAssessmentObservationsResolved === '__WPSO_CONTENT_PRESENT__'
+      ? (() => {
+          const wr = wpsoAssessment.responses || {};
+          return [
+            wr.observation_purpose, wr.observation_type, wr.job_role_observed,
+            wr.observation_duration_minutes ? `Observation duration: ${wr.observation_duration_minutes} minutes` : null,
+            wr.overall_prompt_level_for_observed_tasks, wr.task_initiation,
+            wr.task_completion_level, wr.work_pace_observed, wr.accuracy_quality_observed,
+            wr.fatigue_or_endurance_observed,
+            wr.tasks_attempted, wr.task_context_notes, wr.primary_task_evaluated,
+            wr.prompt_level_examples,
+            wr.task_performance_strengths_observed, wr.task_performance_concerns_observed,
+            wr.task_performance_vocational_implications,
+            wr.support_or_training_needed_from_observation,
+            wr.overall_observation_summary,
+            wr.verified_strengths_from_observation, wr.verified_support_needs_from_observation,
+            wr.verified_barriers_or_concerns_from_observation,
+          ].map(v => safeString(v).trim()).filter(v => v && v.length > 2 && !v.startsWith('[')).join('\n\n');
+        })()
+      : null;
+
     console.log('DEBUG worksiteSimulationLocation:', worksiteSimulationLocation);
 
     // Extract Work Environment Tolerance Assessment (WET) data as a dedicated block
@@ -777,6 +874,12 @@ Deno.serve(async (req) => {
       // Pre-resolved value for worksite_simulation_location — the LLM must use this verbatim.
       wpso_explicit_location: wpsoExplicitLocation || null,
       worksite_simulation_location_resolved: worksiteSimulationLocation,
+      // Pre-resolved work_assessment_observations evidence.
+      // When work_assessment_observations_resolved is '__WPSO_CONTENT_PRESENT__', the LLM
+      // must synthesize ONLY from wpso_observation_text. Any other value is a hard-guard
+      // placeholder and must be used verbatim.
+      work_assessment_observations_resolved: workAssessmentObservationsResolved,
+      wpso_observation_text: wpsoObservationTextForLLM,
       client: {
         name: clientName,
         email: client.email,
