@@ -241,7 +241,7 @@ function buildInterviewSkillObservationFromWsaInterview(interviewSessions) {
     .join(' ');
 }
 
-async function generateDetailedFields(base44, contextBlock) {
+async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
   const fieldLabelsText = WSA_FIELD_KEYS
     .map((key) => key + ': ' + (WSA_FIELD_LABELS[key] || key))
     .join('\n');
@@ -310,7 +310,7 @@ CRITICAL — SOURCE MAPPING FOR WSA FIELDS:
 
 SOURCE: Work Performance & Support Observation (assessment_type = "work_performance_support_observation")
 Use this assessment's responses as the primary evidence for:
-- worksite_simulation_location: Only populate from a specific employer name, facility, or site that is explicitly named in the Work Performance & Support Observation record. Do NOT infer or invent a location from any other source. If no explicit location is documented in this assessment, write: "[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]"
+- worksite_simulation_location: STRICT RULE — Check the context field "wpso_explicit_location". If it is null or absent, you MUST write exactly: "[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]" — do not write anything else for this field. If wpso_explicit_location contains a value, use that exact value and nothing more. Do NOT infer, derive, or construct a location from ANY other source under any circumstances. Prohibited sources include: Work Environment Tolerance responses, client work history, resume, job goals, target role, documents, WSA InterviewSession content, VFP, staff notes, client profile, intake forms, narrative descriptions of tasks, customer-facing scenarios, or any AI-generated assumption. The only valid input is the literal wpso_explicit_location value from the context.
 - work_assessment_observations: Summarize what was directly observed during the work performance assessment — tasks attempted, skills demonstrated, areas of difficulty, supervisor or staff observations, pace, accuracy, behavior, and vocational implications. Do NOT use WET data here. Do NOT invent a worksite name (e.g., Winegar's, cashier simulation, cash handling) unless the Work Performance & Support Observation record explicitly names it. If this assessment is absent or sparse, write: "[Staff entry required: describe observed client performance during the on-site worksite simulation, including skills demonstrated, areas of difficulty, and vocational implications.]"
 - current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
 - work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
@@ -330,6 +330,7 @@ STRICT PROHIBITION:
 - WET narratives describe self-reported past experiences and tolerance assessments — they are NOT worksite simulation observations and must NEVER be interpreted as such.
 - Do NOT infer a worksite name (Winegar's, a grocery store, a warehouse, a cashier station, etc.) from any WET field. A phrase like "a long line of people needing to check out" in overwhelm_triggers is a stress tolerance example, not a worksite simulation record.
 - Do NOT describe cash handling, transaction processing, or cashier tasks as observed worksite performance unless the Work Performance & Support Observation explicitly documents those tasks.
+- WET data has ZERO permitted contribution to worksite_simulation_location. Even if a WET field appears to describe a physical location or employer, it must be completely ignored for this field.
 
 If work_environment_tolerance_profile is null or sparse, rely on other available evidence for the WET-allowed fields and note that WET data was not available.
 If no Work Performance & Support Observation exists for this client, use the staff-entry placeholder text for worksite_simulation_location and work_assessment_observations.`;
@@ -341,7 +342,23 @@ If no Work Performance & Support Observation exists for this client, use the sta
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   const detailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
 
-    // These values cannot be finalized from AI-generated evidence alone.
+    // worksite_simulation_location: hard guard — only valid if the WP&SO assessment
+  // contained an explicit, literal location value. If the LLM generated anything
+  // that looks like an inferred or invented name, replace with the staff placeholder.
+  // We enforce this by checking whether a WP&SO assessment record actually exists
+  // in the context and has a non-empty location/worksite field. Since we cannot
+  // re-query the DB here (already executed above), we apply a conservative rule:
+  // if the field was set by the LLM but no WP&SO location was injected into the
+  // context, clear it. This is enforced at the prompt level above; the guard below
+  // ensures the placeholder is written even if the LLM hallucinates a location.
+  // The caller (Deno.serve handler) passes wpsoHasExplicitLocation to this function.
+  // For now, always enforce the placeholder when the WP&SO record did not supply one.
+  if (!wpsoExplicitLocation) {
+    detailedFields.worksite_simulation_location =
+      '[Staff entry required: enter the name and address of the worksite simulation or situational assessment location.]';
+  }
+
+  // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
   detailedFields.planned_job_search_hours_week =
     PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE;
@@ -659,6 +676,28 @@ Deno.serve(async (req) => {
     }
 
 
+    // Extract explicit worksite location from Work Performance & Support Observation.
+    // This is the ONLY permitted source for worksite_simulation_location.
+    // We look for any field whose key contains "location", "site", "worksite", or "employer"
+    // and whose value is a non-empty string that is not a generic placeholder.
+    const wpsoAssessment = assessments.find(a => a.assessment_type === 'work_performance_support_observation');
+    let wpsoExplicitLocation = null;
+    if (wpsoAssessment && wpsoAssessment.responses) {
+      const wpsoResponses = wpsoAssessment.responses;
+      const locationKeys = Object.keys(wpsoResponses).filter(k => {
+        const kl = k.toLowerCase();
+        return kl.includes('location') || kl.includes('worksite') || kl.includes('site_name') ||
+               kl.includes('employer') || kl.includes('facility') || kl.includes('address');
+      });
+      for (const k of locationKeys) {
+        const val = safeString(wpsoResponses[k]).trim();
+        if (val && val.length > 2 && !val.startsWith('[')) {
+          wpsoExplicitLocation = val;
+          break;
+        }
+      }
+    }
+
     // Extract Work Environment Tolerance Assessment (WET) data as a dedicated block
     // so the LLM can synthesize it into work_assessment_observations, other_observations,
     // worksite_simulation_location, and vocational implications fields.
@@ -720,6 +759,9 @@ Deno.serve(async (req) => {
     } : null;
 
     const contextPayload = {
+      // Explicit guard: tells the LLM whether a verified WP&SO location exists.
+      // If null, worksite_simulation_location MUST be the staff placeholder.
+      wpso_explicit_location: wpsoExplicitLocation || null,
       client: {
         name: clientName,
         email: client.email,
@@ -768,7 +810,7 @@ Deno.serve(async (req) => {
 
     if (mode === 'detailed_report' || mode === 'both') {
       console.log('Generating full detailed WSA fields...');
-      const detailedResult = await generateDetailedFields(base44, contextBlock);
+      const detailedResult = await generateDetailedFields(base44, contextBlock, wpsoExplicitLocation);
 
       detailed_wsa_fields = detailedResult.detailed_wsa_fields;
 
@@ -788,7 +830,8 @@ Deno.serve(async (req) => {
     if (mode === 'field_draft') {
       console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
       console.log('DEBUG interview_sessions_in_context count:', interviewSessionSummaries.length);
-      const detailedResult = await generateDetailedFields(base44, contextBlock);
+      console.log('DEBUG wpsoExplicitLocation:', wpsoExplicitLocation);
+      const detailedResult = await generateDetailedFields(base44, contextBlock, wpsoExplicitLocation);
 
        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
 
