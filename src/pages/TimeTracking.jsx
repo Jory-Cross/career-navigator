@@ -114,11 +114,12 @@ function entryTypeRequiresClient(entryTypeCode) {
   const raw = String(entryTypeCode || "").trim().toLowerCase();
   const normalized = normalizeEntryTypeCode(raw);
 
-    const noClientRequired = new Set([
+  const noClientRequired = new Set([
     "admin_time",
     "misc",
+    "miscellaneous",
+    "pto",
   ]);
-
    const explicitlyRequiresClient = new Set([
     "job_coaching",
     "job_development",
