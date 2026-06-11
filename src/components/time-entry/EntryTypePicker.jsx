@@ -211,7 +211,7 @@ export default function EntryTypePicker({
   // ── Grid mode (default) ──
   if (mode === "grid") {
     return (
-      <div className={cn("space-y-6", className)}>
+      <div className={cn("space-y-6 overflow-y-auto max-h-[60vh] pr-1", className)}>
         {Object.entries(grouped).map(([prog, types]) => (
           <div key={prog} className="space-y-3">
             {groupByProgram && (
