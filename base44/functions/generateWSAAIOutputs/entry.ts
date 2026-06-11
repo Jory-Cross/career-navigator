@@ -241,6 +241,32 @@ function buildInterviewSkillObservationFromWsaInterview(interviewSessions) {
     .join(' ');
 }
 
+async function synthesizeWorkAssessmentObservations(base44, wpsoLabeledText) {
+  const prompt = `You are a vocational rehabilitation evaluator writing the Work Assessment Observations field for an official Utah DWS Work Strategy Assessment (WSA).
+
+TASK:
+Using ONLY the Work Performance & Support Observation evidence provided below, write a professional vocational assessment narrative for the "Work Assessment Observations" WSA field.
+
+WORK PERFORMANCE & SUPPORT OBSERVATION EVIDENCE:
+${wpsoLabeledText}
+
+REQUIREMENTS:
+- Write as a professional vocational evaluator summarizing what was directly observed.
+- Cover in a single cohesive narrative: the task(s) evaluated, observation duration (if documented), level of prompting and support required, work performance observed, strengths demonstrated, barriers or concerns observed, and vocational implications.
+- Use past tense and professional assessment language (e.g., "The client demonstrated...", "During the observation...", "Support was required for...").
+- Do NOT copy field labels or question text verbatim — synthesize into natural prose.
+- Do NOT invent any fact not present in the evidence above.
+- Do NOT describe any physical activity (standing, walking, carrying, lifting, etc.) unless it is explicitly stated in the evidence above.
+- Do NOT name any employer, worksite, or location unless explicitly stated in the evidence above.
+- Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
+- If a category (e.g., strengths, barriers) has no documented evidence, omit it rather than speculating.
+- Maximum 900 characters for the final narrative.
+- Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({ prompt });
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 900);
+}
+
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
   const fieldLabelsText = WSA_FIELD_KEYS
     .map((key) => key + ': ' + (WSA_FIELD_LABELS[key] || key))
@@ -311,9 +337,7 @@ CRITICAL — SOURCE MAPPING FOR WSA FIELDS:
 SOURCE: Work Performance & Support Observation (assessment_type = "work_performance_support_observation")
 Use this assessment's responses as the primary evidence for:
 - worksite_simulation_location: STRICT RULE — Use the value from the context field "worksite_simulation_location_resolved" verbatim. Do not modify it, supplement it, or replace it. Do NOT infer, derive, or construct a location from any other source. This field has already been resolved by the server.
-- work_assessment_observations: STRICT RULE — This field is controlled by two context fields:
-  1. If context field "work_assessment_observations_resolved" is NOT "__WPSO_CONTENT_PRESENT__", use that value verbatim. Do not modify, supplement, or replace it.
-  2. If "work_assessment_observations_resolved" IS "__WPSO_CONTENT_PRESENT__", synthesize ONLY from the context field "wpso_observation_text". Do not use any other source. Do NOT use WET data. Do NOT use client profile fields. Do NOT use documents. Do NOT use interview sessions. Do NOT use work history. Do NOT infer, assume, or fabricate ANY physical activity (standing, walking, carrying, lifting, laundry, cashier tasks, etc.) unless it is explicitly stated in wpso_observation_text. Do NOT name a worksite or employer not explicitly documented in wpso_observation_text.
+- work_assessment_observations: STRICT RULE — Do NOT generate this field. Leave it empty or null. It is always overwritten by a dedicated server-side synthesis step after your response.
 - current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
 - work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
 - recommended_supports_on_job: When support needs were directly observed during the work performance assessment, use that evidence as primary. WET preferred supports may supplement.
@@ -345,7 +369,7 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   const detailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
 
   // worksite_simulation_location + work_assessment_observations: always hard-override.
-  // The LLM must never determine these fields — they are resolved entirely by server-side logic.
+  // The LLM main generation must NEVER determine these fields.
   let resolvedWorksiteLocation = wpsoExplicitLocation;
   let resolvedWorkAssessmentObservations = null;
   try {
@@ -357,17 +381,18 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
       if (ctx.work_assessment_observations_resolved !== '__WPSO_CONTENT_PRESENT__') {
         // Placeholder case — use verbatim
         resolvedWorkAssessmentObservations = ctx.work_assessment_observations_resolved;
+      } else if (ctx.wpso_observation_text) {
+        // Content is present — synthesize a professional narrative from labeled WP&SO evidence only.
+        // This is a dedicated call, completely isolated from WET, documents, and other sources.
+        resolvedWorkAssessmentObservations = await synthesizeWorkAssessmentObservations(base44, ctx.wpso_observation_text);
       }
-      // If '__WPSO_CONTENT_PRESENT__', allow the LLM-generated value through (it was
-      // synthesized only from wpso_observation_text injected into the prompt).
     }
   } catch (_e) { /* leave as defaults */ }
 
   detailedFields.worksite_simulation_location = resolvedWorksiteLocation || 'Work Performance & Support Observation assessment has not been completed. Complete the Work Performance & Support Observation assessment before generating this section of the WSA.';
 
-  if (resolvedWorkAssessmentObservations !== null) {
-    detailedFields.work_assessment_observations = resolvedWorkAssessmentObservations;
-  }
+  // Always overwrite — either with the synthesized professional narrative or a placeholder.
+  detailedFields.work_assessment_observations = resolvedWorkAssessmentObservations || 'Work Performance & Support Observation assessment has not been completed. Complete the Work Performance & Support Observation assessment before generating this section of the WSA.';
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
@@ -785,26 +810,45 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Store the raw WP&SO observation text so the LLM can use it for synthesis
-    // when content is present. When absent/incomplete, the hard-guard placeholder is injected.
+    // Build a labeled key:value block of WP&SO evidence for the narrative synthesis call.
+    // Using labeled pairs so the LLM knows what each value means without seeing raw field keys.
     const wpsoObservationTextForLLM = workAssessmentObservationsResolved === '__WPSO_CONTENT_PRESENT__'
       ? (() => {
           const wr = wpsoAssessment.responses || {};
-          return [
-            wr.observation_purpose, wr.observation_type, wr.job_role_observed,
-            wr.observation_duration_minutes ? `Observation duration: ${wr.observation_duration_minutes} minutes` : null,
-            wr.overall_prompt_level_for_observed_tasks, wr.task_initiation,
-            wr.task_completion_level, wr.work_pace_observed, wr.accuracy_quality_observed,
-            wr.fatigue_or_endurance_observed,
-            wr.tasks_attempted, wr.task_context_notes, wr.primary_task_evaluated,
-            wr.prompt_level_examples,
-            wr.task_performance_strengths_observed, wr.task_performance_concerns_observed,
-            wr.task_performance_vocational_implications,
-            wr.support_or_training_needed_from_observation,
-            wr.overall_observation_summary,
-            wr.verified_strengths_from_observation, wr.verified_support_needs_from_observation,
-            wr.verified_barriers_or_concerns_from_observation,
-          ].map(v => safeString(v).trim()).filter(v => v && v.length > 2 && !v.startsWith('[')).join('\n\n');
+          const labeled = [
+            ['Observation purpose', wr.observation_purpose],
+            ['Observation type', wr.observation_type],
+            ['Job role observed', wr.job_role_observed],
+            ['Observation duration', wr.observation_duration_minutes ? `${wr.observation_duration_minutes} minutes` : null],
+            ['Tasks attempted', wr.tasks_attempted],
+            ['Task context / assignment description', wr.task_context_notes],
+            ['Primary task evaluated', wr.primary_task_evaluated],
+            ['Task initiation', wr.task_initiation],
+            ['Highest prompt level required', wr.overall_prompt_level_for_observed_tasks],
+            ['Where prompting was needed', wr.prompt_level_examples],
+            ['Task sequence completion', wr.task_sequence_completion],
+            ['Task completion level', wr.task_completion_level],
+            ['Work pace observed', wr.work_pace_observed],
+            ['Accuracy and quality observed', wr.accuracy_quality_observed],
+            ['Error awareness and correction', wr.error_awareness_and_correction],
+            ['Persistence and follow-through', wr.persistence_and_follow_through],
+            ['Fatigue or endurance observed', wr.fatigue_or_endurance_observed],
+            ['Observed performance strengths', wr.task_performance_strengths_observed],
+            ['Observed performance concerns', wr.task_performance_concerns_observed],
+            ['Vocational implications of task performance', wr.task_performance_vocational_implications],
+            ['Support or training needed', wr.support_or_training_needed_from_observation],
+            ['Overall observation summary', wr.overall_observation_summary],
+            ['Verified vocational strengths', wr.verified_strengths_from_observation],
+            ['Verified support needs', wr.verified_support_needs_from_observation],
+            ['Verified barriers or concerns', wr.verified_barriers_or_concerns_from_observation],
+          ]
+            .filter(([, v]) => {
+              const s = safeString(v).trim();
+              return s && s.length > 2 && !s.startsWith('[');
+            })
+            .map(([label, v]) => `${label}: ${safeString(v).trim()}`)
+            .join('\n');
+          return labeled;
         })()
       : null;
 
