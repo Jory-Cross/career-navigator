@@ -206,7 +206,8 @@ function normalizeDurationMinutes(formData, schema) {
     formData.usor96_hours,
     formData.preets_hours,
     formData.wsa_hours,
-    formData.admin_hours,
+        formData.admin_hours,
+    formData.pto_hours,
     formData.misc_hours,
     formData.eom_total_hours,
   ];
