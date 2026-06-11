@@ -184,6 +184,30 @@ export default function LegacyAssessmentPanel({
     );
   }
 
+  async function persistWSANow(nextResponses, toastMessage) {
+    const payload = {
+      client_id: clientId,
+      assessment_type: key,
+      status: "in_progress",
+      responses: stripLargeWSABlobs(nextResponses),
+    };
+    try {
+      let savedRecord;
+      if (existingRecordIdRef.current) {
+        savedRecord = await base44.entities.Assessment.update(existingRecordIdRef.current, payload);
+      } else {
+        savedRecord = await base44.entities.Assessment.create(payload);
+        existingRecordIdRef.current = savedRecord?.id || existingRecordIdRef.current;
+      }
+      wsaDirtyRef.current = false;
+      onSaved?.();
+      toast.success(toastMessage);
+    } catch (error) {
+      console.error("WSA auto-save failed:", error);
+      toast.error("WSA content was generated but could not be saved. Please click Save Assessment.");
+    }
+  }
+
    function updateResponse(questionId, value) {
     setResponses((previous) => {
       const nextResponses = {
@@ -382,7 +406,7 @@ export default function LegacyAssessmentPanel({
       latestResponsesRef.current = nextResponses;
       wsaDirtyRef.current = true;
 
-      toast.success("AI filled the WSA editor fields. Review before saving.");
+      await persistWSANow(nextResponses, "AI filled and saved WSA fields.");
     } catch (error) {
       console.error("WSA AI field draft failed:", error);
       toast.error(`WSA AI field draft failed: ${error.message || "Unknown error"}`);
@@ -446,7 +470,7 @@ export default function LegacyAssessmentPanel({
       latestResponsesRef.current = nextResponses;
       wsaDirtyRef.current = true;
 
-      toast.success("Full detailed WSA and supplemental report generated. Changes will save when you leave this assessment.");
+      await persistWSANow(nextResponses, "AI detailed WSA report generated and saved.");
     } catch (error) {
       console.error("WSA detailed report failed:", error);
       toast.error(`WSA detailed report failed: ${error.message || "Unknown error"}`);
