@@ -1193,7 +1193,7 @@ if (entryTypeFilter !== "all") {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+             <SelectContent className="max-h-72 overflow-y-auto">
                 <SelectItem value="payroll1">1st–15th</SelectItem>
                 <SelectItem value="payroll2">16th–End of Month</SelectItem>
                 <SelectItem value="week">This Week</SelectItem>
@@ -1217,7 +1217,7 @@ if (entryTypeFilter !== "all") {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+               <SelectContent className="max-h-72 overflow-y-auto">
                   <SelectItem value="all">All Employees</SelectItem>
                   {filterableEmployees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
@@ -1235,7 +1235,7 @@ if (entryTypeFilter !== "all") {
               <SelectTrigger>
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
-              <SelectContent>
+             <SelectContent className="max-h-72 overflow-y-auto">
                 <SelectItem value="all">All Types</SelectItem>
                 {entryTypes.map((type) => (
                   <SelectItem key={type.code} value={type.code}>
@@ -1252,7 +1252,7 @@ if (entryTypeFilter !== "all") {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+             <SelectContent className="max-h-72 overflow-y-auto">
                 <SelectItem value="all">All Clients</SelectItem>
                 {clients
                   .filter((client) => !client.is_archived)
@@ -1660,7 +1660,7 @@ if (entryTypeFilter !== "all") {
                 <SelectTrigger>
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
-                <SelectContent>
+               <SelectContent className="max-h-72 overflow-y-auto">
                   {clients
                     .filter((client) => !client.is_archived)
                     .map((client) => (
@@ -1705,7 +1705,7 @@ if (entryTypeFilter !== "all") {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                 <SelectContent className="max-h-72 overflow-y-auto">
                     <SelectItem value="no_show">No show</SelectItem>
                     <SelectItem value="late_cancellation">Late cancellation</SelectItem>
                     <SelectItem value="excused_cancellation">Excused cancellation</SelectItem>
@@ -1777,7 +1777,7 @@ if (entryTypeFilter !== "all") {
       <SelectTrigger>
         <SelectValue placeholder="Select entry type" />
       </SelectTrigger>
-      <SelectContent>
+    <SelectContent className="max-h-72 overflow-y-auto">
         {entryTypes.map((opt) => (
           <SelectItem key={opt.code} value={opt.code}>
             {opt.label}
@@ -1805,7 +1805,7 @@ if (entryTypeFilter !== "all") {
           <SelectTrigger>
             <SelectValue placeholder="Select client" />
           </SelectTrigger>
-          <SelectContent>
+       <SelectContent className="max-h-72 overflow-y-auto">
             {clients
               .filter((client) => !client.is_archived)
               .map((client) => (
