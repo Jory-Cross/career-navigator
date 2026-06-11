@@ -162,8 +162,8 @@ function getEntryTypeColorClasses(entryTypeCode) {
 
   if (code === "pto") {
     return {
-      card: "border-orange-300 bg-orange-50 shadow-sm ring-1 ring-orange-200",
-      badge: "bg-orange-100 text-orange-800 border-orange-300",
+      card: "border-teal-300 bg-teal-50 shadow-sm ring-1 ring-teal-200",
+      badge: "bg-teal-100 text-teal-800 border-teal-300",
     };
   }
 
