@@ -70,6 +70,20 @@ const BASE_ENTRY_TYPES = [
     group: "time_entry",
   },
   {
+    code: "pto",
+    label: "PTO",
+    schemaKey: "admin_time",
+    category: "simple",
+    programType: "internal",
+    showInDropdown: true,
+    active: true,
+    clientRequired: false,
+    billable: false,
+    reportable: false,
+    payrollEligible: true,
+    group: "time_entry",
+  },
+  {
     code: "miscellaneous",
     label: "Miscellaneous",
     schemaKey: "simple_time",
@@ -79,7 +93,7 @@ const BASE_ENTRY_TYPES = [
     active: true,
     group: "time_entry",
   },
-   {
+  {
     code: "pre_ets_training",
     label: "Pre-ETS",
     schemaKey: "simple_time",
