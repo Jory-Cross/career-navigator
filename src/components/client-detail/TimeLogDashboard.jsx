@@ -110,6 +110,28 @@ function activeFilterCount(filters) {
   return Object.values(filters).filter((value) => value && value !== "all").length;
 }
 
+const PLACEHOLDER_VALUES = new Set(["No description", "Session", ""]);
+
+function getEntryDisplayText(entry, fallback = "No description") {
+  const fd = entry?.form_data || {};
+  const candidates = [
+    entry?.description,
+    fd.development_activity,
+    fd.activity_description,
+    fd.development_activity_description,
+    fd.job_development_activity_description,
+    fd.job_dev_activity_description,
+    fd.job_development_activity,
+    fd.job_coaching_activity,
+    fd.activity,
+    fd.description,
+  ];
+  for (const val of candidates) {
+    if (val && !PLACEHOLDER_VALUES.has(val.trim())) return val.trim();
+  }
+  return fallback;
+}
+
 function getImmediateEntryTypeCode(entry) {
   return normalizeEntryTypeCode(
     entry?.entry_type_code ||
@@ -946,7 +968,7 @@ export default function TimeLogDashboard({
                             </p>
                           </div>
                         ) : (
-                          entry.description || "No description"
+                          getEntryDisplayText(entry)
                         )}
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
