@@ -906,6 +906,7 @@ export default function TimeLogDashboard({
             client={client}
             timeEntries={effectiveTimeEntries}
             selectedMonth={filters.dateFrom ? filters.dateFrom.substring(0, 7) : undefined}
+            onClientUpdate={onRefresh}
           />
         )}
 

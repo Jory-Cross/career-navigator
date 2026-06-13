@@ -200,24 +200,19 @@
       "additionalProperties": true
     },
     "vocational_facts_extracted_at": {
-      "type": "string",
-      "description": "ISO datetime when vocational facts were last extracted"
+      "type": "string"
     },
     "vocational_facts_extracted_by": {
-      "type": "string",
-      "description": "Email of user who ran the extraction"
+      "type": "string"
     },
     "vocational_facts_document_count": {
-      "type": "number",
-      "description": "Number of documents analyzed in last extraction"
+      "type": "number"
     },
     "vocational_facts_assessment_count": {
-      "type": "number",
-      "description": "Number of assessments analyzed in last extraction"
+      "type": "number"
     },
     "case_number": {
-      "type": "string",
-      "description": "VR case number assigned to this client"
+      "type": "string"
     },
     "primary_vr_counselor_name": {
       "type": "string"
@@ -230,26 +225,47 @@
     },
     "authorization_summary": {
       "type": "object",
-      "description": "Cached summary of active authorizations for quick access",
       "additionalProperties": true
     },
     "job_coaching_auth_number": {
       "type": "string",
-      "description": "Authorization number for Job Coaching services"
+      "description": "Authorization number for primary Job Coaching authorization"
     },
     "job_coaching_authorized_hours_total": {
       "type": "number",
-      "description": "Total authorized hours for Job Coaching"
+      "description": "Total authorized hours for primary Job Coaching authorization"
     },
     "job_coaching_auth_start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Start date of Job Coaching authorization"
+      "format": "date"
     },
     "job_coaching_auth_end_date": {
       "type": "string",
-      "format": "date",
-      "description": "End date of Job Coaching authorization"
+      "format": "date"
+    },
+    "job_coaching_additional_auths": {
+      "type": "array",
+      "description": "Additional Job Coaching authorizations (e.g. renewals or supplements)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "auth_number": {
+            "type": "string"
+          },
+          "authorized_hours": {
+            "type": "number"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     },
     "dspd_monthly_authorized_hours": {
       "type": "number",
