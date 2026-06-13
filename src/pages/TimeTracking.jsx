@@ -654,15 +654,12 @@ useEffect(() => {
 }, [clients]);
 
 console.log(
-  "[TIME TRACKING DEBUG]",
-  scopedTimeEntries.length,
-  scopedTimeEntries.map(e => ({
-    id: e.id,
-    client_id: e.client_id,
-    employee_id: e.employee_id,
-    created_by: e.created_by,
-    minutes: e.duration_minutes
-  }))
+  "[RYAN DEBUG]",
+  scopedTimeEntries.filter((e) => {
+    const client = clientById[e.client_id];
+    const name = `${client?.first_name || ""} ${client?.last_name || ""}`.trim();
+    return name.toLowerCase().includes("ryan");
+  })
 );
   
   const filtered = useMemo(() => {
