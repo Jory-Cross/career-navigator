@@ -663,7 +663,12 @@ useEffect(() => {
       employeeFilter !== "all"
     ) {
       const selectedStaff = staffById[employeeFilter];
-      if (!entryBelongsToUser(entry, selectedStaff)) continue;
+      if (selectedStaff) {
+        if (!entryBelongsToUser(entry, selectedStaff)) continue;
+      } else {
+        // Fallback: direct ID match
+        if (entry.employee_id !== employeeFilter) continue;
+      }
     }
 
     if (clientFilter !== "all" && entry.client_id !== clientFilter) {
@@ -816,22 +821,21 @@ if (entryTypeFilter !== "all") {
      const byClient = useMemo(() => {
     const grouped = {};
 
+    // Seed all non-archived clients so they always appear in the "By Client" view
+    for (const client of clients) {
+      if (!client?.id || client.is_archived) continue;
+      grouped[client.id] = { minutes: 0, entries: 0 };
+    }
+
     for (const entry of filtered) {
       const key = entry.client_id || "__self__";
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          minutes: 0,
-          entries: 0
-        };
-      }
-
+      if (!grouped[key]) grouped[key] = { minutes: 0, entries: 0 };
       grouped[key].minutes += Number(entry.duration_minutes || 0);
       grouped[key].entries += 1;
     }
 
     return grouped;
-  }, [filtered]);
+  }, [clients, filtered]);
 
    // Day-card totals: same filters as the entry list, but ignoring selectedDay
   // so the calendar cards do not double-count the currently selected day.
@@ -842,7 +846,11 @@ if (entryTypeFilter !== "all") {
         employeeFilter !== "all"
       ) {
         const selectedStaff = staffById[employeeFilter];
-        if (!entryBelongsToUser(entry, selectedStaff)) return false;
+        if (selectedStaff) {
+          if (!entryBelongsToUser(entry, selectedStaff)) return false;
+        } else {
+          if (entry.employee_id !== employeeFilter) return false;
+        }
       }
 
       if (clientFilter !== "all" && entry.client_id !== clientFilter) {
