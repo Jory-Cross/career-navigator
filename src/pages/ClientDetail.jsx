@@ -22,7 +22,7 @@ import {
   Video,
   Plus,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -182,6 +182,7 @@ function canAccessClient(client, user, clientId) {
 export default function ClientDetail() {
   const clientId = useMemo(() => getClientIdFromUrl(), []);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -922,11 +923,11 @@ const currentTaskCount = tasks.filter(
                   type="button"
                   size="sm"
                   onClick={() => {
-                    const returnUrl = encodeURIComponent(
-                      `/ClientDetail?id=${client.id}&tab=meetings`
-                    );
+                  const returnUrl = encodeURIComponent(
+                    `/ClientDetail?id=${client.id}&tab=meetings`
+                  );
 
-                    window.location.href = `/Calendar?client_id=${client.id}&return_url=${returnUrl}`;
+                  navigate(`/Calendar?client_id=${client.id}&return_url=${returnUrl}`);
                   }}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
@@ -1033,7 +1034,7 @@ const currentTaskCount = tasks.filter(
                                     `/ClientDetail?id=${client.id}&tab=meetings`
                                   );
 
-                                  window.location.href = `/Calendar?client_id=${client.id}&meeting_id=${meeting.id}&return_url=${returnUrl}`;
+                                  navigate(`/Calendar?client_id=${client.id}&meeting_id=${meeting.id}&return_url=${returnUrl}`);
                                 }}
                               >
                                 Edit

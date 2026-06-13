@@ -563,11 +563,22 @@ export default function LegacyAssessmentPanel({
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
+    // Prevent the blob URL click from triggering browser "Leave site?" dialog
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
     document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 
-    URL.revokeObjectURL(url);
+    // Temporarily suppress beforeunload during programmatic download
+    const noop = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.removeEventListener("beforeunload", noop);
+
+    link.click();
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+
     toast.success(`${title} downloaded`);
   }
 
