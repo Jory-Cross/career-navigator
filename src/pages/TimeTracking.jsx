@@ -653,18 +653,7 @@ useEffect(() => {
   return result;
 }, [clients]);
 
-console.log(
-  "[FILTER DEBUG]",
-  {
-    clientFilter,
-    employeeFilter,
-    entryTypeFilter,
-    periodFilter,
-    selectedMonth,
-    filteredCount: filtered.length,
-    filteredRyan: filtered.filter((e) => e.client_id === "69b8671b8cd5ea1012b54787"),
-  }
-);
+// Debug removed
   
   const filtered = useMemo(() => {
   const result = [];
