@@ -653,6 +653,18 @@ useEffect(() => {
   return result;
 }, [clients]);
 
+console.log(
+  "[TIME TRACKING DEBUG]",
+  scopedTimeEntries.length,
+  scopedTimeEntries.map(e => ({
+    id: e.id,
+    client_id: e.client_id,
+    employee_id: e.employee_id,
+    created_by: e.created_by,
+    minutes: e.duration_minutes
+  }))
+);
+  
   const filtered = useMemo(() => {
   const result = [];
 
