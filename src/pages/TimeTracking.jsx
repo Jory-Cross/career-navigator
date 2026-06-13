@@ -110,32 +110,31 @@ function formatHoursFromMinutes(minutes) {
   return `${parseFloat(hours.toFixed(2))}h`;
 }
 
+const PLACEHOLDER_VALUES = new Set(["No description", "Session", ""]);
+
 function getEntryDisplayText(entry, fallback = "Session") {
   const fd = entry?.form_data || {};
-  const d = entry?.data || {};
-  return (
-    (entry?.description && entry.description !== "No description" ? entry.description : null) ||
-    fd.activity_description ||
-    fd.development_activity_description ||
-    fd.job_development_activity_description ||
-    fd.job_dev_activity_description ||
-    fd.job_development_activity ||
-    fd.job_coaching_activity ||
-    fd.activity ||
-    fd.description ||
-    fd.admin_description ||
-    fd.misc_description ||
-    fd.preets_activity ||
-    fd.wsa_tasks_completed ||
-    d.activity_description ||
-    d.development_activity_description ||
-    d.job_development_activity_description ||
-    d.job_dev_activity_description ||
-    d.activity ||
-    d.description ||
-    entry?.description ||
-    fallback
-  );
+  const candidates = [
+    entry?.description,
+    fd.development_activity,
+    fd.activity_description,
+    fd.activity_outcome,
+    fd.development_activity_description,
+    fd.job_development_activity_description,
+    fd.job_dev_activity_description,
+    fd.job_development_activity,
+    fd.job_coaching_activity,
+    fd.activity,
+    fd.description,
+    fd.admin_description,
+    fd.misc_description,
+    fd.preets_activity,
+    fd.wsa_tasks_completed,
+  ];
+  for (const val of candidates) {
+    if (val && !PLACEHOLDER_VALUES.has(val.trim())) return val.trim();
+  }
+  return fallback;
 }
 
 function entryTypeRequiresClient(entryTypeCode) {
@@ -1944,7 +1943,7 @@ if (entryTypeFilter !== "all") {
 
               <div>
                 <div className="mb-1 text-xs text-slate-500">Description</div>
-                <div className="text-sm">{selectedEntry.description || "—"}</div>
+                <div className="text-sm">{getEntryDisplayText(selectedEntry, "—")}</div>
               </div>
 
               {selectedEntry.created_by && (user?.role === "admin" || effectiveUser?.role === "management") ? (
