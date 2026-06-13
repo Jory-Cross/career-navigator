@@ -326,10 +326,31 @@ const currentTaskCount = tasks.filter(
     task.status !== "cancelled"
 ).length;
 
-    const { data: timeEntries = [] } = useQuery({
-    queryKey: queryKeys.timeEntries(clientId),
-    queryFn: () => getTimeEntries(clientId),
-    enabled: shouldLoadTime,
+      const { data: timeEntries = [] } = useQuery({
+    queryKey: [...queryKeys.timeEntries(clientId), user?.role, user?.id, user?.email],
+    queryFn: async () => {
+      const rows = await getTimeEntries(clientId);
+
+      if (user?.role === "admin" || user?.role === "management") {
+        return rows;
+      }
+
+      if (user?.role === "employee") {
+        return rows.filter((entry) => {
+          if (entry.employee_id && entry.employee_id === user.id) return true;
+          if (entry.staff_id && entry.staff_id === user.id) return true;
+          if (entry.user_id && entry.user_id === user.id) return true;
+          if (entry.created_by && entry.created_by === user.email) return true;
+          if (entry.employee_email && entry.employee_email === user.email) return true;
+          if (entry.staff_email && entry.staff_email === user.email) return true;
+
+          return false;
+        });
+      }
+
+      return [];
+    },
+    enabled: shouldLoadTime && !!user,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
