@@ -234,6 +234,7 @@ export default function TimeLogDashboard({
   clients = [],
   onRefresh,
   onEditEntry,
+  onClientUpdate,
 }) {
   const mountedRef = useRef(true);
   const resolveRunIdRef = useRef(0);
@@ -906,7 +907,7 @@ export default function TimeLogDashboard({
             client={client}
             timeEntries={effectiveTimeEntries}
             selectedMonth={filters.dateFrom ? filters.dateFrom.substring(0, 7) : undefined}
-            onClientUpdate={onRefresh}
+            onClientUpdate={onClientUpdate || onRefresh}
           />
         )}
 

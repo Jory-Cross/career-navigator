@@ -1069,6 +1069,7 @@ const currentTaskCount = tasks.filter(
               clientId={client.id}
               timeEntries={timeEntries}
               onRefresh={refreshTimeEntries}
+              onClientUpdate={refreshClient}
               mode="time"
             />
           </TabsContent>
