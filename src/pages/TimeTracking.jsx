@@ -838,8 +838,19 @@ if (entryTypeFilter !== "all") {
 
   return result;
 }, [scopedTimeEntries]);
-       const byClient = useMemo(() => {
+           const byClient = useMemo(() => {
     const grouped = {};
+
+    if (clientFilter === "all") {
+      for (const client of clients) {
+        if (!client?.id || client.is_archived) continue;
+
+        grouped[client.id] = {
+          minutes: 0,
+          entries: 0
+        };
+      }
+    }
 
     for (const entry of filtered) {
       const key = entry.client_id || "__self__";
@@ -856,8 +867,7 @@ if (entryTypeFilter !== "all") {
     }
 
     return grouped;
-  }, [filtered]);
-
+  }, [clients, filtered, clientFilter]);
    // Day-card totals: same filters as the entry list, but ignoring selectedDay
   // so the calendar cards do not double-count the currently selected day.
   const filteredWithoutDay = useMemo(() => {
