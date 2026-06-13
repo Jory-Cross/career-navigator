@@ -654,12 +654,16 @@ useEffect(() => {
 }, [clients]);
 
 console.log(
-  "[RYAN DEBUG]",
-  scopedTimeEntries.filter((e) => {
-    const client = clientById[e.client_id];
-    const name = `${client?.first_name || ""} ${client?.last_name || ""}`.trim();
-    return name.toLowerCase().includes("ryan");
-  })
+  "[RYAN DEBUG FULL]",
+  JSON.stringify(
+    scopedTimeEntries.filter((e) => {
+      const client = clientById[e.client_id];
+      const name = `${client?.first_name || ""} ${client?.last_name || ""}`.trim();
+      return name.toLowerCase().includes("ryan");
+    }),
+    null,
+    2
+  )
 );
   
   const filtered = useMemo(() => {
