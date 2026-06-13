@@ -96,7 +96,13 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         employer_name: currentForm.employer_name || "",
         employer_contact_name: currentForm.employer_contact_name || "",
         employer_address: currentForm.employer_address || "",
-        employer_phone: currentForm.employer_phone || ""
+        employer_phone: currentForm.employer_phone || "",
+        job_coaching_auth_number: currentForm.job_coaching_auth_number || "",
+        job_coaching_authorized_hours_total: currentForm.job_coaching_authorized_hours_total != null ? Number(currentForm.job_coaching_authorized_hours_total) : null,
+        job_coaching_auth_start_date: currentForm.job_coaching_auth_start_date || "",
+        job_coaching_auth_end_date: currentForm.job_coaching_auth_end_date || "",
+        dspd_monthly_authorized_hours: currentForm.dspd_monthly_authorized_hours != null ? Number(currentForm.dspd_monthly_authorized_hours) : null,
+        dspd_auth_number: currentForm.dspd_auth_number || ""
       };
 
       const updatedClient = await base44.entities.Client.update(
@@ -290,6 +296,31 @@ if (editing || formOnly) {
           </div>
         </div>
       <Textarea className="h-24 md:col-span-2" value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
+
+      {/* Job Coaching Authorization */}
+      {(form.client_type === 'employed' || form.client_type === 'job_seeker') && (
+        <div className="md:col-span-2 pt-2 border-t">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Job Coaching Authorization</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input className="h-10" value={form.job_coaching_auth_number || ""} onChange={e => u("job_coaching_auth_number", e.target.value)} placeholder="Auth Number" />
+            <Input className="h-10" type="number" min="0" value={form.job_coaching_authorized_hours_total ?? ""} onChange={e => u("job_coaching_authorized_hours_total", e.target.value === "" ? null : Number(e.target.value))} placeholder="Total Authorized Hours" />
+            <Input className="h-10" type="date" value={form.job_coaching_auth_start_date || ""} onChange={e => u("job_coaching_auth_start_date", e.target.value)} placeholder="Auth Start Date" />
+            <Input className="h-10" type="date" value={form.job_coaching_auth_end_date || ""} onChange={e => u("job_coaching_auth_end_date", e.target.value)} placeholder="Auth End Date" />
+          </div>
+        </div>
+      )}
+
+      {/* DSPD Monthly Authorization */}
+      {form.client_type === 'dspd' && (
+        <div className="md:col-span-2 pt-2 border-t">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">DSPD Monthly Authorization</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input className="h-10" value={form.dspd_auth_number || ""} onChange={e => u("dspd_auth_number", e.target.value)} placeholder="Auth Number (optional)" />
+            <Input className="h-10" type="number" min="0" value={form.dspd_monthly_authorized_hours ?? ""} onChange={e => u("dspd_monthly_authorized_hours", e.target.value === "" ? null : Number(e.target.value))} placeholder="Monthly Authorized Hours" />
+          </div>
+        </div>
+      )}
+
     <div className="pt-4 border-t">
   <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />
 </div>

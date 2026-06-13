@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Copy, Filter, Trash2, AlertTriangle } from "lucide-react";
+import AuthorizationHoursCards from "@/components/client-detail/AuthorizationHoursCards";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -898,6 +899,15 @@ export default function TimeLogDashboard({
             </div>
           </Card>
         ) : null}
+
+        {/* Authorization hour tracking cards — only show when viewing a specific client */}
+        {clientId && client && (
+          <AuthorizationHoursCards
+            client={client}
+            timeEntries={effectiveTimeEntries}
+            selectedMonth={filters.dateFrom ? filters.dateFrom.substring(0, 7) : undefined}
+          />
+        )}
 
         {filtered.length === 0 ? (
           <EmptyState message="No time entries match the current filters." />

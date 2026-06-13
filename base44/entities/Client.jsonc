@@ -232,11 +232,38 @@
       "type": "object",
       "description": "Cached summary of active authorizations for quick access",
       "additionalProperties": true
+    },
+    "job_coaching_auth_number": {
+      "type": "string",
+      "description": "Authorization number for Job Coaching services"
+    },
+    "job_coaching_authorized_hours_total": {
+      "type": "number",
+      "description": "Total authorized hours for Job Coaching"
+    },
+    "job_coaching_auth_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of Job Coaching authorization"
+    },
+    "job_coaching_auth_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date of Job Coaching authorization"
+    },
+    "dspd_monthly_authorized_hours": {
+      "type": "number",
+      "description": "Monthly authorized hours for DSPD services"
+    },
+    "dspd_auth_number": {
+      "type": "string",
+      "description": "Authorization number for DSPD services"
     }
   },
   "required": [
     "first_name",
     "last_name",
     "email"
-  ]
+  ],
+  "rls": {}
 }
