@@ -816,15 +816,6 @@ if (entryTypeFilter !== "all") {
      const byClient = useMemo(() => {
     const grouped = {};
 
-    for (const client of clients) {
-      if (!client?.id || client.is_archived) continue;
-
-      grouped[client.id] = {
-        minutes: 0,
-        entries: 0
-      };
-    }
-
     for (const entry of filtered) {
       const key = entry.client_id || "__self__";
 
@@ -840,7 +831,7 @@ if (entryTypeFilter !== "all") {
     }
 
     return grouped;
-  }, [clients, filtered]);
+  }, [filtered]);
 
    // Day-card totals: same filters as the entry list, but ignoring selectedDay
   // so the calendar cards do not double-count the currently selected day.
