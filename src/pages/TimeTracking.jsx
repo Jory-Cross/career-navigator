@@ -746,7 +746,13 @@ if (entryTypeFilter !== "all") {
     const seen = {};
 
     for (const entry of scopedTimeEntries) {
-      const key = `${entry.client_id || "__self__"}__${entry.date || ""}__${
+      const employeeKey =
+        entry.employee_id ||
+        entry.staff_id ||
+        entry.user_id ||
+        entry.created_by ||
+        "__unknown__";
+      const key = `${employeeKey}__${entry.client_id || "__self__"}__${entry.date || ""}__${
         entry.start_time || "notime"
       }`;
 
