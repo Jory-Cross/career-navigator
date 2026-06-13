@@ -673,10 +673,28 @@ useEffect(() => {
       }
     }
 
-    if (clientFilter !== "all" && entry.client_id !== clientFilter) {
-      continue;
-    }
+       if (clientFilter !== "all") {
+      const selectedClient = clientById[clientFilter];
+      const entryClient = clientById[entry.client_id];
 
+      const selectedClientName = `${selectedClient?.first_name || ""} ${selectedClient?.last_name || ""}`
+        .trim()
+        .toLowerCase();
+
+      const entryClientName = `${entryClient?.first_name || ""} ${entryClient?.last_name || ""}`
+        .trim()
+        .toLowerCase();
+
+      const sameClientId = entry.client_id === clientFilter;
+      const sameClientName =
+        selectedClientName &&
+        entryClientName &&
+        selectedClientName === entryClientName;
+
+      if (!sameClientId && !sameClientName) {
+        continue;
+      }
+    }
     if (selectedDay && entry.date !== selectedDay) {
       continue;
     }
