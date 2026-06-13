@@ -285,15 +285,9 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
           </div>
           <HoursBar used={dspdUsedHours} total={dspdMonthly} />
           {dspdRemaining <= 0 && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-red-100 border border-red-200 px-3 py-2 text-sm text-red-700">
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              DSPD monthly authorized hours exhausted.
-            </div>
-          )}
-          {dspdRemaining > 0 && dspdRemaining <= 10 && (
             <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-100 border border-amber-200 px-3 py-2 text-sm text-amber-700">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              Only {dspdRemaining}h of DSPD hours remaining this month.
+              DSPD monthly authorized hours exhausted.
             </div>
           )}
         </Card>
