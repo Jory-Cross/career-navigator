@@ -30,13 +30,16 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
 
   const jcUsedMinutes = useMemo(() => {
     if (!showJobCoaching) return 0;
+    const startDate = client?.job_coaching_auth_start_date || null;
     return timeEntries
       .filter((e) => {
         const code = (e.entry_type_code || e.entry_type || "").toLowerCase();
-        return code === "job_coaching";
+        if (code !== "job_coaching") return false;
+        if (startDate && e.date && e.date < startDate) return false;
+        return true;
       })
       .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
-  }, [timeEntries, showJobCoaching]);
+  }, [timeEntries, showJobCoaching, client?.job_coaching_auth_start_date]);
 
   const jcUsedHours = +(jcUsedMinutes / 60).toFixed(2);
   const jcRemaining = +(jcAuthTotal - jcUsedHours).toFixed(2);
