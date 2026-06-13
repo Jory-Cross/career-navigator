@@ -1482,7 +1482,16 @@ if (entryTypeFilter !== "all") {
                         </p>
                       </div>
                     ) : (
-                      entry.description || "Session"
+                      entry.description ||
+                      entry.form_data?.activity_description ||
+                      entry.form_data?.description ||
+                      entry.form_data?.job_development_activity ||
+                      entry.form_data?.job_coaching_activity ||
+                      entry.form_data?.admin_description ||
+                      entry.form_data?.misc_description ||
+                      entry.form_data?.preets_activity ||
+                      entry.form_data?.wsa_tasks_completed ||
+                      "Session"
                     )}
                   </div>
 
