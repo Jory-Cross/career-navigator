@@ -27,6 +27,29 @@ import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { toast } from "sonner";
 
 const DEFAULT_START_TIME = "07:00";
+
+const PLACEHOLDER_VALUES = new Set(["No description", "Session", ""]);
+
+function getEntryDisplayText(entry, fallback = "Session") {
+  const fd = entry?.form_data || entry?.data?.form_data || {};
+  const d = entry?.data || {};
+  const candidates = [
+    entry?.description,
+    fd.development_activity,
+    fd.activity_description,
+    fd.development_activity_description,
+    fd.job_development_activity_description,
+    fd.job_dev_activity_description,
+    fd.activity,
+    fd.description,
+    d.development_activity,
+    d.activity_description,
+  ];
+  for (const val of candidates) {
+    if (val && !PLACEHOLDER_VALUES.has(val.trim())) return val.trim();
+  }
+  return fallback;
+}
 const DEFAULT_END_TIME = "07:15";
 
 const CATEGORY_OPTIONS = [
@@ -378,7 +401,7 @@ export default function TimeLogSection({ timeEntries = [], clientId, onRefresh }
                     </div>
 
                     <p className="text-sm text-slate-800">
-                      {entry.description || "Session"}
+                      {getEntryDisplayText(entry)}
                     </p>
                   </div>
 
