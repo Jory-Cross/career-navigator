@@ -116,6 +116,7 @@ function getEntryDisplayText(entry, fallback = "Session") {
   const fd = entry?.form_data || {};
   const candidates = [
     entry?.description,
+    fd.description,
     fd.development_activity,
     fd.activity_description,
     fd.activity_outcome,
@@ -125,7 +126,18 @@ function getEntryDisplayText(entry, fallback = "Session") {
     fd.job_development_activity,
     fd.job_coaching_activity,
     fd.activity,
-    fd.description,
+    // DSPD fields — first non-empty one wins
+    fd.job_coaching,
+    fd.individual_support,
+    fd.community_outreach,
+    fd.job_application_process,
+    fd.resume_writing,
+    fd.job_interview_process,
+    // Life Skills fields
+    fd.specific_skill_taught,
+    fd.life_skills_area,
+    fd.observations_comments,
+    // Misc fields
     fd.admin_description,
     fd.misc_description,
     fd.preets_activity,

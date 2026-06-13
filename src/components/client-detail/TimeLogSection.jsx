@@ -34,6 +34,15 @@ function getEntryDisplayText(entry, fallback = "Session") {
   const fd = entry?.form_data || entry?.data?.form_data || {};
   const d = entry?.data || {};
   const candidates = [
+    fd.job_coaching,
+    fd.individual_support,
+    fd.community_outreach,
+    fd.job_application_process,
+    fd.resume_writing,
+    fd.job_interview_process,
+    fd.specific_skill_taught,
+    fd.life_skills_area,
+    fd.observations_comments,
     entry?.description,
     fd.development_activity,
     fd.activity_description,

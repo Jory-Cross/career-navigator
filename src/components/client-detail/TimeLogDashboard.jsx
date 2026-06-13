@@ -116,6 +116,7 @@ function getEntryDisplayText(entry, fallback = "No description") {
   const fd = entry?.form_data || {};
   const candidates = [
     entry?.description,
+    fd.description,
     fd.development_activity,
     fd.activity_description,
     fd.development_activity_description,
@@ -124,7 +125,15 @@ function getEntryDisplayText(entry, fallback = "No description") {
     fd.job_development_activity,
     fd.job_coaching_activity,
     fd.activity,
-    fd.description,
+    fd.job_coaching,
+    fd.individual_support,
+    fd.community_outreach,
+    fd.job_application_process,
+    fd.resume_writing,
+    fd.job_interview_process,
+    fd.specific_skill_taught,
+    fd.life_skills_area,
+    fd.observations_comments,
   ];
   for (const val of candidates) {
     if (val && !PLACEHOLDER_VALUES.has(val.trim())) return val.trim();
