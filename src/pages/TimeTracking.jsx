@@ -110,6 +110,34 @@ function formatHoursFromMinutes(minutes) {
   return `${parseFloat(hours.toFixed(2))}h`;
 }
 
+function getEntryDisplayText(entry, fallback = "Session") {
+  const fd = entry?.form_data || {};
+  const d = entry?.data || {};
+  return (
+    (entry?.description && entry.description !== "No description" ? entry.description : null) ||
+    fd.activity_description ||
+    fd.development_activity_description ||
+    fd.job_development_activity_description ||
+    fd.job_dev_activity_description ||
+    fd.job_development_activity ||
+    fd.job_coaching_activity ||
+    fd.activity ||
+    fd.description ||
+    fd.admin_description ||
+    fd.misc_description ||
+    fd.preets_activity ||
+    fd.wsa_tasks_completed ||
+    d.activity_description ||
+    d.development_activity_description ||
+    d.job_development_activity_description ||
+    d.job_dev_activity_description ||
+    d.activity ||
+    d.description ||
+    entry?.description ||
+    fallback
+  );
+}
+
 function entryTypeRequiresClient(entryTypeCode) {
   const raw = String(entryTypeCode || "").trim().toLowerCase();
   const normalized = normalizeEntryTypeCode(raw);
@@ -1482,16 +1510,7 @@ if (entryTypeFilter !== "all") {
                         </p>
                       </div>
                     ) : (
-                      entry.description ||
-                      entry.form_data?.activity_description ||
-                      entry.form_data?.description ||
-                      entry.form_data?.job_development_activity ||
-                      entry.form_data?.job_coaching_activity ||
-                      entry.form_data?.admin_description ||
-                      entry.form_data?.misc_description ||
-                      entry.form_data?.preets_activity ||
-                      entry.form_data?.wsa_tasks_completed ||
-                      "Session"
+                      getEntryDisplayText(entry)
                     )}
                   </div>
 
