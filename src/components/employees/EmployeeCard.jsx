@@ -12,6 +12,52 @@ const roleColors = {
   admin: "bg-red-100 text-red-700",
 };
 
+/**
+ * Returns the payroll period to display for the card:
+ * - Show the PREVIOUS period if it ended within the last 3 days
+ *   (e.g. show 1–15 through the 18th; show 16–end through the 3rd of next month)
+ * - Otherwise show the CURRENT period
+ */
+function getDisplayPayrollPeriod() {
+  const now = new Date();
+  const day = now.getDate();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-based
+
+  // Last day of current month
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  // Last day of previous month
+  const prevMonthLastDay = new Date(y, m, 0).getDate();
+
+  // Within 3 days after the 15th → show previous period (1–15)
+  if (day >= 16 && day <= 18) {
+    return { start: new Date(y, m, 1), end: new Date(y, m, 15), label: `${now.toLocaleString('default', { month: 'short' })} 1–15` };
+  }
+
+  // Within 3 days into new month → show previous period (16–end of last month)
+  if (day >= 1 && day <= 3) {
+    return {
+      start: new Date(y, m - 1, 16),
+      end: new Date(y, m - 1, prevMonthLastDay),
+      label: `${new Date(y, m - 1).toLocaleString('default', { month: 'short' })} 16–${prevMonthLastDay}`
+    };
+  }
+
+  // Current period: 1st–15th
+  if (day <= 15) {
+    return { start: new Date(y, m, 1), end: new Date(y, m, 15), label: `${now.toLocaleString('default', { month: 'short' })} 1–15` };
+  }
+
+  // Current period: 16th–end
+  return { start: new Date(y, m, 16), end: new Date(y, m, lastDay), label: `${now.toLocaleString('default', { month: 'short' })} 16–${lastDay}` };
+}
+
+function parseDateOnly(str) {
+  if (!str) return null;
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export default function EmployeeCard({ employee, onClick }) {
   const { data: clients = [] } = useQuery({
     queryKey: ["clients-for-employee", employee.id],
@@ -21,18 +67,25 @@ export default function EmployeeCard({ employee, onClick }) {
     }
   });
 
+  const period = getDisplayPayrollPeriod();
+
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["time-for-employee", employee.id],
+    queryKey: ["time-for-employee-card", employee.id],
     queryFn: async () => {
-      const clientIds = clients.map(c => c.id);
-      if (!clientIds.length) return [];
       const all = await base44.entities.TimeEntry.list();
-      return all.filter(t => clientIds.includes(t.client_id));
-    },
-    enabled: clients.length > 0
+      return all.filter(t => t.employee_id === employee.id || t.created_by_id === employee.id);
+    }
   });
 
-  const totalHours = Math.round(timeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60);
+  const periodHours = Math.round(
+    timeEntries
+      .filter(t => {
+        const d = parseDateOnly(t.date);
+        return d && d >= period.start && d <= period.end;
+      })
+      .reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60 * 10
+  ) / 10;
+
   const initials = `${employee.full_name?.split(' ')[0]?.[0] || ''}${employee.full_name?.split(' ')[1]?.[0] || ''}`;
 
   return (
@@ -68,7 +121,7 @@ export default function EmployeeCard({ employee, onClick }) {
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <Clock className="w-3 h-3" />
-          <span>{totalHours}h logged</span>
+          <span>{periodHours}h · {period.label}</span>
         </div>
       </div>
     </Card>
