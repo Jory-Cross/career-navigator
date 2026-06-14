@@ -25,6 +25,18 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
   const [uploadingCoverLetter, setUploadingCoverLetter] = useState(false);
   const [employers, setEmployers] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const canManageAuthorizations = user && (
+    user.role === "admin" ||
+    user.role === "management" ||
+    user.access_level === "admin" ||
+    user.access_level === "management"
+  );
 
   const fileInputRef = useRef(null);
   const coverLetterInputRef = useRef(null);
@@ -97,17 +109,21 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         employer_contact_name: currentForm.employer_contact_name || "",
         employer_address: currentForm.employer_address || "",
         employer_phone: currentForm.employer_phone || "",
-        job_coaching_auth_number: currentForm.job_coaching_auth_number || "",
-        job_coaching_authorized_hours_total: currentForm.job_coaching_authorized_hours_total != null ? Number(currentForm.job_coaching_authorized_hours_total) : null,
-        job_coaching_auth_start_date: currentForm.job_coaching_auth_start_date || "",
-        job_coaching_auth_end_date: currentForm.job_coaching_auth_end_date || "",
-        dspd_monthly_authorized_hours: currentForm.dspd_monthly_authorized_hours != null ? Number(currentForm.dspd_monthly_authorized_hours) : null,
-        dspd_auth_number: currentForm.dspd_auth_number || "",
-        life_skills_auth_number: currentForm.life_skills_auth_number || "",
-        life_skills_authorized_hours_total: currentForm.life_skills_authorized_hours_total != null ? Number(currentForm.life_skills_authorized_hours_total) : null,
-        life_skills_auth_start_date: currentForm.life_skills_auth_start_date || "",
-        life_skills_auth_end_date: currentForm.life_skills_auth_end_date || ""
       };
+
+      // Only allow authorization field updates for management/admin
+      if (canManageAuthorizations) {
+        updates.job_coaching_auth_number = currentForm.job_coaching_auth_number || "";
+        updates.job_coaching_authorized_hours_total = currentForm.job_coaching_authorized_hours_total != null ? Number(currentForm.job_coaching_authorized_hours_total) : null;
+        updates.job_coaching_auth_start_date = currentForm.job_coaching_auth_start_date || "";
+        updates.job_coaching_auth_end_date = currentForm.job_coaching_auth_end_date || "";
+        updates.dspd_monthly_authorized_hours = currentForm.dspd_monthly_authorized_hours != null ? Number(currentForm.dspd_monthly_authorized_hours) : null;
+        updates.dspd_auth_number = currentForm.dspd_auth_number || "";
+        updates.life_skills_auth_number = currentForm.life_skills_auth_number || "";
+        updates.life_skills_authorized_hours_total = currentForm.life_skills_authorized_hours_total != null ? Number(currentForm.life_skills_authorized_hours_total) : null;
+        updates.life_skills_auth_start_date = currentForm.life_skills_auth_start_date || "";
+        updates.life_skills_auth_end_date = currentForm.life_skills_auth_end_date || "";
+      }
 
       const updatedClient = await base44.entities.Client.update(
         client.id,
@@ -302,7 +318,7 @@ if (editing || formOnly) {
       <Textarea className="h-24 md:col-span-2" value={form.notes || ""} onChange={e => u("notes", e.target.value)} placeholder="Notes" rows={3} />
 
       {/* Job Coaching Authorization */}
-      {(form.client_type === 'employed' || form.client_type === 'job_seeker') && (
+      {(form.client_type === 'employed' || form.client_type === 'job_seeker') && canManageAuthorizations && (
         <div className="md:col-span-2 pt-2 border-t">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Job Coaching Authorization</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,7 +331,7 @@ if (editing || formOnly) {
       )}
 
       {/* DSPD Monthly Authorization */}
-      {form.client_type === 'dspd' && (
+      {form.client_type === 'dspd' && canManageAuthorizations && (
         <div className="md:col-span-2 pt-2 border-t">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">DSPD Monthly Authorization</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -326,6 +342,7 @@ if (editing || formOnly) {
       )}
 
       {/* Life Skills Authorization */}
+      {canManageAuthorizations && (
       <div className="md:col-span-2 pt-2 border-t">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Life Skills Authorization</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,6 +352,7 @@ if (editing || formOnly) {
           <Input className="h-10" type="date" value={form.life_skills_auth_end_date || ""} onChange={e => u("life_skills_auth_end_date", e.target.value)} placeholder="Auth End Date" />
         </div>
       </div>
+      )}
 
     <div className="pt-4 border-t">
   <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />

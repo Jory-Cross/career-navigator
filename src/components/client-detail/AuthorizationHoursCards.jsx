@@ -8,6 +8,7 @@ import { AlertTriangle, ShieldCheck, Plus, Trash2, ChevronDown, ChevronUp } from
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { useState as useStateBase, useEffect } from "react";
 
 function HoursBar({ used, total }) {
   if (!total) return null;
@@ -36,6 +37,18 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
   const [newAuth, setNewAuth] = useState(EMPTY_AUTH);
   const [saving, setSaving] = useState(false);
   const [showAuthDetails, setShowAuthDetails] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const canManageAuthorizations = user && (
+    user.role === "admin" ||
+    user.role === "management" ||
+    user.access_level === "admin" ||
+    user.access_level === "management"
+  );
 
   // ── Build combined auth list for Job Coaching ─────────────────────────
   const allJCAuths = useMemo(() => {
@@ -209,6 +222,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
                   {allJCAuths.length} auths combined
                 </span>
               )}
+              {canManageAuthorizations && (
               <Button
                 variant="outline"
                 size="sm"
@@ -217,6 +231,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
               >
                 <Plus className="w-3 h-3" /> Add Auth
               </Button>
+              )}
             </div>
           </div>
 
@@ -256,7 +271,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
                     )}
                     {a.notes && <p className="mt-0.5 text-slate-400 italic">{a.notes}</p>}
                   </div>
-                  {!a.isPrimary && (
+                  {!a.isPrimary && canManageAuthorizations && (
                     <button
                       onClick={() => handleRemoveAdditionalAuth(i - 1)}
                       className="text-red-400 hover:text-red-600 ml-2 shrink-0"
@@ -342,6 +357,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
       )}
 
       {/* ── Add Authorization Dialog ── */}
+      {canManageAuthorizations && (
       <Dialog open={showAddAuth} onOpenChange={(o) => { if (!o) { setShowAddAuth(false); setNewAuth(EMPTY_AUTH); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -379,7 +395,8 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
             </div>
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+        </Dialog>
+        )}
+        </div>
+        );
+        }
