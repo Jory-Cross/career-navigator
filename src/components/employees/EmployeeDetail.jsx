@@ -167,7 +167,7 @@ function TimeEntriesDrillDown({ timeEntries, clients, timePeriod, setTimePeriod,
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-semibold shrink-0">
-                        {(() => { const c = clients.find(c => c.id === clientId); return c ? `${c.first_name?.[0]}${c.last_name?.[0]}` : '?'; })()}
+                        {(() => { const c = clients.find(c => c.id === clientId); return c ? `${c.first_name?.[0]}${c.last_name?.[0]}` : clientId ? '?' : 'A'; })()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1.5">
@@ -264,9 +264,8 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
     queryKey: ["time-for-employee-detail", employee.id],
     queryFn: async () => {
       const all = await base44.entities.TimeEntry.list("-created_date");
-      return all.filter(t => clientIds.includes(t.client_id));
-    },
-    enabled: clientIds.length > 0
+      return all.filter(t => t.employee_id === employee.id || t.created_by_id === employee.id);
+    }
   });
 
   const { data: activities = [] } = useQuery({
@@ -313,8 +312,9 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
   const pendingTasks = filteredTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
 
   const getClientName = (clientId) => {
+    if (!clientId) return "Admin / No Client";
     const c = clients.find(c => c.id === clientId);
-    return c ? `${c.first_name} ${c.last_name}` : "Unknown";
+    return c ? `${c.first_name} ${c.last_name}` : "Unknown Client";
   };
 
   return (
