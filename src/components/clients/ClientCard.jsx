@@ -53,30 +53,40 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
   const authStatus = useMemo(() => {
     const status = {};
     
-    // Job Coaching calculation
-    if (Number(client.job_coaching_authorized_hours_total) > 0) {
+    // Job Coaching calculation (including additional authorizations)
+    let jcTotalAuthorized = Number(client.job_coaching_authorized_hours_total) || 0;
+    if (Array.isArray(client.job_coaching_additional_auths)) {
+      jcTotalAuthorized += client.job_coaching_additional_auths.reduce((sum, auth) => sum + (Number(auth.authorized_hours) || 0), 0);
+    }
+    
+    if (jcTotalAuthorized > 0) {
       const jcUsedMinutes = timeEntries
         .filter(e => (e.entry_type_code || "").toLowerCase() === "job_coaching")
         .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
       const jcUsedHours = jcUsedMinutes / 60;
-      const jcRemaining = client.job_coaching_authorized_hours_total - jcUsedHours;
+      const jcRemaining = jcTotalAuthorized - jcUsedHours;
       status.jobCoaching = {
-        authorized: client.job_coaching_authorized_hours_total,
+        authorized: jcTotalAuthorized,
         remaining: parseFloat(jcRemaining.toFixed(2)),
         isLow: jcRemaining > 0 && jcRemaining <= 10,
         isExhausted: jcRemaining <= 0
       };
     }
     
-    // Life Skills calculation
-    if (Number(client.life_skills_authorized_hours_total) > 0) {
+    // Life Skills calculation (including additional authorizations if they exist)
+    let lsTotalAuthorized = Number(client.life_skills_authorized_hours_total) || 0;
+    if (Array.isArray(client.life_skills_additional_auths)) {
+      lsTotalAuthorized += client.life_skills_additional_auths.reduce((sum, auth) => sum + (Number(auth.authorized_hours) || 0), 0);
+    }
+    
+    if (lsTotalAuthorized > 0) {
       const lsUsedMinutes = timeEntries
         .filter(e => (e.entry_type_code || "").toLowerCase() === "life_skills")
         .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
       const lsUsedHours = lsUsedMinutes / 60;
-      const lsRemaining = client.life_skills_authorized_hours_total - lsUsedHours;
+      const lsRemaining = lsTotalAuthorized - lsUsedHours;
       status.lifeSkills = {
-        authorized: client.life_skills_authorized_hours_total,
+        authorized: lsTotalAuthorized,
         remaining: parseFloat(lsRemaining.toFixed(2)),
         isLow: lsRemaining > 0 && lsRemaining <= 10,
         isExhausted: lsRemaining <= 0
@@ -84,7 +94,7 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
     }
     
     return status;
-  }, [client.job_coaching_authorized_hours_total, client.life_skills_authorized_hours_total, timeEntries]);
+  }, [client.job_coaching_authorized_hours_total, client.job_coaching_additional_auths, client.life_skills_authorized_hours_total, client.life_skills_additional_auths, timeEntries]);
 
   // Archive active client (soft delete)
   const handleArchive = async (e) => {
