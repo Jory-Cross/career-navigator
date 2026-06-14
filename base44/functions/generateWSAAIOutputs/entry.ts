@@ -305,6 +305,33 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 900);
 }
 
+async function synthesizeNaturalSupportObservations(base44, evidenceBlock) {
+  const prompt = `You are a vocational rehabilitation evaluator writing the "Natural Support Assessment Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
+
+TASK:
+Using ONLY the documented support evidence provided below, write a professional narrative for the "Natural Support Assessment Observations" WSA field.
+
+DOCUMENTED SUPPORT EVIDENCE:
+${evidenceBlock}
+
+REQUIREMENTS:
+- Describe only documented support systems, support availability, family/caregiver involvement, coworker/supervisor natural supports, and support needs that are explicitly recorded in the evidence above.
+- Do NOT invent support people, relationships, or availability.
+- Do NOT assume natural supports exist unless explicitly documented in the evidence above.
+- Do NOT use work environment tolerance data, interview session answers, resume content, document text, client notes, or VFP inferences.
+- Do NOT use family_issues_supports or any VR-authored field content.
+- If natural workplace supports (supervisor, coworker) were observed, describe their availability and observed effectiveness.
+- If family or caregiver supports are documented, describe only what is explicitly recorded — name, role, and documented involvement.
+- If support gaps or absence of natural supports are documented, describe those clearly.
+- Write in past tense for observed evidence and present tense for documented availability.
+- Professional vocational rehabilitation language. No labels, no headings, no markdown.
+- Maximum 850 characters.
+- Return ONLY the plain text narrative.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({ prompt });
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+}
+
 async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
   const sourceBlocks = [];
 
@@ -566,6 +593,95 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   supportsBarriersText,
   supportsWsaInterviewText
   );
+
+  // ── natural_support_observations: hard-override via dedicated synthesis ──────
+  // Permitted sources only: WP&SO natural support fields, support/accommodation
+  // assessment, barriers assessment, client contact fields.
+  // Prohibited: client.notes, documents, resumes, interview sessions, WET,
+  //             family_issues_supports, VFP (unless explicit support documentation).
+  let naturalSupportEvidenceBlock = null;
+  try {
+    const ctx = JSON.parse(contextBlock);
+    const lines = [];
+
+    // Source 1: Work Performance & Support Observation — natural support fields only
+    const wpsoNatural = (ctx.assessments || []).find(a => a.type === 'work_performance_support_observation');
+    if (wpsoNatural && wpsoNatural.responses) {
+      const wr = wpsoNatural.responses;
+      const wpsoSupportFields = [
+        ['Natural supports available during observation', wr.natural_supports_available_observed],
+        ['Natural support effectiveness observed', wr.natural_support_effectiveness_observed],
+        ['Natural support examples and notes', wr.natural_support_examples_notes],
+        ['Current support provider', wr.current_support_provider],
+        ['Supervisor or coworker input obtained', wr.supervisor_or_coworker_input_obtained],
+        ['Employer/supervisor input on supports', wr.employer_supervisor_input_on_supports],
+      ];
+      for (const [label, val] of wpsoSupportFields) {
+        const s = safeString(val).trim();
+        if (s && s.length > 2 && !s.startsWith('[')) {
+          lines.push(`[Work Performance Observation] ${label}: ${s}`);
+        }
+      }
+    }
+
+    // Source 2: Support & Accommodation Assessment — family/caregiver/support availability fields only
+    const supportAccAssessment = (ctx.assessments || []).find(a => a.type === 'support_and_accommodation');
+    if (supportAccAssessment && supportAccAssessment.responses) {
+      const sr = supportAccAssessment.responses;
+      // Only include fields whose keys or values explicitly reference support availability,
+      // family/caregiver involvement, or support gaps.
+      const supportKeywords = ['support', 'caregiver', 'family', 'natural', 'guardian', 'provider', 'helper', 'assist'];
+      for (const [k, v] of Object.entries(sr)) {
+        const s = safeString(v).trim();
+        if (!s || s.length < 3 || s.startsWith('[')) continue;
+        const kLower = k.toLowerCase();
+        if (supportKeywords.some(kw => kLower.includes(kw))) {
+          lines.push(`[Support & Accommodation Assessment] ${k}: ${s}`);
+        }
+      }
+    }
+
+    // Source 3: Barriers to Employment — support-system barrier fields only
+    const barriersAssessment = (ctx.assessments || []).find(a => a.type === 'barriers_to_employment');
+    if (barriersAssessment && barriersAssessment.responses) {
+      const br = barriersAssessment.responses;
+      const supportBarrierKeywords = ['support', 'caregiver', 'family', 'natural', 'guardian', 'provider', 'isolated', 'lack_of_support', 'no_support'];
+      for (const [k, v] of Object.entries(br)) {
+        const s = safeString(v).trim();
+        if (!s || s.length < 3 || s.startsWith('[')) continue;
+        const kLower = k.toLowerCase();
+        if (supportBarrierKeywords.some(kw => kLower.includes(kw))) {
+          lines.push(`[Barriers to Employment Assessment] ${k}: ${s}`);
+        }
+      }
+    }
+
+    // Source 4: Client contact fields — only if explicitly populated
+    const clientData = ctx.client || {};
+    if (safeString(clientData.guardian_name).trim()) {
+      lines.push(`[Client Record] Guardian name: ${safeString(clientData.guardian_name).trim()}`);
+    }
+    if (safeString(clientData.support_staff_name).trim()) {
+      lines.push(`[Client Record] Support staff name: ${safeString(clientData.support_staff_name).trim()}`);
+    }
+    if (Array.isArray(clientData.contacts)) {
+      for (const contact of clientData.contacts) {
+        const name = safeString(contact.name).trim();
+        const type = safeString(contact.type || contact.label).trim();
+        if (name) {
+          lines.push(`[Client Record] Contact — ${type || 'type not specified'}: ${name}`);
+        }
+      }
+    }
+
+    if (lines.length > 0) {
+      naturalSupportEvidenceBlock = lines.join('\n');
+    }
+  } catch (_e) { /* leave as null */ }
+
+  detailedFields.natural_support_observations = naturalSupportEvidenceBlock
+    ? await synthesizeNaturalSupportObservations(base44, naturalSupportEvidenceBlock)
+    : 'Natural support information has not been documented in the approved assessment sources. Staff must complete the natural support section or document available supports before generating this portion of the WSA.';
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
@@ -1171,6 +1287,10 @@ Deno.serve(async (req) => {
         notes: client.notes,
         employer_name: client.employer_name,
         workplace_name: client.workplace_name,
+        // Support contact fields — used exclusively for natural_support_observations pre-extraction
+        guardian_name: client.guardian_name || null,
+        support_staff_name: client.support_staff_name || null,
+        contacts: Array.isArray(client.contacts) ? client.contacts : [],
       },
       work_environment_tolerance_profile: workEnvironmentToleranceProfile,
       vocational_facts_profile:
