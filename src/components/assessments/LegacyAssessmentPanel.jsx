@@ -72,6 +72,36 @@ const WSA_LARGE_HTML_BLOB_KEYS = new Set([
   '_detailed_wsa_report_html',
 ]);
 
+// VR-authored fields — everything above "COMMUNITY REHABILITATION PROGRAM Observation and Report".
+// These are uploaded from the source WSA document and must NEVER be overwritten by any AI process.
+// AI generation scope begins ONLY at the CRP section (worksite_simulation_location and below).
+const WSA_VR_AUTHORED_KEYS = new Set([
+  // ── COUNSELOR REFERRAL PAGE ──
+  'crp_referring_to',
+  'guardianship',
+  'guardian_name_phone',
+  'referral_question',
+  'extended_services_provider',
+  'health_insurance',
+  'social_security_benefits',
+  'benefits_planning',
+  'benefits_planning_date',
+  'benefits_summary_info',
+  'other_services_benefits',
+  // ── DESCRIBE THE FOLLOWING AS IT APPLIES TO CLIENT ──
+  'current_work_skills',
+  'work_skill_development_needs',
+  'jobs_of_interest',
+  'interpersonal_social_skills',
+  'assistive_technology_needs',
+  'communication_needs',
+  'behavioral_self_regulation',
+  'activities_of_daily_living',
+  'family_issues_supports',
+  'criminal_background',
+  'school_academic',
+]);
+
 function stripLargeWSABlobs(responses) {
   return Object.fromEntries(
     Object.entries(responses).filter(([k]) => !WSA_LARGE_HTML_BLOB_KEYS.has(k))
@@ -394,9 +424,15 @@ export default function LegacyAssessmentPanel({
         return;
       }
 
+      // Strip any VR-authored fields from AI output before merging —
+      // they must never overwrite the uploaded VR content.
+      const safeAIFields = Object.fromEntries(
+        Object.entries(officialFields).filter(([k]) => !WSA_VR_AUTHORED_KEYS.has(k))
+      );
+
       const nextResponses = {
         ...responses,
-        ...officialFields,
+        ...safeAIFields,
         _wsa_ai_evidence_summary: data.evidence_summary || [],
         _wsa_ai_staff_should_verify: data.staff_should_verify || [],
         _wsa_ai_fields_generated_at: new Date().toISOString(),
@@ -444,11 +480,17 @@ export default function LegacyAssessmentPanel({
         return;
       }
 
+      // Strip VR-authored fields from detailed_wsa_fields before storing —
+      // they must never overwrite the uploaded VR content.
+      const safeDetailedFields = Object.fromEntries(
+        Object.entries(data.detailed_wsa_fields || {}).filter(([k]) => !WSA_VR_AUTHORED_KEYS.has(k))
+      );
+
       const nextResponses = {
         ...responses,
 
         // Full Detailed WSA: exact same fields as the official WSA, no character limits.
-        _detailed_wsa_fields: data.detailed_wsa_fields || {},
+        _detailed_wsa_fields: safeDetailedFields,
         _full_detailed_wsa_html: data.full_detailed_wsa_html || "",
 
         // Supplemental narrative report: broader add-on report for staff review.

@@ -75,6 +75,43 @@ const WSA_FIELD_LABELS = {
 
 const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS);
 
+// ─── VR-AUTHORED FIELDS — BOUNDARY PROTECTION ─────────────────────────────────
+// Everything above "COMMUNITY REHABILITATION PROGRAM Observation and Report"
+// is VR-authored content from the uploaded WSA. These fields must NEVER be
+// generated, overwritten, or modified by any AI process.
+//
+// AI generation scope begins ONLY at the CRP section:
+//   worksite_simulation_location, work_assessment_observations, and below.
+//
+// These keys are excluded from generateDetailedFields, generateOfficialFields,
+// AI Fill WSA Fields, and AI Detailed Report updates.
+const VR_AUTHORED_KEYS = new Set([
+  // ── COUNSELOR REFERRAL PAGE ──
+  'crp_referring_to',
+  'guardianship',
+  'guardian_name_phone',
+  'referral_question',
+  'extended_services_provider',
+  'health_insurance',
+  'social_security_benefits',
+  'benefits_planning',
+  'benefits_planning_date',
+  'benefits_summary_info',
+  'other_services_benefits',
+  // ── DESCRIBE THE FOLLOWING AS IT APPLIES TO CLIENT ──
+  'current_work_skills',
+  'work_skill_development_needs',
+  'jobs_of_interest',
+  'interpersonal_social_skills',
+  'assistive_technology_needs',
+  'communication_needs',
+  'behavioral_self_regulation',
+  'activities_of_daily_living',
+  'family_issues_supports',
+  'criminal_background',
+  'school_academic',
+]);
+
 const PLANNED_JOB_SEARCH_HOURS_STAFF_NOTE =
   '[Staff entry required: enter planned CRP/job coach job-development support hours per week from verified plan or authorization.]';
 
@@ -165,7 +202,8 @@ function stripUnsafeHtml(html) {
 }
 
 function buildDetailedWsaHtml(detailedFields) {
-  const sections = WSA_FIELD_KEYS.map((key) => {
+  // Only include CRP section and below — VR-authored fields above are excluded.
+  const sections = WSA_FIELD_KEYS.filter((key) => !VR_AUTHORED_KEYS.has(key)).map((key) => {
     const label = WSA_FIELD_LABELS[key] || key;
     const value = detailedFields[key] || '';
 
@@ -268,19 +306,34 @@ REQUIREMENTS:
 }
 
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
-  const fieldLabelsText = WSA_FIELD_KEYS
+  // Only generate fields that are NOT VR-authored. VR-authored fields above the CRP
+  // section boundary must be preserved exactly as uploaded and never AI-generated.
+  const aiGeneratedKeys = WSA_FIELD_KEYS.filter((key) => !VR_AUTHORED_KEYS.has(key));
+
+  const fieldLabelsText = aiGeneratedKeys
     .map((key) => key + ': ' + (WSA_FIELD_LABELS[key] || key))
     .join('\n');
 
   const prompt = `You are a vocational rehabilitation specialist drafting a Full Detailed Work Strategy Assessment.
 
 TASK:
-Generate detailed_wsa_fields using the exact same field keys as the official WSA/PDF.
+Generate detailed_wsa_fields for the CRP Observation and Report section and subsequent sections ONLY.
 
-This is the FULL DETAILED WSA.
-It must use the same fields as the official WSA.
+CRITICAL BOUNDARY RULE — VR-AUTHORED FIELDS:
+The following fields are completed by the VR counselor from the uploaded WSA document. You must NOT generate, include, or modify any of these fields. They are excluded from this task entirely:
+  crp_referring_to, guardianship, guardian_name_phone, referral_question,
+  extended_services_provider, health_insurance, social_security_benefits,
+  benefits_planning, benefits_planning_date, benefits_summary_info,
+  other_services_benefits, current_work_skills, work_skill_development_needs,
+  jobs_of_interest, interpersonal_social_skills, assistive_technology_needs,
+  communication_needs, behavioral_self_regulation, activities_of_daily_living,
+  family_issues_supports, criminal_background, school_academic.
+AI generation scope begins ONLY at the CRP section: worksite_simulation_location and all fields that follow it.
+
+This is the FULL DETAILED WSA (CRP section and below only).
+It must use the exact field keys listed below.
 It is NOT character limited.
-It should provide complete detailed content for each WSA field when supported by evidence.
+It should provide complete detailed content for each listed field when supported by evidence.
 
 CLIENT, FACTS, ASSESSMENTS, DOCUMENTS, AND CURRENT WSA DATA:
 ${contextBlock}
@@ -366,7 +419,12 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   });
 
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-  const detailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
+  const rawDetailedFields = normalizeObject(parsed && parsed.detailed_wsa_fields);
+
+  // Strip any VR-authored keys the LLM may have returned despite the prompt restrictions.
+  const detailedFields = Object.fromEntries(
+    Object.entries(rawDetailedFields).filter(([k]) => !VR_AUTHORED_KEYS.has(k))
+  );
 
   // worksite_simulation_location + work_assessment_observations: always hard-override.
   // The LLM main generation must NEVER determine these fields.
@@ -452,6 +510,9 @@ async function generateOfficialFields(base44, detailedFields, contextBlock) {
   const overLimitFields = {};
 
   for (const key of WSA_FIELD_KEYS) {
+    // VR-authored fields are never generated or modified — skip entirely.
+    if (VR_AUTHORED_KEYS.has(key)) continue;
+
     if (STAFF_VR_ONLY_KEYS.has(key)) {
       officialFields[key] = '';
       continue;
@@ -476,6 +537,16 @@ async function generateOfficialFields(base44, detailedFields, contextBlock) {
     const overLimitBlock = JSON.stringify(overLimitFields, null, 2);
 
     const prompt = `You are a vocational rehabilitation specialist completing the official Utah DWS Work Strategy Assessment PDF fields.
+
+CRITICAL BOUNDARY RULE — VR-AUTHORED FIELDS:
+The following fields are VR-authored content from the uploaded WSA. They must NEVER be included in or modified by this task:
+  crp_referring_to, guardianship, guardian_name_phone, referral_question,
+  extended_services_provider, health_insurance, social_security_benefits,
+  benefits_planning, benefits_planning_date, benefits_summary_info,
+  other_services_benefits, current_work_skills, work_skill_development_needs,
+  jobs_of_interest, interpersonal_social_skills, assistive_technology_needs,
+  communication_needs, behavioral_self_regulation, activities_of_daily_living,
+  family_issues_supports, criminal_background, school_academic.
 
 TASK:
 The following WSA fields are too long for the official PDF character limits.
@@ -688,15 +759,17 @@ Deno.serve(async (req) => {
     const sourceWsaResponses = Object.fromEntries(
       Object.entries(current_wsa_responses).filter(([k]) => !ASSESSMENT_CONTEXT_STRIP_KEYS.has(k))
     );
-          // These fields must not be inferred from prior AI output.
+    // These fields must not be inferred from prior AI output.
     // They are completed only through verified staff entry,
     // final staff/client selection, or VR close-out completion.
     delete sourceWsaResponses.planned_job_search_hours_week;
     delete sourceWsaResponses.recommended_target_occupations;
     delete sourceWsaResponses.job_development_supports;
     delete sourceWsaResponses.ongoing_supports;
-
     delete sourceWsaResponses.interview_skill_observations;
+
+    // VR-authored fields above the CRP section boundary are kept in sourceWsaResponses
+    // as read-only context only — they must never be regenerated or overwritten by AI.
 
     if (sourceWsaResponses._detailed_wsa_fields) {
       sourceWsaResponses._detailed_wsa_fields = {
@@ -707,8 +780,12 @@ Deno.serve(async (req) => {
       delete sourceWsaResponses._detailed_wsa_fields.recommended_target_occupations;
       delete sourceWsaResponses._detailed_wsa_fields.job_development_supports;
       delete sourceWsaResponses._detailed_wsa_fields.ongoing_supports;
-
       delete sourceWsaResponses._detailed_wsa_fields.interview_skill_observations;
+
+      // Strip VR-authored keys from cached _detailed_wsa_fields to prevent stale AI values.
+      for (const k of VR_AUTHORED_KEYS) {
+        delete sourceWsaResponses._detailed_wsa_fields[k];
+      }
     }
 
 
