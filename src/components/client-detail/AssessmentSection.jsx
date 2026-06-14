@@ -283,13 +283,15 @@ function AssessmentCard({ assessment, record, isActive, onClick, statusOverride 
 
   const status = statusOverride || (!record ? "not_started"
     : record.status === "completed" ? "completed"
-    : "in_progress");
+    : record.status === "in_progress" ? "in_progress"
+    : "draft");
 
   const statusConfig = {
     not_started: { label: "Not Started", color: "bg-slate-100 text-slate-500" },
+    draft:        { label: "Draft",        color: "bg-slate-100 text-slate-500" },
     in_progress:  { label: "In Progress",  color: "bg-amber-100 text-amber-700"  },
-    completed:    { label: "Completed",     color: "bg-emerald-100 text-emerald-700" },
-  }[status];
+    completed:    { label: "Completed",    color: "bg-emerald-100 text-emerald-700" },
+  }[status] || { label: "Not Started", color: "bg-slate-100 text-slate-500" };
 
   return (
     <button

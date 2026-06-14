@@ -12,7 +12,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Clock, CheckCheck } from "lucide-react";
 import StructuredAssessmentForm from "./StructuredAssessmentForm";
 import {
   extractEvidenceFromResponses,
@@ -35,6 +36,8 @@ export default function StructuredAssessmentWorkspacePanel({
   const [responses, setResponses] = useState(existingRecord?.responses || {});
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
+  const [recordStatus, setRecordStatus] = useState(existingRecord?.status || null);
 
   // Always-current refs so async save reads latest values (never stale)
   const responsesRef = useRef(responses);
@@ -51,6 +54,7 @@ export default function StructuredAssessmentWorkspacePanel({
     setIsDirty(false);
     recordIdRef.current = existingRecord?.id || null;
     setResponses(existingRecord?.responses || {});
+    setRecordStatus(existingRecord?.status || null);
   }, [existingRecord?.id]);
 
   // Field change handler — mark dirty, update state
@@ -124,7 +128,8 @@ export default function StructuredAssessmentWorkspacePanel({
     const payload = {
       client_id: clientId,
       assessment_type: meta.assessment_type,
-      status: "in_progress",
+      // Never downgrade a completed assessment via auto-save
+      status: recordIdRef.current && recordStatus === "completed" ? "completed" : "in_progress",
       responses: latestResponses,
       completed_by: user?.email || "",
       structured_evidence,
@@ -178,6 +183,65 @@ export default function StructuredAssessmentWorkspacePanel({
     }
   }, [doSave]);
 
+  // ── "Mark Assessment Complete" — staff-controlled status change
+  const handleMarkComplete = useCallback(async () => {
+    setMarkingComplete(true);
+    try {
+      const user = await base44.auth.me();
+      const completedAt = new Date().toISOString();
+      const latestResponses = responsesRef.current;
+
+      let structured_evidence = [];
+      let source_metadata = {};
+      let staff_review_flags = [];
+
+      try {
+        structured_evidence = extractEvidenceFromResponses(sections, latestResponses, {
+          completedBy: user?.email, completedAt, source: "staff_observed",
+        });
+      } catch (e) { /* non-fatal */ }
+
+      try {
+        source_metadata = buildSourceMetadata({
+          assessmentType: meta.assessment_type, completedBy: user?.email,
+          completedAt, source: "staff_observed", clientId,
+        });
+      } catch (e) { /* non-fatal */ }
+
+      try {
+        staff_review_flags = extractStaffReviewFlags(sections, latestResponses);
+      } catch (e) { /* non-fatal */ }
+
+      const payload = {
+        client_id: clientId,
+        assessment_type: meta.assessment_type,
+        status: "completed",
+        responses: latestResponses,
+        completed_by: user?.email || "",
+        completed_at: completedAt,
+        structured_evidence,
+        source_metadata,
+        staff_review_flags,
+      };
+
+      if (recordIdRef.current) {
+        await base44.entities.Assessment.update(recordIdRef.current, payload);
+      } else {
+        const result = await base44.entities.Assessment.create(payload);
+        recordIdRef.current = result?.id || null;
+      }
+
+      setRecordStatus("completed");
+      setIsDirty(false);
+      toast.success("Assessment marked as complete");
+      if (onSaved) onSaved();
+    } catch (err) {
+      toast.error("Failed to mark complete: " + (err?.message || "Unknown error"));
+    } finally {
+      setMarkingComplete(false);
+    }
+  }, [clientId, meta.assessment_type, sections, onSaved]);
+
   // ── "Save & Close" button (cancel) — save then notify parent
    const handleCancel = useCallback(async () => {
     if (isDirtyRef.current) {
@@ -188,17 +252,19 @@ export default function StructuredAssessmentWorkspacePanel({
     onClose?.();
   }, [doSave, onSaved, onClose]);
 
-  const status = !existingRecord
-    ? "not_started"
-    : existingRecord.status === "completed"
-    ? "completed"
-    : "in_progress";
+  const status = recordStatus === "completed" ? "completed"
+    : (existingRecord || recordIdRef.current) ? "in_progress"
+    : "draft";
 
   const statusBadge = {
-    not_started: null,
+    draft: (
+      <Badge variant="outline" className="text-slate-500 border-slate-200 bg-slate-50 gap-1">
+        <Clock className="w-3 h-3" /> Draft
+      </Badge>
+    ),
     in_progress: (
       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 gap-1">
-        <Clock className="w-3 h-3" /> Draft
+        <Clock className="w-3 h-3" /> In Progress
       </Badge>
     ),
     completed: (
@@ -211,14 +277,45 @@ export default function StructuredAssessmentWorkspacePanel({
   return (
     <Card className="border border-slate-200 shadow-sm h-full flex flex-col">
       <CardHeader className="pb-3 border-b border-slate-100">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-base font-semibold text-slate-900">{meta.label}</h3>
             {meta.description && (
               <p className="text-xs text-slate-500 mt-0.5">{meta.description}</p>
             )}
           </div>
-          {statusBadge}
+          <div className="flex items-center gap-2">
+            {statusBadge}
+            {status !== "completed" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-green-700 border-green-300 hover:bg-green-50 gap-1.5"
+                onClick={handleMarkComplete}
+                disabled={markingComplete}
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                {markingComplete ? "Saving..." : "Mark Complete"}
+              </Button>
+            )}
+            {status === "completed" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-slate-500 text-xs"
+                onClick={() => {
+                  setRecordStatus("in_progress");
+                  // Persist the reopen
+                  if (recordIdRef.current) {
+                    base44.entities.Assessment.update(recordIdRef.current, { status: "in_progress" })
+                      .then(() => onSaved?.()).catch(() => {});
+                  }
+                }}
+              >
+                Reopen
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
 
