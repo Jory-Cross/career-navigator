@@ -305,6 +305,60 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 900);
 }
 
+async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
+  const sourceBlocks = [];
+
+  if (wpsoText) {
+    sourceBlocks.push(`== SOURCE 1: Work Performance & Support Observation (PRIMARY) ==\n${wpsoText}`);
+  }
+  if (wetProfile) {
+    const wetLines = Object.entries(wetProfile)
+      .filter(([, v]) => v && safeString(v).trim().length > 2)
+      .map(([k, v]) => `${k}: ${safeString(v).trim()}`)
+      .join('\n');
+    if (wetLines) sourceBlocks.push(`== SOURCE 2: Work Environment Tolerance Assessment ==\n${wetLines}`);
+  }
+  if (supportAssessmentText) {
+    sourceBlocks.push(`== SOURCE 3: Support & Accommodation Assessment ==\n${supportAssessmentText}`);
+  }
+  if (barriersText) {
+    sourceBlocks.push(`== SOURCE 4: Barriers to Employment Assessment ==\n${barriersText}`);
+  }
+  if (wsaInterviewText) {
+    sourceBlocks.push(`== SOURCE 5: WSA Interview Assessment ==\n${wsaInterviewText}`);
+  }
+
+  if (sourceBlocks.length === 0) {
+    return 'Insufficient assessment evidence to generate recommended supports. Complete the Work Performance & Support Observation and related assessments before generating this field.';
+  }
+
+  const prompt = `You are a vocational rehabilitation evaluator writing the "Recommended Supports on the Job" field for an official Utah DWS Work Strategy Assessment (WSA).
+
+TASK:
+Using ONLY the documented assessment evidence provided below, write a professional narrative for the "Recommended Supports on the Job" WSA field.
+
+EVIDENCE SOURCES (in priority order — use higher-priority sources first):
+${sourceBlocks.join('\n\n')}
+
+REQUIREMENTS:
+- Base every recommended support on specific documented evidence from the sources above.
+- Prioritize observed support needs from the Work Performance & Support Observation (Source 1).
+- Supports must directly address documented barriers and observed performance needs.
+- Do NOT recommend supports that are not grounded in the evidence above.
+- Do NOT use generic disability accommodations not tied to specific documented needs.
+- Do NOT recommend accommodations solely because a diagnosis exists.
+- For each support recommended, explain: (1) what the support is, (2) why it is recommended, (3) what assessment evidence supports it.
+- Write in professional vocational rehabilitation language using past tense for observations and present/future tense for recommendations.
+- Examples of evidence-grounded supports: if WP&SO documents difficulty learning unfamiliar tasks, need for prompts, and need for repetition → recommend step-by-step task instruction, initial job coaching, structured training, natural support development.
+- Do NOT copy field labels, question text, or source headings verbatim — synthesize into natural professional prose.
+- Do NOT invent any fact not present in the evidence above.
+- Maximum 950 characters for the final narrative.
+- Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({ prompt });
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 950);
+}
+
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
   // Only generate fields that are NOT VR-authored. VR-authored fields above the CRP
   // section boundary must be preserved exactly as uploaded and never AI-generated.
@@ -379,7 +433,7 @@ The context includes a "work_environment_tolerance_profile" block. This is struc
 FIELDS WHERE WET EVIDENCE IS ALLOWED:
 - behavioral_self_regulation: Use overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, past_stress_job_narrative as primary evidence.
 - other_observations: Include WET findings — ideal vs. avoid environment synthesis, specific sensory triggers, stress recovery strategies, preferred supports, environmental red flags. Do NOT describe these as observed performance.
-- recommended_supports_on_job: Use preferred_supports_at_work, break_quiet_detail, written_instructions_detail, sensory accommodation needs.
+- recommended_supports_on_job: SKIP — this field is handled by a dedicated server-side synthesis step and must not be generated here.
 - work_skill_development_needs: Use pace tolerance, multitasking ability, interruptions tolerance, written instructions need, task switching tolerance as functional evidence.
 - communication_needs: Use phone_communication, phone_difficulty_detail, conflict_tolerance.
 - interpersonal_social_skills: Use customer_interaction_comfort, coworker_comfort, supervision_style_preference, and related narratives.
@@ -393,13 +447,13 @@ Use this assessment's responses as the primary evidence for:
 - work_assessment_observations: STRICT RULE — Do NOT generate this field. Leave it empty or null. It is always overwritten by a dedicated server-side synthesis step after your response.
 - current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
 - work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
-- recommended_supports_on_job: When support needs were directly observed during the work performance assessment, use that evidence as primary. WET preferred supports may supplement.
+- recommended_supports_on_job: STRICT RULE — Do NOT generate this field. Leave it empty or null. It is always overwritten by a dedicated server-side synthesis step after your response.
 
 SOURCE: Work Environment Tolerance (assessment_type = "work_environment_tolerance")
 Use WET responses as structured tolerance and functional capacity evidence for:
 - behavioral_self_regulation: overwhelm_triggers, overwhelm_signs, overwhelm_signs_detail, recovery_strategies, break_or_quiet_space_needed, past_stress_job_narrative.
 - other_observations: ideal vs. avoid environment synthesis, sensory triggers, stress recovery strategies, preferred supports, environmental red flags. Write these as documented tolerance findings, not observed worksite performance.
-- recommended_supports_on_job: preferred_supports_at_work, break/quiet space needs, written instructions needs, sensory accommodation needs.
+- recommended_supports_on_job: SKIP — handled by dedicated server-side synthesis.
 - communication_needs: phone_communication, phone_difficulty_detail, conflict_tolerance.
 - interpersonal_social_skills: customer_interaction_comfort, coworker_comfort, supervision_style_preference.
 - assistive_technology_needs: sensory or AT accommodation needs documented in WET.
@@ -451,6 +505,67 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
 
   // Always overwrite — either with the synthesized professional narrative or a placeholder.
   detailedFields.work_assessment_observations = resolvedWorkAssessmentObservations || 'Work Performance & Support Observation assessment has not been completed. Complete the Work Performance & Support Observation assessment before generating this section of the WSA.';
+
+  // ── recommended_supports_on_job: hard-override via dedicated synthesis ────────
+  // Extract evidence texts for each priority source.
+  let supportsWpsoText = null;
+  let supportsWetProfile = null;
+  let supportsSupportAssessmentText = null;
+  let supportsBarriersText = null;
+  let supportsWsaInterviewText = null;
+
+  try {
+  const ctx = JSON.parse(contextBlock);
+
+  // Source 1: WP&SO — reuse wpso_observation_text (already labeled)
+  if (ctx.wpso_observation_text) {
+    supportsWpsoText = ctx.wpso_observation_text;
+  }
+
+  // Source 2: WET profile
+  if (ctx.work_environment_tolerance_profile) {
+    supportsWetProfile = ctx.work_environment_tolerance_profile;
+  }
+
+  // Source 3: Support & Accommodation Assessment
+  const supportAccAssessment = (ctx.assessments || []).find(a => a.type === 'support_and_accommodation');
+  if (supportAccAssessment && supportAccAssessment.responses) {
+    supportsSupportAssessmentText = Object.entries(supportAccAssessment.responses)
+      .filter(([, v]) => safeString(v).trim().length > 2)
+      .map(([k, v]) => `${k}: ${safeString(v).trim()}`)
+      .join('\n');
+  }
+
+  // Source 4: Barriers Assessment
+  const barriersAssessment = (ctx.assessments || []).find(a => a.type === 'barriers_to_employment');
+  if (barriersAssessment && barriersAssessment.responses) {
+    supportsBarriersText = Object.entries(barriersAssessment.responses)
+      .filter(([, v]) => safeString(v).trim().length > 2)
+      .map(([k, v]) => `${k}: ${safeString(v).trim()}`)
+      .join('\n');
+  }
+
+  // Source 5: WSA Interview sessions — summarize answered questions
+  if (ctx.wsa_interview_sessions && ctx.wsa_interview_sessions.length > 0) {
+    const sessionLines = ctx.wsa_interview_sessions.flatMap(s =>
+      (s.questions || [])
+        .filter(q => safeString(q.answer).trim())
+        .map(q => `Q: ${q.question} | Answer: ${q.answer}${q.feedback ? ` | Feedback: ${q.feedback}` : ''}`)
+    );
+    if (sessionLines.length > 0) {
+      supportsWsaInterviewText = sessionLines.join('\n');
+    }
+  }
+  } catch (_e) { /* leave as null — synthesis will use only available sources */ }
+
+  detailedFields.recommended_supports_on_job = await synthesizeRecommendedSupportsOnJob(
+  base44,
+  supportsWpsoText,
+  supportsWetProfile,
+  supportsSupportAssessmentText,
+  supportsBarriersText,
+  supportsWsaInterviewText
+  );
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
