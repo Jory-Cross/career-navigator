@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,42 @@ import EmployeeReactivationDialog from "@/components/employees/EmployeeReactivat
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, isWithinInterval } from "date-fns";
+
+function parseDateOnly(dateString) {
+  if (!dateString || typeof dateString !== "string") return null;
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]), month = Number(parts[1]), day = Number(parts[2]);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null;
+  return parsed;
+}
+
+function getPeriodRange(periodFilter, selectedMonth) {
+  const now = new Date();
+  if (periodFilter === "this_month") {
+    return { start: startOfMonth(now), end: endOfMonth(now) };
+  }
+  if (periodFilter === "last_month") {
+    const last = subMonths(now, 1);
+    return { start: startOfMonth(last), end: endOfMonth(last) };
+  }
+  if (periodFilter === "custom_month" && selectedMonth) {
+    const [y, m] = selectedMonth.split("-").map(Number);
+    const base = new Date(y, m - 1, 1);
+    return { start: startOfMonth(base), end: endOfMonth(base) };
+  }
+  return null; // all time
+}
+
+function isInPeriod(dateStr, range) {
+  if (!range) return true;
+  const parsed = parseDateOnly(dateStr);
+  if (!parsed) return false;
+  return isWithinInterval(parsed, { start: range.start, end: range.end });
+}
 
 const catColors = {
   consultation: "bg-emerald-50 text-emerald-700",
@@ -187,6 +222,8 @@ function TimeEntriesDrillDown({ timeEntries, clients, timePeriod, setTimePeriod,
 }
 
 export default function EmployeeDetail({ employee, currentUser, onOffboarded }) {
+  const [periodFilter, setPeriodFilter] = useState("this_month");
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [timePeriod, setTimePeriod] = useState("all");
   const [timeClientFilter, setTimeClientFilter] = useState("all");
   const [expandedClient, setExpandedClient] = useState(null);
@@ -247,9 +284,30 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
     enabled: clientIds.length > 0
   });
 
-  const totalHours = Math.round(timeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60);
+  const periodRange = useMemo(() => getPeriodRange(periodFilter, selectedMonth), [periodFilter, selectedMonth]);
+
+  const filteredTimeEntries = useMemo(() =>
+    timeEntries.filter(e => isInPeriod(e.date, periodRange)), [timeEntries, periodRange]);
+
+  const filteredActivities = useMemo(() =>
+    activities.filter(a => isInPeriod(a.created_date, periodRange)), [activities, periodRange]);
+
+  const filteredTasks = useMemo(() =>
+    tasks.filter(t => {
+      if (!periodRange) return true;
+      // Use due_date if available, else created_date
+      const dateStr = t.due_date || t.created_date;
+      return isInPeriod(dateStr, periodRange);
+    }), [tasks, periodRange]);
+
+  const periodLabel = useMemo(() => {
+    if (!periodRange) return "All Time";
+    return `${format(periodRange.start, "MMM d")} – ${format(periodRange.end, "MMM d, yyyy")}`;
+  }, [periodRange]);
+
+  const totalHours = Math.round(filteredTimeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60);
   const activeClients = clients.filter(c => !c.is_archived).length;
-  const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
+  const pendingTasks = filteredTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
 
   const getClientName = (clientId) => {
     const c = clients.find(c => c.id === clientId);
@@ -340,8 +398,35 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
           />
         )}
 
+        {/* Period Filter */}
+        <div className="mt-5 pt-5 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-3">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-40 text-sm border-slate-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="last_month">Last Month</SelectItem>
+                <SelectItem value="custom_month">Custom Month</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+            {periodFilter === "custom_month" && (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            )}
+            <span className="text-xs text-slate-400">{periodLabel}</span>
+          </div>
+        </div>
+
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-100">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           {[
             { label: "Active Clients", value: activeClients, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
             { label: "Total Clients", value: clients.length, icon: Users, color: "text-slate-600", bg: "bg-slate-50" },
@@ -361,9 +446,9 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
       <Tabs defaultValue="clients">
         <TabsList className="bg-white border border-slate-200 shadow-sm">
           <TabsTrigger value="clients">Assigned Clients ({clients.length})</TabsTrigger>
-          <TabsTrigger value="activity">Activity ({activities.length})</TabsTrigger>
-          <TabsTrigger value="time">Time Entries ({timeEntries.length})</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+          <TabsTrigger value="activity">Activity ({filteredActivities.length})</TabsTrigger>
+          <TabsTrigger value="time">Time Entries ({filteredTimeEntries.length})</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({filteredTasks.length})</TabsTrigger>
         </TabsList>
 
         {/* Clients Tab */}
@@ -399,8 +484,8 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
         <TabsContent value="activity" className="mt-4">
           <Card className="border-0 shadow-sm p-4">
             <div className="space-y-3">
-              {activities.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No activity yet</p>}
-              {activities.slice(0, 50).map(act => (
+              {filteredActivities.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No activity for this period</p>}
+              {filteredActivities.slice(0, 50).map(act => (
                 <div key={act.id} className="flex items-start gap-3 py-2 border-b border-slate-50 last:border-0">
                   <span className="text-lg shrink-0">{activityIcons[act.activity_type] || "📌"}</span>
                   <div className="flex-1 min-w-0">
@@ -419,7 +504,7 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
         {/* Time Tab */}
         <TabsContent value="time" className="mt-4">
           <TimeEntriesDrillDown
-            timeEntries={timeEntries}
+            timeEntries={filteredTimeEntries}
             clients={clients}
             timePeriod={timePeriod}
             setTimePeriod={setTimePeriod}
@@ -435,8 +520,8 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
         <TabsContent value="tasks" className="mt-4">
           <Card className="border-0 shadow-sm p-4">
             <div className="space-y-3">
-              {tasks.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No tasks yet</p>}
-              {tasks.map(task => (
+              {filteredTasks.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No tasks for this period</p>}
+              {filteredTasks.map(task => (
                 <div key={task.id} className="flex items-start justify-between py-2 border-b border-slate-50 last:border-0 gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800">{task.title}</p>
