@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck, Trash2 } from "lucide-react";
+import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck, Trash2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,55 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
   const [showAssign, setShowAssign] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [showPermanentDelete, setShowPermanentDelete] = useState(false);
+  const [timeEntries, setTimeEntries] = useState([]);
+
+  useEffect(() => {
+    const fetchTimeEntries = async () => {
+      try {
+        const entries = await base44.entities.TimeEntry.filter({ client_id: client.id });
+        setTimeEntries(Array.isArray(entries) ? entries : []);
+      } catch {
+        setTimeEntries([]);
+      }
+    };
+    fetchTimeEntries();
+  }, [client.id]);
+
+  const authStatus = useMemo(() => {
+    const status = {};
+    
+    // Job Coaching calculation
+    if (Number(client.job_coaching_authorized_hours_total) > 0) {
+      const jcUsedMinutes = timeEntries
+        .filter(e => (e.entry_type_code || "").toLowerCase() === "job_coaching")
+        .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
+      const jcUsedHours = jcUsedMinutes / 60;
+      const jcRemaining = client.job_coaching_authorized_hours_total - jcUsedHours;
+      status.jobCoaching = {
+        authorized: client.job_coaching_authorized_hours_total,
+        remaining: parseFloat(jcRemaining.toFixed(2)),
+        isLow: jcRemaining > 0 && jcRemaining <= 10,
+        isExhausted: jcRemaining <= 0
+      };
+    }
+    
+    // Life Skills calculation
+    if (Number(client.life_skills_authorized_hours_total) > 0) {
+      const lsUsedMinutes = timeEntries
+        .filter(e => (e.entry_type_code || "").toLowerCase() === "life_skills")
+        .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
+      const lsUsedHours = lsUsedMinutes / 60;
+      const lsRemaining = client.life_skills_authorized_hours_total - lsUsedHours;
+      status.lifeSkills = {
+        authorized: client.life_skills_authorized_hours_total,
+        remaining: parseFloat(lsRemaining.toFixed(2)),
+        isLow: lsRemaining > 0 && lsRemaining <= 10,
+        isExhausted: lsRemaining <= 0
+      };
+    }
+    
+    return status;
+  }, [client.job_coaching_authorized_hours_total, client.life_skills_authorized_hours_total, timeEntries]);
 
   // Archive active client (soft delete)
   const handleArchive = async (e) => {
@@ -123,6 +172,44 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
                 <span>{applicationCount || 0} applications</span>
               </div>
             </div>
+
+            {/* Authorization Hours Status */}
+            {(authStatus.jobCoaching || authStatus.lifeSkills) && (
+              <div className="mt-3 pt-3 border-t border-slate-50 space-y-1.5">
+                {authStatus.jobCoaching && (
+                  <div className={cn(
+                    "flex items-center gap-1.5 text-xs px-2 py-1 rounded",
+                    authStatus.jobCoaching.isExhausted
+                      ? "bg-red-50 text-red-700"
+                      : authStatus.jobCoaching.isLow
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-600"
+                  )}>
+                    {authStatus.jobCoaching.isExhausted || authStatus.jobCoaching.isLow ? (
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                    ) : null}
+                    <span className="font-medium">Job Coaching:</span>
+                    <span>{authStatus.jobCoaching.remaining}h / {authStatus.jobCoaching.authorized}h</span>
+                  </div>
+                )}
+                {authStatus.lifeSkills && (
+                  <div className={cn(
+                    "flex items-center gap-1.5 text-xs px-2 py-1 rounded",
+                    authStatus.lifeSkills.isExhausted
+                      ? "bg-red-50 text-red-700"
+                      : authStatus.lifeSkills.isLow
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-600"
+                  )}>
+                    {authStatus.lifeSkills.isExhausted || authStatus.lifeSkills.isLow ? (
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                    ) : null}
+                    <span className="font-medium">Life Skills:</span>
+                    <span>{authStatus.lifeSkills.remaining}h / {authStatus.lifeSkills.authorized}h</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </Link>
