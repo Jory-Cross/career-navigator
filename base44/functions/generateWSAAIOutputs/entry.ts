@@ -216,10 +216,12 @@ function clampOfficialText(value, maxLength) {
   if (!text) return '';
   if (text.length <= maxLength) return text;
 
-  const suffix = '... [see detailed WSA]';
-  const sliceLength = Math.max(0, maxLength - suffix.length);
-
-  return text.slice(0, sliceLength).trimEnd() + suffix;
+  // Hard truncate at a word boundary — no referral suffix.
+  // Fields that arrive here via the hard-guard path bypassed LLM compression,
+  // so we truncate cleanly rather than appending any "see elsewhere" language.
+  const sliced = text.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(' ');
+  return (lastSpace > maxLength * 0.8 ? sliced.slice(0, lastSpace) : sliced).trimEnd();
 }
 
 function normalizeObject(value) {
@@ -1028,7 +1030,10 @@ RULES:
 - The JSON must contain: { "official_wsa_fields": { ... } }
 - Only include the field keys listed above in official_wsa_fields.
 - Condense only enough to fit within the character limit. Do not over-shorten.
-- Preserve concrete details, examples, ratings, scores, barriers, supports, training needs, and vocational implications.
+- Preserve the most important evidence, findings, and conclusions from the detailed content.
+- Each condensed field must be a complete, self-contained paragraph that stands alone.
+- Do NOT use phrases like "see detailed WSA", "see detailed report", "refer to supplemental report", "details available elsewhere", or any language that directs the reader to another document.
+- Do NOT use ellipsis (...) at the end of a field to imply continuation elsewhere.
 - Do not turn detailed content into vague generic summaries.
 - Do not exceed the listed character limits.
 - Do not invent facts.
