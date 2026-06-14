@@ -592,17 +592,55 @@ RULES:
 }
 
 async function generateSupplementalReport(base44, contextBlock, detailedFields) {
+  // Extract referral_question from context to use as the report's primary framework.
+  let referralQuestion = '';
+  try {
+    const ctx = JSON.parse(contextBlock);
+    referralQuestion = safeString(
+      (ctx.current_wsa_responses && ctx.current_wsa_responses.referral_question) || ''
+    ).trim();
+  } catch (_e) { /* leave empty */ }
+
+  const referralQuestionSection = referralQuestion
+    ? `COUNSELOR REFERRAL QUESTION (VR-authored — do NOT reprint verbatim):
+"${referralQuestion}"
+
+PRIMARY FRAMEWORK RULE:
+The Referral Question above is the counselor's primary guidance for what to assess and report.
+Extract each distinct question or area of concern embedded in the Referral Question.
+Structure the Supplemental Report so each of those questions is clearly answered using documented assessment evidence.
+The report must demonstrate that the assessment process gathered evidence to answer every question the counselor asked.
+Do NOT repeat or reprint the Referral Question text in the report.
+Instead, answer each embedded question with evidence-based narrative.
+Example format:
+  The counselor asked about [topic]. Assessment findings indicate [evidence-based answer].
+
+REFERRAL QUESTION TOPICS TO ADDRESS (derived from the Referral Question above):
+Identify and answer all topics the counselor raised. Common topics include support needs, peer/coworker interaction, task strengths, areas of struggle, response to new/unusual situations, response to instructions and feedback. Address every topic found in the Referral Question.`
+    : `NOTE: No Referral Question was found in the WSA responses. Structure the report using standard supplemental WSA sections.`;
+
   const prompt = `You are a vocational rehabilitation specialist writing a supplemental narrative Work Strategy Assessment report for a Utah DWS client file.
 
 This supplemental report is an ADD-ON report.
 It does not replace the Full Detailed WSA fields.
-It may use broader narrative sections for staff review and analysis.
+It uses broader narrative sections for staff review and analysis.
+
+${referralQuestionSection}
 
 CLIENT, FACTS, ASSESSMENTS, DOCUMENTS, AND CURRENT WSA DATA:
 ${contextBlock}
 
 FULL DETAILED WSA FIELDS:
 ${truncateForPrompt(detailedFields, 12000)}
+
+EVIDENCE SOURCES (use ONLY these to answer the Referral Question and build the report):
+- Work Performance & Support Observation
+- Work Environment Tolerance Assessment
+- Barriers to Employment Assessment
+- Interview Assessment / WSA Interview Sessions
+- FACTS / Vocational Facts Profile (VFP)
+- Documents (resume, uploaded assessments, etc.)
+- Other completed assessments
 
 REQUIREMENTS:
 - Return ONLY clean HTML.
@@ -613,17 +651,19 @@ REQUIREMENTS:
 - No unsafe HTML.
 - Use <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em> tags appropriately.
 - Structure the report with these sections:
-  1. Client Overview
-  2. Evidence Reviewed
-  3. Vocational Skills & Work History Analysis
-  4. Functional Capabilities & Limitations
-  5. Work Environment & Behavioral Observations
-  6. Transportation & Community Access
-  7. Support & Accommodation Needs
-  8. Interpersonal & Communication Skills
-  9. Job Development Recommendations
-  10. Ongoing Support Recommendations
-  11. Staff Verification Items
+  1. Counselor Referral Question Response (REQUIRED — present ONLY when a Referral Question exists; answer each embedded counselor question with evidence-based narrative; do NOT reprint the question text)
+  2. Client Overview
+  3. Evidence Reviewed
+  4. Vocational Skills & Work History Analysis
+  5. Functional Capabilities & Limitations
+  6. Work Environment & Behavioral Observations
+  7. Transportation & Community Access
+  8. Support & Accommodation Needs
+  9. Interpersonal & Communication Skills
+  10. Job Development Recommendations
+  11. Ongoing Support Recommendations
+  12. Staff Verification Items
+- The "Counselor Referral Question Response" section must be the FIRST section and must directly address each topic raised by the counselor using evidence from assessments. Do not simply describe evidence generically — connect evidence explicitly to the counselor's areas of concern.
 - Be thorough and analytical.
 - Use complete sentences and professional language.
 - Do not invent facts.
