@@ -77,21 +77,7 @@ const ALL_ASSESSMENTS = [
       { id: "interview_experience", label: "Recent Interview Experience", type: "textarea" },
     ],
   },
-  {
-    key: "interview_readiness",
-    label: "Interview Readiness",
-    emoji: "🎤",
-    description: "Confidence level, behavioral prep, weaknesses & employer questions",
-    type: "legacy",
-    available: true,
-    questions: [
-      { id: "interview_confidence", label: "Interview Confidence Level (1-10)", type: "text" },
-      { id: "behavioral_prep", label: "Behavioral Questions Preparation", type: "textarea" },
-      { id: "technical_prep", label: "Technical Questions Preparation", type: "textarea" },
-      { id: "common_weaknesses", label: "Common Interview Weaknesses", type: "textarea" },
-      { id: "questions_for_employer", label: "Questions Prepared for Employers", type: "textarea" },
-    ],
-  },
+
   {
     key: "interest_profiler",
     label: "Interest Profiler",
