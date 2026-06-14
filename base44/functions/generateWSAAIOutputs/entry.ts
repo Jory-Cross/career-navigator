@@ -75,6 +75,64 @@ const WSA_FIELD_LABELS = {
 
 const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS);
 
+// ─── PDF-SAFE LIMITS ──────────────────────────────────────────────────────────
+// Measured from actual Utah DWS WSA PDF field rectangle dimensions (usor94.pdf)
+// using Helvetica 10pt character width constants and an 18% safety margin.
+// Audit function: auditWSAPDFFieldCapacity — run to regenerate.
+//
+// These are the limits for official_wsa_fields (what gets written into the PDF).
+// detailed_wsa_fields remains unrestricted — it is the evidence-rich working copy.
+//
+// Single-line short fields (worksite_simulation_location, transportation_public/private,
+// computer_skills_other, planned_job_search_hours_week, industry_targeted_pay_range,
+// hours_available_to_work): geometry shows ~47-68 chars. These fields hold addresses,
+// names, or short numeric values — 100 chars is a practical safe cap.
+//
+// Field dimensions → safe limit derivation (537pt wide fields, Helvetica 10pt, 82% margin):
+//   ~1 line  (~14pt tall): 47 chars  → capped at 100 (single-line practical max)
+//   ~5 lines (~80pt tall): 364 chars
+//   ~6 lines (~95pt tall): 437 chars
+//   ~8 lines (~121pt tall): 583 chars
+//   ~12 lines (150pt+): 729 chars
+const WSA_PDF_SAFE_LIMITS = {
+  // Single-line / short fields — practical cap applied
+  worksite_simulation_location:  100,   // measured ~47pt; single-line, venue/address name
+  transportation_public:         100,   // measured ~59pt; short description
+  transportation_private:        100,   // measured ~47pt; short description
+  computer_skills_other:         100,   // measured ~68pt; short label
+  planned_job_search_hours_week: 80,    // measured ~47pt; numeric/short text
+  industry_targeted_pay_range:   100,   // measured ~47pt; short value
+  hours_available_to_work:       100,   // measured ~47pt; short value
+  // Multi-line narrative fields — from measured geometry
+  work_assessment_observations:  360,   // measured 537x81pt → 364 safe
+  natural_support_observations:  360,   // measured 537x80pt → 364 safe
+  life_skills_observations:      360,   // measured 537x80pt → 364 safe
+  current_work_skills:           360,   // measured 537x80pt → 364 safe
+  work_skill_development_needs:  360,   // measured 537x80pt → 364 safe
+  family_issues_supports:        360,   // measured 537x80pt → 364 safe
+  criminal_background:           360,   // measured 537x80pt → 364 safe
+  school_academic:               360,   // measured 537x80pt → 364 safe
+  communication_needs:           360,   // measured ~same height group
+  assistive_technology_needs:    360,   // measured ~same height group
+  interpersonal_social_skills:   360,   // measured ~same height group
+  transportation_observations:   430,   // measured 537x95pt → 437 safe
+  computer_skill_observations:   430,   // measured 537x95pt → 437 safe
+  interview_skill_observations:  430,   // measured 537x95pt → 437 safe
+  behavioral_self_regulation:    430,   // measured 537x95pt → 437 safe
+  activities_of_daily_living:    430,   // measured 537x95pt → 437 safe
+  referral_question:             430,   // measured 537x95pt → 437 safe
+  other_observations:            575,   // measured 537x121pt → 583 safe
+  recommended_supports_on_job:   575,   // measured 537x121pt → 583 safe
+  job_development_supports:      720,   // measured larger field → 729 safe
+  ongoing_supports:              720,   // measured larger field → 729 safe
+  // Short structured fields
+  jobs_of_interest:              140,   // measured ~145 safe
+  life_skills_needed:            140,   // measured ~145 safe
+  recommended_target_occupations: 210,  // measured ~218 safe
+  job_goal:                      210,   // measured ~218 safe
+  benefits_other:                210,   // measured ~218 safe
+};
+
 // ─── VR-AUTHORED FIELDS — BOUNDARY PROTECTION ─────────────────────────────────
 // Everything above "COMMUNITY REHABILITATION PROGRAM Observation and Report"
 // is VR-authored content from the uploaded WSA. These fields must NEVER be
@@ -685,6 +743,8 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   const naturalSupportRaw = naturalSupportEvidenceBlock
     ? await synthesizeNaturalSupportObservations(base44, naturalSupportEvidenceBlock)
     : 'Natural support information has not been documented in the approved assessment sources. Staff must complete the natural support section or document available supports before generating this portion of the WSA.';
+  // Clamp to the app-level limit for detailed fields (850 chars).
+  // generateOfficialFields will further compress to WSA_PDF_SAFE_LIMITS (360 chars) for the PDF.
   detailedFields.natural_support_observations = clampOfficialText(naturalSupportRaw, WSA_CHAR_LIMITS.natural_support_observations);
 
   // These values cannot be finalized from AI-generated evidence alone.
@@ -739,8 +799,12 @@ const STAFF_VR_ONLY_KEYS = new Set([
 ]);
 
 async function generateOfficialFields(base44, detailedFields, contextBlock) {
-  // Pass 1: copy every field that already fits within its character limit.
-  // Only fields that are OVER the limit are sent to the LLM for compression.
+  // Pass 1: copy every field that already fits within its PDF-safe character limit.
+  // Only fields that are OVER the PDF-safe limit are sent to the LLM for compression.
+  // NOTE: We use WSA_PDF_SAFE_LIMITS here (measured from actual PDF field geometry),
+  // NOT WSA_CHAR_LIMITS (which are database/app limits and are too large for the PDF).
+  // detailed_wsa_fields uses WSA_CHAR_LIMITS (unrestricted working copy).
+  // official_wsa_fields uses WSA_PDF_SAFE_LIMITS (what actually fits in the PDF).
   const officialFields = {};
   const overLimitFields = {};
 
@@ -752,13 +816,13 @@ async function generateOfficialFields(base44, detailedFields, contextBlock) {
       officialFields[key] = '';
       continue;
     }
-    const limit = WSA_CHAR_LIMITS[key];
+    const limit = WSA_PDF_SAFE_LIMITS[key] || WSA_CHAR_LIMITS[key];
     const text = safeString(detailedFields[key]).replace(/\s+/g, ' ').trim();
     if (text.length <= limit) {
-      // Fits — copy verbatim, no LLM needed.
+      // Fits within PDF-safe limit — copy verbatim, no LLM needed.
       officialFields[key] = text;
     } else {
-      // Over limit — needs compression.
+      // Over PDF-safe limit — needs compression.
       overLimitFields[key] = text;
     }
   }
@@ -766,7 +830,7 @@ async function generateOfficialFields(base44, detailedFields, contextBlock) {
   // Pass 2: if any fields are over-limit, compress only those via LLM.
   if (Object.keys(overLimitFields).length > 0) {
     const limitsText = Object.entries(overLimitFields)
-      .map(([key]) => key + ': max ' + WSA_CHAR_LIMITS[key] + ' chars')
+      .map(([key]) => key + ': max ' + (WSA_PDF_SAFE_LIMITS[key] || WSA_CHAR_LIMITS[key]) + ' chars')
       .join('\n');
 
     const overLimitBlock = JSON.stringify(overLimitFields, null, 2);
@@ -816,12 +880,13 @@ RULES:
     }
   }
 
-  // Final safety pass: hard-clamp every official field to its WSA_CHAR_LIMITS value.
+  // Final safety pass: hard-clamp every official field to its WSA_PDF_SAFE_LIMITS value.
   // This catches any field set by hard-override logic (natural_support_observations,
   // work_assessment_observations, recommended_supports_on_job, etc.) that bypassed
-  // the LLM compression path above, ensuring NO official field ever exceeds its PDF limit.
+  // the LLM compression path above, ensuring NO official field ever exceeds the
+  // actual visible PDF field capacity.
   for (const key of Object.keys(officialFields)) {
-    const limit = WSA_CHAR_LIMITS[key];
+    const limit = WSA_PDF_SAFE_LIMITS[key] || WSA_CHAR_LIMITS[key];
     if (limit && typeof officialFields[key] === 'string') {
       officialFields[key] = clampOfficialText(officialFields[key], limit);
     }
