@@ -27,14 +27,19 @@ export default function StructuredAssessmentWorkspacePanel({
   clientId,
   assessment,
   existingRecord,
+  initialResponses,
   onSaved,
   onClose,
 }) {
   const { sections, meta } = assessment;
 
+  // Seed from existingRecord, then overlay any initialResponses (e.g. pre-selected purpose)
+  const baseResponses = existingRecord?.responses || {};
+  const seedResponses = initialResponses ? { ...baseResponses, ...initialResponses } : baseResponses;
+
   // Local state — mirrors IntakeSectionForm pattern
-  const [responses, setResponses] = useState(existingRecord?.responses || {});
-  const [isDirty, setIsDirty] = useState(false);
+  const [responses, setResponses] = useState(seedResponses);
+  const [isDirty, setIsDirty] = useState(!!initialResponses);
   const [saving, setSaving] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
   const [recordStatus, setRecordStatus] = useState(existingRecord?.status || null);
@@ -43,7 +48,7 @@ export default function StructuredAssessmentWorkspacePanel({
   const responsesRef = useRef(responses);
   useEffect(() => { responsesRef.current = responses; }, [responses]);
 
-  const isDirtyRef = useRef(false);
+  const isDirtyRef = useRef(isDirty);
   useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
   // Track the DB record id so we update rather than create a duplicate

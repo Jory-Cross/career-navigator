@@ -80,6 +80,18 @@ function sortObservationRecords(records) {
   });
 }
 
+const OBSERVATION_PURPOSE_OPTIONS = [
+  "Pre-employment situational assessment",
+  "Community-based discovery",
+  "Trial work experience",
+  "Job placement observation",
+  "Employed job-coaching observation",
+  "Support-needs review",
+  "Retention follow-up",
+  "Support fading review",
+  "Other",
+];
+
 export default function WorkPerformanceSupportObservationPanel({
   clientId,
   records = [],
@@ -88,6 +100,8 @@ export default function WorkPerformanceSupportObservationPanel({
   const [view, setView] = useState("history");
   const [selectedRecordId, setSelectedRecordId] = useState(null);
   const [newObservationSession, setNewObservationSession] = useState(0);
+  const [selectedPurpose, setSelectedPurpose] = useState(null);
+  const [initialResponses, setInitialResponses] = useState(null);
 
   const observationDefinition = {
     key: WORK_PERFORMANCE_SUPPORT_OBSERVATION_META.assessment_type,
@@ -110,6 +124,14 @@ export default function WorkPerformanceSupportObservationPanel({
 
   const handleStartNewObservation = () => {
     setSelectedRecordId(null);
+    setSelectedPurpose(null);
+    setInitialResponses(null);
+    setView("select_purpose");
+  };
+
+  const handlePurposeConfirm = () => {
+    if (!selectedPurpose) return;
+    setInitialResponses({ observation_purpose: selectedPurpose });
     setNewObservationSession((previous) => previous + 1);
     setView("new");
   };
@@ -127,6 +149,62 @@ export default function WorkPerformanceSupportObservationPanel({
   const handleSaved = async () => {
     await onSaved?.();
   };
+
+  if (view === "select_purpose") {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReturnToHistory}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Observation History
+          </Button>
+          <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">
+            New Observation
+          </Badge>
+        </div>
+
+        <div>
+          <h3 className="text-base font-semibold text-slate-900 mb-1">Select Observation Purpose</h3>
+          <p className="text-sm text-slate-500">Choose the reason for completing this observation before beginning the assessment.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {OBSERVATION_PURPOSE_OPTIONS.map((purpose) => (
+            <button
+              key={purpose}
+              type="button"
+              onClick={() => setSelectedPurpose(purpose)}
+              className={`text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                selectedPurpose === purpose
+                  ? "border-indigo-500 bg-indigo-50 text-indigo-800 shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50"
+              }`}
+            >
+              {purpose}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            onClick={handlePurposeConfirm}
+            disabled={!selectedPurpose}
+            className="gap-2"
+          >
+            <ClipboardPlus className="h-4 w-4" />
+            Begin Observation
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (view === "new") {
     return (
@@ -147,15 +225,16 @@ export default function WorkPerformanceSupportObservationPanel({
             variant="outline"
             className="border-indigo-200 bg-indigo-50 text-indigo-700"
           >
-            New Observation
+            New Observation — {selectedPurpose}
           </Badge>
         </div>
 
-                <StructuredAssessmentWorkspacePanel
+        <StructuredAssessmentWorkspacePanel
           key={`new-observation-${newObservationSession}`}
           clientId={clientId}
           assessment={observationDefinition}
           existingRecord={null}
+          initialResponses={initialResponses}
           onSaved={handleSaved}
           onClose={handleReturnToHistory}
         />
