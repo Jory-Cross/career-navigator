@@ -679,9 +679,13 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
     }
   } catch (_e) { /* leave as null */ }
 
-  detailedFields.natural_support_observations = naturalSupportEvidenceBlock
+  // Hard-guard: natural_support_observations is always set from permitted sources only.
+  // The detailed field may be up to 850 chars (its WSA_CHAR_LIMITS value).
+  // generateOfficialFields will copy it verbatim if ≤ limit, or compress if over.
+  const naturalSupportRaw = naturalSupportEvidenceBlock
     ? await synthesizeNaturalSupportObservations(base44, naturalSupportEvidenceBlock)
     : 'Natural support information has not been documented in the approved assessment sources. Staff must complete the natural support section or document available supports before generating this portion of the WSA.';
+  detailedFields.natural_support_observations = clampOfficialText(naturalSupportRaw, WSA_CHAR_LIMITS.natural_support_observations);
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
@@ -812,8 +816,20 @@ RULES:
     }
   }
 
+  // Final safety pass: hard-clamp every official field to its WSA_CHAR_LIMITS value.
+  // This catches any field set by hard-override logic (natural_support_observations,
+  // work_assessment_observations, recommended_supports_on_job, etc.) that bypassed
+  // the LLM compression path above, ensuring NO official field ever exceeds its PDF limit.
+  for (const key of Object.keys(officialFields)) {
+    const limit = WSA_CHAR_LIMITS[key];
+    if (limit && typeof officialFields[key] === 'string') {
+      officialFields[key] = clampOfficialText(officialFields[key], limit);
+    }
+  }
+
   console.log('DEBUG generateOfficialFields INPUT detailedFields.interview_skill_observations:', JSON.stringify(detailedFields.interview_skill_observations));
   console.log('DEBUG generateOfficialFields OUTPUT officialFields.interview_skill_observations:', JSON.stringify(officialFields.interview_skill_observations));
+  console.log('DEBUG generateOfficialFields OUTPUT natural_support_observations length:', (officialFields.natural_support_observations || '').length, '/ limit:', WSA_CHAR_LIMITS.natural_support_observations);
 
   return {
     official_wsa_fields: officialFields,
