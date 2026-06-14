@@ -307,7 +307,7 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
     return `${format(periodRange.start, "MMM d")} – ${format(periodRange.end, "MMM d, yyyy")}`;
   }, [periodRange]);
 
-  const totalHours = Math.round(filteredTimeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60);
+  const totalHours = Math.round(filteredTimeEntries.reduce((s, t) => s + (t.duration_minutes || 0), 0) / 60 * 10) / 10;
   const activeClients = clients.filter(c => !c.is_archived).length;
   const pendingTasks = filteredTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
 
