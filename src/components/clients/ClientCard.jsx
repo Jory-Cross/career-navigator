@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Briefcase, Clock, Archive, ArchiveRestore, Mail, UserCheck, Trash2, AlertTriangle } from "lucide-react";
+import { MapPin, Briefcase, Archive, ArchiveRestore, Mail, UserCheck, Trash2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -159,17 +159,6 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
                     {client.location}
                   </p>
                 )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-50">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <Clock className="w-3 h-3" />
-                <span>{totalHours || 0}h logged</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <Briefcase className="w-3 h-3" />
-                <span>{applicationCount || 0} applications</span>
               </div>
             </div>
 
