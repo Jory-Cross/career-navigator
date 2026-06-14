@@ -178,7 +178,7 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
                       <AlertTriangle className="w-3 h-3 shrink-0" />
                     ) : null}
                     <span className="font-medium">Job Coaching:</span>
-                    <span>{authStatus.jobCoaching.remaining}h / {authStatus.jobCoaching.authorized}h</span>
+                    <span>{authStatus.jobCoaching.remaining}h remaining</span>
                   </div>
                 )}
                 {authStatus.lifeSkills && (
@@ -194,7 +194,7 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
                       <AlertTriangle className="w-3 h-3 shrink-0" />
                     ) : null}
                     <span className="font-medium">Life Skills:</span>
-                    <span>{authStatus.lifeSkills.remaining}h / {authStatus.lifeSkills.authorized}h</span>
+                    <span>{authStatus.lifeSkills.remaining}h remaining</span>
                   </div>
                 )}
               </div>
