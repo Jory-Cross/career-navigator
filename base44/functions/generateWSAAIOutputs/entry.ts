@@ -390,6 +390,42 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
 }
 
+async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
+  const prompt = `You are a vocational rehabilitation evaluator writing the "Life Skills Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
+
+PURPOSE OF THIS FIELD:
+Identify documented life skills deficits, gaps, or training needs discovered through the assessment process that may justify additional CRP Life Skills service authorization.
+
+This field documents WHAT WAS IDENTIFIED — not recommendations.
+Do NOT write a recommendation list.
+Do NOT prescribe training programs.
+Do NOT suggest services.
+The companion field "Life Skills Needed" handles recommendations separately.
+
+TASK:
+Using ONLY the documented assessment evidence below, write a professional narrative identifying specific life skills deficits or gaps that were observed or reported across the assessment process.
+
+DOCUMENTED ASSESSMENT EVIDENCE (organized by life skills domain):
+${evidenceBlock}
+
+REQUIREMENTS:
+- Identify specific life skills areas where deficits, gaps, or training needs are documented in the evidence.
+- For each identified area, explain what the assessment evidence shows (what was observed, reported, or documented).
+- Tie every identified deficit to a specific assessment finding — do NOT make general statements without evidence.
+- Life skills domains to consider (only when evidence supports them): financial literacy/budgeting, professional attire/workplace hygiene, time management/organization, self-advocacy, communication skills, transportation independence, community integration, independent living skills, workplace etiquette, technology skills for employment.
+- Do NOT generate generic life skills deficits not supported by the evidence.
+- Do NOT invent any fact not present in the evidence above.
+- Do NOT use resume data, work history documents, client notes, or VR-authored field content.
+- Do NOT write recommendations — only document what was identified through assessment.
+- Use past tense for observed/documented findings ("Assessment findings indicated...", "The client reported difficulty with...", "Observation noted...").
+- Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
+- Maximum 850 characters.
+- Return ONLY the plain text narrative.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({ prompt });
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+}
+
 async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
   const sourceBlocks = [];
 
@@ -533,6 +569,7 @@ Use this assessment's responses as the primary evidence for:
 - current_work_skills: Draw primarily from observed skills documented in the Work Performance & Support Observation.
 - work_skill_development_needs: Draw primarily from skill gaps and development areas observed in the Work Performance & Support Observation. WET functional tolerance data (pace, multitasking, interruptions) may supplement but must be labeled as tolerance assessment findings, not observed worksite performance.
 - recommended_supports_on_job: STRICT RULE — Do NOT generate this field. Leave it empty or null. It is always overwritten by a dedicated server-side synthesis step after your response.
+- life_skills_observations: STRICT RULE — Do NOT generate this field. Leave it empty or null. It is always overwritten by a dedicated server-side synthesis step that identifies documented life skills deficits from approved assessment sources only.
 
 SOURCE: Work Environment Tolerance (assessment_type = "work_environment_tolerance")
 Use WET responses as structured tolerance and functional capacity evidence for:
@@ -746,6 +783,133 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   // Clamp to the app-level limit for detailed fields (850 chars).
   // generateOfficialFields will further compress to WSA_PDF_SAFE_LIMITS (360 chars) for the PDF.
   detailedFields.natural_support_observations = clampOfficialText(naturalSupportRaw, WSA_CHAR_LIMITS.natural_support_observations);
+
+  // ── life_skills_observations: hard-override via dedicated synthesis ──────────
+  // Purpose: identify documented life skills deficits/gaps through assessment findings.
+  // This is NOT a recommendation field — life_skills_needed handles recommendations.
+  // Approved sources: WP&SO, Barriers, WET, Support/Accommodation, WSA Interview.
+  // Prohibited: resume, documents, client.notes, VR-authored fields as sole source.
+  let lifeSkillsEvidenceBlock = null;
+  try {
+    const ctx = JSON.parse(contextBlock);
+    const lines = [];
+
+    // Source 1: Work Performance & Support Observation — observed functional/skill gaps
+    const wpsoAssmt = (ctx.assessments || []).find(a => a.type === 'work_performance_support_observation');
+    if (wpsoAssmt && wpsoAssmt.responses) {
+      const wr = wpsoAssmt.responses;
+      // Any field whose key or value touches life-skills-adjacent domains
+      const lifeSkillsWpsoFields = [
+        ['Observed task initiation difficulty', wr.task_initiation],
+        ['Prompt level required during observation', wr.overall_prompt_level_for_observed_tasks],
+        ['Where prompting was needed', wr.prompt_level_examples],
+        ['Observed performance concerns', wr.task_performance_concerns_observed],
+        ['Support or training needed from observation', wr.support_or_training_needed_from_observation],
+        ['Vocational implications of task performance', wr.task_performance_vocational_implications],
+        ['Verified support needs', wr.verified_support_needs_from_observation],
+        ['Verified barriers or concerns', wr.verified_barriers_or_concerns_from_observation],
+        ['Communication observed during worksite', wr.communication_observed],
+        ['Self-advocacy observed', wr.self_advocacy_observed],
+        ['Technology use observed', wr.technology_use_observed],
+        ['Professional presentation observed', wr.professional_presentation_observed],
+        ['Time management or punctuality observed', wr.time_management_observed],
+        ['Work habits observed', wr.work_habits_observed],
+      ];
+      for (const [label, val] of lifeSkillsWpsoFields) {
+        const s = safeString(val).trim();
+        if (s && s.length > 2 && !s.startsWith('[')) {
+          lines.push(`[Work Performance Observation] ${label}: ${s}`);
+        }
+      }
+    }
+
+    // Source 2: Barriers to Employment — named barrier categories map directly to life skills domains
+    const barriersAssmt = (ctx.assessments || []).find(a => a.type === 'barriers_to_employment');
+    if (barriersAssmt && barriersAssmt.responses) {
+      const lifeSkillsBarrierKeywords = [
+        'transportation', 'financial', 'budget', 'money', 'communication', 'organization',
+        'independent', 'living', 'community', 'hygiene', 'attire', 'clothing', 'appearance',
+        'time', 'schedule', 'technology', 'computer', 'phone', 'self_care', 'advocacy',
+        'etiquette', 'social', 'interpersonal', 'literacy', 'reading', 'math',
+      ];
+      for (const [k, v] of Object.entries(barriersAssmt.responses)) {
+        const s = safeString(v).trim();
+        if (!s || s.length < 3 || s.startsWith('[')) continue;
+        const kLower = k.toLowerCase();
+        if (lifeSkillsBarrierKeywords.some(kw => kLower.includes(kw))) {
+          lines.push(`[Barriers to Employment] ${k}: ${s}`);
+        }
+      }
+    }
+
+    // Source 3: Work Environment Tolerance — functional gaps that indicate trainable life skills deficits
+    if (ctx.work_environment_tolerance_profile) {
+      const wet = ctx.work_environment_tolerance_profile;
+      const wetLifeSkillsFields = [
+        ['Phone communication difficulty', wet.phone_difficulty_detail],
+        ['Phone communication comfort', wet.phone_communication],
+        ['Written instructions needed', wet.written_instructions_detail],
+        ['Written instructions need level', wet.written_instructions_need],
+        ['Multitasking ability', wet.multitasking_ability],
+        ['Interruption impact', wet.interruption_impact_narrative],
+        ['Task switching difficulty', wet.task_switching_tolerance],
+        ['Fast pace struggle', wet.pace_struggle_narrative],
+        ['Overwhelm triggers', wet.overwhelm_triggers],
+        ['Stress recovery strategies needed', wet.recovery_strategies],
+        ['Self-regulation needs', wet.overwhelm_signs_detail],
+        ['Conflict tolerance', wet.conflict_tolerance],
+        ['Community/customer interaction difficulty', wet.customer_avoidance_detail],
+      ];
+      for (const [label, val] of wetLifeSkillsFields) {
+        const s = safeString(val).trim();
+        if (s && s.length > 2 && !s.startsWith('[')) {
+          lines.push(`[Work Environment Tolerance] ${label}: ${s}`);
+        }
+      }
+    }
+
+    // Source 4: Support & Accommodation Assessment — independence gaps imply training needs
+    const supportAssmt = (ctx.assessments || []).find(a => a.type === 'support_and_accommodation');
+    if (supportAssmt && supportAssmt.responses) {
+      const lifeSkillsSupportKeywords = [
+        'independent', 'self', 'daily', 'living', 'communication', 'transportation',
+        'financial', 'budget', 'technology', 'organization', 'time', 'hygiene', 'community',
+      ];
+      for (const [k, v] of Object.entries(supportAssmt.responses)) {
+        const s = safeString(v).trim();
+        if (!s || s.length < 3 || s.startsWith('[')) continue;
+        const kLower = k.toLowerCase();
+        if (lifeSkillsSupportKeywords.some(kw => kLower.includes(kw))) {
+          lines.push(`[Support & Accommodation Assessment] ${k}: ${s}`);
+        }
+      }
+    }
+
+    // Source 5: WSA Interview Assessment — communication, self-advocacy, professional presentation gaps
+    if (ctx.wsa_interview_sessions && ctx.wsa_interview_sessions.length > 0) {
+      const answeredQuestions = ctx.wsa_interview_sessions.flatMap(s =>
+        (s.questions || []).filter(q => safeString(q.answer).trim())
+      );
+      // Include overall feedback and low-scoring answers as life skills evidence
+      for (const session of ctx.wsa_interview_sessions) {
+        if (session.overall_feedback) {
+          lines.push(`[WSA Interview Session] Overall feedback: ${safeString(session.overall_feedback).trim()}`);
+        }
+      }
+      const lowScoreQuestions = answeredQuestions.filter(q => q.score !== null && Number(q.score) < 60);
+      for (const q of lowScoreQuestions.slice(0, 5)) {
+        lines.push(`[WSA Interview Session] Low-score response (${q.score}%) — Question: ${safeString(q.question).trim()} | Answer: ${safeString(q.answer).trim().slice(0, 200)}`);
+      }
+    }
+
+    if (lines.length > 0) {
+      lifeSkillsEvidenceBlock = lines.join('\n');
+    }
+  } catch (_e) { /* leave as null */ }
+
+  detailedFields.life_skills_observations = lifeSkillsEvidenceBlock
+    ? await synthesizeLifeSkillsObservations(base44, lifeSkillsEvidenceBlock)
+    : 'Life skills deficits or training needs have not been identified through the current assessment data. Complete the Work Performance & Support Observation, Barriers to Employment, and Work Environment Tolerance assessments before generating this section of the WSA.';
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
