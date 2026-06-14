@@ -102,7 +102,7 @@ export default function InterviewPrepSection({ client }) {
         getApplications(client.id),
       ]);
 
-      setSessions(Array.isArray(loadedSessions) ? loadedSessions : []);
+      setSessions((Array.isArray(loadedSessions) ? loadedSessions : []).filter(s => s.session_type !== "WSA"));
       setApplications(
         (Array.isArray(loadedApps) ? loadedApps : []).filter(
           (a) => a.status !== "rejected" && a.status !== "withdrawn"
@@ -433,10 +433,7 @@ export default function InterviewPrepSection({ client }) {
             </div>
           )}
 
-          <Button variant="secondary" onClick={() => startNewSession(true)}>
-            <Lightbulb className="mr-2 h-4 w-4" />
-            WSA Interview
-          </Button>
+
         </div>
       </div>
 

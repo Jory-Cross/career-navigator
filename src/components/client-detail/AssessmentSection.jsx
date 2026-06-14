@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import StructuredAssessmentWorkspacePanel from "@/components/assessments/StructuredAssessmentWorkspacePanel";
 import WorkPerformanceSupportObservationPanel from "@/components/assessments/WorkPerformanceSupportObservationPanel";
 import LegacyAssessmentPanel from "@/components/assessments/LegacyAssessmentPanel";
+import WSAInterviewPanel from "@/components/assessments/WSAInterviewPanel";
 
 import {
   WORK_ENVIRONMENT_TOLERANCE_SECTIONS,
@@ -185,6 +186,16 @@ const ALL_ASSESSMENTS = [
     meta: BARRIERS_TO_EMPLOYMENT_META,
   },
   {
+    key: "wsa_interview",
+    label: "WSA Interview Assessment",
+    emoji: "🎤",
+    description: "Structured WSA interview session — conduct, score, and review interview responses",
+    type: "wsa_interview",
+    available: true,
+    questions: [],
+    sections: [],
+  },
+  {
     key: "work_performance_support_observation",
     label: "Work Performance & Support Observation",
     emoji: "📝",
@@ -265,7 +276,7 @@ function countAnsweredStructuredQuestions(sections, responses) {
 
 // ── Assessment Card ────────────────────────────────────────────────────────────
 
-function AssessmentCard({ assessment, record, isActive, onClick }) {
+function AssessmentCard({ assessment, record, isActive, onClick, statusOverride }) {
   const { label, emoji, description, type, available, questions = [], sections = [] } = assessment;
 
   let totalFields = 0;
@@ -275,17 +286,18 @@ function AssessmentCard({ assessment, record, isActive, onClick }) {
     if (type === "legacy") {
       totalFields = countTotalLegacyFields(questions);
       answeredFields = countAnsweredLegacyFields(questions, record?.responses);
-    } else {
+    } else if (type === "structured") {
       totalFields = countTotalStructuredQuestions(sections);
       answeredFields = countAnsweredStructuredQuestions(sections, record?.responses);
     }
+    // wsa_interview type: no field count — uses statusOverride
   }
 
   const pct = totalFields > 0 ? Math.round((answeredFields / totalFields) * 100) : 0;
 
-  const status = !record ? "not_started"
+  const status = statusOverride || (!record ? "not_started"
     : record.status === "completed" ? "completed"
-    : "in_progress";
+    : "in_progress");
 
   const statusConfig = {
     not_started: { label: "Not Started", color: "bg-slate-100 text-slate-500" },
@@ -368,13 +380,29 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     enabled: !!resolvedClientId,
   });
 
+  const { data: wsaSessions = [] } = useQuery({
+    queryKey: ["client-wsa-sessions", resolvedClientId],
+    queryFn: async () => {
+      const all = await base44.entities.InterviewSession.filter({ client_id: resolvedClientId });
+      return (Array.isArray(all) ? all : []).filter(s => s.session_type === "WSA");
+    },
+    enabled: !!resolvedClientId,
+  });
+
   const getRecord = (key) => assessments.find((a) => a.assessment_type === key) || null;
+
+  const getWsaInterviewStatus = () => {
+    if (!wsaSessions.length) return "not_started";
+    if (wsaSessions.some(s => s.overall_feedback)) return "completed";
+    return "in_progress";
+  };
 
   const activeAssessment = ALL_ASSESSMENTS.find((a) => a.key === activeKey);
   const activeRecord = activeKey ? getRecord(activeKey) : null;
 
     const handleSaved = async () => {
     await queryClient.invalidateQueries({ queryKey: ["client-assessments", resolvedClientId] });
+    await queryClient.invalidateQueries({ queryKey: ["client-wsa-sessions", resolvedClientId] });
   };
 
   const handleAssessmentSelection = async (assessmentKey) => {
@@ -413,7 +441,17 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const renderRightPanel = (onClose) => {
     if (!activeAssessment || !activeAssessment.available) return null;
 
-      if (activeAssessment.key === "work_performance_support_observation") {
+      if (activeAssessment.key === "wsa_interview") {
+      return (
+        <WSAInterviewPanel
+          clientId={resolvedClientId}
+          client={client}
+          onSaved={handleSaved}
+        />
+      );
+    }
+
+    if (activeAssessment.key === "work_performance_support_observation") {
       return (
         <WorkPerformanceSupportObservationPanel
           clientId={resolvedClientId}
@@ -480,6 +518,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
             assessment={assessment}
             record={getRecord(assessment.key)}
             isActive={activeKey === assessment.key}
+            statusOverride={assessment.key === "wsa_interview" ? getWsaInterviewStatus() : undefined}
             onClick={() => {
               setActiveKey(assessment.key);
               setMobileOpen(true);
@@ -506,7 +545,8 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
               assessment={assessment}
               record={getRecord(assessment.key)}
               isActive={activeKey === assessment.key}
-                           onClick={() => {
+              statusOverride={assessment.key === "wsa_interview" ? getWsaInterviewStatus() : undefined}
+              onClick={() => {
                 handleAssessmentSelection(assessment.key);
               }}
             />
