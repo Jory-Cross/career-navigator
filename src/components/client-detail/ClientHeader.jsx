@@ -102,7 +102,11 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
         job_coaching_auth_start_date: currentForm.job_coaching_auth_start_date || "",
         job_coaching_auth_end_date: currentForm.job_coaching_auth_end_date || "",
         dspd_monthly_authorized_hours: currentForm.dspd_monthly_authorized_hours != null ? Number(currentForm.dspd_monthly_authorized_hours) : null,
-        dspd_auth_number: currentForm.dspd_auth_number || ""
+        dspd_auth_number: currentForm.dspd_auth_number || "",
+        life_skills_auth_number: currentForm.life_skills_auth_number || "",
+        life_skills_authorized_hours_total: currentForm.life_skills_authorized_hours_total != null ? Number(currentForm.life_skills_authorized_hours_total) : null,
+        life_skills_auth_start_date: currentForm.life_skills_auth_start_date || "",
+        life_skills_auth_end_date: currentForm.life_skills_auth_end_date || ""
       };
 
       const updatedClient = await base44.entities.Client.update(
@@ -320,6 +324,17 @@ if (editing || formOnly) {
           </div>
         </div>
       )}
+
+      {/* Life Skills Authorization */}
+      <div className="md:col-span-2 pt-2 border-t">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Life Skills Authorization</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input className="h-10" value={form.life_skills_auth_number || ""} onChange={e => u("life_skills_auth_number", e.target.value)} placeholder="Auth Number" />
+          <Input className="h-10" type="number" min="0" value={form.life_skills_authorized_hours_total ?? ""} onChange={e => u("life_skills_authorized_hours_total", e.target.value === "" ? null : Number(e.target.value))} placeholder="Total Authorized Hours" />
+          <Input className="h-10" type="date" value={form.life_skills_auth_start_date || ""} onChange={e => u("life_skills_auth_start_date", e.target.value)} placeholder="Auth Start Date" />
+          <Input className="h-10" type="date" value={form.life_skills_auth_end_date || ""} onChange={e => u("life_skills_auth_end_date", e.target.value)} placeholder="Auth End Date" />
+        </div>
+      </div>
 
     <div className="pt-4 border-t">
   <ClientContactSectionsEdit form={form} onChange={u} clientType={form.client_type} />

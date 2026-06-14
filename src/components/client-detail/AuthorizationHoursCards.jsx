@@ -95,6 +95,23 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
   const jcUsedHours = +(jcUsedMinutes / 60).toFixed(2);
   const jcRemaining = +(jcAuthTotal - jcUsedHours).toFixed(2);
 
+  // ── Life Skills overall authorization (no monthly reset) ────────────────
+  const lifeSkillsTotal = Number(client?.life_skills_authorized_hours_total || 0);
+  const showLifeSkills = lifeSkillsTotal > 0;
+
+  const lifeSkillsUsedMinutes = useMemo(() => {
+    if (!showLifeSkills) return 0;
+    return timeEntries
+      .filter((e) => {
+        const code = (e.entry_type_code || e.entry_type || "").toLowerCase();
+        return code === "life_skills";
+      })
+      .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
+  }, [timeEntries, showLifeSkills]);
+
+  const lifeSkillsUsedHours = +(lifeSkillsUsedMinutes / 60).toFixed(2);
+  const lifeSkillsRemaining = +(lifeSkillsTotal - lifeSkillsUsedHours).toFixed(2);
+
   // ── DSPD monthly card ──────────────────────────────────────────────────
   const dspdMonthly = Number(client?.dspd_monthly_authorized_hours || 0);
   const showDspd = dspdMonthly > 0;
@@ -176,7 +193,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
     }
   };
 
-  if (!showJobCoaching && !showDspd) return null;
+  if (!showJobCoaching && !showDspd && !showLifeSkills) return null;
 
   return (
     <div className="space-y-3">
@@ -262,6 +279,37 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
             <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-100 border border-amber-200 px-3 py-2 text-sm text-amber-700">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               Only {jcRemaining}h of job coaching hours remaining. Request new authorization.
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── Life Skills Overall Authorization Card ── */}
+      {showLifeSkills && (
+        <Card className="p-4 border-teal-200 bg-teal-50/40">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 text-teal-600" />
+            <h4 className="font-semibold text-sm text-teal-900">Life Skills Authorization</h4>
+          </div>
+          {client.life_skills_auth_number && (
+            <p className="text-xs text-slate-500 mb-2">Auth #: {client.life_skills_auth_number}</p>
+          )}
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <StatCell label="Total Authorized" value={`${lifeSkillsTotal}h`} />
+            <StatCell label="Used" value={`${lifeSkillsUsedHours}h`} />
+            <StatCell label="Remaining" value={`${lifeSkillsRemaining}h`} />
+          </div>
+          <HoursBar used={lifeSkillsUsedHours} total={lifeSkillsTotal} />
+          {lifeSkillsRemaining <= 0 && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-red-100 border border-red-200 px-3 py-2 text-sm text-red-700">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              Life skills authorization hours exhausted. Request new authorization before adding more hours.
+            </div>
+          )}
+          {lifeSkillsRemaining > 0 && lifeSkillsRemaining <= 10 && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-100 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              Only {lifeSkillsRemaining}h of life skills hours remaining. Request new authorization.
             </div>
           )}
         </Card>

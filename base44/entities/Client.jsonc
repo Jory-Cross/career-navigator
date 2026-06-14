@@ -274,6 +274,22 @@
     "dspd_auth_number": {
       "type": "string",
       "description": "Authorization number for DSPD services"
+    },
+    "life_skills_auth_number": {
+      "type": "string",
+      "description": "Authorization number for Life Skills"
+    },
+    "life_skills_authorized_hours_total": {
+      "type": "number",
+      "description": "Total authorized hours for Life Skills (carries forward month to month)"
+    },
+    "life_skills_auth_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "life_skills_auth_end_date": {
+      "type": "string",
+      "format": "date"
     }
   },
   "required": [

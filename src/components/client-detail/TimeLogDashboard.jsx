@@ -192,6 +192,13 @@ function getEntryTypeColorClasses(entryTypeCode) {
     };
   }
 
+  if (code === "life_skills") {
+    return {
+      card: "border-teal-200 bg-teal-50/50",
+      badge: "bg-teal-100 text-teal-700 border-teal-200",
+    };
+  }
+
   if (code === "pre_ets_training") {
     return {
       card: "border-indigo-200 bg-indigo-50/50",
