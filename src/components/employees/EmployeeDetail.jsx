@@ -27,16 +27,19 @@ function parseDateOnly(dateString) {
 
 function getPeriodRange(periodFilter, selectedMonth) {
   const now = new Date();
-  if (periodFilter === "this_month") {
-    return { start: startOfMonth(now), end: endOfMonth(now) };
-  }
-  if (periodFilter === "last_month") {
-    const last = subMonths(now, 1);
-    return { start: startOfMonth(last), end: endOfMonth(last) };
-  }
+  const y = now.getFullYear(), m = now.getMonth();
+  const lastMonth = subMonths(now, 1);
+  const ly = lastMonth.getFullYear(), lm = lastMonth.getMonth();
+
+  if (periodFilter === "this_first") return { start: new Date(y, m, 1), end: new Date(y, m, 15) };
+  if (periodFilter === "this_second") return { start: new Date(y, m, 16), end: endOfMonth(now) };
+  if (periodFilter === "last_first") return { start: new Date(ly, lm, 1), end: new Date(ly, lm, 15) };
+  if (periodFilter === "last_second") return { start: new Date(ly, lm, 16), end: endOfMonth(lastMonth) };
+  if (periodFilter === "this_month") return { start: startOfMonth(now), end: endOfMonth(now) };
+  if (periodFilter === "last_month") return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
   if (periodFilter === "custom_month" && selectedMonth) {
-    const [y, m] = selectedMonth.split("-").map(Number);
-    const base = new Date(y, m - 1, 1);
+    const [cy, cm] = selectedMonth.split("-").map(Number);
+    const base = new Date(cy, cm - 1, 1);
     return { start: startOfMonth(base), end: endOfMonth(base) };
   }
   return null; // all time
@@ -222,7 +225,7 @@ function TimeEntriesDrillDown({ timeEntries, clients, timePeriod, setTimePeriod,
 }
 
 export default function EmployeeDetail({ employee, currentUser, onOffboarded }) {
-  const [periodFilter, setPeriodFilter] = useState("this_month");
+  const [periodFilter, setPeriodFilter] = useState("this_first");
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [timePeriod, setTimePeriod] = useState("all");
   const [timeClientFilter, setTimeClientFilter] = useState("all");
@@ -407,8 +410,12 @@ export default function EmployeeDetail({ employee, currentUser, onOffboarded }) 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="this_month">This Month</SelectItem>
-                <SelectItem value="last_month">Last Month</SelectItem>
+                <SelectItem value="this_first">This Month: 1st–15th</SelectItem>
+                <SelectItem value="this_second">This Month: 16th–End</SelectItem>
+                <SelectItem value="last_first">Last Month: 1st–15th</SelectItem>
+                <SelectItem value="last_second">Last Month: 16th–End</SelectItem>
+                <SelectItem value="this_month">This Month (Full)</SelectItem>
+                <SelectItem value="last_month">Last Month (Full)</SelectItem>
                 <SelectItem value="custom_month">Custom Month</SelectItem>
                 <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
