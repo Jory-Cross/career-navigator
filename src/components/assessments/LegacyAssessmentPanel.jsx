@@ -72,6 +72,30 @@ const WSA_LARGE_HTML_BLOB_KEYS = new Set([
   '_detailed_wsa_report_html',
 ]);
 
+// Upsert a Document record for the client — replaces any existing doc with same title.
+async function upsertWSADocument({ clientId, title, fileUrl, fileName }) {
+  try {
+    const existing = await base44.entities.Document.filter({ client_id: clientId, title });
+    const payload = {
+      client_id: clientId,
+      title,
+      file_url: fileUrl,
+      file_name: fileName,
+      category: 'assessment',
+      document_subtype: 'wsa',
+      is_generated: true,
+      visibility: 'staff',
+    };
+    if (existing?.length > 0) {
+      await base44.entities.Document.update(existing[0].id, payload);
+    } else {
+      await base44.entities.Document.create(payload);
+    }
+  } catch (e) {
+    console.error('upsertWSADocument failed:', e);
+  }
+}
+
 // VR-authored fields — everything above "COMMUNITY REHABILITATION PROGRAM Observation and Report".
 // These are uploaded from the source WSA document and must NEVER be overwritten by any AI process.
 // AI generation scope begins ONLY at the CRP section (worksite_simulation_location and below).
@@ -348,6 +372,20 @@ export default function LegacyAssessmentPanel({
   }
 
   async function handleWSADownload() {
+    // If a stored PDF URL exists, open it directly without regenerating
+    if (responses?._filled_wsa_pdf_url) {
+      const link = document.createElement("a");
+      link.href = responses._filled_wsa_pdf_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = "Filled-WSA.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Filled WSA PDF downloaded");
+      return;
+    }
+
     let assessmentId = existingRecord?.id;
 
     if (!assessmentId) {
@@ -373,6 +411,27 @@ export default function LegacyAssessmentPanel({
         throw new Error(data?.error || "The PDF function did not return a file URL.");
       }
 
+      // Persist the PDF URL as a Document record and in responses
+      await upsertWSADocument({ clientId, title: "WSA - Filled WSA", fileUrl: data.pdf_url, fileName: "Filled-WSA.pdf" });
+
+      // Store the PDF URL in the assessment so it's available on next open
+      const nextResponses = {
+        ...latestResponsesRef.current,
+        _filled_wsa_pdf_url: data.pdf_url,
+        _filled_wsa_pdf_generated_at: new Date().toISOString(),
+      };
+      setResponses(nextResponses);
+      latestResponsesRef.current = nextResponses;
+      const savePayload = {
+        client_id: clientId,
+        assessment_type: key,
+        status: "in_progress",
+        responses: stripLargeWSABlobs(nextResponses),
+      };
+      if (existingRecordIdRef.current) {
+        await base44.entities.Assessment.update(existingRecordIdRef.current, savePayload);
+      }
+
       const link = document.createElement("a");
       link.href = data.pdf_url;
       link.target = "_blank";
@@ -382,7 +441,7 @@ export default function LegacyAssessmentPanel({
       link.click();
       document.body.removeChild(link);
 
-      toast.success("Filled WSA PDF generated");
+      toast.success("Filled WSA PDF generated and saved");
       onSaved?.();
     } catch (error) {
       console.error("WSA PDF download failed:", error);
@@ -486,6 +545,32 @@ export default function LegacyAssessmentPanel({
         Object.entries(data.detailed_wsa_fields || {}).filter(([k]) => !WSA_VR_AUTHORED_KEYS.has(k))
       );
 
+      // Upload HTML reports as persistent files so they survive across sessions
+      const wrapHtml = (html, title, desc) => `<!doctype html><html><head><meta charset="utf-8"/><title>${title}</title><style>body{font-family:Arial,sans-serif;color:#111827;line-height:1.5;margin:40px;max-width:900px;}h1{font-size:24px;border-bottom:2px solid #111827;padding-bottom:8px;}h2{font-size:20px;margin-top:28px;color:#111827;}h3{font-size:16px;margin-top:18px;color:#1f2937;}p{margin:8px 0;}section{page-break-inside:avoid;margin-bottom:22px;}.meta{color:#4b5563;font-size:13px;margin-bottom:24px;}</style></head><body><h1>${title}</h1><div class="meta">${desc}</div>${html}</body></html>`;
+
+      let detailedDocUrl = responses._detailed_report_doc_url || "";
+      let supplementalDocUrl = responses._supplemental_report_doc_url || "";
+
+      if (data.full_detailed_wsa_html) {
+        try {
+          const blob = new Blob([wrapHtml(data.full_detailed_wsa_html, "Full Detailed Work Strategy Assessment", "Detailed WSA — full evidence-based narrative.")], { type: "text/html" });
+          const file = new File([blob], "Full-Detailed-WSA.html", { type: "text/html" });
+          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+          detailedDocUrl = file_url;
+          await upsertWSADocument({ clientId, title: "WSA - Detailed Report", fileUrl: file_url, fileName: "Full-Detailed-WSA.html" });
+        } catch (e) { console.error("Failed to upload detailed WSA HTML:", e); }
+      }
+
+      if (data.supplemental_wsa_report_html) {
+        try {
+          const blob = new Blob([wrapHtml(data.supplemental_wsa_report_html, "Supplemental WSA Narrative Report", "Supplemental narrative analysis for staff review.")], { type: "text/html" });
+          const file = new File([blob], "Supplemental-WSA-Narrative-Report.html", { type: "text/html" });
+          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+          supplementalDocUrl = file_url;
+          await upsertWSADocument({ clientId, title: "WSA - Supplemental Report", fileUrl: file_url, fileName: "Supplemental-WSA-Narrative-Report.html" });
+        } catch (e) { console.error("Failed to upload supplemental WSA HTML:", e); }
+      }
+
       const nextResponses = {
         ...responses,
 
@@ -503,12 +588,16 @@ export default function LegacyAssessmentPanel({
           data.detailed_wsa_report_html ||
           "",
 
+        // Persistent file URLs — survive across sessions without needing re-generation
+        _detailed_report_doc_url: detailedDocUrl,
+        _supplemental_report_doc_url: supplementalDocUrl,
+
         _wsa_report_evidence_summary: data.evidence_summary || [],
         _wsa_report_staff_should_verify: data.staff_should_verify || [],
         _wsa_report_generated_at: new Date().toISOString(),
       };
 
-            setResponses(nextResponses);
+      setResponses(nextResponses);
       latestResponsesRef.current = nextResponses;
       wsaDirtyRef.current = true;
 
@@ -625,22 +714,48 @@ export default function LegacyAssessmentPanel({
   }
 
   function handleDownloadFullDetailedWSA() {
+    // Use persisted file URL if available (survives page refresh)
+    if (responses?._detailed_report_doc_url) {
+      const link = document.createElement("a");
+      link.href = responses._detailed_report_doc_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = "Full-Detailed-WSA.html";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Full Detailed WSA downloaded");
+      return;
+    }
+    // Fallback to in-memory HTML blob (same session only)
     downloadHtmlDocument({
       html: responses?._full_detailed_wsa_html,
       title: "Full Detailed Work Strategy Assessment",
       fileName: "Full-Detailed-WSA.html",
-      description:
-        "This document uses the exact same fields as the official WSA form, but is not limited by the PDF field character limits.",
+      description: "This document uses the exact same fields as the official WSA form, but is not limited by the PDF field character limits.",
     });
   }
 
   function handleDownloadSupplementalWSAReport() {
+    // Use persisted file URL if available (survives page refresh)
+    if (responses?._supplemental_report_doc_url) {
+      const link = document.createElement("a");
+      link.href = responses._supplemental_report_doc_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = "Supplemental-WSA-Narrative-Report.html";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Supplemental WSA Report downloaded");
+      return;
+    }
+    // Fallback to in-memory HTML blob (same session only)
     downloadHtmlDocument({
       html: responses?._supplemental_wsa_report_html,
       title: "Supplemental WSA Narrative Report",
       fileName: "Supplemental-WSA-Narrative-Report.html",
-      description:
-        "This supplemental report provides broader narrative analysis for staff review. It does not replace the full detailed WSA fields.",
+      description: "This supplemental report provides broader narrative analysis for staff review. It does not replace the full detailed WSA fields.",
     });
   }
   
@@ -704,7 +819,7 @@ export default function LegacyAssessmentPanel({
                             <Button
                 type="button"
                 variant="outline"
-                disabled={!responses?._full_detailed_wsa_html}
+                disabled={!responses?._full_detailed_wsa_html && !responses?._detailed_report_doc_url}
                 onClick={handleDownloadFullDetailedWSA}
               >
                 <Download className="mr-2 h-4 w-4" />
@@ -714,7 +829,7 @@ export default function LegacyAssessmentPanel({
               <Button
                 type="button"
                 variant="outline"
-                disabled={!responses?._supplemental_wsa_report_html}
+                disabled={!responses?._supplemental_wsa_report_html && !responses?._supplemental_report_doc_url}
                 onClick={handleDownloadSupplementalWSAReport}
               >
                 <Download className="mr-2 h-4 w-4" />
@@ -732,7 +847,7 @@ export default function LegacyAssessmentPanel({
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                Download Filled WSA
+                {responses?._filled_wsa_pdf_url ? "Re-download Filled WSA" : "Download Filled WSA"}
               </Button>
             </>
           )}
