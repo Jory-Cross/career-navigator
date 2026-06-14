@@ -132,6 +132,31 @@ function stripLargeWSABlobs(responses) {
   );
 }
 
+// Sanitize stale referral-language artifacts from previously-saved official WSA field values.
+// These were produced by the old clampOfficialText logic and must be removed before PDF generation.
+const REFERRAL_LANGUAGE_PATTERNS = [
+  /\s*\[\s*see detailed WSA\s*\]/gi,
+  /\s*\[\s*see detailed report\s*\]/gi,
+  /\s*refer to supplemental report\.?\s*/gi,
+  /\s*details available elsewhere\.?\s*/gi,
+  /\s*\.\.\.\s*$/g,  // trailing ellipsis from old truncation
+];
+
+function sanitizeWSAFieldValue(value) {
+  if (typeof value !== 'string') return value;
+  let cleaned = value;
+  for (const pattern of REFERRAL_LANGUAGE_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  return cleaned.trimEnd();
+}
+
+function sanitizeWSAResponses(responses) {
+  return Object.fromEntries(
+    Object.entries(responses).map(([k, v]) => [k, sanitizeWSAFieldValue(v)])
+  );
+}
+
 export default function LegacyAssessmentPanel({
   assessmentDef,
   existingRecord,
@@ -372,18 +397,14 @@ export default function LegacyAssessmentPanel({
   }
 
   async function handleWSADownload() {
-    // If a stored PDF URL exists, open it directly without regenerating
-    if (responses?._filled_wsa_pdf_url) {
-      const link = document.createElement("a");
-      link.href = responses._filled_wsa_pdf_url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.download = "Filled-WSA.pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Filled WSA PDF downloaded");
-      return;
+    // Sanitize current responses — strip stale referral-language artifacts before saving/generating
+    const sanitized = sanitizeWSAResponses(latestResponsesRef.current);
+    const hasDirtyFields = Object.keys(sanitized).some(
+      k => !k.startsWith('_') && sanitized[k] !== latestResponsesRef.current[k]
+    );
+    if (hasDirtyFields) {
+      latestResponsesRef.current = sanitized;
+      setResponses(sanitized);
     }
 
     let assessmentId = existingRecord?.id;
@@ -495,6 +516,9 @@ export default function LegacyAssessmentPanel({
         _wsa_ai_evidence_summary: data.evidence_summary || [],
         _wsa_ai_staff_should_verify: data.staff_should_verify || [],
         _wsa_ai_fields_generated_at: new Date().toISOString(),
+        // Invalidate any previously-saved Filled WSA PDF — official fields changed
+        _filled_wsa_pdf_url: undefined,
+        _filled_wsa_pdf_generated_at: undefined,
       };
 
             setResponses(nextResponses);
