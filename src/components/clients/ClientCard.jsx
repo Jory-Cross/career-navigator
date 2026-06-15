@@ -54,15 +54,31 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
     const status = {};
     
     // Job Coaching calculation (including additional authorizations)
-    let jcTotalAuthorized = Number(client.job_coaching_authorized_hours_total) || 0;
-    const jcAdditionalAuths = Array.isArray(client.job_coaching_additional_auths) ? client.job_coaching_additional_auths : [];
-    for (const auth of jcAdditionalAuths) {
-      jcTotalAuthorized += Number(auth.authorized_hours || 0);
+    const jcAuths = [];
+    if (Number(client.job_coaching_authorized_hours_total) > 0) {
+      jcAuths.push({
+        authorized_hours: Number(client.job_coaching_authorized_hours_total),
+        start_date: client.job_coaching_auth_start_date || "",
+      });
     }
+    const jcAdditionalAuths = Array.isArray(client.job_coaching_additional_auths) ? client.job_coaching_additional_auths : [];
+    jcAuths.push(...jcAdditionalAuths);
+    
+    let jcTotalAuthorized = jcAuths.reduce((sum, a) => sum + Number(a.authorized_hours || 0), 0);
     
     if (jcTotalAuthorized > 0) {
+      // Filter entries by earliest authorization start_date (like AuthorizationHoursCards does)
+      const startDates = jcAuths.map(a => a.start_date).filter(Boolean).sort();
+      const earliestStart = startDates[0] || null;
+      
       const jcUsedMinutes = timeEntries
-        .filter(e => (e.entry_type_code || "").toLowerCase() === "job_coaching")
+        .filter(e => {
+          const code = (e.entry_type_code || "").toLowerCase();
+          if (code !== "job_coaching") return false;
+          if (!e.date) return true;
+          if (earliestStart && e.date < earliestStart) return false;
+          return true;
+        })
         .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
       const jcUsedHours = jcUsedMinutes / 60;
       const jcRemaining = jcTotalAuthorized - jcUsedHours;
@@ -96,7 +112,7 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
     }
     
     return status;
-  }, [client.job_coaching_authorized_hours_total, client.job_coaching_additional_auths, client.life_skills_authorized_hours_total, client.life_skills_additional_auths, timeEntries]);
+  }, [client.job_coaching_authorized_hours_total, client.job_coaching_auth_start_date, client.job_coaching_additional_auths, client.life_skills_authorized_hours_total, client.life_skills_additional_auths, timeEntries]);
 
   // Archive active client (soft delete)
   const handleArchive = async (e) => {
