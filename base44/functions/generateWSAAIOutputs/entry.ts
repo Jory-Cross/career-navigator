@@ -392,25 +392,169 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
 }
 
-async function synthesizeTransportationObservations(base44, transportationEvidenceBlock) {
+// Method categories used to classify primary transportation method
+const PARATRANSIT_METHODS = new Set(['Paratransit']);
+const FIXED_ROUTE_METHODS = new Set(['Public transportation', 'Community transportation service', 'Transportation provider']);
+const PERSONAL_SUPPORT_METHODS = new Set(['Family transportation', 'Friend transportation', 'Employer transportation', 'Co-worker transportation', 'Ride share', 'Taxi']);
+const DRIVES_SELF_METHODS = new Set(['Drives self']);
+const MOBILITY_DEVICE_METHODS = new Set(['Walking', 'Manual wheelchair', 'Motorized wheelchair', 'Power scooter / mobility device', 'Bicycle']);
+
+function classifyPrimaryMethod(primary, methodsArray) {
+  if (PARATRANSIT_METHODS.has(primary) || methodsArray.some(m => PARATRANSIT_METHODS.has(m))) return 'paratransit';
+  if (DRIVES_SELF_METHODS.has(primary)) return 'drives_self';
+  if (PERSONAL_SUPPORT_METHODS.has(primary)) return 'personal_support';
+  if (FIXED_ROUTE_METHODS.has(primary)) return 'fixed_route';
+  if (MOBILITY_DEVICE_METHODS.has(primary)) return 'mobility_device';
+  // Fallback: check methodsArray for any classified method
+  if (methodsArray.some(m => DRIVES_SELF_METHODS.has(m))) return 'drives_self';
+  if (methodsArray.some(m => PERSONAL_SUPPORT_METHODS.has(m))) return 'personal_support';
+  if (methodsArray.some(m => FIXED_ROUTE_METHODS.has(m))) return 'fixed_route';
+  if (methodsArray.some(m => MOBILITY_DEVICE_METHODS.has(m))) return 'mobility_device';
+  return 'unknown';
+}
+
+function buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock) {
+  // Build a labeled evidence block from the most relevant fields for this method
+  const evidenceLines = [];
+
+  // Always include: primary method, all methods, reliability, employment impact, staff observations
+  if (primaryMethod) evidenceLines.push(`Primary transportation method: ${primaryMethod}`);
+  if (methodsArray.length > 0) evidenceLines.push(`All transportation methods used: ${methodsArray.join(', ')}`);
+  if (tr.paratransit_status) evidenceLines.push(`Paratransit status: ${tr.paratransit_status}`);
+  if (tr.public_transit_access) evidenceLines.push(`Public transportation access: ${tr.public_transit_access}`);
+  if (tr.transportation_availability) evidenceLines.push(`Transportation availability: ${tr.transportation_availability}`);
+  if (tr.reliability_rating) evidenceLines.push(`Reliability rating: ${tr.reliability_rating}/5`);
+  if (tr.absences_past_12_months) evidenceLines.push(`Transportation-related absences (past 12 months): ${tr.absences_past_12_months}`);
+  if (tr.client_readiness) evidenceLines.push(`Client readiness when transportation arrives: ${tr.client_readiness}`);
+  if (tr.provider_reliability) evidenceLines.push(`Transportation provider reliability/delay frequency: ${tr.provider_reliability}`);
+  if (tr.prompting_requirement) evidenceLines.push(`Prompting requirement for transportation: ${tr.prompting_requirement}`);
+  if (tr.employment_support) evidenceLines.push(`Transportation support for employment: ${tr.employment_support}`);
+  if (tr.geographic_restrictions) evidenceLines.push(`Geographic employment restrictions: ${tr.geographic_restrictions}`);
+  if (tr.shift_restrictions) evidenceLines.push(`Shift restrictions: ${tr.shift_restrictions}`);
+  if (tr.attendance_risk) evidenceLines.push(`Attendance risk: ${tr.attendance_risk}`);
+  if (tr.local_independent_mobility) evidenceLines.push(`Local independent mobility: ${tr.local_independent_mobility}`);
+  if (tr.driver_status) evidenceLines.push(`Driver status: ${tr.driver_status}`);
+  if (tr.vehicle_access) evidenceLines.push(`Vehicle access: ${tr.vehicle_access}`);
+  if (Array.isArray(tr.availability_by_schedule) && tr.availability_by_schedule.length > 0) {
+    evidenceLines.push(`Transportation availability by schedule: ${tr.availability_by_schedule.join(', ')}`);
+  }
+  if (Array.isArray(tr.accommodations_needed) && tr.accommodations_needed.length > 0) {
+    evidenceLines.push(`Transportation accommodations needed: ${tr.accommodations_needed.join(', ')}`);
+  }
+
+  // Barrier ratings (only include where score > 0)
+  const barrierFields = [
+    ['Physical barriers', tr.physical_barriers],
+    ['Cognitive barriers', tr.cognitive_barriers],
+    ['Financial barriers', tr.financial_barriers],
+    ['Scheduling barriers', tr.scheduling_barriers],
+    ['Geographic barriers', tr.geographic_barriers],
+    ['Confidence/emotional barriers', tr.confidence_emotional_barriers],
+    ['Safety concerns', tr.safety_concerns],
+  ];
+  for (const [label, val] of barrierFields) {
+    const n = Number(val);
+    if (!isNaN(n) && n > 0) evidenceLines.push(`${label}: ${n}/3`);
+  }
+
+  // Staff free-text — weighted most heavily
+  if (tr.observed_strengths) evidenceLines.push(`Staff observed strengths: ${tr.observed_strengths}`);
+  if (tr.observed_barriers) evidenceLines.push(`Staff observed barriers: ${tr.observed_barriers}`);
+  if (tr.supports_working) evidenceLines.push(`Transportation supports currently working: ${tr.supports_working}`);
+  if (tr.recommended_supports) evidenceLines.push(`Staff recommended transportation supports: ${tr.recommended_supports}`);
+  if (tr.employment_considerations) evidenceLines.push(`Employment considerations (transportation): ${tr.employment_considerations}`);
+
+  // Training needs (only those rated Recommended or Strongly Recommended)
+  if (tr.training_needs_matrix && typeof tr.training_needs_matrix === 'object') {
+    const relevantTraining = Object.entries(tr.training_needs_matrix)
+      .filter(([, v]) => v === 'Recommended' || v === 'Strongly Recommended')
+      .map(([k]) => k);
+    if (relevantTraining.length > 0) evidenceLines.push(`Training identified as recommended or strongly recommended: ${relevantTraining.join(', ')}`);
+  }
+
+  // Resource needs (only Recommended or Immediate Need)
+  if (tr.resource_matrix && typeof tr.resource_matrix === 'object') {
+    const relevantResources = Object.entries(tr.resource_matrix)
+      .filter(([, v]) => v === 'Recommended' || v === 'Immediate Need')
+      .map(([k]) => k);
+    if (relevantResources.length > 0) evidenceLines.push(`Resources identified as needed: ${relevantResources.join(', ')}`);
+  }
+
+  // Build method-specific focus instructions
+  let methodFocusBlock = '';
+
+  if (methodClass === 'paratransit') {
+    const secondaryMethods = methodsArray.filter(m => !PARATRANSIT_METHODS.has(m)).join(', ');
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES (Primary Method: Paratransit):
+- Lead with paratransit status and its role in the client's transportation plan.
+- Prioritize: paratransit approval status, ride scheduling ability, pickup readiness, time management, prompting/reminder needs, service hours coverage, service area limits.
+- If other methods are documented (${secondaryMethods || 'none'}), describe them as backup or supplemental only.
+- Do NOT frame fixed-route transit skills (route planning, reading schedules, map reading, transfers) as current needs unless the assessment explicitly indicates the client currently uses or plans to use fixed-route public transit.
+- You MAY add ONE conditional sentence for fixed-route skills: "If the client chooses to use fixed-route public transportation in the future, travel training may be beneficial."
+- Do NOT add that sentence unless fixed-route transit also appears in the methods list.`;
+
+  } else if (methodClass === 'fixed_route') {
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES (Primary Method: Fixed-Route Public Transit):
+- Lead with public transportation access and how the client uses it.
+- Prioritize: route planning ability, reading schedules and maps, transfers, navigation, getting to stops, travel safety, confidence using public transit, schedule reliability.
+- Include paratransit only if paratransit_status is documented and relevant.
+- Backup methods should be mentioned only if documented and relevant to employment risk.`;
+
+  } else if (methodClass === 'personal_support') {
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES (Primary Method: ${primaryMethod || 'Personal Transportation Support'}):
+- Lead with the availability and reliability of the personal transportation support.
+- Prioritize: availability of the support person or service, reliability, schedule limitations, geographic coverage, dependency risk, backup transportation if primary support is unavailable, attendance risk.
+- Do NOT over-focus on route planning, map reading, or fixed-route transit navigation unless the assessment indicates the client is expected to use public transit independently.
+- Do NOT mention paratransit unless it is documented in the assessment.`;
+
+  } else if (methodClass === 'drives_self') {
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES (Primary Method: Drives Self):
+- Lead with driver status and vehicle access.
+- Prioritize: license status, vehicle access, vehicle reliability, fuel and maintenance considerations, geographic flexibility, attendance reliability, backup transportation if vehicle is unavailable.
+- Do NOT mention paratransit or public transit training unless those methods are also selected in the assessment.`;
+
+  } else if (methodClass === 'mobility_device') {
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES (Primary Method: ${primaryMethod || 'Mobility Device / Walking'}):
+- Lead with local independent mobility level.
+- Prioritize: local mobility range, distance limitations, weather and safety concerns, physical barriers (terrain, curb cuts, surface conditions), geographic work area limits, need for transportation beyond local mobility range.
+- Other transportation methods should be described as supplemental if documented.`;
+
+  } else {
+    methodFocusBlock = `METHOD-AWARE FOCUS RULES:
+- Use the primary transportation method documented to frame the observation.
+- Prioritize reliability, availability, barriers, and employment impact over skill-deficit lists.
+- Do not generate a generic list of all low-scoring transportation skills.`;
+  }
+
   const prompt = `You are a vocational rehabilitation evaluator writing the "Transportation Assessment Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
 
 TASK:
 Using ONLY the Transportation Assessment evidence provided below, write a professional narrative for the "Transportation Assessment Observations" WSA field.
 
-TRANSPORTATION ASSESSMENT EVIDENCE:
-${transportationEvidenceBlock}
+${methodFocusBlock}
 
-REQUIREMENTS:
-- Summarize only documented Transportation Assessment findings — do NOT invent transportation concerns or barriers.
-- Do NOT infer transportation needs unless explicitly documented in the assessment.
-- Do NOT state the client needs paratransit, specialized transportation, or any support unless the assessment explicitly supports it.
-- Cover: transportation reliability, availability, readiness, barriers if documented, skills assessment if documented, training or resource needs if identified.
+TRANSPORTATION ASSESSMENT EVIDENCE:
+${evidenceLines.join('\n')}
+
+UNIVERSAL SYNTHESIS RULES:
+- Structure the observation around: (1) Primary transportation method and its role, (2) Reliability and consistency, (3) Method-relevant barriers, (4) Skill or support needs directly tied to this method, (5) Prompting or reminder needs, (6) Employment impact.
+- Do NOT generate a generic list of all low-scoring transportation skills.
+- Only mention skills that are relevant to the client's current or planned transportation method.
+- Weight staff free-text observations heavily when they clarify how the client actually travels.
+- If numeric scores conflict with staff narrative, do not overstate the numeric score concern.
+- Do NOT invent facts not present in the evidence above.
+- Do NOT infer transportation needs from unrelated assessments or sources.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
-- Professional vocational rehabilitation language. No labels, no headings, no markdown.
-- Maximum 850 characters for detailed version; 430 characters for official PDF version.
+- Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
+- Maximum 850 characters.
 - Return ONLY the plain text narrative.`;
 
+  return prompt;
+}
+
+async function synthesizeTransportationObservations(base44, tr, methodsArray, primaryMethod, transportationEvidenceBlock) {
+  const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
+  const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
 }
@@ -1029,8 +1173,8 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
           transportationPrivate = 'No private transportation options documented in assessment.';
         }
 
-        // For transportation_observations, use dedicated LLM synthesis
-        transportationObservations = await synthesizeTransportationObservations(base44, transportationEvidenceBlock);
+        // For transportation_observations, use dedicated method-aware LLM synthesis
+        transportationObservations = await synthesizeTransportationObservations(base44, tr, methodsArray, primaryMethod, transportationEvidenceBlock);
       } else {
         // Assessment exists but responses are empty
         transportationPublic = 'Transportation Assessment completed but contains no documented responses.';
