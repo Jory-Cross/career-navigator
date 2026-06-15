@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument, PDFName, PDFString } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, PDFName, PDFString, PDFNumber } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
@@ -215,10 +215,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Multiline narrative fields — write /V directly and remove stale /AP so
-    // the PDF viewer uses its own renderer (which correctly fills the full field rect).
-    // pdf-lib's setText() + updateFieldAppearances regenerates AP incorrectly for
-    // multiline fields, clipping text to only the top portion of the visible box.
+    // ── Multiline narrative field names ──────────────────────────────────────
+    // Diagnostic confirmed all five target fields have:
+    //   flags = 0x801000 → Multiline (bit 13) + Comb (bit 24) BOTH set
+    //   DA    = /Helv 12 Tf  → 12pt font, only ~4 lines fit in an 81pt field
+    //   AP    = pre-baked appearance stream present
+    //
+    // Root cause of clipping: the Comb bit (0x800000) causes viewers to render
+    // a fixed per-character grid, constraining multiline layout. With a 12pt DA
+    // and no MaxLen, this produces ~3-4 rendered lines regardless of field height.
+    //
+    // Fix applied to every multiline field before setting /V:
+    //   1. Strip the Comb bit from /Ff  → allow free-flow multiline rendering
+    //   2. Override /DA to 10pt         → 10pt Helv fits ~6-7 lines in 81pt
+    //   3. Delete /AP                   → force viewer to re-render from /V
+    //      (do NOT use updateFieldAppearances — it regenerates /AP incorrectly)
     const MULTILINE_FIELDS = new Set([
       'Work Assessment Observations',
       'Natural Support Assessment Observations',
@@ -243,6 +254,33 @@ Deno.serve(async (req) => {
       'Work Skill Development Needs',
     ]);
 
+    // Pre-patch: strip Comb flag + set 10pt DA on every multiline field
+    // before we write any values, so the field definition is correct first.
+    const COMB_BIT = 0x800000;
+    for (const pdfFieldName of MULTILINE_FIELDS) {
+      try {
+        const field = form.getFieldMaybe(pdfFieldName);
+        if (!field) continue;
+        const dict = field.acroField.dict;
+
+        // 1. Strip Comb bit from Ff flags
+        const ffObj = dict.get(PDFName.of('Ff'));
+        const currentFlags = ffObj ? ffObj.asNumber() : 0;
+        if (currentFlags & COMB_BIT) {
+          dict.set(PDFName.of('Ff'), PDFNumber.of(currentFlags & ~COMB_BIT));
+          console.log(`✓ Stripped Comb bit from "${pdfFieldName}" (was 0x${currentFlags.toString(16)})`);
+        }
+
+        // 2. Override DA to 10pt Helvetica (was 12pt — too large for the field height)
+        dict.set(PDFName.of('DA'), PDFString.of('/Helv 10 Tf 0 g'));
+
+        // 3. Delete the pre-baked AP stream — viewer must re-render from /V + /DA + /Rect
+        dict.delete(PDFName.of('AP'));
+      } catch (e) {
+        console.log(`✗ Pre-patch error on "${pdfFieldName}":`, e.message);
+      }
+    }
+
     // Set all text fields
     for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
       const value = r[key];
@@ -252,11 +290,9 @@ Deno.serve(async (req) => {
         if (field) {
           const text = limitPdfText(value, key);
           if (MULTILINE_FIELDS.has(pdfFieldName)) {
-            // Write /V directly; remove /AP so the viewer renders from /V using the
-            // field's own /DA and /Rect — avoids pdf-lib's clipping AP regeneration.
+            // Write /V directly — field definition already patched above.
             field.acroField.dict.set(PDFName.of('V'), PDFString.of(text));
-            field.acroField.dict.delete(PDFName.of('AP'));
-            console.log(`✓ Set (raw) "${key}" [${text.length} chars]`);
+            console.log(`✓ Set (raw/multiline) "${key}" [${text.length} chars]`);
           } else {
             field.setText(text);
             console.log(`✓ Set "${key}"`);
@@ -313,10 +349,12 @@ Deno.serve(async (req) => {
       } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
-    // updateFieldAppearances: true for single-line fields (setText path).
-    // Multiline fields had their /AP removed so the viewer renders them natively from /V.
-    // Do NOT flatten — keep fields editable.
-    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
+    // Save with updateFieldAppearances: false.
+    // Multiline fields: /AP deleted + /DA overridden to 10pt + Comb bit stripped.
+    //   The viewer must regenerate appearance from /V. We must NOT let pdf-lib
+    //   regenerate AP — it would re-bake the old clipped rendering.
+    // Single-line fields: setText() wrote their values; pdf-lib handles AP internally.
+    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
 
     const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
