@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument, PDFName, PDFString } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
@@ -162,30 +162,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fields that use 12pt font in the original PDF but benefit from 10pt for capacity.
-    // Overriding DA to 10pt ensures multiline fields can show more lines without clipping.
-    const FONT_OVERRIDE_FIELDS = new Set([
-      'Transportation Assessment Observations',
-      'Work Assessment Observations',
-      'Natural Support Assessment Observations',
-      'Life Skills Observations',
-      'Computer Skill Assessment Observations',
-      'Interview Skill Assessment Observations',
-      'Other Observations',
-      'Joint VR/CRP Recommendations for Job Development Supports',
-      'Joint VR/CRP Recommendations for Ongoing Supports',
-      'Recommended supports on the job',
-      'BehavioralSelfregulation',
-      'Activities of Daily Living hygiene meal prep etc',
-      'Family IssuesSupports',
-      'Criminal Background expungement etc',
-      'SchoolAcademic can include behavioral information',
-      'informalformal speech',
-      'Identified Assistive Technology Needs glasses UCAT device etc',
-      'Communication Needs interpreter etc',
-      'Referral question',
-    ]);
-
     // Set all text fields
     for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
       const value = r[key];
@@ -193,13 +169,6 @@ Deno.serve(async (req) => {
       try {
         const field = form.getFieldMaybe(pdfFieldName);
         if (field) {
-          // Override font size to 10pt for large multiline fields whose original DA uses 12pt.
-          // This allows the appearance stream to render more lines within the same field rect.
-          if (FONT_OVERRIDE_FIELDS.has(pdfFieldName)) {
-            try {
-              field.acroField.dict.set(PDFName.of('DA'), PDFString.of('/Helv 10 Tf 0 g'));
-            } catch (_) { /* ignore — field will still render at original size */ }
-          }
           field.setText(limitPdfText(value, key));
           console.log(`✓ Set "${key}"`);
         } else {
@@ -254,8 +223,11 @@ Deno.serve(async (req) => {
       } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
-    // Do NOT flatten — keep remaining fields editable for download
-    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
+    // Do NOT flatten — keep remaining fields editable for download.
+    // updateFieldAppearances: false preserves the original PDF's AP stream rendering,
+    // which correctly fills the full field rect. pdf-lib's AP regeneration clips
+    // multiline text to only the top portion of the visible field.
+    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
 
     const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
