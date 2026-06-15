@@ -973,24 +973,48 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
       if (transportLines.length > 0) {
         transportationEvidenceBlock = transportLines.join('\n');
 
-        // Extract public transportation info
-        const pubFields = ['public_transportation', 'public_transit', 'paratransit', 'community_transportation', 'public_transportation_usage', 'public_transportation_access'];
-        const pubValues = [];
-        for (const field of pubFields) {
+        // Extract public transportation info — prioritize paratransit and public transit options
+        // High-priority public fields: paratransit, public transit, community services, transportation providers
+        const pubPriorityFields = ['paratransit', 'public_transportation', 'public_transit', 'community_transportation', 'transportation_provider'];
+        const pubPriorityValues = [];
+        for (const field of pubPriorityFields) {
           const val = tr[field];
-          if (val) pubValues.push(safeString(val).trim());
+          if (val) pubPriorityValues.push(safeString(val).trim());
         }
+        
+        // Include supporting public transportation fields if no priority fields found
+        let pubValues = [...pubPriorityValues];
+        if (pubPriorityValues.length === 0) {
+          const pubSupportFields = ['public_transportation_usage', 'public_transportation_access'];
+          for (const field of pubSupportFields) {
+            const val = tr[field];
+            if (val) pubValues.push(safeString(val).trim());
+          }
+        }
+        
         transportationPublic = pubValues.length > 0
           ? pubValues.join(' ').slice(0, 220)
           : 'No public transportation options documented in assessment.';
 
-        // Extract private transportation info
-        const privFields = ['private_transportation', 'family_transportation', 'drives_self', 'vehicle_access', 'employer_transportation', 'coworker_transportation', 'rideshare', 'taxi'];
-        const privValues = [];
-        for (const field of privFields) {
+        // Extract private transportation info — prioritize personal/alternative support options
+        // High-priority private fields: family, friends, employer, coworkers, rideshare, taxi
+        const privPriorityFields = ['family_transportation', 'friend_transportation', 'employer_transportation', 'coworker_transportation', 'rideshare', 'taxi'];
+        const privPriorityValues = [];
+        for (const field of privPriorityFields) {
           const val = tr[field];
-          if (val) privValues.push(safeString(val).trim());
+          if (val) privPriorityValues.push(safeString(val).trim());
         }
+        
+        // If no priority private options documented, include drives_self and vehicle_access as supporting info
+        let privValues = [...privPriorityValues];
+        if (privPriorityValues.length === 0) {
+          const privSupportFields = ['drives_self', 'vehicle_access'];
+          for (const field of privSupportFields) {
+            const val = tr[field];
+            if (val) privValues.push(safeString(val).trim());
+          }
+        }
+        
         transportationPrivate = privValues.length > 0
           ? privValues.join(' ').slice(0, 220)
           : 'No private transportation options documented in assessment.';
