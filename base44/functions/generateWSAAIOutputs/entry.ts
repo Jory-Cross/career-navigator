@@ -973,51 +973,61 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
       if (transportLines.length > 0) {
         transportationEvidenceBlock = transportLines.join('\n');
 
-        // Extract public transportation info — prioritize paratransit and public transit options
-        // High-priority public fields: paratransit, public transit, community services, transportation providers
-        const pubPriorityFields = ['paratransit', 'public_transportation', 'public_transit', 'community_transportation', 'transportation_provider'];
-        const pubPriorityValues = [];
-        for (const field of pubPriorityFields) {
-          const val = tr[field];
-          if (val) pubPriorityValues.push(safeString(val).trim());
-        }
-        
-        // Include supporting public transportation fields if no priority fields found
-        let pubValues = [...pubPriorityValues];
-        if (pubPriorityValues.length === 0) {
-          const pubSupportFields = ['public_transportation_usage', 'public_transportation_access'];
-          for (const field of pubSupportFields) {
-            const val = tr[field];
-            if (val) pubValues.push(safeString(val).trim());
-          }
-        }
-        
-        transportationPublic = pubValues.length > 0
-          ? pubValues.join(' ').slice(0, 220)
-          : 'No public transportation options documented in assessment.';
+        // The Transportation Assessment stores methods as arrays (select_multiple) and
+        // single-select strings. Read from actual field names in the schema.
+        const methodsArray = Array.isArray(tr.transportation_methods) ? tr.transportation_methods : [];
+        const primaryMethod = safeString(tr.primary_transportation_method).trim();
+        const paratransitStatus = safeString(tr.paratransit_status).trim();
+        const publicTransitAccess = safeString(tr.public_transit_access).trim();
 
-        // Extract private transportation info — prioritize personal/alternative support options
-        // High-priority private fields: family, friends, employer, coworkers, rideshare, taxi
-        const privPriorityFields = ['family_transportation', 'friend_transportation', 'employer_transportation', 'coworker_transportation', 'rideshare', 'taxi'];
-        const privPriorityValues = [];
-        for (const field of privPriorityFields) {
-          const val = tr[field];
-          if (val) privPriorityValues.push(safeString(val).trim());
+        // PUBLIC transportation — paratransit, public transit, community services, providers
+        const PUBLIC_METHOD_KEYWORDS = ['Paratransit', 'Public transportation', 'Community transportation service', 'Transportation provider'];
+        const publicMethodsFound = methodsArray.filter(m => PUBLIC_METHOD_KEYWORDS.includes(m));
+        const primaryIsPublic = PUBLIC_METHOD_KEYWORDS.includes(primaryMethod);
+        const paratransitApproved = ['Currently approved', 'Previously approved', 'Application in process', 'Eligible but not applied'].includes(paratransitStatus);
+        const publicAccessDocumented = publicTransitAccess && publicTransitAccess !== 'No public transportation available' && publicTransitAccess !== 'Unknown';
+
+        const pubParts = [];
+        if (paratransitApproved) pubParts.push(`paratransit (${paratransitStatus.toLowerCase()})`);
+        if (publicMethodsFound.length > 0) {
+          const nonParatransit = publicMethodsFound.filter(m => m !== 'Paratransit');
+          if (nonParatransit.length > 0) pubParts.push(nonParatransit.join(', ').toLowerCase());
         }
-        
-        // If no priority private options documented, include drives_self and vehicle_access as supporting info
-        let privValues = [...privPriorityValues];
-        if (privPriorityValues.length === 0) {
-          const privSupportFields = ['drives_self', 'vehicle_access'];
-          for (const field of privSupportFields) {
-            const val = tr[field];
-            if (val) privValues.push(safeString(val).trim());
+        if (publicAccessDocumented && pubParts.length === 0) {
+          pubParts.push(publicTransitAccess.toLowerCase());
+        }
+
+        if (pubParts.length > 0) {
+          transportationPublic = `Client has access to ${pubParts.join(' and ')}.`;
+          if (primaryIsPublic && primaryMethod) {
+            transportationPublic = `Client primarily uses ${primaryMethod.toLowerCase()}. ` + transportationPublic;
           }
+          transportationPublic = transportationPublic.slice(0, 220);
+        } else {
+          transportationPublic = 'No public transportation options documented in assessment.';
         }
-        
-        transportationPrivate = privValues.length > 0
-          ? privValues.join(' ').slice(0, 220)
-          : 'No private transportation options documented in assessment.';
+
+        // PRIVATE transportation — family, friend, employer, coworker, rideshare, taxi; drives self
+        const PRIVATE_SUPPORT_KEYWORDS = ['Family transportation', 'Friend transportation', 'Employer transportation', 'Co-worker transportation', 'Ride share', 'Taxi'];
+        const DRIVES_SELF_KEYWORDS = ['Drives self'];
+        const privateSupportFound = methodsArray.filter(m => PRIVATE_SUPPORT_KEYWORDS.includes(m));
+        const drivesself = methodsArray.filter(m => DRIVES_SELF_KEYWORDS.includes(m));
+        const primaryIsPrivateSupport = PRIVATE_SUPPORT_KEYWORDS.includes(primaryMethod);
+        const primaryDrivesSelf = primaryMethod === 'Drives self';
+
+        const privParts = [];
+        if (privateSupportFound.length > 0) privParts.push(...privateSupportFound.map(m => m.toLowerCase()));
+        if (drivesself.length > 0 && privParts.length === 0) privParts.push('drives self');
+
+        if (privParts.length > 0) {
+          const primaryPrivate = primaryIsPrivateSupport ? primaryMethod.toLowerCase() : (primaryDrivesSelf ? 'drives self' : null);
+          transportationPrivate = primaryPrivate
+            ? `Client primarily uses ${primaryPrivate}. Available options include: ${privParts.join(', ')}.`
+            : `Available private transportation options include: ${privParts.join(', ')}.`;
+          transportationPrivate = transportationPrivate.slice(0, 220);
+        } else {
+          transportationPrivate = 'No private transportation options documented in assessment.';
+        }
 
         // For transportation_observations, use dedicated LLM synthesis
         transportationObservations = await synthesizeTransportationObservations(base44, transportationEvidenceBlock);
