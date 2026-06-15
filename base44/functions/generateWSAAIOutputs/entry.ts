@@ -392,8 +392,31 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
 }
 
+async function synthesizeTransportationObservations(base44, transportationEvidenceBlock) {
+  const prompt = `You are a vocational rehabilitation evaluator writing the "Transportation Assessment Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
+
+TASK:
+Using ONLY the Transportation Assessment evidence provided below, write a professional narrative for the "Transportation Assessment Observations" WSA field.
+
+TRANSPORTATION ASSESSMENT EVIDENCE:
+${transportationEvidenceBlock}
+
+REQUIREMENTS:
+- Summarize only documented Transportation Assessment findings — do NOT invent transportation concerns or barriers.
+- Do NOT infer transportation needs unless explicitly documented in the assessment.
+- Do NOT state the client needs paratransit, specialized transportation, or any support unless the assessment explicitly supports it.
+- Cover: transportation reliability, availability, readiness, barriers if documented, skills assessment if documented, training or resource needs if identified.
+- Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
+- Professional vocational rehabilitation language. No labels, no headings, no markdown.
+- Maximum 850 characters for detailed version; 430 characters for official PDF version.
+- Return ONLY the plain text narrative.`;
+
+  const result = await base44.integrations.Core.InvokeLLM({ prompt });
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+}
+
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
-  const prompt = `You are a vocational rehabilitation evaluator writing the "Life Skills Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
+   const prompt = `You are a vocational rehabilitation evaluator writing the "Life Skills Observations" field for an official Utah DWS Work Strategy Assessment (WSA).
 
 PURPOSE OF THIS FIELD:
 Identify documented life skills deficits, gaps, or training needs discovered through the assessment process that may justify additional CRP Life Skills service authorization.
@@ -912,6 +935,84 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   detailedFields.life_skills_observations = lifeSkillsEvidenceBlock
     ? await synthesizeLifeSkillsObservations(base44, lifeSkillsEvidenceBlock)
     : 'Life skills deficits or training needs have not been identified through the current assessment data. Complete the Work Performance & Support Observation, Barriers to Employment, and Work Environment Tolerance assessments before generating this section of the WSA.';
+
+  // ── transportation fields: hard-override using Transportation Assessment only ──
+  // transportation_public, transportation_private, transportation_observations
+  // Source: Transportation Assessment ONLY. Prohibited: all other assessments.
+  let transportationEvidenceBlock = null;
+  let transportationPublic = null;
+  let transportationPrivate = null;
+  let transportationObservations = null;
+  try {
+    const ctx = JSON.parse(contextBlock);
+    const transportationAssmt = (ctx.assessments || []).find(a => a.type === 'transportation');
+    
+    if (!transportationAssmt) {
+      // No Transportation Assessment exists
+      transportationPublic = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+      transportationPrivate = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+      transportationObservations = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+    } else if (!transportationAssmt.responses || Object.keys(transportationAssmt.responses).length === 0) {
+      // Assessment exists but no responses
+      transportationPublic = 'Transportation Assessment completed but no transportation options documented.';
+      transportationPrivate = 'Transportation Assessment completed but no transportation options documented.';
+      transportationObservations = 'Transportation Assessment completed but responses are incomplete. Staff should review and document transportation findings.';
+    } else {
+      // Assessment exists with responses — extract evidence
+      const tr = transportationAssmt.responses;
+      const transportLines = [];
+
+      // Collect all Transportation Assessment fields
+      for (const [key, value] of Object.entries(tr)) {
+        const s = safeString(value).trim();
+        if (s && s.length > 2 && !s.startsWith('[')) {
+          transportLines.push(`${key}: ${s}`);
+        }
+      }
+
+      if (transportLines.length > 0) {
+        transportationEvidenceBlock = transportLines.join('\n');
+
+        // Extract public transportation info
+        const pubFields = ['public_transportation', 'public_transit', 'paratransit', 'community_transportation', 'public_transportation_usage', 'public_transportation_access'];
+        const pubValues = [];
+        for (const field of pubFields) {
+          const val = tr[field];
+          if (val) pubValues.push(safeString(val).trim());
+        }
+        transportationPublic = pubValues.length > 0
+          ? pubValues.join(' ').slice(0, 220)
+          : 'No public transportation options documented in assessment.';
+
+        // Extract private transportation info
+        const privFields = ['private_transportation', 'family_transportation', 'drives_self', 'vehicle_access', 'employer_transportation', 'coworker_transportation', 'rideshare', 'taxi'];
+        const privValues = [];
+        for (const field of privFields) {
+          const val = tr[field];
+          if (val) privValues.push(safeString(val).trim());
+        }
+        transportationPrivate = privValues.length > 0
+          ? privValues.join(' ').slice(0, 220)
+          : 'No private transportation options documented in assessment.';
+
+        // For transportation_observations, use dedicated LLM synthesis
+        transportationObservations = await synthesizeTransportationObservations(base44, transportationEvidenceBlock);
+      } else {
+        // Assessment exists but responses are empty
+        transportationPublic = 'Transportation Assessment completed but contains no documented responses.';
+        transportationPrivate = 'Transportation Assessment completed but contains no documented responses.';
+        transportationObservations = 'Transportation Assessment completed but contains no documented responses. Staff should review and complete the assessment.';
+      }
+    }
+  } catch (_e) {
+    transportationPublic = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+    transportationPrivate = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+    transportationObservations = 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+  }
+
+  detailedFields.transportation_public = transportationPublic || 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+  detailedFields.transportation_private = transportationPrivate || 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
+  detailedFields.transportation_observations = transportationObservations || 'Transportation Assessment has not been completed. Complete the Transportation Assessment before generating this portion of the Work Strategy Assessment.';
 
   // These values cannot be finalized from AI-generated evidence alone.
   // They require verified staff entry, staff/client final selection, or VR completion.
