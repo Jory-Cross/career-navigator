@@ -789,9 +789,14 @@ if (entryTypeFilter !== "all") {
         entry.user_id ||
         entry.created_by ||
         "__unknown__";
+      const entryCode =
+        resolvedEntryTypeCodes[entry.id] ||
+        getImmediateEntryTypeCode(entry) ||
+        normalizeEntryTypeCode(entry.entry_type_code) ||
+        "__unknown_type__";
       const key = `${employeeKey}__${entry.client_id || "__self__"}__${entry.date || ""}__${
         entry.start_time || "notime"
-      }`;
+      }__${entryCode}`;
 
       if (seen[key]) {
         ids.add(entry.id);
