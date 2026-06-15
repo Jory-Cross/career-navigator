@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, PDFName, PDFString } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
@@ -68,12 +68,65 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { assessment_id } = await req.json();
+    const body = await req.json();
+    const { assessment_id, diagnostic } = body;
     const assessment = await base44.entities.Assessment.get(assessment_id);
     if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const client = await base44.asServiceRole.entities.Client.get(assessment.client_id);
     const r = assessment.responses || {};
+
+    // Diagnostic mode: inspect field values and AP stream presence without generating a PDF.
+    if (diagnostic) {
+      const DIAGNOSTIC_KEYS = {
+        work_assessment_observations:  'Work Assessment Observations',
+        natural_support_observations:  'Natural Support Assessment Observations',
+        transportation_observations:   'Transportation Assessment Observations',
+        life_skills_observations:      'Life Skills Observations',
+        computer_skill_observations:   'Computer Skill Assessment Observations',
+      };
+      const pdfResponse2 = await fetch(FILLABLE_WSA_URL);
+      const pdfBytes2 = await pdfResponse2.arrayBuffer();
+      const pdfDoc2 = await PDFDocument.load(pdfBytes2, { ignoreEncryption: true });
+      const form2 = pdfDoc2.getForm();
+      const results = {};
+      for (const [key, pdfName] of Object.entries(DIAGNOSTIC_KEYS)) {
+        const rawValue = r[key] || null;
+        const truncated = rawValue ? limitPdfText(rawValue, key) : null;
+        let fieldFound = false;
+        let hasApStream = false;
+        let fieldType = null;
+        try {
+          const f = form2.getFieldMaybe(pdfName);
+          if (f) {
+            fieldFound = true;
+            fieldType = f.constructor?.name || 'unknown';
+            const apDict = f.acroField?.dict?.lookup?.(f.acroField?.dict?.context?.obj?.PDFName?.of?.('AP'));
+            // Check for AP entry in field dict
+            const apEntry = f.acroField.dict.get(pdfDoc2.context.obj?.PDFName?.of('AP') || 'AP');
+            hasApStream = !!apEntry;
+            // Also check via raw dict keys
+            const keys = [];
+            f.acroField.dict.entries().forEach(([k]) => keys.push(String(k)));
+            hasApStream = keys.includes('/AP') || keys.includes('AP');
+          }
+        } catch(e) { /* field lookup error */ }
+        results[key] = {
+          pdf_field_name: pdfName,
+          response_value_exists: rawValue !== null && rawValue !== undefined,
+          response_value_length: rawValue ? rawValue.length : 0,
+          response_value_preview: rawValue ? rawValue.slice(0, 120) : null,
+          truncated_length: truncated ? truncated.length : 0,
+          truncated_preview: truncated ? truncated.slice(0, 120) : null,
+          field_found_in_pdf: fieldFound,
+          field_type: fieldType,
+          has_ap_stream_before_set: hasApStream,
+          char_limit_used: PDF_TEXT_LIMITS[key] || DEFAULT_PDF_TEXT_LIMIT,
+        };
+      }
+      return Response.json({ diagnostic: true, fields: results });
+    }
+
     console.log('Loading fillable WSA template and populating fields...');
 
     // Load fillable PDF template
@@ -162,6 +215,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Multiline narrative fields — write /V directly and remove stale /AP so
+    // the PDF viewer uses its own renderer (which correctly fills the full field rect).
+    // pdf-lib's setText() + updateFieldAppearances regenerates AP incorrectly for
+    // multiline fields, clipping text to only the top portion of the visible box.
+    const MULTILINE_FIELDS = new Set([
+      'Work Assessment Observations',
+      'Natural Support Assessment Observations',
+      'Life Skills Observations',
+      'Transportation Assessment Observations',
+      'Computer Skill Assessment Observations',
+      'Interview Skill Assessment Observations',
+      'Other Observations',
+      'BehavioralSelfregulation',
+      'Activities of Daily Living hygiene meal prep etc',
+      'Family IssuesSupports',
+      'Criminal Background expungement etc',
+      'SchoolAcademic can include behavioral information',
+      'informalformal speech',
+      'Identified Assistive Technology Needs glasses UCAT device etc',
+      'Communication Needs interpreter etc',
+      'Referral question',
+      'Recommended supports on the job',
+      'Joint VR/CRP Recommendations for Job Development Supports',
+      'Joint VR/CRP Recommendations for Ongoing Supports',
+      'Current Work Skills knowledge skills and abilities',
+      'Work Skill Development Needs',
+    ]);
+
     // Set all text fields
     for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
       const value = r[key];
@@ -169,8 +250,17 @@ Deno.serve(async (req) => {
       try {
         const field = form.getFieldMaybe(pdfFieldName);
         if (field) {
-          field.setText(limitPdfText(value, key));
-          console.log(`✓ Set "${key}"`);
+          const text = limitPdfText(value, key);
+          if (MULTILINE_FIELDS.has(pdfFieldName)) {
+            // Write /V directly; remove /AP so the viewer renders from /V using the
+            // field's own /DA and /Rect — avoids pdf-lib's clipping AP regeneration.
+            field.acroField.dict.set(PDFName.of('V'), PDFString.of(text));
+            field.acroField.dict.delete(PDFName.of('AP'));
+            console.log(`✓ Set (raw) "${key}" [${text.length} chars]`);
+          } else {
+            field.setText(text);
+            console.log(`✓ Set "${key}"`);
+          }
         } else {
           console.log(`✗ Field not found: "${pdfFieldName}"`);
         }
@@ -223,11 +313,10 @@ Deno.serve(async (req) => {
       } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
-    // Do NOT flatten — keep remaining fields editable for download.
-    // updateFieldAppearances: false preserves the original PDF's AP stream rendering,
-    // which correctly fills the full field rect. pdf-lib's AP regeneration clips
-    // multiline text to only the top portion of the visible field.
-    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
+    // updateFieldAppearances: true for single-line fields (setText path).
+    // Multiline fields had their /AP removed so the viewer renders them natively from /V.
+    // Do NOT flatten — keep fields editable.
+    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
 
     const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
