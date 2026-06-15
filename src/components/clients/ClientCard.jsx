@@ -55,8 +55,9 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
     
     // Job Coaching calculation (including additional authorizations)
     let jcTotalAuthorized = Number(client.job_coaching_authorized_hours_total) || 0;
-    if (Array.isArray(client.job_coaching_additional_auths)) {
-      jcTotalAuthorized += client.job_coaching_additional_auths.reduce((sum, auth) => sum + (Number(auth.authorized_hours) || 0), 0);
+    const jcAdditionalAuths = Array.isArray(client.job_coaching_additional_auths) ? client.job_coaching_additional_auths : [];
+    for (const auth of jcAdditionalAuths) {
+      jcTotalAuthorized += Number(auth.authorized_hours || 0);
     }
     
     if (jcTotalAuthorized > 0) {
@@ -73,10 +74,11 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
       };
     }
     
-    // Life Skills calculation (including additional authorizations if they exist)
+    // Life Skills calculation (overall total, not monthly reset)
     let lsTotalAuthorized = Number(client.life_skills_authorized_hours_total) || 0;
-    if (Array.isArray(client.life_skills_additional_auths)) {
-      lsTotalAuthorized += client.life_skills_additional_auths.reduce((sum, auth) => sum + (Number(auth.authorized_hours) || 0), 0);
+    const lsAdditionalAuths = Array.isArray(client.life_skills_additional_auths) ? client.life_skills_additional_auths : [];
+    for (const auth of lsAdditionalAuths) {
+      lsTotalAuthorized += Number(auth.authorized_hours || 0);
     }
     
     if (lsTotalAuthorized > 0) {
