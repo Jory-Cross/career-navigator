@@ -38,31 +38,6 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
   const [showPermanentDelete, setShowPermanentDelete] = useState(false);
   const [timeEntries, setTimeEntries] = useState([]);
 
-  // Debug: log Dallyn's data
-  useEffect(() => {
-    if (client.first_name === "Dallyn" && client.last_name === "Dietrich") {
-      const jcAdditionalAuths = Array.isArray(client.job_coaching_additional_auths) ? client.job_coaching_additional_auths : [];
-      let jcTotalAuthorized = Number(client.job_coaching_authorized_hours_total) || 0;
-      for (const auth of jcAdditionalAuths) {
-        jcTotalAuthorized += Number(auth.authorized_hours || 0);
-      }
-      const jcUsedMinutes = timeEntries
-        .filter(e => (e.entry_type_code || "").toLowerCase() === "job_coaching")
-        .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
-      const jcUsedHours = jcUsedMinutes / 60;
-      const jcRemaining = jcTotalAuthorized - jcUsedHours;
-      console.log("Dallyn Dietrich calculation:", {
-        job_coaching_authorized_hours_total: client.job_coaching_authorized_hours_total,
-        job_coaching_additional_auths: jcAdditionalAuths,
-        jcTotalAuthorized,
-        jcUsedHours,
-        jcRemaining,
-        timeEntriesCount: timeEntries.length,
-        timeEntriesJC: timeEntries.filter(e => (e.entry_type_code || "").toLowerCase() === "job_coaching").length
-      });
-    }
-  }, [client, timeEntries]);
-
   useEffect(() => {
     const fetchTimeEntries = async () => {
       try {
