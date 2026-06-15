@@ -25,6 +25,11 @@ import {
   SKILLS_AUDIT_SECTIONS,
   SKILLS_AUDIT_META,
 } from "@/lib/assessments/skillsAuditDefinition";
+import {
+  TRANSPORTATION_ASSESSMENT_SECTIONS,
+  TRANSPORTATION_ASSESSMENT_META,
+} from "@/lib/assessments/transportationAssessmentDefinition";
+import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
 
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
@@ -197,10 +202,10 @@ const ALL_ASSESSMENTS = [
     label: "Transportation",
     emoji: "🚌",
     description: "Transportation options, reliability, and barriers",
-    type: "structured",
-    available: false,
-    sections: [],
-    meta: { assessment_type: "transportation", label: "Transportation" },
+    type: "transportation",
+    available: true,
+    sections: TRANSPORTATION_ASSESSMENT_SECTIONS,
+    meta: TRANSPORTATION_ASSESSMENT_META,
   },
   {
     key: "support_and_accommodation",
@@ -449,6 +454,15 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
               WORK_PERFORMANCE_SUPPORT_OBSERVATION_META.assessment_type
           )}
           onSaved={handleSaved}
+        />
+      );
+    }
+
+    if (activeAssessment.key === "transportation") {
+      return (
+        <TransportationAssessmentPanel
+          clientId={resolvedClientId}
+          onAssessmentUpdate={handleSaved}
         />
       );
     }
