@@ -94,43 +94,60 @@ const WSA_FIELD_KEYS = Object.keys(WSA_CHAR_LIMITS);
 //   ~6 lines (~95pt tall): 437 chars
 //   ~8 lines (~121pt tall): 583 chars
 //   ~12 lines (150pt+): 729 chars
+// ─── PDF-SAFE LIMITS (ALL MULTILINE FIELDS AT 10pt HELVETICA) ─────────────────
+// All large multiline observation fields have their DA (Default Appearance) overridden
+// to /Helv 10 Tf in generateWSAPDF before setText is called. This means capacity is
+// calculated at 10pt, NOT the original 12pt stored in the PDF template.
+//
+// Derivation at 10pt Helvetica (avg char width ~6.5pt, line height ~12pt, 15% safety):
+//   Field width 536pt → chars/line = floor(536 / 6.5) × 0.85 = ~70 chars/line
+//   Lines = floor(field_height / 12)
+//   Safe capacity = chars/line × lines
+//
+// Single-line fields remain at 12pt (no DA override) — capacity from 12pt metrics:
+//   transportation_public:  436pt wide / 7pt avg = 62 → cap at 80 (practical)
+//   transportation_private: 353pt wide / 7pt avg = 50 → cap at 65 (practical)
+//   worksite_simulation_location: single-line, cap at 100 (address/venue)
+//
+// Field heights measured from usor94.pdf rect coordinates.
 const WSA_PDF_SAFE_LIMITS = {
-  // Single-line / short fields — practical cap applied
-  worksite_simulation_location:  100,   // measured ~47pt; single-line, venue/address name
-  transportation_public:         100,   // measured ~59pt; short description
-  transportation_private:        100,   // measured ~47pt; short description
-  computer_skills_other:         100,   // measured ~68pt; short label
-  planned_job_search_hours_week: 80,    // measured ~47pt; numeric/short text
-  industry_targeted_pay_range:   100,   // measured ~47pt; short value
-  hours_available_to_work:       100,   // measured ~47pt; short value
-  // Multi-line narrative fields — from measured geometry
-  work_assessment_observations:  360,   // measured 537x81pt → 364 safe
-  natural_support_observations:  360,   // measured 537x80pt → 364 safe
-  life_skills_observations:      360,   // measured 537x80pt → 364 safe
-  current_work_skills:           360,   // measured 537x80pt → 364 safe
-  work_skill_development_needs:  360,   // measured 537x80pt → 364 safe
-  family_issues_supports:        360,   // measured 537x80pt → 364 safe
-  criminal_background:           360,   // measured 537x80pt → 364 safe
-  school_academic:               360,   // measured 537x80pt → 364 safe
-  communication_needs:           360,   // measured ~same height group
-  assistive_technology_needs:    360,   // measured ~same height group
-  interpersonal_social_skills:   360,   // measured ~same height group
-  transportation_observations:   600,   // 536pt wide × 95pt tall at 10pt Helv → ~672 char capacity; 600 safe
-  computer_skill_observations:   430,   // measured 537x95pt → 437 safe
-  interview_skill_observations:  430,   // measured 537x95pt → 437 safe
-  behavioral_self_regulation:    430,   // measured 537x95pt → 437 safe
-  activities_of_daily_living:    430,   // measured 537x95pt → 437 safe
-  referral_question:             430,   // measured 537x95pt → 437 safe
-  other_observations:            575,   // measured 537x121pt → 583 safe
-  recommended_supports_on_job:   575,   // measured 537x121pt → 583 safe
-  job_development_supports:      720,   // measured larger field → 729 safe
-  ongoing_supports:              720,   // measured larger field → 729 safe
-  // Short structured fields
-  jobs_of_interest:              140,   // measured ~145 safe
-  life_skills_needed:            140,   // measured ~145 safe
-  recommended_target_occupations: 210,  // measured ~218 safe
-  job_goal:                      210,   // measured ~218 safe
-  benefits_other:                210,   // measured ~218 safe
+  // ── Single-line / short fields (12pt, no DA override) ──────────────────────
+  worksite_simulation_location:   100,  // single-line; address/venue name
+  transportation_public:           80,  // 436pt wide, single-line → ~62 chars; cap 80
+  transportation_private:          65,  // 353pt wide, single-line → ~50 chars; cap 65
+  computer_skills_other:          100,  // single-line; short label
+  planned_job_search_hours_week:   80,  // single-line; numeric/short
+  industry_targeted_pay_range:    100,  // single-line; short value
+  hours_available_to_work:        100,  // single-line; short value
+  // ── Multiline narrative fields (10pt DA override applied in generateWSAPDF) ─
+  // 536pt wide → ~70 chars/line at 10pt Helv (6.5pt avg, 15% margin)
+  work_assessment_observations:   350,  // 536×81pt → 6 lines × 70 = 420; −20% safety = 336 → 350
+  natural_support_observations:   350,  // 536×80pt → same group → 350
+  life_skills_observations:       350,  // 536×80pt → same group → 350
+  current_work_skills:            350,  // 536×80pt → same group → 350
+  work_skill_development_needs:   350,  // 536×80pt → same group → 350
+  family_issues_supports:         350,  // 536×80pt → same group → 350
+  criminal_background:            350,  // 536×80pt → same group → 350
+  school_academic:                350,  // 536×80pt → same group → 350
+  communication_needs:            350,  // 536×80pt → same group → 350
+  assistive_technology_needs:     350,  // 536×80pt → same group → 350
+  interpersonal_social_skills:    350,  // 536×80pt → same group → 350
+  transportation_observations:    490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  computer_skill_observations:    490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  interview_skill_observations:   490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  behavioral_self_regulation:     490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  activities_of_daily_living:     490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  referral_question:              490,  // 536×95pt → 7 lines × 70 = 490 → 490
+  other_observations:             630,  // 536×121pt → 10 lines × 70 = 700; −10% = 630
+  recommended_supports_on_job:    630,  // 536×121pt → same group → 630
+  job_development_supports:       700,  // larger field (measured ~137pt) → 11 lines × 70 = 770; −10% = 700
+  ongoing_supports:               700,  // same group → 700
+  // ── Short structured fields ────────────────────────────────────────────────
+  jobs_of_interest:               140,
+  life_skills_needed:             140,
+  recommended_target_occupations: 210,
+  job_goal:                       210,
+  benefits_other:                 210,
 };
 
 // ─── VR-AUTHORED FIELDS — BOUNDARY PROTECTION ─────────────────────────────────
@@ -365,11 +382,11 @@ REQUIREMENTS:
 - Do NOT name any employer, worksite, or location unless explicitly stated in the evidence above.
 - Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
 - If a category (e.g., strengths, barriers) has no documented evidence, omit it rather than speculating.
-- Maximum 900 characters for the final narrative.
+- Maximum 350 characters for the final narrative. The PDF field holds up to 350 characters at 10pt font (536×81pt field, ~70 chars/line, 6 lines).
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 900);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
 }
 
 async function synthesizeNaturalSupportObservations(base44, evidenceBlock) {
@@ -392,11 +409,11 @@ REQUIREMENTS:
 - If support gaps or absence of natural supports are documented, describe those clearly.
 - Write in past tense for observed evidence and present tense for documented availability.
 - Professional vocational rehabilitation language. No labels, no headings, no markdown.
-- Maximum 850 characters.
+- Maximum 350 characters.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
 }
 
 // ─── Transportation Method Classification ─────────────────────────────────────
@@ -584,7 +601,7 @@ UNIVERSAL SYNTHESIS RULES:
 - Do NOT infer transportation needs from unrelated assessments or sources.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 750 characters. The PDF field holds up to 600 characters at 10pt font; write rich but concise content.
+- Maximum 490 characters. The PDF field holds up to 490 characters at 10pt font (536×95pt field, ~70 chars/line, 7 lines).
 - Prioritize in order: primary transportation method → reliability → readiness/prompting needs → employment impact → backup supports. Drop lower-priority details first if space is tight.
 - Return ONLY the plain text narrative.
 
@@ -612,7 +629,7 @@ async function synthesizeTransportationObservations(base44, tr, methodsArray, pr
   const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
   const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 750);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 490);
 }
 
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
@@ -644,11 +661,11 @@ REQUIREMENTS:
 - Do NOT write recommendations — only document what was identified through assessment.
 - Use past tense for observed/documented findings ("Assessment findings indicated...", "The client reported difficulty with...", "Observation noted...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 850 characters.
+- Maximum 350 characters.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
 }
 
 async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
@@ -698,11 +715,11 @@ REQUIREMENTS:
 - Examples of evidence-grounded supports: if WP&SO documents difficulty learning unfamiliar tasks, need for prompts, and need for repetition → recommend step-by-step task instruction, initial job coaching, structured training, natural support development.
 - Do NOT copy field labels, question text, or source headings verbatim — synthesize into natural professional prose.
 - Do NOT invent any fact not present in the evidence above.
-- Maximum 950 characters for the final narrative.
+- Maximum 630 characters for the final narrative. The PDF field holds up to 630 characters at 10pt font (536×121pt field).
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 950);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 630);
 }
 
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
@@ -1181,53 +1198,35 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
         const publicTransitAccess = safeString(tr.public_transit_access).trim();
 
         // PUBLIC transportation — paratransit, public transit, community services, providers
+        // These are SHORT summary fields (single-line PDF boxes). No observations, reliability,
+        // or prompting content. Examples: "Paratransit (currently approved)", "Public transportation available"
         const PUBLIC_METHOD_KEYWORDS = ['Paratransit', 'Public transportation', 'Community transportation service', 'Transportation provider'];
         const publicMethodsFound = methodsArray.filter(m => PUBLIC_METHOD_KEYWORDS.includes(m));
-        const primaryIsPublic = PUBLIC_METHOD_KEYWORDS.includes(primaryMethod);
         const paratransitApproved = ['Currently approved', 'Previously approved', 'Application in process', 'Eligible but not applied'].includes(paratransitStatus);
-        const publicAccessDocumented = publicTransitAccess && publicTransitAccess !== 'No public transportation available' && publicTransitAccess !== 'Unknown';
 
         const pubParts = [];
-        if (paratransitApproved) pubParts.push(`paratransit (${paratransitStatus.toLowerCase()})`);
-        if (publicMethodsFound.length > 0) {
-          const nonParatransit = publicMethodsFound.filter(m => m !== 'Paratransit');
-          if (nonParatransit.length > 0) pubParts.push(nonParatransit.join(', ').toLowerCase());
-        }
-        if (publicAccessDocumented && pubParts.length === 0) {
+        if (paratransitApproved) pubParts.push(`Paratransit (${paratransitStatus.toLowerCase()})`);
+        const nonParatransitPublic = publicMethodsFound.filter(m => m !== 'Paratransit');
+        if (nonParatransitPublic.length > 0) pubParts.push(...nonParatransitPublic.map(m => m.toLowerCase()));
+        if (pubParts.length === 0 && publicTransitAccess && publicTransitAccess !== 'No public transportation available' && publicTransitAccess !== 'Unknown') {
           pubParts.push(publicTransitAccess.toLowerCase());
         }
 
-        if (pubParts.length > 0) {
-          transportationPublic = `Client has access to ${pubParts.join(' and ')}.`;
-          if (primaryIsPublic && primaryMethod) {
-            transportationPublic = `Client primarily uses ${primaryMethod.toLowerCase()}. ` + transportationPublic;
-          }
-          transportationPublic = transportationPublic.slice(0, 220);
-        } else {
-          transportationPublic = 'No public transportation options documented in assessment.';
-        }
+        transportationPublic = pubParts.length > 0
+          ? pubParts.join('; ')
+          : 'No public transportation options documented.';
+        transportationPublic = transportationPublic.slice(0, 100);
 
         // PRIVATE transportation — family, friend, employer, coworker, rideshare, taxi; drives self
-        const PRIVATE_SUPPORT_KEYWORDS = ['Family transportation', 'Friend transportation', 'Employer transportation', 'Co-worker transportation', 'Ride share', 'Taxi'];
-        const DRIVES_SELF_KEYWORDS = ['Drives self'];
-        const privateSupportFound = methodsArray.filter(m => PRIVATE_SUPPORT_KEYWORDS.includes(m));
-        const drivesself = methodsArray.filter(m => DRIVES_SELF_KEYWORDS.includes(m));
-        const primaryIsPrivateSupport = PRIVATE_SUPPORT_KEYWORDS.includes(primaryMethod);
-        const primaryDrivesSelf = primaryMethod === 'Drives self';
+        // Short summary only. No mobility devices. No observations or reliability commentary.
+        // Examples: "Family transportation available", "Drives self", "Family transportation; rideshare"
+        const PRIVATE_METHOD_KEYWORDS = ['Family transportation', 'Friend transportation', 'Employer transportation', 'Co-worker transportation', 'Ride share', 'Taxi', 'Drives self'];
+        const privateMethodsFound = methodsArray.filter(m => PRIVATE_METHOD_KEYWORDS.includes(m));
 
-        const privParts = [];
-        if (privateSupportFound.length > 0) privParts.push(...privateSupportFound.map(m => m.toLowerCase()));
-        if (drivesself.length > 0 && privParts.length === 0) privParts.push('drives self');
-
-        if (privParts.length > 0) {
-          const primaryPrivate = primaryIsPrivateSupport ? primaryMethod.toLowerCase() : (primaryDrivesSelf ? 'drives self' : null);
-          transportationPrivate = primaryPrivate
-            ? `Client primarily uses ${primaryPrivate}. Available options include: ${privParts.join(', ')}.`
-            : `Available private transportation options include: ${privParts.join(', ')}.`;
-          transportationPrivate = transportationPrivate.slice(0, 220);
-        } else {
-          transportationPrivate = 'No private transportation options documented in assessment.';
-        }
+        transportationPrivate = privateMethodsFound.length > 0
+          ? privateMethodsFound.map(m => m === 'Drives self' ? 'Drives self' : m.toLowerCase()).join('; ')
+          : 'No private transportation options documented.';
+        transportationPrivate = transportationPrivate.slice(0, 100);
 
         // For transportation_observations, use dedicated method-aware LLM synthesis
         transportationObservations = await synthesizeTransportationObservations(base44, tr, methodsArray, primaryMethod, transportationEvidenceBlock);

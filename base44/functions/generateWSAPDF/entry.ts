@@ -10,40 +10,46 @@ const DEFAULT_PDF_TEXT_LIMIT = 950;
 // Limits measured from actual PDF field rectangle dimensions (usor94.pdf)
 // using Helvetica 10pt constants and 18% safety margin. Must match WSA_PDF_SAFE_LIMITS
 // in generateWSAAIOutputs so content bounded at generation cannot overflow here.
+// Limits must stay in sync with WSA_PDF_SAFE_LIMITS in generateWSAAIOutputs.
+// All multiline observation fields are overridden to 10pt DA before setText (see FONT_OVERRIDE_FIELDS).
+// Derivation: 536pt wide / 6.5pt avg char / 0.85 margin ≈ 70 chars/line at 10pt.
 const PDF_TEXT_LIMITS = {
+  // Single-line / short fields (12pt, no DA override)
   worksite_simulation_location:   100,
-  work_assessment_observations:   360,
-  natural_support_observations:   360,
-  life_skills_observations:       360,
-  transportation_public:          100,
-  transportation_private:         100,
-  transportation_observations:    600,   // 536pt wide × 95pt tall field at 10pt Helv → ~96 chars/line × ~7 lines = ~672; 600 safe
+  transportation_public:           80,  // 436pt single-line → ~62 chars; cap 80
+  transportation_private:          65,  // 353pt single-line → ~50 chars; cap 65
   computer_skills_other:          100,
-  computer_skill_observations:    430,
-  interview_skill_observations:   430,
-  other_observations:             575,
-  current_work_skills:            360,
-  work_skill_development_needs:   360,
-  recommended_supports_on_job:    575,
-  job_development_supports:       720,
-  ongoing_supports:               720,
-  behavioral_self_regulation:     430,
-  activities_of_daily_living:     430,
-  family_issues_supports:         360,
-  criminal_background:            360,
-  school_academic:                360,
-  communication_needs:            360,
-  assistive_technology_needs:     360,
-  interpersonal_social_skills:    360,
-  referral_question:              430,
+  planned_job_search_hours_week:   80,
+  industry_targeted_pay_range:    100,
+  hours_available_to_work:        100,
+  // Multiline narrative fields (10pt DA override → ~70 chars/line)
+  work_assessment_observations:   350,  // 536×81pt → 6 lines → 350
+  natural_support_observations:   350,
+  life_skills_observations:       350,
+  current_work_skills:            350,
+  work_skill_development_needs:   350,
+  family_issues_supports:         350,
+  criminal_background:            350,
+  school_academic:                350,
+  communication_needs:            350,
+  assistive_technology_needs:     350,
+  interpersonal_social_skills:    350,
+  transportation_observations:    490,  // 536×95pt → 7 lines → 490
+  computer_skill_observations:    490,
+  interview_skill_observations:   490,
+  behavioral_self_regulation:     490,
+  activities_of_daily_living:     490,
+  referral_question:              490,
+  other_observations:             630,  // 536×121pt → 10 lines → 630
+  recommended_supports_on_job:    630,
+  job_development_supports:       700,  // larger field ~137pt → 700
+  ongoing_supports:               700,
+  // Short structured fields
   jobs_of_interest:               140,
   life_skills_needed:             140,
-  planned_job_search_hours_week:  80,
   recommended_target_occupations: 210,
-  industry_targeted_pay_range:    100,
   job_goal:                       210,
   benefits_other:                 210,
-  hours_available_to_work:        100,
 };
 function limitPdfText(value, key) {
   if (value === null || value === undefined) return '';
