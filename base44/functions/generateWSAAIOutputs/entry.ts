@@ -115,7 +115,7 @@ const WSA_PDF_SAFE_LIMITS = {
   communication_needs:           360,   // measured ~same height group
   assistive_technology_needs:    360,   // measured ~same height group
   interpersonal_social_skills:   360,   // measured ~same height group
-  transportation_observations:   360,   // corrected from screenshot — actual field smaller than 437 safe estimate; 360 prevents mid-sentence truncation
+  transportation_observations:   600,   // 536pt wide × 95pt tall at 10pt Helv → ~672 char capacity; 600 safe
   computer_skill_observations:   430,   // measured 537x95pt → 437 safe
   interview_skill_observations:  430,   // measured 537x95pt → 437 safe
   behavioral_self_regulation:    430,   // measured 537x95pt → 437 safe
@@ -553,7 +553,7 @@ UNIVERSAL SYNTHESIS RULES:
 - Do NOT infer transportation needs from unrelated assessments or sources.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 500 characters. Write concisely so the final PDF field (360 character limit) can be satisfied without losing key information during compression.
+- Maximum 750 characters. The PDF field holds up to 600 characters at 10pt font; write rich but concise content.
 - Prioritize in order: primary transportation method → reliability → readiness/prompting needs → employment impact → backup supports. Drop lower-priority details first if space is tight.
 - Return ONLY the plain text narrative.`;
 
@@ -564,7 +564,7 @@ async function synthesizeTransportationObservations(base44, tr, methodsArray, pr
   const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
   const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 500);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 750);
 }
 
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
