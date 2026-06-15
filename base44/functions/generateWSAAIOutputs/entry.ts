@@ -115,7 +115,7 @@ const WSA_PDF_SAFE_LIMITS = {
   communication_needs:           360,   // measured ~same height group
   assistive_technology_needs:    360,   // measured ~same height group
   interpersonal_social_skills:   360,   // measured ~same height group
-  transportation_observations:   430,   // measured 537x95pt → 437 safe
+  transportation_observations:   360,   // corrected from screenshot — actual field smaller than 437 safe estimate; 360 prevents mid-sentence truncation
   computer_skill_observations:   430,   // measured 537x95pt → 437 safe
   interview_skill_observations:  430,   // measured 537x95pt → 437 safe
   behavioral_self_regulation:    430,   // measured 537x95pt → 437 safe
@@ -216,10 +216,17 @@ function clampOfficialText(value, maxLength) {
   if (!text) return '';
   if (text.length <= maxLength) return text;
 
-  // Hard truncate at a word boundary — no referral suffix.
-  // Fields that arrive here via the hard-guard path bypassed LLM compression,
-  // so we truncate cleanly rather than appending any "see elsewhere" language.
   const sliced = text.slice(0, maxLength);
+
+  // Prefer truncating at the last complete sentence (period followed by space or end).
+  // This prevents mid-sentence and mid-word cutoffs in PDF fields.
+  const lastPeriod = Math.max(sliced.lastIndexOf('. '), sliced.lastIndexOf('.'));
+  if (lastPeriod > maxLength * 0.65) {
+    // Found a sentence boundary in the usable range — truncate there.
+    return sliced.slice(0, lastPeriod + 1).trimEnd();
+  }
+
+  // Fallback: truncate at last word boundary.
   const lastSpace = sliced.lastIndexOf(' ');
   return (lastSpace > maxLength * 0.8 ? sliced.slice(0, lastSpace) : sliced).trimEnd();
 }
@@ -546,7 +553,8 @@ UNIVERSAL SYNTHESIS RULES:
 - Do NOT infer transportation needs from unrelated assessments or sources.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 850 characters.
+- Maximum 500 characters. Write concisely so the final PDF field (360 character limit) can be satisfied without losing key information during compression.
+- Prioritize in order: primary transportation method → reliability → readiness/prompting needs → employment impact → backup supports. Drop lower-priority details first if space is tight.
 - Return ONLY the plain text narrative.`;
 
   return prompt;
@@ -556,7 +564,7 @@ async function synthesizeTransportationObservations(base44, tr, methodsArray, pr
   const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
   const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
+  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 500);
 }
 
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
