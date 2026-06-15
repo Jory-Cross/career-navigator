@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useMemo } from "react";
 import { MapPin, Briefcase, Archive, ArchiveRestore, Mail, UserCheck, Trash2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
