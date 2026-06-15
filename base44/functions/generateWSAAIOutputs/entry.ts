@@ -399,11 +399,33 @@ REQUIREMENTS:
   return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 850);
 }
 
-// Method categories used to classify primary transportation method
+// ─── Transportation Method Classification ─────────────────────────────────────
+//
+// Methods are sorted into three exclusive categories:
+//
+//   Category 1 – Primary Transportation (how the client travels to/from work):
+//     Paratransit, Public transportation, Community transportation service,
+//     Transportation provider, Family transportation, Friend transportation,
+//     Employer transportation, Co-worker transportation, Ride share, Taxi, Drives self
+//
+//   Category 2 – Backup Transportation (fallback when primary is unavailable):
+//     Same pool as Category 1 — context determines whether a method is primary or backup.
+//     (The LLM is instructed to frame non-primary transportation methods as backup.)
+//
+//   Category 3 – Mobility Supports (devices that support local movement, NOT transportation):
+//     Manual wheelchair, Motorized wheelchair, Power scooter / mobility device, Walking, Bicycle
+//     → These MUST be described as local mobility/community access aids, NEVER as backup transport.
+//
+// Rules:
+//   - A mobility device in transportation_methods is ALWAYS a Category 3 Mobility Support.
+//   - Mobility devices must NEVER appear in backup transportation lists.
+//   - The LLM prompt explicitly separates these categories and instructs accordingly.
+
 const PARATRANSIT_METHODS = new Set(['Paratransit']);
 const FIXED_ROUTE_METHODS = new Set(['Public transportation', 'Community transportation service', 'Transportation provider']);
 const PERSONAL_SUPPORT_METHODS = new Set(['Family transportation', 'Friend transportation', 'Employer transportation', 'Co-worker transportation', 'Ride share', 'Taxi']);
 const DRIVES_SELF_METHODS = new Set(['Drives self']);
+// Mobility supports — local movement aids, NOT transportation methods
 const MOBILITY_DEVICE_METHODS = new Set(['Walking', 'Manual wheelchair', 'Motorized wheelchair', 'Power scooter / mobility device', 'Bicycle']);
 
 function classifyPrimaryMethod(primary, methodsArray) {
@@ -421,12 +443,21 @@ function classifyPrimaryMethod(primary, methodsArray) {
 }
 
 function buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock) {
+  // ── Pre-classify methods into the three categories before building the prompt ──
+  // This prevents mobility devices from appearing in the transportation methods list
+  // that the LLM sees, eliminating the root cause of the misclassification bug.
+  const mobilityDevices = methodsArray.filter(m => MOBILITY_DEVICE_METHODS.has(m));
+  const transportationMethods = methodsArray.filter(m => !MOBILITY_DEVICE_METHODS.has(m));
+  const backupMethods = transportationMethods.filter(m => m !== primaryMethod);
+
   // Build a labeled evidence block from the most relevant fields for this method
   const evidenceLines = [];
 
-  // Always include: primary method, all methods, reliability, employment impact, staff observations
+  // Always include: primary method, classified method lists, reliability, employment impact, staff observations
   if (primaryMethod) evidenceLines.push(`Primary transportation method: ${primaryMethod}`);
-  if (methodsArray.length > 0) evidenceLines.push(`All transportation methods used: ${methodsArray.join(', ')}`);
+  if (transportationMethods.length > 0) evidenceLines.push(`All transportation methods (Category 1 – Primary/Backup Transport): ${transportationMethods.join(', ')}`);
+  if (backupMethods.length > 0) evidenceLines.push(`Backup transportation options (if primary unavailable): ${backupMethods.join(', ')}`);
+  if (mobilityDevices.length > 0) evidenceLines.push(`Mobility supports (Category 3 – local movement aids, NOT transportation): ${mobilityDevices.join(', ')}`);
   if (tr.paratransit_status) evidenceLines.push(`Paratransit status: ${tr.paratransit_status}`);
   if (tr.public_transit_access) evidenceLines.push(`Public transportation access: ${tr.public_transit_access}`);
   if (tr.transportation_availability) evidenceLines.push(`Transportation availability: ${tr.transportation_availability}`);
@@ -555,7 +586,24 @@ UNIVERSAL SYNTHESIS RULES:
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
 - Maximum 750 characters. The PDF field holds up to 600 characters at 10pt font; write rich but concise content.
 - Prioritize in order: primary transportation method → reliability → readiness/prompting needs → employment impact → backup supports. Drop lower-priority details first if space is tight.
-- Return ONLY the plain text narrative.`;
+- Return ONLY the plain text narrative.
+
+CRITICAL — THREE-CATEGORY TRANSPORTATION CLASSIFICATION (MUST FOLLOW):
+Transportation methods in this assessment fall into three distinct categories. Apply these rules strictly:
+
+CATEGORY 1 — PRIMARY TRANSPORTATION: How the client travels to/from work destinations.
+  Examples: Paratransit, Public transportation, Family transportation, Drives self, Ride share, Employer transportation.
+
+CATEGORY 2 — BACKUP TRANSPORTATION: Alternative methods used when the primary method is unavailable.
+  Examples: Family transportation, Friend transportation, Employer transportation, Co-worker transportation, Ride share, Taxi.
+  Rule: Only describe a method as "backup transportation" if it is documented in the "Backup transportation options" evidence line above AND it is a Category 1 transportation method (not a mobility device).
+
+CATEGORY 3 — MOBILITY SUPPORTS: Devices that support local movement or community access. These are NOT transportation methods.
+  Examples: Manual wheelchair, Motorized wheelchair, Power scooter / mobility device, Walking, Bicycle.
+  STRICT RULE: ANY device listed under "Mobility supports" in the evidence above MUST be described as a mobility support or local mobility aid — NEVER as backup transportation, NEVER as an alternative transportation method.
+  Correct language: "A motorized wheelchair supports independent mobility within the community." OR "The client uses a power scooter for local community access."
+  Incorrect language: "Backup options include a motorized wheelchair." OR "The client's wheelchair serves as an alternative transportation option."
+  This rule applies universally — regardless of client name, diagnosis, or how the device was listed.`;
 
   return prompt;
 }
