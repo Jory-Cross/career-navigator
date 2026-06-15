@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo } from "react";
 import { MapPin, Briefcase, Archive, ArchiveRestore, Mail, UserCheck, Trash2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -111,8 +112,33 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
       };
     }
     
+    // DSPD monthly calculation (resets each month)
+    const dspdMonthlyAuthorized = Number(client.dspd_monthly_authorized_hours) || 0;
+    if (dspdMonthlyAuthorized > 0) {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      const dspdUsedMinutes = timeEntries
+        .filter(e => {
+          const code = (e.entry_type_code || "").toLowerCase();
+          if (code !== "dspd") return false;
+          if (!e.date) return false;
+          const entryDate = new Date(e.date);
+          return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+        })
+        .reduce((sum, e) => sum + Number(e.duration_minutes || 0), 0);
+      const dspdUsedHours = dspdUsedMinutes / 60;
+      const dspdRemaining = dspdMonthlyAuthorized - dspdUsedHours;
+      status.dspd = {
+        authorized: dspdMonthlyAuthorized,
+        remaining: parseFloat(dspdRemaining.toFixed(2)),
+        isExhausted: dspdRemaining <= 0
+      };
+    }
+    
     return status;
-  }, [client.job_coaching_authorized_hours_total, client.job_coaching_auth_start_date, client.job_coaching_additional_auths, client.life_skills_authorized_hours_total, client.life_skills_additional_auths, timeEntries]);
+  }, [client.job_coaching_authorized_hours_total, client.job_coaching_auth_start_date, client.job_coaching_additional_auths, client.life_skills_authorized_hours_total, client.life_skills_additional_auths, client.dspd_monthly_authorized_hours, timeEntries]);
 
   // Archive active client (soft delete)
   const handleArchive = async (e) => {
@@ -191,7 +217,7 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
             </div>
 
             {/* Authorization Hours Status */}
-            {(authStatus.jobCoaching || authStatus.lifeSkills) && (
+            {(authStatus.jobCoaching || authStatus.lifeSkills || authStatus.dspd) && (
               <div className="mt-3 pt-3 border-t border-slate-50 space-y-1.5">
                 {authStatus.jobCoaching && (
                   <div className={cn(
@@ -223,6 +249,20 @@ export default function ClientCard({ client, totalHours, applicationCount, onArc
                     ) : null}
                     <span className="font-medium">Life Skills:</span>
                     <span>{authStatus.lifeSkills.remaining}h remaining</span>
+                  </div>
+                )}
+                {authStatus.dspd && (
+                  <div className={cn(
+                    "flex items-center gap-1.5 text-xs px-2 py-1 rounded",
+                    authStatus.dspd.isExhausted
+                      ? "bg-red-50 text-red-700"
+                      : "text-slate-600"
+                  )}>
+                    {authStatus.dspd.isExhausted ? (
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                    ) : null}
+                    <span className="font-medium">DSPD Monthly:</span>
+                    <span>{authStatus.dspd.remaining}h remaining</span>
                   </div>
                 )}
               </div>
