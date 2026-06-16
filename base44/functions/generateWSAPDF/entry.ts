@@ -1,84 +1,83 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
-const DEFAULT_PDF_TEXT_LIMIT = 950;
-
-const PDF_TEXT_LIMITS = {
-  worksite_simulation_location:   100,
-  transportation_public:           80,
-  transportation_private:          65,
-  computer_skills_other:          100,
-  planned_job_search_hours_week:   80,
-  industry_targeted_pay_range:    100,
-  hours_available_to_work:        100,
-  work_assessment_observations:   350,
-  natural_support_observations:   350,
-  life_skills_observations:       350,
-  current_work_skills:            350,
-  work_skill_development_needs:   350,
-  family_issues_supports:         350,
-  criminal_background:            350,
-  school_academic:                350,
-  communication_needs:            350,
-  assistive_technology_needs:     350,
-  interpersonal_social_skills:    350,
-  transportation_observations:    490,
-  computer_skill_observations:    490,
-  interview_skill_observations:   490,
-  behavioral_self_regulation:     490,
-  activities_of_daily_living:     490,
-  referral_question:              490,
-  other_observations:             630,
-  recommended_supports_on_job:    630,
-  job_development_supports:       700,
-  ongoing_supports:               700,
-  jobs_of_interest:               140,
-  life_skills_needed:             140,
-  recommended_target_occupations: 210,
-  job_goal:                       210,
-  benefits_other:                 210,
-};
-
-function limitPdfText(value, key) {
+function cleanPdfText(value) {
   if (value === null || value === undefined) return '';
-  const text = String(value).replace(/\s+/g, ' ').trim();
-  const limit = PDF_TEXT_LIMITS[key] || DEFAULT_PDF_TEXT_LIMIT;
-  if (text.length <= limit) return text;
-  return `${text.slice(0, Math.max(0, limit - 24)).trim()}... [truncated for PDF]`;
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function getResponseValue(responses, officialFields, key) {
+  if (officialFields && officialFields[key] !== undefined && officialFields[key] !== null) {
+    return officialFields[key];
+  }
+
+  if (responses && responses[key] !== undefined && responses[key] !== null) {
+    return responses[key];
+  }
+
+  return '';
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!user) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await req.json();
-    const { assessment_id } = body;
+    const assessment_id = body && body.assessment_id;
+
+    if (!assessment_id) {
+      return Response.json({ success: false, error: 'assessment_id is required' }, { status: 400 });
+    }
+
     const assessment = await base44.entities.Assessment.get(assessment_id);
-    if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
-    const client = await base44.asServiceRole.entities.Client.get(assessment.client_id);
-    const r = assessment.responses || {};
+    if (!assessment) {
+      return Response.json({ success: false, error: 'Assessment not found' }, { status: 404 });
+    }
 
-    console.log('Loading fillable WSA template and populating fields...');
+    const responses = assessment.responses || {};
+
+    const officialFields =
+      responses.official_wsa_fields && typeof responses.official_wsa_fields === 'object'
+        ? responses.official_wsa_fields
+        : responses._official_wsa_fields && typeof responses._official_wsa_fields === 'object'
+          ? responses._official_wsa_fields
+          : {};
+
+    let client = null;
+
+    if (assessment.client_id) {
+      try {
+        client = await base44.asServiceRole.entities.Client.get(assessment.client_id);
+      } catch (_error) {
+        client = null;
+      }
+    }
 
     const pdfResponse = await fetch(FILLABLE_WSA_URL);
-    if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
-    const pdfBytes = await pdfResponse.arrayBuffer();
 
+    if (!pdfResponse.ok) {
+      throw new Error('Failed to fetch WSA PDF template: ' + pdfResponse.status);
+    }
+
+    const pdfBytes = await pdfResponse.arrayBuffer();
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
     const form = pdfDoc.getForm();
 
-    // Exact field name mapping from response keys → PDF internal field names
     const TEXT_FIELD_MAP = {
       crp_referring_to: 'CRP Referring to',
       guardian_name_phone: 'Parent/Guardian name and phone',
       referral_question: 'Referral question',
       benefits_summary_info: 'Benefits Summary Info',
       other_services_benefits: 'Other ServicesBenefits',
+
       current_work_skills: 'Current Work Skills knowledge skills and abilities',
       work_skill_development_needs: 'Work Skill Development Needs',
       jobs_of_interest: 'Jobs of Interest_1',
@@ -90,17 +89,21 @@ Deno.serve(async (req) => {
       family_issues_supports: 'Family IssuesSupports',
       criminal_background: 'Criminal Background expungement etc',
       school_academic: 'SchoolAcademic can include behavioral information',
+
       worksite_simulation_location: 'Worksite Simulation Location',
       work_assessment_observations: 'Work Assessment Observations',
       natural_support_observations: 'Natural Support Assessment Observations',
       life_skills_observations: 'Life Skills Observations',
+
       transportation_public: 'Public Transportation Options (text)',
       transportation_private: 'Private Transportation Options (text)',
       transportation_observations: 'Transportation Assessment Observations',
+
       computer_skills_other: 'Other skills (text)',
       computer_skill_observations: 'Computer Skill Assessment Observations',
       interview_skill_observations: 'Interview Skill Assessment Observations',
       other_observations: 'Other Observations',
+
       planned_job_search_hours_week: 'Planned Job Search hours/week',
       life_skills_needed: 'Life Skills needed',
       life_skills_hours_requested: 'Life Skills hours requested',
@@ -108,10 +111,12 @@ Deno.serve(async (req) => {
       recommended_supports_on_job: 'Recommended supports on the job',
       job_development_supports: 'Joint VR/CRP Recommendations for Job Development Supports',
       ongoing_supports: 'Joint VR/CRP Recommendations for Ongoing Supports',
+
       job_goal: 'Job Goal (must align with IPE goal)',
       industry_targeted_pay_range: 'Industry Targeted Pay Range',
       benefits_other: 'Benefits/Other',
       hours_available_to_work: 'Other hours available to work',
+
       crp_name: 'Community Rehabilitation Program Name',
       assigned_employment_specialist: 'Assigned Employment SpecialistJob Coach',
       benefits_planning_date: 'Date Scheduled',
@@ -119,107 +124,166 @@ Deno.serve(async (req) => {
       health_insurance: 'Other Health Insurance (text)',
     };
 
-    // Populate client-level fields
     if (client) {
       const clientFields = {
-        'Client Name': `${client.first_name || ''} ${client.last_name || ''}`.trim(),
+        'Client Name': [client.first_name, client.last_name].filter(Boolean).join(' '),
         'Client Phone': client.phone || '',
-        'Address': client.address || '',
+        Address: client.address || '',
       };
+
       if (client.address) {
-        const parts = client.address.split(',').map(s => s.trim());
+        const parts = String(client.address).split(',').map((part) => part.trim());
+
         if (parts.length >= 3) {
-          clientFields['Address'] = parts[0];
-          clientFields['City'] = parts[1];
-          const stateZip = parts[2].trim().split(' ');
-          clientFields['State'] = stateZip[0] || '';
-          clientFields['ZIP'] = stateZip[1] || '';
+          clientFields.Address = parts[0];
+          clientFields.City = parts[1];
+
+          const stateZip = parts[2].split(' ').filter(Boolean);
+          clientFields.State = stateZip[0] || '';
+          clientFields.ZIP = stateZip[1] || '';
         } else if (parts.length === 2) {
-          clientFields['Address'] = parts[0];
-          clientFields['City'] = parts[1];
+          clientFields.Address = parts[0];
+          clientFields.City = parts[1];
         }
       }
-      for (const [pdfFieldName, value] of Object.entries(clientFields)) {
-        if (!value) continue;
+
+      for (const pdfFieldName of Object.keys(clientFields)) {
+        const text = cleanPdfText(clientFields[pdfFieldName]);
+        if (!text) continue;
+
         try {
           const field = form.getFieldMaybe(pdfFieldName);
-          if (field) { field.setText(value); console.log(`✓ Client field "${pdfFieldName}"`); }
-        } catch(e) { console.log(`✗ Client field error "${pdfFieldName}":`, e.message); }
+          if (field && typeof field.setText === 'function') {
+            field.setText(text);
+          }
+        } catch (_error) {
+          console.log('Client field skipped:', pdfFieldName);
+        }
       }
     }
 
-    // Set all text fields using standard setText
-    for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
-      const value = r[key];
-      if (!value) continue;
+    for (const key of Object.keys(TEXT_FIELD_MAP)) {
+      const pdfFieldName = TEXT_FIELD_MAP[key];
+      const text = cleanPdfText(getResponseValue(responses, officialFields, key));
+
+      if (!text) continue;
+
       try {
         const field = form.getFieldMaybe(pdfFieldName);
-        if (field) {
-          field.setText(limitPdfText(value, key));
-          console.log(`✓ Set "${key}"`);
-        } else {
-          console.log(`✗ Field not found: "${pdfFieldName}"`);
+
+        if (field && typeof field.setText === 'function') {
+          field.setText(text);
         }
-      } catch (e) {
-        console.log(`✗ Error setting "${key}":`, e.message);
+      } catch (_error) {
+        console.log('PDF field skipped:', key, pdfFieldName);
       }
     }
 
-    // Handle RadioGroups (Guardianship, ACRE Certified)
     try {
       const guardianshipField = form.getFieldMaybe('Guardianship');
-      if (guardianshipField && r.guardianship) {
-        guardianshipField.select(r.guardianship === 'Yes' ? 'Guardianship-Yes' : 'Guardianship-No');
+
+      if (guardianshipField && responses.guardianship && typeof guardianshipField.select === 'function') {
+        guardianshipField.select(
+          responses.guardianship === 'Yes' ? 'Guardianship-Yes' : 'Guardianship-No'
+        );
       }
-    } catch(e) { console.log('Guardianship radio error:', e.message); }
+    } catch (_error) {
+      console.log('Guardianship field skipped');
+    }
 
     try {
       const acreField = form.getFieldMaybe('ACRE Certified?');
-      if (acreField && r.acre_certified) {
-        acreField.select(r.acre_certified);
+
+      if (acreField && responses.acre_certified && typeof acreField.select === 'function') {
+        acreField.select(responses.acre_certified);
       }
-    } catch(e) { console.log('ACRE Certified radio error:', e.message); }
-
-    // Handle checkboxes
-    const checkIfContains = (text, keyword) => text && text.toLowerCase().includes(keyword.toLowerCase());
-    const checkboxMap = {
-      'Division of Services for People with Disabilities DSPD': checkIfContains(r.extended_services_provider, 'DSPD'),
-      'Partnership Plus TTW': checkIfContains(r.extended_services_provider, 'TTW') || checkIfContains(r.extended_services_provider, 'Partnership'),
-      'Medicaid': checkIfContains(r.health_insurance, 'Medicaid'),
-      'Medicare': checkIfContains(r.health_insurance, 'Medicare'),
-      'Parents Insurance': checkIfContains(r.health_insurance, "Parent"),
-      'Spouses Insurance': checkIfContains(r.health_insurance, 'Spouse'),
-      'Supplemental Security Income SSI': checkIfContains(r.social_security_benefits, 'SSI'),
-      'Social Security Disability Insurance SSDI': checkIfContains(r.social_security_benefits, 'SSDI'),
-      'Completed': r.benefits_planning === 'Completed',
-      'Pending Date Scheduled': r.benefits_planning === 'Pending – Date Scheduled',
-      'Not Applicable': r.benefits_planning === 'Not Applicable',
-      'Full Time': checkIfContains(r.hours_available_to_work, 'Full Time'),
-      'Part Time': checkIfContains(r.hours_available_to_work, 'Part Time'),
-      '10 hourswk': checkIfContains(r.hours_available_to_work, '10 hours'),
-      'Days': checkIfContains(r.hours_available_to_work, 'Days'),
-      'Swing shift': checkIfContains(r.hours_available_to_work, 'Swing'),
-    };
-
-    for (const [fieldName, shouldCheck] of Object.entries(checkboxMap)) {
-      if (!shouldCheck) continue;
-      try {
-        const field = form.getFieldMaybe(fieldName);
-        if (field) { field.check(); console.log(`✓ Checked "${fieldName}"`); }
-      } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
+    } catch (_error) {
+      console.log('ACRE field skipped');
     }
 
-    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
+    function contains(value, keyword) {
+      return cleanPdfText(value).toLowerCase().includes(keyword.toLowerCase());
+    }
 
-    const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
+    const checkboxMap = {
+      'Division of Services for People with Disabilities DSPD': contains(
+        getResponseValue(responses, officialFields, 'extended_services_provider'),
+        'DSPD'
+      ),
+      'Partnership Plus TTW':
+        contains(getResponseValue(responses, officialFields, 'extended_services_provider'), 'TTW') ||
+        contains(getResponseValue(responses, officialFields, 'extended_services_provider'), 'Partnership'),
+      Medicaid: contains(getResponseValue(responses, officialFields, 'health_insurance'), 'Medicaid'),
+      Medicare: contains(getResponseValue(responses, officialFields, 'health_insurance'), 'Medicare'),
+      'Parents Insurance': contains(getResponseValue(responses, officialFields, 'health_insurance'), 'Parent'),
+      'Spouses Insurance': contains(getResponseValue(responses, officialFields, 'health_insurance'), 'Spouse'),
+      'Supplemental Security Income SSI': contains(
+        getResponseValue(responses, officialFields, 'social_security_benefits'),
+        'SSI'
+      ),
+      'Social Security Disability Insurance SSDI': contains(
+        getResponseValue(responses, officialFields, 'social_security_benefits'),
+        'SSDI'
+      ),
+      Completed: getResponseValue(responses, officialFields, 'benefits_planning') === 'Completed',
+      'Pending Date Scheduled':
+        getResponseValue(responses, officialFields, 'benefits_planning') === 'Pending – Date Scheduled',
+      'Not Applicable':
+        getResponseValue(responses, officialFields, 'benefits_planning') === 'Not Applicable',
+      'Full Time': contains(getResponseValue(responses, officialFields, 'hours_available_to_work'), 'Full Time'),
+      'Part Time': contains(getResponseValue(responses, officialFields, 'hours_available_to_work'), 'Part Time'),
+      '10 hourswk': contains(getResponseValue(responses, officialFields, 'hours_available_to_work'), '10 hours'),
+      Days: contains(getResponseValue(responses, officialFields, 'hours_available_to_work'), 'Days'),
+      'Swing shift': contains(getResponseValue(responses, officialFields, 'hours_available_to_work'), 'Swing'),
+    };
 
-    await base44.entities.Assessment.update(assessment_id, { pdf_url: file_url });
+    for (const fieldName of Object.keys(checkboxMap)) {
+      if (!checkboxMap[fieldName]) continue;
 
-    console.log('WSA PDF generated:', file_url);
-    return Response.json({ pdf_url: file_url });
+      try {
+        const field = form.getFieldMaybe(fieldName);
+
+        if (field && typeof field.check === 'function') {
+          field.check();
+        }
+      } catch (_error) {
+        console.log('Checkbox skipped:', fieldName);
+      }
+    }
+
+    const modifiedPdfBytes = await pdfDoc.save({
+      updateFieldAppearances: true,
+    });
+
+    const pdfFile = new File(
+      [modifiedPdfBytes],
+      'Work_Strategy_Assessment_' + assessment_id + '.pdf',
+      { type: 'application/pdf' }
+    );
+
+    const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfFile });
+    const file_url = uploadResult.file_url;
+
+    await base44.entities.Assessment.update(assessment_id, {
+      pdf_url: file_url,
+    });
+
+    return Response.json({
+      success: true,
+      pdf_url: file_url,
+    });
   } catch (error) {
-    console.error('generateWSAPDF error:', error.message, error.stack);
-    return Response.json({ error: error.message }, { status: 500 });
+    const message = error && error.message ? error.message : 'Failed to generate WSA PDF';
+    const stack = error && error.stack ? error.stack : '';
+
+    console.error('generateWSAPDF error:', message, stack);
+
+    return Response.json(
+      {
+        success: false,
+        error: message,
+      },
+      { status: 500 }
+    );
   }
 });
