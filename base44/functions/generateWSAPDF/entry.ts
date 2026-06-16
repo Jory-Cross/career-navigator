@@ -1,29 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
-import { PDFDocument, PDFName, PDFString, PDFNumber } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
 const FILLABLE_WSA_URL = 'https://jobs.utah.gov/usor/vr/partners/usor94.pdf';
 
-// PDF fields in the original Utah WSA form have limited visible space.
-// Keep the full in-app WSA answers unchanged, but trim text before writing into the PDF.
 const DEFAULT_PDF_TEXT_LIMIT = 950;
 
-// Limits measured from actual PDF field rectangle dimensions (usor94.pdf)
-// using Helvetica 10pt constants and 18% safety margin. Must match WSA_PDF_SAFE_LIMITS
-// in generateWSAAIOutputs so content bounded at generation cannot overflow here.
-// Limits must stay in sync with WSA_PDF_SAFE_LIMITS in generateWSAAIOutputs.
-// All multiline observation fields are overridden to 10pt DA before setText (see FONT_OVERRIDE_FIELDS).
-// Derivation: 536pt wide / 6.5pt avg char / 0.85 margin ≈ 70 chars/line at 10pt.
 const PDF_TEXT_LIMITS = {
-  // Single-line / short fields (12pt, no DA override)
   worksite_simulation_location:   100,
-  transportation_public:           80,  // 436pt single-line → ~62 chars; cap 80
-  transportation_private:          65,  // 353pt single-line → ~50 chars; cap 65
+  transportation_public:           80,
+  transportation_private:          65,
   computer_skills_other:          100,
   planned_job_search_hours_week:   80,
   industry_targeted_pay_range:    100,
   hours_available_to_work:        100,
-  // Multiline narrative fields (10pt DA override → ~70 chars/line)
-  work_assessment_observations:   350,  // 536×81pt → 6 lines → 350
+  work_assessment_observations:   350,
   natural_support_observations:   350,
   life_skills_observations:       350,
   current_work_skills:            350,
@@ -34,31 +24,28 @@ const PDF_TEXT_LIMITS = {
   communication_needs:            350,
   assistive_technology_needs:     350,
   interpersonal_social_skills:    350,
-  transportation_observations:    490,  // 536×95pt → 7 lines → 490
+  transportation_observations:    490,
   computer_skill_observations:    490,
   interview_skill_observations:   490,
   behavioral_self_regulation:     490,
   activities_of_daily_living:     490,
   referral_question:              490,
-  other_observations:             630,  // 536×121pt → 10 lines → 630
+  other_observations:             630,
   recommended_supports_on_job:    630,
-  job_development_supports:       700,  // larger field ~137pt → 700
+  job_development_supports:       700,
   ongoing_supports:               700,
-  // Short structured fields
   jobs_of_interest:               140,
   life_skills_needed:             140,
   recommended_target_occupations: 210,
   job_goal:                       210,
   benefits_other:                 210,
 };
+
 function limitPdfText(value, key) {
   if (value === null || value === undefined) return '';
-
   const text = String(value).replace(/\s+/g, ' ').trim();
   const limit = PDF_TEXT_LIMITS[key] || DEFAULT_PDF_TEXT_LIMIT;
-
   if (text.length <= limit) return text;
-
   return `${text.slice(0, Math.max(0, limit - 24)).trim()}... [truncated for PDF]`;
 }
 
@@ -69,74 +56,21 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { assessment_id, diagnostic } = body;
+    const { assessment_id } = body;
     const assessment = await base44.entities.Assessment.get(assessment_id);
     if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const client = await base44.asServiceRole.entities.Client.get(assessment.client_id);
     const r = assessment.responses || {};
 
-    // Diagnostic mode: inspect field values and AP stream presence without generating a PDF.
-    if (diagnostic) {
-      const DIAGNOSTIC_KEYS = {
-        work_assessment_observations:  'Work Assessment Observations',
-        natural_support_observations:  'Natural Support Assessment Observations',
-        transportation_observations:   'Transportation Assessment Observations',
-        life_skills_observations:      'Life Skills Observations',
-        computer_skill_observations:   'Computer Skill Assessment Observations',
-      };
-      const pdfResponse2 = await fetch(FILLABLE_WSA_URL);
-      const pdfBytes2 = await pdfResponse2.arrayBuffer();
-      const pdfDoc2 = await PDFDocument.load(pdfBytes2, { ignoreEncryption: true });
-      const form2 = pdfDoc2.getForm();
-      const results = {};
-      for (const [key, pdfName] of Object.entries(DIAGNOSTIC_KEYS)) {
-        const rawValue = r[key] || null;
-        const truncated = rawValue ? limitPdfText(rawValue, key) : null;
-        let fieldFound = false;
-        let hasApStream = false;
-        let fieldType = null;
-        try {
-          const f = form2.getFieldMaybe(pdfName);
-          if (f) {
-            fieldFound = true;
-            fieldType = f.constructor?.name || 'unknown';
-            const apDict = f.acroField?.dict?.lookup?.(f.acroField?.dict?.context?.obj?.PDFName?.of?.('AP'));
-            // Check for AP entry in field dict
-            const apEntry = f.acroField.dict.get(pdfDoc2.context.obj?.PDFName?.of('AP') || 'AP');
-            hasApStream = !!apEntry;
-            // Also check via raw dict keys
-            const keys = [];
-            f.acroField.dict.entries().forEach(([k]) => keys.push(String(k)));
-            hasApStream = keys.includes('/AP') || keys.includes('AP');
-          }
-        } catch(e) { /* field lookup error */ }
-        results[key] = {
-          pdf_field_name: pdfName,
-          response_value_exists: rawValue !== null && rawValue !== undefined,
-          response_value_length: rawValue ? rawValue.length : 0,
-          response_value_preview: rawValue ? rawValue.slice(0, 120) : null,
-          truncated_length: truncated ? truncated.length : 0,
-          truncated_preview: truncated ? truncated.slice(0, 120) : null,
-          field_found_in_pdf: fieldFound,
-          field_type: fieldType,
-          has_ap_stream_before_set: hasApStream,
-          char_limit_used: PDF_TEXT_LIMITS[key] || DEFAULT_PDF_TEXT_LIMIT,
-        };
-      }
-      return Response.json({ diagnostic: true, fields: results });
-    }
-
     console.log('Loading fillable WSA template and populating fields...');
 
-    // Load fillable PDF template
     const pdfResponse = await fetch(FILLABLE_WSA_URL);
     if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
     const pdfBytes = await pdfResponse.arrayBuffer();
 
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
     const form = pdfDoc.getForm();
-    const fields = form.getFields();
 
     // Exact field name mapping from response keys → PDF internal field names
     const TEXT_FIELD_MAP = {
@@ -192,7 +126,6 @@ Deno.serve(async (req) => {
         'Client Phone': client.phone || '',
         'Address': client.address || '',
       };
-      // Parse address into parts if it contains city/state/zip (e.g. "123 Main St, Ogden, UT 84401")
       if (client.address) {
         const parts = client.address.split(',').map(s => s.trim());
         if (parts.length >= 3) {
@@ -215,88 +148,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Multiline narrative field names ──────────────────────────────────────
-    // Diagnostic confirmed all five target fields have:
-    //   flags = 0x801000 → Multiline (bit 13) + Comb (bit 24) BOTH set
-    //   DA    = /Helv 12 Tf  → 12pt font, only ~4 lines fit in an 81pt field
-    //   AP    = pre-baked appearance stream present
-    //
-    // Root cause of clipping: the Comb bit (0x800000) causes viewers to render
-    // a fixed per-character grid, constraining multiline layout. With a 12pt DA
-    // and no MaxLen, this produces ~3-4 rendered lines regardless of field height.
-    //
-    // Fix applied to every multiline field before setting /V:
-    //   1. Strip the Comb bit from /Ff  → allow free-flow multiline rendering
-    //   2. Override /DA to 10pt         → 10pt Helv fits ~6-7 lines in 81pt
-    //   3. Delete /AP                   → force viewer to re-render from /V
-    //      (do NOT use updateFieldAppearances — it regenerates /AP incorrectly)
-    const MULTILINE_FIELDS = new Set([
-      'Work Assessment Observations',
-      'Natural Support Assessment Observations',
-      'Life Skills Observations',
-      'Transportation Assessment Observations',
-      'Computer Skill Assessment Observations',
-      'Interview Skill Assessment Observations',
-      'Other Observations',
-      'BehavioralSelfregulation',
-      'Activities of Daily Living hygiene meal prep etc',
-      'Family IssuesSupports',
-      'Criminal Background expungement etc',
-      'SchoolAcademic can include behavioral information',
-      'informalformal speech',
-      'Identified Assistive Technology Needs glasses UCAT device etc',
-      'Communication Needs interpreter etc',
-      'Referral question',
-      'Recommended supports on the job',
-      'Joint VR/CRP Recommendations for Job Development Supports',
-      'Joint VR/CRP Recommendations for Ongoing Supports',
-      'Current Work Skills knowledge skills and abilities',
-      'Work Skill Development Needs',
-    ]);
-
-    // Pre-patch: strip Comb flag + set 10pt DA on every multiline field
-    // before we write any values, so the field definition is correct first.
-    const COMB_BIT = 0x800000;
-    for (const pdfFieldName of MULTILINE_FIELDS) {
-      try {
-        const field = form.getFieldMaybe(pdfFieldName);
-        if (!field) continue;
-        const dict = field.acroField.dict;
-
-        // 1. Strip Comb bit from Ff flags
-        const ffObj = dict.get(PDFName.of('Ff'));
-        const currentFlags = ffObj ? ffObj.asNumber() : 0;
-        if (currentFlags & COMB_BIT) {
-          dict.set(PDFName.of('Ff'), PDFNumber.of(currentFlags & ~COMB_BIT));
-          console.log(`✓ Stripped Comb bit from "${pdfFieldName}" (was 0x${currentFlags.toString(16)})`);
-        }
-
-        // 2. Override DA to 10pt Helvetica (was 12pt — too large for the field height)
-        dict.set(PDFName.of('DA'), PDFString.of('/Helv 10 Tf 0 g'));
-
-        // 3. Delete the pre-baked AP stream — viewer must re-render from /V + /DA + /Rect
-        dict.delete(PDFName.of('AP'));
-      } catch (e) {
-        console.log(`✗ Pre-patch error on "${pdfFieldName}":`, e.message);
-      }
-    }
-
-    // Set all text fields
+    // Set all text fields using standard setText
     for (const [key, pdfFieldName] of Object.entries(TEXT_FIELD_MAP)) {
       const value = r[key];
       if (!value) continue;
       try {
         const field = form.getFieldMaybe(pdfFieldName);
         if (field) {
-          const text = limitPdfText(value, key);
-          if (MULTILINE_FIELDS.has(pdfFieldName)) {
-            // Write /V directly — field definition already patched above.
-            field.acroField.dict.set(PDFName.of('V'), PDFString.of(text));
-            console.log(`✓ Set (raw/multiline) "${key}" [${text.length} chars]`);
-          } else {
-            field.setText(text);
-            console.log(`✓ Set "${key}"`);
-          }
+          field.setText(limitPdfText(value, key));
+          console.log(`✓ Set "${key}"`);
         } else {
           console.log(`✗ Field not found: "${pdfFieldName}"`);
         }
@@ -316,11 +176,11 @@ Deno.serve(async (req) => {
     try {
       const acreField = form.getFieldMaybe('ACRE Certified?');
       if (acreField && r.acre_certified) {
-        acreField.select(r.acre_certified); // 'Yes' or 'No'
+        acreField.select(r.acre_certified);
       }
     } catch(e) { console.log('ACRE Certified radio error:', e.message); }
 
-    // Handle checkboxes based on text values in responses
+    // Handle checkboxes
     const checkIfContains = (text, keyword) => text && text.toLowerCase().includes(keyword.toLowerCase());
     const checkboxMap = {
       'Division of Services for People with Disabilities DSPD': checkIfContains(r.extended_services_provider, 'DSPD'),
@@ -349,17 +209,11 @@ Deno.serve(async (req) => {
       } catch(e) { console.log(`✗ Checkbox error "${fieldName}":`, e.message); }
     }
 
-    // Save with updateFieldAppearances: false.
-    // Multiline fields: /AP deleted + /DA overridden to 10pt + Comb bit stripped.
-    //   The viewer must regenerate appearance from /V. We must NOT let pdf-lib
-    //   regenerate AP — it would re-bake the old clipped rendering.
-    // Single-line fields: setText() wrote their values; pdf-lib handles AP internally.
-    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
+    const modifiedPdfBytes = await pdfDoc.save({ updateFieldAppearances: true });
 
     const pdfFile = new File([modifiedPdfBytes], `Work_Strategy_Assessment_${assessment_id}.pdf`, { type: 'application/pdf' });
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
 
-    // Save pdf_url back to assessment
     await base44.entities.Assessment.update(assessment_id, { pdf_url: file_url });
 
     console.log('WSA PDF generated:', file_url);
