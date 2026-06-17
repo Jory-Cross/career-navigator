@@ -59,7 +59,7 @@ export default function Clients() {
       // Admin viewing as someone else — use backend hierarchy enforcement for that user
       // Admin with no viewAs — fetch all directly for speed
            if (user.role === 'admin' && !viewAsUser) {
-        const validClientTypes = ["job_seeker", "pre_ets", "dspd", "employed"];
+        const validClientTypes = ["job_seeker", "pre_ets", "dspd", "employed", "customized_employment"];
         const shouldFilterByType = validClientTypes.includes(typeFilter);
 
         if (orgId || shouldFilterByType) {
