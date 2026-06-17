@@ -578,24 +578,41 @@ const currentTaskCount = tasks.filter(
       </button>
     )}
 
-    {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
-      <button
-        type="button"
-        onClick={() => handleTabChange("assessments")}
-        className={cn(
-          "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
-          activeTab === "assessments"
-            ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
-            : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          <span className="text-sm font-semibold">Assessments</span>
-        </div>
-      </button>
+  {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
+  <button
+    type="button"
+    onClick={() => handleTabChange("assessments")}
+    className={cn(
+      "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+      activeTab === "assessments"
+        ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+        : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
     )}
+  >
+    <div className="flex items-center gap-2">
+      <FileText className="h-4 w-4" />
+      <span className="text-sm font-semibold">Assessments</span>
+    </div>
+  </button>
+)}
 
+{isCE && !isClientUser && (
+  <button
+    type="button"
+    onClick={() => handleTabChange("customized_employment")}
+    className={cn(
+      "rounded-2xl border p-4 text-left transition shadow-sm hover:shadow-lg hover:-translate-y-0.5 bg-white",
+      activeTab === "customized_employment"
+        ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+        : "border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300"
+    )}
+  >
+    <div className="flex items-center gap-2">
+      <Users className="h-4 w-4" />
+      <span className="text-sm font-semibold">Customized Employment</span>
+    </div>
+  </button>
+)}
                 {client.client_type === "pre_ets" && !isClientUser && (
       <>
         {cd.pre_ets_wble_forms && (
