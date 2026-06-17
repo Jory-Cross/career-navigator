@@ -290,6 +290,7 @@ if (editing || formOnly) {
               <SelectItem value="employed">Employed</SelectItem>
               <SelectItem value="pre_ets">Pre-ETS</SelectItem>
               <SelectItem value="dspd">DSPD</SelectItem>
+              <SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
             </SelectContent>
           </Select>
         </div>
