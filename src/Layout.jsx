@@ -21,6 +21,7 @@ const navItems = [
   { name: "Employed",       icon: Users,           page: "Clients",        featureKey: "employed",      indent: true, roles: ["admin", "management", "employee"], param: "?type=employed" },
    { name: "Pre-ETS",        icon: GraduationCap,   page: "Clients",             featureKey: "pre_ets",       indent: true, roles: ["admin", "management", "employee"], param: "?type=pre_ets" },
   { name: "DSPD",           icon: Users,           page: "Clients",             featureKey: "dspd",          indent: true, roles: ["admin", "management", "employee"], param: "?type=dspd" },
+ { name: "Customized Employment", icon: Users,    page: "Clients",        featureKey: "customized_employment", indent: true, roles: ["admin", "management", "employee"], param: "?type=customized_employment" },
   { name: "Employees",      icon: UserCog,         page: "EmployeePortal",      featureKey: "employees",     roles: ["admin", "management"] },
   { name: "Calendar",       icon: Calendar,        page: "Calendar",       featureKey: "calendar" },
   { name: "Reports",        icon: BarChart3,       page: "Reports",              featureKey: "reports" },
