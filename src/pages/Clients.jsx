@@ -158,10 +158,11 @@ export default function Clients() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="job_seeker">Job Seeker</SelectItem>
-            <SelectItem value="pre_ets">Pre-ETS</SelectItem>
-            <SelectItem value="dspd">DSPD</SelectItem>
-            <SelectItem value="employed">Employed</SelectItem>
+           <SelectItem value="job_seeker">Job Seeker</SelectItem>
+<SelectItem value="pre_ets">Pre-ETS</SelectItem>
+<SelectItem value="dspd">DSPD</SelectItem>
+<SelectItem value="employed">Employed</SelectItem>
+<SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
           </SelectContent>
         </Select>
         {(effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && (() => {
