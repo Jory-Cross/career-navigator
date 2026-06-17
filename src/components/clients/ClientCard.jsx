@@ -22,14 +22,16 @@ const clientTypeLabels = {
   client: "Client",
   pre_ets: "Pre-ETS",
   dspd: "DSPD",
-  employed: "Employed"
+  employed: "Employed",
+  customized_employment: "Customized Employment"
 };
 
 const clientTypeColors = {
   client: "bg-violet-100 text-violet-700",
   pre_ets: "bg-amber-100 text-amber-700",
   dspd: "bg-teal-100 text-teal-700",
-  employed: "bg-green-100 text-green-700"
+  employed: "bg-green-100 text-green-700",
+  customized_employment: "bg-indigo-100 text-indigo-700"
 };
 
 export default function ClientCard({ client, totalHours, applicationCount, onArchiveToggle, canAssign, employees = [] }) {
