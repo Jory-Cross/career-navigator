@@ -151,8 +151,9 @@ function getMeetingBadgeClassName(status) {
 }
 function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
-  const isEmployed = client?.client_type === "employed";
-  const isCE = client?.client_type === "customized_employment";
+const isEmployed = client?.client_type === "employed";
+const isCE = client?.client_type === "customized_employment";
+const isClientUser = user?.role === "client";
 
   if (isDspd) return "client_details";
   if (isEmployed) return "client_details";
