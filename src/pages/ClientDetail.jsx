@@ -826,16 +826,54 @@ const currentTaskCount = tasks.filter(
           </TabsContent>
         )}
 
-        {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
-          <TabsContent value="assessments">
-            <AssessmentSection
-              client={client}
-              onRefresh={refreshClient}
-              openAssessmentType={openAssessmentType}
-              onOpenAssessmentTypeHandled={() => setOpenAssessmentType(null)}
-            />
-          </TabsContent>
-        )}
+       {cd.assessments && !isDspd && !isEmployed && !isClientUser && (
+  <TabsContent value="assessments">
+    <AssessmentSection
+      client={client}
+      onRefresh={refreshClient}
+      openAssessmentType={openAssessmentType}
+      onOpenAssessmentTypeHandled={() => setOpenAssessmentType(null)}
+    />
+  </TabsContent>
+)}
+
+{isCE && !isClientUser && (
+  <TabsContent value="customized_employment">
+    <Card className="border-0 shadow-sm">
+      <div className="p-6">
+        <h3 className="text-lg font-semibold mb-2">
+          Customized Employment
+        </h3>
+
+        <p className="text-slate-500 mb-6">
+          Discovery workflow coming next.
+        </p>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="border rounded-xl p-4">
+            <h4 className="font-medium">Home & Community Discovery</h4>
+            <p className="text-sm text-slate-500">Not built yet</p>
+          </div>
+
+          <div className="border rounded-xl p-4">
+            <h4 className="font-medium">Discovery Interviews</h4>
+            <p className="text-sm text-slate-500">Not built yet</p>
+          </div>
+
+          <div className="border rounded-xl p-4">
+            <h4 className="font-medium">Discovery Activities</h4>
+            <p className="text-sm text-slate-500">Not built yet</p>
+          </div>
+
+          <div className="border rounded-xl p-4">
+            <h4 className="font-medium">Discovery Staging Record</h4>
+            <p className="text-sm text-slate-500">Not built yet</p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  </TabsContent>
+)}
 
                              {client.client_type === "pre_ets" && !isClientUser && (
           <>
