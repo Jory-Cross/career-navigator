@@ -107,6 +107,7 @@ export default function NewClientDialog({ open, onOpenChange, onCreated }) {
                 <SelectItem value="pre_ets">Pre-ETS Student</SelectItem>
                 <SelectItem value="dspd">DSPD</SelectItem>
                 <SelectItem value="employed">Employed</SelectItem>
+                <SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
               </SelectContent>
             </Select>
           </div>
