@@ -41,6 +41,10 @@ import {
   ASSISTIVE_TECHNOLOGY_SECTIONS,
   ASSISTIVE_TECHNOLOGY_META,
 } from "@/lib/assessments/assistiveTechnologyAssessmentDefinition";
+import {
+  DISCOVERY_INTERVIEW_SECTIONS,
+  DISCOVERY_INTERVIEW_META,
+} from "@/lib/assessments/discoveryInterviewDefinition";
 import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
