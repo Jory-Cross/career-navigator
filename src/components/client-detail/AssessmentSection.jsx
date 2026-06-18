@@ -529,6 +529,20 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
       );
     }
 
+if (activeAssessment.key === "discovery_interview") {
+  return (
+    <DiscoveryInterviewPanel
+      clientId={resolvedClientId}
+      records={assessments.filter(
+        (record) =>
+          record.assessment_type ===
+          DISCOVERY_INTERVIEW_META.assessment_type
+      )}
+      onSaved={handleSaved}
+    />
+  );
+}
+    
     if (activeAssessment.key === "transportation") {
       return (
         <TransportationAssessmentPanel
