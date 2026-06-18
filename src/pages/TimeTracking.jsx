@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { User, Filter, AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
+import { User, Filter, AlertTriangle, Pencil, Plus, Trash2, List, LayoutGrid } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
@@ -290,6 +290,7 @@ const [deletingEntry, setDeletingEntry] = useState(null);
 const [isDeleting, setIsDeleting] = useState(false);
 
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
+  const [entryListView, setEntryListView] = useState("list");
 
   const entryTypes = useMemo(() => getEntryTypeOptions(), []);
 
@@ -1491,11 +1492,39 @@ if (entryTypeFilter !== "all") {
       ) : null}
 
       <Card className="p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Time Entries</h2>
+          <div className="flex rounded-lg border bg-white p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setEntryListView("list")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1",
+                entryListView === "list" ? "bg-slate-900 text-white" : "text-slate-600"
+              )}
+            >
+              <List className="h-3.5 w-3.5" />
+              List View
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryListView("type")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1",
+                entryListView === "type" ? "bg-slate-900 text-white" : "text-slate-600"
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              By Type
+            </button>
+          </div>
+        </div>
+
         {filtered.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
             No time entries found
           </div>
-        ) : (
+        ) : entryListView === "list" ? (
           <div className="space-y-3">
                         {filtered.map((entry) => {
                            const isDuplicate = duplicateIds.has(entry.id);
@@ -1666,7 +1695,201 @@ if (entryTypeFilter !== "all") {
               );
             })}
           </div>
-        )}
+        ) : (() => {
+          // By Type view — group filtered entries by entry_type_code
+          const TYPE_ORDER = [
+            "job_coaching",
+            "job_development",
+            "life_skills",
+            "dspd",
+            "admin_time",
+            "pto",
+            "wsa",
+            "pre_ets",
+            "misc",
+            "eom_reporting",
+            "client_non_attendance",
+          ];
+
+          const TYPE_LABELS = {
+            job_coaching: "Job Coaching",
+            job_development: "Job Development",
+            life_skills: "Life Skills",
+            dspd: "DSPD",
+            admin_time: "Admin Time",
+            pto: "PTO",
+            wsa: "WSA",
+            pre_ets: "Pre-ETS",
+            misc: "Miscellaneous",
+            eom_reporting: "End-of-Month Reporting",
+            client_non_attendance: "No-Show / Cancellation",
+          };
+
+          const grouped = {};
+          for (const entry of filtered) {
+            const code =
+              resolvedEntryTypeCodes[entry.id] ||
+              getImmediateEntryTypeCode(entry) ||
+              normalizeEntryTypeCode(entry.entry_type_code) ||
+              "misc";
+            if (!grouped[code]) grouped[code] = [];
+            grouped[code].push(entry);
+          }
+
+          const sortedCodes = [
+            ...TYPE_ORDER.filter((c) => grouped[c]),
+            ...Object.keys(grouped).filter((c) => !TYPE_ORDER.includes(c)),
+          ];
+
+          return (
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-4" style={{ minWidth: `${sortedCodes.length * 336}px` }}>
+                {sortedCodes.map((code) => {
+                  const entries = grouped[code];
+                  const totalMins = entries.reduce((s, e) => s + Number(e.duration_minutes || 0), 0);
+                  const label = TYPE_LABELS[code] || getEntryTypeLabel({ entry_type_code: code }, {}) || code;
+                  const colors = getEntryTypeColorClasses(code);
+
+                  return (
+                    <div key={code} className="flex flex-col gap-2" style={{ minWidth: "320px", width: "320px" }}>
+                      {/* Column header */}
+                      <div className={cn("rounded-lg border px-3 py-2", colors.card)}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm">{label}</span>
+                          <Badge className={cn("text-xs", colors.badge)}>
+                            {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {formatHoursFromMinutes(totalMins)} total
+                        </div>
+                      </div>
+
+                      {/* Entry cards */}
+                      <div className="space-y-2">
+                        {entries.map((entry) => {
+                          const isDuplicate = duplicateIds.has(entry.id);
+                          const entryTypeCode =
+                            resolvedEntryTypeCodes[entry.id] ||
+                            getImmediateEntryTypeCode(entry) ||
+                            normalizeEntryTypeCode(entry.entry_type_code);
+                          const entryColors = getEntryTypeColorClasses(entryTypeCode);
+                          const isNonAttendance = entryTypeCode === "client_non_attendance";
+                          const nonAttendanceLabel =
+                            entry.form_data?.event_label ||
+                            entry.form_data?.event_type?.replace(/_/g, " ") ||
+                            "No-show / cancellation";
+
+                          return (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              onClick={() => handleOpenEntry(entry)}
+                              className={cn(
+                                "w-full rounded-lg border p-4 text-left transition hover:bg-muted/40",
+                                entryColors.card,
+                                isDuplicate && "border-amber-400 bg-amber-50"
+                              )}
+                            >
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                {isNonAttendance ? (
+                                  <Badge className="bg-red-100 text-red-700">No-show / cancellation</Badge>
+                                ) : (
+                                  <Badge variant="secondary">{formatDurationMinutes(entry.duration_minutes)}</Badge>
+                                )}
+                                {entry.start_time ? (
+                                  <Badge variant="outline">
+                                    {entry.start_time}{entry.end_time ? ` - ${entry.end_time}` : ""}
+                                  </Badge>
+                                ) : null}
+                                {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
+                              </div>
+
+                              <div className="mb-2 text-sm text-slate-900">
+                                {isNonAttendance ? (
+                                  <div>
+                                    <p className="font-medium capitalize">{nonAttendanceLabel}</p>
+                                    <p className="mt-1 text-slate-600">{entry.description || "No note entered"}</p>
+                                  </div>
+                                ) : (
+                                  getEntryDisplayText(entry)
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                {entry.client_id ? (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    className="inline-flex items-center gap-1 hover:text-slate-800"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const client = clientById[entry.client_id];
+                                      if (!client?.id) { toast.error("Client record not found"); return; }
+                                      navigate(`/ClientDetail?id=${client.id}`);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault(); e.stopPropagation();
+                                        const client = clientById[entry.client_id];
+                                        if (!client?.id) { toast.error("Client record not found"); return; }
+                                        navigate(`/ClientDetail?id=${client.id}`);
+                                      }
+                                    }}
+                                  >
+                                    <User className="h-3.5 w-3.5" />
+                                    {getClientName(entry.client_id)}
+                                  </span>
+                                ) : (
+                                  <span>Myself</span>
+                                )}
+                                <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
+                                {showStaffColumn && entry.created_by ? (
+                                  <span className="inline-flex items-center gap-1 text-slate-400">
+                                    <User className="h-3.5 w-3.5" />
+                                    {getEntryStaffName(entry)}
+                                  </span>
+                                ) : null}
+                                {!isNonAttendance ? (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    className="inline-flex items-center gap-1 hover:text-slate-800"
+                                    onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); handleEditEntry(entry); }
+                                    }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Edit
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-slate-400">Staff record</span>
+                                )}
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="inline-flex items-center gap-1 text-red-500 hover:text-red-700"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); handleDeleteEntry(entry); }
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Delete
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       <Dialog
