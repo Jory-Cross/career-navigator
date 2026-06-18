@@ -270,17 +270,18 @@ const potentialBusinessSettings = [
 
 const relationshipsAndNaturalSupports = [
   ...collectEvidence([homeDiscovery], [
-    "family_friends_and_community_participation",
-    "preferred_people",
-    "support_network",
+    "natural_supports",
+    "social_preferences",
+    "neighbors_connections",
   ]),
   ...collectEvidence(discoveryInterviews, [
-    "strengths_and_contributions",
-    "support_network",
-    "important_relationships",
+    "preferred_people",
+    "people_or_connections",
+    "positive_qualities",
+    "contributions",
   ]),
 ];
-
+  
 const communityConnections = [
   ...collectEvidence([homeDiscovery], [
     "neighborhood_mapping",
