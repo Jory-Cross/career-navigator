@@ -154,17 +154,37 @@ export default function CustomizedEmploymentPanel({ client, currentUser }) {
     [assessmentRecords]
   );
 
-  const discoveryInterviewCount = countAny(
-    assessmentRecords,
-    "discovery_interview"
-  );
+const discoveryInterviewCount = countAny(
+  assessmentRecords,
+  "discovery_interview"
+);
 
-  const completedDiscoveryInterviewCount = countCompleted(
-    assessmentRecords,
-    "discovery_interview"
-  );
+const completedDiscoveryInterviewCount = countCompleted(
+  assessmentRecords,
+  "discovery_interview"
+);
 
-  const hasAnyEvidence = assessmentRecords.length > 0;
+const informationalInterviewCount = countAny(
+  assessmentRecords,
+  "informational_interview"
+);
+
+const completedInformationalInterviewCount = countCompleted(
+  assessmentRecords,
+  "informational_interview"
+);
+
+const discoveryActivityCount = countAny(
+  assessmentRecords,
+  "discovery_activity"
+);
+
+const completedDiscoveryActivityCount = countCompleted(
+  assessmentRecords,
+  "discovery_activity"
+);
+
+const hasAnyEvidence = assessmentRecords.length > 0;
 
   return (
     <Card className="border-0 shadow-sm">
