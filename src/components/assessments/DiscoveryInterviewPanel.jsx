@@ -354,7 +354,10 @@ export default function DiscoveryInterviewPanel({
   variant="outline"
   className="border-indigo-200 bg-indigo-50 text-indigo-700"
 >
-  {responses.interview_type || `${responses.relationship_to_client || "Interview"} Interview`}
+ {responses.interview_type ||
+  (responses.relationship_to_client
+    ? `${responses.relationship_to_client} Interview`
+    : "Interview Type Not Entered")}
 </Badge>
 
 <Badge
