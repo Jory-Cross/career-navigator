@@ -351,11 +351,18 @@ export default function DiscoveryInterviewPanel({
                         </div>
 
                         <Badge
-                          variant="outline"
-                          className={statusConfig.className}
-                        >
-                          {statusConfig.label}
-                        </Badge>
+  variant="outline"
+  className="border-indigo-200 bg-indigo-50 text-indigo-700"
+>
+  {responses.interview_type || `${responses.relationship_to_client || "Interview"} Interview`}
+</Badge>
+
+<Badge
+  variant="outline"
+  className={statusConfig.className}
+>
+  {statusConfig.label}
+</Badge>
                       </div>
 
                       <div className="space-y-1 text-xs text-slate-600">
