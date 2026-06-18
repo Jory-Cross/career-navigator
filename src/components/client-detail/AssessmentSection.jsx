@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import StructuredAssessmentWorkspacePanel from "@/components/assessments/StructuredAssessmentWorkspacePanel";
 import WorkPerformanceSupportObservationPanel from "@/components/assessments/WorkPerformanceSupportObservationPanel";
 import DiscoveryInterviewPanel from "@/components/assessments/DiscoveryInterviewPanel";
+import InformationalInterviewPanel from "@/components/assessments/InformationalInterviewPanel";
 import LegacyAssessmentPanel from "@/components/assessments/LegacyAssessmentPanel";
 import WSAInterviewPanel from "@/components/assessments/WSAInterviewPanel";
 
