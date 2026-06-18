@@ -537,7 +537,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
 
       {/* Mobile: card list → bottom sheet */}
       <div className="block lg:hidden space-y-2">
-        {ALL_ASSESSMENTS.map((assessment) => (
+                {visibleAssessments.map((assessment) => (
           <AssessmentCard
             key={assessment.key}
             assessment={assessment}
