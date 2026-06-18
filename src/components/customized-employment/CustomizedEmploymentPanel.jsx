@@ -284,16 +284,16 @@ const relationshipsAndNaturalSupports = [
   
 const communityConnections = [
   ...collectEvidence([homeDiscovery], [
-    "neighborhood_mapping",
-    "community_participation",
-    "community_organizations",
-    "faith_groups",
-    "clubs",
-    "volunteer_activities",
+    "family_friend_community_activities",
+    "nearby_resources",
+    "neighbors_connections",
+    "activities_civic_engagement",
+    "places_visited",
   ]),
   ...collectEvidence(discoveryInterviews, [
-    "community_connections",
-    "community_locations",
+    "community_roles",
+    "people_or_connections",
+    "businesses_or_places_to_explore",
   ]),
 ];
 
