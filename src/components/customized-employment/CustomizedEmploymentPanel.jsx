@@ -451,87 +451,77 @@ const hasAnyEvidence = assessmentRecords.length > 0;
                     </h5>
                   </div>
 
-                 <div className="grid gap-3 md:grid-cols-2">
+                                  <div className="grid gap-4 md:grid-cols-2">
   <div>
     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Emerging Vocational Themes
+      Emerging Interests
     </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {getResponseValue(
-        homeDiscovery,
-        "emerging_vocational_themes"
-      ) || "No vocational themes entered yet."}
+
+    {emergingInterests.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {emergingInterests.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No interests identified yet.
+      </p>
+    )}
+  </div>
+
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      Observed Skills
     </p>
+
+    {observedSkills.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {observedSkills.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No skills identified yet.
+      </p>
+    )}
   </div>
 
   <div>
     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
       Conditions for Success
     </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {getResponseValue(
-        homeDiscovery,
-        "conditions_for_success_observed"
-      ) || "No conditions for success entered yet."}
-    </p>
+
+    {conditionsForSuccess.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {conditionsForSuccess.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No conditions identified yet.
+      </p>
+    )}
   </div>
 
   <div>
     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Discovery Interviews
+      Potential Business Settings
     </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {discoveryInterviewCount > 0
-        ? `${discoveryInterviewCount} interview record(s) collected`
-        : "No discovery interviews completed yet."}
-    </p>
-  </div>
 
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Informational Interviews
-    </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {informationalInterviewCount > 0
-        ? `${informationalInterviewCount} informational interview record(s) collected`
-        : "No informational interviews completed yet."}
-    </p>
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Discovery Activities
-    </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {discoveryActivityCount > 0
-        ? `${discoveryActivityCount} discovery activity record(s) collected`
-        : "No discovery activities completed yet."}
-    </p>
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Benefits Considerations
-    </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {getResponseValue(
-        benefitsAssessment,
-        "benefits_summary"
-      ) || "No benefits summary entered yet."}
-    </p>
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Assistive Technology Considerations
-    </p>
-    <p className="text-sm text-slate-700 mt-1">
-      {getResponseValue(
-        assistiveTechnologyAssessment,
-        "assistive_technology_summary"
-      ) ||
-        "No assistive technology summary entered yet."}
-    </p>
+    {potentialBusinessSettings.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {potentialBusinessSettings.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No business settings identified yet.
+      </p>
+    )}
   </div>
 </div>
                 </div>
