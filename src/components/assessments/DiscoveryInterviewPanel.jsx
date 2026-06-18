@@ -140,9 +140,10 @@ export default function DiscoveryInterviewPanel({
   const handleInterviewTypeConfirm = () => {
     if (!selectedInterviewType) return;
 
-    setInitialResponses({
-      relationship_to_client: relationshipFromInterviewType(selectedInterviewType),
-    });
+   setInitialResponses({
+  interview_type: selectedInterviewType,
+  relationship_to_client: relationshipFromInterviewType(selectedInterviewType),
+});
 
     setNewInterviewSession((previous) => previous + 1);
     setView("new");
