@@ -1543,99 +1543,84 @@ if (entryTypeFilter !== "all") {
                 entry.form_data?.event_type?.replace(/_/g, " ") ||
                 "No-show / cancellation";
 
+              const entryClient = entry.client_id ? clientById[entry.client_id] : null;
+              const employerName = entryClient?.employer_name || entryClient?.workplace_name || null;
+
               return (
                 <button
                   key={entry.id}
                   type="button"
                   onClick={() => handleOpenEntry(entry)}
-                                    className={cn(
+                  className={cn(
                     "w-full rounded-lg border p-4 text-left transition hover:bg-muted/40",
                     entryColors.card,
                     isDuplicate && "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
                   )}
                 >
+                  {/* Row 1: badges */}
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                                       {isNonAttendance ? (
-                      <Badge className="bg-red-100 text-red-700">
-                        No-show / cancellation
-                      </Badge>
+                    {isNonAttendance ? (
+                      <Badge className="bg-red-100 text-red-700">No-show / cancellation</Badge>
                     ) : (
-                      <Badge variant="secondary">
-                        {formatDurationMinutes(entry.duration_minutes)}
-                      </Badge>
+                      <Badge variant="secondary">{formatDurationMinutes(entry.duration_minutes)}</Badge>
                     )}
-
                     {entry.start_time ? (
                       <Badge variant="outline">
-                        {entry.start_time} {entry.end_time ? `- ${entry.end_time}` : ""}
+                        {entry.start_time}{entry.end_time ? ` - ${entry.end_time}` : ""}
                       </Badge>
                     ) : null}
-
-                                      {!isNonAttendance ? (
+                    {!isNonAttendance ? (
                       <Badge className={entryColors.badge}>
                         {getEntryTypeLabel(entry, resolvedEntryTypeCodes)}
                       </Badge>
                     ) : null}
-
                     {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
                   </div>
 
-                                    <div className="mb-2 text-sm text-slate-900">
+                  {/* Row 2: client name (primary) */}
+                  {entry.client_id ? (
+                    <div className="mb-1">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="text-base font-semibold text-slate-900 hover:text-blue-700 hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const client = clientById[entry.client_id];
+                          if (!client?.id) { toast.error("Client record not found"); return; }
+                          navigate(`/ClientDetail?id=${client.id}`);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault(); e.stopPropagation();
+                            const client = clientById[entry.client_id];
+                            if (!client?.id) { toast.error("Client record not found"); return; }
+                            navigate(`/ClientDetail?id=${client.id}`);
+                          }
+                        }}
+                      >
+                        {getClientName(entry.client_id)}
+                      </span>
+                      {employerName ? (
+                        <div className="text-xs text-slate-500 mt-0.5">{employerName}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Row 3: description */}
+                  <div className="mb-2 text-sm text-slate-600">
                     {isNonAttendance ? (
                       <div>
-                        <p className="font-medium capitalize">
-                          {nonAttendanceLabel}
-                        </p>
-                        <p className="mt-1 text-slate-600">
-                          {entry.description || "No note entered"}
-                        </p>
+                        <p className="font-medium capitalize text-slate-900">{nonAttendanceLabel}</p>
+                        <p className="mt-0.5">{entry.description || "No note entered"}</p>
                       </div>
                     ) : (
                       getEntryDisplayText(entry)
                     )}
                   </div>
 
+                  {/* Row 4: metadata (date, staff, actions) — client name removed */}
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                    {entry.client_id ? (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="inline-flex items-center gap-1 hover:text-slate-800"
-                       onClick={(e) => {
-  e.stopPropagation();
-
-  const client = clientById[entry.client_id];
-
-  if (!client?.id) {
-    toast.error("Client record not found");
-    return;
-  }
-
-  navigate(`/ClientDetail?id=${client.id}`);
-}}
-                        onKeyDown={(e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const client = clientById[entry.client_id];
-
-    if (!client?.id) {
-      toast.error("Client record not found");
-      return;
-    }
-
-    navigate(`/ClientDetail?id=${client.id}`);
-  }
-}}
-                      >
-                        <User className="h-3.5 w-3.5" />
-                        {getClientName(entry.client_id)}
-                      </span>
-                    ) : (
-                      <span>Myself</span>
-                    )}
-
                     <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
 
                     {showStaffColumn && entry.created_by ? (
@@ -1645,7 +1630,7 @@ if (entryTypeFilter !== "all") {
                       </span>
                     ) : null}
 
-                                        {!isNonAttendance ? (
+                    {!isNonAttendance ? (
                       <span
                         role="button"
                         tabIndex={0}
@@ -1656,8 +1641,7 @@ if (entryTypeFilter !== "all") {
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
+                            e.preventDefault(); e.stopPropagation();
                             handleEditEntry(entry);
                           }
                         }}
@@ -1666,9 +1650,7 @@ if (entryTypeFilter !== "all") {
                         Edit
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-slate-400">
-                        Staff record
-                      </span>
+                      <span className="inline-flex items-center gap-1 text-slate-400">Staff record</span>
                     )}
 
                     <span
@@ -1681,8 +1663,7 @@ if (entryTypeFilter !== "all") {
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          e.stopPropagation();
+                          e.preventDefault(); e.stopPropagation();
                           handleDeleteEntry(entry);
                         }
                       }}
@@ -1693,7 +1674,7 @@ if (entryTypeFilter !== "all") {
                   </div>
                 </button>
               );
-            })}
+              })}
           </div>
         ) : (() => {
           // By Type view — group filtered entries by entry_type_code
@@ -1780,6 +1761,9 @@ if (entryTypeFilter !== "all") {
                             entry.form_data?.event_type?.replace(/_/g, " ") ||
                             "No-show / cancellation";
 
+                          const colClient = entry.client_id ? clientById[entry.client_id] : null;
+                          const colEmployer = colClient?.employer_name || colClient?.workplace_name || null;
+
                           return (
                             <button
                               key={entry.id}
@@ -1791,6 +1775,7 @@ if (entryTypeFilter !== "all") {
                                 isDuplicate && "border-amber-400 bg-amber-50"
                               )}
                             >
+                              {/* Row 1: badges */}
                               <div className="mb-2 flex flex-wrap items-center gap-2">
                                 {isNonAttendance ? (
                                   <Badge className="bg-red-100 text-red-700">No-show / cancellation</Badge>
@@ -1805,23 +1790,13 @@ if (entryTypeFilter !== "all") {
                                 {isDuplicate ? <Badge variant="destructive">Duplicate</Badge> : null}
                               </div>
 
-                              <div className="mb-2 text-sm text-slate-900">
-                                {isNonAttendance ? (
-                                  <div>
-                                    <p className="font-medium capitalize">{nonAttendanceLabel}</p>
-                                    <p className="mt-1 text-slate-600">{entry.description || "No note entered"}</p>
-                                  </div>
-                                ) : (
-                                  getEntryDisplayText(entry)
-                                )}
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                {entry.client_id ? (
+                              {/* Row 2: client name (primary) */}
+                              {entry.client_id ? (
+                                <div className="mb-1">
                                   <span
                                     role="button"
                                     tabIndex={0}
-                                    className="inline-flex items-center gap-1 hover:text-slate-800"
+                                    className="text-base font-semibold text-slate-900 hover:text-blue-700 hover:underline"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const client = clientById[entry.client_id];
@@ -1837,12 +1812,28 @@ if (entryTypeFilter !== "all") {
                                       }
                                     }}
                                   >
-                                    <User className="h-3.5 w-3.5" />
                                     {getClientName(entry.client_id)}
                                   </span>
+                                  {colEmployer ? (
+                                    <div className="text-xs text-slate-500 mt-0.5">{colEmployer}</div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+
+                              {/* Row 3: description */}
+                              <div className="mb-2 text-sm text-slate-600">
+                                {isNonAttendance ? (
+                                  <div>
+                                    <p className="font-medium capitalize text-slate-900">{nonAttendanceLabel}</p>
+                                    <p className="mt-0.5">{entry.description || "No note entered"}</p>
+                                  </div>
                                 ) : (
-                                  <span>Myself</span>
+                                  getEntryDisplayText(entry)
                                 )}
+                              </div>
+
+                              {/* Row 4: metadata — client name removed */}
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                                 <span>{entry.date ? formatShortEntryDate(entry.date) : ""}</span>
                                 {showStaffColumn && entry.created_by ? (
                                   <span className="inline-flex items-center gap-1 text-slate-400">
