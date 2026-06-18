@@ -366,37 +366,93 @@ export const HOME_COMMUNITY_DISCOVERY_SECTIONS = [
     ],
   },
 
-  {
-    id: "stage_one_summary",
-    label: "Section 9: Stage One Summary",
-    description: "Summarize Stage One findings for the Discovery Staging Record.",
-    questions: [
-      {
-        id: "stage_one_summary_narrative",
-        label: "Stage One Summary Narrative",
-        type: "textarea",
-        placeholder: "Summarize the most important findings from home and community discovery.",
-      },
-      {
-        id: "emerging_patterns",
-        label: "Emerging Patterns",
-        type: "textarea",
-        placeholder: "Describe emerging patterns in interests, talents, skills, supports, settings, and conditions.",
-      },
-      {
-        id: "recommended_next_discovery_steps",
-        label: "Recommended Next Discovery Steps",
-        type: "textarea",
-        placeholder: "List people to interview, places to visit, activities to observe, or records to review next.",
-      },
-      {
-        id: "time_to_complete_stage_one",
-        label: "Time to Complete Stage One",
-        type: "text",
-        placeholder: "Example: 3.5 hours",
-      },
-    ],
-  },
+ {
+  id: "emerging_vocational_themes",
+  label: "Section 9: Emerging Vocational Themes & Conditions for Success",
+  description: "Identify emerging vocational themes, conditions for success, and discovery hypotheses revealed during Stage One.",
+  questions: [
+    {
+      id: "activities_consistently_drawn_to",
+      label: "Activities the Client is Consistently Drawn Toward",
+      type: "textarea",
+      placeholder: "Describe activities, topics, tasks, objects, places, or routines repeatedly chosen, discussed, requested, or observed.",
+    },
+    {
+      id: "preferred_people_patterns",
+      label: "People the Client Appears to Prefer Being Around",
+      type: "textarea",
+      placeholder: "Describe preferred social patterns, relationships, interaction styles, and group sizes.",
+    },
+    {
+      id: "best_environments_observed",
+      label: "Environments Where the Client Appears Most Successful",
+      type: "textarea",
+      placeholder: "Describe settings where engagement, comfort, participation, confidence, and success were strongest.",
+    },
+    {
+      id: "challenging_environments_observed",
+      label: "Environments Where the Client Appears to Struggle",
+      type: "textarea",
+      placeholder: "Describe settings that appear to reduce engagement, participation, comfort, or success.",
+    },
+    {
+      id: "conditions_for_success_observed",
+      label: "Conditions for Success Observed",
+      type: "textarea",
+      placeholder: "Describe supports, routines, environmental factors, supervision styles, learning approaches, social conditions, or accommodations associated with success.",
+    },
+    {
+      id: "emerging_vocational_themes",
+      label: "Emerging Vocational Themes",
+      type: "textarea",
+      placeholder: "Identify possible vocational themes emerging from interests, skills, environments, relationships, routines, and observations.",
+    },
+    {
+      id: "potential_businesses_or_settings",
+      label: "Potential Businesses, Industries, or Community Settings to Explore",
+      type: "textarea",
+      placeholder: "List employers, industries, organizations, businesses, or community settings that may align with emerging themes.",
+    },
+    {
+      id: "discovery_hypotheses",
+      label: "Discovery Hypotheses to Test During Stage Two",
+      type: "textarea",
+      placeholder: "Describe hypotheses that should be tested through interviews, observations, informational interviews, work experiences, or community exploration.",
+    },
+  ],
+},
+
+{
+  id: "stage_one_summary",
+  label: "Section 10: Stage One Summary",
+  description: "Summarize Stage One findings for the Discovery Staging Record.",
+  questions: [
+    {
+      id: "stage_one_summary_narrative",
+      label: "Stage One Summary Narrative",
+      type: "textarea",
+      placeholder: "Summarize the most important findings from home and community discovery.",
+    },
+    {
+      id: "emerging_patterns",
+      label: "Emerging Patterns",
+      type: "textarea",
+      placeholder: "Describe emerging patterns in interests, talents, skills, supports, settings, and conditions.",
+    },
+    {
+      id: "recommended_next_discovery_steps",
+      label: "Recommended Next Discovery Steps",
+      type: "textarea",
+      placeholder: "List people to interview, places to visit, activities to observe, or records to review next.",
+    },
+    {
+      id: "time_to_complete_stage_one",
+      label: "Time to Complete Stage One",
+      type: "text",
+      placeholder: "Example: 3.5 hours",
+    },
+  ],
+},
 ];
 
 export const HOME_COMMUNITY_DISCOVERY_META = {
