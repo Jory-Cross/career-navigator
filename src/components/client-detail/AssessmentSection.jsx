@@ -124,6 +124,19 @@ const ALL_ASSESSMENTS = [
   repeatable: true,
   clientTypes: ["customized_employment"],
 },
+
+{
+  key: "discovery_activity",
+  label: "Discovery Activity",
+  emoji: "🧩",
+  description: "Repeatable discovery activities, community exploration, task-based observations, job shadows, volunteer activities, and vocational theme testing",
+  type: "structured",
+  available: true,
+  sections: DISCOVERY_ACTIVITY_SECTIONS,
+  meta: DISCOVERY_ACTIVITY_META,
+  repeatable: true,
+  clientTypes: ["customized_employment"],
+},
   // Legacy types — rendered via LegacyAssessmentPanel
   {
     key: "career_goals",
