@@ -62,6 +62,7 @@ import AIJobSearchPanel from "@/components/client-detail/AIJobSearchPanel";
 import { testOnetConnection } from "@/lib/onet/onetClient";
 import VocationalProfileCard from "@/components/client-detail/VocationalProfileCard";
 import IntakePacketPanel from "@/components/intake/IntakePacketPanel";
+import CustomizedEmploymentPanel from "@/components/customized-employment/CustomizedEmploymentPanel";
 import ArchiveClientDialog from "@/components/clients/ArchiveClientDialog";
 
 function getClientIdFromUrl() {
