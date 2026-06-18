@@ -53,6 +53,11 @@ import {
   INFORMATIONAL_INTERVIEW_SECTIONS,
   INFORMATIONAL_INTERVIEW_META,
 } from "@/lib/assessments/informationalInterviewDefinition";
+
+import {
+  DISCOVERY_ACTIVITY_SECTIONS,
+  DISCOVERY_ACTIVITY_META,
+} from "@/lib/assessments/discoveryActivityDefinition";
 import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
