@@ -564,8 +564,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
       <div className="hidden lg:flex gap-5" style={{ height: "calc(100vh - 280px)", minHeight: "520px" }}>
         {/* Left: card list */}
         <div className="w-[290px] shrink-0 overflow-y-auto space-y-2 pr-1">
-          {ALL_ASSESSMENTS.map((assessment) => (
-            <AssessmentCard
+        {visibleAssessments.map((assessment) => (            <AssessmentCard
               key={assessment.key}
               assessment={assessment}
               record={getRecord(assessment.key)}
