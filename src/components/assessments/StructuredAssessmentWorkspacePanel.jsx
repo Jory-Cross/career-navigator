@@ -55,12 +55,17 @@ export default function StructuredAssessmentWorkspacePanel({
   const recordIdRef = useRef(existingRecord?.id || null);
 
   // Reset when switching to a different assessment (existingRecord changes)
-  useEffect(() => {
-    setIsDirty(false);
-    recordIdRef.current = existingRecord?.id || null;
-    setResponses(existingRecord?.responses || {});
-    setRecordStatus(existingRecord?.status || null);
-  }, [existingRecord?.id]);
+ useEffect(() => {
+  const baseResponses = existingRecord?.responses || {};
+  const nextResponses = initialResponses
+    ? { ...baseResponses, ...initialResponses }
+    : baseResponses;
+
+  setIsDirty(!!initialResponses);
+  recordIdRef.current = existingRecord?.id || null;
+  setResponses(nextResponses);
+  setRecordStatus(existingRecord?.status || null);
+}, [existingRecord?.id, initialResponses]);
 
   // Field change handler — mark dirty, update state
    const handleChange = useCallback((id, value) => {
