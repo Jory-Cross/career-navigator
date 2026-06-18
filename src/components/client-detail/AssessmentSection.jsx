@@ -29,8 +29,11 @@ import {
   TRANSPORTATION_ASSESSMENT_SECTIONS,
   TRANSPORTATION_ASSESSMENT_META,
 } from "@/lib/assessments/transportationAssessmentDefinition";
+import {
+  HOME_COMMUNITY_DISCOVERY_SECTIONS,
+  HOME_COMMUNITY_DISCOVERY_META,
+} from "@/lib/assessments/homeCommunityDiscoveryDefinition";
 import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
-
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
 
