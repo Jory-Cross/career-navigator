@@ -42,17 +42,29 @@ import TransportationAssessmentPanel from "@/components/assessments/Transportati
 // Order determines card display order. type: "structured" | "legacy"
 
 const ALL_ASSESSMENTS = [
-  {
-    key: "home_community_discovery",
-    label: "Home & Community Discovery",
-    emoji: "🏠",
-    description: "Stage One CE discovery: home observation, daily routines, interests, community participation, neighborhood mapping, observable talents and skills, and conditions to avoid",
-    type: "structured",
-    available: true,
-    sections: HOME_COMMUNITY_DISCOVERY_SECTIONS,
-    meta: HOME_COMMUNITY_DISCOVERY_META,
-    clientTypes: ["customized_employment"],
-  },
+ {
+  key: "home_community_discovery",
+  label: "Home & Community Discovery",
+  emoji: "🏠",
+  description: "Stage One CE discovery: home observation, daily routines, interests, community participation, neighborhood mapping, observable talents and skills, and conditions to avoid",
+  type: "structured",
+  available: true,
+  sections: HOME_COMMUNITY_DISCOVERY_SECTIONS,
+  meta: HOME_COMMUNITY_DISCOVERY_META,
+  clientTypes: ["customized_employment"],
+},
+
+{
+  key: "benefits_resources",
+  label: "Benefits & Resources",
+  emoji: "💵",
+  description: "Benefits planning, BPQY, work incentives, WIPA referral, resources, and employment impact",
+  type: "structured",
+  available: true,
+  sections: BENEFITS_RESOURCES_SECTIONS,
+  meta: BENEFITS_RESOURCES_META,
+  clientTypes: ["customized_employment"],
+},
 
   // Legacy types — rendered via LegacyAssessmentPanel
   {
