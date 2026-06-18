@@ -260,6 +260,7 @@ const handleDocumentsChanged = useCallback(() => {
 
   const isDspd = client?.client_type === "dspd";
   const isEmployed = client?.client_type === "employed";
+  const isCE = client?.client_type === "customized_employment";
   const isClientUser = user?.role === "client";
 
   // Feature-gating for client detail sections (admin always sees all)
