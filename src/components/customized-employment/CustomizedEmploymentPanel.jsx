@@ -503,7 +503,7 @@ const hasAnyEvidence = assessmentRecords.length > 0;
                     </h5>
                   </div>
 
-                                  <div className="grid gap-4 md:grid-cols-2">
+ <div className="grid gap-4 md:grid-cols-2">
   <div>
     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
       Emerging Interests
@@ -572,6 +572,78 @@ const hasAnyEvidence = assessmentRecords.length > 0;
     ) : (
       <p className="text-sm text-slate-500 mt-1">
         No business settings identified yet.
+      </p>
+    )}
+  </div>
+
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      Relationships / Natural Supports
+    </p>
+
+    {relationshipsAndNaturalSupports.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {relationshipsAndNaturalSupports.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No natural supports identified yet.
+      </p>
+    )}
+  </div>
+
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      Community Connections
+    </p>
+
+    {communityConnections.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {communityConnections.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No community connections identified yet.
+      </p>
+    )}
+  </div>
+
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      Employer Leads
+    </p>
+
+    {employerLeads.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {employerLeads.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No employer leads identified yet.
+      </p>
+    )}
+  </div>
+
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      Discovery Hypotheses
+    </p>
+
+    {discoveryHypotheses.length > 0 ? (
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        {discoveryHypotheses.slice(0, 10).map((item, index) => (
+          <li key={index}>• {item}</li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-500 mt-1">
+        No discovery hypotheses identified yet.
       </p>
     )}
   </div>
