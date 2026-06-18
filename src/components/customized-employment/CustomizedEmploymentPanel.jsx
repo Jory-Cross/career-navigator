@@ -314,10 +314,14 @@ const employerLeads = [
 
 const discoveryHypotheses = [
   ...collectEvidence([homeDiscovery], [
-    "discovery_hypotheses_to_test_stage_two",
+    "discovery_hypotheses",
+    "recommended_next_discovery_steps",
+    "emerging_patterns",
   ]),
   ...collectEvidence(discoveryInterviews, [
-    "discovery_hypotheses",
+    "patterns_revealed",
+    "recommended_next_steps",
+    "possible_vocational_themes",
   ]),
 ];
   
