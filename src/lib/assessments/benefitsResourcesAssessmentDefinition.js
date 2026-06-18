@@ -23,7 +23,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "current_benefits",
         label: "Current Benefits (select all that apply)",
-        type: "select_multiple",
+        type: "select_all",
         options: [
           "SSI",
           "SSDI",
@@ -41,7 +41,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "benefits_verified",
         label: "Benefits Verified",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "Fully Verified",
           "Partially Verified",
@@ -52,7 +52,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "benefits_notes",
         label: "Benefits Notes",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -65,7 +65,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "bpqy_requested",
         label: "BPQY Requested",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No", "Unknown"],
       },
       {
@@ -76,7 +76,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "bpqy_received",
         label: "BPQY Received",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No", "Pending"],
       },
       {
@@ -87,19 +87,19 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "ssa_3288_completed",
         label: "SSA-3288 Release Completed",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No", "Unknown"],
       },
       {
         id: "ssa_3288_submitted",
         label: "SSA-3288 Submitted",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No", "Unknown"],
       },
       {
         id: "bpqy_notes",
         label: "BPQY Findings / Notes",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -112,7 +112,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "pass_potential",
         label: "PASS Potential",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "Strong Potential",
           "Possible",
@@ -123,7 +123,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "irwe_potential",
         label: "IRWE Potential",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "Strong Potential",
           "Possible",
@@ -134,7 +134,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "able_account",
         label: "ABLE Account",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "Current Account",
           "Potential Candidate",
@@ -145,7 +145,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "student_earned_income_exclusion",
         label: "Student Earned Income Exclusion",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "Eligible",
           "Not Eligible",
@@ -155,7 +155,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "other_work_incentives",
         label: "Other Work Incentives",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -168,13 +168,13 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "wipa_referral_needed",
         label: "WIPA Referral Needed",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No"],
       },
       {
         id: "wipa_referred",
         label: "Referral Made",
-        type: "select_single",
+        type: "multiple_choice",
         options: ["Yes", "No"],
       },
       {
@@ -185,12 +185,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "benefits_planner",
         label: "Benefits Planner / Agency",
-        type: "text",
+        type: "short_text",
       },
       {
         id: "benefits_planning_outcome",
         label: "Benefits Planning Outcome",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -203,32 +203,32 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "family_support",
         label: "Family Support",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "housing_support",
         label: "Housing Support",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "transportation_support",
         label: "Transportation Support",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "community_resources",
         label: "Community Resources",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "financial_resources",
         label: "Financial Resources",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "natural_supports",
         label: "Natural Supports",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -241,7 +241,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "fear_of_losing_benefits",
         label: "Fear of Losing Benefits",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "None",
           "Mild",
@@ -252,7 +252,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "fear_of_losing_healthcare",
         label: "Fear of Losing Healthcare",
-        type: "select_single",
+        type: "multiple_choice",
         options: [
           "None",
           "Mild",
@@ -263,12 +263,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "employment_concerns",
         label: "Employment Related Concerns",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "support_needs",
         label: "Benefits Planning Support Needs",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
@@ -281,22 +281,22 @@ export const BENEFITS_RESOURCES_SECTIONS = [
       {
         id: "benefits_summary",
         label: "Benefits Planning Summary",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "recommended_actions",
         label: "Recommended Actions",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "outstanding_needs",
         label: "Outstanding Needs",
-        type: "textarea",
+        type: "narrative",
       },
       {
         id: "employment_considerations",
         label: "Employment Considerations",
-        type: "textarea",
+        type: "narrative",
       },
     ],
   },
