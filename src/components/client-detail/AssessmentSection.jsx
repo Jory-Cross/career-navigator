@@ -70,6 +70,17 @@ const ALL_ASSESSMENTS = [
   clientTypes: ["customized_employment"],
 },
 
+{
+  key: "assistive_technology",
+  label: "Assistive Technology",
+  emoji: "💻",
+  description: "Technology skills, assistive technology, accessibility supports, barriers, and referral recommendations",
+  type: "structured",
+  available: true,
+  sections: ASSISTIVE_TECHNOLOGY_SECTIONS,
+  meta: ASSISTIVE_TECHNOLOGY_META,
+  clientTypes: ["customized_employment"],
+},
   // Legacy types — rendered via LegacyAssessmentPanel
   {
     key: "career_goals",
