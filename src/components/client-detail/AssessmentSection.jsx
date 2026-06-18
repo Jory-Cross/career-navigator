@@ -37,6 +37,10 @@ import {
   BENEFITS_RESOURCES_SECTIONS,
   BENEFITS_RESOURCES_META,
 } from "@/lib/assessments/benefitsResourcesAssessmentDefinition";
+import {
+  ASSISTIVE_TECHNOLOGY_SECTIONS,
+  ASSISTIVE_TECHNOLOGY_META,
+} from "@/lib/assessments/assistiveTechnologyAssessmentDefinition";
 import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
