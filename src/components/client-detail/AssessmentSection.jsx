@@ -38,6 +38,18 @@ import TransportationAssessmentPanel from "@/components/assessments/Transportati
 // Order determines card display order. type: "structured" | "legacy"
 
 const ALL_ASSESSMENTS = [
+  {
+    key: "home_community_discovery",
+    label: "Home & Community Discovery",
+    emoji: "🏠",
+    description: "Stage One CE discovery: home observation, daily routines, interests, community participation, neighborhood mapping, observable talents and skills, and conditions to avoid",
+    type: "structured",
+    available: true,
+    sections: HOME_COMMUNITY_DISCOVERY_SECTIONS,
+    meta: HOME_COMMUNITY_DISCOVERY_META,
+    clientTypes: ["customized_employment"],
+  },
+
   // Legacy types — rendered via LegacyAssessmentPanel
   {
     key: "career_goals",
