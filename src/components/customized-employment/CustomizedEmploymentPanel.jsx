@@ -267,6 +267,58 @@ const potentialBusinessSettings = [
     "job_carving_opportunities",
   ]),
 ];
+
+const relationshipsAndNaturalSupports = [
+  ...collectEvidence([homeDiscovery], [
+    "family_friends_and_community_participation",
+    "preferred_people",
+    "support_network",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "strengths_and_contributions",
+    "support_network",
+    "important_relationships",
+  ]),
+];
+
+const communityConnections = [
+  ...collectEvidence([homeDiscovery], [
+    "neighborhood_mapping",
+    "community_participation",
+    "community_organizations",
+    "faith_groups",
+    "clubs",
+    "volunteer_activities",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "community_connections",
+    "community_locations",
+  ]),
+];
+
+const employerLeads = [
+  ...collectEvidence(discoveryInterviews, [
+    "employment_ideas_and_community_leads",
+    "customized_employment_opportunities",
+    "businesses_or_places_to_explore",
+  ]),
+  ...collectEvidence(informationalInterviews, [
+    "job_carving_opportunities",
+    "employer_leads",
+  ]),
+  ...collectEvidence([homeDiscovery], [
+    "potential_businesses_or_settings",
+  ]),
+];
+
+const discoveryHypotheses = [
+  ...collectEvidence([homeDiscovery], [
+    "discovery_hypotheses_to_test_stage_two",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "discovery_hypotheses",
+  ]),
+];
   
 const hasAnyEvidence = assessmentRecords.length > 0;
 
