@@ -33,6 +33,10 @@ import {
   HOME_COMMUNITY_DISCOVERY_SECTIONS,
   HOME_COMMUNITY_DISCOVERY_META,
 } from "@/lib/assessments/homeCommunityDiscoveryDefinition";
+import {
+  BENEFITS_RESOURCES_SECTIONS,
+  BENEFITS_RESOURCES_META,
+} from "@/lib/assessments/benefitsResourcesAssessmentDefinition";
 import TransportationAssessmentPanel from "@/components/assessments/TransportationAssessmentPanel";
 // ── Unified assessment registry ────────────────────────────────────────────────
 // Order determines card display order. type: "structured" | "legacy"
