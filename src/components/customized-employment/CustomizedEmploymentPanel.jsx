@@ -18,6 +18,8 @@ const CE_ASSESSMENT_TYPES = [
   "benefits_resources_assessment",
   "assistive_technology_assessment",
   "discovery_interview",
+  "informational_interview",
+  "discovery_activity",
 ];
 
 function countCompleted(records, assessmentType) {
