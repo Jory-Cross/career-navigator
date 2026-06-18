@@ -562,6 +562,20 @@ if (activeAssessment.key === "discovery_interview") {
     />
   );
 }
+
+if (activeAssessment.key === "informational_interview") {
+  return (
+    <InformationalInterviewPanel
+      clientId={resolvedClientId}
+      records={assessments.filter(
+        (record) =>
+          record.assessment_type ===
+          INFORMATIONAL_INTERVIEW_META.assessment_type
+      )}
+      onSaved={handleSaved}
+    />
+  );
+}
     
     if (activeAssessment.key === "transportation") {
       return (
