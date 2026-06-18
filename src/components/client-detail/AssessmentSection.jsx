@@ -8,6 +8,7 @@ import StructuredAssessmentWorkspacePanel from "@/components/assessments/Structu
 import WorkPerformanceSupportObservationPanel from "@/components/assessments/WorkPerformanceSupportObservationPanel";
 import DiscoveryInterviewPanel from "@/components/assessments/DiscoveryInterviewPanel";
 import InformationalInterviewPanel from "@/components/assessments/InformationalInterviewPanel";
+import DiscoveryActivityPanel from "@/components/assessments/DiscoveryActivityPanel";
 import LegacyAssessmentPanel from "@/components/assessments/LegacyAssessmentPanel";
 import WSAInterviewPanel from "@/components/assessments/WSAInterviewPanel";
 
