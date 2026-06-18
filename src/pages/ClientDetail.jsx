@@ -151,9 +151,8 @@ function getMeetingBadgeClassName(status) {
 }
 function getDefaultTab(client, userRole) {
   const isDspd = client?.client_type === "dspd";
-const isEmployed = client?.client_type === "employed";
-const isCE = client?.client_type === "customized_employment";
-const isClientUser = user?.role === "client";
+  const isEmployed = client?.client_type === "employed";
+  const isCE = client?.client_type === "customized_employment";
 
   if (isDspd) return "client_details";
   if (isEmployed) return "client_details";
@@ -161,7 +160,6 @@ const isClientUser = user?.role === "client";
   if (userRole === "client") return "activity";
   return "applications";
 }
-
 function canAccessClient(client, user, clientId) {
   if (!client || !user) return false;
   if (user.role === "admin") return true;
