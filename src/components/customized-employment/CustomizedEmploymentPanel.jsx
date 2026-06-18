@@ -184,6 +184,90 @@ const completedDiscoveryActivityCount = countCompleted(
   "discovery_activity"
 );
 
+const discoveryInterviews = assessmentRecords.filter(
+  (record) => record.assessment_type === "discovery_interview"
+);
+
+const informationalInterviews = assessmentRecords.filter(
+  (record) => record.assessment_type === "informational_interview"
+);
+
+const discoveryActivities = assessmentRecords.filter(
+  (record) => record.assessment_type === "discovery_activity"
+);
+
+function collectEvidence(records, fields) {
+  return records
+    .flatMap((record) =>
+      fields
+        .map((field) => record?.responses?.[field])
+        .filter(Boolean)
+    )
+    .filter(Boolean);
+}
+
+const emergingInterests = [
+  ...collectEvidence([homeDiscovery], [
+    "preferred_activities",
+    "observable_interests",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "favorite_activities",
+    "topics_of_interest",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "signs_of_interest",
+    "preferred_activities_tools_materials",
+  ]),
+];
+
+const observedSkills = [
+  ...collectEvidence([homeDiscovery], [
+    "observable_skills",
+    "work_relevant_daily_skills",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "home_skills",
+    "community_skills",
+    "work_skills",
+    "technology_skills",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "skills_demonstrated",
+  ]),
+];
+
+const conditionsForSuccess = [
+  ...collectEvidence([homeDiscovery], [
+    "conditions_for_success_observed",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "conditions_for_success",
+    "best_environments",
+    "best_supports",
+    "best_schedule",
+    "best_supervision_style",
+  ]),
+  ...collectEvidence(informationalInterviews, [
+    "conditions_needed_for_client_success",
+  ]),
+];
+
+const potentialBusinessSettings = [
+  ...collectEvidence([homeDiscovery], [
+    "potential_businesses_or_settings",
+  ]),
+  ...collectEvidence(discoveryInterviews, [
+    "businesses_or_places_to_explore",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "possible_business_settings",
+  ]),
+  ...collectEvidence(informationalInterviews, [
+    "job_carving_opportunities",
+  ]),
+];
+  
 const hasAnyEvidence = assessmentRecords.length > 0;
 
   return (
