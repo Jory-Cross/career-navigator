@@ -85,6 +85,19 @@ const ALL_ASSESSMENTS = [
   meta: ASSISTIVE_TECHNOLOGY_META,
   clientTypes: ["customized_employment"],
 },
+
+  {
+  key: "discovery_interview",
+  label: "Discovery Interview",
+  emoji: "🗣️",
+  description: "Repeatable Discovery interview with family, friends, employers, providers, and others who know the client well",
+  type: "structured",
+  available: true,
+  sections: DISCOVERY_INTERVIEW_SECTIONS,
+  meta: DISCOVERY_INTERVIEW_META,
+  repeatable: true,
+  clientTypes: ["customized_employment"],
+},
   // Legacy types — rendered via LegacyAssessmentPanel
   {
     key: "career_goals",
