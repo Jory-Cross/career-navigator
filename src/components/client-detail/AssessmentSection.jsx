@@ -93,7 +93,7 @@ const ALL_ASSESSMENTS = [
   clientTypes: ["customized_employment"],
 },
 
-  {
+{
   key: "discovery_interview",
   label: "Discovery Interview",
   emoji: "🗣️",
@@ -102,6 +102,19 @@ const ALL_ASSESSMENTS = [
   available: true,
   sections: DISCOVERY_INTERVIEW_SECTIONS,
   meta: DISCOVERY_INTERVIEW_META,
+  repeatable: true,
+  clientTypes: ["customized_employment"],
+},
+
+{
+  key: "informational_interview",
+  label: "Informational Interview",
+  emoji: "🏢",
+  description: "Repeatable informational interviews with employers, business owners, managers, supervisors, employees, and community contacts",
+  type: "structured",
+  available: true,
+  sections: INFORMATIONAL_INTERVIEW_SECTIONS,
+  meta: INFORMATIONAL_INTERVIEW_META,
   repeatable: true,
   clientTypes: ["customized_employment"],
 },
