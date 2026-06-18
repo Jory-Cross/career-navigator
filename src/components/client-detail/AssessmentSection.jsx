@@ -405,7 +405,15 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     return "in_progress";
   };
 
-  const activeAssessment = ALL_ASSESSMENTS.find((a) => a.key === activeKey);
+   const visibleAssessments = ALL_ASSESSMENTS.filter((assessment) => {
+    if (!assessment.clientTypes || assessment.clientTypes.length === 0) {
+      return true;
+    }
+
+    return assessment.clientTypes.includes(client?.client_type);
+  });
+
+  const activeAssessment = visibleAssessments.find((a) => a.key === activeKey);
   const activeRecord = activeKey ? getRecord(activeKey) : null;
 
     const handleSaved = async () => {
