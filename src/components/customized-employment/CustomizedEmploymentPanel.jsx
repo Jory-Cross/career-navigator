@@ -325,18 +325,29 @@ const hasAnyEvidence = assessmentRecords.length > 0;
                   )}
                 />
 
-                <EvidenceStatus
-                  label="Assistive Technology Assessment"
-                  count={countAny(
-                    assessmentRecords,
-                    "assistive_technology_assessment"
-                  )}
-                  completed={countCompleted(
-                    assessmentRecords,
-                    "assistive_technology_assessment"
-                  )}
-                />
-              </div>
+             <EvidenceStatus
+  label="Assistive Technology Assessment"
+  count={countAny(
+    assessmentRecords,
+    "assistive_technology_assessment"
+  )}
+  completed={countCompleted(
+    assessmentRecords,
+    "assistive_technology_assessment"
+  )}
+/>
+
+<EvidenceStatus
+  label="Informational Interviews"
+  count={informationalInterviewCount}
+  completed={completedInformationalInterviewCount}
+/>
+
+<EvidenceStatus
+  label="Discovery Activities"
+  count={discoveryActivityCount}
+  completed={completedDiscoveryActivityCount}
+/>              </div>
 
               {!hasAnyEvidence ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex gap-2">
