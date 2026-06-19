@@ -446,10 +446,10 @@ const hasAnyEvidence = assessmentRecords.length > 0;
                 Discovery Staging Record
               </h4>
               <p className="text-sm text-slate-600 mt-1">
-                Draft shell that organizes CE evidence into emerging interests,
-                skills, conditions for success, relationships, community leads,
-                barriers, vocational themes, and Stage Two hypotheses.
-              </p>
+  Draft shell that organizes CE evidence into emerging interests,
+  skills, conditions for success, relationships, community connections,
+  employer leads, and Stage Two hypotheses.
+</p>
             </div>
           </div>
 
