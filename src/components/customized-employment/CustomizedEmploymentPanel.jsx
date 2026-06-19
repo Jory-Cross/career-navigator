@@ -273,6 +273,7 @@ const relationshipsAndNaturalSupports = [
     "natural_supports",
     "social_preferences",
     "neighbors_connections",
+    "preferred_people_patterns",
   ]),
   ...collectEvidence(discoveryInterviews, [
     "preferred_people",
@@ -280,8 +281,13 @@ const relationshipsAndNaturalSupports = [
     "positive_qualities",
     "contributions",
   ]),
+  ...collectEvidence(discoveryActivities, [
+    "people_present",
+    "people_social_conditions",
+    "supports_or_accommodations_used",
+  ]),
 ];
-  
+
 const communityConnections = [
   ...collectEvidence([homeDiscovery], [
     "family_friend_community_activities",
@@ -289,26 +295,40 @@ const communityConnections = [
     "neighbors_connections",
     "activities_civic_engagement",
     "places_visited",
+    "community_strengths",
   ]),
   ...collectEvidence(discoveryInterviews, [
     "community_roles",
     "people_or_connections",
     "businesses_or_places_to_explore",
+    "preferred_places",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "activity_location",
+    "possible_business_settings",
+    "customized_employment_possibilities",
   ]),
 ];
 
 const employerLeads = [
+  ...collectEvidence([homeDiscovery], [
+    "potential_businesses_or_settings",
+    "nearby_employers",
+    "possible_discovery_leads",
+  ]),
   ...collectEvidence(discoveryInterviews, [
-    "employment_ideas_and_community_leads",
-    "customized_employment_opportunities",
+    "jobs_client_might_enjoy",
     "businesses_or_places_to_explore",
+    "people_or_connections",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "possible_work_tasks",
+    "possible_business_settings",
+    "customized_employment_possibilities",
   ]),
   ...collectEvidence(informationalInterviews, [
     "job_carving_opportunities",
     "employer_leads",
-  ]),
-  ...collectEvidence([homeDiscovery], [
-    "potential_businesses_or_settings",
   ]),
 ];
 
@@ -322,6 +342,12 @@ const discoveryHypotheses = [
     "patterns_revealed",
     "recommended_next_steps",
     "possible_vocational_themes",
+  ]),
+  ...collectEvidence(discoveryActivities, [
+    "themes_or_hypotheses_refuted",
+    "recommended_next_activities",
+    "discovery_hypotheses_confirmed",
+    "discovery_hypotheses_to_continue_testing",
   ]),
 ];
   
