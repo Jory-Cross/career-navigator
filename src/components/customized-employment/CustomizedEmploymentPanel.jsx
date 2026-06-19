@@ -418,21 +418,21 @@ const hasAnyEvidence = assessmentRecords.length > 0;
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2">
-              <BriefcaseBusiness className="h-4 w-4 text-indigo-600" />
-              <h4 className="font-medium text-slate-900">
-                Vocational Themes
-              </h4>
-            </div>
-            <p className="text-sm text-slate-500 mt-2">
-              Emerging vocational themes based on interests, talents, skills,
-              discovery activities, and informational interviews.
-            </p>
-            <p className="text-xs text-slate-400 mt-3">
-              Will be generated from Discovery Staging Record evidence.
-            </p>
-          </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+  <div className="flex items-center gap-2">
+    <BriefcaseBusiness className="h-4 w-4 text-indigo-600" />
+    <h4 className="font-medium text-slate-900">
+      Employer Leads
+    </h4>
+  </div>
+  <p className="text-sm text-slate-500 mt-2">
+    Businesses, industries, community settings, and customized employment
+    leads identified through discovery evidence.
+  </p>
+  <p className="text-xs text-slate-400 mt-3">
+    Pulled from assessment responses only.
+  </p>
+</div>
         </div>
 
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5 space-y-4">
