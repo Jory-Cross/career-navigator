@@ -451,9 +451,10 @@ const discoveryProgressItems = [
     evidenceItems: informationalInterviewCount,
     sourceCount: null,
   },
- {
+{
   label: "Emerging Interests",
   evidenceItems: emergingInterests.length,
+  conceptCount: countDistinctConcepts(emergingInterests),
   sourceCount: countEvidenceSources(emergingInterests),
   sourceBreakdown: buildSourceBreakdown(emergingInterests),
 },
