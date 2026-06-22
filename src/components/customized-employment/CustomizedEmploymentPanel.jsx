@@ -198,7 +198,7 @@ const discoveryActivities = assessmentRecords.filter(
 
 const assistiveTechnologyAssessments = assessmentRecords.filter(
   (record) =>
-    record.assessment_type === "assistive_technology_assessment"
+    record.assessment_type === "assistive_technology"
 );
 
 function getAssessmentSourceLabel(assessmentType) {
