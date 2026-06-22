@@ -564,6 +564,9 @@ const discoveryProgressItems = [
   conceptCount: countDistinctConcepts(conditionsForSuccess),
   sourceCount: countEvidenceSources(conditionsForSuccess),
   sourceBreakdown: buildSourceBreakdown(conditionsForSuccess),
+sourceMatrix: buildSourceContributionMatrix(
+  conditionsForSuccess
+),
 },
 {
   label: "Business Settings",
