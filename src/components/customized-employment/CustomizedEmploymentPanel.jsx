@@ -393,6 +393,23 @@ function countEvidenceSources(items) {
   return new Set(items.map((item) => item.source).filter(Boolean)).size;
 }
 
+function buildSourceBreakdown(items) {
+  const breakdown = {};
+
+  items.forEach((item) => {
+    if (!item?.source) return;
+
+    breakdown[item.source] = (breakdown[item.source] || 0) + 1;
+  });
+
+  return Object.entries(breakdown)
+    .map(([source, count]) => ({
+      source,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
 const discoveryProgressItems = [
   {
     label: "Home & Community Discovery",
