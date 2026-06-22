@@ -682,11 +682,17 @@ const discoveryProgressItems = [
             {item.evidenceItems} item{item.evidenceItems === 1 ? "" : "s"}
           </Badge>
 
-          {item.sourceCount !== null && (
-            <Badge variant="outline">
-              {item.sourceCount} source{item.sourceCount === 1 ? "" : "s"}
-            </Badge>
-          )}
+         {item.conceptCount !== undefined && (
+  <Badge variant="outline">
+    {item.conceptCount} concept{item.conceptCount === 1 ? "" : "s"}
+  </Badge>
+)}
+
+{item.sourceCount !== null && (
+  <Badge variant="outline">
+    {item.sourceCount} source{item.sourceCount === 1 ? "" : "s"}
+  </Badge>
+)}
         </div>
       </div>
 
