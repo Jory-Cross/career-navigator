@@ -381,42 +381,43 @@ const discoveryHypotheses = [
   
 const hasAnyEvidence = assessmentRecords.length > 0;
 
-const readinessChecks = [
+const discoveryProgressItems = [
   {
     label: "Home & Community Discovery",
-    complete: countCompleted(
+    records: countAny(
       assessmentRecords,
       "home_community_discovery"
-    ) > 0,
+    ),
   },
   {
-    label: "Discovery Interview",
-    complete: completedDiscoveryInterviewCount > 0,
+    label: "Discovery Interviews",
+    records: discoveryInterviewCount,
   },
   {
-    label: "Discovery Activity",
-    complete: completedDiscoveryActivityCount > 0,
+    label: "Discovery Activities",
+    records: discoveryActivityCount,
   },
   {
-    label: "Informational Interview",
-    complete: completedInformationalInterviewCount > 0,
+    label: "Informational Interviews",
+    records: informationalInterviewCount,
   },
   {
-    label: "Interests Identified",
-    complete: emergingInterests.length > 0,
+    label: "Emerging Interests Evidence",
+    records: emergingInterests.length,
   },
   {
-    label: "Conditions for Success Identified",
-    complete: conditionsForSuccess.length > 0,
+    label: "Conditions for Success Evidence",
+    records: conditionsForSuccess.length,
   },
   {
-    label: "Business Settings Identified",
-    complete: potentialBusinessSettings.length > 0,
+    label: "Business Settings Evidence",
+    records: potentialBusinessSettings.length,
+  },
+  {
+    label: "Employer Leads Evidence",
+    records: employerLeads.length,
   },
 ];
-
-const stageOneDiscoveryComplete =
-  readinessChecks.every((item) => item.complete);
 
   return (
     <Card className="border-0 shadow-sm">
