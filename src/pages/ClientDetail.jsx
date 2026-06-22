@@ -21,6 +21,7 @@ import {
   MapPin,
   Video,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -187,6 +188,7 @@ export default function ClientDetail() {
 
  const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [tabsCollapsed, setTabsCollapsed] = useState(false);
 
 const [user, setUser] = useState(null);
 const [openAssessmentType, setOpenAssessmentType] = useState(null);
@@ -467,6 +469,18 @@ const currentTaskCount = tasks.filter(
       
 
    <Tabs value={activeTab || ""} onValueChange={handleTabChange}>
+  <div className="flex items-center justify-end mb-1">
+    <button
+      type="button"
+      onClick={() => setTabsCollapsed((v) => !v)}
+      className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 px-2 py-1 rounded-md hover:bg-slate-100"
+      title={tabsCollapsed ? "Show navigation" : "Hide navigation"}
+    >
+      <ChevronDown className={cn("w-4 h-4 transition-transform", tabsCollapsed && "rotate-180")} />
+      {tabsCollapsed ? "Show tabs" : "Hide tabs"}
+    </button>
+  </div>
+  {!tabsCollapsed && (
   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
   {cd.details && !isClientUser && (
   <button
@@ -770,8 +784,9 @@ const currentTaskCount = tasks.filter(
         </div>
       </button>
     )}
-  </div>
-  
+    </div>
+    )}
+
        <>
   {cd.details && !isClientUser && (
     <TabsContent value="client_details">
