@@ -11,14 +11,14 @@
  *   disabled   - optional boolean
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from "@/lib/assessments/structuredAssessmentTypes";
 import { isConditionalVisible, normalizeResponse } from "@/lib/assessments/structuredAssessmentHelpers";
-import { Info } from "lucide-react";
+import { Info, HelpCircle } from "lucide-react";
 
 // ── Sub-renderers ─────────────────────────────────────────────────────────────
 
