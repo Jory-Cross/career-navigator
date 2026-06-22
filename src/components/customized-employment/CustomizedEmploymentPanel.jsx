@@ -145,14 +145,14 @@ export default function CustomizedEmploymentPanel({ client, currentUser }) {
     [assessmentRecords]
   );
 
-  const assistiveTechnologyAssessment = useMemo(
-    () =>
-      getLatestRecord(
-        assessmentRecords,
-        "assistive_technology_assessment"
-      ),
-    [assessmentRecords]
-  );
+ const assistiveTechnologyAssessment = useMemo(
+  () =>
+    getLatestRecord(
+      assessmentRecords,
+      "assistive_technology"
+    ),
+  [assessmentRecords]
+);
 
 const discoveryInterviewCount = countAny(
   assessmentRecords,
