@@ -827,10 +827,10 @@ sourceMatrix: buildSourceContributionMatrix(
 
              <EvidenceStatus
   label="Assistive Technology Assessment"
-  count={countAny(
-    assessmentRecords,
-    "assistive_technology_assessment"
-  )}
+ countAny(
+  assessmentRecords,
+  "assistive_technology"
+)}
   completed={countCompleted(
     assessmentRecords,
     "assistive_technology_assessment"
