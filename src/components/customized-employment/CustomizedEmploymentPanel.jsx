@@ -293,7 +293,7 @@ const emergingInterests = [
   ]),
 ];
 
-const observedSkills = [
+coconst observedSkills = [
   ...collectEvidence([homeDiscovery], [
     "observable_skills",
     "work_relevant_daily_skills",
@@ -306,6 +306,11 @@ const observedSkills = [
   ]),
   ...collectEvidence(discoveryActivities, [
     "skills_demonstrated",
+  ]),
+  ...collectEvidence(assistiveTechnologyAssessments, [
+    "technology_skills_present",
+    "technology_skill_strengths",
+    "workplace_technology_experience",
   ]),
 ];
 
