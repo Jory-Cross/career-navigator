@@ -642,150 +642,72 @@ const stageOneDiscoveryComplete =
   </h5>
 </div>
 
- <div className="grid gap-4 md:grid-cols-2">
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Emerging Interests
-    </p>
-
-    {emergingInterests.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {emergingInterests.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No interests identified yet.
+<div className="grid gap-4 md:grid-cols-2">
+  {[
+    {
+      label: "Emerging Interests",
+      items: emergingInterests,
+      emptyText: "No interests identified yet.",
+    },
+    {
+      label: "Observed Skills",
+      items: observedSkills,
+      emptyText: "No skills identified yet.",
+    },
+    {
+      label: "Conditions for Success",
+      items: conditionsForSuccess,
+      emptyText: "No conditions identified yet.",
+    },
+    {
+      label: "Potential Business Settings",
+      items: potentialBusinessSettings,
+      emptyText: "No business settings identified yet.",
+    },
+    {
+      label: "Relationships / Natural Supports",
+      items: relationshipsAndNaturalSupports,
+      emptyText: "No natural supports identified yet.",
+    },
+    {
+      label: "Community Connections",
+      items: communityConnections,
+      emptyText: "No community connections identified yet.",
+    },
+    {
+      label: "Employer Leads",
+      items: employerLeads,
+      emptyText: "No employer leads identified yet.",
+    },
+    {
+      label: "Discovery Hypotheses",
+      items: discoveryHypotheses,
+      emptyText: "No discovery hypotheses identified yet.",
+    },
+  ].map((section) => (
+    <div key={section.label}>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        {section.label}
       </p>
-    )}
-  </div>
 
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Observed Skills
-    </p>
-
-    {observedSkills.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {observedSkills.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No skills identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Conditions for Success
-    </p>
-
-    {conditionsForSuccess.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {conditionsForSuccess.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No conditions identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Potential Business Settings
-    </p>
-
-    {potentialBusinessSettings.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {potentialBusinessSettings.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No business settings identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Relationships / Natural Supports
-    </p>
-
-    {relationshipsAndNaturalSupports.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {relationshipsAndNaturalSupports.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No natural supports identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Community Connections
-    </p>
-
-    {communityConnections.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {communityConnections.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No community connections identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Employer Leads
-    </p>
-
-    {employerLeads.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {employerLeads.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No employer leads identified yet.
-      </p>
-    )}
-  </div>
-
-  <div>
-    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-      Discovery Hypotheses
-    </p>
-
-    {discoveryHypotheses.length > 0 ? (
-      <ul className="mt-2 space-y-1 text-sm text-slate-700">
-        {discoveryHypotheses.slice(0, 10).map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-sm text-slate-500 mt-1">
-        No discovery hypotheses identified yet.
-      </p>
-    )}
-  </div>
+      {section.items.length > 0 ? (
+        <ul className="mt-2 space-y-3 text-sm text-slate-700">
+          {section.items.slice(0, 10).map((item, index) => (
+            <li key={`${section.label}-${index}`}>
+              <p>• {item.text}</p>
+              <p className="text-xs text-slate-400 mt-1 ml-3">
+                Source: {item.source}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-slate-500 mt-1">
+          {section.emptyText}
+        </p>
+      )}
+    </div>
+  ))}
 </div>
                 </div>
               )}
