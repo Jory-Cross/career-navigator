@@ -353,6 +353,43 @@ const discoveryHypotheses = [
   
 const hasAnyEvidence = assessmentRecords.length > 0;
 
+const readinessChecks = [
+  {
+    label: "Home & Community Discovery",
+    complete: countCompleted(
+      assessmentRecords,
+      "home_community_discovery"
+    ) > 0,
+  },
+  {
+    label: "Discovery Interview",
+    complete: completedDiscoveryInterviewCount > 0,
+  },
+  {
+    label: "Discovery Activity",
+    complete: completedDiscoveryActivityCount > 0,
+  },
+  {
+    label: "Informational Interview",
+    complete: completedInformationalInterviewCount > 0,
+  },
+  {
+    label: "Interests Identified",
+    complete: emergingInterests.length > 0,
+  },
+  {
+    label: "Conditions for Success Identified",
+    complete: conditionsForSuccess.length > 0,
+  },
+  {
+    label: "Business Settings Identified",
+    complete: potentialBusinessSettings.length > 0,
+  },
+];
+
+const stageOneDiscoveryComplete =
+  readinessChecks.every((item) => item.complete);
+
   return (
     <Card className="border-0 shadow-sm">
       <div className="p-6 space-y-6">
