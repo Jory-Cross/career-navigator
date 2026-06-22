@@ -335,8 +335,14 @@ const conditionsForSuccess = [
   ...collectEvidence(informationalInterviews, [
     "conditions_needed_for_client_success",
   ]),
+  ...collectEvidence(assistiveTechnologyAssessments, [
+    "organization_supports",
+    "employment_supports",
+    "technology_accommodations_needed",
+    "technology_barriers_summary",
+    "technology_recommendations",
+  ]),
 ];
-
 const potentialBusinessSettings = [
   ...collectEvidence([homeDiscovery], [
     "potential_businesses_or_settings",
