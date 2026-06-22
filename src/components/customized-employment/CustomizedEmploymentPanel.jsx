@@ -205,7 +205,7 @@ function getAssessmentSourceLabel(assessmentType) {
   const labels = {
     home_community_discovery: "Home & Community Discovery",
     benefits_resources_assessment: "Benefits & Resources Assessment",
-    assistive_technology_assessment: "Assistive Technology Assessment",
+    assistive_technology: "Assistive Technology Assessment",
     discovery_interview: "Discovery Interview",
     informational_interview: "Informational Interview",
     discovery_activity: "Discovery Activity",
