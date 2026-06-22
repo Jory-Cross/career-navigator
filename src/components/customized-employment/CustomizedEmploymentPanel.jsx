@@ -293,7 +293,7 @@ const emergingInterests = [
   ]),
 ];
 
-coconst observedSkills = [
+const observedSkills = [
   ...collectEvidence([homeDiscovery], [
     "observable_skills",
     "work_relevant_daily_skills",
