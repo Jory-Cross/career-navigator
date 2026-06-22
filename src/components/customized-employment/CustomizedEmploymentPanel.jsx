@@ -196,11 +196,39 @@ const discoveryActivities = assessmentRecords.filter(
   (record) => record.assessment_type === "discovery_activity"
 );
 
+function getAssessmentSourceLabel(assessmentType) {
+  const labels = {
+    home_community_discovery: "Home & Community Discovery",
+    benefits_resources_assessment: "Benefits & Resources Assessment",
+    assistive_technology_assessment: "Assistive Technology Assessment",
+    discovery_interview: "Discovery Interview",
+    informational_interview: "Informational Interview",
+    discovery_activity: "Discovery Activity",
+  };
+
+  return labels[assessmentType] || "Assessment";
+}
+
 function collectEvidence(records, fields) {
   return records
     .flatMap((record) =>
       fields
-        .map((field) => record?.responses?.[field])
+        .map((field) => {
+          const value = record?.responses?.[field];
+
+          if (!value) {
+            return null;
+          }
+
+          return {
+            text: value,
+            source: getAssessmentSourceLabel(record?.assessment_type),
+            field,
+            recordId: record?.id,
+            status: record?.status,
+            updatedDate: record?.updated_date || record?.created_date || "",
+          };
+        })
         .filter(Boolean)
     )
     .filter(Boolean);
