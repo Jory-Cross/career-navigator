@@ -610,9 +610,12 @@ sourceMatrix: buildSourceContributionMatrix(
   conceptCount: countDistinctConcepts(
     communityConnections
   ),
-  sourceCount: countEvidenceSources(
-    communityConnections
-  ),
+ sourceBreakdown: buildSourceBreakdown(
+  communityConnections
+),
+sourceMatrix: buildSourceContributionMatrix(
+  communityConnections
+),
   sourceBreakdown: buildSourceBreakdown(
     communityConnections
   ),
