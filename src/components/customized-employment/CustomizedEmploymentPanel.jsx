@@ -573,14 +573,20 @@ sourceMatrix: buildSourceContributionMatrix(
   evidenceItems: potentialBusinessSettings.length,
   conceptCount: countDistinctConcepts(potentialBusinessSettings),
   sourceCount: countEvidenceSources(potentialBusinessSettings),
-  sourceBreakdown: buildSourceBreakdown(potentialBusinessSettings),
+sourceBreakdown: buildSourceBreakdown(potentialBusinessSettings),
+sourceMatrix: buildSourceContributionMatrix(
+  potentialBusinessSettings
+),
 },
 {
   label: "Employer Leads",
   evidenceItems: employerLeads.length,
   conceptCount: countDistinctConcepts(employerLeads),
   sourceCount: countEvidenceSources(employerLeads),
-  sourceBreakdown: buildSourceBreakdown(employerLeads),
+ sourceBreakdown: buildSourceBreakdown(employerLeads),
+sourceMatrix: buildSourceContributionMatrix(
+  employerLeads
+),
 },
 {
   label: "Relationships / Natural Supports",
