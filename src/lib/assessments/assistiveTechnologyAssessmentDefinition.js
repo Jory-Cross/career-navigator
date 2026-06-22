@@ -240,7 +240,7 @@ export const ASSISTIVE_TECHNOLOGY_SECTIONS = [
 ];
 
 export const ASSISTIVE_TECHNOLOGY_META = {
-  assessment_type: "assistive_technology",
+  assessment_type: "assistive_technology_assessment",
   label: "Assistive Technology Assessment",
   description:
     "Customized Employment assistive technology, technology skills, supports, barriers, and referral assessment.",
