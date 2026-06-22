@@ -175,10 +175,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
     label: "Section 4: WIPA / Benefits Counseling",
     description: "Track benefits planning referrals.",
     questions: [
-      {
+          {
         id: "wipa_referral_needed",
         label: "WIPA Referral Needed",
         type: "multiple_choice",
+        helpText:
+          "WIPA means Work Incentives Planning and Assistance. WIPA programs provide benefits counseling to help people understand how work and earnings may affect Social Security, Medicaid, Medicare, and other benefits.",
         options: ["Yes", "No"],
       },
       {
