@@ -425,6 +425,15 @@ const discoveryHypotheses = [
     "discovery_hypotheses_confirmed",
     "discovery_hypotheses_to_continue_testing",
   ]),
+  ...collectEvidence(informationalInterviews, [
+    "connection_to_vocational_themes",
+    "client_strengths_that_align",
+    "conditions_needed_for_client_success",
+    "follow_up_opportunities",
+    "customized_employment_possibilities",
+    "key_takeaways",
+    "recommended_next_steps",
+  ]),
 ];
   
 const hasAnyEvidence = assessmentRecords.length > 0;
