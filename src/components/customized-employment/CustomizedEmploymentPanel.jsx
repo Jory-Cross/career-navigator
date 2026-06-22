@@ -554,6 +554,9 @@ const discoveryProgressItems = [
   conceptCount: countDistinctConcepts(emergingInterests),
   sourceCount: countEvidenceSources(emergingInterests),
   sourceBreakdown: buildSourceBreakdown(emergingInterests),
+  sourceMatrix: buildSourceContributionMatrix(
+    emergingInterests
+  ),
 },
 {
   label: "Conditions for Success",
