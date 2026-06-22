@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { QUESTION_TYPES } from "@/lib/assessments/structuredAssessmentTypes";
 import { isConditionalVisible, normalizeResponse } from "@/lib/assessments/structuredAssessmentHelpers";
 import { Info, HelpCircle } from "lucide-react";
-
 // ── Sub-renderers ─────────────────────────────────────────────────────────────
 
 function MultipleChoice({ question, value, onChange, disabled }) {
