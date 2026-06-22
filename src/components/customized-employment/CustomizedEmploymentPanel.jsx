@@ -434,26 +434,30 @@ const discoveryProgressItems = [
     evidenceItems: informationalInterviewCount,
     sourceCount: null,
   },
-  {
-    label: "Emerging Interests",
-    evidenceItems: emergingInterests.length,
-    sourceCount: countEvidenceSources(emergingInterests),
-  },
-  {
-    label: "Conditions for Success",
-    evidenceItems: conditionsForSuccess.length,
-    sourceCount: countEvidenceSources(conditionsForSuccess),
-  },
-  {
-    label: "Business Settings",
-    evidenceItems: potentialBusinessSettings.length,
-    sourceCount: countEvidenceSources(potentialBusinessSettings),
-  },
-  {
-    label: "Employer Leads",
-    evidenceItems: employerLeads.length,
-    sourceCount: countEvidenceSources(employerLeads),
-  },
+ {
+  label: "Emerging Interests",
+  evidenceItems: emergingInterests.length,
+  sourceCount: countEvidenceSources(emergingInterests),
+  sourceBreakdown: buildSourceBreakdown(emergingInterests),
+},
+{
+  label: "Conditions for Success",
+  evidenceItems: conditionsForSuccess.length,
+  sourceCount: countEvidenceSources(conditionsForSuccess),
+  sourceBreakdown: buildSourceBreakdown(conditionsForSuccess),
+},
+{
+  label: "Business Settings",
+  evidenceItems: potentialBusinessSettings.length,
+  sourceCount: countEvidenceSources(potentialBusinessSettings),
+  sourceBreakdown: buildSourceBreakdown(potentialBusinessSettings),
+},
+{
+  label: "Employer Leads",
+  evidenceItems: employerLeads.length,
+  sourceCount: countEvidenceSources(employerLeads),
+  sourceBreakdown: buildSourceBreakdown(employerLeads),
+},
 ];
 
   return (
