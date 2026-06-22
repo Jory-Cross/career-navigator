@@ -389,41 +389,53 @@ const discoveryHypotheses = [
   
 const hasAnyEvidence = assessmentRecords.length > 0;
 
+function countEvidenceSources(items) {
+  return new Set(items.map((item) => item.source).filter(Boolean)).size;
+}
+
 const discoveryProgressItems = [
   {
     label: "Home & Community Discovery",
-    records: countAny(
+    evidenceItems: countAny(
       assessmentRecords,
       "home_community_discovery"
     ),
+    sourceCount: null,
   },
   {
     label: "Discovery Interviews",
-    records: discoveryInterviewCount,
+    evidenceItems: discoveryInterviewCount,
+    sourceCount: null,
   },
   {
     label: "Discovery Activities",
-    records: discoveryActivityCount,
+    evidenceItems: discoveryActivityCount,
+    sourceCount: null,
   },
   {
     label: "Informational Interviews",
-    records: informationalInterviewCount,
+    evidenceItems: informationalInterviewCount,
+    sourceCount: null,
   },
   {
-    label: "Emerging Interests Evidence",
-    records: emergingInterests.length,
+    label: "Emerging Interests",
+    evidenceItems: emergingInterests.length,
+    sourceCount: countEvidenceSources(emergingInterests),
   },
   {
-    label: "Conditions for Success Evidence",
-    records: conditionsForSuccess.length,
+    label: "Conditions for Success",
+    evidenceItems: conditionsForSuccess.length,
+    sourceCount: countEvidenceSources(conditionsForSuccess),
   },
   {
-    label: "Business Settings Evidence",
-    records: potentialBusinessSettings.length,
+    label: "Business Settings",
+    evidenceItems: potentialBusinessSettings.length,
+    sourceCount: countEvidenceSources(potentialBusinessSettings),
   },
   {
-    label: "Employer Leads Evidence",
-    records: employerLeads.length,
+    label: "Employer Leads",
+    evidenceItems: employerLeads.length,
+    sourceCount: countEvidenceSources(employerLeads),
   },
 ];
 
