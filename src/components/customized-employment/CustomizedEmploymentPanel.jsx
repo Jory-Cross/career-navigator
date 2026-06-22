@@ -311,6 +311,13 @@ const conditionsForSuccess = [
     "best_schedule",
     "best_supervision_style",
   ]),
+  ...collectEvidence(discoveryActivities, [
+    "environmental_conditions",
+    "people_social_conditions",
+    "instruction_style",
+    "supports_or_accommodations_used",
+    "conditions_associated_with_success",
+  ]),
   ...collectEvidence(informationalInterviews, [
     "conditions_needed_for_client_success",
   ]),
