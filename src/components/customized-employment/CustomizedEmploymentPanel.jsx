@@ -614,6 +614,9 @@ const discoveryProgressItems = [
   sourceBreakdown: buildSourceBreakdown(
     discoveryHypotheses
   ),
+  sourceMatrix: buildSourceContributionMatrix(
+    discoveryHypotheses
+  ),
 },
 ];
 
