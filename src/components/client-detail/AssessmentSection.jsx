@@ -465,6 +465,7 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   const resolvedClientId = clientId || client?.id || "";
     const [activeKey, setActiveKey] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cardListCollapsed, setCardListCollapsed] = useState(false);
   const formPanelRef = useRef(null);
   const leaveSaveRef = useRef(null);
   const queryClient = useQueryClient();
@@ -700,22 +701,43 @@ if (activeAssessment.key === "discovery_activity") {
       {/* Desktop: two-panel layout */}
       <div className="hidden lg:flex gap-5" style={{ height: "calc(100vh - 280px)", minHeight: "520px" }}>
         {/* Left: card list */}
-        <div className="w-[290px] shrink-0 overflow-y-auto space-y-2 pr-1">
+        {!cardListCollapsed && (
+        <div className="w-[290px] shrink-0 overflow-y-auto space-y-2 pr-1 relative">
+          <button
+            type="button"
+            onClick={() => setCardListCollapsed(true)}
+            className="absolute -right-1 top-0 z-10 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            title="Collapse list"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         {visibleAssessments.map((assessment) => (            <AssessmentCard
-              key={assessment.key}
-              assessment={assessment}
-              record={getRecord(assessment.key)}
-              isActive={activeKey === assessment.key}
-              statusOverride={assessment.key === "wsa_interview" ? getWsaInterviewStatus() : undefined}
-              onClick={() => {
-                handleAssessmentSelection(assessment.key);
-              }}
-            />
-          ))}
+               key={assessment.key}
+               assessment={assessment}
+               record={getRecord(assessment.key)}
+               isActive={activeKey === assessment.key}
+               statusOverride={assessment.key === "wsa_interview" ? getWsaInterviewStatus() : undefined}
+               onClick={() => {
+                 handleAssessmentSelection(assessment.key);
+               }}
+             />
+           ))}
         </div>
+        )}
 
         {/* Right: form panel */}
-        <div ref={formPanelRef} className="flex-1 overflow-y-auto">
+        <div ref={formPanelRef} className="flex-1 overflow-y-auto relative">
+          {cardListCollapsed && (
+            <button
+              type="button"
+              onClick={() => setCardListCollapsed(false)}
+              className="absolute left-0 top-0 z-10 flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-slate-200 shadow-sm text-slate-600 hover:bg-slate-50 text-xs font-medium"
+              title="Expand list"
+            >
+              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              Assessments
+            </button>
+          )}
           {activeAssessment?.available ? (
             renderRightPanel(null)
           ) : (
