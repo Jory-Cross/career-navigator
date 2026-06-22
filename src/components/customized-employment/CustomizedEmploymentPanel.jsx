@@ -625,21 +625,29 @@ const discoveryProgressItems = [
   </div>
 
   <div className="grid gap-2 md:grid-cols-2 mt-3">
-    {discoveryProgressItems.map((item) => (
-      <div
-        key={item.label}
-        className="flex items-center justify-between text-sm border-b border-slate-100 pb-1"
-      >
-        <span className="text-slate-700">
-          {item.label}
-        </span>
+  {discoveryProgressItems.map((item) => (
+    <div
+      key={item.label}
+      className="flex items-center justify-between text-sm border-b border-slate-100 pb-1"
+    >
+      <span className="text-slate-700">
+        {item.label}
+      </span>
 
+      <div className="flex items-center gap-2">
         <Badge variant="secondary">
-          {item.records}
+          {item.evidenceItems} item{item.evidenceItems === 1 ? "" : "s"}
         </Badge>
+
+        {item.sourceCount !== null && (
+          <Badge variant="outline">
+            {item.sourceCount} source{item.sourceCount === 1 ? "" : "s"}
+          </Badge>
+        )}
       </div>
-    ))}
-  </div>
+    </div>
+  ))}
+</div>
 
   <p className="text-xs text-slate-500 mt-3">
     Evidence counts only. Discovery fidelity and completion criteria will be evaluated separately.
