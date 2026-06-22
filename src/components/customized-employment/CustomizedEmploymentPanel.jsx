@@ -593,47 +593,37 @@ const discoveryProgressItems = [
                 </div>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
   <div className="flex items-center justify-between">
     <h5 className="text-sm font-semibold text-slate-900">
-      Discovery Readiness
+      Discovery Progress
     </h5>
 
-    {stageOneDiscoveryComplete ? (
-      <Badge className="bg-emerald-600">
-        Stage One Complete
-      </Badge>
-    ) : (
-      <Badge variant="outline">
-        In Progress
-      </Badge>
-    )}
+    <Badge variant="outline">
+      Evidence Tracking
+    </Badge>
   </div>
 
   <div className="grid gap-2 md:grid-cols-2 mt-3">
-    {readinessChecks.map((check) => (
+    {discoveryProgressItems.map((item) => (
       <div
-        key={check.label}
-        className="flex items-center gap-2 text-sm"
+        key={item.label}
+        className="flex items-center justify-between text-sm border-b border-slate-100 pb-1"
       >
-        <span>
-          {check.complete ? "✓" : "☐"}
+        <span className="text-slate-700">
+          {item.label}
         </span>
 
-        <span className="text-slate-700">
-          {check.label}
-        </span>
+        <Badge variant="secondary">
+          {item.records}
+        </Badge>
       </div>
     ))}
   </div>
 
-  {stageOneDiscoveryComplete && (
-    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-      <p className="text-sm text-emerald-800">
-        Stage One Discovery Complete. Ready to begin Stage Two Customized Employment planning.
-      </p>
-    </div>
-  )}
+  <p className="text-xs text-slate-500 mt-3">
+    Evidence counts only. Discovery fidelity and completion criteria will be evaluated separately.
+  </p>
 </div>
 
 <div className="flex items-center gap-2">
