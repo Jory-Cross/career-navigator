@@ -86,10 +86,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
         label: "BPQY Received Date",
         type: "date",
       },
-      {
+           {
         id: "ssa_3288_completed",
         label: "SSA-3288 Release Completed",
         type: "multiple_choice",
+        helpText:
+          "SSA-3288 is the Social Security consent form that allows SSA to release benefit information to an approved person or agency. It is usually needed before requesting or reviewing detailed benefits information.",
         options: ["Yes", "No", "Unknown"],
       },
       {
