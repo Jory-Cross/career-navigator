@@ -180,7 +180,14 @@ export default function StructuredAssessmentWorkspacePanel({
   }, []);
 
   // ── Manual "Save Progress" button handler
-  const handleSave = useCallback(async () => {
+    const handleSave = useCallback(async () => {
+    console.log("STRUCTURED SAVE CLICKED", {
+      assessmentType: meta.assessment_type,
+      responses: responsesRef.current,
+    });
+
+    toast.message("Save button clicked");
+
     setSaving(true);
     try {
       await doSave(responsesRef.current, true);
@@ -191,8 +198,7 @@ export default function StructuredAssessmentWorkspacePanel({
     } finally {
       setSaving(false);
     }
-  }, [doSave]);
-
+  }, [doSave, meta.assessment_type]);
   // ── "Mark Assessment Complete" — staff-controlled status change
   const handleMarkComplete = useCallback(async () => {
     setMarkingComplete(true);
