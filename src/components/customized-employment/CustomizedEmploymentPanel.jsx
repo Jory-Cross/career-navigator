@@ -454,6 +454,11 @@ const discoveryHypotheses = [
     "key_takeaways",
     "recommended_next_steps",
   ]),
+  ...collectEvidence(assistiveTechnologyAssessments, [
+    "potential_assistive_technology",
+    "employment_implications",
+    "technology_recommendations",
+  ]),
 ];
   
 const hasAnyEvidence = assessmentRecords.length > 0;
