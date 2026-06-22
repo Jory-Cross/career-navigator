@@ -410,6 +410,23 @@ function buildSourceBreakdown(items) {
     .sort((a, b) => b.count - a.count);
 }
 
+function normalizeEvidenceConcept(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/public\s+/g, "")
+    .replace(/local\s+/g, "")
+    .replace(/community\s+/g, "")
+    .trim();
+}
+
+function countDistinctConcepts(items) {
+  return new Set(
+    items.map((item) =>
+      normalizeEvidenceConcept(item.text)
+    )
+  ).size;
+}
+
 const discoveryProgressItems = [
   {
     label: "Home & Community Discovery",
