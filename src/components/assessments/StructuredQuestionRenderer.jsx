@@ -338,12 +338,25 @@ export default function StructuredQuestionRenderer({
 
   return (
     <div className={cn("space-y-2", depth > 0 && "ml-4 pl-3 border-l-2 border-blue-100")}>
-      <div className="space-y-1">
-        <Label className={cn("text-sm font-medium text-slate-800", question.narrativeRequired && "after:content-['*'] after:text-red-500 after:ml-0.5")}>
-          {question.label}
-        </Label>
-        {question.guidance && <GuidanceNote text={question.guidance} />}
-      </div>
+     <div className="space-y-1">
+  <div className="flex items-center gap-2">
+    <Label
+      className={cn(
+        "text-sm font-medium text-slate-800",
+        question.narrativeRequired &&
+          "after:content-['*'] after:text-red-500 after:ml-0.5"
+      )}
+    >
+      {question.label}
+    </Label>
+
+    {question.helpText && (
+      <HelpTooltip text={question.helpText} />
+    )}
+  </div>
+
+  {question.guidance && <GuidanceNote text={question.guidance} />}
+</div>
 
       <QuestionInput
         question={question}
