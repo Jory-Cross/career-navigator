@@ -196,6 +196,11 @@ const discoveryActivities = assessmentRecords.filter(
   (record) => record.assessment_type === "discovery_activity"
 );
 
+const assistiveTechnologyAssessments = assessmentRecords.filter(
+  (record) =>
+    record.assessment_type === "assistive_technology_assessment"
+);
+
 function getAssessmentSourceLabel(assessmentType) {
   const labels = {
     home_community_discovery: "Home & Community Discovery",
