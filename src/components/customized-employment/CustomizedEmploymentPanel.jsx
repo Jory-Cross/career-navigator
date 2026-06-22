@@ -490,6 +490,7 @@ function buildSourceContributionMatrix(items) {
     "Discovery Interview": 0,
     "Discovery Activity": 0,
     "Informational Interview": 0,
+    "Assistive Technology Assessment": 0,
   };
 
   items.forEach((item) => {
