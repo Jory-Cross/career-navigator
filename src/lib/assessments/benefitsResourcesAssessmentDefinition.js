@@ -62,10 +62,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
     label: "Section 2: Benefits Verification & BPQY",
     description: "Track BPQY and SSA information gathering.",
     questions: [
-      {
+           {
         id: "bpqy_requested",
         label: "BPQY Requested",
         type: "multiple_choice",
+        helpText:
+          "BPQY means Benefits Planning Query. It is a Social Security report that shows current benefits, work history, earnings records, Medicare/Medicaid status, and work incentives. It helps staff understand how employment may affect benefits.",
         options: ["Yes", "No", "Unknown"],
       },
       {
