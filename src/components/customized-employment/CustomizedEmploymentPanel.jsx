@@ -461,18 +461,21 @@ const discoveryProgressItems = [
 {
   label: "Conditions for Success",
   evidenceItems: conditionsForSuccess.length,
+  conceptCount: countDistinctConcepts(emergingInterests),
   sourceCount: countEvidenceSources(conditionsForSuccess),
   sourceBreakdown: buildSourceBreakdown(conditionsForSuccess),
 },
 {
   label: "Business Settings",
   evidenceItems: potentialBusinessSettings.length,
+  conceptCount: countDistinctConcepts(emergingInterests),
   sourceCount: countEvidenceSources(potentialBusinessSettings),
   sourceBreakdown: buildSourceBreakdown(potentialBusinessSettings),
 },
 {
   label: "Employer Leads",
   evidenceItems: employerLeads.length,
+  conceptCount: countDistinctConcepts(emergingInterests),
   sourceCount: countEvidenceSources(employerLeads),
   sourceBreakdown: buildSourceBreakdown(employerLeads),
 },
