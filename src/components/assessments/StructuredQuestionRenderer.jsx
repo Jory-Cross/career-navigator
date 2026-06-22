@@ -262,6 +262,30 @@ function GuidanceNote({ text }) {
   );
 }
 
+function HelpTooltip({ text }) {
+  const [open, setOpen] = useState(false);
+
+  if (!text) return null;
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-slate-400 hover:text-blue-600 transition-colors"
+      >
+        <HelpCircle className="w-4 h-4" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-6 left-0 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs text-slate-700">
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Question Renderer ────────────────────────────────────────────────────
 
 function QuestionInput({ question, value, onChange, disabled }) {
