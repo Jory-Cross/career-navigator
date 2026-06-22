@@ -287,6 +287,10 @@ const emergingInterests = [
     "signs_of_interest",
     "preferred_activities_tools_materials",
   ]),
+  ...collectEvidence(assistiveTechnologyAssessments, [
+    "technology_interests",
+    "technology_strengths_summary",
+  ]),
 ];
 
 const observedSkills = [
