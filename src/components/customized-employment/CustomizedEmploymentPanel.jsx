@@ -555,6 +555,45 @@ const discoveryProgressItems = [
   sourceCount: countEvidenceSources(employerLeads),
   sourceBreakdown: buildSourceBreakdown(employerLeads),
 },
+{
+  label: "Relationships / Natural Supports",
+  evidenceItems: relationshipsAndNaturalSupports.length,
+  conceptCount: countDistinctConcepts(
+    relationshipsAndNaturalSupports
+  ),
+  sourceCount: countEvidenceSources(
+    relationshipsAndNaturalSupports
+  ),
+  sourceBreakdown: buildSourceBreakdown(
+    relationshipsAndNaturalSupports
+  ),
+},
+{
+  label: "Community Connections",
+  evidenceItems: communityConnections.length,
+  conceptCount: countDistinctConcepts(
+    communityConnections
+  ),
+  sourceCount: countEvidenceSources(
+    communityConnections
+  ),
+  sourceBreakdown: buildSourceBreakdown(
+    communityConnections
+  ),
+},
+{
+  label: "Discovery Hypotheses",
+  evidenceItems: discoveryHypotheses.length,
+  conceptCount: countDistinctConcepts(
+    discoveryHypotheses
+  ),
+  sourceCount: countEvidenceSources(
+    discoveryHypotheses
+  ),
+  sourceBreakdown: buildSourceBreakdown(
+    discoveryHypotheses
+  ),
+},
 ];
 
   return (
