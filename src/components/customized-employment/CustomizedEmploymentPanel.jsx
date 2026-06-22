@@ -597,9 +597,12 @@ sourceMatrix: buildSourceContributionMatrix(
   sourceCount: countEvidenceSources(
     relationshipsAndNaturalSupports
   ),
-  sourceBreakdown: buildSourceBreakdown(
-    relationshipsAndNaturalSupports
-  ),
+ sourceBreakdown: buildSourceBreakdown(
+  relationshipsAndNaturalSupports
+),
+sourceMatrix: buildSourceContributionMatrix(
+  relationshipsAndNaturalSupports
+),
 },
 {
   label: "Community Connections",
