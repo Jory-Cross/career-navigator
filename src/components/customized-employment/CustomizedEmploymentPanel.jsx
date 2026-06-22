@@ -645,27 +645,42 @@ const discoveryProgressItems = [
     </Badge>
   </div>
 
-  <div className="grid gap-2 md:grid-cols-2 mt-3">
+ <div className="grid gap-3 md:grid-cols-2 mt-3">
   {discoveryProgressItems.map((item) => (
     <div
       key={item.label}
-      className="flex items-center justify-between text-sm border-b border-slate-100 pb-1"
+      className="border-b border-slate-100 pb-2"
     >
-      <span className="text-slate-700">
-        {item.label}
-      </span>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-slate-700">
+          {item.label}
+        </span>
 
-      <div className="flex items-center gap-2">
-        <Badge variant="secondary">
-          {item.evidenceItems} item{item.evidenceItems === 1 ? "" : "s"}
-        </Badge>
-
-        {item.sourceCount !== null && (
-          <Badge variant="outline">
-            {item.sourceCount} source{item.sourceCount === 1 ? "" : "s"}
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">
+            {item.evidenceItems} item{item.evidenceItems === 1 ? "" : "s"}
           </Badge>
-        )}
+
+          {item.sourceCount !== null && (
+            <Badge variant="outline">
+              {item.sourceCount} source{item.sourceCount === 1 ? "" : "s"}
+            </Badge>
+          )}
+        </div>
       </div>
+
+      {item.sourceBreakdown?.length > 0 && (
+        <div className="mt-2 ml-2 space-y-1">
+          {item.sourceBreakdown.map((source) => (
+            <div
+              key={`${item.label}-${source.source}`}
+              className="text-xs text-slate-500"
+            >
+              • {source.source} ({source.count})
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   ))}
 </div>
