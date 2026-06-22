@@ -113,10 +113,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
     label: "Section 3: Work Incentives",
     description: "Identify work incentive opportunities.",
     questions: [
-      {
+          {
         id: "pass_potential",
         label: "PASS Potential",
         type: "multiple_choice",
+        helpText:
+          "PASS means Plan to Achieve Self-Support. It is an SSA work incentive that may allow a person receiving SSI to set aside income or resources for an approved employment goal.",
         options: [
           "Strong Potential",
           "Possible",
