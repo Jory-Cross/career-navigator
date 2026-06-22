@@ -378,6 +378,12 @@ const communityConnections = [
     "possible_business_settings",
     "customized_employment_possibilities",
   ]),
+  ...collectEvidence(informationalInterviews, [
+    "business_organization",
+    "person_interviewed",
+    "community_contact_opportunities",
+    "follow_up_opportunities",
+  ]),
 ];
 
 const employerLeads = [
