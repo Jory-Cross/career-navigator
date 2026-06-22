@@ -139,10 +139,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
           "Not Reviewed",
         ],
       },
-      {
+           {
         id: "able_account",
         label: "ABLE Account",
         type: "multiple_choice",
+        helpText:
+          "An ABLE account is a tax-advantaged savings account for eligible people with disabilities. It can help save money for qualified disability expenses without automatically counting against certain benefit limits.",
         options: [
           "Current Account",
           "Potential Candidate",
