@@ -811,18 +811,43 @@ const discoveryProgressItems = [
         </div>
       </div>
 
-      {item.sourceBreakdown?.length > 0 && (
-        <div className="mt-2 ml-2 space-y-1">
-          {item.sourceBreakdown.map((source) => (
-            <div
-              key={`${item.label}-${source.source}`}
-              className="text-xs text-slate-500"
-            >
-              • {source.source} ({source.count})
-            </div>
-          ))}
+    {item.sourceBreakdown?.length > 0 && (
+  <>
+    <div className="mt-2 ml-2 space-y-1">
+      {item.sourceBreakdown.map((source) => (
+        <div
+          key={`${item.label}-${source.source}`}
+          className="text-xs text-slate-500"
+        >
+          • {source.source} ({source.count})
+        </div>
+      ))}
+    </div>
+
+    <div className="mt-2 ml-2 text-xs">
+      <div className="font-medium text-slate-700">
+        {getEvidenceStrength(item.sourceCount).icon}{" "}
+        {getEvidenceStrength(item.sourceCount).label}
+      </div>
+
+      {getRecommendedSources(
+        item.sourceBreakdown.map((source) => ({
+          source: source.source,
+        }))
+      ).length > 0 && (
+        <div className="mt-1 text-slate-500">
+          Recommended next sources:
+          {" "}
+          {getRecommendedSources(
+            item.sourceBreakdown.map((source) => ({
+              source: source.source,
+            }))
+          ).join(", ")}
         </div>
       )}
+    </div>
+  </>
+)}
     </div>
   ))}
 </div>
