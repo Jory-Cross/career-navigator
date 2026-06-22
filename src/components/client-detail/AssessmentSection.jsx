@@ -493,6 +493,14 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
   };
 
    const visibleAssessments = ALL_ASSESSMENTS.filter((assessment) => {
+    // Customized Employment clients only see CE-tagged assessments
+    if (client?.client_type === "customized_employment") {
+      return (
+        assessment.clientTypes &&
+        assessment.clientTypes.includes("customized_employment")
+      );
+    }
+
     if (!assessment.clientTypes || assessment.clientTypes.length === 0) {
       return true;
     }
