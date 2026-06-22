@@ -448,10 +448,59 @@ function normalizeEvidenceConcept(text) {
 
 function countDistinctConcepts(items) {
   return new Set(
-    items.map((item) =>
-      normalizeEvidenceConcept(item.text)
-    )
+    items
+      .map((item) =>
+        normalizeEvidenceConcept(item.text)
+      )
+      .filter(Boolean)
   ).size;
+}
+
+function getEvidenceStrength(sourceCount) {
+  if (sourceCount >= 3) {
+    return {
+      label: "Strong Evidence",
+      icon: "✅",
+    };
+  }
+
+  if (sourceCount === 2) {
+    return {
+      label: "Developing Evidence",
+      icon: "🟡",
+    };
+  }
+
+  return {
+    label: "Weak Evidence",
+    icon: "⚠️",
+  };
+}
+
+function getRecommendedSources(items) {
+  const existingSources = new Set(
+    items.map((item) => item.source)
+  );
+
+  const recommendations = [];
+
+  if (!existingSources.has("Home & Community Discovery")) {
+    recommendations.push("Home & Community Discovery");
+  }
+
+  if (!existingSources.has("Discovery Interview")) {
+    recommendations.push("Discovery Interview");
+  }
+
+  if (!existingSources.has("Discovery Activity")) {
+    recommendations.push("Discovery Activity");
+  }
+
+  if (!existingSources.has("Informational Interview")) {
+    recommendations.push("Informational Interview");
+  }
+
+  return recommendations;
 }
 
 const discoveryProgressItems = [
