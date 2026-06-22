@@ -315,7 +315,7 @@ export const BENEFITS_RESOURCES_SECTIONS = [
 ];
 
 export const BENEFITS_RESOURCES_META = {
-  assessment_type: "benefits_resources",
+  assessment_type: "benefits_resources_assessment",
   label: "Benefits & Resources Assessment",
   description:
     "Customized Employment benefits planning, BPQY, work incentives, WIPA referral, and resource assessment.",
