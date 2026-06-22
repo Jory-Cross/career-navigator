@@ -564,12 +564,55 @@ const stageOneDiscoveryComplete =
                 </div>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-600" />
-                    <h5 className="text-sm font-semibold text-slate-900">
-                      Draft Evidence Preview
-                    </h5>
-                  </div>
+                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+  <div className="flex items-center justify-between">
+    <h5 className="text-sm font-semibold text-slate-900">
+      Discovery Readiness
+    </h5>
+
+    {stageOneDiscoveryComplete ? (
+      <Badge className="bg-emerald-600">
+        Stage One Complete
+      </Badge>
+    ) : (
+      <Badge variant="outline">
+        In Progress
+      </Badge>
+    )}
+  </div>
+
+  <div className="grid gap-2 md:grid-cols-2 mt-3">
+    {readinessChecks.map((check) => (
+      <div
+        key={check.label}
+        className="flex items-center gap-2 text-sm"
+      >
+        <span>
+          {check.complete ? "✓" : "☐"}
+        </span>
+
+        <span className="text-slate-700">
+          {check.label}
+        </span>
+      </div>
+    ))}
+  </div>
+
+  {stageOneDiscoveryComplete && (
+    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+      <p className="text-sm text-emerald-800">
+        Stage One Discovery Complete. Ready to begin Stage Two Customized Employment planning.
+      </p>
+    </div>
+  )}
+</div>
+
+<div className="flex items-center gap-2">
+  <Sparkles className="h-4 w-4 text-indigo-600" />
+  <h5 className="text-sm font-semibold text-slate-900">
+    Draft Evidence Preview
+  </h5>
+</div>
 
  <div className="grid gap-4 md:grid-cols-2">
   <div>
