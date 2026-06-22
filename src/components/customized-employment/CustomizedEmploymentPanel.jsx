@@ -437,6 +437,27 @@ function buildSourceBreakdown(items) {
     .sort((a, b) => b.count - a.count);
 }
 
+function buildSourceContributionMatrix(items) {
+  const sourceCounts = {
+    "Home & Community Discovery": 0,
+    "Discovery Interview": 0,
+    "Discovery Activity": 0,
+    "Informational Interview": 0,
+  };
+
+  items.forEach((item) => {
+    if (sourceCounts[item.source] !== undefined) {
+      sourceCounts[item.source] += 1;
+    }
+  });
+
+  return Object.entries(sourceCounts).map(
+    ([source, count]) => ({
+      source,
+      count,
+    })
+  );
+}
 function normalizeEvidenceConcept(text) {
   return String(text || "")
     .toLowerCase()
