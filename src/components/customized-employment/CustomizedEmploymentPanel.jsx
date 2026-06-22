@@ -214,10 +214,37 @@ function splitEvidenceText(value) {
     return [];
   }
 
-  return value
+  const cleanedValue = value.trim();
+
+  if (!cleanedValue) {
+    return [];
+  }
+
+  const hasLineBreaksOrBullets = /[\n•;]/.test(cleanedValue);
+  const sentenceCount = (cleanedValue.match(/[.!?]/g) || []).length;
+
+  if (!hasLineBreaksOrBullets && sentenceCount > 1) {
+    return [cleanedValue];
+  }
+
+  return cleanedValue
     .split(/\n|•|;/)
-    .flatMap((part) => part.split(","))
-    .map((part) => part.trim())
+    .flatMap((part) => {
+      const trimmedPart = part.trim();
+      const partSentenceCount = (trimmedPart.match(/[.!?]/g) || []).length;
+
+      if (partSentenceCount > 1) {
+        return [trimmedPart];
+      }
+
+      return trimmedPart.split(",");
+    })
+    .map((part) =>
+      part
+        .trim()
+        .replace(/^and\s+/i, "")
+        .replace(/\.$/, "")
+    )
     .filter(Boolean)
     .filter((part) => part.length > 2);
 }
