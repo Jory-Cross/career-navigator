@@ -126,10 +126,12 @@ export const BENEFITS_RESOURCES_SECTIONS = [
           "Not Reviewed",
         ],
       },
-      {
+          {
         id: "irwe_potential",
         label: "IRWE Potential",
         type: "multiple_choice",
+        helpText:
+          "IRWE means Impairment-Related Work Expense. These are disability-related expenses a person pays out of pocket that may be deducted when SSA calculates countable earnings.",
         options: [
           "Strong Potential",
           "Possible",
