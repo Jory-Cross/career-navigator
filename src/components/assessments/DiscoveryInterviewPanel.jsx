@@ -8,8 +8,11 @@ import {
   Clock,
   Eye,
   MessageSquare,
+  Trash2,
   UserRound,
 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import StructuredAssessmentWorkspacePanel from "./StructuredAssessmentWorkspacePanel";
 
 import {
@@ -110,6 +113,32 @@ export default function DiscoveryInterviewPanel({
   const [newInterviewSession, setNewInterviewSession] = useState(0);
   const [selectedInterviewType, setSelectedInterviewType] = useState(null);
   const [initialResponses, setInitialResponses] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDeleteInterview = async (record) => {
+    const confirmed = window.confirm(
+      `Delete this Discovery Interview${
+        record?.responses?.interview_date
+          ? ` from ${formatInterviewDate(record.responses.interview_date)}`
+          : ""
+      }? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(record.id);
+
+    try {
+      await base44.entities.Assessment.delete(record.id);
+      toast.success("Discovery Interview deleted");
+      await onSaved?.();
+    } catch (error) {
+      console.error("Failed to delete Discovery Interview", error);
+      toast.error("Failed to delete interview");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const interviewDefinition = {
     key: DISCOVERY_INTERVIEW_META.assessment_type,
@@ -399,16 +428,30 @@ export default function DiscoveryInterviewPanel({
                       </div>
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenInterview(record.id)}
-                      className="gap-2 shrink-0"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Open / Edit
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenInterview(record.id)}
+                        className="gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Open / Edit
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteInterview(record)}
+                        disabled={deletingId === record.id}
+                        className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingId === record.id ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
