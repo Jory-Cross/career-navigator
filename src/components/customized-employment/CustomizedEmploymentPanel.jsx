@@ -209,27 +209,35 @@ function getAssessmentSourceLabel(assessmentType) {
   return labels[assessmentType] || "Assessment";
 }
 
+function splitEvidenceText(value) {
+  if (!value || typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(/\n|•|;/)
+    .flatMap((part) => part.split(","))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => part.length > 2);
+}
+
 function collectEvidence(records, fields) {
   return records
     .flatMap((record) =>
-      fields
-        .map((field) => {
-          const value = record?.responses?.[field];
+      fields.flatMap((field) => {
+        const value = record?.responses?.[field];
+        const evidenceItems = splitEvidenceText(value);
 
-          if (!value) {
-            return null;
-          }
-
-          return {
-            text: value,
-            source: getAssessmentSourceLabel(record?.assessment_type),
-            field,
-            recordId: record?.id,
-            status: record?.status,
-            updatedDate: record?.updated_date || record?.created_date || "",
-          };
-        })
-        .filter(Boolean)
+        return evidenceItems.map((text) => ({
+          text,
+          source: getAssessmentSourceLabel(record?.assessment_type),
+          field,
+          recordId: record?.id,
+          status: record?.status,
+          updatedDate: record?.updated_date || record?.created_date || "",
+        }));
+      })
     )
     .filter(Boolean);
 }
