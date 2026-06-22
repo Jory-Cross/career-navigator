@@ -610,13 +610,13 @@ sourceMatrix: buildSourceContributionMatrix(
   conceptCount: countDistinctConcepts(
     communityConnections
   ),
- sourceBreakdown: buildSourceBreakdown(
-  communityConnections
-),
-sourceMatrix: buildSourceContributionMatrix(
-  communityConnections
-),
+  sourceCount: countEvidenceSources(
+    communityConnections
+  ),
   sourceBreakdown: buildSourceBreakdown(
+    communityConnections
+  ),
+  sourceMatrix: buildSourceContributionMatrix(
     communityConnections
   ),
 },
