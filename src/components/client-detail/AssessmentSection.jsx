@@ -487,19 +487,21 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
 
  const getRecord = (key) => {
   const assessment = ALL_ASSESSMENTS.find((a) => a.key === key);
+  if (!assessment) return null;
 
-  if (!assessment) {
-    return null;
-  }
+  const assessmentType = assessment.meta?.assessment_type || key;
 
-  const assessmentType =
-    assessment.meta?.assessment_type || key;
-
-  return (
-    assessments.find(
-      (a) => a.assessment_type === assessmentType
-    ) || null
+  // Support both old records saved under the card key and newer records
+  // saved under meta.assessment_type, and pick the most recently updated one
+  const matches = assessments.filter(
+    (a) => a.assessment_type === assessmentType || a.assessment_type === key
   );
+
+  if (matches.length === 0) return null;
+  // Return the most recently updated record (avoids stale duplicates)
+  return matches.sort((a, b) =>
+    new Date(b.updated_date || 0) - new Date(a.updated_date || 0)
+  )[0];
 };
 
   const getWsaInterviewStatus = () => {
