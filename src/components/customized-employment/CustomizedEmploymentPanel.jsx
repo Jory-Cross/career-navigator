@@ -571,6 +571,52 @@ const discoveryHypotheses = [
   ]),
 ];
   
+const vocationalThemesEvidence = [
+  // Home & Community Discovery
+  ...collectEvidence([homeDiscovery], [
+    "preferred_activities",
+    "observable_interests",
+    "observable_skills",
+    "observable_talents",
+    "emerging_vocational_themes",
+    "potential_businesses_or_settings",
+    "possible_discovery_leads",
+    "discovery_hypotheses",
+    "emerging_patterns",
+  ]),
+  // Discovery Interview
+  ...collectEvidence(discoveryInterviews, [
+    "positive_qualities",
+    "contributions",
+    "known_for",
+    "favorite_activities",
+    "preferred_activities",
+    "people_or_connections",
+    "businesses_or_places_to_explore",
+    "jobs_client_might_enjoy",
+    "possible_vocational_themes",
+  ]),
+  // Informational Interview
+  ...collectEvidence(informationalInterviews, [
+    "customized_employment_possibilities",
+    "job_carving_opportunities",
+    "business_organization",
+    "employer_needs_identified",
+    "key_takeaways",
+    "connection_to_vocational_themes",
+  ]),
+  // Discovery Activity
+  ...collectEvidence(discoveryActivities, [
+    "signs_of_interest",
+    "skills_demonstrated",
+    "preferred_activities_tools_materials",
+    "conditions_associated_with_success",
+    "engagement_patterns",
+    "discovery_hypotheses_confirmed",
+    "customized_employment_possibilities",
+  ]),
+];
+
 const hasAnyEvidence = assessmentRecords.length > 0;
 
 function countEvidenceSources(items) {
@@ -1089,6 +1135,11 @@ sourceMatrix: buildSourceContributionMatrix(
       label: "Discovery Hypotheses",
       items: discoveryHypotheses,
       emptyText: "No discovery hypotheses identified yet.",
+    },
+    {
+      label: "Vocational Themes Evidence",
+      items: vocationalThemesEvidence,
+      emptyText: "No vocational themes evidence identified yet.",
     },
   ].map((section) => (
     <div key={section.label}>
