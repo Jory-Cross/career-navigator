@@ -775,3 +775,179 @@ export function getThemeInsightSummary(theme = {}) {
     strengthReason: (STRENGTH_REASON_TEMPLATES[strengthKey] || STRENGTH_REASON_TEMPLATES.none)(theme?.themeName || "", conceptSummary),
   };
 }
+
+// ── Emerging Vocational Themes Layer ──────────────────────────────────────
+// Deterministic synthesis of higher-level Vocational Theme Candidates from the
+// Discovery Themes produced by buildEvidenceThemes(). These are CANDIDATES
+// only — provisional, evidence-derived, never conclusions, never occupation
+// matches, never job recommendations. No AI, no external calls.
+//
+// A Vocational Theme Candidate fires when EVERY discovery theme listed in its
+// `requiresThemes` is present in the input themes list (set membership on the
+// themeName strings). Discovery themes that match no candidate pass through
+// untouched; nothing is dropped, nothing is hidden upstream. "No match" means
+// "not yet a candidate," never "no evidence."
+//
+// Confidence is derived purely from getThemeEvidenceStrength() of each
+// supporting theme (see getVocationalThemeStrength).
+
+const VOCATIONAL_THEME_DICTIONARY = [
+  {
+    vocationalName: "Library Materials & Information Organization",
+    requiresThemes: [
+      "Organization & Inventory Systems",
+      "Libraries & Information Organization",
+      "Routine Structured Work",
+    ],
+  },
+  {
+    vocationalName: "Routine Operational Support",
+    requiresThemes: [
+      "Organization & Inventory Systems",
+      "Routine Structured Work",
+    ],
+  },
+  {
+    vocationalName: "Administrative Records Support",
+    requiresThemes: [
+      "Organization & Inventory Systems",
+      "Administrative & Clerical Support",
+    ],
+  },
+  {
+    vocationalName: "Community-Based Service Support",
+    requiresThemes: [
+      "Community Service & Helping Roles",
+      "Customer & Community Interaction",
+    ],
+  },
+];
+
+function aggregateStrengthFromThemes(supportingThemes = []) {
+  // Map each supporting theme to its strength key via the existing ladder.
+  const strengths = supportingThemes
+    .map((t) => getThemeEvidenceStrength(t).strengthKey);
+
+  const strongCount = strengths.filter((k) => k === "strong").length;
+  const moderateOrBetter = strengths.filter(
+    (k) => k === "strong" || k === "moderate"
+  ).length;
+  const anyModerateOrEmerging = strengths.some(
+    (k) => k === "strong" || k === "moderate" || k === "emerging"
+  );
+
+  if (strongCount >= 1 && supportingThemes.length >= 3) {
+    return { confidenceLabel: "Strong", confidenceKey: "strong" };
+  }
+  if (strongCount >= 1 || moderateOrBetter >= 2) {
+    return { confidenceLabel: "Moderate", confidenceKey: "moderate" };
+  }
+  if (anyModerateOrEmerging) {
+    return { confidenceLabel: "Emerging", confidenceKey: "emerging" };
+  }
+  return { confidenceLabel: "Insufficient", confidenceKey: "insufficient" };
+}
+
+/**
+ * getVocationalThemeStrength — aggregate confidence for a Vocational Theme
+ * Candidate, derived only from getThemeEvidenceStrength() of its supporting
+ * discovery themes. Returns { confidenceLabel, confidenceKey }.
+ *
+ * Rules (evaluated in order; first match wins):
+ *   Strong         — ≥1 supporting theme is Strong AND ≥3 supporting themes total
+ *   Moderate       — ≥1 supporting theme is Strong OR ≥2 supporting themes are
+ *                    Moderate-or-better
+ *   Emerging       — ≥1 supporting theme is Moderate or Emerging
+ *   Insufficient   — all supporting themes have no evidence
+ */
+export function getVocationalThemeStrength(vocationalTheme = {}) {
+  const supportingThemes = Array.isArray(vocationalTheme?.supportingThemeObjects)
+    ? vocationalTheme.supportingThemeObjects
+    : [];
+  return aggregateStrengthFromThemes(supportingThemes);
+}
+
+// Cap for displayed concept names in a candidate (UI density guard).
+const VOCATIONAL_CONCEPT_CAP = 12;
+
+/**
+ * buildEmergingVocationalThemes — deterministic synthesis layer.
+ * Input:  buildEvidenceThemes() output (array of discovery theme objects).
+ * Output: array of Vocational Theme Candidate objects (shape below).
+ *
+ * Additive only — discovery themes that match no candidate dictionary entry
+ * are NOT surfaced as standalone candidates. A candidate fires only when ALL
+ * of its required discovery themes are present. Entries, concepts, and
+ * sources are unioned (deduped) across the supporting themes so the full
+ * evidence trail is preserved verbatim on each candidate.
+ */
+export function buildEmergingVocationalThemes(themes = []) {
+  if (!Array.isArray(themes) || themes.length === 0) return [];
+
+  // Index discovery themes by name for O(1) lookup.
+  const themeByName = new Map();
+  themes.forEach((theme) => {
+    if (theme?.themeName) themeByName.set(theme.themeName, theme);
+  });
+
+  const candidates = [];
+
+  VOCATIONAL_THEME_DICTIONARY.forEach((entry) => {
+    // A candidate fires only when every required discovery theme is present.
+    const supportingThemeObjects = entry.requiresThemes
+      .map((name) => themeByName.get(name))
+      .filter(Boolean);
+
+    if (supportingThemeObjects.length !== entry.requiresThemes.length) return;
+
+    // Union entries across supporting themes, dedupe by text.
+    const entriesMap = new Map();
+    const conceptsSet = new Set();
+    const sourcesSet = new Set();
+
+    supportingThemeObjects.forEach((theme) => {
+      (theme.entries || []).forEach((entryObj) => {
+        const key = entryObj?.text || "";
+        if (!entriesMap.has(key)) entriesMap.set(key, entryObj);
+      });
+      (theme.concepts || []).forEach((c) => {
+        if (c) conceptsSet.add(c);
+      });
+      (theme.sources || []).forEach((s) => {
+        if (s) sourcesSet.add(s);
+      });
+    });
+
+    const entries = Array.from(entriesMap.values());
+    const concepts = Array.from(conceptsSet);
+    const sources = Array.from(sourcesSet);
+
+    const candidate = {
+      themeName: entry.vocationalName,
+      supportingThemeObjects, // needed by getVocationalThemeStrength
+      supportingThemes: supportingThemeObjects.map((t) => t.themeName),
+      supportingConcepts: concepts.slice(0, VOCATIONAL_CONCEPT_CAP),
+      supportingSources: sources,
+      supportingEntries: entries.length,
+      supportingThemeCount: supportingThemeObjects.length,
+      supportingConceptCount: concepts.length,
+      supportingSourceCount: sources.length,
+    };
+
+    const { confidenceLabel, confidenceKey } = getVocationalThemeStrength(candidate);
+    candidate.confidenceLabel = confidenceLabel;
+    candidate.confidenceKey = confidenceKey;
+
+    candidates.push(candidate);
+  });
+
+  // Strongest candidates first; ties broken by supporting entry count.
+  const confidenceRank = { strong: 0, moderate: 1, emerging: 2, insufficient: 3 };
+  return candidates.sort((a, b) => {
+    const rankDiff =
+      (confidenceRank[a.confidenceKey] ?? 9) -
+      (confidenceRank[b.confidenceKey] ?? 9);
+    if (rankDiff !== 0) return rankDiff;
+    return b.supportingEntries - a.supportingEntries;
+  });
+}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers, Compass, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary } from "@/lib/customized-employment/evidenceNormalizer";
+import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary, buildEmergingVocationalThemes } from "@/lib/customized-employment/evidenceNormalizer";
 
 // Strength-key → tailwind classes for the always-visible strength chip.
 const STRENGTH_CHIP_CLASSES = {
@@ -9,6 +9,7 @@ const STRENGTH_CHIP_CLASSES = {
   moderate: "bg-amber-50 text-amber-700 border-amber-200",
   emerging: "bg-sky-50 text-sky-700 border-sky-200",
   none: "bg-slate-50 text-slate-500 border-slate-200",
+  insufficient: "bg-slate-50 text-slate-500 border-slate-200",
 };
 
 function ThemeRow({ theme }) {
@@ -122,9 +123,125 @@ function ThemeRow({ theme }) {
   );
 }
 
+function VocationalThemeCandidateCard({ candidate }) {
+  const chipClass = STRENGTH_CHIP_CLASSES[candidate.confidenceKey] || STRENGTH_CHIP_CLASSES.insufficient;
+
+  return (
+    <div className="rounded-lg border border-violet-200 bg-white overflow-hidden">
+      <div className="flex items-start justify-between gap-2 px-3 py-2.5 bg-violet-50/40">
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 text-violet-600 shrink-0" />
+          <span className="text-sm font-semibold text-slate-800 truncate">
+            {candidate.themeName}
+          </span>
+        </div>
+        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold shrink-0 ${chipClass}`}>
+          {candidate.confidenceLabel}
+        </span>
+      </div>
+
+      <div className="px-3 py-2 space-y-2">
+        {/* Supporting Themes */}
+        <div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Supporting Themes
+          </p>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {candidate.supportingThemes.map((name) => (
+              <Badge key={name} variant="outline" className="text-xs border-violet-200 text-violet-700 bg-violet-50/40">
+                {name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Supporting Concepts */}
+        {candidate.supportingConcepts.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Supporting Concepts
+            </p>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {candidate.supportingConcepts.map((concept) => (
+                <span key={concept} className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5">
+                  {concept}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Supporting Sources */}
+        {candidate.supportingSources.length > 0 && (
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs font-semibold text-slate-500 shrink-0">Supporting Sources:</span>
+            <span className="text-xs text-slate-700">
+              {candidate.supportingSources.join(", ")}
+            </span>
+          </div>
+        )}
+
+        {/* Supporting Entry Count */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{candidate.supportingEntries}</span> supporting entries
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{candidate.supportingThemeCount}</span> supporting themes
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{candidate.supportingConceptCount}</span> supporting concepts
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{candidate.supportingSourceCount}</span> supporting sources
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 italic">
+          Candidate only — provisional synthesis of discovery evidence, not an employment recommendation.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function VocationalThemeCandidatesBlock({ candidates }) {
+  if (!candidates || candidates.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Compass className="h-4 w-4 text-violet-600" />
+          <h6 className="text-sm font-semibold text-slate-800">
+            Vocational Theme Candidates
+          </h6>
+        </div>
+        <Badge variant="outline" className="text-xs border-violet-200 text-violet-600">
+          {candidates.length} {candidates.length === 1 ? "candidate" : "candidates"}
+        </Badge>
+      </div>
+
+      <p className="text-xs text-slate-500">
+        Provisional synthesis of discovery themes into higher-level vocational candidates. Candidates are not conclusions, not established vocational themes, and not employment recommendations.
+      </p>
+
+      <div className="space-y-1.5">
+        {candidates.map((candidate) => (
+          <VocationalThemeCandidateCard key={candidate.themeName} candidate={candidate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function EvidenceThemeGroupPanel({ items, label }) {
   const concepts = createEvidenceConcepts(items);
   const themes = buildEvidenceThemes(concepts);
+  const vocationalCandidates = buildEmergingVocationalThemes(themes);
 
   if (themes.length === 0) {
     return (
@@ -155,6 +272,10 @@ export default function EvidenceThemeGroupPanel({ items, label }) {
           {themes.length} {themes.length === 1 ? "theme" : "themes"}
         </Badge>
       </div>
+
+      {vocationalCandidates.length > 0 && (
+        <VocationalThemeCandidatesBlock candidates={vocationalCandidates} />
+      )}
 
       <div className="space-y-1.5">
         {themes.map((theme) => (
