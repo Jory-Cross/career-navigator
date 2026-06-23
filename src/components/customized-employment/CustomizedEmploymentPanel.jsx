@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
 import { base44 } from "@/api/base44Client";
 
 const CE_ASSESSMENT_TYPES = [
@@ -1076,6 +1077,20 @@ sourceMatrix: buildSourceContributionMatrix(
     Evidence counts only. Discovery fidelity and completion criteria will be evaluated separately.
   </p>
 </div>
+
+<DiscoveryFidelityPanel
+  emergingInterests={emergingInterests}
+  observedSkills={observedSkills}
+  conditionsForSuccess={conditionsForSuccess}
+  potentialBusinessSettings={potentialBusinessSettings}
+  relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
+  communityConnections={communityConnections}
+  employerLeads={employerLeads}
+  benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
+  assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
+  discoveryHypotheses={discoveryHypotheses}
+  vocationalThemesEvidence={vocationalThemesEvidence}
+/>
 
 <div className="flex items-center gap-2">
   <Sparkles className="h-4 w-4 text-indigo-600" />
