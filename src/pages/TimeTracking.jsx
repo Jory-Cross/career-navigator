@@ -37,6 +37,7 @@ import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
+import { useCohortVisibleMembership } from "@/lib/cohort/useCohortVisibleMembership";
 import { Button } from "@/components/ui/button";
 import {
   format,
@@ -52,200 +53,18 @@ import { getEntryTypeOptions, normalizeEntryTypeCode } from "@/lib/entryTypeRegi
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 import { getEntryTypeLabel } from "@/lib/getEntryTypeLabel";
 
-function parseDateOnly(dateString) {
-  if (!dateString || typeof dateString !== "string") return null;
-
-  const parts = dateString.split("-");
-  if (parts.length !== 3) return null;
-
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
-
-  if (!year || !month || !day) return null;
-
-  const parsed = new Date(year, month - 1, day);
-
-  if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function formatShortEntryDate(dateString) {
-  const parsed = parseDateOnly(dateString);
-  if (!parsed) return "";
-  return format(parsed, "MMM d");
-}
-
-function formatLongEntryDate(dateString) {
-  const parsed = parseDateOnly(dateString);
-  if (!parsed) return "—";
-  return format(parsed, "MMM d, yyyy");
-}
-
-function formatDurationMinutes(minutes) {
-  const total = Number(minutes || 0);
-  if (!total) return "0m";
-  if (total < 60) return `${total}m`;
-
-  const hours = Math.floor(total / 60);
-  const remainder = total % 60;
-
-  if (!remainder) return `${hours}h`;
-  return `${hours}h ${remainder}m`;
-}
-
-function formatHoursFromMinutes(minutes) {
-  const total = Number(minutes || 0);
-  if (!total) return "0h";
-  // Keep exact quarter-hour precision (15 min = 0.25h) without rounding
-  const hours = total / 60;
-  // Trim trailing zeros but preserve up to 2 decimal places
-  return `${parseFloat(hours.toFixed(2))}h`;
-}
-
-const PLACEHOLDER_VALUES = new Set(["No description", "Session", ""]);
-
-function getEntryDisplayText(entry, fallback = "Session") {
-  const fd = entry?.form_data || {};
-  const candidates = [
-    entry?.description,
-    fd.description,
-    fd.development_activity,
-    fd.activity_description,
-    fd.activity_outcome,
-    fd.development_activity_description,
-    fd.job_development_activity_description,
-    fd.job_dev_activity_description,
-    fd.job_development_activity,
-    fd.job_coaching_activity,
-    fd.activity,
-    // DSPD fields — first non-empty one wins
-    fd.job_coaching,
-    fd.individual_support,
-    fd.community_outreach,
-    fd.job_application_process,
-    fd.resume_writing,
-    fd.job_interview_process,
-    // Life Skills fields
-    fd.specific_skill_taught,
-    fd.life_skills_area,
-    fd.observations_comments,
-    // Misc fields
-    fd.admin_description,
-    fd.misc_description,
-    fd.preets_activity,
-    fd.wsa_tasks_completed,
-  ];
-  for (const val of candidates) {
-    if (val && !PLACEHOLDER_VALUES.has(val.trim())) return val.trim();
-  }
-  return fallback;
-}
-
-function entryTypeRequiresClient(entryTypeCode) {
-  const raw = String(entryTypeCode || "").trim().toLowerCase();
-  const normalized = normalizeEntryTypeCode(raw);
-
-  const noClientRequired = new Set([
-    "admin_time",
-    "misc",
-    "miscellaneous",
-    "pto",
-  ]);
-   const explicitlyRequiresClient = new Set([
-    "job_coaching",
-    "job_development",
-    "life_skills",
-    "csb",
-    "pre_ets",
-    "usor96",
-    "wsa",
-    "eom_reporting",
-  ]);
-
-  if (explicitlyRequiresClient.has(raw)) return true;
-  if (explicitlyRequiresClient.has(normalized)) return true;
-
-  if (noClientRequired.has(raw)) return false;
-  if (noClientRequired.has(normalized)) return false;
-
-  return true;
-}
-function getImmediateEntryTypeCode(entry) {
-  return normalizeEntryTypeCode(
-    entry?.entry_type_code ||
-      entry?.entry_type ||
-      entry?.entry_type_key ||
-      entry?.type ||
-      entry?.category ||
-      ""
-  );
-}
-
-function getEntryTypeColorClasses(entryTypeCode) {
-  const code = normalizeEntryTypeCode(entryTypeCode);
-
-  if (code === "client_non_attendance") {
-    return {
-      card: "border-red-200 bg-red-50/50",
-      badge: "bg-red-100 text-red-700 border-red-200",
-    };
-  }
-
-  if (code === "pto") {
-    return {
-      card: "border-teal-300 bg-teal-50 shadow-sm ring-1 ring-teal-200",
-      badge: "bg-red-500 text-white border-red-600",
-    };
-  }
-
-  if (code === "admin_time") {
-    return {
-      card: "border-slate-200 bg-slate-50/70",
-      badge: "bg-slate-100 text-slate-700 border-slate-200",
-    };
-  }
-
-  if (code === "dspd") {
-    return {
-      card: "border-purple-200 bg-purple-50/50",
-      badge: "bg-purple-100 text-purple-700 border-purple-200",
-    };
-  }
-
-  if (code === "job_coaching") {
-    return {
-      card: "border-blue-200 bg-blue-50/50",
-      badge: "bg-blue-100 text-blue-700 border-blue-200",
-    };
-  }
-
-  if (code === "job_development") {
-    return {
-      card: "border-green-200 bg-green-50/50",
-      badge: "bg-green-100 text-green-700 border-green-200",
-    };
-  }
-
-  if (code === "pre_ets_training") {
-    return {
-      card: "border-indigo-200 bg-indigo-50/50",
-      badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
-    };
-  }
-
-  return {
-    card: "border-slate-200 bg-white",
-    badge: "bg-slate-100 text-slate-700 border-slate-200",
-  };
-}
+import {
+  parseDateOnly,
+  formatShortEntryDate,
+  formatLongEntryDate,
+  formatDurationMinutes,
+  formatHoursFromMinutes,
+  getEntryDisplayText,
+  entryTypeRequiresClient,
+  getImmediateEntryTypeCode,
+  getEntryTypeColorClasses,
+  entryBelongsToUser,
+} from "@/lib/timeTrackingHelpers";
 
 export default function TimeTracking() {
   const { viewAsUser } = useViewAs();
@@ -323,6 +142,46 @@ const { data: allUsers = [] } = useQuery({
   refetchOnReconnect: false,
 });
 
+// ── Cohort visibility (additive-only) ────────────────────────────────────
+// Adds cohort member users + cohort-visible clients + cohort-authored time
+// entries to the existing platform visibility. Never reduces access.
+// See Phase 5 design doc + useCohortVisibleMembership.js.
+const cohortMembership = useCohortVisibleMembership(effectiveUser);
+const cohortMemberIds = useMemo(
+  () => new Set(cohortMembership.memberUserIds || []),
+  [cohortMembership.memberUserIds]
+);
+
+// Fetch cohort member user records so their names show in the staff column /
+// employee filter dropdown. Only fires when cohort returned members.
+const cohortMemberIdList = useMemo(
+  () => Array.from(cohortMemberIds),
+  [cohortMemberIds]
+);
+const { data: cohortMemberUsers = [] } = useQuery({
+  queryKey: ["cohortMemberUsers", cohortMemberIdList.join(",")],
+  queryFn: async () => {
+    if (cohortMemberIdList.length === 0) return [];
+    try {
+      const users = await base44.entities.User.filter({
+        id: { $in: cohortMemberIdList },
+      });
+      return Array.isArray(users) ? users : [];
+    } catch {
+      return [];
+    }
+  },
+  enabled: cohortMemberIdList.length > 0,
+  staleTime: 60 * 1000,
+  gcTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+});
+
+// Platform user set (from getOrgUsers) — separate from cohort users so we can
+// distinguish "platform-visible" from "cohort-only" in canMutate.
+const platformUsers = allUsers;
+
 // Load active assignments for the current manager (or all, for admin)
 const { data: managerAssignments = [] } = useQuery({
   queryKey: ["managerAssignments"],
@@ -333,9 +192,28 @@ const { data: managerAssignments = [] } = useQuery({
   refetchOnWindowFocus: false,
 });
 
+  // Additive union: platform users + cohort member users (deduped by id).
+  const usersWithCohort = useMemo(() => {
+    const seen = new Set();
+    const merged = [];
+    for (const u of [...(platformUsers || []), ...cohortMemberUsers]) {
+      if (!u || seen.has(u.id)) continue;
+      seen.add(u.id);
+      merged.push(u);
+    }
+    return merged;
+  }, [platformUsers, cohortMemberUsers]);
+
   const scopedUsers = useMemo(() => {
-  return getScopedUsers(allUsers, effectiveUser);
-}, [allUsers, effectiveUser]);
+  return getScopedUsers(usersWithCohort, effectiveUser);
+}, [usersWithCohort, effectiveUser]);
+
+  // Separate "platform-only" scoped user set — used by canMutate to know whether
+  // an entry was visible via the platform hierarchy (existing edit rights preserved)
+  // vs ONLY via cohort (view-only). This never gates visibility; it only classifies.
+  const platformScopedUsers = useMemo(() => {
+  return getScopedUsers(platformUsers, effectiveUser);
+}, [platformUsers, effectiveUser]);
 
 // Build list of employee_ids visible to a manager: ManagerEmployeeAssignment + legacy manager_id fallback.
 // Defined before visibleStaffUsers because visibleStaffUsers depends on it.
@@ -352,24 +230,26 @@ const managedEmployeeIds = useMemo(() => {
   return [...new Set([...assignedIds, ...legacyIds])];
 }, [allUsers, effectiveUser, managerAssignments]);
 
-// All staff users whose entries are visible to the current user.
-const visibleStaffUsers = useMemo(() => {
+// All staff users whose entries are visible to the current user via the
+// PLATFORM hierarchy (admin/management/employee). Used by canMutate to
+// classify "platform-visible" vs "cohort-only".
+const platformVisibleStaffUsers = useMemo(() => {
   if (!effectiveUser) return [];
 
   // Admin: all non-archived managers + ALL employees (via assignments OR legacy manager_id)
   if (effectiveUser.role === "admin") {
-    const managers = allUsers.filter((u) => !u.is_archived && u.role === "management");
+    const managers = platformUsers.filter((u) => !u.is_archived && u.role === "management");
     const managerIds = new Set(managers.map((m) => m.id));
     // Employees via legacy manager_id
-    const legacyEmployees = allUsers.filter(
+    const legacyEmployees = platformUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && managerIds.has(u.manager_id)
     );
     // Employees via ManagerEmployeeAssignment
     const assignedEmployeeIds = new Set(managerAssignments.map((a) => a.employee_user_id));
-    const assignedEmployees = allUsers.filter(
+    const assignedEmployees = platformUsers.filter(
       (u) => !u.is_archived && u.role === "employee" && assignedEmployeeIds.has(u.id)
     );
-    const selfEntry = allUsers.find((u) => u.id === effectiveUser.id) || effectiveUser;
+    const selfEntry = platformUsers.find((u) => u.id === effectiveUser.id) || effectiveUser;
     return [selfEntry, ...managers, ...legacyEmployees, ...assignedEmployees].filter(
       (u, i, arr) => arr.findIndex((x) => x.id === u.id) === i
     );
@@ -378,7 +258,7 @@ const visibleStaffUsers = useMemo(() => {
   // Management: self + employees from ManagerEmployeeAssignment (+ legacy manager_id fallback)
   if (effectiveUser.role === "management") {
     const assignedIds = new Set(managedEmployeeIds);
-    const assignedEmployees = allUsers.filter(
+    const assignedEmployees = platformUsers.filter(
       (u) => !u.is_archived && assignedIds.has(u.id)
     );
     return [effectiveUser, ...assignedEmployees].filter(
@@ -388,7 +268,29 @@ const visibleStaffUsers = useMemo(() => {
 
   // Employee: only self
   return [effectiveUser];
-}, [allUsers, effectiveUser, managerAssignments, managedEmployeeIds]);
+}, [platformUsers, effectiveUser, managerAssignments, managedEmployeeIds]);
+
+// Additive union: platform-visible staff + cohort member users (deduped by id).
+// This is what scopedTimeEntries filters against so cohort-member entries are
+// not stripped out by the in-memory gate.
+const visibleStaffUsers = useMemo(() => {
+  if (!effectiveUser) return [];
+  const platformIds = new Set(platformVisibleStaffUsers.map((u) => u.id));
+  const cohortAdditions = (cohortMemberUsers || []).filter(
+    (u) => !platformIds.has(u.id)
+  );
+  return [...platformVisibleStaffUsers, ...cohortAdditions];
+}, [platformVisibleStaffUsers, cohortMemberUsers, effectiveUser]);
+
+// IDs of staff visible via the platform hierarchy only (for canMutate rule).
+const platformStaffIds = useMemo(
+  () => new Set(platformVisibleStaffUsers.map((u) => u.id).filter(Boolean)),
+  [platformVisibleStaffUsers]
+);
+const platformStaffEmails = useMemo(
+  () => new Set(platformVisibleStaffUsers.map((u) => u.email).filter(Boolean)),
+  [platformVisibleStaffUsers]
+);
 
 // Employees shown in the filter dropdown.
 // Admin: all managers + employees. Management: self + direct reports.
@@ -425,17 +327,54 @@ const staffByEmail = useMemo(() => {
   return map;
 }, [visibleStaffUsers]);
 
-// Helper: does an entry belong to a given staff user?
-function entryBelongsToUser(entry, staffUser) {
-  if (!staffUser) return false;
-  if (entry.employee_id && entry.employee_id === staffUser.id) return true;
-  if (entry.staff_id && entry.staff_id === staffUser.id) return true;
-  if (entry.user_id && entry.user_id === staffUser.id) return true;
-  if (staffUser.email) {
-    if (entry.created_by === staffUser.email) return true;
-    if (entry.employee_email === staffUser.email) return true;
-    if (entry.staff_email === staffUser.email) return true;
-  }
+// ── canMutate(entry) — Phase 5 view-only rule ────────────────────────────
+// An entry is mutable by the current user when it is visible through the
+// PLATFORM hierarchy (existing edit rights preserved). Entries visible
+// ONLY through cohort membership are view-only (edit + delete denied).
+// Risk #3 resolution: a user who is both a platform manager AND a cohort
+// manager keeps platform edit rights for platform-visible entries. Cohort
+// membership never removes existing platform rights.
+//
+// Inputs:
+//   - platformStaffIds / platformStaffEmails : platform-visible staff sets
+//   - cohortOnlyMemberIds                  : cohort members NOT in platform sets
+//
+// Resolution order (first match wins):
+//   1. Admin → always mutable (unchanged)
+//   2. Entry authored by a platform-visible user (incl. self) → mutable
+//   3. Entry authored by a cohort-only user → NOT mutable (view-only)
+//   4. Defensive default → NOT mutable
+function isEntryPlatformVisible(entry) {
+  if (!entry) return false;
+  if (entry.employee_id && platformStaffIds.has(entry.employee_id)) return true;
+  if (entry.staff_id && platformStaffIds.has(entry.staff_id)) return true;
+  if (entry.user_id && platformStaffIds.has(entry.user_id)) return true;
+  if (entry.created_by && platformStaffEmails.has(entry.created_by)) return true;
+  if (entry.employee_email && platformStaffEmails.has(entry.employee_email)) return true;
+  if (entry.staff_email && platformStaffEmails.has(entry.staff_email)) return true;
+  return false;
+}
+
+function isEntryCohortOnly(entry) {
+  // Cohort-only = authored by a cohort member that is NOT platform-visible.
+  if (!entry) return false;
+  if (cohortOnlyMemberIds.size === 0) return false;
+  const matches = (id) => !!id && cohortOnlyMemberIds.has(id);
+  const matchesEmail = (email, map) => {
+    if (!email) return false;
+    const u = map && map[email];
+    return !!u && matches(u.id);
+  };
+  if (matches(entry.employee_id)) return true;
+  if (matches(entry.staff_id)) return true;
+  if (matches(entry.user_id)) return true;
+  // created_by / employee_email are emails — resolve via staffByEmail (covers
+  // cohort member users we fetched). If we can't resolve, fall back to
+  // platformStaffIds-based reasoning: an unknown author that ISN'T platform
+  // is treated by the caller as not-isEntryPlatformVisible → view-only.
+  if (matchesEmail(entry.created_by, staffByEmail)) return true;
+  if (matchesEmail(entry.employee_email, staffByEmail)) return true;
+  if (matchesEmail(entry.staff_email, staffByEmail)) return true;
   return false;
 }
 
@@ -449,22 +388,58 @@ function entryBelongsToUser(entry, staffUser) {
   refetchOnReconnect: false,
 });
 
-const allClients = useMemo(() => {
+const platformClients = useMemo(() => {
   return getScopedClients(rawClients, effectiveUser, scopedUsers);
 }, [rawClients, effectiveUser, scopedUsers]);
+
+// Additive union: platform clients + cohort-visible clients (deduped by id).
+const allClients = useMemo(() => {
+  const seen = new Set();
+  const merged = [];
+  for (const c of [...platformClients, ...(cohortMembership.clients || [])]) {
+    if (!c || seen.has(c.id)) continue;
+    seen.add(c.id);
+    merged.push(c);
+  }
+  return merged;
+}, [platformClients, cohortMembership.clients]);
+
+// Cohort member user IDs that are NOT already platform-visible — these are the
+// "cohort-only" authors whose entries must be view-only in canMutate.
+// Members that overlap with platformScopedUsers already have platform rights, so
+// their entries are NOT classified as cohort-only.
+const cohortOnlyMemberIds = useMemo(() => {
+  const platformIds = new Set(platformScopedUsers.map((u) => u.id).filter(Boolean));
+  return new Set(
+    cohortMembership.memberUserIds.filter((id) => !platformIds.has(id))
+  );
+}, [platformScopedUsers, cohortMembership.memberUserIds]);
   
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeTracking", "entries", effectiveUser?.id, managedEmployeeIds.join(",")],
+    queryKey: ["timeTracking", "entries", effectiveUser?.id, managedEmployeeIds.join(","), cohortMemberIdList.join(",")],
     queryFn: async () => {
       // Admin: fetch everything
       if (effectiveUser?.role === "admin" && !viewAsUser) {
         return getAllTimeEntries();
       }
+      // Cohort member IDs to additionally fetch (subtract ones already fetched
+      // by the management branch so we don't double-fetch).
+      const reportIdSet = new Set(
+        effectiveUser?.role === "management" ? managedEmployeeIds : []
+      );
+      const additionalCohortIds = cohortMemberIdList.filter(
+        (id) => !reportIdSet.has(id) && id !== effectiveUser?.id
+      );
+
       // Management: fetch own entries + each direct report's entries in parallel
       if (effectiveUser?.role === "management" && managedEmployeeIds.length > 0) {
         const [ownEntries, ...reportEntries] = await Promise.all([
           getAllTimeEntries(), // returns entries the current user can see (own entries)
           ...managedEmployeeIds.map((empId) =>
+            base44.entities.TimeEntry.filter({ employee_id: empId })
+          ),
+          // Additive cohort fetches
+          ...additionalCohortIds.map((empId) =>
             base44.entities.TimeEntry.filter({ employee_id: empId })
           ),
         ]);
@@ -479,10 +454,28 @@ const allClients = useMemo(() => {
         }
         return combined;
       }
+      // Employee or management with no direct reports: own entries + cohort-only entries
+      if (additionalCohortIds.length > 0) {
+        const [ownEntries, ...cohortEntryBatches] = await Promise.all([
+          getAllTimeEntries(),
+          ...additionalCohortIds.map((empId) =>
+            base44.entities.TimeEntry.filter({ employee_id: empId })
+          ),
+        ]);
+        const seen = new Set();
+        const combined = [];
+        for (const entry of [...ownEntries, ...cohortEntryBatches.flat()]) {
+          if (entry?.id && !seen.has(entry.id)) {
+            seen.add(entry.id);
+            combined.push(entry);
+          }
+        }
+        return combined;
+      }
       // Employee or management with no direct reports: just own entries
       return getAllTimeEntries();
     },
-    enabled: !!effectiveUser && (effectiveUser.role !== "management" || allUsers.length > 0 || managedEmployeeIds.length >= 0),
+    enabled: !!effectiveUser && (effectiveUser.role !== "management" || allUsers.length > 0 || managedEmployeeIds.length >= 0 || cohortMemberIdList.length >= 0),
     staleTime: 0,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -1047,8 +1040,29 @@ if (entryTypeFilter !== "all") {
   await queryClient.refetchQueries({ queryKey: ["timeTracking", "entries"] });
 }, [queryClient]);
 
+  // canMutate(entry) — Phase 5 view-only rule.
+  // Cohort-only entries (visible exclusively through cohort membership) are
+  // view-only. Platform-visible entries retain existing edit rights (Risk #3):
+  // a user who is both a platform manager AND a cohort manager keeps platform
+  // edit rights for platform-visible entries.
+  const canMutate = useCallback(
+    (entry) => {
+      if (!effectiveUser || !entry) return false;
+      if (effectiveUser.role === "admin") return true;
+      if (isEntryPlatformVisible(entry)) return true;
+      if (isEntryCohortOnly(entry)) return false;
+      return false;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [effectiveUser, platformStaffIds, platformStaffEmails, cohortOnlyMemberIds, staffByEmail]
+  );
+
   const handleEditEntry = useCallback(
     async (entry) => {
+      if (!canMutate(entry)) {
+        toast.error("View-only access — this entry belongs to a cohort member.");
+        return;
+      }
       // Use freshly-saved override if available so form_data is current.
       const freshEntry = savedEntryOverrides[entry?.id] ?? entry;
       const code =
@@ -1061,7 +1075,7 @@ if (entryTypeFilter !== "all") {
       setEditingEntryTypeCode(code);
       setSelectedEntry(null);
     },
-    [resolvedEntryTypeCodes, savedEntryOverrides]
+    [resolvedEntryTypeCodes, savedEntryOverrides, canMutate]
   );
 
   const handleOpenEntry = useCallback((entry) => {
@@ -1161,11 +1175,21 @@ if (entryTypeFilter !== "all") {
   ]);
   
   const handleDeleteEntry = useCallback((entry) => {
+    if (!canMutate(entry)) {
+      toast.error("View-only access — this entry belongs to a cohort member.");
+      return;
+    }
     setDeletingEntry(entry);
   }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!deletingEntry?.id) return;
+    if (!canMutate(deletingEntry)) {
+      toast.error("View-only access — this entry belongs to a cohort member.");
+      setIsDeleting(false);
+      setDeletingEntry(null);
+      return;
+    }
     setIsDeleting(true);
     try {
       await base44.entities.TimeEntry.delete(deletingEntry.id);
@@ -1631,6 +1655,7 @@ if (entryTypeFilter !== "all") {
                     ) : null}
 
                     {!isNonAttendance ? (
+                      canMutate(entry) ? (
                       <span
                         role="button"
                         tabIndex={0}
@@ -1649,10 +1674,17 @@ if (entryTypeFilter !== "all") {
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
                       </span>
+                      ) : (
+                      <span className="inline-flex items-center gap-1 text-slate-300" title="View-only access — this entry belongs to a cohort member">
+                        <Pencil className="h-3.5 w-3.5" />
+                        View only
+                      </span>
+                      )
                     ) : (
                       <span className="inline-flex items-center gap-1 text-slate-400">Staff record</span>
                     )}
 
+                    {canMutate(entry) ? (
                     <span
                       role="button"
                       tabIndex={0}
@@ -1671,12 +1703,18 @@ if (entryTypeFilter !== "all") {
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
                     </span>
-                  </div>
-                </button>
-              );
-              })}
-          </div>
-        ) : (() => {
+                    ) : (
+                    <span className="inline-flex items-center gap-1 text-slate-300" title="View-only access — this entry belongs to a cohort member">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      View only
+                    </span>
+                    )}
+                    </div>
+                    </button>
+                    );
+                    })}
+                    </div>
+                    ) : (() => {
           // By Type view — group filtered entries by entry_type_code
           const TYPE_ORDER = [
             "job_coaching",
@@ -2221,6 +2259,7 @@ if (entryTypeFilter !== "all") {
               ) : null}
 
                            <div className="flex justify-between items-center">
+                {canMutate(selectedEntry) ? (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -2229,8 +2268,14 @@ if (entryTypeFilter !== "all") {
                   <Trash2 className="h-4 w-4 mr-1" />
                   Delete Entry
                 </Button>
+                ) : (
+                <Badge className="bg-slate-100 text-slate-400">
+                  View only
+                </Badge>
+                )}
 
                 {!isSelectedNonAttendance ? (
+                  canMutate(selectedEntry) ? (
                   <Button
                     onClick={() => {
                       const entry = selectedEntry;
@@ -2240,6 +2285,11 @@ if (entryTypeFilter !== "all") {
                   >
                     Edit
                   </Button>
+                  ) : (
+                  <Badge className="bg-slate-100 text-slate-700">
+                    View only
+                  </Badge>
+                  )
                 ) : (
                   <Badge className="bg-slate-100 text-slate-700">
                     Staff record
