@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
+import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
 import { base44 } from "@/api/base44Client";
 
 const CE_ASSESSMENT_TYPES = [
@@ -994,11 +995,20 @@ sourceMatrix: buildSourceContributionMatrix(
                 </div>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+               <DiscoveryReadinessScore
+                  homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
+                  benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
+                  assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
+                  discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
+                  informationalInterviewCompletedCount={completedInformationalInterviewCount}
+                  discoveryActivityCompletedCount={completedDiscoveryActivityCount}
+                />
+
                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-  <div className="flex items-center justify-between">
-    <h5 className="text-sm font-semibold text-slate-900">
-      Discovery Progress
-    </h5>
+               <div className="flex items-center justify-between">
+               <h5 className="text-sm font-semibold text-slate-900">
+               Discovery Progress
+               </h5>
 
     <Badge variant="outline">
       Evidence Tracking
