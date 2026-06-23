@@ -804,7 +804,13 @@ export default function CustomizedEmploymentPanel({ client, currentUser, onOpenA
             <h3 className="text-lg font-semibold text-slate-900">
               🧠 Vocational Themes
             </h3>
-            {client && <EvidenceThemeGroupPanel client={client} currentUser={currentUser} />}
+            {client && (
+              <EvidenceThemeGroupPanel
+                items={vocationalThemesEvidence}
+                client={client}
+                currentUser={currentUser}
+              />
+            )}
           </div>
         )}
 
