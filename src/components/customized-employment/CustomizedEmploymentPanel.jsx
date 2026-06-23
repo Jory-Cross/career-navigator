@@ -917,14 +917,14 @@ sourceMatrix: buildSourceContributionMatrix(
 
   {item.sourceMatrix?.length > 0 && (
     <div className="mt-2 space-y-1">
-      {item.sourceMatrix.map((source) => (
-        <div
-          key={`${item.label}-${source.source}-matrix`}
-          className="text-slate-500"
-        >
-          {source.source}: {source.count}
-        </div>
-      ))}
+      {item.sourceMatrix.filter((source) => source.count > 0).map((source) => (
+                        <div
+                          key={`${item.label}-${source.source}-matrix`}
+                          className="text-slate-500"
+                        >
+                          {source.source}: {source.count}
+                        </div>
+                      ))}
     </div>
   )}
 </div>
