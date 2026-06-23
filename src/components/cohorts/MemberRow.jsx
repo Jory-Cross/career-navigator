@@ -1,13 +1,14 @@
 import React from "react";
-import { Mail } from "lucide-react";
+import { Mail, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
- * MemberRow — Phase 6B
+ * MemberRow — Phase 6E
  *
- * Read-only display of a single active cohort member (manager or member).
- * No actions — Phase 6B is view-only by spec.
+ * Display of a single active cohort member (manager or member).
+ * Shows Remove button when appropriate based on permissions and context.
  */
-export default function MemberRow({ member, user }) {
+export default function MemberRow({ member, user, onRemove, canRemove }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg hover:bg-slate-50 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
@@ -31,11 +32,24 @@ export default function MemberRow({ member, user }) {
           )}
         </div>
       </div>
-      {member.joined_at && (
-        <span className="text-xs text-slate-400 whitespace-nowrap">
-          Joined {new Date(member.joined_at).toLocaleDateString()}
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {member.joined_at && (
+          <span className="text-xs text-slate-400 whitespace-nowrap">
+            Joined {new Date(member.joined_at).toLocaleDateString()}
+          </span>
+        )}
+        {canRemove && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onRemove(member)}
+            disabled={!canRemove}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

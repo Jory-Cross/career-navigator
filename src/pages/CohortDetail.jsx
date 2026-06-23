@@ -175,6 +175,54 @@ export default function CohortDetail() {
     }
   };
 
+  const handleRemoveManager = async (membership) => {
+    if (managers.length === 1) {
+      toast.error("Cannot remove the last active manager");
+      return;
+    }
+    if (!window.confirm(`Remove ${orgUsers?.find(u => u.id === membership.user_id)?.full_name || membership.user_id} as manager?`)) {
+      return;
+    }
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "remove",
+        cohort_id,
+        membership_id: membership.id,
+        cohort_role: "manager",
+      });
+      if (res.data?.ok) {
+        toast.success("Manager removed");
+        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
+      } else {
+        throw new Error(res.data?.error || "Unknown error");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to remove manager");
+    }
+  };
+
+  const handleRemoveMember = async (membership) => {
+    if (!window.confirm(`Remove ${orgUsers?.find(u => u.id === membership.user_id)?.full_name || membership.user_id} as member?`)) {
+      return;
+    }
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "remove",
+        cohort_id,
+        membership_id: membership.id,
+        cohort_role: "member",
+      });
+      if (res.data?.ok) {
+        toast.success("Member removed");
+        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
+      } else {
+        throw new Error(res.data?.error || "Unknown error");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to remove member");
+    }
+  };
+
   // ── Render guards ─────────────────────────────────────────────────────
   if (!authChecked) {
     return (
@@ -288,10 +336,16 @@ export default function CohortDetail() {
             <p className="text-sm text-slate-400 px-3 py-4">No active managers.</p>
           ) : (
             <div className="divide-y divide-slate-50">
-              {managers.map((m) => (
-                <MemberRow key={m.id} member={m} user={userById[m.user_id]} />
-              ))}
-            </div>
+               {managers.map((m) => (
+                 <MemberRow
+                   key={m.id}
+                   member={m}
+                   user={userById[m.user_id]}
+                   onRemove={handleRemoveManager}
+                   canRemove={user?.role === "admin" && managers.length > 1}
+                 />
+               ))}
+             </div>
           )}
         </div>
       </section>
@@ -321,10 +375,16 @@ export default function CohortDetail() {
             <p className="text-sm text-slate-400 px-3 py-4">No active members.</p>
           ) : (
             <div className="divide-y divide-slate-50">
-              {members.map((m) => (
-                <MemberRow key={m.id} member={m} user={userById[m.user_id]} />
-              ))}
-            </div>
+               {members.map((m) => (
+                 <MemberRow
+                   key={m.id}
+                   member={m}
+                   user={userById[m.user_id]}
+                   onRemove={handleRemoveMember}
+                   canRemove={canAddMember}
+                 />
+               ))}
+             </div>
           )}
         </div>
       </section>
