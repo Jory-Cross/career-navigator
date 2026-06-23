@@ -362,19 +362,19 @@ const relationshipsAndNaturalSupports = [
   ...collectEvidence([homeDiscovery], [
     "natural_supports",
     "social_preferences",
-    "neighbors_connections",
     "preferred_people_patterns",
+    "family_friend_community_activities",
+    "neighbors_connections",
+    "people_present",
+    "people_interviewed",
   ]),
   ...collectEvidence(discoveryInterviews, [
     "preferred_people",
-    "people_or_connections",
+    "best_supports",
     "positive_qualities",
     "contributions",
-  ]),
-  ...collectEvidence(discoveryActivities, [
-    "people_present",
-    "people_social_conditions",
-    "supports_or_accommodations_used",
+    "known_for",
+    "people_or_connections",
   ]),
 ];
 
