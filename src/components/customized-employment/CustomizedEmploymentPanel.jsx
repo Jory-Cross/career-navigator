@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
 import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
+import StageTwoReadinessGate from "./StageTwoReadinessGate";
 import { base44 } from "@/api/base44Client";
 
 const CE_ASSESSMENT_TYPES = [
@@ -621,6 +622,47 @@ const vocationalThemesEvidence = [
 
 const hasAnyEvidence = assessmentRecords.length > 0;
 
+// ── Stage Two gate inputs ────────────────────────────────────────────────
+const totalReadinessScore =
+  (countCompleted(assessmentRecords, "home_community_discovery") > 0 ? 25 : 0) +
+  (countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0 ? 15 : 0) +
+  (countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0 ? 10 : 0) +
+  Math.min(25, Math.round((Math.min(completedDiscoveryInterviewCount, 3) / 3) * 25)) +
+  Math.min(15, Math.round((Math.min(completedInformationalInterviewCount, 2) / 2) * 15)) +
+  (completedDiscoveryActivityCount >= 1 ? 10 : 0);
+
+const MIN_EVIDENCE_THRESHOLD = 3;
+const MIN_SOURCE_THRESHOLD = 2;
+
+function computeFidelityStatus(items, singleSource = false) {
+  if (items.length === 0) return "missing";
+  const sourceCount = new Set(items.map((i) => i.source).filter(Boolean)).size;
+  if (singleSource) return items.length >= MIN_EVIDENCE_THRESHOLD ? "ok" : "weak";
+  if (items.length < MIN_EVIDENCE_THRESHOLD || sourceCount < MIN_SOURCE_THRESHOLD) return "weak";
+  return "ok";
+}
+
+const fidelityCategories = [
+  { items: emergingInterests },
+  { items: observedSkills },
+  { items: conditionsForSuccess },
+  { items: potentialBusinessSettings },
+  { items: relationshipsAndNaturalSupports },
+  { items: communityConnections },
+  { items: employerLeads },
+  { items: benefitsAndFinancialConsiderations, singleSource: true },
+  { items: assistiveTechnologyAndAccommodations, singleSource: true },
+  { items: discoveryHypotheses },
+  { items: vocationalThemesEvidence },
+];
+
+const fidelityMissingCount = fidelityCategories.filter(
+  (c) => computeFidelityStatus(c.items, c.singleSource) === "missing"
+).length;
+const fidelityWeakCount = fidelityCategories.filter(
+  (c) => computeFidelityStatus(c.items, c.singleSource) === "weak"
+).length;
+
 function countEvidenceSources(items) {
   return new Set(items.map((item) => item.source).filter(Boolean)).size;
 }
@@ -1005,6 +1047,21 @@ sourceMatrix: buildSourceContributionMatrix(
                   informationalInterviewTotalCount={informationalInterviewCount}
                   discoveryActivityCompletedCount={completedDiscoveryActivityCount}
                   discoveryActivityTotalCount={discoveryActivityCount}
+                />
+
+                <StageTwoReadinessGate
+                  totalScore={totalReadinessScore}
+                  homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
+                  benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
+                  assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
+                  discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
+                  discoveryInterviewTotalCount={discoveryInterviewCount}
+                  informationalInterviewCompletedCount={completedInformationalInterviewCount}
+                  informationalInterviewTotalCount={informationalInterviewCount}
+                  discoveryActivityCompletedCount={completedDiscoveryActivityCount}
+                  discoveryActivityTotalCount={discoveryActivityCount}
+                  fidelityMissingCount={fidelityMissingCount}
+                  fidelityWeakCount={fidelityWeakCount}
                 />
 
                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
