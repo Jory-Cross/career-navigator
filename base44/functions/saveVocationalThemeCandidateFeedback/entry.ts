@@ -37,6 +37,19 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Client not found' }, { status: 404 });
     }
 
+    // ── VALIDATE cohort early if provided (even if platform access grants permission) ──
+    if (cohort_id) {
+      try {
+        const cohort = await base44.entities.CETrainingCohort.get(cohort_id);
+        if (!cohort) {
+          return Response.json({ error: 'Cohort not found' }, { status: 404 });
+        }
+      } catch (err) {
+        console.error(`[saveVocationalThemeCandidateFeedback] Cohort lookup failed for cohort_id: ${cohort_id}`, err);
+        return Response.json({ error: 'Cohort not found' }, { status: 404 });
+      }
+    }
+
     // ── Access check: platform hierarchy OR cohort membership ─────────────────────
     let hasAccess = false;
 
@@ -50,12 +63,6 @@ Deno.serve(async (req) => {
     // Cohort access: user is manager or member of cohort + client is assigned to member
     if (!hasAccess && cohort_id) {
       try {
-        // Verify cohort exists
-        const cohort = await base44.entities.CETrainingCohort.get(cohort_id);
-        if (!cohort) {
-          return Response.json({ error: 'Cohort not found' }, { status: 404 });
-        }
-
         // Check if user is manager or member of this cohort
         const userCohortMembership = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
           cohort_id,
