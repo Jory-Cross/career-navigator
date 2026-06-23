@@ -107,7 +107,7 @@ export default function Clients() {
       // clients across all cohorts the caller manages/is a member of, scoped by the caller's org.
       let unionClients = platformClients;
       try {
-        const cohortRes = await base44.functions.invoke('getCohortVisibleClients', {});
+        const cohortRes = await base44.functions.invoke('getCohortVisibleClients', { user_id: user.id });
         const cohortClients = cohortRes.data?.clients || [];
         if (cohortClients.length > 0) {
           const seenIds = new Set(platformClients.map(c => c.id));

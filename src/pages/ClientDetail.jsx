@@ -253,7 +253,7 @@ const handleDocumentsChanged = useCallback(() => {
       //    Fires only when platform access was already denied, so it can only expand access.
       if (user.role === "employee" || user.role === "management") {
         try {
-          const res = await base44.functions.invoke("getCohortVisibleClients", {});
+          const res = await base44.functions.invoke("getCohortVisibleClients", { user_id: user.id });
           const cohortClientIds = res.data?.clientIds || [];
           if (cohortClientIds.includes(clientId)) {
             return clientData;
