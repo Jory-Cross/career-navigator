@@ -2,7 +2,16 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createEvidenceConcepts } from "@/lib/customized-employment/evidenceNormalizer";
+import EvidenceThemeGroupPanel from "./EvidenceThemeGroupPanel";
+import { createEvidenceConcepts, buildEvidenceThemes } from "@/lib/customized-employment/evidenceNormalizer";
+
+// Categories that should render the Theme Grouping Engine above the source list.
+const THEME_ENABLED_CATEGORIES = new Set([
+  "Emerging Interests",
+  "Observed Skills",
+  "Conditions for Success",
+  "Vocational Themes Evidence",
+]);
 
 // Maps the source label (set by getAssessmentSourceLabel in CustomizedEmploymentPanel)
 // to the assessment key used by AssessmentSection
@@ -114,13 +123,23 @@ function CategorySection({ label, items, onOpenAssessment }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-2">
+        <div className="px-4 pb-4 space-y-3">
           {items.length === 0 ? (
             <p className="text-xs text-slate-400 italic">No evidence recorded for this category.</p>
           ) : (
-            sourceGroups.map(([source, entries]) => (
-              <SourceGroup key={source} source={source} entries={entries} onOpenAssessment={onOpenAssessment} />
-            ))
+            <>
+              {THEME_ENABLED_CATEGORIES.has(label) && (
+                <EvidenceThemeGroupPanel items={items} label={label} />
+              )}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Evidence by Source
+                </p>
+                {sourceGroups.map(([source, entries]) => (
+                  <SourceGroup key={source} source={source} entries={entries} onOpenAssessment={onOpenAssessment} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
