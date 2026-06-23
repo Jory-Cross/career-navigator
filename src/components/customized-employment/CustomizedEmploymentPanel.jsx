@@ -15,7 +15,9 @@ import { base44 } from "@/api/base44Client";
 
 const CE_ASSESSMENT_TYPES = [
   "home_community_discovery",
+  "benefits_resources",
   "benefits_resources_assessment",
+  "assistive_technology",
   "assistive_technology_assessment",
   "discovery_interview",
   "informational_interview",
@@ -141,7 +143,9 @@ export default function CustomizedEmploymentPanel({ client, currentUser }) {
   );
 
   const benefitsAssessment = useMemo(
-    () => getLatestRecord(assessmentRecords, "benefits_resources_assessment"),
+    () =>
+      getLatestRecord(assessmentRecords, "benefits_resources_assessment") ||
+      getLatestRecord(assessmentRecords, "benefits_resources"),
     [assessmentRecords]
   );
 
@@ -198,7 +202,8 @@ const discoveryActivities = assessmentRecords.filter(
 
 const assistiveTechnologyAssessments = assessmentRecords.filter(
   (record) =>
-    record.assessment_type === "assistive_technology_assessment"
+    record.assessment_type === "assistive_technology_assessment" ||
+    record.assessment_type === "assistive_technology"
 );
 
 function getAssessmentSourceLabel(assessmentType) {
@@ -206,6 +211,8 @@ function getAssessmentSourceLabel(assessmentType) {
     home_community_discovery: "Home & Community Discovery",
     benefits_resources_assessment: "Benefits & Resources Assessment",
     assistive_technology: "Assistive Technology Assessment",
+    assistive_technology_assessment: "Assistive Technology Assessment",
+    benefits_resources: "Benefits & Resources Assessment",
     discovery_interview: "Discovery Interview",
     informational_interview: "Informational Interview",
     discovery_activity: "Discovery Activity",
@@ -429,7 +436,9 @@ const employerLeads = [
 ];
 
 const benefitsAssessments = assessmentRecords.filter(
-  (record) => record.assessment_type === "benefits_resources_assessment"
+  (record) =>
+    record.assessment_type === "benefits_resources_assessment" ||
+    record.assessment_type === "benefits_resources"
 );
 
 // Collect select_all array values (e.g. current_benefits) as individual evidence items
