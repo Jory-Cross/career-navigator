@@ -46,9 +46,9 @@ const CRITERIA = [
 ];
 
 function getStatus(score) {
-  if (score === 0) return { label: "Not Started", color: "slate", bar: "bg-slate-300" };
-  if (score < 40) return { label: "In Progress", color: "amber", bar: "bg-amber-400" };
-  if (score < 80) return { label: "Nearly Complete", color: "blue", bar: "bg-blue-500" };
+  if (score < 40) return { label: "Not Started", color: "slate", bar: "bg-slate-300" };
+  if (score < 80) return { label: "In Progress", color: "amber", bar: "bg-amber-400" };
+  if (score < 100) return { label: "Nearly Complete", color: "blue", bar: "bg-blue-500" };
   return { label: "Ready for Stage Two", color: "emerald", bar: "bg-emerald-500" };
 }
 
