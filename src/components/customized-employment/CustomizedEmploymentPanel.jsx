@@ -428,6 +428,26 @@ const employerLeads = [
   ]),
 ];
 
+const assistiveTechnologyAndAccommodations = [
+  ...collectEvidence(assistiveTechnologyAssessments, [
+    "technology_use_notes",
+    "technology_skill_strengths",
+    "technology_training_needs",
+    "communication_supports",
+    "organization_supports",
+    "transportation_supports",
+    "employment_supports",
+    "independence_supports",
+    "technology_barrier_notes",
+    "technology_support_needed_for_access",
+    "technology_accommodations_needed",
+    "workplace_technology_training_needed",
+    "current_assistive_technology",
+    "potential_assistive_technology",
+    "assistive_technology_referral_notes",
+  ]),
+];
+
 const discoveryHypotheses = [
   ...collectEvidence([homeDiscovery], [
     "discovery_hypotheses",
@@ -810,17 +830,7 @@ sourceMatrix: buildSourceContributionMatrix(
                   )}
                 />
 
-    <EvidenceStatus
-  label="Assistive Technology Assessment"
-  count={countAny(
-    assessmentRecords,
-    "assistive_technology_assessment"
-  )}
-  completed={countCompleted(
-    assessmentRecords,
-    "assistive_technology_assessment"
-  )}
-/>
+
 
 <EvidenceStatus
   label="Informational Interviews"
@@ -972,6 +982,11 @@ sourceMatrix: buildSourceContributionMatrix(
       label: "Employer Leads",
       items: employerLeads,
       emptyText: "No employer leads identified yet.",
+    },
+    {
+      label: "Assistive Technology & Accommodations",
+      items: assistiveTechnologyAndAccommodations,
+      emptyText: "No assistive technology evidence identified yet.",
     },
     {
       label: "Discovery Hypotheses",
