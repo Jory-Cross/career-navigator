@@ -16,7 +16,7 @@ import { base44 } from "@/api/base44Client";
 const CE_ASSESSMENT_TYPES = [
   "home_community_discovery",
   "benefits_resources_assessment",
-  "assistive_technology",
+  "assistive_technology_assessment",
   "discovery_interview",
   "informational_interview",
   "discovery_activity",
