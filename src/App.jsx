@@ -17,6 +17,7 @@ import PreEtsTimeEntries from './pages/PreEtsTimeEntries';
 import Agents from './pages/Agents';
 import AppAnalytics from './pages/AppAnalytics';
 import Cohorts from './pages/Cohorts';
+import CohortDetail from './pages/CohortDetail';
 import FeaturePermissions from './pages/FeaturePermissions';
 import { AuthProvider, useAuth, classifyUserAccess } from '@/lib/AuthContext';
 import { ViewAsProvider } from '@/lib/ViewAsContext';
@@ -157,6 +158,7 @@ const AuthenticatedApp = () => {
 <Route path="/Agents" element={<LayoutWrapper currentPageName="Agents"><Agents /></LayoutWrapper>} />
 <Route path="/AppAnalytics" element={<LayoutWrapper currentPageName="AppAnalytics"><AppAnalytics /></LayoutWrapper>} />
 <Route path="/Cohorts" element={<LayoutWrapper currentPageName="Cohorts"><Cohorts /></LayoutWrapper>} />
+<Route path="/CohortDetail" element={<LayoutWrapper currentPageName="CohortDetail"><CohortDetail /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
       <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
