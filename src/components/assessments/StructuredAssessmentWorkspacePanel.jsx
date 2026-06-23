@@ -67,9 +67,10 @@ export default function StructuredAssessmentWorkspacePanel({
   setRecordStatus(existingRecord?.status || null);
 }, [existingRecord?.id, initialResponses]);
 
-  // Field change handler — mark dirty, update state
-   const handleChange = useCallback((id, value) => {
+  // Field change handler — mark dirty, update state, and immediately update refs
+  const handleChange = useCallback((id, value) => {
     setIsDirty(true);
+    isDirtyRef.current = true;
 
     setResponses((prev) => {
       const next = { ...prev, [id]: value };
@@ -89,6 +90,7 @@ export default function StructuredAssessmentWorkspacePanel({
         delete next.sensory_accommodation_outcome;
       }
 
+      responsesRef.current = next;
       return next;
     });
   }, []);
