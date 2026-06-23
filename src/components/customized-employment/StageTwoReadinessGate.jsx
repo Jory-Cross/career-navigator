@@ -59,6 +59,7 @@ function buildRules({
           ? "No Discovery Interview records found. Complete at least 3."
           : `${discoveryInterviewCompletedCount} of ${discoveryInterviewTotalCount} interviews completed — 3 required.`,
       current: discoveryInterviewCompletedCount,
+      total: discoveryInterviewTotalCount,
       target: 3,
       unit: "complete",
     },
@@ -71,6 +72,7 @@ function buildRules({
           ? "No Informational Interview records found. Complete at least 2."
           : `${informationalInterviewCompletedCount} of ${informationalInterviewTotalCount} completed — 2 required.`,
       current: informationalInterviewCompletedCount,
+      total: informationalInterviewTotalCount,
       target: 2,
       unit: "complete",
     },
@@ -83,6 +85,7 @@ function buildRules({
           ? "No Discovery Activity records found. Complete at least 1."
           : `${discoveryActivityCompletedCount} of ${discoveryActivityTotalCount} completed — 1 required.`,
       current: discoveryActivityCompletedCount,
+      total: discoveryActivityTotalCount,
       target: 1,
       unit: "complete",
     },

@@ -36,19 +36,27 @@ export default function StageOneWorkDashboard({ rules }) {
             ? Math.round((rule.current / rule.target) * 100)
             : 0;
 
+          const hasTotal = rule.total !== undefined;
+
           return (
             <div key={rule.key} className="py-3 first:pt-0 last:pb-0">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-sm font-medium text-slate-800">{rule.label}</span>
                 {hasProgress && (
                   <span className="text-xs text-slate-500 shrink-0">
-                    {rule.current} / {rule.target}{rule.unit ? ` ${rule.unit}` : ""}
+                    Target: {rule.target}{rule.unit ? ` ${rule.unit}` : ""}
                   </span>
                 )}
               </div>
 
               {hasProgress && (
                 <>
+                  {hasTotal && (
+                    <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                      <p>{rule.total} record{rule.total !== 1 ? "s" : ""} found</p>
+                      <p>{rule.current} completed</p>
+                    </div>
+                  )}
                   <div className="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-amber-400 transition-all duration-300"
