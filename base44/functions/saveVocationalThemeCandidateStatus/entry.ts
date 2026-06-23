@@ -42,12 +42,12 @@ Deno.serve(async (req) => {
     try {
       client = await base44.entities.Client.get(client_id);
       if (!client) {
-        console.error('[saveVocationalThemeCandidateStatus] Client not found:', client_id);
         return Response.json({ error: 'Client not found' }, { status: 404 });
       }
-      console.log('[saveVocationalThemeCandidateStatus] Client found:', { id: client.id, org_id: client.org_id });
     } catch (err) {
-      console.error('[saveVocationalThemeCandidateStatus] Error fetching client:', err.message);
+      if (err.status === 404 || err.message?.includes('not found')) {
+        return Response.json({ error: 'Client not found' }, { status: 404 });
+      }
       throw err;
     }
 

@@ -116,21 +116,20 @@ export default function VocationalThemeCandidateStatusPanel({
     try {
       setSaving(true);
       
-      if (!client?.id || !candidate?.themeName) {
-        console.error('[StatusPanel.handleSaveStatus] Missing client.id or candidate.themeName', { clientId: client?.id, candidateThemeName: candidate?.themeName });
+      const clientId = client?.id || client?._id;
+      if (!clientId || !candidate?.themeName) {
         toast.error('Missing client or candidate information');
         setSaving(false);
         return;
       }
       
       const savePayload = {
-        client_id: client.id,
+        client_id: clientId,
         candidate_theme_name: candidate.themeName,
         category_label: candidate.categoryLabel || 'Emerging Interests',
         status,
         status_notes: statusNotes,
       };
-      console.log('[StatusPanel.handleSaveStatus] Sending payload:', savePayload);
 
       const response = await base44.functions.invoke(
         'saveVocationalThemeCandidateStatus',
