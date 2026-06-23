@@ -23,50 +23,72 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ── Visibility check: user must have access to client ──────────────────────
-    // Check platform access first (assigned_employee_id match)
-    let hasAccess = false;
+    // ── HARDENED VALIDATION: Client must exist ──────────────────────────────────
+    // Verify client_id is valid and user has access (no admin bypass)
+    let client;
     try {
-      const client = await base44.entities.Client.get(client_id);
-      if (!client) {
-        // Admin bypass for non-existent clients (test scenario)
-        if (user.role === 'admin') {
-          hasAccess = true;
-        } else {
-          return Response.json({ error: 'Client not found' }, { status: 404 });
-        }
-      } else {
-        // Check if user is assigned to this client
-        if (user.role === 'admin' || user.role === 'management') {
-          hasAccess = true;
-        } else if (client.assigned_employee_id === user.id) {
-          hasAccess = true;
-        }
-      }
+      client = await base44.entities.Client.get(client_id);
     } catch (err) {
-      console.error('Client lookup error:', err);
-      // Admin bypass on error
-      if (user.role === 'admin') {
-        hasAccess = true;
-      } else {
-        return Response.json({ error: 'Client access check failed' }, { status: 500 });
-      }
+      console.error(`[saveVocationalThemeCandidateFeedback] Client lookup failed for ID: ${client_id}`, err);
+      return Response.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Check cohort visibility if cohort_id provided
-    if (cohort_id && !hasAccess) {
+    if (!client) {
+      return Response.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    // ── Access check: platform hierarchy OR cohort membership ─────────────────────
+    let hasAccess = false;
+
+    // Platform access: admin, management, or assigned employee
+    if (user.role === 'admin' || user.role === 'management') {
+      hasAccess = true;
+    } else if (client.assigned_employee_id === user.id) {
+      hasAccess = true;
+    }
+
+    // Cohort access: user is manager or member of cohort + client is assigned to member
+    if (!hasAccess && cohort_id) {
       try {
-        const cohortMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        // Verify cohort exists
+        const cohort = await base44.entities.CETrainingCohort.get(cohort_id);
+        if (!cohort) {
+          return Response.json({ error: 'Cohort not found' }, { status: 404 });
+        }
+
+        // Check if user is manager or member of this cohort
+        const userCohortMembership = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
           cohort_id,
           user_id: user.id,
           is_active: true,
         });
-        if (cohortMembers && cohortMembers.length > 0) {
-          hasAccess = true;
+
+        if (userCohortMembership && userCohortMembership.length > 0) {
+          // User is in cohort; now verify if they can access this client
+          // Cohort manager: can access all clients assigned to cohort members
+          // Cohort member: can only access their own clients
+          const userRole = userCohortMembership[0].cohort_role;
+
+          if (userRole === 'manager') {
+            // Manager: check if client is assigned to any active cohort member
+            const cohortMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+              cohort_id,
+              is_active: true,
+            });
+            const memberUserIds = cohortMembers.map(m => m.user_id);
+            if (memberUserIds.includes(client.assigned_employee_id)) {
+              hasAccess = true;
+            }
+          } else if (userRole === 'member') {
+            // Member: can only access their own clients
+            if (client.assigned_employee_id === user.id) {
+              hasAccess = true;
+            }
+          }
         }
       } catch (err) {
-        console.error('Cohort membership check error:', err);
-        // Continue without cohort access (has access via platform already checked)
+        console.error(`[saveVocationalThemeCandidateFeedback] Cohort validation failed for cohort_id: ${cohort_id}`, err);
+        return Response.json({ error: 'Cohort validation failed' }, { status: 500 });
       }
     }
 
