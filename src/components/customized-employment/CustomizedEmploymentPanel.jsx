@@ -829,11 +829,11 @@ sourceMatrix: buildSourceContributionMatrix(
   label="Assistive Technology Assessment"
   count={countAny(
     assessmentRecords,
-    "assistive_technology"
+    "assistive_technology_assessment"
   )}
   completed={countCompleted(
     assessmentRecords,
-    "assistive_technology"
+    "assistive_technology_assessment"
   )}
 />
 
