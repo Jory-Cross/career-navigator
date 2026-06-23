@@ -71,14 +71,12 @@ export default function VocationalThemeCandidateStatusPanel({
 
   // Fetch current status on mount
   useEffect(() => {
-    console.log('[StatusPanel] Mount/update with client:', { id: client?.id, org_id: client?.org_id }, 'candidate:', { themeName: candidate?.themeName, categoryLabel: candidate?.categoryLabel });
     fetchStatus();
   }, [client?.id, candidate?.themeName]);
 
   const fetchStatus = async () => {
     try {
       if (!client?.id || !candidate?.themeName) {
-        console.warn('[StatusPanel.fetchStatus] Missing client.id or candidate.themeName', { clientId: client?.id, candidateThemeName: candidate?.themeName });
         return;
       }
       
@@ -87,22 +85,15 @@ export default function VocationalThemeCandidateStatusPanel({
         client_id: client.id,
         candidate_theme_name: candidate.themeName,
       };
-      console.log('[StatusPanel.fetchStatus] Sending payload:', getPayload);
 
       const response = await base44.functions.invoke(
         'getVocationalThemeCandidateStatus',
         getPayload
       );
 
-      console.log('[StatusPanel.fetchStatus] Response:', response.data);
-
       if (response.data) {
         setStatus(response.data.status || 'untested');
         setStatusNotes(response.data.status_notes || '');
-        console.log('[StatusPanel.fetchStatus] Set state to:', {
-          status: response.data.status || 'untested',
-          status_notes: response.data.status_notes || ''
-        });
       }
     } catch (error) {
       console.error('Error fetching status:', error);
@@ -136,8 +127,6 @@ export default function VocationalThemeCandidateStatusPanel({
         savePayload
       );
 
-      console.log('[StatusPanel.handleSaveStatus] Response:', response.data || response);
-
       // Check for success indicators (handle various response shapes from SDK wrapper vs direct)
       const successResponse = response.data || response;
       const isSaved = 
@@ -147,12 +136,10 @@ export default function VocationalThemeCandidateStatusPanel({
         successResponse?.status;
 
       if (isSaved) {
-        console.log('[StatusPanel.handleSaveStatus] Save confirmed, refreshing...');
         toast.success(`Status updated to "${STATUS_CONFIG[status].label}"`);
         await fetchStatus(); // Refresh displayed status
         setIsEditing(false); // Close editor and return to display mode
       } else {
-        console.error('[StatusPanel.handleSaveStatus] Save failed - no success indicators found');
         toast.error('Failed to save status');
       }
     } catch (error) {

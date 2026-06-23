@@ -117,7 +117,6 @@ export default function CustomizedEmploymentPanel({ client, currentUser, onOpenA
           )
         );
       } catch (error) {
-        console.error("Failed to load CE assessment records", error);
         if (!cancelled) {
           setAssessmentRecords([]);
         }
