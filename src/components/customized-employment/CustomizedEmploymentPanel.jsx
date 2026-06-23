@@ -1000,8 +1000,11 @@ sourceMatrix: buildSourceContributionMatrix(
                   benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
                   assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
                   discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
+                  discoveryInterviewTotalCount={discoveryInterviewCount}
                   informationalInterviewCompletedCount={completedInformationalInterviewCount}
+                  informationalInterviewTotalCount={informationalInterviewCount}
                   discoveryActivityCompletedCount={completedDiscoveryActivityCount}
+                  discoveryActivityTotalCount={discoveryActivityCount}
                 />
 
                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">

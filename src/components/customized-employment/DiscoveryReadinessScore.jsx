@@ -86,8 +86,11 @@ export default function DiscoveryReadinessScore({
   benefitsCompleted,
   assistiveTechCompleted,
   discoveryInterviewCompletedCount,
+  discoveryInterviewTotalCount,
   informationalInterviewCompletedCount,
+  informationalInterviewTotalCount,
   discoveryActivityCompletedCount,
+  discoveryActivityTotalCount,
 }) {
   // Calculate earned points per criterion
   const earned = {
@@ -117,21 +120,33 @@ export default function DiscoveryReadinessScore({
       label: "Discovery Interviews",
       earned: earned.discovery_interviews,
       max: 25,
-      description: `${discoveryInterviewCompletedCount} completed (target: 3)`,
+      description: discoveryInterviewTotalCount === 0
+        ? "No records found (target: 3 completed)"
+        : discoveryInterviewCompletedCount === 0
+        ? `${discoveryInterviewTotalCount} record${discoveryInterviewTotalCount === 1 ? "" : "s"} found, 0 completed — mark complete to earn credit (target: 3)`
+        : `${discoveryInterviewCompletedCount} of ${discoveryInterviewTotalCount} completed (target: 3)`,
     },
     {
       key: "informational_interviews",
       label: "Informational Interviews",
       earned: earned.informational_interviews,
       max: 15,
-      description: `${informationalInterviewCompletedCount} completed (target: 2)`,
+      description: informationalInterviewTotalCount === 0
+        ? "No records found (target: 2 completed)"
+        : informationalInterviewCompletedCount === 0
+        ? `${informationalInterviewTotalCount} record${informationalInterviewTotalCount === 1 ? "" : "s"} found, 0 completed — mark complete to earn credit (target: 2)`
+        : `${informationalInterviewCompletedCount} of ${informationalInterviewTotalCount} completed (target: 2)`,
     },
     {
       key: "discovery_activities",
       label: "Discovery Activities",
       earned: earned.discovery_activities,
       max: 10,
-      description: `${discoveryActivityCompletedCount} completed (target: 1)`,
+      description: discoveryActivityTotalCount === 0
+        ? "No records found (target: 1 completed)"
+        : discoveryActivityCompletedCount === 0
+        ? `${discoveryActivityTotalCount} record${discoveryActivityTotalCount === 1 ? "" : "s"} found, 0 completed — mark complete to earn credit (target: 1)`
+        : `${discoveryActivityCompletedCount} of ${discoveryActivityTotalCount} completed (target: 1)`,
     },
   ];
 
