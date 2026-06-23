@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 const AuthContext = createContext();
 
 // ─── Access Classification ────────────────────────────────────────────────────
-// Returns one of: 'staff' | 'client_portal' | 'pre_ets_employer_portal' | 'denied'
+// Returns one of: 'staff' | 'client_portal' | 'pre_ets_employer_portal' | 'ce_training' | 'denied'
 // STRICT: any blank/invalid role or access_level → denied
 export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
@@ -25,6 +25,10 @@ export const classifyUserAccess = (user) => {
 
   if (role === 'pre_ets_employer' && access === 'pre_ets_employer_portal') {
     return 'pre_ets_employer_portal';
+  }
+
+  if (['ce_instructor', 'ce_student'].includes(role) && access === 'ce_training_portal') {
+    return 'ce_training';
   }
 
   return 'denied';

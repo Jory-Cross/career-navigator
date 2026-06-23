@@ -32,10 +32,11 @@
         "job_seeker",
         "pre_ets",
         "dspd",
-        "employed"
+        "employed",
+        "ce_training"
       ],
       "default": "job_seeker",
-      "description": "Type of client program"
+      "description": "Type of client program. ce_training = training client created by CE student"
     },
     "status": {
       "type": "string",
@@ -290,6 +291,23 @@
     "life_skills_auth_end_date": {
       "type": "string",
       "format": "date"
+    },
+    "created_by_student_id": {
+      "type": "string",
+      "description": "CE Student user ID who created this training client (populated for ce_training client_type)"
+    },
+    "assigned_instructor_id": {
+      "type": "string",
+      "description": "CE Instructor user ID assigned to oversee this training client"
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "CE Training cohort ID this client belongs to"
+    },
+    "is_training_client": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this is a CE Training client (distinct from operational clients)"
     }
   },
   "required": [

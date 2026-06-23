@@ -1,7 +1,7 @@
 {
   "name": "FeaturePermission",
   "type": "object",
-  "description": "Controls which features/pages are visible and interactive per staff role or client portal role.",
+  "description": "Controls which features/pages are visible and interactive per staff role, client portal role, or CE Training role.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -15,13 +15,15 @@
         "employee",
         "client",
         "pre_ets",
-        "dspd"
+        "dspd",
+        "ce_instructor",
+        "ce_student"
       ],
-      "description": "Staff role (admin/management/employee) or client portal role (client/pre_ets/dspd)"
+      "description": "Staff role (admin/management/employee), client portal role (client/pre_ets/dspd), or CE Training role (ce_instructor/ce_student)"
     },
     "feature_key": {
       "type": "string",
-      "description": "Unique key for the feature (e.g. time_tracking, clients, client_portal_intake_forms)"
+      "description": "Unique key for the feature (e.g. time_tracking, clients, ce_training_portal)"
     },
     "label": {
       "type": "string",
@@ -29,7 +31,7 @@
     },
     "category": {
       "type": "string",
-      "description": "Grouping category (e.g. core, clinical, admin, client_portal)"
+      "description": "Grouping category (e.g. core, clinical, admin, client_portal, ce_training)"
     },
     "visible": {
       "type": "boolean",

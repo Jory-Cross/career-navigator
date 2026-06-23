@@ -11,10 +11,12 @@
         "client",
         "pre_ets",
         "dspd",
-        "pre_ets_employer"
+        "pre_ets_employer",
+        "ce_instructor",
+        "ce_student"
       ],
       "default": "employee",
-      "description": "User's role. 'user' is the platform default before onUserRegistered upgrades it."
+      "description": "User's role. 'user' is the platform default before onUserRegistered upgrades it. ce_instructor and ce_student are dedicated to CE Training Portal only."
     },
     "access_level": {
       "type": "string",
@@ -22,9 +24,10 @@
         "client_portal",
         "staff",
         "admin",
-        "pre_ets_employer_portal"
+        "pre_ets_employer_portal",
+        "ce_training_portal"
       ],
-      "description": "Access level granted via invitation. Blank = denied everywhere."
+      "description": "Access level granted via invitation. Blank = denied everywhere. ce_training_portal = CE Training Portal only."
     },
     "is_active": {
       "type": "boolean",
@@ -54,6 +57,18 @@
     },
     "timezone": {
       "type": "string"
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "CE Training cohort ID (for ce_instructor and ce_student roles)"
+    },
+    "cohort_role": {
+      "type": "string",
+      "enum": [
+        "instructor",
+        "student"
+      ],
+      "description": "Role within the CE Training cohort (instructor manages, student participates)"
     }
   },
   "required": []

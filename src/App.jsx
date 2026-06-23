@@ -25,6 +25,8 @@ import AccessDenied from '@/components/AccessDenied';
 import InvitationRequired from '@/components/InvitationRequired';
 import { isAdmin } from '@/lib/utils';
 import SmartLanding from '@/components/SmartLanding';
+import CETrainingPortal from './pages/CETrainingPortal';
+import CETrainingNav from '@/components/ce-training/CETrainingNav';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -87,8 +89,23 @@ const AuthenticatedApp = () => {
       return <AccessDenied user={user} />;
     }
 
+    // CE Training users: render CE Training portal ONLY
+    if (accessClass === 'ce_training') {
+      return (
+        <CETrainingNav user={user}>
+          <Routes>
+            <Route path="/" element={<CETrainingPortal />} />
+            <Route path="/CETrainingPortal" element={<CETrainingPortal />} />
+            <Route path="/Cohorts" element={<LayoutWrapper currentPageName="Cohorts"><Cohorts /></LayoutWrapper>} />
+            <Route path="/CohortDetail" element={<LayoutWrapper currentPageName="CohortDetail"><CohortDetail /></LayoutWrapper>} />
+            <Route path="*" element={<CETrainingPortal />} />
+          </Routes>
+        </CETrainingNav>
+      );
+    }
+
     // Client portal users: render portal routes ONLY — never mount staff layout
-        if (accessClass === 'client_portal') {
+    if (accessClass === 'client_portal') {
       const ClientPortal = Pages['ClientPortal'];
 
       if (user?.role === 'pre_ets') {
