@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
 import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
+import StageOneMilestoneTracker from "./StageOneMilestoneTracker";
 import StageTwoReadinessGate from "./StageTwoReadinessGate";
 import StageOneWorkDashboard from "./StageOneWorkDashboard";
 import { base44 } from "@/api/base44Client";
@@ -1039,6 +1040,16 @@ sourceMatrix: buildSourceContributionMatrix(
                 </div>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+               <StageOneMilestoneTracker
+                  homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
+                  benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
+                  assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
+                  discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
+                  informationalInterviewCompletedCount={completedInformationalInterviewCount}
+                  discoveryActivityCompletedCount={completedDiscoveryActivityCount}
+                  stageTwoReady={totalReadinessScore === 100}
+                />
+
                <DiscoveryReadinessScore
                   homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
                   benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
