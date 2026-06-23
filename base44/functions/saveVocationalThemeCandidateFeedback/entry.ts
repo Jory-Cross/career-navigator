@@ -103,21 +103,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Access denied to this client' }, { status: 403 });
     }
 
-    // ── Upsert: find existing feedback by (client_id, candidate_theme_name, reviewer_user_id) ──
-    let existingFeedback;
-    try {
-      const results = await base44.entities.VocationalThemeCandidateFeedback.filter({
-        client_id,
-        candidate_theme_name,
-        reviewer_user_id: user.id,
-        is_active: true,
-      });
-      existingFeedback = results && results.length > 0 ? results[0] : null;
-    } catch (err) {
-      console.error('Feedback lookup error:', err);
-      return Response.json({ error: 'Feedback lookup failed' }, { status: 500 });
-    }
-
+    // ── DUPLICATE PREVENTION: Query → Create → Retry on Conflict ──
+    // Protected approach:
+    // 1. Query for existing record by composite key
+    // 2. If found, update it
+    // 3. If not found, create new
+    // 4. If create fails (likely duplicate key conflict), retry query once
+    
     const feedbackData = {
       org_id: user.org_id,
       client_id,
@@ -135,21 +127,67 @@ Deno.serve(async (req) => {
     };
 
     let feedback;
-    if (existingFeedback) {
-      // Update existing
-      feedback = await base44.entities.VocationalThemeCandidateFeedback.update(
-        existingFeedback.id,
-        feedbackData
-      );
-    } else {
-      // Create new
-      feedback = await base44.entities.VocationalThemeCandidateFeedback.create(feedbackData);
+    let wasCreated = false;
+
+    try {
+      // Step 1: Query for existing record
+      const existingRecords = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.filter({
+        client_id,
+        candidate_theme_name,
+        reviewer_user_id: user.id,
+        is_active: true,
+      });
+
+      if (existingRecords && existingRecords.length > 0) {
+        // Record exists; update it
+        feedback = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.update(
+          existingRecords[0].id,
+          feedbackData
+        );
+        wasCreated = false;
+      } else {
+        // Record does not exist; attempt to create
+        try {
+          feedback = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.create(feedbackData);
+          wasCreated = true;
+        } catch (createErr) {
+          // Create failed; likely a concurrent request created the same record
+          // Query again to get the record that another request created
+          console.error('[DUPLICATE_PREVENTION] Create conflict detected, re-querying:', createErr.message);
+          
+          const retryRecords = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.filter({
+            client_id,
+            candidate_theme_name,
+            reviewer_user_id: user.id,
+            is_active: true,
+          });
+
+          if (retryRecords && retryRecords.length > 0) {
+            // Record now exists (created by concurrent request); update it
+            feedback = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.update(
+              retryRecords[0].id,
+              feedbackData
+            );
+            wasCreated = false;
+          } else {
+            // Still no record; original create error must be something else
+            throw createErr;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[DUPLICATE_PREVENTION] Fatal error:', error.message);
+      return Response.json({ error: 'Failed to save feedback' }, { status: 500 });
+    }
+
+    if (!feedback) {
+      return Response.json({ error: 'Failed to save feedback' }, { status: 500 });
     }
 
     return Response.json({
       ok: true,
       feedback_id: feedback.id,
-      message: existingFeedback ? 'Feedback updated' : 'Feedback created',
+      message: wasCreated ? 'Feedback created' : 'Feedback updated',
     });
   } catch (error) {
     console.error('saveVocationalThemeCandidateFeedback error:', error);
