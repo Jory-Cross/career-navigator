@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers, Compass, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary, buildEmergingVocationalThemes } from "@/lib/customized-employment/evidenceNormalizer";
+import VocationalThemeCandidateFeedbackPanel from "./VocationalThemeCandidateFeedbackPanel";
 
 // Strength-key → tailwind classes for the always-visible strength chip.
 const STRENGTH_CHIP_CLASSES = {
@@ -123,11 +124,11 @@ function ThemeRow({ theme }) {
   );
 }
 
-function VocationalThemeCandidateCard({ candidate }) {
+function VocationalThemeCandidateCard({ candidate, client, currentUser }) {
   const chipClass = STRENGTH_CHIP_CLASSES[candidate.confidenceKey] || STRENGTH_CHIP_CLASSES.insufficient;
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-white overflow-hidden">
+    <div className="rounded-lg border border-violet-200 bg-white overflow-hidden space-y-2">
       <div className="flex items-start justify-between gap-2 px-3 py-2.5 bg-violet-50/40">
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles className="h-4 w-4 text-violet-600 shrink-0" />
@@ -204,11 +205,22 @@ function VocationalThemeCandidateCard({ candidate }) {
           Candidate only — provisional synthesis of discovery evidence, not an employment recommendation.
         </p>
       </div>
+
+      {client && currentUser && (
+        <div className="px-3 pb-3">
+          <VocationalThemeCandidateFeedbackPanel
+            client={client}
+            candidate={candidate}
+            currentUser={currentUser}
+            canEdit={true}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function VocationalThemeCandidatesBlock({ candidates }) {
+function VocationalThemeCandidatesBlock({ candidates, client, currentUser }) {
   if (!candidates || candidates.length === 0) return null;
 
   return (
@@ -231,14 +243,19 @@ function VocationalThemeCandidatesBlock({ candidates }) {
 
       <div className="space-y-1.5">
         {candidates.map((candidate) => (
-          <VocationalThemeCandidateCard key={candidate.themeName} candidate={candidate} />
+          <VocationalThemeCandidateCard
+            key={candidate.themeName}
+            candidate={candidate}
+            client={client}
+            currentUser={currentUser}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-export default function EvidenceThemeGroupPanel({ items, label }) {
+export default function EvidenceThemeGroupPanel({ items, label, client, currentUser }) {
   const concepts = createEvidenceConcepts(items);
   const themes = buildEvidenceThemes(concepts);
   const vocationalCandidates = buildEmergingVocationalThemes(themes);
@@ -274,7 +291,7 @@ export default function EvidenceThemeGroupPanel({ items, label }) {
       </div>
 
       {vocationalCandidates.length > 0 && (
-        <VocationalThemeCandidatesBlock candidates={vocationalCandidates} />
+        <VocationalThemeCandidatesBlock candidates={vocationalCandidates} client={client} currentUser={currentUser} />
       )}
 
       <div className="space-y-1.5">

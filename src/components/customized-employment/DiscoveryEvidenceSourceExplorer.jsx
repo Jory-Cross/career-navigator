@@ -90,7 +90,7 @@ function SourceGroup({ source, entries, onOpenAssessment }) {
   );
 }
 
-function CategorySection({ label, items, onOpenAssessment }) {
+function CategorySection({ label, items, onOpenAssessment, client, currentUser }) {
   const [open, setOpen] = useState(false);
   const sourceGroups = groupBySource(items);
   const conceptCount = createEvidenceConcepts(items).length;
@@ -129,7 +129,7 @@ function CategorySection({ label, items, onOpenAssessment }) {
           ) : (
             <>
               {THEME_ENABLED_CATEGORIES.has(label) && (
-                <EvidenceThemeGroupPanel items={items} label={label} />
+                <EvidenceThemeGroupPanel items={items} label={label} client={client} currentUser={currentUser} />
               )}
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -160,6 +160,8 @@ export default function DiscoveryEvidenceSourceExplorer({
   discoveryHypotheses,
   vocationalThemesEvidence,
   onOpenAssessment,
+  client,
+  currentUser,
 }) {
   const categories = [
     { label: "Emerging Interests", items: emergingInterests },
@@ -196,7 +198,7 @@ export default function DiscoveryEvidenceSourceExplorer({
 
       <div className="space-y-2">
         {categories.map((cat) => (
-          <CategorySection key={cat.label} label={cat.label} items={cat.items} onOpenAssessment={onOpenAssessment} />
+          <CategorySection key={cat.label} label={cat.label} items={cat.items} onOpenAssessment={onOpenAssessment} client={client} currentUser={currentUser} />
         ))}
       </div>
     </div>

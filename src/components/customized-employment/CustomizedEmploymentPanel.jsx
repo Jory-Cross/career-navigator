@@ -1208,18 +1208,20 @@ sourceMatrix: buildSourceContributionMatrix(
 />
 
 <DiscoveryEvidenceSourceExplorer
-  emergingInterests={emergingInterests}
-  observedSkills={observedSkills}
-  conditionsForSuccess={conditionsForSuccess}
-  potentialBusinessSettings={potentialBusinessSettings}
-  relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
-  communityConnections={communityConnections}
-  employerLeads={employerLeads}
-  benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
-  assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
-  discoveryHypotheses={discoveryHypotheses}
-  vocationalThemesEvidence={vocationalThemesEvidence}
-  onOpenAssessment={onOpenAssessment}
+   emergingInterests={emergingInterests}
+   observedSkills={observedSkills}
+   conditionsForSuccess={conditionsForSuccess}
+   potentialBusinessSettings={potentialBusinessSettings}
+   relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
+   communityConnections={communityConnections}
+   employerLeads={employerLeads}
+   benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
+   assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
+   discoveryHypotheses={discoveryHypotheses}
+   vocationalThemesEvidence={vocationalThemesEvidence}
+   onOpenAssessment={onOpenAssessment}
+   client={client}
+   currentUser={currentUser}
 />
 
 <div className="flex items-center gap-2">
