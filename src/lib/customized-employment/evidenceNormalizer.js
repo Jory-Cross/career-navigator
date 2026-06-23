@@ -89,8 +89,12 @@ const NARRATIVE_LEAD_INS = [
   "sarah appeared motivated by",
   "sarah showed strong interest in",
   "sarah is most interested in",
+  "sarah demonstrated strengths in",
   "sarah demonstrates strengths in",
   "sarah demonstrates strength in",
+  "sarah demonstrated strength in",
+  "sarah shows strength in",
+  "sarah showed strength in",
   "sarah showed interest in",
   "sarah is interested in",
   "sarah enjoys",
@@ -102,8 +106,12 @@ const NARRATIVE_LEAD_INS = [
   "client appeared motivated by",
   "client showed strong interest in",
   "client is most interested in",
+  "client demonstrated strengths in",
   "client demonstrates strengths in",
   "client demonstrates strength in",
+  "client demonstrated strength in",
+  "client shows strength in",
+  "client showed strength in",
   "client showed interest in",
   "client is interested in",
   "client enjoys",
@@ -374,7 +382,7 @@ function buildConceptFamilies() {
     {
       familyLabel: "Organization",
       matchers: [
-        (k) => k === "organize" || has(k, "organize") || has(k, "organization"),
+        (k) => k === "organize" || has(k, "organize") || has(k, "organization") || has(k, "organized"),
       ],
     },
     {
@@ -387,8 +395,9 @@ function buildConceptFamilies() {
       familyLabel: "Inventory Tracking",
       matchers: [
         (k) => (has(k, "track") && has(k, "inventory"))
-            || (has(k, "track") && has(k, "supplie"))
-            || (has(k, "track") && has(k, "material"))
+            || (has(k, "track") && (has(k, "supplie") || has(k, "supply")))
+            || (has(k, "track") && (has(k, "material") || has(k, "materials")))
+            || (has(k, "track") && has(k, "stock"))
             || k === "track",
       ],
     },
