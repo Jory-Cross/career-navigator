@@ -71,11 +71,17 @@ export default function VocationalThemeCandidateStatusPanel({
 
   // Fetch current status on mount
   useEffect(() => {
+    console.log('[StatusPanel] Mount/update with client:', { id: client?.id, org_id: client?.org_id }, 'candidate:', { themeName: candidate?.themeName, categoryLabel: candidate?.categoryLabel });
     fetchStatus();
   }, [client?.id, candidate?.themeName]);
 
   const fetchStatus = async () => {
     try {
+      if (!client?.id || !candidate?.themeName) {
+        console.warn('[StatusPanel.fetchStatus] Missing client.id or candidate.themeName', { clientId: client?.id, candidateThemeName: candidate?.themeName });
+        return;
+      }
+      
       setLoading(true);
       const getPayload = {
         client_id: client.id,
@@ -109,6 +115,14 @@ export default function VocationalThemeCandidateStatusPanel({
   const handleSaveStatus = async () => {
     try {
       setSaving(true);
+      
+      if (!client?.id || !candidate?.themeName) {
+        console.error('[StatusPanel.handleSaveStatus] Missing client.id or candidate.themeName', { clientId: client?.id, candidateThemeName: candidate?.themeName });
+        toast.error('Missing client or candidate information');
+        setSaving(false);
+        return;
+      }
+      
       const savePayload = {
         client_id: client.id,
         candidate_theme_name: candidate.themeName,
