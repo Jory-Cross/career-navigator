@@ -243,8 +243,9 @@ export default function StructuredAssessmentWorkspacePanel({
         recordIdRef.current = result?.id || null;
       }
 
-      setRecordStatus("completed");
+           setRecordStatus("completed");
       setIsDirty(false);
+      isDirtyRef.current = false;
       toast.success("Assessment marked as complete");
       if (onSaved) onSaved();
     } catch (err) {
