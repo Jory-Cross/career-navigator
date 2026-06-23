@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, ShieldX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,9 +25,12 @@ function buildRules({
   return [
     {
       key: "score_threshold",
-      label: "Readiness score ≥ 80%",
+      label: "Readiness Score",
       passed: totalScore >= 80,
       reason: `Score is ${totalScore}% — at least 80% required to advance.`,
+      current: totalScore,
+      target: 80,
+      unit: "%",
     },
     {
       key: "home_community",
@@ -49,30 +52,39 @@ function buildRules({
     },
     {
       key: "discovery_interviews",
-      label: "At least 3 completed Discovery Interviews",
+      label: "Discovery Interviews",
       passed: discoveryInterviewCompletedCount >= 3,
       reason:
         discoveryInterviewTotalCount === 0
           ? "No Discovery Interview records found. Complete at least 3."
           : `${discoveryInterviewCompletedCount} of ${discoveryInterviewTotalCount} interviews completed — 3 required.`,
+      current: discoveryInterviewCompletedCount,
+      target: 3,
+      unit: "complete",
     },
     {
       key: "informational_interviews",
-      label: "At least 2 completed Informational Interviews",
+      label: "Informational Interviews",
       passed: informationalInterviewCompletedCount >= 2,
       reason:
         informationalInterviewTotalCount === 0
           ? "No Informational Interview records found. Complete at least 2."
           : `${informationalInterviewCompletedCount} of ${informationalInterviewTotalCount} completed — 2 required.`,
+      current: informationalInterviewCompletedCount,
+      target: 2,
+      unit: "complete",
     },
     {
       key: "discovery_activities",
-      label: "At least 1 completed Discovery Activity",
+      label: "Discovery Activities",
       passed: discoveryActivityCompletedCount >= 1,
       reason:
         discoveryActivityTotalCount === 0
           ? "No Discovery Activity records found. Complete at least 1."
           : `${discoveryActivityCompletedCount} of ${discoveryActivityTotalCount} completed — 1 required.`,
+      current: discoveryActivityCompletedCount,
+      target: 1,
+      unit: "complete",
     },
     {
       key: "fidelity_no_missing",
@@ -132,6 +144,7 @@ export default function StageTwoReadinessGate({
   discoveryActivityTotalCount,
   fidelityMissingCount,
   fidelityWeakCount,
+  onRules,
 }) {
   const rules = buildRules({
     totalScore,
@@ -151,6 +164,11 @@ export default function StageTwoReadinessGate({
   const failedRules = rules.filter((r) => !r.passed);
   const passedRules = rules.filter((r) => r.passed);
   const isReady = failedRules.length === 0;
+
+  // Surface rules to parent so StageOneWorkDashboard can consume them without re-computing
+  useEffect(() => {
+    if (onRules) onRules(rules);
+  }, [rules.map((r) => r.passed).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

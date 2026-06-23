@@ -14,6 +14,7 @@ import {
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
 import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
 import StageTwoReadinessGate from "./StageTwoReadinessGate";
+import StageOneWorkDashboard from "./StageOneWorkDashboard";
 import { base44 } from "@/api/base44Client";
 
 const CE_ASSESSMENT_TYPES = [
@@ -95,6 +96,7 @@ function EvidenceStatus({ label, count, completed }) {
 
 export default function CustomizedEmploymentPanel({ client, currentUser }) {
   const [assessmentRecords, setAssessmentRecords] = useState([]);
+  const [gateRules, setGateRules] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1062,7 +1064,10 @@ sourceMatrix: buildSourceContributionMatrix(
                   discoveryActivityTotalCount={discoveryActivityCount}
                   fidelityMissingCount={fidelityMissingCount}
                   fidelityWeakCount={fidelityWeakCount}
+                  onRules={setGateRules}
                 />
+
+                <StageOneWorkDashboard rules={gateRules} />
 
                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                <div className="flex items-center justify-between">
