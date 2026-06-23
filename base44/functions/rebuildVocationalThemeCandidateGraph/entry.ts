@@ -23,61 +23,95 @@ Deno.serve(async (req) => {
       status: 'completed'
     });
 
-    // Extract all evidence and concepts from assessments
-    const allEvidence = [];
-    const conceptMap = new Map(); // concept_name -> { type, count }
-    const themeMap = new Map(); // theme_name -> { evidence_count, concept_count }
+    // Collect ALL vocationalThemesEvidence (same as CustomizedEmploymentPanel)
+    const allVocationalEvidence = collectVocationalThemesEvidence(assessments);
+
     const sourceTypeSet = new Set();
     const evidenceIdSet = new Set();
+    const allConcepts = new Set();
+    const allThemes = new Map(); // theme_name -> evidence_set
 
-    for (const assessment of assessments) {
-      if (!assessment.structured_evidence) continue;
-
-      sourceTypeSet.add(assessment.assessment_type);
-
-      for (const evidence of assessment.structured_evidence) {
-        // Only include evidence that relates to the candidate
-        if (isCandidateRelated(evidence, candidate_theme_name)) {
-          allEvidence.push(evidence);
-          evidenceIdSet.add(evidence.question_id || `${assessment.id}-${evidence.label}`);
-
-          // Extract concepts from implications
-          if (evidence.implications && Array.isArray(evidence.implications)) {
-            for (const implication of evidence.implications) {
-              const conceptType = getConceptType(implication);
-              const conceptName = normalizeConceptName(implication);
-              if (conceptName) {
-                if (!conceptMap.has(conceptName)) {
-                  conceptMap.set(conceptName, { type: conceptType, count: 0 });
-                }
-                conceptMap.get(conceptName).count += 1;
-              }
-            }
+    allVocationalEvidence.forEach(item => {
+      sourceTypeSet.add(item.source);
+      evidenceIdSet.add(`${item.recordId}-${item.field}`);
+      
+      // Extract concepts and map to themes
+      const concepts = extractConcepts(item.text);
+      concepts.forEach(concept => {
+        allConcepts.add(concept);
+        
+        // Map to themes
+        const key = normalizeConceptKey(concept);
+        const themeNames = matchConceptToThemes(key);
+        themeNames.forEach(themeName => {
+          if (!allThemes.has(themeName)) {
+            allThemes.set(themeName, new Set());
           }
+          allThemes.get(themeName).add(item.text);
+        });
+      });
+    });
 
-          // Extract themes from evidence label
-          const themeName = extractThemeName(evidence.label);
-          if (themeName && themeName.toLowerCase() !== candidate_theme_name.toLowerCase()) {
-            if (!themeMap.has(themeName)) {
-              themeMap.set(themeName, { evidence_count: 0, concept_count: 0 });
-            }
-            themeMap.get(themeName).evidence_count += 1;
-          }
-        }
-      }
+    // Check if this candidate's required themes are all present
+    const candidateThemesRequired = getCandidateRequiredThemes(candidate_theme_name);
+    const hasAllRequiredThemes = candidateThemesRequired.every(t => allThemes.has(t));
+
+    // If candidate doesn't match, return empty graph
+    if (!hasAllRequiredThemes) {
+      return Response.json({
+        ok: true,
+        graph_id: null,
+        candidate_theme_name,
+        supporting_evidence_count: 0,
+        supporting_concept_count: 0,
+        supporting_theme_count: 0,
+        supporting_source_count: 0,
+        feedback_count: 0,
+        consensus_status: 'No Feedback',
+        message: 'Candidate does not match available themes'
+      });
     }
 
-    // Count concepts per theme
-    for (const [themeName, themeData] of themeMap) {
-      let conceptCount = 0;
-      for (const [conceptName, conceptData] of conceptMap) {
-        if (conceptName.toLowerCase().includes(themeName.toLowerCase()) ||
-            themeName.toLowerCase().includes(conceptName.toLowerCase())) {
-          conceptCount += 1;
+    // Candidate evidence = all evidence items that contribute to supporting themes
+    const candidateEvidence = [];
+    const candidateEvidenceSeen = new Set();
+    
+    allVocationalEvidence.forEach(item => {
+      // Check if this item contributes to any required theme
+      const concepts = extractConcepts(item.text);
+      const contributesToCandidate = concepts.some(concept => {
+        const key = normalizeConceptKey(concept);
+        const themeNames = matchConceptToThemes(key);
+        return themeNames.some(t => candidateThemesRequired.includes(t));
+      });
+      
+      if (contributesToCandidate) {
+        const key = `${item.recordId}-${item.field}-${item.text}`;
+        if (!candidateEvidenceSeen.has(key)) {
+          candidateEvidenceSeen.add(key);
+          candidateEvidence.push(item);
         }
       }
-      themeData.concept_count = conceptCount;
-    }
+    });
+
+    // Count concepts per supporting theme (from allVocationalEvidence)
+    const conceptsByTheme = new Map(); // theme_name -> set of unique concepts
+    candidateThemesRequired.forEach(themeName => {
+      conceptsByTheme.set(themeName, new Set());
+    });
+
+    allVocationalEvidence.forEach(item => {
+      const concepts = extractConcepts(item.text);
+      concepts.forEach(concept => {
+        const key = normalizeConceptKey(concept);
+        const themeNames = matchConceptToThemes(key);
+        themeNames.forEach(themeName => {
+          if (candidateThemesRequired.includes(themeName)) {
+            conceptsByTheme.get(themeName).add(concept);
+          }
+        });
+      });
+    });
 
     // Fetch feedback for consensus
     const feedbackRecords = await base44.entities.VocationalThemeCandidateFeedback.filter({
@@ -86,7 +120,7 @@ Deno.serve(async (req) => {
       is_active: true
     });
 
-    // Get consensus status by directly calculating from feedback
+    // Calculate consensus status
     let consensusStatus = 'No Feedback';
     if (feedbackRecords.length > 0) {
       const supportedCount = feedbackRecords.filter(f => f.staff_validation === 'supported').length;
@@ -109,32 +143,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build supporting_concepts array
-    const supportingConcepts = Array.from(conceptMap).map(([name, data]) => ({
-      concept_name: name,
-      concept_type: data.type,
-      evidence_count: data.count
-    }));
-
-    // Build supporting_themes array
-    const supportingThemes = Array.from(themeMap).map(([name, data]) => ({
-      theme_name: name,
-      evidence_count: data.evidence_count,
-      concept_count: data.concept_count
-    }));
-
-    // Fetch category_label from first candidate definition
-    let categoryLabel = 'Unknown';
-    for (const assessment of assessments) {
-      if (!assessment.structured_evidence) continue;
-      for (const evidence of assessment.structured_evidence) {
-        if (isCandidateRelated(evidence, candidate_theme_name)) {
-          categoryLabel = evidence.evidence_category || 'Vocational Themes Evidence';
-          break;
-        }
-      }
-      if (categoryLabel !== 'Unknown') break;
+    // Build supporting_concepts array (all unique concepts from candidate's themes)
+    const allConceptsForCandidate = new Set();
+    for (const conceptSet of conceptsByTheme.values()) {
+      conceptSet.forEach(c => allConceptsForCandidate.add(c));
     }
+
+    const supportingConcepts = Array.from(allConceptsForCandidate).map(concept => ({
+      concept_name: concept,
+      concept_type: 'skill',
+      evidence_count: allVocationalEvidence.filter(i => 
+        i.text.toLowerCase().includes(concept.toLowerCase())
+      ).length
+    }));
+
+    // Build supporting_themes array (only themes required for this candidate)
+    const supportingThemes = candidateThemesRequired.map(themeName => ({
+      theme_name: themeName,
+      evidence_count: allThemes.get(themeName)?.size || 0,
+      concept_count: conceptsByTheme.get(themeName)?.size || 0
+    }));
 
     // Check if graph already exists
     const existingGraphs = await base44.entities.VocationalThemeCandidateGraph.filter({
@@ -146,14 +174,14 @@ Deno.serve(async (req) => {
       org_id: client.org_id || "COMOP",
       client_id,
       candidate_theme_name,
-      category_label: categoryLabel,
+      category_label: 'Vocational Themes Evidence',
       supporting_themes: supportingThemes,
       supporting_concepts: supportingConcepts,
       supporting_source_types: Array.from(sourceTypeSet),
       supporting_evidence_ids: Array.from(evidenceIdSet),
-      supporting_evidence_count: evidenceIdSet.size,
-      supporting_concept_count: conceptMap.size,
-      supporting_theme_count: themeMap.size,
+      supporting_evidence_count: candidateEvidence.length,
+      supporting_concept_count: allConceptsForCandidate.size,
+      supporting_theme_count: candidateThemesRequired.length,
       supporting_source_count: sourceTypeSet.size,
       feedback_count: feedbackRecords.length,
       consensus_status: consensusStatus,
@@ -163,13 +191,11 @@ Deno.serve(async (req) => {
 
     let graphRecord;
     if (existingGraphs.length > 0) {
-      // Update existing
       graphRecord = await base44.entities.VocationalThemeCandidateGraph.update(
         existingGraphs[0].id,
         graphData
       );
     } else {
-      // Create new
       graphRecord = await base44.entities.VocationalThemeCandidateGraph.create(graphData);
     }
 
@@ -183,6 +209,8 @@ Deno.serve(async (req) => {
       supporting_source_count: graphData.supporting_source_count,
       feedback_count: graphData.feedback_count,
       consensus_status: consensusStatus,
+      supporting_themes: graphData.supporting_themes,
+      supporting_concepts: graphData.supporting_concepts,
       message: existingGraphs.length > 0 ? 'Graph updated' : 'Graph created'
     });
   } catch (error) {
@@ -190,38 +218,177 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper: Check if evidence relates to candidate
-function isCandidateRelated(evidence, candidateName) {
-  if (!evidence) return false;
-  const label = (evidence.label || '').toLowerCase();
-  const name = (candidateName || '').toLowerCase();
-  return label.includes(name) || (evidence.implications && evidence.implications.some(i => String(i).toLowerCase().includes(name)));
+// Helper: Collect vocational themes evidence from assessments (same as CustomizedEmploymentPanel)
+function collectVocationalThemesEvidence(assessments) {
+  const evidence = [];
+
+  // Filter by assessment type
+  const homeDiscovery = assessments.find(r => r.assessment_type === 'home_community_discovery');
+  const discoveryInterviews = assessments.filter(r => r.assessment_type === 'discovery_interview');
+  const informationalInterviews = assessments.filter(r => r.assessment_type === 'informational_interview');
+  const discoveryActivities = assessments.filter(r => r.assessment_type === 'discovery_activity');
+
+  // Collect from Home & Community Discovery
+  if (homeDiscovery?.responses) {
+    const fields = [
+      'preferred_activities', 'observable_interests', 'observable_skills', 'observable_talents',
+      'emerging_vocational_themes', 'potential_businesses_or_settings', 'possible_discovery_leads',
+      'discovery_hypotheses', 'emerging_patterns'
+    ];
+    fields.forEach(field => {
+      const items = splitEvidence(homeDiscovery.responses[field]);
+      items.forEach(text => {
+        evidence.push({
+          text, source: 'Home & Community Discovery',
+          field, recordId: homeDiscovery.id, status: homeDiscovery.status,
+          updatedDate: homeDiscovery.updated_date || homeDiscovery.created_date
+        });
+      });
+    });
+  }
+
+  // Collect from Discovery Interviews
+  discoveryInterviews.forEach(record => {
+    const fields = [
+      'positive_qualities', 'contributions', 'known_for', 'favorite_activities',
+      'preferred_activities', 'people_or_connections', 'businesses_or_places_to_explore',
+      'jobs_client_might_enjoy', 'possible_vocational_themes'
+    ];
+    fields.forEach(field => {
+      const items = splitEvidence(record.responses?.[field]);
+      items.forEach(text => {
+        evidence.push({
+          text, source: 'Discovery Interview',
+          field, recordId: record.id, status: record.status,
+          updatedDate: record.updated_date || record.created_date
+        });
+      });
+    });
+  });
+
+  // Collect from Informational Interviews
+  informationalInterviews.forEach(record => {
+    const fields = [
+      'customized_employment_possibilities', 'job_carving_opportunities',
+      'business_organization', 'employer_needs_identified', 'key_takeaways',
+      'connection_to_vocational_themes'
+    ];
+    fields.forEach(field => {
+      const items = splitEvidence(record.responses?.[field]);
+      items.forEach(text => {
+        evidence.push({
+          text, source: 'Informational Interview',
+          field, recordId: record.id, status: record.status,
+          updatedDate: record.updated_date || record.created_date
+        });
+      });
+    });
+  });
+
+  // Collect from Discovery Activities
+  discoveryActivities.forEach(record => {
+    const fields = [
+      'signs_of_interest', 'skills_demonstrated', 'preferred_activities_tools_materials',
+      'conditions_associated_with_success', 'engagement_patterns',
+      'discovery_hypotheses_confirmed', 'customized_employment_possibilities'
+    ];
+    fields.forEach(field => {
+      const items = splitEvidence(record.responses?.[field]);
+      items.forEach(text => {
+        evidence.push({
+          text, source: 'Discovery Activity',
+          field, recordId: record.id, status: record.status,
+          updatedDate: record.updated_date || record.created_date
+        });
+      });
+    });
+  });
+
+  return evidence;
 }
 
-// Helper: Extract concept type from implication
-function getConceptType(implication) {
-  const str = String(implication).toLowerCase();
-  if (str.includes('skill')) return 'skill';
-  if (str.includes('interest')) return 'interest';
-  if (str.includes('value')) return 'value';
-  if (str.includes('condition')) return 'condition_for_success';
-  if (str.includes('barrier')) return 'barrier';
-  return 'skill';
+// Helper: Split evidence text (same as CustomizedEmploymentPanel)
+function splitEvidence(value) {
+  if (!value || typeof value !== 'string') return [];
+  const cleanedValue = value.trim();
+  if (!cleanedValue) return [];
+  return cleanedValue
+    .split(/\n|•|;/)
+    .flatMap((part) => {
+      const trimmed = part.trim();
+      const sentenceCount = (trimmed.match(/[.!?]/g) || []).length;
+      if (sentenceCount > 1) return [trimmed];
+      return trimmed.split(",");
+    })
+    .map((part) => part.trim().replace(/^and\s+/i, "").replace(/\.$/, ""))
+    .filter((part) => part.length > 2);
 }
 
-// Helper: Normalize concept name
-function normalizeConceptName(implication) {
-  const str = String(implication).trim();
-  if (!str || str.length < 2) return null;
-  return str.replace(/^[A-Z]+:\s*/i, '').substring(0, 100);
+// Helper: Extract concepts from evidence text
+function extractConcepts(text) {
+  const concepts = [];
+  const words = text.toLowerCase().split(/[,;]/).map(w => w.trim());
+  words.forEach(word => {
+    if (word.length > 2) {
+      const titleCased = word.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+      concepts.push(titleCased);
+    }
+  });
+  return concepts;
 }
 
-// Helper: Extract theme name from evidence label
-function extractThemeName(label) {
-  if (!label) return null;
-  // Remove common prefixes
-  const cleaned = label.replace(/^(evidence|skill|interest|concept):\s*/i, '');
-  // Take first phrase before dash or parenthesis
-  const match = cleaned.match(/^([^-()]+)/);
-  return match ? match[1].trim() : null;
+// Helper: Normalize concept key for matching
+function normalizeConceptKey(text) {
+  return text.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// Helper: Get required themes for a vocational candidate
+function getCandidateRequiredThemes(candidateName) {
+  const CANDIDATES = {
+    'Library Materials & Information Organization': [
+      'Organization & Inventory Systems',
+      'Libraries & Information Organization',
+      'Routine Structured Work'
+    ],
+    'Routine Operational Support': [
+      'Organization & Inventory Systems',
+      'Routine Structured Work'
+    ],
+    'Administrative Records Support': [
+      'Organization & Inventory Systems',
+      'Administrative & Clerical Support'
+    ]
+  };
+
+  return CANDIDATES[candidateName] || [];
+}
+
+// Helper: Match concept to themes using keyword dictionary
+function matchConceptToThemes(normalizedKey) {
+  const THEME_KEYWORDS = {
+    'Organization & Inventory Systems': [
+      'inventory', 'tracking', 'track', 'label', 'sort', 'organize',
+      'stock', 'shelf', 'supply', 'supplies', 'record', 'catalog', 'list', 'checklist'
+    ],
+    'Libraries & Information Organization': [
+      'library', 'libraries', 'books', 'book', 'catalog', 'records',
+      'information', 'file', 'filing', 'archive'
+    ],
+    'Routine Structured Work': [
+      'routine', 'predictable', 'schedule', 'structured', 'consistency',
+      'consistent', 'step', 'written', 'instruction', 'procedure'
+    ]
+  };
+
+  const matched = [];
+  const tokens = normalizedKey.split(' ');
+  
+  for (const [theme, keywords] of Object.entries(THEME_KEYWORDS)) {
+    if (tokens.some(t => keywords.includes(t)) || 
+        keywords.some(kw => kw.includes(' ') && normalizedKey.includes(kw))) {
+      matched.push(theme);
+    }
+  }
+  
+  return matched;
 }
