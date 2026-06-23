@@ -78,29 +78,246 @@ export function normalizeEvidenceText(text) {
   return sorted.join(" ");
 }
 
+// ── Concept Refinement Layer ──────────────────────────────────────────────
+// Decomposes a narrative evidence statement into concise concept phrases
+// that read as canonical labels (e.g. "Organizing Materials") while the
+// original full text is preserved separately under entries[].
+
+// Rule B — narrative lead-in phrases (removed only when they occur at the
+// BEGINNING of a candidate fragment).
+const NARRATIVE_LEAD_INS = [
+  "sarah appeared motivated by",
+  "sarah showed strong interest in",
+  "sarah is most interested in",
+  "sarah demonstrates strengths in",
+  "sarah demonstrates strength in",
+  "sarah showed interest in",
+  "sarah is interested in",
+  "sarah enjoys",
+  "sarah likes",
+  "sarah prefers",
+  "sarah has strengths in",
+  "sarah has strength in",
+  "sarah is good at",
+  "client appeared motivated by",
+  "client showed strong interest in",
+  "client is most interested in",
+  "client demonstrates strengths in",
+  "client demonstrates strength in",
+  "client showed interest in",
+  "client is interested in",
+  "client enjoys",
+  "client likes",
+  "client prefers",
+  "client has strengths in",
+  "client has strength in",
+  "client is good at",
+  "appeared motivated by",
+  "showed strong interest in",
+  "is most interested in",
+  "demonstrates strengths in",
+  "demonstrates strength in",
+  "showed interest in",
+  "is interested in",
+  "has strengths in",
+  "has strength in",
+  "is good at",
+  "motivated by",
+  "interested in",
+  "strong interest in",
+  "strengths in",
+  "strength in",
+  "interest in",
+];
+
+// Rule C — generic scaffolding phrases. When a fragment matches
+// `<generic> that helps with <topic>` / `<generic> for <topic>` etc., the
+// generic phrase is removed and the topic is promoted as the concept.
+const GENERIC_SCAFFOLDS = [
+  "technology that helps with",
+  "technology that helps",
+  "using technology for",
+  "using technology",
+  "technology for",
+  "supports for",
+  "tools for",
+  "assistance with",
+  "help with",
+  "helps with",
+  "helps",
+];
+
+// Rule F — phrases that are pure narrative fragments, not concepts.
+const NARRATIVE_FRAGMENT_BLACKLIST = new Set([
+  "sarah demonstrates strengths",
+  "sarah demonstrates strength",
+  "sarah appeared motivated",
+  "sarah showed strong interest",
+  "sarah showed interest",
+  "client demonstrates strengths",
+  "client demonstrates strength",
+  "client appeared motivated",
+  "client showed strong interest",
+  "client showed interest",
+  "appeared motivated by",
+  "showed strong interest in",
+  "showed interest in",
+  "demonstrates strengths in",
+  "demonstrates strength in",
+  "is most interested in",
+  "motivated by",
+  "interested in",
+]);
+
+// Rule A — split a narrative into candidate fragments.
+function splitIntoFragments(text) {
+  if (!text) return [];
+  const raw = String(text)
+    .replace(/[\n•;]/g, ",")
+    .replace(/\band\b/gi, ",")
+    .replace(/\bor\b/gi, ",")
+    .replace(/\bas well as\b/gi, ",");
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function stripLeadIn(fragment) {
+  let f = fragment.toLowerCase().trim();
+  for (const lead of NARRATIVE_LEAD_INS) {
+    if (f.startsWith(lead + " ")) {
+      f = f.slice(lead.length).trim();
+      break;
+    }
+  }
+  return f;
+}
+
+function stripGenericScaffold(fragment) {
+  let f = fragment.toLowerCase().trim();
+  for (const scaffold of GENERIC_SCAFFOLDS) {
+    if (f.startsWith(scaffold + " ")) {
+      f = f.slice(scaffold.length).trim();
+      break;
+    }
+  }
+  return f;
+}
+
+function isNarrativeFragment(phrase) {
+  const p = phrase.toLowerCase().trim();
+  if (!p) return true;
+  if (NARRATIVE_FRAGMENT_BLACKLIST.has(p)) return true;
+  // bare subject/auxiliary words are not concepts
+  const singleStopword = /^[a-z]+$/.test(p) && (STOP_WORDS.has(p) || p.length < 3);
+  return singleStopword;
+}
+
+function titleCase(phrase) {
+  return phrase
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w.length === 0 ? w : w[0].toUpperCase() + w.slice(1)))
+    .join(" ")
+    .trim();
+}
+
+// Rule G — one statement may produce multiple concise labels; original
+// text is preserved by the caller under entries[].
+export function extractConceptLabels(text) {
+  if (!text) return [];
+  const fragments = splitIntoFragments(text);
+  const labels = [];
+  const seen = new Set();
+
+  fragments.forEach((frag) => {
+    let phrase = stripLeadIn(frag);
+    phrase = stripGenericScaffold(phrase);
+    // remove leading/trailing punctuation and collapse whitespace
+    phrase = phrase.replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+
+    if (!phrase) return;
+    if (isNarrativeFragment(phrase)) return;
+
+    // Rule F — length cap & skip
+    const wordCount = phrase.split(/\s+/).length;
+    if (wordCount > 6) return;        // still narrative
+    if (phrase.length < 3) return;    // artifact
+
+    const label = toConceptLabel(phrase);
+    if (!label) return;
+
+    const key = label.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      labels.push(label);
+    }
+  });
+
+  // If decomposition yielded nothing, fall back to a single label derived
+  // from the whole text so we never drop evidence silently.
+  if (labels.length === 0) {
+    const whole = toConceptLabel(stripGenericScaffold(stripLeadIn(text)));
+    if (whole) labels.push(whole);
+  }
+
+  return labels;
+}
+
+// Rule D + Rule E — convert a phrase into a title-cased canonical concept
+// label, preserving original word order (NO alphabetical sort).
+export function toConceptLabel(phrase) {
+  if (!phrase) return "";
+  let p = String(phrase)
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!p) return "";
+
+  // Stop-word trimming on leading/trailing words only — never interior.
+  const tokens = p.split(" ").filter(Boolean);
+  while (tokens.length > 1 && STOP_WORDS.has(tokens[0])) tokens.shift();
+  while (tokens.length > 1 && STOP_WORDS.has(tokens[tokens.length - 1])) tokens.pop();
+  if (tokens.length === 0) return "";
+  if (tokens.length === 1 && tokens[0].length < 3) return "";
+
+  return titleCase(tokens.join(" "));
+}
+
 export function createEvidenceConcepts(entries = []) {
   const concepts = new Map();
 
   entries.forEach((entry) => {
-    const normalized = normalizeEvidenceText(entry?.text);
+    // Produce one or more concise concept labels from the narrative text.
+    const labels = extractConceptLabels(entry?.text || "");
 
-    if (!normalized) return;
+    // If no labels could be derived, fall back to a single concept keyed on
+    // the normalized raw text so no entry is silently dropped.
+    const labelSet = labels.length > 0 ? labels : [entry?.text];
 
-    if (!concepts.has(normalized)) {
-      concepts.set(normalized, {
-        concept: entry.text,
-        sources: new Set(),
-        entries: [],
-      });
-    }
+    labelSet.forEach((label) => {
+      const displayLabel = label || entry?.text || "";
+      const normalized = normalizeEvidenceText(label || "") || normalizeEvidenceText(entry?.text || "");
 
-    const concept = concepts.get(normalized);
+      if (!normalized) return;
 
-    if (entry?.source) {
-      concept.sources.add(entry.source);
-    }
+      if (!concepts.has(normalized)) {
+        concepts.set(normalized, {
+          concept: displayLabel,
+          sources: new Set(),
+          entries: [],
+        });
+      }
 
-    concept.entries.push(entry);
+      const concept = concepts.get(normalized);
+
+      if (entry?.source) {
+        concept.sources.add(entry.source);
+      }
+
+      concept.entries.push(entry);
+    });
   });
 
   return Array.from(concepts.values()).map((concept) => ({
