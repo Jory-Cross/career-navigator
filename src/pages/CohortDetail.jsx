@@ -47,6 +47,8 @@ export default function CohortDetail() {
   const [authChecked, setAuthChecked] = useState(false);
   const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
   const [addingManager, setAddingManager] = useState(false);
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -120,6 +122,14 @@ export default function CohortDetail() {
   );
 
   const existingManagerUserIds = useMemo(() => managers.map((m) => m.user_id), [managers]);
+  const existingMemberUserIds = useMemo(() => members.map((m) => m.user_id), [members]);
+
+  // Determine if current user can add members: admin OR is active manager of this cohort
+  const canAddMember = useMemo(() => {
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    return managers.some((m) => m.user_id === user.id);
+  }, [user, managers]);
 
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
@@ -132,7 +142,6 @@ export default function CohortDetail() {
       });
       if (res.data?.ok) {
         toast.success("Manager added");
-        // Refresh memberships
         queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
       } else {
         throw new Error(res.data?.error || "Unknown error");
@@ -141,6 +150,28 @@ export default function CohortDetail() {
       toast.error(err?.message || "Failed to add manager");
     } finally {
       setAddingManager(false);
+    }
+  };
+
+  const handleAddMember = async (selectedUser) => {
+    setAddingMember(true);
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "add",
+        cohort_id,
+        user_id: selectedUser.id,
+        cohort_role: "member",
+      });
+      if (res.data?.ok) {
+        toast.success("Member added");
+        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
+      } else {
+        throw new Error(res.data?.error || "Unknown error");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to add member");
+    } finally {
+      setAddingMember(false);
     }
   };
 
@@ -187,6 +218,17 @@ export default function CohortDetail() {
         allowedRoles={["admin", "management", "employee"]}
         existingMemberUserIds={existingManagerUserIds}
         onSubmit={handleAddManager}
+      />
+
+      {/* Add Member Dialog */}
+      <AddMemberDialog
+        open={showAddMemberDialog}
+        onOpenChange={setShowAddMemberDialog}
+        title="Add Member"
+        cohortRole="member"
+        allowedRoles={["admin", "management", "employee"]}
+        existingMemberUserIds={existingMemberUserIds}
+        onSubmit={handleAddMember}
       />
 
       {/* 1. Back link */}
@@ -262,6 +304,17 @@ export default function CohortDetail() {
           <span className="ml-auto text-xs text-slate-400">
             {members.length} active
           </span>
+          {canAddMember && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddMemberDialog(true)}
+              disabled={addingMember}
+              className="ml-2"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add
+            </Button>
+          )}
         </div>
         <div className="p-2">
           {members.length === 0 ? (
