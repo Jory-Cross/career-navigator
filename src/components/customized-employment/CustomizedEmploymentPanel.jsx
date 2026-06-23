@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   FileText,
   Home,
@@ -11,8 +10,6 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Download,
-  ChevronUp,
 } from "lucide-react";
 import DSRExportPackage from "./DSRExportPackage";
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
@@ -104,7 +101,6 @@ export default function CustomizedEmploymentPanel({ client, currentUser, onOpenA
   const [assessmentRecords, setAssessmentRecords] = useState([]);
   const [gateRules, setGateRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -978,15 +974,33 @@ sourceMatrix: buildSourceContributionMatrix(
   employer leads, and Stage Two hypotheses.
 </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0 gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-              onClick={() => setShowExport((v) => !v)}
-            >
-              {showExport ? <ChevronUp className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-              {showExport ? "Hide Export" : "Export Package"}
-            </Button>
+            <DSRExportPackage
+              client={client}
+              totalReadinessScore={totalReadinessScore}
+              homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
+              benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
+              assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
+              discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
+              discoveryInterviewTotalCount={discoveryInterviewCount}
+              informationalInterviewCompletedCount={completedInformationalInterviewCount}
+              informationalInterviewTotalCount={informationalInterviewCount}
+              discoveryActivityCompletedCount={completedDiscoveryActivityCount}
+              discoveryActivityTotalCount={discoveryActivityCount}
+              fidelityMissingCount={fidelityMissingCount}
+              fidelityWeakCount={fidelityWeakCount}
+              gateRules={gateRules}
+              emergingInterests={emergingInterests}
+              observedSkills={observedSkills}
+              conditionsForSuccess={conditionsForSuccess}
+              potentialBusinessSettings={potentialBusinessSettings}
+              relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
+              communityConnections={communityConnections}
+              employerLeads={employerLeads}
+              benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
+              assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
+              discoveryHypotheses={discoveryHypotheses}
+              vocationalThemesEvidence={vocationalThemesEvidence}
+            />
           </div>
 
           {loading ? (
@@ -1302,36 +1316,7 @@ sourceMatrix: buildSourceContributionMatrix(
                 </>
                 )}
 
-                {/* DSR Export Package — shown when toggled */}
-                {showExport && hasAnyEvidence && (
-                <DSRExportPackage
-                client={client}
-                totalReadinessScore={totalReadinessScore}
-                homeDiscoveryCompleted={countCompleted(assessmentRecords, "home_community_discovery") > 0}
-                benefitsCompleted={countCompleted(assessmentRecords, "benefits_resources_assessment", "benefits_resources") > 0}
-                assistiveTechCompleted={countCompleted(assessmentRecords, "assistive_technology_assessment", "assistive_technology") > 0}
-                discoveryInterviewCompletedCount={completedDiscoveryInterviewCount}
-                discoveryInterviewTotalCount={discoveryInterviewCount}
-                informationalInterviewCompletedCount={completedInformationalInterviewCount}
-                informationalInterviewTotalCount={informationalInterviewCount}
-                discoveryActivityCompletedCount={completedDiscoveryActivityCount}
-                discoveryActivityTotalCount={discoveryActivityCount}
-                fidelityMissingCount={fidelityMissingCount}
-                fidelityWeakCount={fidelityWeakCount}
-                gateRules={gateRules}
-                emergingInterests={emergingInterests}
-                observedSkills={observedSkills}
-                conditionsForSuccess={conditionsForSuccess}
-                potentialBusinessSettings={potentialBusinessSettings}
-                relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
-                communityConnections={communityConnections}
-                employerLeads={employerLeads}
-                benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
-                assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
-                discoveryHypotheses={discoveryHypotheses}
-                vocationalThemesEvidence={vocationalThemesEvidence}
-                />
-                )}
+
                 </div>
                 </div>
                 </Card>

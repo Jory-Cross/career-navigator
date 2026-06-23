@@ -1,104 +1,462 @@
-import React, { useRef } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Printer, CheckCircle2, XCircle, AlertCircle, MinusCircle } from "lucide-react";
-import StageOneMilestoneTracker from "./StageOneMilestoneTracker";
-import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
-import StageTwoReadinessGate from "./StageTwoReadinessGate";
-import StageOneWorkDashboard from "./StageOneWorkDashboard";
-import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Printer, X, CheckCircle2, XCircle, AlertCircle, ChevronRight } from "lucide-react";
+
+// ── Print styles injected into popup window ──────────────────────────────────
+
+const PRINT_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; font-size: 11px; color: #1e293b; background: white; }
+  .page { padding: 36px 40px; max-width: 760px; margin: 0 auto; }
+  .page-break { page-break-before: always; padding-top: 36px; }
+  h1 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 2px; }
+  .meta { font-size: 10px; color: #94a3b8; margin-bottom: 6px; }
+  .disclaimer { font-size: 10px; color: #cbd5e1; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 6px; margin-bottom: 24px; }
+  h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6366f1; border-bottom: 2px solid #e0e7ff; padding-bottom: 5px; margin-bottom: 12px; margin-top: 28px; }
+  h3 { font-size: 11px; font-weight: 700; color: #1e293b; margin-bottom: 3px; margin-top: 14px; }
+  p { font-size: 11px; line-height: 1.6; color: #475569; }
+  ul { list-style: none; padding: 0; }
+  li { font-size: 10.5px; line-height: 1.7; color: #334155; padding-left: 12px; position: relative; }
+  li::before { content: "•"; position: absolute; left: 0; color: #94a3b8; }
+  .source-tag { font-size: 9px; color: #94a3b8; margin-left: 4px; }
+  .overflow-note { font-size: 9px; color: #6366f1; font-style: italic; margin-top: 4px; }
+  /* Score bar */
+  .score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .score-label { font-size: 10px; color: #64748b; min-width: 180px; }
+  .score-bar-wrap { flex: 1; height: 7px; background: #e2e8f0; border-radius: 4px; }
+  .score-bar-fill { height: 7px; border-radius: 4px; background: #6366f1; }
+  .score-val { font-size: 10px; font-weight: 700; color: #4f46e5; min-width: 34px; text-align: right; }
+  /* Gate rows */
+  .gate-row { display: flex; align-items: center; gap-8px; margin-bottom: 5px; font-size: 10.5px; }
+  .gate-pass { color: #16a34a; font-weight: 600; }
+  .gate-fail { color: #dc2626; font-weight: 600; }
+  /* Fidelity table */
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
+  th { background: #f8fafc; font-weight: 700; text-align: left; padding: 5px 8px; border: 1px solid #e2e8f0; color: #64748b; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 4px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .status-strong { color: #16a34a; font-weight: 700; }
+  .status-weak { color: #d97706; font-weight: 700; }
+  .status-missing { color: #dc2626; font-weight: 700; }
+  /* Milestone grid */
+  .milestone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+  .milestone-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; }
+  .milestone-done { border-color: #bbf7d0; background: #f0fdf4; }
+  .milestone-pending { border-color: #e2e8f0; background: #f8fafc; }
+  .milestone-title { font-size: 10px; font-weight: 700; color: #1e293b; }
+  .milestone-status { font-size: 9px; margin-top: 2px; }
+  .ms-done { color: #16a34a; }
+  .ms-pending { color: #94a3b8; }
+  /* Summary stat boxes */
+  .stat-row { display: flex; gap: 12px; margin: 10px 0; }
+  .stat-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; text-align: center; }
+  .stat-num { font-size: 22px; font-weight: 800; color: #4f46e5; }
+  .stat-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
+  /* Evidence section */
+  .evidence-category { margin-bottom: 18px; break-inside: avoid; }
+  .evidence-cat-header { font-size: 10.5px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px; }
+  .source-breakdown { font-size: 9px; color: #94a3b8; margin-bottom: 5px; }
+  @media print {
+    .page { padding: 24px 28px; }
+    .page-break { page-break-before: always; }
+  }
+`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function SectionHeader({ title, subtitle }) {
+function buildFidelityRows(sections) {
+  return sections.map((sec) => {
+    const sources = new Set(sec.items.map((i) => i.source).filter(Boolean));
+    const count = sec.items.length;
+    const srcCount = sources.size;
+    let status;
+    if (count === 0) status = "missing";
+    else if (sec.singleSource) status = count >= 3 ? "strong" : "weak";
+    else if (count < 3 || srcCount < 2) status = "weak";
+    else status = "strong";
+    return { label: sec.label, count, srcCount, sources: [...sources], status };
+  });
+}
+
+function buildSourceBreakdown(items) {
+  const map = {};
+  items.forEach((i) => { if (i.source) map[i.source] = (map[i.source] || 0) + 1; });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([s, c]) => `${s} (${c})`).join(", ");
+}
+
+function buildPrintHTML({ client, exportDate, exportMode, sections, fidelityRows, props }) {
+  const {
+    totalReadinessScore,
+    homeDiscoveryCompleted,
+    benefitsCompleted,
+    assistiveTechCompleted,
+    discoveryInterviewCompletedCount,
+    discoveryInterviewTotalCount,
+    informationalInterviewCompletedCount,
+    informationalInterviewTotalCount,
+    discoveryActivityCompletedCount,
+    discoveryActivityTotalCount,
+    fidelityMissingCount,
+    fidelityWeakCount,
+    gateRules,
+  } = props;
+
+  const strong = fidelityRows.filter((r) => r.status === "strong").length;
+  const weak = fidelityRows.filter((r) => r.status === "weak").length;
+  const missing = fidelityRows.filter((r) => r.status === "missing").length;
+
+  const milestones = [
+    { title: "Home & Community Discovery", done: homeDiscoveryCompleted },
+    { title: "Benefits & Resources Assessment", done: benefitsCompleted },
+    { title: "Assistive Technology Assessment", done: assistiveTechCompleted },
+    { title: `Discovery Interviews (${discoveryInterviewCompletedCount}/${Math.max(discoveryInterviewTotalCount, 3)} needed)`, done: discoveryInterviewCompletedCount >= 3 },
+    { title: `Informational Interviews (${informationalInterviewCompletedCount}/${Math.max(informationalInterviewTotalCount, 2)} needed)`, done: informationalInterviewCompletedCount >= 2 },
+    { title: `Discovery Activities (${discoveryActivityCompletedCount} completed)`, done: discoveryActivityCompletedCount >= 1 },
+  ];
+
+  const failedRules = (gateRules || []).filter((r) => !r.passed);
+
+  // ── Page 1: Summary ──────────────────────────────────────────────────────
+  const page1 = `
+    <div class="page">
+      <h1>Discovery Staging Record</h1>
+      <p class="meta">${client?.first_name || ""} ${client?.last_name || ""} &nbsp;·&nbsp; Stage One Export &nbsp;·&nbsp; ${exportDate}</p>
+      <p class="disclaimer">Staff review document only — not a finalized report. Contains raw discovery evidence.</p>
+
+      <h2>Stage One Milestones</h2>
+      <div class="milestone-grid">
+        ${milestones.map((m) => `
+          <div class="milestone-card ${m.done ? "milestone-done" : "milestone-pending"}">
+            <div class="milestone-title">${m.title}</div>
+            <div class="milestone-status ${m.done ? "ms-done" : "ms-pending"}">${m.done ? "✓ Complete" : "○ Pending"}</div>
+          </div>
+        `).join("")}
+      </div>
+
+      <h2>Discovery Readiness Score</h2>
+      <div class="score-row">
+        <span class="score-label">Overall Readiness</span>
+        <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${totalReadinessScore}%"></div></div>
+        <span class="score-val">${totalReadinessScore}%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-num">${totalReadinessScore}%</div><div class="stat-label">Readiness Score</div></div>
+        <div class="stat-box"><div class="stat-num">${milestones.filter((m) => m.done).length}/${milestones.length}</div><div class="stat-label">Milestones Complete</div></div>
+        <div class="stat-box"><div class="stat-num">${strong}/${fidelityRows.length}</div><div class="stat-label">Strong Evidence Categories</div></div>
+      </div>
+
+      <h2>Stage Two Readiness Gate</h2>
+      <p style="font-size:10px;color:#64748b;margin-bottom:8px;">Pass/fail status for each readiness requirement:</p>
+      ${(gateRules || []).map((r) => `
+        <div class="gate-row">
+          <span class="${r.passed ? "gate-pass" : "gate-fail"}">${r.passed ? "✓" : "✗"}</span>
+          <span style="margin-left:8px;font-size:10.5px;color:${r.passed ? "#334155" : "#dc2626"}">${r.label}</span>
+          ${!r.passed && r.description ? `<span style="font-size:9px;color:#94a3b8;margin-left:8px;"> — ${r.description}</span>` : ""}
+        </div>
+      `).join("")}
+
+      ${failedRules.length > 0 ? `
+        <h2>Remaining Stage One Work</h2>
+        ${failedRules.map((r) => `
+          <div style="margin-bottom:6px;padding:6px 10px;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;">
+            <div style="font-size:10.5px;font-weight:700;color:#dc2626">${r.label}</div>
+            ${r.description ? `<div style="font-size:9.5px;color:#64748b;margin-top:2px">${r.description}</div>` : ""}
+          </div>
+        `).join("")}
+      ` : `<p style="font-size:10.5px;color:#16a34a;font-weight:600;margin-top:8px;">✓ All Stage One requirements are complete.</p>`}
+    </div>
+  `;
+
+  // ── Page 2: Fidelity Summary ─────────────────────────────────────────────
+  const page2 = `
+    <div class="page page-break">
+      <h2 style="margin-top:0">Discovery Fidelity & Evidence Gap Analysis</h2>
+      <div class="stat-row">
+        <div class="stat-box" style="border-color:#bbf7d0;background:#f0fdf4"><div class="stat-num" style="color:#16a34a">${strong}</div><div class="stat-label">Strong</div></div>
+        <div class="stat-box" style="border-color:#fde68a;background:#fffbeb"><div class="stat-num" style="color:#d97706">${weak}</div><div class="stat-label">Weak</div></div>
+        <div class="stat-box" style="border-color:#fecaca;background:#fef2f2"><div class="stat-num" style="color:#dc2626">${missing}</div><div class="stat-label">Missing</div></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Items</th>
+            <th>Sources</th>
+            <th>Contributing Sources</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fidelityRows.map((row) => `
+            <tr>
+              <td style="font-weight:600">${row.label}</td>
+              <td class="${row.status === "strong" ? "status-strong" : row.status === "weak" ? "status-weak" : "status-missing"}">
+                ${row.status === "strong" ? "Strong" : row.status === "weak" ? "Weak" : "Missing"}
+              </td>
+              <td style="text-align:center">${row.count}</td>
+              <td style="text-align:center">${row.srcCount}</td>
+              <td style="color:#64748b">${row.sources.join(", ") || "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // ── Page 3+: Evidence Preview ────────────────────────────────────────────
+  let evidencePages = "";
+  if (exportMode !== "summary_only") {
+    const limit = exportMode === "full_appendix" ? Infinity : 10;
+    evidencePages = `
+      <div class="page page-break">
+        <h2 style="margin-top:0">Evidence Preview${exportMode === "full_appendix" ? " — Full Appendix" : ""}</h2>
+        <p style="font-size:9.5px;color:#94a3b8;margin-bottom:16px;">
+          ${exportMode === "full_appendix"
+            ? "All evidence entries with source attribution."
+            : "Top 10 entries per category. Additional evidence is available in the DSR Source Explorer."}
+        </p>
+        ${sections.filter((sec) => sec.items.length > 0).map((sec) => {
+          const displayed = sec.items.slice(0, limit === Infinity ? sec.items.length : limit);
+          const overflow = sec.items.length - displayed.length;
+          const breakdown = buildSourceBreakdown(sec.items);
+          return `
+            <div class="evidence-category">
+              <div class="evidence-cat-header">${sec.label}</div>
+              <div class="source-breakdown">Sources: ${breakdown || "—"}</div>
+              <ul>
+                ${displayed.map((item) => `
+                  <li>${item.text}<span class="source-tag">(${item.source})</span></li>
+                `).join("")}
+              </ul>
+              ${overflow > 0 ? `<p class="overflow-note">+ ${overflow} additional entries available in DSR Source Explorer</p>` : ""}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>DSR Export – ${client?.first_name} ${client?.last_name}</title>
+    <style>${PRINT_CSS}</style>
+  </head><body>${page1}${page2}${evidencePages}</body></html>`;
+}
+
+// ── Modal preview component ───────────────────────────────────────────────────
+
+function ExportModeSelector({ value, onChange }) {
+  const options = [
+    { key: "summary_evidence", label: "Summary + Evidence Preview", desc: "Pages 1–2 + top 10 per category" },
+    { key: "summary_only", label: "Summary Only", desc: "Pages 1–2: milestones, score, gate, fidelity" },
+    { key: "full_appendix", label: "Full Evidence Appendix", desc: "All evidence entries included" },
+  ];
   return (
-    <div className="border-b border-slate-200 pb-2 mb-4">
-      <h2 className="text-base font-bold text-slate-900 uppercase tracking-wide">{title}</h2>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <div className="flex flex-col gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          onClick={() => onChange(opt.key)}
+          className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+            value === opt.key
+              ? "border-indigo-300 bg-indigo-50"
+              : "border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 ${
+            value === opt.key ? "border-indigo-600 bg-indigo-600" : "border-slate-300"
+          }`} />
+          <div>
+            <p className={`text-sm font-medium ${value === opt.key ? "text-indigo-900" : "text-slate-900"}`}>
+              {opt.label}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
+          </div>
+        </button>
+      ))}
     </div>
   );
 }
 
-function EvidenceSection({ label, items, emptyText }) {
+// ── Inline preview panels ─────────────────────────────────────────────────────
+
+function PreviewSummary({ props, fidelityRows }) {
+  const {
+    totalReadinessScore, homeDiscoveryCompleted, benefitsCompleted, assistiveTechCompleted,
+    discoveryInterviewCompletedCount, informationalInterviewCompletedCount, discoveryActivityCompletedCount,
+    gateRules,
+  } = props;
+
+  const milestones = [
+    { title: "Home & Community Discovery", done: homeDiscoveryCompleted },
+    { title: "Benefits & Resources", done: benefitsCompleted },
+    { title: "Assistive Technology", done: assistiveTechCompleted },
+    { title: `Discovery Interviews (${discoveryInterviewCompletedCount} completed)`, done: discoveryInterviewCompletedCount >= 3 },
+    { title: `Informational Interviews (${informationalInterviewCompletedCount} completed)`, done: informationalInterviewCompletedCount >= 2 },
+    { title: `Discovery Activities (${discoveryActivityCompletedCount} completed)`, done: discoveryActivityCompletedCount >= 1 },
+  ];
+
+  const strong = fidelityRows.filter((r) => r.status === "strong").length;
+  const weak = fidelityRows.filter((r) => r.status === "weak").length;
+  const missing = fidelityRows.filter((r) => r.status === "missing").length;
+
   return (
-    <div className="break-inside-avoid mb-4">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{label}</p>
-      {items.length > 0 ? (
-        <ul className="space-y-1.5">
-          {items.map((item, i) => (
-            <li key={i} className="text-sm text-slate-700">
-              <span>• {item.text}</span>
-              <span className="text-xs text-slate-400 ml-2">({item.source})</span>
-            </li>
+    <div className="space-y-5">
+      {/* Milestones */}
+      <div>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Stage One Milestones</p>
+        <div className="grid grid-cols-2 gap-2">
+          {milestones.map((m) => (
+            <div key={m.title} className={`flex items-center gap-2 rounded-lg px-3 py-2 border text-xs ${
+              m.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-500"
+            }`}>
+              {m.done
+                ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                : <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 shrink-0" />}
+              <span className="font-medium">{m.title}</span>
+            </div>
           ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-slate-400 italic">{emptyText}</p>
+        </div>
+      </div>
+
+      {/* Readiness score */}
+      <div>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Readiness Score</p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-2 bg-indigo-500 rounded-full" style={{ width: `${totalReadinessScore}%` }} />
+          </div>
+          <span className="text-lg font-bold text-indigo-700 w-12 text-right">{totalReadinessScore}%</span>
+        </div>
+      </div>
+
+      {/* Fidelity summary */}
+      <div>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Fidelity Summary</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Strong", val: strong, cls: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+            { label: "Weak", val: weak, cls: "bg-amber-50 border-amber-200 text-amber-700" },
+            { label: "Missing", val: missing, cls: "bg-red-50 border-red-200 text-red-700" },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-lg border px-3 py-2 text-center ${s.cls}`}>
+              <div className="text-xl font-bold">{s.val}</div>
+              <div className="text-xs font-medium uppercase tracking-wide">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Gate rules */}
+      <div>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Stage Two Gate</p>
+        <div className="space-y-1">
+          {(gateRules || []).slice(0, 8).map((r, i) => (
+            <div key={i} className={`flex items-start gap-2 text-xs px-2 py-1.5 rounded ${
+              r.passed ? "text-slate-600" : "text-red-700 bg-red-50"
+            }`}>
+              {r.passed
+                ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                : <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />}
+              <span>{r.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewFidelityTable({ fidelityRows }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Fidelity & Evidence Gap Analysis</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-slate-50">
+              <th className="text-left px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Category</th>
+              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Status</th>
+              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Items</th>
+              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Sources</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fidelityRows.map((row) => (
+              <tr key={row.label} className="even:bg-slate-50/50">
+                <td className="px-2 py-1.5 border border-slate-200 font-medium text-slate-700">{row.label}</td>
+                <td className="px-2 py-1.5 border border-slate-200 text-center">
+                  <Badge variant="outline" className={`text-xs ${
+                    row.status === "strong"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : row.status === "weak"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}>
+                    {row.status === "strong" ? "Strong" : row.status === "weak" ? "Weak" : "Missing"}
+                  </Badge>
+                </td>
+                <td className="px-2 py-1.5 border border-slate-200 text-center text-slate-700">{row.count}</td>
+                <td className="px-2 py-1.5 border border-slate-200 text-center text-slate-700">{row.srcCount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PreviewEvidenceSection({ sections, exportMode }) {
+  const limit = exportMode === "full_appendix" ? Infinity : 10;
+  const populated = sections.filter((s) => s.items.length > 0);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+        Evidence Preview {exportMode === "full_appendix" ? "— Full Appendix" : "(Top 10 per category)"}
+      </p>
+      {populated.map((sec) => {
+        const displayed = sec.items.slice(0, limit === Infinity ? sec.items.length : limit);
+        const overflow = sec.items.length - displayed.length;
+        const breakdown = buildSourceBreakdown(sec.items);
+        return (
+          <div key={sec.label} className="rounded-lg border border-slate-200 p-3">
+            <p className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">{sec.label}</p>
+            {breakdown && <p className="text-xs text-slate-400 mb-2">Sources: {breakdown}</p>}
+            <ul className="space-y-1">
+              {displayed.map((item, i) => (
+                <li key={i} className="text-xs text-slate-600">
+                  • {item.text}
+                  <span className="text-slate-400 ml-1.5">({item.source})</span>
+                </li>
+              ))}
+            </ul>
+            {overflow > 0 && (
+              <p className="text-xs text-indigo-500 italic mt-2">
+                + {overflow} additional entries available in DSR Source Explorer
+              </p>
+            )}
+          </div>
+        );
+      })}
+      {populated.length === 0 && (
+        <p className="text-sm text-slate-400 italic">No evidence recorded yet.</p>
       )}
     </div>
   );
 }
 
-function SourceSummaryTable({ sections }) {
-  // Build a source × category matrix
-  const allSources = [
-    "Home & Community Discovery",
-    "Discovery Interview",
-    "Informational Interview",
-    "Discovery Activity",
-    "Benefits & Resources Assessment",
-    "Assistive Technology Assessment",
-  ];
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          <tr className="bg-slate-100">
-            <th className="text-left px-2 py-1.5 font-semibold text-slate-700 border border-slate-200">Category</th>
-            <th className="text-center px-2 py-1.5 font-semibold text-slate-700 border border-slate-200">Items</th>
-            <th className="text-center px-2 py-1.5 font-semibold text-slate-700 border border-slate-200">Sources</th>
-            {allSources.map((s) => (
-              <th key={s} className="text-center px-1 py-1.5 font-medium text-slate-500 border border-slate-200 max-w-[60px] whitespace-normal">
-                {s.split(" ").slice(0, 2).join(" ")}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sections.map((sec) => {
-            const sourceSet = new Set(sec.items.map((i) => i.source).filter(Boolean));
-            return (
-              <tr key={sec.label} className="even:bg-slate-50">
-                <td className="px-2 py-1.5 text-slate-700 border border-slate-200 font-medium">{sec.label}</td>
-                <td className="px-2 py-1.5 text-center text-slate-700 border border-slate-200">{sec.items.length}</td>
-                <td className="px-2 py-1.5 text-center text-slate-700 border border-slate-200">{sourceSet.size}</td>
-                {allSources.map((s) => {
-                  const count = sec.items.filter((i) => i.source === s).length;
-                  return (
-                    <td key={s} className="px-1 py-1.5 text-center border border-slate-200">
-                      {count > 0 ? (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">{count}</span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ── Main Export Component ─────────────────────────────────────────────────────
+// ── Main export component (trigger + modal) ───────────────────────────────────
 
 export default function DSRExportPackage({
   client,
-  // readiness props
   totalReadinessScore,
   homeDiscoveryCompleted,
   benefitsCompleted,
@@ -112,7 +470,6 @@ export default function DSRExportPackage({
   fidelityMissingCount,
   fidelityWeakCount,
   gateRules,
-  // evidence props
   emergingInterests,
   observedSkills,
   conditionsForSuccess,
@@ -125,208 +482,99 @@ export default function DSRExportPackage({
   discoveryHypotheses,
   vocationalThemesEvidence,
 }) {
-  const printRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [exportMode, setExportMode] = useState("summary_evidence");
+
   const exportDate = new Date().toLocaleDateString("en-US", {
     year: "numeric", month: "long", day: "numeric",
   });
 
-  const handlePrint = () => {
-    const content = printRef.current?.innerHTML;
-    if (!content) return;
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>DSR Export – ${client?.first_name} ${client?.last_name}</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: system-ui, sans-serif; font-size: 11px; color: #1e293b; padding: 32px; }
-            h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-            h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 24px; }
-            h3 { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155; }
-            p, li { font-size: 11px; line-height: 1.6; color: #475569; }
-            ul { list-style: none; padding: 0; }
-            .meta { font-size: 10px; color: #94a3b8; margin-bottom: 24px; }
-            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-            .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-            .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; break-inside: avoid; }
-            .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 9px; font-weight: 600; border: 1px solid #e2e8f0; }
-            .badge-ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-            .badge-weak { background: #fffbeb; color: #92400e; border-color: #fde68a; }
-            .badge-missing { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
-            table { width: 100%; border-collapse: collapse; font-size: 10px; }
-            th, td { border: 1px solid #e2e8f0; padding: 4px 8px; text-align: left; }
-            th { background: #f8fafc; font-weight: 600; }
-            .evidence-item { margin-bottom: 6px; }
-            .evidence-source { font-size: 9px; color: #94a3b8; margin-left: 8px; }
-            .section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; }
-            .pass { color: #16a34a; }
-            .fail { color: #dc2626; }
-            .score-bar { height: 8px; background: #e2e8f0; border-radius: 4px; margin-top: 4px; }
-            .score-fill { height: 8px; border-radius: 4px; background: #6366f1; }
-            @media print {
-              body { padding: 20px; }
-              h2 { margin-top: 16px; }
-              .page-break { page-break-before: always; }
-            }
-          </style>
-        </head>
-        <body>${content}</body>
-      </html>
-    `);
-    win.document.close();
-    setTimeout(() => { win.print(); }, 300);
-  };
-
   const evidenceSections = [
-    { label: "Emerging Interests", items: emergingInterests, emptyText: "No interests identified yet." },
-    { label: "Observed Skills", items: observedSkills, emptyText: "No skills identified yet." },
-    { label: "Conditions for Success", items: conditionsForSuccess, emptyText: "No conditions identified yet." },
-    { label: "Potential Business Settings", items: potentialBusinessSettings, emptyText: "No business settings identified yet." },
-    { label: "Relationships / Natural Supports", items: relationshipsAndNaturalSupports, emptyText: "No natural supports identified yet." },
-    { label: "Community Connections", items: communityConnections, emptyText: "No community connections identified yet." },
-    { label: "Employer Leads", items: employerLeads, emptyText: "No employer leads identified yet." },
-    { label: "Benefits & Financial Considerations", items: benefitsAndFinancialConsiderations, emptyText: "No benefits evidence identified yet." },
-    { label: "Assistive Technology & Accommodations", items: assistiveTechnologyAndAccommodations, emptyText: "No assistive technology evidence identified yet." },
-    { label: "Discovery Hypotheses", items: discoveryHypotheses, emptyText: "No hypotheses identified yet." },
-    { label: "Vocational Themes Evidence", items: vocationalThemesEvidence, emptyText: "No vocational themes evidence identified yet." },
+    { label: "Emerging Interests", items: emergingInterests || [] },
+    { label: "Observed Skills", items: observedSkills || [] },
+    { label: "Conditions for Success", items: conditionsForSuccess || [] },
+    { label: "Potential Business Settings", items: potentialBusinessSettings || [] },
+    { label: "Relationships / Natural Supports", items: relationshipsAndNaturalSupports || [] },
+    { label: "Community Connections", items: communityConnections || [] },
+    { label: "Employer Leads", items: employerLeads || [] },
+    { label: "Benefits & Financial Considerations", items: benefitsAndFinancialConsiderations || [], singleSource: true },
+    { label: "Assistive Technology & Accommodations", items: assistiveTechnologyAndAccommodations || [], singleSource: true },
+    { label: "Discovery Hypotheses", items: discoveryHypotheses || [] },
+    { label: "Vocational Themes Evidence", items: vocationalThemesEvidence || [] },
   ];
 
+  const fidelityRows = buildFidelityRows(evidenceSections);
+
+  const readinessProps = {
+    totalReadinessScore, homeDiscoveryCompleted, benefitsCompleted, assistiveTechCompleted,
+    discoveryInterviewCompletedCount, discoveryInterviewTotalCount,
+    informationalInterviewCompletedCount, informationalInterviewTotalCount,
+    discoveryActivityCompletedCount, discoveryActivityTotalCount,
+    fidelityMissingCount, fidelityWeakCount, gateRules,
+  };
+
+  const handlePrint = () => {
+    const html = buildPrintHTML({
+      client, exportDate, exportMode,
+      sections: evidenceSections,
+      fidelityRows,
+      props: readinessProps,
+    });
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 400);
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Export trigger */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-sm font-semibold text-slate-900">DSR Export Package</h4>
-          <p className="text-xs text-slate-500 mt-0.5">Staff-facing Stage One review document</p>
-        </div>
-        <Button onClick={handlePrint} size="sm" className="gap-2">
-          <Printer className="h-4 w-4" />
-          Print / Export PDF
-        </Button>
-      </div>
+    <>
+      {/* Trigger button rendered inline by the parent */}
+      <Button size="sm" variant="outline" className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => setOpen(true)}>
+        <Printer className="h-3.5 w-3.5" />
+        Export Package
+      </Button>
 
-      {/* Preview panel (also used as print source) */}
-      <div
-        ref={printRef}
-        className="bg-white border border-slate-200 rounded-xl p-6 space-y-8 text-sm"
-      >
-        {/* Cover */}
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">
-            Discovery Staging Record — Stage One Export
-          </h1>
-          <p className="text-slate-500 text-xs mt-1">
-            {client?.first_name} {client?.last_name} &nbsp;·&nbsp; Exported {exportDate}
-          </p>
-          <p className="text-xs text-slate-400 mt-1 italic">
-            Staff review document only. Contains raw discovery evidence — not a finalized report.
-          </p>
-        </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-slate-200 shrink-0">
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900">
+                  DSR Export Package
+                </DialogTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {client?.first_name} {client?.last_name} &nbsp;·&nbsp; {exportDate}
+                </p>
+              </div>
+              <Button size="sm" onClick={handlePrint} className="gap-1.5 ml-4 shrink-0">
+                <Printer className="h-3.5 w-3.5" />
+                Print / Save PDF
+              </Button>
+            </div>
+          </DialogHeader>
 
-        {/* 1. Stage One Milestones */}
-        <div>
-          <SectionHeader title="1. Stage One Milestones" subtitle="Visual roadmap of completion requirements" />
-          <StageOneMilestoneTracker
-            homeDiscoveryCompleted={homeDiscoveryCompleted}
-            benefitsCompleted={benefitsCompleted}
-            assistiveTechCompleted={assistiveTechCompleted}
-            discoveryInterviewCompletedCount={discoveryInterviewCompletedCount}
-            informationalInterviewCompletedCount={informationalInterviewCompletedCount}
-            discoveryActivityCompletedCount={discoveryActivityCompletedCount}
-            stageTwoReady={totalReadinessScore === 100}
-          />
-        </div>
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {/* Left: options */}
+            <div className="w-56 shrink-0 border-r border-slate-200 p-4 overflow-y-auto bg-slate-50">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Export Options</p>
+              <ExportModeSelector value={exportMode} onChange={setExportMode} />
+              <div className="mt-4 pt-4 border-t border-slate-200 text-xs text-slate-400 space-y-1">
+                <p>The print dialog will open in a new window.</p>
+                <p className="mt-1">Choose "Save as PDF" in your browser's print dialog.</p>
+              </div>
+            </div>
 
-        {/* 2. Discovery Readiness Score */}
-        <div>
-          <SectionHeader title="2. Discovery Readiness Score" subtitle="Weighted completion score toward Stage Two" />
-          <DiscoveryReadinessScore
-            homeDiscoveryCompleted={homeDiscoveryCompleted}
-            benefitsCompleted={benefitsCompleted}
-            assistiveTechCompleted={assistiveTechCompleted}
-            discoveryInterviewCompletedCount={discoveryInterviewCompletedCount}
-            discoveryInterviewTotalCount={discoveryInterviewTotalCount}
-            informationalInterviewCompletedCount={informationalInterviewCompletedCount}
-            informationalInterviewTotalCount={informationalInterviewTotalCount}
-            discoveryActivityCompletedCount={discoveryActivityCompletedCount}
-            discoveryActivityTotalCount={discoveryActivityTotalCount}
-          />
-        </div>
-
-        {/* 3. Stage Two Readiness Gate */}
-        <div>
-          <SectionHeader title="3. Stage Two Readiness Gate" subtitle="Deterministic pass/fail criteria for Stage Two advancement" />
-          <StageTwoReadinessGate
-            totalScore={totalReadinessScore}
-            homeDiscoveryCompleted={homeDiscoveryCompleted}
-            benefitsCompleted={benefitsCompleted}
-            assistiveTechCompleted={assistiveTechCompleted}
-            discoveryInterviewCompletedCount={discoveryInterviewCompletedCount}
-            discoveryInterviewTotalCount={discoveryInterviewTotalCount}
-            informationalInterviewCompletedCount={informationalInterviewCompletedCount}
-            informationalInterviewTotalCount={informationalInterviewTotalCount}
-            discoveryActivityCompletedCount={discoveryActivityCompletedCount}
-            discoveryActivityTotalCount={discoveryActivityTotalCount}
-            fidelityMissingCount={fidelityMissingCount}
-            fidelityWeakCount={fidelityWeakCount}
-            onRules={() => {}} // read-only in export
-          />
-        </div>
-
-        {/* 4. Remaining Stage One Work */}
-        {gateRules && gateRules.filter((r) => !r.passed).length > 0 && (
-          <div>
-            <SectionHeader title="4. Remaining Stage One Work" subtitle="Outstanding requirements before Stage Two" />
-            <StageOneWorkDashboard rules={gateRules} />
+            {/* Right: preview */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <PreviewSummary props={readinessProps} fidelityRows={fidelityRows} />
+              <PreviewFidelityTable fidelityRows={fidelityRows} />
+              {exportMode !== "summary_only" && (
+                <PreviewEvidenceSection sections={evidenceSections} exportMode={exportMode} />
+              )}
+            </div>
           </div>
-        )}
-
-        {/* 5. Discovery Fidelity & Evidence Gap Analysis */}
-        <div>
-          <SectionHeader title="5. Discovery Fidelity & Evidence Gap Analysis" subtitle="Evidence depth and source diversity across discovery categories" />
-          <DiscoveryFidelityPanel
-            emergingInterests={emergingInterests}
-            observedSkills={observedSkills}
-            conditionsForSuccess={conditionsForSuccess}
-            potentialBusinessSettings={potentialBusinessSettings}
-            relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
-            communityConnections={communityConnections}
-            employerLeads={employerLeads}
-            benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
-            assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
-            discoveryHypotheses={discoveryHypotheses}
-            vocationalThemesEvidence={vocationalThemesEvidence}
-          />
-        </div>
-
-        {/* 6. Draft Evidence Preview */}
-        <div>
-          <SectionHeader title="6. Draft Evidence Preview" subtitle="All categorized evidence items with source attribution" />
-          <div className="grid gap-5 md:grid-cols-2">
-            {evidenceSections.map((sec) => (
-              <EvidenceSection
-                key={sec.label}
-                label={sec.label}
-                items={sec.items}
-                emptyText={sec.emptyText}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* 7. Evidence Source Summary */}
-        <div>
-          <SectionHeader title="7. Evidence Source Summary" subtitle="Cross-reference of categories and contributing sources" />
-          <SourceSummaryTable sections={evidenceSections} />
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-slate-100 pt-4 text-xs text-slate-400">
-          Generated {exportDate} &nbsp;·&nbsp; {client?.first_name} {client?.last_name} &nbsp;·&nbsp; Stage One DSR Export Package
-        </div>
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
