@@ -100,7 +100,27 @@ export default function Clients() {
 
       // management / employee — backend enforces hierarchy
       const res = await base44.functions.invoke('getClientsForUser', { org_id: orgId || null });
-      return (res.data?.clients || []).sort((a, b) =>
+      const platformClients = res.data?.clients || [];
+
+      // Additive: union with cohort-visible clients (never reduces existing platform visibility).
+      // getCohortVisibleClients resolves the caller's cohort memberships server-side and returns
+      // clients across all cohorts the caller manages/is a member of, scoped by the caller's org.
+      let unionClients = platformClients;
+      try {
+        const cohortRes = await base44.functions.invoke('getCohortVisibleClients', {});
+        const cohortClients = cohortRes.data?.clients || [];
+        if (cohortClients.length > 0) {
+          const seenIds = new Set(platformClients.map(c => c.id));
+          unionClients = [
+            ...platformClients,
+            ...cohortClients.filter(c => !seenIds.has(c.id))
+          ];
+        }
+      } catch {
+        // Cohort engine unavailable — keep platform visibility unchanged.
+      }
+
+      return unionClients.sort((a, b) =>
         new Date(b.created_date) - new Date(a.created_date)
       );
     },
