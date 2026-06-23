@@ -1,0 +1,68 @@
+{
+  "name": "VocationalThemeCandidateStatus",
+  "type": "object",
+  "description": "Tracks the validation lifecycle of a Vocational Theme Candidate as a discovery hypothesis. Records the current status and progression through validation activities (Discovery Activities, Interviews, Employer Validation).",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "FK to Client"
+    },
+    "candidate_theme_name": {
+      "type": "string",
+      "description": "Exact name of the vocational theme candidate (e.g. 'Retail Customer Service')"
+    },
+    "category_label": {
+      "type": "string",
+      "description": "Category this candidate was synthesized from (e.g. 'Emerging Interests', 'Vocational Themes Evidence')"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "untested",
+        "emerging",
+        "supported",
+        "needs_validation",
+        "refuted",
+        "archived"
+      ],
+      "default": "untested",
+      "description": "Current validation status of the hypothesis: untested (no evidence), emerging (initial evidence), supported (sufficient evidence), needs_validation (inconclusive), refuted (contradicted), archived (no longer pursuing)"
+    },
+    "status_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the status was set"
+    },
+    "status_notes": {
+      "type": "string",
+      "description": "Narrative explanation for the current status (e.g. 'Confirmed by Discovery Activity on 6/20. Candidate expressed strong interest in retail operations.')"
+    },
+    "reviewer_user_id": {
+      "type": "string",
+      "description": "User ID who set the status"
+    },
+    "reviewer_role": {
+      "type": "string",
+      "description": "Platform role of reviewer at time of status update (admin, management, employee)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Soft-delete: false = archived/superseded status record"
+    }
+  },
+  "required": [
+    "org_id",
+    "client_id",
+    "candidate_theme_name",
+    "category_label",
+    "status",
+    "status_date",
+    "reviewer_user_id"
+  ],
+  "rls": {}
+}

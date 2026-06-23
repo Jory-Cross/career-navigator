@@ -5,6 +5,7 @@ import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary, bu
 import VocationalThemeCandidateFeedbackPanel from "./VocationalThemeCandidateFeedbackPanel";
 import VocationalThemeCandidateConsensus from "./VocationalThemeCandidateConsensus";
 import VocationalThemeCandidateGraphSummary from "./VocationalThemeCandidateGraphSummary";
+import VocationalThemeCandidateStatusPanel from "./VocationalThemeCandidateStatusPanel";
 import { base44 } from "@/api/base44Client";
 
 // Strength-key → tailwind classes for the always-visible strength chip.
@@ -198,6 +199,20 @@ function VocationalThemeCandidateCard({ candidate, client, currentUser }) {
             {graphOpen && (
               <VocationalThemeCandidateGraphSummary client={client} candidate={candidate} />
             )}
+          </div>
+        )}
+
+        {/* Validation Status */}
+        {client && currentUser && (
+          <div className="border-t border-violet-100 pt-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Validation Status
+            </p>
+            <VocationalThemeCandidateStatusPanel
+              client={client}
+              candidate={candidate}
+              currentUser={currentUser}
+            />
           </div>
         )}
 
