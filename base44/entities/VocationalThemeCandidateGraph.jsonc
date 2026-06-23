@@ -1,0 +1,133 @@
+{
+  "name": "VocationalThemeCandidateGraph",
+  "type": "object",
+  "description": "Persisted discovery evidence graph for a vocational theme candidate. Stores the deterministic relationship chain: Evidence \u2192 Concepts \u2192 Supporting Themes \u2192 Candidate \u2192 Feedback \u2192 Consensus. Rebuilt on demand and cached for UI display.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "FK to Client"
+    },
+    "candidate_theme_name": {
+      "type": "string",
+      "description": "Exact name of the vocational theme candidate (e.g. 'Retail Customer Service')"
+    },
+    "category_label": {
+      "type": "string",
+      "description": "Category this candidate was synthesized from (e.g. 'Emerging Interests', 'Vocational Themes Evidence')"
+    },
+    "supporting_themes": {
+      "type": "array",
+      "description": "List of distinct theme names that support this candidate",
+      "items": {
+        "type": "object",
+        "properties": {
+          "theme_name": {
+            "type": "string"
+          },
+          "evidence_count": {
+            "type": "number"
+          },
+          "concept_count": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "supporting_concepts": {
+      "type": "array",
+      "description": "List of distinct concept names (interests, skills, values) supporting the candidate",
+      "items": {
+        "type": "object",
+        "properties": {
+          "concept_name": {
+            "type": "string"
+          },
+          "concept_type": {
+            "type": "string",
+            "enum": [
+              "interest",
+              "skill",
+              "value",
+              "condition_for_success",
+              "barrier"
+            ]
+          },
+          "evidence_count": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "supporting_source_types": {
+      "type": "array",
+      "description": "List of assessment types providing supporting evidence",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supporting_evidence_ids": {
+      "type": "array",
+      "description": "IDs of individual evidence items (assessment structured_evidence items)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supporting_evidence_count": {
+      "type": "number",
+      "description": "Total count of distinct evidence items"
+    },
+    "supporting_concept_count": {
+      "type": "number",
+      "description": "Total count of distinct concepts"
+    },
+    "supporting_theme_count": {
+      "type": "number",
+      "description": "Total count of distinct themes"
+    },
+    "supporting_source_count": {
+      "type": "number",
+      "description": "Total count of distinct source types"
+    },
+    "feedback_count": {
+      "type": "number",
+      "description": "Number of reviewer feedback records for this candidate"
+    },
+    "consensus_status": {
+      "type": "string",
+      "enum": [
+        "Strongly Supported",
+        "Emerging Support",
+        "Weak Support",
+        "Needs More Discovery",
+        "Mixed Feedback",
+        "No Feedback"
+      ],
+      "description": "Current consensus status derived from feedback"
+    },
+    "last_rebuilt_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO datetime when this graph was last rebuilt"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Soft-delete: false = archived/invalidated"
+    }
+  },
+  "required": [
+    "org_id",
+    "client_id",
+    "candidate_theme_name",
+    "category_label",
+    "supporting_evidence_count",
+    "supporting_concept_count",
+    "supporting_theme_count",
+    "supporting_source_count"
+  ],
+  "rls": {}
+}

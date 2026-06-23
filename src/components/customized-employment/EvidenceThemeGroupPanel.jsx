@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers, Compass, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers, Compass, Sparkles, BarChart2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary, buildEmergingVocationalThemes } from "@/lib/customized-employment/evidenceNormalizer";
 import VocationalThemeCandidateFeedbackPanel from "./VocationalThemeCandidateFeedbackPanel";
 import VocationalThemeCandidateConsensus from "./VocationalThemeCandidateConsensus";
+import VocationalThemeCandidateGraphSummary from "./VocationalThemeCandidateGraphSummary";
+import { base44 } from "@/api/base44Client";
 
 // Strength-key → tailwind classes for the always-visible strength chip.
 const STRENGTH_CHIP_CLASSES = {
@@ -127,6 +129,7 @@ function ThemeRow({ theme }) {
 
 function VocationalThemeCandidateCard({ candidate, client, currentUser }) {
   const chipClass = STRENGTH_CHIP_CLASSES[candidate.confidenceKey] || STRENGTH_CHIP_CLASSES.insufficient;
+  const [graphOpen, setGraphOpen] = useState(false);
 
   return (
     <div className="rounded-lg border border-violet-200 bg-white overflow-hidden space-y-2">
@@ -170,6 +173,31 @@ function VocationalThemeCandidateCard({ candidate, client, currentUser }) {
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Evidence Graph Summary */}
+        {client && (
+          <div className="border-t border-violet-100 pt-2">
+            <button
+              onClick={() => setGraphOpen(!graphOpen)}
+              className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-slate-50 rounded text-left"
+            >
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-3.5 w-3.5 text-violet-600" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Evidence Graph Summary
+                </span>
+              </div>
+              {graphOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+              )}
+            </button>
+            {graphOpen && (
+              <VocationalThemeCandidateGraphSummary client={client} candidate={candidate} />
+            )}
           </div>
         )}
 
