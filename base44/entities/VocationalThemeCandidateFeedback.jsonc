@@ -7,6 +7,10 @@
       "type": "string",
       "description": "Tenant organization ID"
     },
+    "feedback_key": {
+      "type": "string",
+      "description": "Deterministic composite key: ${client_id}::${normalized_candidate_theme_name}::${reviewer_user_id}. Enforces uniqueness per composite key."
+    },
     "client_id": {
       "type": "string",
       "description": "FK to Client"
@@ -77,7 +81,8 @@
     "client_id",
     "candidate_theme_name",
     "category_label",
-    "reviewer_user_id"
+    "reviewer_user_id",
+    "feedback_key"
   ],
   "rls": {}
 }

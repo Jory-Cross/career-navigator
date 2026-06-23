@@ -24,10 +24,9 @@ Deno.serve(async (req) => {
     }
 
     // ── HARDENED VALIDATION: Client must exist ──────────────────────────────────
-    // Verify client_id is valid and user has access (no admin bypass)
     let client;
     try {
-      client = await base44.entities.Client.get(client_id);
+      client = await base44.asServiceRole.entities.Client.get(client_id);
     } catch (err) {
       console.error(`[saveVocationalThemeCandidateFeedback] Client lookup failed for ID: ${client_id}`, err);
       return Response.json({ error: 'Client not found' }, { status: 404 });
@@ -37,10 +36,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // ── VALIDATE cohort early if provided (even if platform access grants permission) ──
+    // ── VALIDATE cohort early if provided ──
     if (cohort_id) {
       try {
-        const cohort = await base44.entities.CETrainingCohort.get(cohort_id);
+        const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(cohort_id);
         if (!cohort) {
           return Response.json({ error: 'Cohort not found' }, { status: 404 });
         }
@@ -63,7 +62,6 @@ Deno.serve(async (req) => {
     // Cohort access: user is manager or member of cohort + client is assigned to member
     if (!hasAccess && cohort_id) {
       try {
-        // Check if user is manager or member of this cohort
         const userCohortMembership = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
           cohort_id,
           user_id: user.id,
@@ -71,13 +69,9 @@ Deno.serve(async (req) => {
         });
 
         if (userCohortMembership && userCohortMembership.length > 0) {
-          // User is in cohort; now verify if they can access this client
-          // Cohort manager: can access all clients assigned to cohort members
-          // Cohort member: can only access their own clients
           const userRole = userCohortMembership[0].cohort_role;
 
           if (userRole === 'manager') {
-            // Manager: check if client is assigned to any active cohort member
             const cohortMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
               cohort_id,
               is_active: true,
@@ -87,7 +81,6 @@ Deno.serve(async (req) => {
               hasAccess = true;
             }
           } else if (userRole === 'member') {
-            // Member: can only access their own clients
             if (client.assigned_employee_id === user.id) {
               hasAccess = true;
             }
@@ -103,15 +96,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Access denied to this client' }, { status: 403 });
     }
 
-    // ── DUPLICATE PREVENTION: Query → Create → Retry on Conflict ──
-    // Protected approach:
-    // 1. Query for existing record by composite key
-    // 2. If found, update it
-    // 3. If not found, create new
-    // 4. If create fails (likely duplicate key conflict), retry query once
+    // ── DETERMINISTIC FEEDBACK KEY ──────────────────────────────────────────────
+    // Normalization: lowercase, trim, collapse whitespace
+    const normalizedThemeName = candidate_theme_name.trim().toLowerCase().replace(/\s+/g, ' ');
+    const feedbackKey = `${client_id}::${normalizedThemeName}::${user.id}`;
     
     const feedbackData = {
       org_id: user.org_id,
+      feedback_key: feedbackKey,
       client_id,
       candidate_theme_name,
       category_label,
@@ -130,23 +122,35 @@ Deno.serve(async (req) => {
     let wasCreated = false;
 
     try {
-      // Step 1: Query for existing record
+      // Query for existing active record by feedback_key
       const existingRecords = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.filter({
-        client_id,
-        candidate_theme_name,
-        reviewer_user_id: user.id,
+        feedback_key: feedbackKey,
         is_active: true,
       });
 
       if (existingRecords && existingRecords.length > 0) {
-        // Record exists; update it
+        // Active record exists; update it
         feedback = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.update(
           existingRecords[0].id,
           feedbackData
         );
         wasCreated = false;
+
+        // If multiple active records exist (orphaned duplicates), mark older ones inactive
+        if (existingRecords.length > 1) {
+          console.log(`[DUPLICATE_CLEANUP] Found ${existingRecords.length} active records for key ${feedbackKey}, marking older ones inactive`);
+          for (const dup of existingRecords.slice(1)) {
+            try {
+              await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.update(dup.id, {
+                is_active: false,
+              });
+            } catch (dupErr) {
+              console.error(`[DUPLICATE_CLEANUP] Failed to deactivate duplicate ${dup.id}:`, dupErr.message);
+            }
+          }
+        }
       } else {
-        // Record does not exist; attempt to create
+        // No active record exists; attempt to create
         try {
           feedback = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.create(feedbackData);
           wasCreated = true;
@@ -156,9 +160,7 @@ Deno.serve(async (req) => {
           console.error('[DUPLICATE_PREVENTION] Create conflict detected, re-querying:', createErr.message);
           
           const retryRecords = await base44.asServiceRole.entities.VocationalThemeCandidateFeedback.filter({
-            client_id,
-            candidate_theme_name,
-            reviewer_user_id: user.id,
+            feedback_key: feedbackKey,
             is_active: true,
           });
 
@@ -187,6 +189,7 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: true,
       feedback_id: feedback.id,
+      feedback_key: feedbackKey,
       message: wasCreated ? 'Feedback created' : 'Feedback updated',
     });
   } catch (error) {
