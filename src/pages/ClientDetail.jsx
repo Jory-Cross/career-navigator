@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -243,7 +244,27 @@ const handleDocumentsChanged = useCallback(() => {
       const clientData = await getClientById(clientId);
       if (!clientData) return null;
 
-      return canAccessClient(clientData, user, clientId) ? clientData : null;
+      // 1) Existing platform visibility — unchanged (admin, management, assigned employee, client portal).
+      if (canAccessClient(clientData, user, clientId)) {
+        return clientData;
+      }
+
+      // 2) Additive: cohort visibility (only for staff roles; never reduces existing access).
+      //    Fires only when platform access was already denied, so it can only expand access.
+      if (user.role === "employee" || user.role === "management") {
+        try {
+          const res = await base44.functions.invoke("getCohortVisibleClients", {});
+          const cohortClientIds = res.data?.clientIds || [];
+          if (cohortClientIds.includes(clientId)) {
+            return clientData;
+          }
+        } catch {
+          // Cohort engine unavailable — existing platform denial stands.
+        }
+      }
+
+      // 3) Deny — existing "Client not found" UI renders (no new UI added).
+      return null;
     },
     enabled: !!clientId && !!user,
     staleTime: 60 * 1000,
