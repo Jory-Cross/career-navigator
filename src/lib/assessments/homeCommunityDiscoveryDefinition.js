@@ -212,6 +212,26 @@ export const HOME_COMMUNITY_DISCOVERY_SECTIONS = [
         label: "Natural Supports",
         type: "textarea",
         placeholder: "List family, friends, neighbors, community members, staff, or others who provide support or connection.",
+        guidance: {
+          purpose: "Natural supports are people who exist in the client's life and can provide assistance, connection, or reinforcement in a workplace setting — without being paid staff. Identifying them early helps build an employment support network grounded in real relationships.",
+          include: [
+            "Family members who actively assist or encourage",
+            "Friends, neighbors, or roommates who provide help",
+            "Faith community members or mentors",
+            "Coaches, teachers, or community volunteers",
+            "Coworkers or employers from past jobs who had a positive relationship",
+          ],
+          exclude: [
+            "Paid support staff or job coaches (document separately)",
+            "General descriptions like 'has a supportive family' without specifics",
+            "People the client has not had contact with in over a year",
+          ],
+          usedFor: [
+            "Identifying who can support job-site integration without formal supports",
+            "Informing the Natural Supports section of the Discovery Staging Record",
+            "Building the employer negotiation strategy for natural workplace integration",
+          ],
+        },
       },
       {
         id: "social_preferences",
