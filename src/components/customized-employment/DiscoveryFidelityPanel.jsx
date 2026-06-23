@@ -5,17 +5,18 @@ import { Badge } from "@/components/ui/badge";
 const MIN_EVIDENCE_THRESHOLD = 3;
 const MIN_SOURCE_THRESHOLD = 2;
 
-function getFidelityStatus(count, sourceCount) {
+function getFidelityStatus(count, sourceCount, singleSource = false) {
   if (count === 0) return "missing";
+  if (singleSource) return count >= MIN_EVIDENCE_THRESHOLD ? "ok" : "weak";
   if (count < MIN_EVIDENCE_THRESHOLD || sourceCount < MIN_SOURCE_THRESHOLD) return "weak";
   return "ok";
 }
 
-function FidelityRow({ label, items }) {
+function FidelityRow({ label, items, singleSource = false }) {
   const count = items.length;
   const sourceCount = new Set(items.map((i) => i.source).filter(Boolean)).size;
   const sources = [...new Set(items.map((i) => i.source).filter(Boolean))];
-  const status = getFidelityStatus(count, sourceCount);
+  const status = getFidelityStatus(count, sourceCount, singleSource);
 
   return (
     <div
@@ -107,8 +108,8 @@ export default function DiscoveryFidelityPanel({
     { label: "Relationships / Natural Supports", items: relationshipsAndNaturalSupports },
     { label: "Community Connections", items: communityConnections },
     { label: "Employer Leads", items: employerLeads },
-    { label: "Benefits & Financial Considerations", items: benefitsAndFinancialConsiderations },
-    { label: "Assistive Technology & Accommodations", items: assistiveTechnologyAndAccommodations },
+    { label: "Benefits & Financial Considerations", items: benefitsAndFinancialConsiderations, singleSource: true },
+    { label: "Assistive Technology & Accommodations", items: assistiveTechnologyAndAccommodations, singleSource: true },
     { label: "Discovery Hypotheses", items: discoveryHypotheses },
     { label: "Vocational Themes Evidence", items: vocationalThemesEvidence },
   ];
@@ -147,7 +148,7 @@ export default function DiscoveryFidelityPanel({
 
       <div className="grid gap-2 md:grid-cols-2">
         {categories.map((cat) => (
-          <FidelityRow key={cat.label} label={cat.label} items={cat.items} />
+          <FidelityRow key={cat.label} label={cat.label} items={cat.items} singleSource={cat.singleSource} />
         ))}
       </div>
     </div>
