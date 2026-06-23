@@ -182,25 +182,19 @@ export default function StructuredAssessmentWorkspacePanel({
   }, []);
 
   // ── Manual "Save Progress" button handler
-    const handleSave = useCallback(async () => {
-    console.log("STRUCTURED SAVE CLICKED", {
-      assessmentType: meta.assessment_type,
-      responses: responsesRef.current,
-    });
-
-    toast.message("Save button clicked");
-
+  const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       await doSave(responsesRef.current, true);
       setIsDirty(false);
+      isDirtyRef.current = false;
     } catch (err) {
       console.error("STRUCTURED SAVE ERROR", err);
       toast.error("Failed to save: " + (err?.message || "Unknown error"));
     } finally {
       setSaving(false);
     }
-  }, [doSave, meta.assessment_type]);
+  }, [doSave]);
   // ── "Mark Assessment Complete" — staff-controlled status change
   const handleMarkComplete = useCallback(async () => {
     setMarkingComplete(true);
