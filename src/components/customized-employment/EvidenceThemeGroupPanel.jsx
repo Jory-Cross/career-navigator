@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers, Compass, Sp
 import { Badge } from "@/components/ui/badge";
 import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary, buildEmergingVocationalThemes } from "@/lib/customized-employment/evidenceNormalizer";
 import VocationalThemeCandidateFeedbackPanel from "./VocationalThemeCandidateFeedbackPanel";
+import VocationalThemeCandidateConsensus from "./VocationalThemeCandidateConsensus";
 
 // Strength-key → tailwind classes for the always-visible strength chip.
 const STRENGTH_CHIP_CLASSES = {
@@ -169,6 +170,16 @@ function VocationalThemeCandidateCard({ candidate, client, currentUser }) {
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Consensus Summary */}
+        {client && (
+          <div className="border-t border-violet-100 pt-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Reviewer Consensus
+            </p>
+            <VocationalThemeCandidateConsensus client={client} candidate={candidate} />
           </div>
         )}
 
