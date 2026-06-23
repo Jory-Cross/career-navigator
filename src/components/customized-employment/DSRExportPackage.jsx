@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Printer, X, CheckCircle2, XCircle, AlertCircle, ChevronRight } from "lucide-react";
+import { Printer } from "lucide-react";
 
 // ── Print styles injected into popup window ──────────────────────────────────
 
@@ -284,9 +283,47 @@ function ExportModeSelector({ value, onChange }) {
   );
 }
 
-// ── Inline preview panels ─────────────────────────────────────────────────────
+// ── Report-style preview ──────────────────────────────────────────────────────
 
-function PreviewSummary({ props, fidelityRows }) {
+function ReportSection({ title, children }) {
+  return (
+    <div className="mb-6">
+      <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-200 pb-1 mb-3">
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+function ReportTable({ headers, rows }) {
+  return (
+    <table className="w-full text-xs border-collapse">
+      <thead>
+        <tr className="bg-slate-50">
+          {headers.map((h) => (
+            <th key={h.key} className={`px-3 py-2 border border-slate-200 font-semibold text-slate-600 ${h.align === "center" ? "text-center" : "text-left"}`}>
+              {h.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i} className={i % 2 === 1 ? "bg-slate-50/40" : ""}>
+            {headers.map((h) => (
+              <td key={h.key} className={`px-3 py-2 border border-slate-200 text-slate-700 ${h.align === "center" ? "text-center" : ""} ${h.bold ? "font-medium" : ""}`}>
+                {row[h.key]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ReportPreview({ props, fidelityRows, sections, exportMode }) {
   const {
     totalReadinessScore, homeDiscoveryCompleted, benefitsCompleted, assistiveTechCompleted,
     discoveryInterviewCompletedCount, informationalInterviewCompletedCount, discoveryActivityCompletedCount,
@@ -295,159 +332,123 @@ function PreviewSummary({ props, fidelityRows }) {
 
   const milestones = [
     { title: "Home & Community Discovery", done: homeDiscoveryCompleted },
-    { title: "Benefits & Resources", done: benefitsCompleted },
-    { title: "Assistive Technology", done: assistiveTechCompleted },
-    { title: `Discovery Interviews (${discoveryInterviewCompletedCount} completed)`, done: discoveryInterviewCompletedCount >= 3 },
-    { title: `Informational Interviews (${informationalInterviewCompletedCount} completed)`, done: informationalInterviewCompletedCount >= 2 },
-    { title: `Discovery Activities (${discoveryActivityCompletedCount} completed)`, done: discoveryActivityCompletedCount >= 1 },
+    { title: "Benefits & Resources Assessment", done: benefitsCompleted },
+    { title: "Assistive Technology Assessment", done: assistiveTechCompleted },
+    { title: "Discovery Interviews", detail: `${discoveryInterviewCompletedCount} completed (3 required)`, done: discoveryInterviewCompletedCount >= 3 },
+    { title: "Informational Interviews", detail: `${informationalInterviewCompletedCount} completed (2 required)`, done: informationalInterviewCompletedCount >= 2 },
+    { title: "Discovery Activities", detail: `${discoveryActivityCompletedCount} completed`, done: discoveryActivityCompletedCount >= 1 },
   ];
 
-  const strong = fidelityRows.filter((r) => r.status === "strong").length;
-  const weak = fidelityRows.filter((r) => r.status === "weak").length;
-  const missing = fidelityRows.filter((r) => r.status === "missing").length;
-
-  return (
-    <div className="space-y-5">
-      {/* Milestones */}
-      <div>
-        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Stage One Milestones</p>
-        <div className="grid grid-cols-2 gap-2">
-          {milestones.map((m) => (
-            <div key={m.title} className={`flex items-center gap-2 rounded-lg px-3 py-2 border text-xs ${
-              m.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-500"
-            }`}>
-              {m.done
-                ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                : <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 shrink-0" />}
-              <span className="font-medium">{m.title}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Readiness score */}
-      <div>
-        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Readiness Score</p>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-2 bg-indigo-500 rounded-full" style={{ width: `${totalReadinessScore}%` }} />
-          </div>
-          <span className="text-lg font-bold text-indigo-700 w-12 text-right">{totalReadinessScore}%</span>
-        </div>
-      </div>
-
-      {/* Fidelity summary */}
-      <div>
-        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Fidelity Summary</p>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "Strong", val: strong, cls: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-            { label: "Weak", val: weak, cls: "bg-amber-50 border-amber-200 text-amber-700" },
-            { label: "Missing", val: missing, cls: "bg-red-50 border-red-200 text-red-700" },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-lg border px-3 py-2 text-center ${s.cls}`}>
-              <div className="text-xl font-bold">{s.val}</div>
-              <div className="text-xs font-medium uppercase tracking-wide">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Gate rules */}
-      <div>
-        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Stage Two Gate</p>
-        <div className="space-y-1">
-          {(gateRules || []).slice(0, 8).map((r, i) => (
-            <div key={i} className={`flex items-start gap-2 text-xs px-2 py-1.5 rounded ${
-              r.passed ? "text-slate-600" : "text-red-700 bg-red-50"
-            }`}>
-              {r.passed
-                ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                : <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />}
-              <span>{r.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewFidelityTable({ fidelityRows }) {
-  return (
-    <div>
-      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">Fidelity & Evidence Gap Analysis</p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="bg-slate-50">
-              <th className="text-left px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Category</th>
-              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Status</th>
-              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Items</th>
-              <th className="text-center px-2 py-1.5 border border-slate-200 font-semibold text-slate-600">Sources</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fidelityRows.map((row) => (
-              <tr key={row.label} className="even:bg-slate-50/50">
-                <td className="px-2 py-1.5 border border-slate-200 font-medium text-slate-700">{row.label}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-center">
-                  <Badge variant="outline" className={`text-xs ${
-                    row.status === "strong"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : row.status === "weak"
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                      : "border-red-200 bg-red-50 text-red-700"
-                  }`}>
-                    {row.status === "strong" ? "Strong" : row.status === "weak" ? "Weak" : "Missing"}
-                  </Badge>
-                </td>
-                <td className="px-2 py-1.5 border border-slate-200 text-center text-slate-700">{row.count}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-center text-slate-700">{row.srcCount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function PreviewEvidenceSection({ sections, exportMode }) {
   const limit = exportMode === "full_appendix" ? Infinity : 10;
   const populated = sections.filter((s) => s.items.length > 0);
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
-        Evidence Preview {exportMode === "full_appendix" ? "— Full Appendix" : "(Top 10 per category)"}
-      </p>
-      {populated.map((sec) => {
-        const displayed = sec.items.slice(0, limit === Infinity ? sec.items.length : limit);
-        const overflow = sec.items.length - displayed.length;
-        const breakdown = buildSourceBreakdown(sec.items);
-        return (
-          <div key={sec.label} className="rounded-lg border border-slate-200 p-3">
-            <p className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">{sec.label}</p>
-            {breakdown && <p className="text-xs text-slate-400 mb-2">Sources: {breakdown}</p>}
-            <ul className="space-y-1">
-              {displayed.map((item, i) => (
-                <li key={i} className="text-xs text-slate-600">
-                  • {item.text}
-                  <span className="text-slate-400 ml-1.5">({item.source})</span>
-                </li>
-              ))}
-            </ul>
-            {overflow > 0 && (
-              <p className="text-xs text-indigo-500 italic mt-2">
-                + {overflow} additional entries available in DSR Source Explorer
-              </p>
-            )}
-          </div>
-        );
-      })}
-      {populated.length === 0 && (
-        <p className="text-sm text-slate-400 italic">No evidence recorded yet.</p>
+    <div className="font-mono text-xs leading-relaxed text-slate-800 space-y-0">
+
+      {/* Section 1: Stage One Status */}
+      <ReportSection title="Section 1 — Stage One Status">
+        <ReportTable
+          headers={[
+            { key: "milestone", label: "Milestone", bold: true },
+            { key: "detail", label: "Detail" },
+            { key: "status", label: "Status", align: "center" },
+          ]}
+          rows={milestones.map((m) => ({
+            milestone: m.title,
+            detail: m.detail || "—",
+            status: (
+              <span className={m.done ? "text-emerald-700 font-semibold" : "text-slate-400"}>
+                {m.done ? "Complete" : "Pending"}
+              </span>
+            ),
+          }))}
+        />
+        <p className="mt-3 text-xs text-slate-500">
+          Overall readiness score: <span className="font-bold text-slate-700">{totalReadinessScore}%</span>
+          &nbsp;·&nbsp; {milestones.filter((m) => m.done).length} of {milestones.length} milestones complete
+        </p>
+      </ReportSection>
+
+      {/* Section 2: Stage Two Readiness */}
+      <ReportSection title="Section 2 — Stage Two Readiness Gate">
+        <ReportTable
+          headers={[
+            { key: "requirement", label: "Requirement", bold: true },
+            { key: "result", label: "Result", align: "center" },
+            { key: "notes", label: "Notes" },
+          ]}
+          rows={(gateRules || []).map((r) => ({
+            requirement: r.label,
+            result: (
+              <span className={r.passed ? "text-emerald-700 font-semibold" : "text-red-600 font-semibold"}>
+                {r.passed ? "Pass" : "Fail"}
+              </span>
+            ),
+            notes: r.passed ? "—" : (r.description || "—"),
+          }))}
+        />
+      </ReportSection>
+
+      {/* Section 3: Fidelity Summary */}
+      <ReportSection title="Section 3 — Fidelity & Evidence Gap Analysis">
+        <ReportTable
+          headers={[
+            { key: "category", label: "Evidence Category", bold: true },
+            { key: "status", label: "Rating", align: "center" },
+            { key: "count", label: "Items", align: "center" },
+            { key: "sources", label: "# Sources", align: "center" },
+            { key: "sourceList", label: "Contributing Sources" },
+          ]}
+          rows={fidelityRows.map((row) => ({
+            category: row.label,
+            status: (
+              <span className={
+                row.status === "strong" ? "text-emerald-700 font-semibold" :
+                row.status === "weak" ? "text-amber-600 font-semibold" :
+                "text-red-600 font-semibold"
+              }>
+                {row.status === "strong" ? "Strong" : row.status === "weak" ? "Weak" : "Missing"}
+              </span>
+            ),
+            count: row.count,
+            sources: row.srcCount,
+            sourceList: row.sources.join(", ") || "—",
+          }))}
+        />
+      </ReportSection>
+
+      {/* Section 4: Evidence Summary */}
+      {exportMode !== "summary_only" && (
+        <ReportSection title={`Section 4 — Evidence Summary${exportMode === "full_appendix" ? " (Full Appendix)" : " (Top 10 per Category)"}`}>
+          {populated.length === 0 ? (
+            <p className="text-slate-400 italic">No evidence recorded yet.</p>
+          ) : (
+            populated.map((sec) => {
+              const displayed = sec.items.slice(0, limit === Infinity ? sec.items.length : limit);
+              const overflow = sec.items.length - displayed.length;
+              const breakdown = buildSourceBreakdown(sec.items);
+              return (
+                <div key={sec.label} className="mb-4">
+                  <p className="text-xs font-bold text-slate-700 mb-0.5">{sec.label}</p>
+                  {breakdown && <p className="text-xs text-slate-400 mb-1">Sources: {breakdown}</p>}
+                  <ul className="space-y-0.5 ml-2">
+                    {displayed.map((item, i) => (
+                      <li key={i} className="text-xs text-slate-600">
+                        — {item.text}
+                        <span className="text-slate-400 ml-1">({item.source})</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {overflow > 0 && (
+                    <p className="text-xs text-indigo-500 italic mt-1 ml-2">
+                      + {overflow} additional entries in DSR Source Explorer
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </ReportSection>
       )}
     </div>
   );
@@ -564,13 +565,14 @@ export default function DSRExportPackage({
               </div>
             </div>
 
-            {/* Right: preview */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <PreviewSummary props={readinessProps} fidelityRows={fidelityRows} />
-              <PreviewFidelityTable fidelityRows={fidelityRows} />
-              {exportMode !== "summary_only" && (
-                <PreviewEvidenceSection sections={evidenceSections} exportMode={exportMode} />
-              )}
+            {/* Right: report preview */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white">
+              <ReportPreview
+                props={readinessProps}
+                fidelityRows={fidelityRows}
+                sections={evidenceSections}
+                exportMode={exportMode}
+              />
             </div>
           </div>
         </DialogContent>
