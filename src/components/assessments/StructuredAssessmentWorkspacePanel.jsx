@@ -149,15 +149,7 @@ export default function StructuredAssessmentWorkspacePanel({
       staff_review_flags,
     };
 
-    if (recordIdRef.current) {
-      await base44.entities.Assessment.update(recordIdRef.current, payload);
-    } else {
-      const result = await base44.entities.Assessment.create(payload);
-      recordIdRef.current = result?.id || null;
-    }
-
-    if (showToast) toast.success("Progress saved");
-    if (onSaved) onSaved();
+   v
   }, [clientId, meta.assessment_type, sections, onSaved]);
 
   // Keep a stable ref to doSave so the unmount effect is never stale
