@@ -30,6 +30,7 @@ const navItems = [
   { name: "Tasks",          icon: ListChecks,      page: "Tasks",          featureKey: "tasks" },
   { name: "Email Templates",icon: Mail,            page: "EmailTemplates", featureKey: "email_templates" },
   { name: "AI Agents",      icon: Bot,             page: "Agents",         featureKey: "ai_agents" },
+  { name: "CE Cohorts",      icon: GraduationCap,   page: "Cohorts",        featureKey: null,         roles: ["admin", "management"] },
   { name: "App Analytics",  icon: BarChart3,       page: "AppAnalytics",   featureKey: "app_analytics" },
   { name: "My Organization",icon: Building2,       page: "OrgDashboard",   featureKey: "org_dashboard", roles: ["admin"] },
   { name: "Permissions",    icon: Shield,          page: "FeaturePermissions", featureKey: null,        roles: ["admin"] },

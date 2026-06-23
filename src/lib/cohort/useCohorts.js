@@ -1,0 +1,149 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
+
+/**
+ * useCohorts — Phase 6A data hook for CETrainingCohort + CETrainingCohortMember.
+ *
+ * Provides:
+ *  - cohorts: all CETrainingCohort rows visible to the caller (org-scoped)
+ *  - memberships: all CETrainingCohortMember rows (for join counts)
+ *  - createCohort / updateCohort mutations
+ *  - addMember / removeMember mutations that route through the
+ *    manageCohortMembership backend function (server-side authority).
+ */
+
+export const COHORT_QUERY_KEYS = {
+  cohorts: ["cohorts", "list"],
+  memberships: ["cohorts", "memberships"],
+};
+
+export function useCohorts(user) {
+  const queryClient = useQueryClient();
+  const enabled = !!user;
+
+  // Resolve org_id up front so create/edit can assert it exists (org scoping rule).
+  const orgId = user?.org_id || null;
+
+  const { data: cohorts = [], isLoading: loadingCohorts } = useQuery({
+    queryKey: COHORT_QUERY_KEYS.cohorts,
+    queryFn: async () => {
+      const list = await base44.entities.CETrainingCohort.list("-created_date", 200);
+      return Array.isArray(list) ? list : [];
+    },
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: memberships = [] } = useQuery({
+    queryKey: COHORT_QUERY_KEYS.memberships,
+    queryFn: async () => {
+      const list = await base44.entities.CETrainingCohortMember.list("-created_date", 500);
+      return Array.isArray(list) ? list.filter((m) => m.is_active !== false) : [];
+    },
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["cohorts"] });
+  };
+
+  const createCohort = useMutation({
+    mutationFn: async (payload) => {
+      if (!orgId) {
+        throw new Error("Missing org_id — cannot create cohort without an organization context.");
+      }
+      return base44.entities.CETrainingCohort.create({
+        org_id: orgId,
+        name: payload.name,
+        code: payload.code || "",
+        description: payload.description || "",
+        course_name: payload.course_name || "",
+        course_version: payload.course_version || "",
+        instructor_notes: payload.instructor_notes || "",
+        cohort_type: payload.cohort_type || "testing",
+        status: payload.status || "planned",
+        start_date: payload.start_date || "",
+        end_date: payload.end_date || "",
+        created_by: user.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Cohort created");
+      invalidateAll();
+    },
+    onError: (err) => toast.error(err?.message || "Failed to create cohort"),
+  });
+
+  const updateCohort = useMutation({
+    mutationFn: async ({ id, patch }) => base44.entities.CETrainingCohort.update(id, patch),
+    onSuccess: () => {
+      toast.success("Cohort updated");
+      invalidateAll();
+    },
+    onError: (err) => toast.error(err?.message || "Failed to update cohort"),
+  });
+
+  const addMember = useMutation({
+    mutationFn: async ({ cohort_id, user_id, cohort_role }) => {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "add",
+        cohort_id,
+        user_id,
+        cohort_role,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Member added");
+      invalidateAll();
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || err?.message || "Failed to add member";
+      toast.error(msg);
+    },
+  });
+
+  const removeMember = useMutation({
+    mutationFn: async ({ cohort_id, membership_id, user_id, cohort_role }) => {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "remove",
+        cohort_id,
+        membership_id,
+        user_id,
+        cohort_role,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Member removed");
+      invalidateAll();
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || err?.message || "Failed to remove member";
+      toast.error(msg);
+    },
+  });
+
+  return {
+    orgId,
+    cohorts,
+    memberships,
+    loadingCohorts,
+    createCohort: createCohort.mutateAsync,
+    updateCohort: updateCohort.mutateAsync,
+    addMember: addMember.mutateAsync,
+    removeMember: removeMember.mutateAsync,
+    isCreating: createCohort.isPending,
+    isUpdating: updateCohort.isPending,
+    isAdding: addMember.isPending,
+    isRemoving: removeMember.isPending,
+  };
+}
+
+export default useCohorts;
