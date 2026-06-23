@@ -319,11 +319,11 @@ function HelpTooltip({ text, guidance }) {
                 )}
                 {guidance.usedFor?.length > 0 && (
                   <div>
-                    <p className="font-semibold text-slate-800 mb-0.5">How this is used in Discovery / DSR</p>
+                    <p className="font-semibold text-slate-800 mb-1.5">How this is used</p>
                     <ul className="space-y-0.5">
                       {guidance.usedFor.map((item, i) => (
-                        <li key={i} className="flex gap-1.5 text-slate-600">
-                          <span className="text-blue-400 shrink-0">→</span>{item}
+                        <li key={i} className="text-slate-600 flex gap-2">
+                          <span className="shrink-0">•</span>{item}
                         </li>
                       ))}
                     </ul>
