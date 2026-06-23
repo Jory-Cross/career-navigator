@@ -14,6 +14,7 @@ import {
 import DiscoveryFidelityPanel from "./DiscoveryFidelityPanel";
 import DiscoveryReadinessScore from "./DiscoveryReadinessScore";
 import StageOneMilestoneTracker from "./StageOneMilestoneTracker";
+import DiscoveryEvidenceSourceExplorer from "./DiscoveryEvidenceSourceExplorer";
 import StageTwoReadinessGate from "./StageTwoReadinessGate";
 import StageOneWorkDashboard from "./StageOneWorkDashboard";
 import { base44 } from "@/api/base44Client";
@@ -1165,6 +1166,20 @@ sourceMatrix: buildSourceContributionMatrix(
 </div>
 
 <DiscoveryFidelityPanel
+  emergingInterests={emergingInterests}
+  observedSkills={observedSkills}
+  conditionsForSuccess={conditionsForSuccess}
+  potentialBusinessSettings={potentialBusinessSettings}
+  relationshipsAndNaturalSupports={relationshipsAndNaturalSupports}
+  communityConnections={communityConnections}
+  employerLeads={employerLeads}
+  benefitsAndFinancialConsiderations={benefitsAndFinancialConsiderations}
+  assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
+  discoveryHypotheses={discoveryHypotheses}
+  vocationalThemesEvidence={vocationalThemesEvidence}
+/>
+
+<DiscoveryEvidenceSourceExplorer
   emergingInterests={emergingInterests}
   observedSkills={observedSkills}
   conditionsForSuccess={conditionsForSuccess}
