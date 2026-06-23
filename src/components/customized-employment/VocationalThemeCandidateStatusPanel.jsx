@@ -136,15 +136,23 @@ export default function VocationalThemeCandidateStatusPanel({
         savePayload
       );
 
-      console.log('[StatusPanel.handleSaveStatus] Response:', response.data);
+      console.log('[StatusPanel.handleSaveStatus] Response:', response.data || response);
 
-      if (response.data?.success) {
-        console.log('[StatusPanel.handleSaveStatus] Success confirmed, refreshing...');
+      // Check for success indicators (handle various response shapes from SDK wrapper vs direct)
+      const successResponse = response.data || response;
+      const isSaved = 
+        successResponse?.success === true ||
+        successResponse?.ok === true ||
+        successResponse?.status_id ||
+        successResponse?.status;
+
+      if (isSaved) {
+        console.log('[StatusPanel.handleSaveStatus] Save confirmed, refreshing...');
         toast.success(`Status updated to "${STATUS_CONFIG[status].label}"`);
         await fetchStatus(); // Refresh displayed status
         setIsEditing(false); // Close editor and return to display mode
       } else {
-        console.error('[StatusPanel.handleSaveStatus] Save returned success=false or missing success field');
+        console.error('[StatusPanel.handleSaveStatus] Save failed - no success indicators found');
         toast.error('Failed to save status');
       }
     } catch (error) {
