@@ -1,0 +1,47 @@
+{
+  "name": "CETrainingCohortMember",
+  "type": "object",
+  "description": "Membership edge linking a user to a CETrainingCohort with a cohort-local role. Manager (cohort_role='manager') and member/staff/student (cohort_role='member') are both stored here. Cohort role is independent of the user's platform role \u2014 a platform employee can be a cohort manager without gaining platform management rights. One row per (cohort_id, user_id, cohort_role). A user may appear in multiple cohorts and may hold different cohort roles in different cohorts.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "FK to CETrainingCohort"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "The manager or staff/student user"
+    },
+    "cohort_role": {
+      "type": "string",
+      "enum": [
+        "manager",
+        "member"
+      ],
+      "description": "manager = cohort-local manager with visibility over the whole cohort (clients, feedback, view-only time entries); member = staff/student whose assigned clients become visible to cohort managers and whose feedback is attributed as reviewer_user_id. Cohort role does NOT change platform role or access_level."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Soft-delete (mirrors ManagerEmployeeAssignment pattern)"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "added_by": {
+      "type": "string",
+      "description": "User ID who added this member"
+    }
+  },
+  "required": [
+    "org_id",
+    "cohort_id",
+    "user_id",
+    "cohort_role"
+  ],
+  "rls": {}
+}

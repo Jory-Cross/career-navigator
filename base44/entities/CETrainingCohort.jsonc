@@ -1,0 +1,71 @@
+{
+  "name": "CETrainingCohort",
+  "type": "object",
+  "description": "A Customized Employment certification training cohort / group. Groups multiple cohort managers and multiple staff/students (members); provides cohort-scoped visibility into clients assigned to those members and feedback authored within the cohort. Cohort role is independent of platform role \u2014 a cohort manager is NOT a platform management user. Used by CE certification course management.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization ID"
+    },
+    "name": {
+      "type": "string",
+      "description": "Cohort display name, e.g. 'CE Certification \u2014 Spring 2026 Cohort A'"
+    },
+    "code": {
+      "type": "string",
+      "description": "Optional short code, e.g. 'CE-2026-SPA'. Unique within org recommended (enforced in build, not by schema)."
+    },
+    "description": {
+      "type": "string"
+    },
+    "course_name": {
+      "type": "string",
+      "description": "Name of the CE certification program this cohort belongs to (e.g. 'CE Discovery Foundations'). Multiple cohorts may share a course_name."
+    },
+    "course_version": {
+      "type": "string",
+      "description": "Version/edition label of the course curriculum (e.g. 'v2026.1'). Free-text so course owners can version however they like."
+    },
+    "instructor_notes": {
+      "type": "string",
+      "description": "Internal notes visible to cohort managers and admins; not visible to members or clients."
+    },
+    "cohort_type": {
+      "type": "string",
+      "enum": [
+        "testing",
+        "training",
+        "production"
+      ],
+      "default": "testing",
+      "description": "Defines the purpose of the cohort. Testing = platform validation and feedback collection. Training = certification/student training cohort. Production = live organizational use."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "active",
+        "completed",
+        "archived"
+      ],
+      "default": "planned"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID of the admin who created the cohort"
+    }
+  },
+  "required": [
+    "org_id",
+    "name"
+  ],
+  "rls": {}
+}
