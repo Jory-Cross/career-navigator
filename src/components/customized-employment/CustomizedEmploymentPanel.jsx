@@ -428,6 +428,87 @@ const employerLeads = [
   ]),
 ];
 
+const benefitsAssessments = assessmentRecords.filter(
+  (record) => record.assessment_type === "benefits_resources_assessment"
+);
+
+// Collect select_all array values (e.g. current_benefits) as individual evidence items
+function collectArrayEvidence(records, fieldId, label) {
+  return records.flatMap((record) => {
+    const value = record?.responses?.[fieldId];
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((v) => v && v !== "Unknown")
+      .map((v) => ({
+        text: `${label}: ${v}`,
+        source: "Benefits & Resources Assessment",
+        field: fieldId,
+        recordId: record?.id,
+        status: record?.status,
+        updatedDate: record?.updated_date || record?.created_date || "",
+      }));
+  });
+}
+
+// Collect single-choice values as evidence items
+function collectChoiceEvidence(records, fieldId, label) {
+  return records.flatMap((record) => {
+    const value = record?.responses?.[fieldId];
+    if (!value || value === "Unknown" || value === "No" || value === "Not Reviewed" || value === "Not Applicable") return [];
+    return [{
+      text: `${label}: ${value}`,
+      source: "Benefits & Resources Assessment",
+      field: fieldId,
+      recordId: record?.id,
+      status: record?.status,
+      updatedDate: record?.updated_date || record?.created_date || "",
+    }];
+  });
+}
+
+const benefitsAndFinancialConsiderations = [
+  // Benefits snapshot
+  ...collectArrayEvidence(benefitsAssessments, "current_benefits", "Current Benefit"),
+  ...collectChoiceEvidence(benefitsAssessments, "benefits_verified", "Benefits Verification Status"),
+  ...collectEvidence(benefitsAssessments, ["benefits_notes"]),
+  // BPQY / SSA
+  ...collectChoiceEvidence(benefitsAssessments, "bpqy_requested", "BPQY Requested"),
+  ...collectChoiceEvidence(benefitsAssessments, "bpqy_received", "BPQY Received"),
+  ...collectChoiceEvidence(benefitsAssessments, "ssa_3288_completed", "SSA-3288 Release Completed"),
+  ...collectChoiceEvidence(benefitsAssessments, "ssa_3288_submitted", "SSA-3288 Submitted"),
+  ...collectEvidence(benefitsAssessments, ["bpqy_notes"]),
+  // Work incentives
+  ...collectChoiceEvidence(benefitsAssessments, "pass_potential", "PASS Potential"),
+  ...collectChoiceEvidence(benefitsAssessments, "irwe_potential", "IRWE Potential"),
+  ...collectChoiceEvidence(benefitsAssessments, "able_account", "ABLE Account"),
+  ...collectChoiceEvidence(benefitsAssessments, "student_earned_income_exclusion", "Student Earned Income Exclusion"),
+  ...collectEvidence(benefitsAssessments, ["other_work_incentives"]),
+  // WIPA
+  ...collectChoiceEvidence(benefitsAssessments, "wipa_referral_needed", "WIPA Referral Needed"),
+  ...collectChoiceEvidence(benefitsAssessments, "wipa_referred", "WIPA Referral Made"),
+  ...collectEvidence(benefitsAssessments, ["benefits_planning_outcome"]),
+  // Financial resources
+  ...collectEvidence(benefitsAssessments, [
+    "family_support",
+    "housing_support",
+    "transportation_support",
+    "community_resources",
+    "financial_resources",
+    "natural_supports",
+  ]),
+  // Benefits concerns
+  ...collectChoiceEvidence(benefitsAssessments, "fear_of_losing_benefits", "Fear of Losing Benefits"),
+  ...collectChoiceEvidence(benefitsAssessments, "fear_of_losing_healthcare", "Fear of Losing Healthcare"),
+  ...collectEvidence(benefitsAssessments, ["employment_concerns", "support_needs"]),
+  // Staff summary
+  ...collectEvidence(benefitsAssessments, [
+    "benefits_summary",
+    "recommended_actions",
+    "outstanding_needs",
+    "employment_considerations",
+  ]),
+];
+
 const assistiveTechnologyAndAccommodations = [
   ...collectEvidence(assistiveTechnologyAssessments, [
     "technology_use_notes",
@@ -982,6 +1063,11 @@ sourceMatrix: buildSourceContributionMatrix(
       label: "Employer Leads",
       items: employerLeads,
       emptyText: "No employer leads identified yet.",
+    },
+    {
+      label: "Benefits & Financial Considerations",
+      items: benefitsAndFinancialConsiderations,
+      emptyText: "No benefits or financial evidence identified yet.",
     },
     {
       label: "Assistive Technology & Accommodations",
