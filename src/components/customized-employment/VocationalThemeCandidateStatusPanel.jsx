@@ -77,17 +77,26 @@ export default function VocationalThemeCandidateStatusPanel({
   const fetchStatus = async () => {
     try {
       setLoading(true);
+      const getPayload = {
+        client_id: client.id,
+        candidate_theme_name: candidate.themeName,
+      };
+      console.log('[StatusPanel.fetchStatus] Sending payload:', getPayload);
+
       const response = await base44.functions.invoke(
         'getVocationalThemeCandidateStatus',
-        {
-          client_id: client.id,
-          candidate_theme_name: candidate.themeName,
-        }
+        getPayload
       );
+
+      console.log('[StatusPanel.fetchStatus] Response:', response.data);
 
       if (response.data) {
         setStatus(response.data.status || 'untested');
         setStatusNotes(response.data.status_notes || '');
+        console.log('[StatusPanel.fetchStatus] Set state to:', {
+          status: response.data.status || 'untested',
+          status_notes: response.data.status_notes || ''
+        });
       }
     } catch (error) {
       console.error('Error fetching status:', error);
@@ -100,22 +109,29 @@ export default function VocationalThemeCandidateStatusPanel({
   const handleSaveStatus = async () => {
     try {
       setSaving(true);
+      const savePayload = {
+        client_id: client.id,
+        candidate_theme_name: candidate.themeName,
+        category_label: candidate.categoryLabel || 'Emerging Interests',
+        status,
+        status_notes: statusNotes,
+      };
+      console.log('[StatusPanel.handleSaveStatus] Sending payload:', savePayload);
+
       const response = await base44.functions.invoke(
         'saveVocationalThemeCandidateStatus',
-        {
-          client_id: client.id,
-          candidate_theme_name: candidate.themeName,
-          category_label: candidate.categoryLabel || 'Emerging Interests',
-          status,
-          status_notes: statusNotes,
-        }
+        savePayload
       );
 
+      console.log('[StatusPanel.handleSaveStatus] Response:', response.data);
+
       if (response.data?.success) {
+        console.log('[StatusPanel.handleSaveStatus] Success confirmed, refreshing...');
         toast.success(`Status updated to "${STATUS_CONFIG[status].label}"`);
         await fetchStatus(); // Refresh displayed status
         setIsEditing(false); // Close editor and return to display mode
       } else {
+        console.error('[StatusPanel.handleSaveStatus] Save returned success=false or missing success field');
         toast.error('Failed to save status');
       }
     } catch (error) {

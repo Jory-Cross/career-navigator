@@ -9,8 +9,14 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { client_id, candidate_theme_name } = payload;
 
+    console.log('[getVocationalThemeCandidateStatus] Payload:', {
+      client_id,
+      candidate_theme_name
+    });
+
     // Validate required fields
     if (!client_id || !candidate_theme_name) {
+      console.error('[getVocationalThemeCandidateStatus] Missing required fields');
       return Response.json(
         { error: 'Missing required fields: client_id, candidate_theme_name' },
         { status: 400 }
@@ -24,8 +30,15 @@ Deno.serve(async (req) => {
       is_active: true
     });
 
+    console.log('[getVocationalThemeCandidateStatus] Query result:', {
+      query: { client_id, candidate_theme_name, is_active: true },
+      found: statusRecords.length,
+      records: statusRecords.map(r => ({ id: r.id, status: r.status, is_active: r.is_active }))
+    });
+
     if (statusRecords.length === 0) {
       // No status record exists yet; return default untested status
+      console.log('[getVocationalThemeCandidateStatus] No record found; returning default untested');
       return Response.json({
         status: 'untested',
         status_date: new Date().toISOString().split('T')[0],
@@ -37,6 +50,12 @@ Deno.serve(async (req) => {
 
     // Return the most recent active status record
     const latestStatus = statusRecords[0];
+    console.log('[getVocationalThemeCandidateStatus] Returning status:', {
+      id: latestStatus.id,
+      status: latestStatus.status,
+      exists: true
+    });
+
     return Response.json({
       ...latestStatus,
       exists: true
