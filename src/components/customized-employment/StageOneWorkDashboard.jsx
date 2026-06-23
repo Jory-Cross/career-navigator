@@ -40,32 +40,36 @@ export default function StageOneWorkDashboard({ rules }) {
 
           return (
             <div key={rule.key} className="py-3 first:pt-0 last:pb-0">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-sm font-medium text-slate-800">{rule.label}</span>
-                {hasProgress && (
-                  <span className="text-xs text-slate-500 shrink-0">
-                    Target: {rule.target}{rule.unit ? ` ${rule.unit}` : ""}
-                  </span>
-                )}
-              </div>
+              <span className="text-sm font-medium text-slate-800">{rule.label}</span>
 
               {hasProgress && (
                 <>
-                  {hasTotal && (
-                    <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-                      <p>{rule.total} record{rule.total !== 1 ? "s" : ""} found</p>
-                      <p>{rule.current} completed</p>
+                  {hasTotal ? (
+                    <div className="mt-1.5 grid grid-cols-3 gap-x-4 text-xs text-slate-500">
+                      <div>
+                        <p className="font-medium text-slate-600">Records Found</p>
+                        <p>{rule.total}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-600">Completed</p>
+                        <p>{rule.current} of {rule.target}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-600">Target</p>
+                        <p>{rule.target} completed</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-xs text-slate-500">
+                      {rule.current} of {rule.target}{rule.unit ? ` ${rule.unit}` : ""}
                     </div>
                   )}
-                  <div className="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-amber-400 transition-all duration-300"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Remaining: {remaining}{rule.unit ? ` ${rule.unit}` : ""}
-                  </p>
                 </>
               )}
 
