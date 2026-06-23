@@ -636,22 +636,7 @@ sourceMatrix: buildSourceContributionMatrix(
   employerLeads
 ),
 },
-{
-  label: "Relationships / Natural Supports",
-  evidenceItems: relationshipsAndNaturalSupports.length,
-  conceptCount: countDistinctConcepts(
-    relationshipsAndNaturalSupports
-  ),
-  sourceCount: countEvidenceSources(
-    relationshipsAndNaturalSupports
-  ),
- sourceBreakdown: buildSourceBreakdown(
-  relationshipsAndNaturalSupports
-),
-sourceMatrix: buildSourceContributionMatrix(
-  relationshipsAndNaturalSupports
-),
-},
+
 {
   label: "Community Connections",
   evidenceItems: communityConnections.length,
