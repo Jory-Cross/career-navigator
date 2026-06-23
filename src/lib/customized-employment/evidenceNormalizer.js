@@ -698,3 +698,80 @@ export function buildEvidenceThemes(concepts = []) {
     }))
     .sort((a, b) => b.entryCount - a.entryCount);
 }
+
+// ── Theme Intelligence Layer ──────────────────────────────────────────────
+// Deterministic evidence-strength classification + prose summary for a theme.
+// No AI, no external calls, no vocational theme generation. Pure functions of
+// the aggregated theme shape produced by buildEvidenceThemes().
+
+/**
+ * getThemeEvidenceStrength — classify a theme's support level.
+ * Rules (evaluated in order; first match wins):
+ *   Strong Evidence    : sourceCount >= 3 AND entryCount >= 10 AND conceptCount >= 5
+ *   Moderate Evidence  : sourceCount >= 2 AND entryCount >= 5
+ *   Emerging Evidence  : sourceCount >= 1 AND entryCount >= 1
+ *   No Evidence        : no entries
+ * Returns { strengthLabel, strengthKey }.
+ */
+export function getThemeEvidenceStrength(theme = {}) {
+  const entryCount = theme?.entryCount ?? 0;
+  const sourceCount = theme?.sourceCount ?? 0;
+  const conceptCount = (theme?.concepts || []).length;
+
+  if (entryCount === 0) {
+    return { strengthLabel: "No Evidence", strengthKey: "none" };
+  }
+  if (sourceCount >= 3 && entryCount >= 10 && conceptCount >= 5) {
+    return { strengthLabel: "Strong Evidence", strengthKey: "strong" };
+  }
+  if (sourceCount >= 2 && entryCount >= 5) {
+    return { strengthLabel: "Moderate Evidence", strengthKey: "moderate" };
+  }
+  return { strengthLabel: "Emerging Evidence", strengthKey: "emerging" };
+}
+
+// Cap for displayed concept names in the summary (UI density guard).
+const CONCEPT_SUMMARY_CAP = 12;
+
+// Deterministic prose templates per strength key. The strong template injects
+// the first few concept names so the sentence reads naturally; the others are
+// static. No AI, no variation beyond the concept-name interpolation.
+const STRENGTH_REASON_TEMPLATES = {
+  strong: (themeName, concepts) => {
+    const sample = concepts.slice(0, 4).join(", ");
+    const tail = concepts.length > 4 ? ", and other related concepts." : ".";
+    return `This theme is strongly supported because it appears across multiple discovery sources and includes repeated concepts related to ${sample}${tail}`;
+  },
+  moderate: () =>
+    "This theme has moderate support because it appears in more than one discovery source and includes repeated evidence.",
+  emerging: () =>
+    "This theme is emerging because it is currently supported by limited evidence.",
+  none: () =>
+    "No evidence has been recorded for this theme yet.",
+};
+
+/**
+ * getThemeInsightSummary — assemble the deterministic intelligence summary
+ * object for a single theme. Pure projection of buildEvidenceThemes() output.
+ */
+export function getThemeInsightSummary(theme = {}) {
+  const { strengthLabel, strengthKey } = getThemeEvidenceStrength(theme);
+
+  const concepts = Array.isArray(theme?.concepts) ? theme.concepts : [];
+  const conceptSummary = concepts.slice(0, CONCEPT_SUMMARY_CAP);
+  const primarySources = Array.isArray(theme?.sources) ? theme.sources : [];
+  const observedAcrossCount = primarySources.length;
+
+  return {
+    themeName: theme?.themeName || "",
+    strengthLabel,
+    strengthKey,
+    entryCount: theme?.entryCount ?? 0,
+    sourceCount: theme?.sourceCount ?? 0,
+    conceptCount: concepts.length,
+    primarySources,
+    observedAcrossCount,
+    conceptSummary,
+    strengthReason: (STRENGTH_REASON_TEMPLATES[strengthKey] || STRENGTH_REASON_TEMPLATES.none)(theme?.themeName || "", conceptSummary),
+  };
+}

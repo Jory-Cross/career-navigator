@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Folder, Users, FileText, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { buildEvidenceThemes, createEvidenceConcepts } from "@/lib/customized-employment/evidenceNormalizer";
+import { buildEvidenceThemes, createEvidenceConcepts, getThemeInsightSummary } from "@/lib/customized-employment/evidenceNormalizer";
+
+// Strength-key → tailwind classes for the always-visible strength chip.
+const STRENGTH_CHIP_CLASSES = {
+  strong: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  moderate: "bg-amber-50 text-amber-700 border-amber-200",
+  emerging: "bg-sky-50 text-sky-700 border-sky-200",
+  none: "bg-slate-50 text-slate-500 border-slate-200",
+};
 
 function ThemeRow({ theme }) {
   const [open, setOpen] = useState(false);
+  const insight = getThemeInsightSummary(theme);
+  const chipClass = STRENGTH_CHIP_CLASSES[insight.strengthKey] || STRENGTH_CHIP_CLASSES.none;
 
   return (
     <div className="rounded-lg border border-indigo-100 bg-white overflow-hidden">
@@ -38,6 +48,41 @@ function ThemeRow({ theme }) {
           </Badge>
         </div>
       </button>
+
+      {/* Always-visible Theme Intelligence summary */}
+      <div className="px-3 py-2 border-t border-slate-100 bg-slate-50/40">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${chipClass}`}>
+            {insight.strengthLabel}
+          </span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{insight.entryCount}</span> supporting entries
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{insight.sourceCount}</span> supporting sources
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-xs text-slate-600">
+            <span className="font-medium text-slate-800">{insight.conceptCount}</span> supporting concepts
+          </span>
+        </div>
+
+        {insight.observedAcrossCount > 0 && (
+          <div className="mt-1.5 flex items-start gap-1.5">
+            <span className="text-xs font-semibold text-slate-500 shrink-0">Observed across:</span>
+            <span className="text-xs text-slate-700">
+              {insight.primarySources.join(", ")}
+            </span>
+          </div>
+        )}
+
+        {insight.strengthReason && (
+          <p className="mt-1.5 text-xs text-slate-600 italic leading-relaxed">
+            {insight.strengthReason}
+          </p>
+        )}
+      </div>
 
       {open && (
         <div className="px-3 pb-3 pt-1 space-y-2 bg-slate-50/50">
