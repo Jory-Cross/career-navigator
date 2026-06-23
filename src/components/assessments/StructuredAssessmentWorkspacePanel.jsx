@@ -256,10 +256,11 @@ export default function StructuredAssessmentWorkspacePanel({
   }, [clientId, meta.assessment_type, sections, onSaved]);
 
   // ── "Save & Close" button (cancel) — save then notify parent
-   const handleCancel = useCallback(async () => {
+     const handleCancel = useCallback(async () => {
     if (isDirtyRef.current) {
       await doSave(responsesRef.current, false).catch(() => {});
       setIsDirty(false);
+      isDirtyRef.current = false;
     }
     await onSaved?.();
     onClose?.();
