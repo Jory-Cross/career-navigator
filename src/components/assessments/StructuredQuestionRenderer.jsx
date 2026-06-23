@@ -407,8 +407,6 @@ export default function StructuredQuestionRenderer({
       <HelpTooltip text={question.helpText} guidance={question.guidance} />
     )}
   </div>
-
-  {question.guidance && <GuidanceNote text={question.guidance} />}
 </div>
 
       <QuestionInput
