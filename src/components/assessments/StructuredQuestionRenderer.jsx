@@ -261,10 +261,10 @@ function GuidanceNote({ text }) {
   );
 }
 
-function HelpTooltip({ text }) {
+function HelpTooltip({ text, guidance }) {
   const [open, setOpen] = useState(false);
 
-  if (!text) return null;
+  if (!text && !guidance) return null;
 
   return (
     <div className="relative inline-flex">
@@ -277,9 +277,62 @@ function HelpTooltip({ text }) {
       </button>
 
       {open && (
-        <div className="absolute z-50 top-6 left-0 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs text-slate-700">
-          {text}
-        </div>
+        <>
+          {/* Click-away backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 top-6 left-0 w-80 bg-white border border-slate-200 rounded-lg shadow-xl p-3 text-xs text-slate-700">
+            {/* Plain helpText (existing pattern) */}
+            {text && !guidance && <p>{text}</p>}
+
+            {/* Structured guidance */}
+            {guidance && (
+              <div className="space-y-2.5">
+                {guidance.purpose && (
+                  <div>
+                    <p className="font-semibold text-slate-800 mb-0.5">Why we collect this</p>
+                    <p className="text-slate-600">{guidance.purpose}</p>
+                  </div>
+                )}
+                {guidance.include?.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-slate-800 mb-0.5">What belongs here</p>
+                    <ul className="space-y-0.5">
+                      {guidance.include.map((item, i) => (
+                        <li key={i} className="flex gap-1.5 text-slate-600">
+                          <span className="text-emerald-500 shrink-0">✓</span>{item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {guidance.exclude?.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-slate-800 mb-0.5">What does not belong here</p>
+                    <ul className="space-y-0.5">
+                      {guidance.exclude.map((item, i) => (
+                        <li key={i} className="flex gap-1.5 text-slate-600">
+                          <span className="text-red-400 shrink-0">✗</span>{item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {guidance.usedFor?.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-slate-800 mb-0.5">How this is used in Discovery / DSR</p>
+                    <ul className="space-y-0.5">
+                      {guidance.usedFor.map((item, i) => (
+                        <li key={i} className="flex gap-1.5 text-slate-600">
+                          <span className="text-blue-400 shrink-0">→</span>{item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -350,8 +403,8 @@ export default function StructuredQuestionRenderer({
       {question.label}
     </Label>
 
-    {question.helpText && (
-      <HelpTooltip text={question.helpText} />
+    {(question.helpText || question.guidance) && (
+      <HelpTooltip text={question.helpText} guidance={question.guidance} />
     )}
   </div>
 
