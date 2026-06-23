@@ -24,16 +24,16 @@ const CE_ASSESSMENT_TYPES = [
   "discovery_activity",
 ];
 
-function countCompleted(records, assessmentType) {
+function countCompleted(records, ...assessmentTypes) {
   return records.filter(
     (record) =>
-      record.assessment_type === assessmentType &&
+      assessmentTypes.includes(record.assessment_type) &&
       record.status === "completed"
   ).length;
 }
 
-function countAny(records, assessmentType) {
-  return records.filter((record) => record.assessment_type === assessmentType)
+function countAny(records, ...assessmentTypes) {
+  return records.filter((record) => assessmentTypes.includes(record.assessment_type))
     .length;
 }
 
@@ -912,11 +912,13 @@ sourceMatrix: buildSourceContributionMatrix(
                   label="Benefits & Resources Assessment"
                   count={countAny(
                     assessmentRecords,
-                    "benefits_resources_assessment"
+                    "benefits_resources_assessment",
+                    "benefits_resources"
                   )}
                   completed={countCompleted(
                     assessmentRecords,
-                    "benefits_resources_assessment"
+                    "benefits_resources_assessment",
+                    "benefits_resources"
                   )}
                 />
 
