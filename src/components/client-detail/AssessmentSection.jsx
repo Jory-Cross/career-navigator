@@ -485,7 +485,22 @@ export default function AssessmentSection({ clientId, client, openAssessmentType
     enabled: !!resolvedClientId,
   });
 
-  const getRecord = (key) => assessments.find((a) => a.assessment_type === key) || null;
+ const getRecord = (key) => {
+  const assessment = ALL_ASSESSMENTS.find((a) => a.key === key);
+
+  if (!assessment) {
+    return null;
+  }
+
+  const assessmentType =
+    assessment.meta?.assessment_type || key;
+
+  return (
+    assessments.find(
+      (a) => a.assessment_type === assessmentType
+    ) || null
+  );
+};
 
   const getWsaInterviewStatus = () => {
     if (!wsaSessions.length) return "not_started";
