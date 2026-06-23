@@ -123,7 +123,7 @@ export default function DiscoveryEvidenceSourceExplorer({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h5 className="text-sm font-semibold text-slate-900">Discovery Evidence Source Explorer</h5>
         <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-          {totalItems} total items
+          {totalItems} categorized evidence entries
         </Badge>
       </div>
 
