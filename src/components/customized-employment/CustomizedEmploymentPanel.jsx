@@ -96,7 +96,7 @@ function EvidenceStatus({ label, count, completed }) {
   );
 }
 
-export default function CustomizedEmploymentPanel({ client, currentUser }) {
+export default function CustomizedEmploymentPanel({ client, currentUser, onOpenAssessment }) {
   const [assessmentRecords, setAssessmentRecords] = useState([]);
   const [gateRules, setGateRules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1191,6 +1191,7 @@ sourceMatrix: buildSourceContributionMatrix(
   assistiveTechnologyAndAccommodations={assistiveTechnologyAndAccommodations}
   discoveryHypotheses={discoveryHypotheses}
   vocationalThemesEvidence={vocationalThemesEvidence}
+  onOpenAssessment={onOpenAssessment}
 />
 
 <div className="flex items-center gap-2">

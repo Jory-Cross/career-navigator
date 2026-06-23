@@ -854,7 +854,14 @@ const currentTaskCount = tasks.filter(
 
 {isCE && !isClientUser && (
   <TabsContent value="customized_employment">
-    <CustomizedEmploymentPanel client={client} currentUser={user} />
+    <CustomizedEmploymentPanel
+      client={client}
+      currentUser={user}
+      onOpenAssessment={(assessmentKey) => {
+        setOpenAssessmentType(assessmentKey);
+        handleTabChange("assessments");
+      }}
+    />
   </TabsContent>
 )}
                              {client.client_type === "pre_ets" && !isClientUser && (
