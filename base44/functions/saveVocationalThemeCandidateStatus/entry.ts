@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     // ── SAVE STATUS ──────────────────────────────────────────────────────────────
     const statusData = {
-      org_id: client.org_id,
+      org_id: user.org_id,
       client_id,
       candidate_theme_name,
       category_label,
