@@ -113,7 +113,8 @@ export default function VocationalThemeCandidateStatusPanel({
 
       if (response.data?.success) {
         toast.success(`Status updated to "${STATUS_CONFIG[status].label}"`);
-        setIsEditing(false);
+        await fetchStatus(); // Refresh displayed status
+        setIsEditing(false); // Close editor and return to display mode
       } else {
         toast.error('Failed to save status');
       }
