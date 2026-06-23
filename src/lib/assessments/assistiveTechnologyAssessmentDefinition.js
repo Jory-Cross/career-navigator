@@ -116,6 +116,11 @@ export const ASSISTIVE_TECHNOLOGY_SECTIONS = [
         label: "Technology Supporting Employment",
         type: "narrative",
       },
+      {
+        id: "independence_supports",
+        label: "Technology Supporting Independence",
+        type: "narrative",
+      },
     ],
   },
 
@@ -144,6 +149,11 @@ export const ASSISTIVE_TECHNOLOGY_SECTIONS = [
       {
         id: "technology_barrier_notes",
         label: "Technology Barrier Notes",
+        type: "narrative",
+      },
+      {
+        id: "technology_support_needed_for_access",
+        label: "Support Needed to Access or Use Technology",
         type: "narrative",
       },
     ],
@@ -196,11 +206,7 @@ export const ASSISTIVE_TECHNOLOGY_SECTIONS = [
         id: "assistive_technology_referral",
         label: "Assistive Technology Referral Recommended",
         type: "multiple_choice",
-        options: [
-          "Yes",
-          "No",
-          "Possibly",
-        ],
+        options: ["Yes", "No", "Possibly"],
       },
       {
         id: "assistive_technology_referral_notes",
