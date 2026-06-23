@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, GraduationCap, Users, UserCog, Calendar } from "lucide-react";
+import { Loader2, ArrowLeft, GraduationCap, Users, UserCog, Plus } from "lucide-react";
+import { toast } from "sonner";
 import MemberRow from "@/components/cohorts/MemberRow";
+import AddMemberDialog from "@/components/cohorts/AddMemberDialog";
 
 const STATUS_STYLES = {
   planned: "bg-slate-100 text-slate-700 border-slate-200",
@@ -38,10 +40,13 @@ function InfoField({ label, value, multiline }) {
  */
 export default function CohortDetail() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const cohort_id = searchParams.get("cohort_id");
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
+  const [addingManager, setAddingManager] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -114,6 +119,31 @@ export default function CohortDetail() {
     [memberships]
   );
 
+  const existingManagerUserIds = useMemo(() => managers.map((m) => m.user_id), [managers]);
+
+  const handleAddManager = async (selectedUser) => {
+    setAddingManager(true);
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "add",
+        cohort_id,
+        user_id: selectedUser.id,
+        cohort_role: "manager",
+      });
+      if (res.data?.ok) {
+        toast.success("Manager added");
+        // Refresh memberships
+        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
+      } else {
+        throw new Error(res.data?.error || "Unknown error");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to add manager");
+    } finally {
+      setAddingManager(false);
+    }
+  };
+
   // ── Render guards ─────────────────────────────────────────────────────
   if (!authChecked) {
     return (
@@ -148,6 +178,17 @@ export default function CohortDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Add Manager Dialog */}
+      <AddMemberDialog
+        open={showAddManagerDialog}
+        onOpenChange={setShowAddManagerDialog}
+        title="Add Manager"
+        cohortRole="manager"
+        allowedRoles={["admin", "management", "employee"]}
+        existingMemberUserIds={existingManagerUserIds}
+        onSubmit={handleAddManager}
+      />
+
       {/* 1. Back link */}
       <BackLink />
 
@@ -188,6 +229,17 @@ export default function CohortDetail() {
           <span className="ml-auto text-xs text-slate-400">
             {managers.length} active
           </span>
+          {user?.role === "admin" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddManagerDialog(true)}
+              disabled={addingManager}
+              className="ml-2"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add
+            </Button>
+          )}
         </div>
         <div className="p-2">
           {managers.length === 0 ? (
