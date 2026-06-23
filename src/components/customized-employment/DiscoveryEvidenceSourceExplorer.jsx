@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { createEvidenceConcepts } from "@/lib/customized-employment/evidenceNormalizer";
 
 // Maps the source label (set by getAssessmentSourceLabel in CustomizedEmploymentPanel)
 // to the assessment key used by AssessmentSection
@@ -28,6 +29,7 @@ function groupBySource(items) {
 function SourceGroup({ source, entries, onOpenAssessment }) {
   const [open, setOpen] = useState(false);
   const assessmentKey = SOURCE_TO_ASSESSMENT_KEY[source];
+  const conceptCount = createEvidenceConcepts(entries).length;
 
   return (
     <div className="border border-slate-100 rounded-lg overflow-hidden">
@@ -45,7 +47,10 @@ function SourceGroup({ source, entries, onOpenAssessment }) {
         </button>
         <div className="flex items-center gap-1.5 shrink-0">
           <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-            {entries.length}
+            {entries.length} entries
+          </Badge>
+          <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+            {conceptCount} concept{conceptCount !== 1 ? "s" : ""}
           </Badge>
           {assessmentKey && onOpenAssessment && (
             <Button
@@ -79,6 +84,7 @@ function SourceGroup({ source, entries, onOpenAssessment }) {
 function CategorySection({ label, items, onOpenAssessment }) {
   const [open, setOpen] = useState(false);
   const sourceGroups = groupBySource(items);
+  const conceptCount = createEvidenceConcepts(items).length;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -96,7 +102,10 @@ function CategorySection({ label, items, onOpenAssessment }) {
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-            {items.length} items
+            {items.length} entries
+          </Badge>
+          <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+            {conceptCount} concept{conceptCount !== 1 ? "s" : ""}
           </Badge>
           <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
             {sourceGroups.length} source{sourceGroups.length !== 1 ? "s" : ""}
@@ -160,6 +169,10 @@ export default function DiscoveryEvidenceSourceExplorer({
 
       <p className="text-xs text-slate-500">
         Expand a category to see evidence by source. Expand a source to inspect individual entries.
+      </p>
+
+      <p className="text-xs text-slate-400 italic">
+        Concepts represent normalized evidence themes. Multiple similar evidence entries may belong to the same concept.
       </p>
 
       <div className="space-y-2">
