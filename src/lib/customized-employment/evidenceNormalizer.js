@@ -320,13 +320,169 @@ export function createEvidenceConcepts(entries = []) {
     });
   });
 
-  return Array.from(concepts.values()).map((concept) => ({
+  const refinedConcepts = Array.from(concepts.values()).map((concept) => ({
     concept: concept.concept,
     sourceCount: concept.sources.size,
     sources: Array.from(concept.sources),
     entries: concept.entries,
     entryCount: concept.entries.length,
   }));
+
+  return consolidateConcepts(refinedConcepts);
+}
+
+// ── Concept Consolidation Layer ───────────────────────────────────────────
+// Pipeline stage 3: merges fragmented refined concepts into canonical
+// concept families. Additive only — concepts with no family match pass
+// through unchanged. Original entries and source attribution are preserved
+// verbatim on each consolidated concept.
+
+// Match against a normalized concept key (output of normalizeEvidenceText):
+// lowercased, verb/gerund → root, singularized, stop-words removed, tokens
+// alphabetically SORTED. Sample normalized keys:
+//   "Labeling"            -> "label"
+//   "Labeling Containers" -> "container label"
+//   "Creating Lists"      -> "create list"
+//   "Inventory Checklist" -> "checklist inventory"
+//   "Organizing Supplies"  -> "organize supplie"
+//   "Household Organization" -> "household organize"
+//   "Tracking Supplies"    -> "supplie track"
+//   "Inventory Tracking"  -> "inventory track"
+//   "Sorting Donations"   -> "donation sort"
+function buildConceptFamilies() {
+  const SPACE = " ";
+  const has = (k, word) => k.split(SPACE).includes(word);
+  return [
+    {
+      familyLabel: "Labeling",
+      matchers: [
+        (k) => k === "label" || has(k, "label"),
+      ],
+    },
+    {
+      familyLabel: "Lists & Checklists",
+      matchers: [
+        (k) => has(k, "list") || has(k, "checklist") || k === "checklist" || k === "list",
+      ],
+    },
+    {
+      familyLabel: "Inventory Systems",
+      matchers: [
+        (k) => (has(k, "inventory") && has(k, "system")) || k === "organize system",
+      ],
+    },
+    {
+      familyLabel: "Organization",
+      matchers: [
+        (k) => k === "organize" || has(k, "organize") || has(k, "organization"),
+      ],
+    },
+    {
+      familyLabel: "Sorting",
+      matchers: [
+        (k) => k === "sort" || has(k, "sort"),
+      ],
+    },
+    {
+      familyLabel: "Inventory Tracking",
+      matchers: [
+        (k) => (has(k, "track") && has(k, "inventory"))
+            || (has(k, "track") && has(k, "supplie"))
+            || (has(k, "track") && has(k, "material"))
+            || k === "track",
+      ],
+    },
+  ];
+}
+
+// Resolve a single refined concept to its family label by matching the
+// normalized concept key. Returns null when no family matches (singleton).
+function matchConceptToFamily(normalizedKey, families) {
+  if (!normalizedKey) return null;
+  for (const family of families) {
+    if (family.matchers.some((m) => m(normalizedKey))) {
+      return family.familyLabel;
+    }
+  }
+  return null;
+}
+
+// Pure grouping pass. Buckets refined concepts by family label; concepts
+// with no family match form a singleton bucket keyed on their own concept
+// label so they pass through unchanged.
+function groupRelatedConcepts(refinedConcepts = []) {
+  const families = buildConceptFamilies();
+  const buckets = new Map(); // familyLabel -> { familyLabel, members: [] }
+
+  refinedConcepts.forEach((concept) => {
+    const normalized = normalizeEvidenceText(concept.concept || "");
+    const familyLabel = matchConceptToFamily(normalized, families);
+
+    if (!familyLabel) {
+      // Singleton — bucket on the concept's own label so it passes through.
+      const singletonKey = concept.concept || "Unknown";
+      if (!buckets.has(singletonKey)) {
+        buckets.set(singletonKey, { familyLabel: singletonKey, members: [] });
+      }
+      buckets.get(singletonKey).members.push(concept);
+      return;
+    }
+
+    if (!buckets.has(familyLabel)) {
+      buckets.set(familyLabel, { familyLabel, members: [] });
+    }
+    buckets.get(familyLabel).members.push(concept);
+  });
+
+  return Array.from(buckets.values());
+}
+
+/**
+ * consolidateConcepts — top-level consolidation pass.
+ * Input:  array of refined concept objects (from createEvidenceConcepts),
+ *         shape: { concept, sourceCount, sources, entries, entryCount }
+ * Output: array of consolidated concept objects, same shape.
+ *
+ * Each bucket becomes ONE concept:
+ *   concept     = bucket familyLabel
+ *   entries     = union of member entries, deduped by entry.text (preserves originals)
+ *   sources     = union of member sources
+ *   entryCount  = entries.length
+ *   sourceCount = sources.length
+ *
+ * Original entries are referenced, never mutated; source attribution is
+ * unioned (never dropped). Singletons pass through as single-member buckets.
+ */
+export function consolidateConcepts(refinedConcepts = []) {
+  if (!Array.isArray(refinedConcepts) || refinedConcepts.length === 0) return [];
+
+  const buckets = groupRelatedConcepts(refinedConcepts);
+
+  return buckets.map((bucket) => {
+    const entriesMap = new Map(); // dedupe by entry text
+    const sourcesSet = new Set();
+
+    bucket.members.forEach((member) => {
+      (member.entries || []).forEach((entry) => {
+        const key = entry?.text || "";
+        if (!entriesMap.has(key)) {
+          entriesMap.set(key, entry);
+        }
+      });
+      (member.sources || []).forEach((src) => {
+        if (src) sourcesSet.add(src);
+      });
+    });
+
+    const entries = Array.from(entriesMap.values());
+    return {
+      concept: bucket.familyLabel,
+      sourceCount: sourcesSet.size,
+      sources: Array.from(sourcesSet),
+      entries,
+      entryCount: entries.length,
+    };
+  });
 }
 
 // ── Theme Grouping Engine ─────────────────────────────────────────────────
