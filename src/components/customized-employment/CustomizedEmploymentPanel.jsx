@@ -149,7 +149,7 @@ export default function CustomizedEmploymentPanel({ client, currentUser }) {
   () =>
     getLatestRecord(
       assessmentRecords,
-      "assistive_technology"
+      "assistive_technology_assessment"
     ),
   [assessmentRecords]
 );
