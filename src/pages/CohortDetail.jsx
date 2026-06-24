@@ -162,6 +162,11 @@ export default function CohortDetail() {
     [memberships]
   );
 
+console.log("MEMBERSHIPS", memberships);
+console.log("MEMBERS", members);
+console.log("ORG USERS", orgUsers);
+console.log("USER MAP", userById);
+  
   const existingManagerUserIds = useMemo(() => managers.map((m) => m.user_id), [managers]);
   const existingMemberUserIds = useMemo(() => members.map((m) => m.user_id), [members]);
 
