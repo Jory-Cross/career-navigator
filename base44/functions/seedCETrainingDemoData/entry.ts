@@ -54,73 +54,19 @@ Deno.serve(async (req) => {
 
     const cohortId = cohort.id;
 
-    // 2. Create actual demo User records
+    // 2. Define demo student data (will become pending invites, NOT active members)
     const demoStudentData = [
       { email: 'alex.ce.student.demo@example.com', first_name: 'Alex', last_name: 'Rivera' },
       { email: 'morgan.ce.student.demo@example.com', first_name: 'Morgan', last_name: 'Lee' },
       { email: 'taylor.ce.student.demo@example.com', first_name: 'Taylor', last_name: 'Brooks' },
     ];
 
-    const studentIds = [];
-    for (const studentData of demoStudentData) {
-      // Create actual User record
-      const user = await base44.asServiceRole.entities.User.create({
-        email: studentData.email,
-        full_name: `${studentData.first_name} ${studentData.last_name}`,
-        first_name: studentData.first_name,
-        last_name: studentData.last_name,
-        role: 'ce_student',
-        access_level: 'ce_training_portal',
-        org_id,
-        is_demo: true,
-        demo_seed_id: seed_id,
-      });
-
-      studentIds.push(user.id);
-
-      // Create cohort member record with real user ID
-      await base44.asServiceRole.entities.CETrainingCohortMember.create({
-        org_id,
-        cohort_id: cohortId,
-        user_id: user.id,
-        cohort_role: 'member',
-        is_active: true,
-        joined_at: new Date().toISOString(),
-        added_by: instructor.id,
-        is_demo: true,
-        demo_seed_id: seed_id,
-      });
-    }
-
-    // 3. Create demo training clients
+    // 3. Create demo training clients (unassigned - no fake student user_ids)
     const clientsData = [
-      // Alex Rivera's clients
-      {
-        first_name: 'Sarah',
-        last_name: 'Martinez',
-        suffix: 'Demo',
-        student_id: studentIds[0],
-      },
-      {
-        first_name: 'Jordan',
-        last_name: 'Fields',
-        suffix: 'Demo',
-        student_id: studentIds[0],
-      },
-      // Morgan Lee's clients
-      {
-        first_name: 'Casey',
-        last_name: 'Nguyen',
-        suffix: 'Demo',
-        student_id: studentIds[1],
-      },
-      // Taylor Brooks' clients
-      {
-        first_name: 'Riley',
-        last_name: 'Thompson',
-        suffix: 'Demo',
-        student_id: studentIds[2],
-      },
+      { first_name: 'Sarah', last_name: 'Martinez' },
+      { first_name: 'Jordan', last_name: 'Fields' },
+      { first_name: 'Casey', last_name: 'Nguyen' },
+      { first_name: 'Riley', last_name: 'Thompson' },
     ];
 
     const createdClients = [];
@@ -128,11 +74,11 @@ Deno.serve(async (req) => {
       const client = await base44.asServiceRole.entities.Client.create({
         org_id,
         first_name: clientData.first_name,
-        last_name: `${clientData.last_name} ${clientData.suffix}`,
+        last_name: `${clientData.last_name} Demo`,
         email: `${clientData.first_name.toLowerCase()}.${clientData.last_name.toLowerCase()}.demo@example.com`,
         client_type: 'ce_training',
         is_training_client: true,
-        created_by_student_id: clientData.student_id,
+        created_by_student_id: null,
         assigned_instructor_id: instructor.id,
         cohort_id: cohortId,
         status: 'active',
@@ -154,14 +100,10 @@ Deno.serve(async (req) => {
       is_demo: false, // Don't mark instructor as demo
     });
 
-    // 4. Create some pending invites to test the Pending Invitations section
-    const pendingEmails = [
-      'future.student.1.demo@example.com',
-      'future.student.2.demo@example.com',
-    ];
-    for (const email of pendingEmails) {
+    // 4. Create pending invites for the three demo students (NOT active members)
+    for (const studentData of demoStudentData) {
       await base44.asServiceRole.entities.PendingRoleAssignment.create({
-        email,
+        email: studentData.email,
         role: 'ce_student',
         access_level: 'ce_training_portal',
         org_id,
@@ -171,7 +113,6 @@ Deno.serve(async (req) => {
         invited_by_name: instructor.full_name,
         invited_at: new Date().toISOString(),
         status: 'pending',
-        is_demo: true,
         demo_seed_id: seed_id,
       });
     }
@@ -179,18 +120,16 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       message: 'CE Training demo data seeded successfully',
-      students_created: studentIds.length,
+      pending_invites_created: demoStudentData.length,
       data: {
         cohort: { id: cohortId, name: cohort.name },
-        students: demoStudentData.map((s, i) => ({
+        pending_students: demoStudentData.map(s => ({
           email: s.email,
           full_name: `${s.first_name} ${s.last_name}`,
-          user_id: studentIds[i],
         })),
         clients: createdClients.map(c => ({
           id: c.id,
           name: `${c.first_name} ${c.last_name}`,
-          created_by_student_id: c.created_by_student_id,
         })),
         seed_id,
       },
