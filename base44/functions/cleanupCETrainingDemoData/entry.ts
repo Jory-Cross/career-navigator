@@ -47,6 +47,9 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.CETrainingCohort.delete(cohort.id);
     }
 
+    // Capture demo cohort IDs
+    const demoCohortIds = demoCohorts.map(c => c.id);
+
     // Delete demo cohort members (by seed_id)
     const demoMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
       org_id,
@@ -57,10 +60,12 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.CETrainingCohortMember.delete(member.id);
     }
 
-    // Delete demo pending role assignments (by seed_id or email)
+    // Delete demo pending role assignments (by cohort, seed_id, or email)
     const allPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({ org_id });
     const demoPending = allPending.filter(p =>
-      p.demo_seed_id === seed_id || demoEmails.includes(p.email)
+      demoCohortIds.includes(p.cohort_id) ||
+      p.demo_seed_id === seed_id ||
+      demoEmails.includes(p.email)
     );
     for (const pending of demoPending) {
       await base44.asServiceRole.entities.PendingRoleAssignment.delete(pending.id);

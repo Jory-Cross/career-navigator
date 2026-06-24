@@ -154,6 +154,28 @@ Deno.serve(async (req) => {
       is_demo: false, // Don't mark instructor as demo
     });
 
+    // 4. Create some pending invites to test the Pending Invitations section
+    const pendingEmails = [
+      'future.student.1.demo@example.com',
+      'future.student.2.demo@example.com',
+    ];
+    for (const email of pendingEmails) {
+      await base44.asServiceRole.entities.PendingRoleAssignment.create({
+        email,
+        role: 'ce_student',
+        access_level: 'ce_training_portal',
+        org_id,
+        cohort_id: cohortId,
+        cohort_role: 'member',
+        invited_by_id: instructor.id,
+        invited_by_name: instructor.full_name,
+        invited_at: new Date().toISOString(),
+        status: 'pending',
+        is_demo: true,
+        demo_seed_id: seed_id,
+      });
+    }
+
     return Response.json({
       success: true,
       message: 'CE Training demo data seeded successfully',
