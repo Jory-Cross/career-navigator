@@ -27,6 +27,7 @@ import { isAdmin } from '@/lib/utils';
 import SmartLanding from '@/components/SmartLanding';
 import CETrainingPortal from './pages/CETrainingPortal';
 import CETrainingNav from '@/components/ce-training/CETrainingNav';
+import CEInstructorStudents from './pages/CEInstructorStudents';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
             <Route path="/CETrainingPortal" element={<CETrainingPortal />} />
             <Route path="/Cohorts" element={<LayoutWrapper currentPageName="Cohorts"><Cohorts /></LayoutWrapper>} />
             <Route path="/CohortDetail" element={<LayoutWrapper currentPageName="CohortDetail"><CohortDetail /></LayoutWrapper>} />
+            <Route path="/CEInstructorStudents" element={<LayoutWrapper currentPageName="CEInstructorStudents"><CEInstructorStudents /></LayoutWrapper>} />
             <Route path="*" element={<CETrainingPortal />} />
           </Routes>
         </CETrainingNav>

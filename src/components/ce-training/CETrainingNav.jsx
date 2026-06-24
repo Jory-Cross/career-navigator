@@ -10,6 +10,7 @@ const ceNavItems = {
   ce_instructor: [
     { label: 'Dashboard', path: '/CETrainingPortal' },
     { label: 'My Cohorts', path: '/Cohorts' },
+    { label: 'Students', path: '/CEInstructorStudents' },
   ],
   ce_student: [
     { label: 'Dashboard', path: '/CETrainingPortal' },

@@ -371,39 +371,18 @@ export default function CohortDetail() {
         </div>
       </section>
 
-      {/* 4. Members section */}
+      {/* 4. Active Students section */}
        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
-           <Users className="w-4 h-4 text-purple-600" />
-           <h2 className="text-sm font-semibold text-slate-900">Students</h2>
+           <Users className="w-4 h-4 text-green-600" />
+           <h2 className="text-sm font-semibold text-slate-900">Active Students</h2>
            <span className="ml-auto text-xs text-slate-400">
-             {members.length} active
+             {members.length} enrolled
            </span>
-           {canInviteStudent && (
-             <Button
-               size="sm"
-               variant="outline"
-               onClick={() => setShowInviteStudentDialog(true)}
-               className="ml-2"
-             >
-               <Plus className="w-3.5 h-3.5 mr-1" /> Invite Student
-             </Button>
-           )}
-           {canAddMember && !canInviteStudent && (
-             <Button
-               size="sm"
-               variant="outline"
-               onClick={() => setShowAddMemberDialog(true)}
-               disabled={addingMember}
-               className="ml-2"
-             >
-               <Plus className="w-3.5 h-3.5 mr-1" /> Add
-             </Button>
-           )}
         </div>
         <div className="p-2">
           {members.length === 0 ? (
-            <p className="text-sm text-slate-400 px-3 py-4">No active members.</p>
+            <p className="text-sm text-slate-400 px-3 py-4">No active students.</p>
           ) : (
             <div className="divide-y divide-slate-50">
                {members.map((m) => (
@@ -417,6 +396,38 @@ export default function CohortDetail() {
                ))}
              </div>
           )}
+        </div>
+      </section>
+
+      {/* 5. Pending Invitations section */}
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+          <Users className="w-4 h-4 text-amber-600" />
+          <h2 className="text-sm font-semibold text-slate-900">Pending Invitations</h2>
+          {canInviteStudent && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowInviteStudentDialog(true)}
+              className="ml-auto"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Invite Student
+            </Button>
+          )}
+          {canAddMember && !canInviteStudent && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddMemberDialog(true)}
+              disabled={addingMember}
+              className="ml-auto"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add
+            </Button>
+          )}
+        </div>
+        <div className="p-2">
+          <p className="text-sm text-slate-400 px-3 py-4">No pending invitations.</p>
         </div>
       </section>
     </div>
