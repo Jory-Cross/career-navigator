@@ -43,5 +43,76 @@
     "user_id",
     "cohort_role"
   ],
-  "rls": {}
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "management"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ce_instructor"
+          }
+        }
+      ],
+      "data.org_id": "{{user.org_id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "data.org_id": "{{user.org_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "management"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ce_instructor"
+          }
+        }
+      ],
+      "data.org_id": "{{user.org_id}}"
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "management"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ce_instructor"
+          }
+        }
+      ],
+      "data.org_id": "{{user.org_id}}"
+    }
+  }
 }
