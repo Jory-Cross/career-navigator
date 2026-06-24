@@ -84,9 +84,11 @@ Deno.serve(async (req) => {
     }
 
     // Most recent VALID assignment wins
-    const assignment = validPending.sort(
-      (a, b) => new Date(b.invited_at || b.created_date) - new Date(a.invited_at || a.created_date)
-    )[0];
+    const assignment = validPending.sort((a, b) => {
+      const bTime = new Date(b.invited_at || b.created_date || 0).getTime();
+      const aTime = new Date(a.invited_at || a.created_date || 0).getTime();
+      return bTime - aTime;
+    })[0];
 
     console.log(`[applyPendingRoleIfNeeded] Matching PendingRoleAssignment found: id=${assignment.id} role=${assignment.role} access_level=${assignment.access_level} org_id=${assignment.org_id} invited_by_id=${assignment.invited_by_id}`);
     console.log(`[applyPendingRoleIfNeeded] Applying role=${assignment.role} access_level=${assignment.access_level} to ${email}`);
@@ -95,10 +97,9 @@ Deno.serve(async (req) => {
       role: assignment.role,
       access_level: assignment.access_level,
       org_id: assignment.org_id,
+      manager_id: assignment.invited_by_id || undefined,
+      linked_client_id: assignment.client_id || undefined,
     };
-
-    if (assignment.invited_by_id) updateData.manager_id = assignment.invited_by_id;
-    if (assignment.client_id) updateData.linked_client_id = assignment.client_id;
 
     // Use the authenticated user's own ID directly — no need to filter by email
     // (base44.auth.me() already returned the correct user object with their id)
@@ -133,34 +134,45 @@ Deno.serve(async (req) => {
        console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
      }
     }
-
-    // Create CETrainingCohortMember for CE students with a cohort assignment
+    // Create CETrainingCohortMember for CE students with a cohort assignment.
+    // Cohort Detail displays active students as cohort_role === "member".
     if (assignment.role === 'ce_student' && assignment.cohort_id) {
      try {
        const existing = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
          cohort_id: assignment.cohort_id,
          user_id: userId,
-         cohort_role: 'student',
        });
+
        if (!existing || existing.length === 0) {
          await base44.asServiceRole.entities.CETrainingCohortMember.create({
            org_id: assignment.org_id,
            cohort_id: assignment.cohort_id,
            user_id: userId,
-           cohort_role: 'student',
+           cohort_role: 'member',
            is_active: true,
            joined_at: new Date().toISOString(),
            added_by: assignment.invited_by_id,
          });
-         console.log(`[applyPendingRoleIfNeeded] Created CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId}`);
+         console.log(`[applyPendingRoleIfNeeded] Created CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId} role=member`);
        } else {
-         console.log(`[applyPendingRoleIfNeeded] CETrainingCohortMember already exists, skipping.`);
+         const existingMembership = existing[0];
+
+         if (existingMembership.cohort_role !== 'member' || existingMembership.is_active === false) {
+           await base44.asServiceRole.entities.CETrainingCohortMember.update(existingMembership.id, {
+             cohort_role: 'member',
+             is_active: true,
+             joined_at: existingMembership.joined_at || new Date().toISOString(),
+             added_by: existingMembership.added_by || assignment.invited_by_id,
+           });
+           console.log(`[applyPendingRoleIfNeeded] Updated existing CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId} role=member`);
+         } else {
+           console.log(`[applyPendingRoleIfNeeded] CETrainingCohortMember already exists as member, skipping.`);
+         }
        }
      } catch (cohortErr) {
        console.warn('[applyPendingRoleIfNeeded] CETrainingCohortMember error:', cohortErr.message);
      }
     }
-
     // Mark the applied assignment as accepted — keep it for audit, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
 
