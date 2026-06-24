@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const demoStudents = [
       { email: 'alex.ce.student.demo@example.com', name: 'Alex Rivera' },
       { email: 'morgan.ce.student.demo@example.com', name: 'Morgan Lee' },
-      { taylor: 'taylor.ce.student.demo@example.com', name: 'Taylor Brooks' },
+      { email: 'taylor.ce.student.demo@example.com', name: 'Taylor Brooks' },
     ];
 
     const studentIds = [];
