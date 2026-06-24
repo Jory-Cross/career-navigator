@@ -6,7 +6,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 //
 // A "valid" assignment MUST have:
 //   - role (non-empty)
-//   - access_level (non-empty)
+//   - accesas_level (non-empty)
 //   - org_id (non-empty)
 //   - client_id (non-empty, required for client/pre_ets/dspd roles)
 //
@@ -170,10 +170,24 @@ Deno.serve(async (req) => {
          }
        }
      } catch (cohortErr) {
-       console.warn('[applyPendingRoleIfNeeded] CETrainingCohortMember error:', cohortErr.message);
+       console.error('[applyPendingRoleIfNeeded] CETrainingCohortMember error:', cohortErr.message);
+
+       return Response.json(
+         {
+           upgraded: false,
+           reason: 'cohort_membership_failed',
+           error: cohortErr.message,
+           cohort_id: assignment.cohort_id,
+           user_id: userId,
+           role: assignment.role,
+         },
+         { status: 500 }
+       );
      }
     }
-    // Mark the applied assignment as accepted — keep it for audit, do NOT delete
+
+    // Mark the applied assignment as accepted — keep it for audit, do NOT delete.
+    // Do this only after cohort membership succeeds.
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
 
     console.log(`[applyPendingRoleIfNeeded] ✓ User ${email} upgraded: role=${updateData.role} access_level=${updateData.access_level} org_id=${updateData.org_id}`);
