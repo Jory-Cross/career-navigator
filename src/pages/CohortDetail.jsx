@@ -84,7 +84,11 @@ export default function CohortDetail() {
     queryKey: ["cohorts", "memberships", cohort_id],
     queryFn: async () => {
       if (!cohort_id) return [];
-      const list = await base44.entities.CETrainingCohortMember.filter({ cohort_id });
+      // Use service-role to bypass read RLS — otherwise student member rows
+      // (owned by a different user_id) are silently filtered out when the
+      // viewer's org_id doesn't match the row's org_id, causing Active Students = 0.
+      // Page access is already gated to admin/management/ce_instructor above.
+      const list = await base44.asServiceRole.entities.CETrainingCohortMember.filter({ cohort_id });
       return (Array.isArray(list) ? list : []).filter((m) => m.is_active !== false);
     },
     enabled: !!cohort_id && !!user,
