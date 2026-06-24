@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, GraduationCap, Users, UserCog, Plus } from "lucide-
 import { toast } from "sonner";
 import MemberRow from "@/components/cohorts/MemberRow";
 import AddMemberDialog from "@/components/cohorts/AddMemberDialog";
+import InviteStudentDialog from "@/components/cohorts/InviteStudentDialog";
 
 const STATUS_STYLES = {
   planned: "bg-slate-100 text-slate-700 border-slate-200",
@@ -49,6 +50,7 @@ export default function CohortDetail() {
   const [addingManager, setAddingManager] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [showInviteStudentDialog, setShowInviteStudentDialog] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -128,6 +130,14 @@ export default function CohortDetail() {
   const canAddMember = useMemo(() => {
     if (!user) return false;
     if (user.role === "admin") return true;
+    if (user.role === "ce_instructor") return managers.some((m) => m.user_id === user.id);
+    return managers.some((m) => m.user_id === user.id);
+  }, [user, managers]);
+
+  // Determine if current user can invite students: CE instructor who is a manager
+  const canInviteStudent = useMemo(() => {
+    if (!user) return false;
+    if (user.role !== "ce_instructor") return false;
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
 
@@ -257,6 +267,17 @@ export default function CohortDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Invite Student Dialog */}
+      <InviteStudentDialog
+        open={showInviteStudentDialog}
+        onOpenChange={setShowInviteStudentDialog}
+        cohort_id={cohort_id}
+        cohortName={cohort?.name || ""}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
+        }}
+      />
+
       {/* Add Manager Dialog */}
       <AddMemberDialog
         open={showAddManagerDialog}
@@ -351,24 +372,34 @@ export default function CohortDetail() {
       </section>
 
       {/* 4. Members section */}
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
-          <Users className="w-4 h-4 text-purple-600" />
-          <h2 className="text-sm font-semibold text-slate-900">Members</h2>
-          <span className="ml-auto text-xs text-slate-400">
-            {members.length} active
-          </span>
-          {canAddMember && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowAddMemberDialog(true)}
-              disabled={addingMember}
-              className="ml-2"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add
-            </Button>
-          )}
+       <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+         <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+           <Users className="w-4 h-4 text-purple-600" />
+           <h2 className="text-sm font-semibold text-slate-900">Students</h2>
+           <span className="ml-auto text-xs text-slate-400">
+             {members.length} active
+           </span>
+           {canInviteStudent && (
+             <Button
+               size="sm"
+               variant="outline"
+               onClick={() => setShowInviteStudentDialog(true)}
+               className="ml-2"
+             >
+               <Plus className="w-3.5 h-3.5 mr-1" /> Invite Student
+             </Button>
+           )}
+           {canAddMember && !canInviteStudent && (
+             <Button
+               size="sm"
+               variant="outline"
+               onClick={() => setShowAddMemberDialog(true)}
+               disabled={addingMember}
+               className="ml-2"
+             >
+               <Plus className="w-3.5 h-3.5 mr-1" /> Add
+             </Button>
+           )}
         </div>
         <div className="p-2">
           {members.length === 0 ? (

@@ -15,7 +15,9 @@
         "client",
         "pre_ets",
         "dspd",
-        "pre_ets_employer"
+        "pre_ets_employer",
+        "ce_instructor",
+        "ce_student"
       ],
       "description": "Role to assign when they register"
     },
@@ -25,7 +27,8 @@
         "client_portal",
         "staff",
         "admin",
-        "pre_ets_employer_portal"
+        "pre_ets_employer_portal",
+        "ce_training_portal"
       ],
       "description": "Portal access level to assign"
     },
@@ -49,6 +52,19 @@
     "client_id": {
       "type": "string",
       "description": "Client record ID this portal invite is linked to (for client/pre_ets/dspd/pre_ets_employer roles)"
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "CE Training cohort ID this invite is linked to (for ce_student role)"
+    },
+    "cohort_role": {
+      "type": "string",
+      "enum": [
+        "manager",
+        "member",
+        "student"
+      ],
+      "description": "Cohort-local role for CE training users (student for ce_student role)"
     },
     "status": {
       "type": "string",
