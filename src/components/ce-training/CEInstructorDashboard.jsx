@@ -69,13 +69,29 @@ export default function CEInstructorDashboard() {
   return (
     <div className="space-y-6">
       {/* Create Cohort Dialog */}
-      <CohortFormDialog
+         <CohortFormDialog
         open={showCreateCohort}
         onOpenChange={setShowCreateCohort}
-        onSuccess={() => {
-          refetchCohorts();
-          setShowCreateCohort(false);
+        cohort={null}
+        onSubmit={async (payload) => {
+          const created = await base44.entities.CETrainingCohort.create({
+            ...payload,
+            org_id: user.org_id,
+          });
+
+          await base44.entities.CETrainingCohortMember.create({
+            org_id: user.org_id,
+            cohort_id: created.id,
+            user_id: user.id,
+            cohort_role: "manager",
+            is_active: true,
+            joined_at: new Date().toISOString(),
+            added_by: user.id,
+          });
+
+          await refetchCohorts();
         }}
+        saving={false}
       />
 
       {/* Header */}
