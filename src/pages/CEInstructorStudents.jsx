@@ -1,223 +1,338 @@
-import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, Mail, Users, ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowRight,
+  Loader2,
+  Mail,
+  UserCheck,
+  Users,
+  UserRoundPlus,
+} from "lucide-react";
+import InviteStudentDialog from "@/components/cohorts/InviteStudentDialog";
+
+const OPEN_INVITE_STATUSES = [
+  "pending",
+  "invite_email_sent",
+  "pending_email_failed",
+];
+
+function displayName(user) {
+  return user?.full_name || user?.email || "Unknown student";
+}
+
+function formatInviteStatus(status) {
+  if (status === "invite_email_sent") return "Email sent";
+  if (status === "pending_email_failed") return "Email needs resend";
+  return "Pending registration";
+}
 
 export default function CEInstructorStudents() {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    let mounted = true;
+
+    base44.auth
+      .me()
+      .then((currentUser) => {
+        if (mounted) setUser(currentUser);
+      })
+      .catch(() => {
+        if (mounted) setUser(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Fetch instructor's cohorts
-  const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
-    queryKey: ['ce-cohorts-instructor', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      // Get all cohorts the instructor manages
-      const allCohorts = await base44.entities.CETrainingCohort.filter({
-        org_id: user.org_id,
-      });
-      // Filter to only those where user is a manager
-      const memberships = await base44.entities.CETrainingCohortMember.filter({
-        user_id: user.id,
-        cohort_role: 'manager',
-      });
-      const managedCohortIds = memberships.map(m => m.cohort_id);
-      return allCohorts.filter(c => managedCohortIds.includes(c.id));
+  const {
+    data: roster = {
+      pending_invitations: [],
+      unassigned_students: [],
+      assigned_students: [],
     },
-    enabled: !!user?.id,
-  });
-
-  // Fetch all students (members and pending) across cohorts
-  const { data: studentsData = { active: [], pending: [] }, isLoading: studentsLoading } = useQuery({
-    queryKey: ['ce-students-instructor', cohorts.map(c => c.id).join(',')],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["ceTrainingStudentRoster"],
     queryFn: async () => {
-      if (cohorts.length === 0) return { active: [], pending: [] };
-
-      const cohortIds = cohorts.map(c => c.id);
-
-      // Get active members (students)
-      const activeMembers = await Promise.all(
-        cohortIds.map(cohortId =>
-          base44.entities.CETrainingCohortMember.filter({
-            cohort_id: cohortId,
-           cohort_role: 'member',
-            is_active: true,
-          })
-        )
-      ).then(results => results.flat());
-
-      // Get user details for active members
-      const activeWithDetails = await Promise.all(
-        activeMembers.map(async (member) => {
-          const cohort = cohorts.find(c => c.id === member.cohort_id);
-          try {
-            const userDetail = await base44.entities.User.get(member.user_id);
-            return { ...member, cohort, user: userDetail, status: 'active' };
-          } catch {
-            return { ...member, cohort, user: null, status: 'active' };
-          }
-        })
+      const response = await base44.functions.invoke(
+        "getCETrainingStudentRoster",
+        {}
       );
 
-      // Get pending invites (CE students only)
-      const pendingInvites = await base44.entities.PendingRoleAssignment.filter({
-        role: 'ce_student',
-        status: 'pending',
-      });
+      if (!response.data?.ok) {
+        throw new Error(
+          response.data?.error || "Unable to load CE students"
+        );
+      }
 
-      // Filter to only those in instructor's cohorts
-      const pendingForInstructor = pendingInvites
-        .filter(p => cohortIds.includes(p.cohort_id))
-        .map(p => ({
-          ...p,
-          cohort: cohorts.find(c => c.id === p.cohort_id),
-          status: 'pending',
-        }));
-
-      return {
-        active: activeWithDetails,
-        pending: pendingForInstructor,
-      };
+      return response.data;
     },
-    enabled: cohorts.length > 0,
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 
-  const allStudents = [...(studentsData.active || []), ...(studentsData.pending || [])];
-  const isLoading = cohortsLoading || studentsLoading;
+  const pendingInvitations = useMemo(
+    () =>
+      (roster.pending_invitations || []).filter((invite) =>
+        OPEN_INVITE_STATUSES.includes(invite.status)
+      ),
+    [roster.pending_invitations]
+  );
 
-  if (isLoading) {
+  const unassignedStudents = roster.unassigned_students || [];
+  const assignedStudents = roster.assigned_students || [];
+  const totalRegistered =
+    unassignedStudents.length + assignedStudents.length;
+
+  if (!user || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">CE Students</h1>
-        <p className="text-slate-600 mt-2">
-          Manage students across your {cohorts.length} cohort{cohorts.length !== 1 ? 's' : ''}.
-        </p>
-      </div>
+      <InviteStudentDialog
+        open={showInviteDialog}
+        onOpenChange={setShowInviteDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["ceTrainingStudentRoster"],
+          });
+        }}
+      />
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4 border-violet-200">
-          <div className="text-sm text-slate-600 mb-1">Total Students</div>
-          <div className="text-3xl font-bold text-violet-600">{allStudents.length}</div>
-          <div className="text-xs text-slate-500 mt-2">
-            {studentsData.active?.length || 0} active · {studentsData.pending?.length || 0} pending
-          </div>
-        </Card>
-        <Card className="p-4 border-blue-200">
-          <div className="text-sm text-slate-600 mb-1">Your Cohorts</div>
-          <div className="text-3xl font-bold text-blue-600">{cohorts.length}</div>
-          <Link to="/Cohorts">
-            <Button variant="outline" size="sm" className="w-full mt-2">
-              View Cohorts
-            </Button>
-          </Link>
-        </Card>
-        <Card className="p-4 border-slate-200">
-          <div className="text-sm text-slate-600 mb-1">Pending Invitations</div>
-          <div className="text-3xl font-bold text-slate-900">{studentsData.pending?.length || 0}</div>
-          <p className="text-xs text-slate-500 mt-2">Awaiting registration</p>
-        </Card>
-      </div>
-
-      {/* Students Table */}
-      {allStudents.length === 0 ? (
-        <Card className="p-12 text-center border-slate-200">
-          <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No Students Yet</h3>
-          <p className="text-slate-600 mb-4">
-            You haven't invited any students. Create a cohort and invite students to get started.
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            CE Students
+          </h1>
+          <p className="mt-2 text-slate-600">
+            Invite students to register, then assign registered students to
+            cohorts.
           </p>
-          <Link to="/Cohorts">
-            <Button>Create Cohort & Invite Students</Button>
-          </Link>
-        </Card>
-      ) : (
-        <Card className="border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Email</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Cohort</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {allStudents.map((student) => (
-                  <tr key={student.id || student.email} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">
-                        {student.user?.full_name || student.email?.split('@')[0] || '—'}
-                      </div>
-                      {!student.user && student.email && (
-                        <div className="text-xs text-slate-500">Not yet registered</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {student.email || (student.user?.email || '—')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-slate-900 font-medium">{student.cohort?.name || '—'}</div>
-                      {student.cohort?.code && (
-                        <div className="text-xs text-slate-500">{student.cohort.code}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {student.status === 'active' ? (
-                        <Badge className="bg-green-100 text-green-800 border-green-300">
-                          ✓ Active
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">
-                          ⏳ Pending
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link to={`/CohortDetail?cohort_id=${student.cohort?.id}`}>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          View
-                          <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        </div>
+
+        <Button
+          onClick={() => setShowInviteDialog(true)}
+          className="gap-2"
+        >
+          <UserRoundPlus className="h-4 w-4" />
+          Invite Student
+        </Button>
+      </div>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {error.message || "Unable to load CE student information."}
         </Card>
       )}
 
-      {/* Info Card */}
-      <Card className="p-6 bg-violet-50 border-violet-200">
-        <h3 className="font-semibold text-violet-900 mb-2">📚 Managing Students</h3>
-        <ol className="text-sm text-violet-800 space-y-1.5">
-          <li><span className="font-medium">1. Go to Cohorts</span> — Create or select a cohort</li>
-          <li><span className="font-medium">2. Invite Students</span> — Use the "Invite Student" button in cohort detail</li>
-          <li><span className="font-medium">3. Track Status</span> — See pending and active students here</li>
-          <li><span className="font-medium">4. Open Cohort</span> — Click "View" to manage students for a cohort</li>
-        </ol>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-violet-200 p-4">
+          <div className="mb-1 text-sm text-slate-600">
+            Registered Students
+          </div>
+          <div className="text-3xl font-bold text-violet-600">
+            {totalRegistered}
+          </div>
+          <div className="mt-2 text-xs text-slate-500">
+            {assignedStudents.length} assigned to a cohort
+          </div>
+        </Card>
+
+        <Card className="border-blue-200 p-4">
+          <div className="mb-1 text-sm text-slate-600">
+            Ready to Assign
+          </div>
+          <div className="text-3xl font-bold text-blue-600">
+            {unassignedStudents.length}
+          </div>
+
+          <Link to="/Cohorts">
+            <Button variant="outline" size="sm" className="mt-2 w-full">
+              Open Cohorts
+            </Button>
+          </Link>
+        </Card>
+
+        <Card className="border-amber-200 p-4">
+          <div className="mb-1 text-sm text-slate-600">
+            Pending Registrations
+          </div>
+          <div className="text-3xl font-bold text-amber-600">
+            {pendingInvitations.length}
+          </div>
+          <div className="mt-2 text-xs text-slate-500">
+            Awaiting student registration
+          </div>
+        </Card>
+      </div>
+
+      <section className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-amber-100 px-5 py-3">
+          <Mail className="h-4 w-4 text-amber-600" />
+          <h2 className="text-sm font-semibold text-slate-900">
+            Pending Registrations
+          </h2>
+          <span className="ml-auto text-xs text-slate-400">
+            {pendingInvitations.length} pending
+          </span>
+        </div>
+
+        {pendingInvitations.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-400">
+            No pending registration invitations.
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {pendingInvitations.map((invite) => (
+              <div
+                key={invite.id}
+                className="flex items-center justify-between gap-4 px-5 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900">
+                    {invite.email}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Invited{" "}
+                    {invite.invited_at
+                      ? new Date(invite.invited_at).toLocaleDateString()
+                      : "recently"}
+                  </p>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className="border-amber-200 bg-amber-50 text-amber-800"
+                >
+                  {formatInviteStatus(invite.status)}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-blue-100 px-5 py-3">
+          <UserCheck className="h-4 w-4 text-blue-600" />
+          <h2 className="text-sm font-semibold text-slate-900">
+            Registered — Not Assigned to a Cohort
+          </h2>
+          <span className="ml-auto text-xs text-slate-400">
+            {unassignedStudents.length} ready
+          </span>
+        </div>
+
+        {unassignedStudents.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-400">
+            No registered students are waiting for cohort assignment.
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {unassignedStudents.map((student) => (
+              <div
+                key={student.id}
+                className="flex items-center justify-between gap-4 px-5 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900">
+                    {displayName(student)}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {student.email}
+                  </p>
+                </div>
+
+                <Link to="/Cohorts">
+                  <Button variant="outline" size="sm" className="gap-1">
+                    Assign in Cohort
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-green-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-green-100 px-5 py-3">
+          <Users className="h-4 w-4 text-green-600" />
+          <h2 className="text-sm font-semibold text-slate-900">
+            Assigned Students
+          </h2>
+          <span className="ml-auto text-xs text-slate-400">
+            {assignedStudents.length} assigned
+          </span>
+        </div>
+
+        {assignedStudents.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-400">
+            No students are assigned to your cohorts yet.
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {assignedStudents.map((entry) => {
+              const firstMembership = entry.memberships?.[0];
+
+              const cohortNames = (entry.memberships || [])
+                .map((membership) => membership.cohort?.name)
+                .filter(Boolean)
+                .join(", ");
+
+              return (
+                <div
+                  key={entry.user.id}
+                  className="flex items-center justify-between gap-4 px-5 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      {displayName(entry.user)}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">
+                      {entry.user.email}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-green-700">
+                      {cohortNames}
+                    </p>
+                  </div>
+
+                  {firstMembership?.cohort?.id && (
+                    <Link
+                      to={`/CohortDetail?cohort_id=${firstMembership.cohort.id}`}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                      >
+                        View Cohort
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
