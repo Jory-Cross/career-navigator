@@ -113,25 +113,52 @@ Deno.serve(async (req) => {
     // Create ManagerEmployeeAssignment for staff roles with a manager link
     const staffRoles = ['employee', 'management'];
     if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
-      try {
-        const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
-          manager_user_id: assignment.invited_by_id,
-          employee_user_id: userId,
-        });
-        if (!existing || existing.length === 0) {
-          await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
-            org_id: assignment.org_id,
-            manager_user_id: assignment.invited_by_id,
-            employee_user_id: userId,
-            is_active: true,
-          });
-          console.log(`[applyPendingRoleIfNeeded] Created ManagerEmployeeAssignment manager=${assignment.invited_by_id} employee=${userId}`);
-        } else {
-          console.log(`[applyPendingRoleIfNeeded] ManagerEmployeeAssignment already exists, skipping.`);
-        }
-      } catch (assignErr) {
-        console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
-      }
+     try {
+       const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+         manager_user_id: assignment.invited_by_id,
+         employee_user_id: userId,
+       });
+       if (!existing || existing.length === 0) {
+         await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
+           org_id: assignment.org_id,
+           manager_user_id: assignment.invited_by_id,
+           employee_user_id: userId,
+           is_active: true,
+         });
+         console.log(`[applyPendingRoleIfNeeded] Created ManagerEmployeeAssignment manager=${assignment.invited_by_id} employee=${userId}`);
+       } else {
+         console.log(`[applyPendingRoleIfNeeded] ManagerEmployeeAssignment already exists, skipping.`);
+       }
+     } catch (assignErr) {
+       console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
+     }
+    }
+
+    // Create CETrainingCohortMember for CE students with a cohort assignment
+    if (assignment.role === 'ce_student' && assignment.cohort_id) {
+     try {
+       const existing = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+         cohort_id: assignment.cohort_id,
+         user_id: userId,
+         cohort_role: 'student',
+       });
+       if (!existing || existing.length === 0) {
+         await base44.asServiceRole.entities.CETrainingCohortMember.create({
+           org_id: assignment.org_id,
+           cohort_id: assignment.cohort_id,
+           user_id: userId,
+           cohort_role: 'student',
+           is_active: true,
+           joined_at: new Date().toISOString(),
+           added_by: assignment.invited_by_id,
+         });
+         console.log(`[applyPendingRoleIfNeeded] Created CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId}`);
+       } else {
+         console.log(`[applyPendingRoleIfNeeded] CETrainingCohortMember already exists, skipping.`);
+       }
+     } catch (cohortErr) {
+       console.warn('[applyPendingRoleIfNeeded] CETrainingCohortMember error:', cohortErr.message);
+     }
     }
 
     // Mark the applied assignment as accepted — keep it for audit, do NOT delete

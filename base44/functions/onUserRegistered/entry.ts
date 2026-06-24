@@ -130,6 +130,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // If this is a CE student with a cohort assignment, create CETrainingCohortMember
+    // (Note: This is also handled by applyPendingRoleIfNeeded on login; this is a backup for automation-based flows)
+    if (assignment.role === 'ce_student' && assignment.cohort_id) {
+      try {
+        const existingMembership = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id: assignment.cohort_id,
+          user_id: user.id,
+          cohort_role: 'student',
+        });
+        if (!existingMembership || existingMembership.length === 0) {
+          await base44.asServiceRole.entities.CETrainingCohortMember.create({
+            org_id: assignment.org_id,
+            cohort_id: assignment.cohort_id,
+            user_id: user.id,
+            cohort_role: 'student',
+            is_active: true,
+            joined_at: new Date().toISOString(),
+            added_by: assignment.invited_by_id,
+          });
+          console.log(`[onUserRegistered] Created CETrainingCohortMember: cohort=${assignment.cohort_id} user=${user.id}`);
+        } else {
+          await base44.asServiceRole.entities.CETrainingCohortMember.update(existingMembership[0].id, { is_active: true });
+        }
+      } catch (cohortErr) {
+        console.warn('[onUserRegistered] Could not create CETrainingCohortMember:', cohortErr.message);
+      }
+    }
+
     // Mark assignment as accepted — keep for audit trail, do NOT delete
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
       status: 'accepted',
