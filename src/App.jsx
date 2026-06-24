@@ -97,9 +97,9 @@ const AuthenticatedApp = () => {
           <Routes>
             <Route path="/" element={<CETrainingPortal />} />
             <Route path="/CETrainingPortal" element={<CETrainingPortal />} />
-            <Route path="/Cohorts" element={<LayoutWrapper currentPageName="Cohorts"><Cohorts /></LayoutWrapper>} />
-            <Route path="/CohortDetail" element={<LayoutWrapper currentPageName="CohortDetail"><CohortDetail /></LayoutWrapper>} />
-            <Route path="/CEInstructorStudents" element={<LayoutWrapper currentPageName="CEInstructorStudents"><CEInstructorStudents /></LayoutWrapper>} />
+            <Route path="/Cohorts" element={<Cohorts />} />
+            <Route path="/CohortDetail" element={<CohortDetail />} />
+            <Route path="/CEInstructorStudents" element={<CEInstructorStudents />} />
             <Route path="*" element={<CETrainingPortal />} />
           </Routes>
         </CETrainingNav>

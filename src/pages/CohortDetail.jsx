@@ -58,7 +58,9 @@ export default function CohortDetail() {
       if (!active) return;
       setUser(u);
       setAuthChecked(true);
-      if (u && u.role !== "admin" && u.role !== "management") {
+      // Allow admin, management, and CE instructors
+      const allowedRoles = ["admin", "management", "ce_instructor"];
+      if (u && !allowedRoles.includes(u.role)) {
         navigate("/Dashboard");
       }
     }).catch(() => setAuthChecked(true));
