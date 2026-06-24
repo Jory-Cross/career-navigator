@@ -318,7 +318,7 @@ export default function CohortDetail() {
         onOpenChange={setShowAddManagerDialog}
         title="Add Manager"
         cohortRole="manager"
-        allowedRoles={["admin", "management", "employee"]}
+        allowedRoles={["admin", "management", "employee", "ce_instructor"]}
         existingMemberUserIds={existingManagerUserIds}
         onSubmit={handleAddManager}
       />
