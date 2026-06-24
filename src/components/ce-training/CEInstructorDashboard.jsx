@@ -115,9 +115,17 @@ export default function CEInstructorDashboard() {
           <div className="text-3xl font-bold text-amber-600 mb-3">
             {isLoading ? '—' : cohorts.reduce((sum, c) => sum + (cohortStats[c.id]?.pendingStudents || 0), 0)}
           </div>
-          <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => setShowCreateCohort(true)}>
-            <Plus className="w-4 h-4" /> New Cohort
-          </Button>
+          {cohorts.length === 0 ? (
+            <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => setShowCreateCohort(true)}>
+              <Plus className="w-4 h-4" /> Create Cohort
+            </Button>
+          ) : (
+            <Link to="/CEInstructorStudents">
+              <Button size="sm" variant="outline" className="w-full gap-2">
+                <Users className="w-4 h-4" /> Manage Invites
+              </Button>
+            </Link>
+          )}
         </Card>
       </div>
 
