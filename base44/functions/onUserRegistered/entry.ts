@@ -22,6 +22,7 @@ function getMostRecentAssignment(assignments) {
   return assignments.sort((a, b) => {
     const bTime = new Date(b.invited_at || b.created_date || 0).getTime();
     const aTime = new Date(a.invited_at || a.created_date || 0).getTime();
+
     return bTime - aTime;
   })[0];
 }
@@ -38,44 +39,55 @@ Deno.serve(async (req) => {
       const users = await base44.asServiceRole.entities.User.filter({
         id: event.entity_id,
       });
+
       user = users?.[0];
     }
 
     if (!user?.email) {
-      return Response.json({ skipped: true, reason: 'no_user_email' });
+      return Response.json({
+        skipped: true,
+        reason: 'no_user_email',
+      });
     }
 
     const email = normalizeEmail(user.email);
 
     const allUsers = await base44.asServiceRole.entities.User.list();
-    const matchingUsers = (allUsers || []).filter((candidate) => {
-      return normalizeEmail(candidate.email) === email;
-    });
+
+    const matchingUsers = (allUsers || []).filter(
+      (candidate) => normalizeEmail(candidate.email) === email
+    );
 
     if (matchingUsers.length > 1) {
       const sortedUsers = matchingUsers.sort((a, b) => {
         const aTime = new Date(a.created_date || 0).getTime();
         const bTime = new Date(b.created_date || 0).getTime();
+
         return aTime - bTime;
       });
 
-      const canonicalUser = sortedUsers.find((candidate) => candidate.is_active !== false) || sortedUsers[0];
+      const canonicalUser =
+        sortedUsers.find((candidate) => candidate.is_active !== false) ||
+        sortedUsers[0];
 
       if (canonicalUser?.id) {
         user = canonicalUser;
       }
     }
 
-    const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
+    const pendingAssignments =
+      await base44.asServiceRole.entities.PendingRoleAssignment.list();
 
     const validPending = (pendingAssignments || [])
-      .filter((assignment) => {
-        return normalizeEmail(assignment.email) === email;
-      })
+      .filter(
+        (assignment) => normalizeEmail(assignment.email) === email
+      )
       .filter((assignment) =>
-        ['pending', 'invite_email_sent', 'pending_email_failed'].includes(
-          assignment.status
-        )
+        [
+          'pending',
+          'invite_email_sent',
+          'pending_email_failed',
+        ].includes(assignment.status)
       )
       .filter(isValidAssignment);
 
@@ -117,50 +129,8 @@ Deno.serve(async (req) => {
       } else {
         await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(
           existingAssignment[0].id,
-          { is_active: true }
-        );
-      }
-    }
-
-    if (assignment.role === 'ce_student') {
-      if (!assignment.cohort_id) {
-        return Response.json(
           {
-            success: false,
-            reason: 'missing_cohort_id',
-            assignment_id: assignment.id,
-            email,
-          },
-          { status: 500 }
-        );
-      }
-
-      const existingMembership =
-        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-          cohort_id: assignment.cohort_id,
-          user_id: user.id,
-        });
-
-      if (!existingMembership || existingMembership.length === 0) {
-        await base44.asServiceRole.entities.CETrainingCohortMember.create({
-          org_id: assignment.org_id,
-          cohort_id: assignment.cohort_id,
-          user_id: user.id,
-          cohort_role: 'member',
-          is_active: true,
-          joined_at: new Date().toISOString(),
-          added_by: assignment.invited_by_id,
-        });
-      } else {
-        await base44.asServiceRole.entities.CETrainingCohortMember.update(
-          existingMembership[0].id,
-          {
-            cohort_role: 'member',
             is_active: true,
-            joined_at:
-              existingMembership[0].joined_at || new Date().toISOString(),
-            added_by:
-              existingMembership[0].added_by || assignment.invited_by_id,
           }
         );
       }
@@ -178,7 +148,6 @@ Deno.serve(async (req) => {
       email,
       user_id: user.id,
       applied: updateData,
-      cohort_id: assignment.cohort_id || null,
     });
   } catch (error) {
     console.error('[onUserRegistered] Error:', error.message);
