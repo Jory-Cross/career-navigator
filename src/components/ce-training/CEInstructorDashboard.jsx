@@ -45,7 +45,7 @@ export default function CEInstructorDashboard() {
         cohorts.map(async (cohort) => {
           const activeMembers = await base44.entities.CETrainingCohortMember.filter({
             cohort_id: cohort.id,
-            cohort_role: 'student',
+            cohort_role: 'member',
             is_active: true,
           });
           const pendingInvites = await base44.entities.PendingRoleAssignment.filter({
