@@ -134,60 +134,10 @@ Deno.serve(async (req) => {
        console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
      }
     }
-    // Create CETrainingCohortMember for CE students with a cohort assignment.
-    // Cohort Detail displays active students as cohort_role === "member".
-    if (assignment.role === 'ce_student' && assignment.cohort_id) {
-     try {
-       const existing = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-         cohort_id: assignment.cohort_id,
-         user_id: userId,
-       });
-
-       if (!existing || existing.length === 0) {
-         await base44.asServiceRole.entities.CETrainingCohortMember.create({
-           org_id: assignment.org_id,
-           cohort_id: assignment.cohort_id,
-           user_id: userId,
-           cohort_role: 'member',
-           is_active: true,
-           joined_at: new Date().toISOString(),
-           added_by: assignment.invited_by_id,
-         });
-         console.log(`[applyPendingRoleIfNeeded] Created CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId} role=member`);
-       } else {
-         const existingMembership = existing[0];
-
-         if (existingMembership.cohort_role !== 'member' || existingMembership.is_active === false) {
-           await base44.asServiceRole.entities.CETrainingCohortMember.update(existingMembership.id, {
-             cohort_role: 'member',
-             is_active: true,
-             joined_at: existingMembership.joined_at || new Date().toISOString(),
-             added_by: existingMembership.added_by || assignment.invited_by_id,
-           });
-           console.log(`[applyPendingRoleIfNeeded] Updated existing CETrainingCohortMember cohort=${assignment.cohort_id} user=${userId} role=member`);
-         } else {
-           console.log(`[applyPendingRoleIfNeeded] CETrainingCohortMember already exists as member, skipping.`);
-         }
-       }
-     } catch (cohortErr) {
-       console.error('[applyPendingRoleIfNeeded] CETrainingCohortMember error:', cohortErr.message);
-
-       return Response.json(
-         {
-           upgraded: false,
-           reason: 'cohort_membership_failed',
-           error: cohortErr.message,
-           cohort_id: assignment.cohort_id,
-           user_id: userId,
-           role: assignment.role,
-         },
-         { status: 500 }
-       );
-     }
-    }
+    // CE students are registered here only.
+    // Cohort membership is assigned later from Cohort Detail.
 
     // Mark the applied assignment as accepted — keep it for audit, do NOT delete.
-    // Do this only after cohort membership succeeds.
     await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
 
     console.log(`[applyPendingRoleIfNeeded] ✓ User ${email} upgraded: role=${updateData.role} access_level=${updateData.access_level} org_id=${updateData.org_id}`);
