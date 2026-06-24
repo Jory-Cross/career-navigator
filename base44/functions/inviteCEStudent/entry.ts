@@ -2,70 +2,58 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
 const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
-const FREE_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com'];
-const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
-const RESEND_FROM = RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
-  ? RESEND_FROM_EMAIL
-  : 'onboarding@resend.dev';
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
 
-async function sendInviteEmail({ toEmail, inviterName, cohortName, appUrl }) {
-  const subject = `You're invited to join the CE Training cohort: ${cohortName}`;
+const FREE_DOMAINS = [
+  'gmail.com',
+  'yahoo.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'icloud.com',
+];
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
-      <h2 style="color: #7c3aed; margin-bottom: 8px;">You're invited to CE Training!</h2>
-      <p style="font-size: 16px; margin-bottom: 16px;">
-        <strong>${inviterName}</strong> has invited you to join the <strong>${cohortName}</strong> cohort as a CE Student.
-      </p>
-      <p style="margin-bottom: 8px;">To get started:</p>
-      <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
-        <li>Click the link below to open the app</li>
-        <li>Register or sign in using <strong>exactly this email address: ${toEmail}</strong></li>
-        <li>You will automatically be added to the cohort after registration</li>
-      </ol>
-      <a href="${appUrl}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 24px;">
-        Register Now →
-      </a>
-      <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-        Important: You must use <strong>${toEmail}</strong> to register. Using a different email will not link your account correctly.
-      </p>
-    </div>
-  `;
+const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `CE Training <${RESEND_FROM}>`,
-      to: [toEmail],
-      subject,
-      html,
-    }),
-  });
+const RESEND_FROM =
+  RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
+    ? RESEND_FROM_EMAIL
+    : 'onboarding@resend.dev';
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Resend API error ${res.status}: ${err}`);
-  }
-
-  return await res.json();
-}
+const OPEN_INVITE_STATUSES = [
+  'pending',
+  'invite_email_sent',
+  'pending_email_failed',
+];
 
 function normalizeEmail(value) {
   return String(value || '').toLowerCase().trim();
 }
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function getCanonicalUser(users) {
-  const activeUsers = (users || []).filter((candidate) => candidate.is_active !== false);
+  const activeUsers = (users || []).filter(
+    (candidate) => candidate.is_active !== false
+  );
+
   const usableUsers = activeUsers.length > 0 ? activeUsers : users || [];
 
   return usableUsers.sort((a, b) => {
     const aTime = new Date(a.created_date || 0).getTime();
     const bTime = new Date(b.created_date || 0).getTime();
+
     return aTime - bTime;
   })[0];
 }
@@ -77,21 +65,74 @@ async function findExistingUserByEmail(base44, email) {
     email: normalizedEmail,
   });
 
-  const filteredMatch = (filteredUsers || []).filter((candidate) => {
-    return normalizeEmail(candidate.email) === normalizedEmail;
-  });
+  const exactMatches = (filteredUsers || []).filter(
+    (candidate) => normalizeEmail(candidate.email) === normalizedEmail
+  );
 
-  if (filteredMatch.length > 0) {
-    return getCanonicalUser(filteredMatch);
+  if (exactMatches.length > 0) {
+    return getCanonicalUser(exactMatches);
   }
 
   const allUsers = await base44.asServiceRole.entities.User.list();
 
-  const listMatches = (allUsers || []).filter((candidate) => {
-    return normalizeEmail(candidate.email) === normalizedEmail;
-  });
+  const listMatches = (allUsers || []).filter(
+    (candidate) => normalizeEmail(candidate.email) === normalizedEmail
+  );
 
   return getCanonicalUser(listMatches);
+}
+
+async function sendInviteEmail({ toEmail, inviterName, appUrl }) {
+  const safeEmail = escapeHtml(toEmail);
+  const safeInviterName = escapeHtml(inviterName);
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `CE Training <${RESEND_FROM}>`,
+      to: [toEmail],
+      subject: "You're invited to CE Training",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+          <h2 style="color: #7c3aed; margin-bottom: 8px;">You're invited to CE Training!</h2>
+
+          <p style="font-size: 16px; margin-bottom: 16px;">
+            <strong>${safeInviterName}</strong> has invited you to register as a CE Training student.
+          </p>
+
+          <p style="margin-bottom: 8px;">To get started:</p>
+
+          <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
+            <li>Click the link below to open the CE Training Portal</li>
+            <li>Register or sign in using <strong>${safeEmail}</strong></li>
+            <li>Your instructor will assign you to a cohort after registration</li>
+          </ol>
+
+          <a
+            href="${appUrl}"
+            style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
+          >
+            Register Now →
+          </a>
+
+          <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+            Register using <strong>${safeEmail}</strong>. A different email address will not connect to this invitation.
+          </p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Resend API error ${response.status}: ${details}`);
+  }
+
+  return response.json();
 }
 
 Deno.serve(async (req) => {
@@ -103,143 +144,118 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const email = normalizeEmail(body.email);
-    const cohort_id = body.cohort_id;
-
-    if (!email || !cohort_id) {
-      return Response.json({ error: 'Missing email or cohort_id' }, { status: 400 });
-    }
-
     if (user.role !== 'ce_instructor') {
-      return Response.json({ error: 'Only instructors can invite students' }, { status: 403 });
+      return Response.json(
+        { error: 'Only CE instructors can invite students' },
+        { status: 403 }
+      );
     }
 
-    const cohort = await base44.entities.CETrainingCohort.get(cohort_id);
+    const body = await req.json().catch(() => ({}));
+    const email = normalizeEmail(body.email);
 
-    if (!cohort) {
-      return Response.json({ error: 'Cohort not found' }, { status: 404 });
+    if (!isValidEmail(email)) {
+      return Response.json(
+        { error: 'A valid student email address is required' },
+        { status: 400 }
+      );
     }
 
-    const orgId = user.org_id || cohort.org_id || '';
+    const orgId = user.org_id || '';
 
-    const managerMemberships = await base44.entities.CETrainingCohortMember.filter({
-      cohort_id,
-      user_id: user.id,
-      cohort_role: 'manager',
-    });
-
-    if (!managerMemberships || managerMemberships.length === 0) {
-      return Response.json({ error: 'You are not a manager of this cohort' }, { status: 403 });
+    if (!orgId) {
+      return Response.json(
+        { error: 'Your instructor account is missing organization access' },
+        { status: 400 }
+      );
     }
 
     const existingUser = await findExistingUserByEmail(base44, email);
 
-    if (existingUser?.id) {
+    if (existingUser && existingUser.id) {
+      if (existingUser.is_active === false) {
+        return Response.json(
+          {
+            error:
+              'This email belongs to a deactivated account and cannot be invited.',
+          },
+          { status: 409 }
+        );
+      }
+
+      if (existingUser.role !== 'ce_student') {
+        return Response.json(
+          {
+            error:
+              'An active account already exists for this email and cannot be converted into a CE Student account.',
+          },
+          { status: 409 }
+        );
+      }
+
+      if (existingUser.org_id && existingUser.org_id !== orgId) {
+        return Response.json(
+          {
+            error:
+              'This CE Student account belongs to a different organization.',
+          },
+          { status: 409 }
+        );
+      }
+
       await base44.asServiceRole.entities.User.update(existingUser.id, {
         role: 'ce_student',
         access_level: 'ce_training_portal',
         org_id: orgId,
-        manager_id: user.id,
+        manager_id: existingUser.manager_id || user.id,
       });
-
-      const existingMemberships = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id,
-        user_id: existingUser.id,
-      });
-
-      let membershipId = null;
-
-      if (!existingMemberships || existingMemberships.length === 0) {
-        const membership = await base44.asServiceRole.entities.CETrainingCohortMember.create({
-          org_id: orgId,
-          cohort_id,
-          user_id: existingUser.id,
-          cohort_role: 'member',
-          is_active: true,
-          joined_at: new Date().toISOString(),
-          added_by: user.id,
-        });
-
-        membershipId = membership.id;
-      } else {
-        const membership = existingMemberships[0];
-
-        await base44.asServiceRole.entities.CETrainingCohortMember.update(membership.id, {
-          cohort_role: 'member',
-          is_active: true,
-          joined_at: membership.joined_at || new Date().toISOString(),
-          added_by: membership.added_by || user.id,
-        });
-
-        membershipId = membership.id;
-      }
-
-      const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
-
-      const matchingPending = (pendingAssignments || []).filter((assignment) => {
-        return (
-          normalizeEmail(assignment.email) === email &&
-          assignment.role === 'ce_student' &&
-          assignment.cohort_id === cohort_id &&
-          ['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)
-        );
-      });
-
-      for (const assignment of matchingPending) {
-        await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
-          status: 'accepted',
-        });
-      }
 
       return Response.json({
         ok: true,
-        message: 'Existing CE Student added to cohort',
+        message: 'This CE Student is already registered',
         email,
-        cohort_id,
         user_id: existingUser.id,
-        membership_id: membershipId,
-        status: 'accepted',
         existing_user: true,
+        already_registered: true,
         email_sent: false,
       });
     }
 
-    const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
+    const pendingAssignments =
+      await base44.asServiceRole.entities.PendingRoleAssignment.list();
 
-    const openExistingPending = (pendingAssignments || []).find((assignment) => {
+    const existingInvite = (pendingAssignments || []).find((assignment) => {
       return (
         normalizeEmail(assignment.email) === email &&
         assignment.role === 'ce_student' &&
-        assignment.cohort_id === cohort_id &&
-        ['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)
+        assignment.org_id === orgId &&
+        OPEN_INVITE_STATUSES.includes(assignment.status)
       );
     });
 
-    if (openExistingPending) {
+    if (existingInvite) {
       return Response.json({
         ok: true,
-        message: 'CE Student invitation already exists',
-        pending_id: openExistingPending.id,
+        message: 'A CE Student invitation already exists for this email',
         email,
-        cohort_id,
-        status: openExistingPending.status,
-        email_sent: openExistingPending.status === 'invite_email_sent',
+        pending_id: existingInvite.id,
+        status: existingInvite.status,
+        already_invited: true,
+        email_sent: existingInvite.status === 'invite_email_sent',
       });
     }
 
-    const pending = await base44.entities.PendingRoleAssignment.create({
-      email,
-      role: 'ce_student',
-      access_level: 'ce_training_portal',
-      org_id: orgId,
-      invited_by_id: user.id,
-      invited_by_name: user.full_name || user.email || '',
-      invited_at: new Date().toISOString(),
-      cohort_id,
-      cohort_role: 'member',
-      status: 'pending',
-    });
+    const pending =
+      await base44.entities.PendingRoleAssignment.create({
+        email,
+        role: 'ce_student',
+        access_level: 'ce_training_portal',
+        org_id: orgId,
+        invited_by_id: user.id,
+        invited_by_name: user.full_name || user.email || '',
+        invited_at: new Date().toISOString(),
+        status: 'pending',
+      });
 
     let emailSent = false;
     let finalStatus = 'pending';
@@ -249,7 +265,6 @@ Deno.serve(async (req) => {
         await sendInviteEmail({
           toEmail: email,
           inviterName: user.full_name || user.email || 'Your instructor',
-          cohortName: cohort.name || 'CE Training',
           appUrl: APP_URL,
         });
 
@@ -259,13 +274,17 @@ Deno.serve(async (req) => {
         await base44.entities.PendingRoleAssignment.update(pending.id, {
           status: finalStatus,
         });
-      } catch (emailErr) {
+      } catch (emailError) {
         finalStatus = 'pending_email_failed';
 
         await base44.entities.PendingRoleAssignment.update(pending.id, {
           status: finalStatus,
-          email_error: emailErr.message,
         });
+
+        console.error(
+          '[inviteCEStudent] Email delivery failed:',
+          String(emailError)
+        );
       }
     }
 
@@ -276,9 +295,9 @@ Deno.serve(async (req) => {
         : 'CE Student invitation created',
       pending_id: pending.id,
       email,
-      cohort_id,
       status: finalStatus,
       email_sent: emailSent,
+      existing_user: false,
     });
   } catch (error) {
     console.error('[inviteCEStudent] Error:', error);
@@ -286,7 +305,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         ok: false,
-        error: error.message,
+        error: error.message || 'Unable to create CE Student invitation',
       },
       { status: 500 }
     );
