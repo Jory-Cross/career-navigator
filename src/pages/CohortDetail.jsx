@@ -118,25 +118,14 @@ export default function CohortDetail() {
      queryKey: ["cohortDetail", "users", userIds.join(",")],
      queryFn: async () => {
        if (userIds.length === 0) return [];
-       // Fetch each user by ID directly
-       const users = [];
-       for (const userId of userIds) {
-         try {
-           const u = await base44.entities.User.get(userId);
-           users.push(u);
-         } catch (err) {
-           // User not found; try to find as pending invite instead
-           try {
-             const pending = await base44.entities.PendingRoleAssignment.get(userId);
-             users.push({ id: userId, email: pending.email, full_name: null, pending: true });
-           } catch {
-             // Still not found; create placeholder
-             console.warn(`User ${userId} not found in User or PendingRoleAssignment`, err);
-             users.push({ id: userId, full_name: null, email: null });
-           }
-         }
+       // Invoke backend function to fetch users with proper auth context
+       try {
+         const res = await base44.functions.invoke("getOrgUsers", { user_ids: userIds });
+         return res.data?.users || [];
+       } catch (err) {
+         console.warn("Failed to fetch users:", err);
+         return [];
        }
-       return users;
      },
      enabled: userIds.length > 0 && !!user,
      staleTime: 5 * 60 * 1000,
