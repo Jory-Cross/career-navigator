@@ -22,12 +22,17 @@ export default function MemberRow({ member, user, onRemove, canRemove }) {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-slate-900 truncate">
-            {user?.full_name || "Unknown user"}
+            {user?.full_name || user?.email || member.user_id || "Unknown user"}
           </p>
           {user?.email && (
             <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
               <Mail className="w-3 h-3 shrink-0" />
               {user.email}
+            </p>
+          )}
+          {!user?.email && member.user_id && (
+            <p className="text-xs text-slate-400 truncate">
+              ID: {member.user_id} (record not found)
             </p>
           )}
         </div>

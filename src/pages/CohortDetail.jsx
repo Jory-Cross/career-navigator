@@ -93,28 +93,39 @@ export default function CohortDetail() {
   });
 
   // Resolve user display info for each membership row.
-  const userIds = useMemo(
-    () => Array.from(new Set(memberships.map((m) => m.user_id).filter(Boolean))),
-    [memberships]
-  );
+   const userIds = useMemo(
+     () => Array.from(new Set(memberships.map((m) => m.user_id).filter(Boolean))),
+     [memberships]
+   );
 
-  const { data: orgUsers = [] } = useQuery({
-    queryKey: ["orgUsers", "cohortDetail"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("getOrgUsers", {});
-      const payload = res.data || {};
-      return Array.isArray(payload.users) ? payload.users : [];
-    },
-    enabled: userIds.length > 0 && !!user,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+   const { data: orgUsers = [] } = useQuery({
+     queryKey: ["cohortDetail", "users", userIds.join(",")],
+     queryFn: async () => {
+       if (userIds.length === 0) return [];
+       // Fetch each user by ID directly
+       const users = [];
+       for (const userId of userIds) {
+         try {
+           const u = await base44.entities.User.get(userId);
+           users.push(u);
+         } catch (err) {
+           // User not found; log but don't crash
+           console.warn(`User ${userId} not found`, err);
+           users.push({ id: userId, full_name: null, email: null });
+         }
+       }
+       return users;
+     },
+     enabled: userIds.length > 0 && !!user,
+     staleTime: 5 * 60 * 1000,
+     refetchOnWindowFocus: false,
+   });
 
-  const userById = useMemo(() => {
-    const map = {};
-    for (const u of orgUsers) map[u.id] = u;
-    return map;
-  }, [orgUsers]);
+   const userById = useMemo(() => {
+     const map = {};
+     for (const u of orgUsers) map[u.id] = u;
+     return map;
+   }, [orgUsers]);
 
   const managers = useMemo(
     () => memberships.filter((m) => m.cohort_role === "manager"),
