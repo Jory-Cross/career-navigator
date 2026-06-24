@@ -12,6 +12,34 @@ Deno.serve(async (req) => {
     const org_id = instructor.org_id;
     const seed_id = 'ce_training_demo_seed_v1';
 
+    // 0. Cleanup old demo data first to avoid duplicates
+    const oldDemoCohorts = await base44.asServiceRole.entities.CETrainingCohort.filter({
+      org_id,
+      demo_seed_id: seed_id,
+    });
+    for (const oldCohort of oldDemoCohorts) {
+      const oldMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        cohort_id: oldCohort.id,
+      });
+      for (const member of oldMembers) {
+        await base44.asServiceRole.entities.CETrainingCohortMember.delete(member.id);
+      }
+      const oldClients = await base44.asServiceRole.entities.Client.filter({
+        cohort_id: oldCohort.id,
+        is_demo: true,
+      });
+      for (const client of oldClients) {
+        await base44.asServiceRole.entities.Client.delete(client.id);
+      }
+      const oldPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({
+        demo_seed_id: seed_id,
+      });
+      for (const pending of oldPending) {
+        await base44.asServiceRole.entities.PendingRoleAssignment.delete(pending.id);
+      }
+      await base44.asServiceRole.entities.CETrainingCohort.delete(oldCohort.id);
+    }
+
     // 1. Create demo cohort
     const cohort = await base44.asServiceRole.entities.CETrainingCohort.create({
       org_id,
@@ -26,40 +54,35 @@ Deno.serve(async (req) => {
 
     const cohortId = cohort.id;
 
-    // 2. Create demo students as PendingRoleAssignment (for UI testing without real invites)
-    const demoStudents = [
-      { email: 'alex.ce.student.demo@example.com', name: 'Alex Rivera' },
-      { email: 'morgan.ce.student.demo@example.com', name: 'Morgan Lee' },
-      { email: 'taylor.ce.student.demo@example.com', name: 'Taylor Brooks' },
+    // 2. Create actual demo User records
+    const demoStudentData = [
+      { email: 'alex.ce.student.demo@example.com', first_name: 'Alex', last_name: 'Rivera' },
+      { email: 'morgan.ce.student.demo@example.com', first_name: 'Morgan', last_name: 'Lee' },
+      { email: 'taylor.ce.student.demo@example.com', first_name: 'Taylor', last_name: 'Brooks' },
     ];
 
     const studentIds = [];
-    for (const student of demoStudents) {
-      // Generate a demo user ID (prefixed with demo_ for clarity)
-      const demoUserId = `demo_student_${Math.random().toString(36).substring(7)}`;
-      studentIds.push(demoUserId);
-
-      // Create pending assignment for cohort membership
-      await base44.asServiceRole.entities.PendingRoleAssignment.create({
-        email: student.email,
+    for (const studentData of demoStudentData) {
+      // Create actual User record
+      const user = await base44.asServiceRole.entities.User.create({
+        email: studentData.email,
+        full_name: `${studentData.first_name} ${studentData.last_name}`,
+        first_name: studentData.first_name,
+        last_name: studentData.last_name,
         role: 'ce_student',
         access_level: 'ce_training_portal',
         org_id,
-        cohort_id: cohortId,
-        cohort_role: 'student',
-        status: 'pending_demo', // Custom status to indicate demo
         is_demo: true,
         demo_seed_id: seed_id,
-        invited_by_id: instructor.id,
-        invited_by_name: instructor.full_name,
-        invited_at: new Date().toISOString(),
       });
 
-      // Create cohort member record with demo user ID
+      studentIds.push(user.id);
+
+      // Create cohort member record with real user ID
       await base44.asServiceRole.entities.CETrainingCohortMember.create({
         org_id,
         cohort_id: cohortId,
-        user_id: demoUserId,
+        user_id: user.id,
         cohort_role: 'member',
         is_active: true,
         joined_at: new Date().toISOString(),
@@ -134,12 +157,13 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       message: 'CE Training demo data seeded successfully',
+      students_created: studentIds.length,
       data: {
         cohort: { id: cohortId, name: cohort.name },
-        students: demoStudents.map((s, i) => ({
+        students: demoStudentData.map((s, i) => ({
           email: s.email,
-          name: s.name,
-          demo_user_id: studentIds[i],
+          full_name: `${s.first_name} ${s.last_name}`,
+          user_id: studentIds[i],
         })),
         clients: createdClients.map(c => ({
           id: c.id,

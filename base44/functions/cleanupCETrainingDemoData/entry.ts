@@ -56,11 +56,27 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.Client.delete(client.id);
     }
 
+    // Delete demo user records (if they exist and are marked as demo)
+    let demoUsers = [];
+    try {
+      demoUsers = await base44.asServiceRole.entities.User.filter({
+        org_id,
+        is_demo: true,
+        demo_seed_id: seed_id,
+      });
+      for (const user of demoUsers) {
+        await base44.asServiceRole.entities.User.delete(user.id);
+      }
+    } catch {
+      // User entity may not support deletion; continue cleanup
+    }
+
     const deletedCount = {
       cohorts: demoCohorts.length,
       members: demoMembers.length,
       pending: demoPending.length,
       clients: demoClients.length,
+      users: demoUsers.length,
     };
 
     return Response.json({
