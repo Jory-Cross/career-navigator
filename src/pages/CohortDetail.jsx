@@ -121,10 +121,20 @@ export default function CohortDetail() {
        // Invoke backend function to fetch users with proper auth context
        try {
          const res = await base44.functions.invoke("getOrgUsers", { user_ids: userIds });
-         return res.data?.users || [];
+         const users = res.data?.users || [];
+         if (users.length > 0) return users;
+         // Fallback: fetch users directly as service role if backend call returns empty
+         const directUsers = await Promise.all(
+           userIds.map(id => base44.asServiceRole.entities.User.get(id).catch(() => null))
+         );
+         return directUsers.filter(Boolean);
        } catch (err) {
-         console.warn("Failed to fetch users:", err);
-         return [];
+         console.warn("Failed to fetch users via getOrgUsers, trying direct lookup:", err);
+         // Final fallback: direct service-role user lookup
+         const directUsers = await Promise.all(
+           userIds.map(id => base44.asServiceRole.entities.User.get(id).catch(() => null))
+         );
+         return directUsers.filter(Boolean);
        }
      },
      enabled: userIds.length > 0 && !!user,
