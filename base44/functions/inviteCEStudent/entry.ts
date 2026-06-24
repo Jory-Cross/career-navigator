@@ -55,6 +55,10 @@ async function sendInviteEmail({ toEmail, inviterName, cohortName, appUrl }) {
   return await res.json();
 }
 
+function normalizeEmail(value) {
+  return String(value || '').toLowerCase().trim();
+}
+
 function getCanonicalUser(users) {
   const activeUsers = (users || []).filter((candidate) => candidate.is_active !== false);
   const usableUsers = activeUsers.length > 0 ? activeUsers : users || [];
@@ -64,6 +68,30 @@ function getCanonicalUser(users) {
     const bTime = new Date(b.created_date || 0).getTime();
     return aTime - bTime;
   })[0];
+}
+
+async function findExistingUserByEmail(base44, email) {
+  const normalizedEmail = normalizeEmail(email);
+
+  const filteredUsers = await base44.asServiceRole.entities.User.filter({
+    email: normalizedEmail,
+  });
+
+  const filteredMatch = (filteredUsers || []).filter((candidate) => {
+    return normalizeEmail(candidate.email) === normalizedEmail;
+  });
+
+  if (filteredMatch.length > 0) {
+    return getCanonicalUser(filteredMatch);
+  }
+
+  const allUsers = await base44.asServiceRole.entities.User.list();
+
+  const listMatches = (allUsers || []).filter((candidate) => {
+    return normalizeEmail(candidate.email) === normalizedEmail;
+  });
+
+  return getCanonicalUser(listMatches);
 }
 
 Deno.serve(async (req) => {
@@ -76,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const email = String(body.email || '').toLowerCase().trim();
+    const email = normalizeEmail(body.email);
     const cohort_id = body.cohort_id;
 
     if (!email || !cohort_id) {
@@ -105,8 +133,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'You are not a manager of this cohort' }, { status: 403 });
     }
 
-    const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
-    const existingUser = getCanonicalUser(existingUsers);
+    const existingUser = await findExistingUserByEmail(base44, email);
 
     if (existingUser?.id) {
       await base44.asServiceRole.entities.User.update(existingUser.id, {
@@ -148,18 +175,21 @@ Deno.serve(async (req) => {
         membershipId = membership.id;
       }
 
-      const existingPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({
-        email,
-        role: 'ce_student',
-        cohort_id,
+      const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
+
+      const matchingPending = (pendingAssignments || []).filter((assignment) => {
+        return (
+          normalizeEmail(assignment.email) === email &&
+          assignment.role === 'ce_student' &&
+          assignment.cohort_id === cohort_id &&
+          ['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)
+        );
       });
 
-      for (const assignment of existingPending || []) {
-        if (['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)) {
-          await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
-            status: 'accepted',
-          });
-        }
+      for (const assignment of matchingPending) {
+        await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
+          status: 'accepted',
+        });
       }
 
       return Response.json({
@@ -175,14 +205,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const existingPending = await base44.entities.PendingRoleAssignment.filter({
-      email,
-      role: 'ce_student',
-      cohort_id,
-    });
+    const pendingAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
 
-    const openExistingPending = (existingPending || []).find((assignment) => {
-      return ['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status);
+    const openExistingPending = (pendingAssignments || []).find((assignment) => {
+      return (
+        normalizeEmail(assignment.email) === email &&
+        assignment.role === 'ce_student' &&
+        assignment.cohort_id === cohort_id &&
+        ['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)
+      );
     });
 
     if (openExistingPending) {
