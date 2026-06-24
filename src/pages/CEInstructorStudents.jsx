@@ -48,7 +48,7 @@ export default function CEInstructorStudents() {
         cohortIds.map(cohortId =>
           base44.entities.CETrainingCohortMember.filter({
             cohort_id: cohortId,
-            cohort_role: 'student',
+           cohort_role: 'member',
             is_active: true,
           })
         )
