@@ -92,6 +92,22 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
+  // Pending invitations for this cohort
+  const { data: pendingInvites = [] } = useQuery({
+    queryKey: ["cohorts", "pending-invites", cohort_id],
+    queryFn: async () => {
+      if (!cohort_id) return [];
+      const list = await base44.entities.PendingRoleAssignment.filter({
+        cohort_id,
+        status: 'pending',
+      });
+      return Array.isArray(list) ? list : [];
+    },
+    enabled: !!cohort_id && !!user,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // Resolve user display info for each membership row.
    const userIds = useMemo(
      () => Array.from(new Set(memberships.map((m) => m.user_id).filter(Boolean))),
@@ -109,9 +125,15 @@ export default function CohortDetail() {
            const u = await base44.entities.User.get(userId);
            users.push(u);
          } catch (err) {
-           // User not found; log but don't crash
-           console.warn(`User ${userId} not found`, err);
-           users.push({ id: userId, full_name: null, email: null });
+           // User not found; try to find as pending invite instead
+           try {
+             const pending = await base44.entities.PendingRoleAssignment.get(userId);
+             users.push({ id: userId, email: pending.email, full_name: null, pending: true });
+           } catch {
+             // Still not found; create placeholder
+             console.warn(`User ${userId} not found in User or PendingRoleAssignment`, err);
+             users.push({ id: userId, full_name: null, email: null });
+           }
          }
        }
        return users;
@@ -417,12 +439,15 @@ export default function CohortDetail() {
         <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
           <Users className="w-4 h-4 text-amber-600" />
           <h2 className="text-sm font-semibold text-slate-900">Pending Invitations</h2>
+          <span className="ml-auto text-xs text-slate-400">
+            {pendingInvites.length} pending
+          </span>
           {canInviteStudent && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => setShowInviteStudentDialog(true)}
-              className="ml-auto"
+              className="ml-2"
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> Invite Student
             </Button>
@@ -433,14 +458,44 @@ export default function CohortDetail() {
               variant="outline"
               onClick={() => setShowAddMemberDialog(true)}
               disabled={addingMember}
-              className="ml-auto"
+              className="ml-2"
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> Add
             </Button>
           )}
         </div>
         <div className="p-2">
-          <p className="text-sm text-slate-400 px-3 py-4">No pending invitations.</p>
+          {pendingInvites.length === 0 ? (
+            <p className="text-sm text-slate-400 px-3 py-4">No pending invitations.</p>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {pendingInvites.map((invite) => (
+                <div key={invite.id} className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold shrink-0">
+                      {(invite.email || "?")
+                        .split("@")[0]
+                        .split(".")
+                        .slice(0, 2)
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">
+                        {invite.email?.split("@")[0] || "Pending User"}
+                      </p>
+                      <p className="text-xs text-amber-600 truncate">⏳ Awaiting registration</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 whitespace-nowrap">
+                    {new Date(invite.invited_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>
