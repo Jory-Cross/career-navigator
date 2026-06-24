@@ -55,6 +55,17 @@ async function sendInviteEmail({ toEmail, inviterName, cohortName, appUrl }) {
   return await res.json();
 }
 
+function getCanonicalUser(users) {
+  const activeUsers = (users || []).filter((candidate) => candidate.is_active !== false);
+  const usableUsers = activeUsers.length > 0 ? activeUsers : users || [];
+
+  return usableUsers.sort((a, b) => {
+    const aTime = new Date(a.created_date || 0).getTime();
+    const bTime = new Date(b.created_date || 0).getTime();
+    return aTime - bTime;
+  })[0];
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -82,6 +93,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Cohort not found' }, { status: 404 });
     }
 
+    const orgId = user.org_id || cohort.org_id || '';
+
     const managerMemberships = await base44.entities.CETrainingCohortMember.filter({
       cohort_id,
       user_id: user.id,
@@ -90,6 +103,76 @@ Deno.serve(async (req) => {
 
     if (!managerMemberships || managerMemberships.length === 0) {
       return Response.json({ error: 'You are not a manager of this cohort' }, { status: 403 });
+    }
+
+    const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
+    const existingUser = getCanonicalUser(existingUsers);
+
+    if (existingUser?.id) {
+      await base44.asServiceRole.entities.User.update(existingUser.id, {
+        role: 'ce_student',
+        access_level: 'ce_training_portal',
+        org_id: orgId,
+        manager_id: user.id,
+      });
+
+      const existingMemberships = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        cohort_id,
+        user_id: existingUser.id,
+      });
+
+      let membershipId = null;
+
+      if (!existingMemberships || existingMemberships.length === 0) {
+        const membership = await base44.asServiceRole.entities.CETrainingCohortMember.create({
+          org_id: orgId,
+          cohort_id,
+          user_id: existingUser.id,
+          cohort_role: 'member',
+          is_active: true,
+          joined_at: new Date().toISOString(),
+          added_by: user.id,
+        });
+
+        membershipId = membership.id;
+      } else {
+        const membership = existingMemberships[0];
+
+        await base44.asServiceRole.entities.CETrainingCohortMember.update(membership.id, {
+          cohort_role: 'member',
+          is_active: true,
+          joined_at: membership.joined_at || new Date().toISOString(),
+          added_by: membership.added_by || user.id,
+        });
+
+        membershipId = membership.id;
+      }
+
+      const existingPending = await base44.asServiceRole.entities.PendingRoleAssignment.filter({
+        email,
+        role: 'ce_student',
+        cohort_id,
+      });
+
+      for (const assignment of existingPending || []) {
+        if (['pending', 'invite_email_sent', 'pending_email_failed'].includes(assignment.status)) {
+          await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, {
+            status: 'accepted',
+          });
+        }
+      }
+
+      return Response.json({
+        ok: true,
+        message: 'Existing CE Student added to cohort',
+        email,
+        cohort_id,
+        user_id: existingUser.id,
+        membership_id: membershipId,
+        status: 'accepted',
+        existing_user: true,
+        email_sent: false,
+      });
     }
 
     const existingPending = await base44.entities.PendingRoleAssignment.filter({
@@ -118,12 +201,12 @@ Deno.serve(async (req) => {
       email,
       role: 'ce_student',
       access_level: 'ce_training_portal',
-      org_id: user.org_id || cohort.org_id || '',
+      org_id: orgId,
       invited_by_id: user.id,
       invited_by_name: user.full_name || user.email || '',
       invited_at: new Date().toISOString(),
       cohort_id,
-      cohort_role: 'student',
+      cohort_role: 'member',
       status: 'pending',
     });
 
