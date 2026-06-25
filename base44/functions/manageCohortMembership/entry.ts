@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Validate cohort exists & caller org matches ──────────────────────
-    const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(cohort_id);
+       const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(cohort_id);
     if (!cohort) {
       return Response.json({ error: 'Cohort not found' }, { status: 404 });
     }
@@ -98,8 +98,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Cohort does not belong to caller org' }, { status: 403 });
     }
 
-    const now = new Date().toISOString();
+    const membershipOrgId = cohort.org_id || orgId;
 
+    if (!membershipOrgId) {
+      return Response.json(
+        { error: 'Cohort organization could not be determined' },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date().toISOString();
     // ── ADD ───────────────────────────────────────────────────────────────
     if (action === 'add') {
               if (cohort_role === 'member') {
