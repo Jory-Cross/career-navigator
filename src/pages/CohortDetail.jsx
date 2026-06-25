@@ -180,8 +180,9 @@ console.log("USER MAP", userById);
     }
   };
 
-  const handleAddMember = async (selectedUser) => {
+   const handleAddMember = async (selectedUser) => {
     setAddingMember(true);
+
     try {
       const res = await base44.functions.invoke("manageCohortMembership", {
         action: "add",
@@ -189,14 +190,21 @@ console.log("USER MAP", userById);
         user_id: selectedUser.id,
         cohort_role: "member",
       });
-      if (res.data?.ok) {
-        toast.success("Member added");
-        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
-      } else {
+
+      if (!res.data?.ok) {
         throw new Error(res.data?.error || "Unknown error");
       }
+
+      toast.success("Student assigned to cohort");
+      await queryClient.invalidateQueries({
+        queryKey: ["cohorts", "memberships", cohort_id],
+      });
+
+      return res.data;
     } catch (err) {
-      toast.error(err?.message || "Failed to add member");
+      console.error("Cohort student assignment failed:", err);
+      toast.error(err?.message || "Failed to assign student");
+      throw err;
     } finally {
       setAddingMember(false);
     }
