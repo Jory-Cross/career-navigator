@@ -122,22 +122,16 @@ export default function CEInstructorDashboard() {
           </Link>
         </Card>
 
-        <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-          <div className="text-sm text-amber-900 font-medium mb-2">Pending Invites</div>
-          <div className="text-3xl font-bold text-amber-600 mb-3">
-            {isLoading ? '—' : cohorts.reduce((sum, c) => sum + (cohortStats[c.id]?.pendingStudents || 0), 0)}
+               <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <div className="text-sm text-amber-900 font-medium mb-2">Student Invitations</div>
+          <div className="text-sm text-amber-800 mb-3">
+            Invite students from the Students page. Assign them to a cohort after registration.
           </div>
-          {cohorts.length === 0 ? (
-            <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => setShowCreateCohort(true)}>
-              <Plus className="w-4 h-4" /> Create Cohort
+          <Link to="/CEInstructorStudents">
+            <Button size="sm" variant="outline" className="w-full gap-2">
+              <Users className="w-4 h-4" /> Invite Students
             </Button>
-          ) : (
-            <Link to="/CEInstructorStudents">
-              <Button size="sm" variant="outline" className="w-full gap-2">
-                <Users className="w-4 h-4" /> Manage Invites
-              </Button>
-            </Link>
-          )}
+          </Link>
         </Card>
       </div>
 
