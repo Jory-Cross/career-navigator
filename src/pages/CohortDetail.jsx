@@ -159,27 +159,57 @@ console.log("USER MAP", userById);
     }
   };
 
-   const handleAddMember = async (selectedUser) => {
+  const handleAddMember = async (selectedUser) => {
     setAddingMember(true);
 
     try {
-      const res = await base44.functions.invoke("manageCohortMembership", {
-        action: "add",
-        cohort_id,
-        user_id: selectedUser.id,
-        cohort_role: "member",
-      });
-
-      if (!res.data?.ok) {
-        throw new Error(res.data?.error || "Unknown error");
+      if (!user?.org_id) {
+        throw new Error("Your account is missing organization access");
       }
 
-      toast.success("Student assigned to cohort");
+      const cohortMemberships =
+        await base44.entities.CETrainingCohortMember.filter({
+          cohort_id,
+        });
+
+      const existingMembership = (
+        Array.isArray(cohortMemberships) ? cohortMemberships : []
+      ).find(
+        (membership) =>
+          membership.user_id === selectedUser.id &&
+          membership.cohort_role === "member"
+      );
+
+      if (existingMembership?.is_active) {
+        toast.success("Student is already assigned to this cohort");
+      } else if (existingMembership) {
+        await base44.entities.CETrainingCohortMember.update(
+          existingMembership.id,
+          {
+            is_active: true,
+            joined_at: existingMembership.joined_at || new Date().toISOString(),
+            added_by: user.id,
+          }
+        );
+
+        toast.success("Student assigned to cohort");
+      } else {
+        await base44.entities.CETrainingCohortMember.create({
+          org_id: user.org_id,
+          cohort_id,
+          user_id: selectedUser.id,
+          cohort_role: "member",
+          is_active: true,
+          joined_at: new Date().toISOString(),
+          added_by: user.id,
+        });
+
+        toast.success("Student assigned to cohort");
+      }
+
       await queryClient.invalidateQueries({
         queryKey: ["cohorts", "memberships", cohort_id],
       });
-
-      return res.data;
     } catch (err) {
       console.error("Cohort student assignment failed:", err);
       toast.error(err?.message || "Failed to assign student");
