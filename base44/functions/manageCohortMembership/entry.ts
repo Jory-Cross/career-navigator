@@ -102,6 +102,35 @@ Deno.serve(async (req) => {
 
     // ── ADD ───────────────────────────────────────────────────────────────
     if (action === 'add') {
+      if (cohort_role === 'member') {
+        const targetUser = await base44.asServiceRole.entities.User.get(user_id);
+
+        if (!targetUser) {
+          return Response.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        if (targetUser.is_active === false) {
+          return Response.json(
+            { error: 'Only active registered CE students may be assigned to a cohort' },
+            { status: 400 }
+          );
+        }
+
+        if (targetUser.role !== 'ce_student') {
+          return Response.json(
+            { error: 'Only registered CE students may be assigned to a cohort' },
+            { status: 400 }
+          );
+        }
+
+        if (orgId && targetUser.org_id && targetUser.org_id !== orgId) {
+          return Response.json(
+            { error: 'Student does not belong to caller org' },
+            { status: 403 }
+          );
+        }
+      }
+
       // Idempotent: find existing membership row (any is_active) for this
       // (cohort, user, role) and re-activate it; otherwise create one.
       const existing = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
@@ -115,11 +144,13 @@ Deno.serve(async (req) => {
         if (row.is_active) {
           return Response.json({ ok: true, message: 'Already a member', membership_id: row.id });
         }
+
         await base44.asServiceRole.entities.CETrainingCohortMember.update(row.id, {
           is_active: true,
           joined_at: row.joined_at || now,
           added_by: caller.id,
         });
+
         return Response.json({ ok: true, message: 'Re-activated', membership_id: row.id });
       }
 
@@ -132,6 +163,7 @@ Deno.serve(async (req) => {
         joined_at: now,
         added_by: caller.id,
       });
+
       return Response.json({ ok: true, message: 'Added', membership_id: created.id });
     }
 
