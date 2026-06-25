@@ -152,8 +152,8 @@ export default function CEInstructorDashboard() {
           <Card className="p-12 text-center border-slate-200">
             <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-slate-900 mb-1">No Cohorts Yet</h3>
-            <p className="text-slate-600 mb-4">
-              Create your first CE training cohort to start inviting students.
+                        <p className="text-slate-600 mb-4">
+              Create your first CE training cohort. Registered students can be assigned from Cohort Detail.
             </p>
             <Button onClick={() => setShowCreateCohort(true)} className="gap-2">
               <Plus className="w-4 h-4" /> Create Cohort
@@ -162,7 +162,7 @@ export default function CEInstructorDashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {cohorts.map((cohort) => {
-              const stats = cohortStats[cohort.id] || { activeStudents: 0, pendingStudents: 0 };
+                            const stats = cohortStats[cohort.id] || { activeStudents: 0 };
               return (
                 <Card key={cohort.id} className="p-6 border-violet-200 hover:border-violet-300 hover:shadow-md transition-all">
                   <div className="flex items-start justify-between mb-3">
