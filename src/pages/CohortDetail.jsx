@@ -109,40 +109,8 @@ export default function CohortDetail() {
 
   const memberships = cohortRoster.memberships;
   const rosterUsers = cohortRoster.users;
-
-  // Resolve user display info for each membership row.
-   const userIds = useMemo(
-     () => Array.from(new Set(memberships.map((m) => m.user_id).filter(Boolean))),
-     [memberships]
-   );
-
-   const { data: orgUsers = [] } = useQuery({
-     queryKey: ["cohortDetail", "users", userIds.join(",")],
-     queryFn: async () => {
-       if (userIds.length === 0) return [];
-       // Invoke backend function to fetch users with proper auth context
-       try {
-         const res = await base44.functions.invoke("getOrgUsers", { user_ids: userIds });
-         const users = res.data?.users || [];
-         if (users.length > 0) return users;
-         // Fallback: fetch users directly as service role if backend call returns empty
-         const directUsers = await Promise.all(
-           userIds.map(id => base44.asServiceRole.entities.User.get(id).catch(() => null))
-         );
-         return directUsers.filter(Boolean);
-       } catch (err) {
-         console.warn("Failed to fetch users via getOrgUsers, trying direct lookup:", err);
-         // Final fallback: direct service-role user lookup
-         const directUsers = await Promise.all(
-           userIds.map(id => base44.asServiceRole.entities.User.get(id).catch(() => null))
-         );
-         return directUsers.filter(Boolean);
-       }
-     },
-     enabled: userIds.length > 0 && !!user,
-     staleTime: 5 * 60 * 1000,
-     refetchOnWindowFocus: false,
-   });
+  // User display information is returned with the secure cohort roster.
+  const orgUsers = rosterUsers;
 
    const userById = useMemo(() => {
      const map = {};
