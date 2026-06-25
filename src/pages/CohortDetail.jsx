@@ -49,7 +49,6 @@ export default function CohortDetail() {
   const [addingManager, setAddingManager] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
-  const [showInviteStudentDialog, setShowInviteStudentDialog] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -93,27 +92,6 @@ export default function CohortDetail() {
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
-
-  // Pending invitations for this cohort
- const { data: pendingInvites = [] } = useQuery({
-  queryKey: ["cohorts", "pending-invites", cohort_id],
-  queryFn: async () => {
-    if (!cohort_id) return [];
-
-    const list = await base44.entities.PendingRoleAssignment.filter({
-      cohort_id,
-    });
-
-    return (Array.isArray(list) ? list : []).filter((invite) =>
-      ["pending", "invite_email_sent", "pending_email_failed"].includes(
-        invite.status
-      )
-    );
-  },
-  enabled: !!cohort_id && !!user,
-  staleTime: 60 * 1000,
-  refetchOnWindowFocus: false,
-});
 
   // Resolve user display info for each membership row.
    const userIds = useMemo(
@@ -177,13 +155,6 @@ console.log("USER MAP", userById);
     if (!user) return false;
     if (user.role === "admin") return true;
     if (user.role === "ce_instructor") return managers.some((m) => m.user_id === user.id);
-    return managers.some((m) => m.user_id === user.id);
-  }, [user, managers]);
-
-  // Determine if current user can invite students: CE instructor who is a manager
-  const canInviteStudent = useMemo(() => {
-    if (!user) return false;
-    if (user.role !== "ce_instructor") return false;
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
 
