@@ -325,13 +325,13 @@ console.log("USER MAP", userById);
         onSubmit={handleAddManager}
       />
 
-      {/* Add Member Dialog */}
+          {/* Assign Registered Student Dialog */}
       <AddMemberDialog
         open={showAddMemberDialog}
         onOpenChange={setShowAddMemberDialog}
-        title="Add Member"
+        title="Assign Registered Student"
         cohortRole="member"
-        allowedRoles={["admin", "management", "employee"]}
+        allowedRoles={["ce_student"]}
         existingMemberUserIds={existingMemberUserIds}
         onSubmit={handleAddMember}
       />
