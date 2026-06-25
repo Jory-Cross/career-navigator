@@ -46,10 +46,10 @@ export default function CEStudentDashboard() {
       {/* Info Card */}
       <Card className="p-6 bg-violet-50 border-violet-200">
         <h3 className="font-semibold text-violet-900 mb-2">📚 About CE Training</h3>
-        <p className="text-sm text-violet-800">
-          You are enrolled in a Customized Employment (CE) training cohort. Your instructor will guide you through 
-          creating training clients and completing discovery assessments. This is a dedicated training environment 
-          separate from operational employment services.
+               <p className="text-sm text-violet-800">
+          You have access to the Customized Employment (CE) Training Portal. Your instructor will assign you to a
+          cohort after registration and guide you through creating training clients and completing discovery
+          assessments. This is a dedicated training environment separate from operational employment services.
         </p>
       </Card>
     </div>
