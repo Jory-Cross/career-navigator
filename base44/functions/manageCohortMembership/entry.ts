@@ -168,9 +168,8 @@ Deno.serve(async (req) => {
 
         return Response.json({ ok: true, message: 'Re-activated', membership_id: row.id });
       }
-
       const created = await base44.asServiceRole.entities.CETrainingCohortMember.create({
-        org_id: orgId,
+        org_id: membershipOrgId,
         cohort_id,
         user_id,
         cohort_role,
@@ -178,7 +177,6 @@ Deno.serve(async (req) => {
         joined_at: now,
         added_by: caller.id,
       });
-
       return Response.json({ ok: true, message: 'Added', membership_id: created.id });
     }
 
