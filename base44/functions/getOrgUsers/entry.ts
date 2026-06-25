@@ -13,12 +13,24 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Use service role to list all users (bypasses frontend permission check)
-    const allUsers = await base44.asServiceRole.entities.User.list();
+    let orgId = user.org_id || null;
 
-    // Separate active vs inactive so the UI can show them differently
-    const activeUsers = allUsers.filter(u => u.is_active !== false);
-    const inactiveUsers = allUsers.filter(u => u.is_active === false);
+    if (!orgId) {
+      const orgs = await base44.asServiceRole.entities.Organization.filter({
+        owner_email: user.email,
+      });
+      orgId = orgs[0]?.id || null;
+    }
+
+    // Use service role to list organization users while preserving frontend access control.
+    const allUsers = await base44.asServiceRole.entities.User.list();
+    const orgUsers = orgId
+      ? allUsers.filter((orgUser) => orgUser.org_id === orgId)
+      : [];
+
+    // Separate active vs inactive so the UI can show them differently.
+    const activeUsers = orgUsers.filter((orgUser) => orgUser.is_active !== false);
+    const inactiveUsers = orgUsers.filter((orgUser) => orgUser.is_active === false);
 
     return Response.json({ users: activeUsers, inactive_users: inactiveUsers });
   } catch (error) {
