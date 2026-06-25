@@ -178,16 +178,9 @@ export default function CEInstructorDashboard() {
                   {cohort.description && (
                     <p className="text-sm text-slate-600 mb-3 line-clamp-2">{cohort.description}</p>
                   )}
-
-                  <div className="grid grid-cols-2 gap-3 mb-4 py-3 border-y border-slate-200">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-violet-600">{stats.activeStudents}</div>
-                      <div className="text-xs text-slate-500">Active Students</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-amber-600">{stats.pendingStudents}</div>
-                      <div className="text-xs text-slate-500">Pending Invites</div>
-                    </div>
+                  <div className="mb-4 py-3 border-y border-slate-200 text-center">
+                    <div className="text-2xl font-bold text-violet-600">{stats.activeStudents}</div>
+                    <div className="text-xs text-slate-500">Assigned Registered Students</div>
                   </div>
 
                   <Link to={`/CohortDetail?cohort_id=${cohort.id}`}>
