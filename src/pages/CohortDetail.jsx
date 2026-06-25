@@ -313,16 +313,6 @@ console.log("USER MAP", userById);
 
   return (
     <div className="space-y-6">
-      {/* Invite Student Dialog */}
-      <InviteStudentDialog
-        open={showInviteStudentDialog}
-        onOpenChange={setShowInviteStudentDialog}
-        cohort_id={cohort_id}
-        cohortName={cohort?.name || ""}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
-        }}
-      />
 
       {/* Add Manager Dialog */}
       <AddMemberDialog
