@@ -408,13 +408,24 @@ console.log("USER MAP", userById);
       </section>
 
       {/* 4. Active Students section */}
-       <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+             <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
            <Users className="w-4 h-4 text-green-600" />
            <h2 className="text-sm font-semibold text-slate-900">Active Students</h2>
            <span className="ml-auto text-xs text-slate-400">
              {members.length} enrolled
            </span>
+           {canAddMember && (
+             <Button
+               size="sm"
+               variant="outline"
+               onClick={() => setShowAddMemberDialog(true)}
+               disabled={addingMember}
+               className="ml-2"
+             >
+               <Plus className="w-3.5 h-3.5 mr-1" /> Assign Registered Student
+             </Button>
+           )}
         </div>
         <div className="p-2">
           {members.length === 0 ? (
