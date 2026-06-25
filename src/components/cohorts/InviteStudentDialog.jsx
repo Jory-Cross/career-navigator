@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail } from 'lucide-react';
 
-export default function InviteStudentDialog({ open, onOpenChange, cohort_id, cohortName, onSuccess }) {
+export default function InviteStudentDialog({ open, onOpenChange, onSuccess }) {
   const [email, setEmail] = useState('');
   const [inviting, setInviting] = useState(false);
 
@@ -23,7 +23,6 @@ export default function InviteStudentDialog({ open, onOpenChange, cohort_id, coh
     try {
       const res = await base44.functions.invoke('inviteCEStudent', {
         email: email.trim(),
-        cohort_id,
       });
 
       if (res.data?.ok) {
@@ -49,11 +48,6 @@ export default function InviteStudentDialog({ open, onOpenChange, cohort_id, coh
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 text-sm text-violet-800">
-            <p className="font-medium mb-1">📚 Cohort</p>
-            <p>{cohortName}</p>
-          </div>
-
           <div className="space-y-1">
             <Label htmlFor="student-email">Student Email Address</Label>
             <Input
@@ -66,7 +60,7 @@ export default function InviteStudentDialog({ open, onOpenChange, cohort_id, coh
               onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
             />
             <p className="text-xs text-slate-500">
-              The student will receive an invitation to register for the CE Training Portal.
+              The student will receive an invitation to register for the CE Training Portal. Assign the student to a cohort after registration.
             </p>
           </div>
         </div>
