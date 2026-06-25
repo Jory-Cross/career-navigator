@@ -135,9 +135,12 @@ Deno.serve(async (req) => {
           );
         }
 
-        if (orgId && targetUser.org_id && targetUser.org_id !== orgId) {
+              if (
+          targetUser.org_id &&
+          targetUser.org_id !== membershipOrgId
+        ) {
           return Response.json(
-            { error: 'Student does not belong to caller org' },
+            { error: 'Student does not belong to this cohort organization' },
             { status: 403 }
           );
         }
