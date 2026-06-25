@@ -102,8 +102,15 @@ Deno.serve(async (req) => {
 
     // ── ADD ───────────────────────────────────────────────────────────────
     if (action === 'add') {
-      if (cohort_role === 'member') {
-        const targetUser = await base44.asServiceRole.entities.User.get(user_id);
+          if (cohort_role === 'member') {
+        const matchingTargetUsers =
+          await base44.asServiceRole.entities.User.filter({
+            id: user_id,
+          });
+
+        const targetUser = Array.isArray(matchingTargetUsers)
+          ? matchingTargetUsers[0]
+          : null;
 
         if (!targetUser) {
           return Response.json({ error: 'User not found' }, { status: 404 });
