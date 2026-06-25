@@ -77,38 +77,24 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
-  // Membership roster for this cohort.
-  const { data: cohortRoster = { memberships: [], users: [] } } = useQuery({
+   // Memberships for this cohort.
+  const { data: memberships = [] } = useQuery({
     queryKey: ["cohorts", "memberships", cohort_id],
     queryFn: async () => {
-      if (!cohort_id) {
-        return { memberships: [], users: [] };
-      }
+      if (!cohort_id) return [];
 
-      const res = await base44.functions.invoke("getCohortMemberships", {
+      const list = await base44.entities.CETrainingCohortMember.filter({
         cohort_id,
       });
 
-      if (!res.data?.ok) {
-        throw new Error(res.data?.error || "Unable to load cohort roster");
-      }
-
-      return {
-        memberships: Array.isArray(res.data.memberships)
-          ? res.data.memberships
-          : [],
-        users: Array.isArray(res.data.users)
-          ? res.data.users
-          : [],
-      };
+      return (Array.isArray(list) ? list : []).filter(
+        (membership) => membership.is_active !== false
+      );
     },
     enabled: !!cohort_id && !!user,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
-
-  const memberships = cohortRoster.memberships;
-  const rosterUsers = cohortRoster.users;
   // User display information is returned with the secure cohort roster.
   const orgUsers = rosterUsers;
 
