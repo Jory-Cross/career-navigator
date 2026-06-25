@@ -89,13 +89,25 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
-    // ── Validate cohort exists & caller org matches ──────────────────────
-       const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(cohort_id);
+        // ── Validate cohort exists & caller org matches ──────────────────────
+    const matchingCohorts =
+      await base44.asServiceRole.entities.CETrainingCohort.filter({
+        id: cohort_id,
+      });
+
+    const cohort = Array.isArray(matchingCohorts)
+      ? matchingCohorts[0]
+      : null;
+
     if (!cohort) {
       return Response.json({ error: 'Cohort not found' }, { status: 404 });
     }
+
     if (orgId && cohort.org_id && cohort.org_id !== orgId) {
-      return Response.json({ error: 'Cohort does not belong to caller org' }, { status: 403 });
+      return Response.json(
+        { error: 'Cohort does not belong to caller org' },
+        { status: 403 }
+      );
     }
 
     const membershipOrgId = cohort.org_id || orgId;
