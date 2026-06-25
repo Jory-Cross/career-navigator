@@ -4,93 +4,121 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, Users, ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import InviteStudentDialog from '@/components/cohorts/InviteStudentDialog';
 
 export default function CEInstructorStudents() {
   const [user, setUser] = useState(null);
+  const [showInviteStudentDialog, setShowInviteStudentDialog] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  // Fetch instructor's cohorts
   const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
     queryKey: ['ce-cohorts-instructor', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      // Get all cohorts the instructor manages
+
       const allCohorts = await base44.entities.CETrainingCohort.filter({
         org_id: user.org_id,
       });
-      // Filter to only those where user is a manager
+
       const memberships = await base44.entities.CETrainingCohortMember.filter({
         user_id: user.id,
         cohort_role: 'manager',
       });
-      const managedCohortIds = memberships.map(m => m.cohort_id);
-      return allCohorts.filter(c => managedCohortIds.includes(c.id));
+
+      const managedCohortIds = memberships.map((membership) => membership.cohort_id);
+      return allCohorts.filter((cohort) => managedCohortIds.includes(cohort.id));
     },
     enabled: !!user?.id,
   });
 
-  // Fetch all students (members and pending) across cohorts
-  const { data: studentsData = { active: [], pending: [] }, isLoading: studentsLoading } = useQuery({
-    queryKey: ['ce-students-instructor', cohorts.map(c => c.id).join(',')],
+  const {
+    data: studentsData = { active: [], pending: [] },
+    isLoading: studentsLoading,
+  } = useQuery({
+    queryKey: ['ce-students-instructor', user?.org_id],
     queryFn: async () => {
-      if (cohorts.length === 0) return { active: [], pending: [] };
+      if (!user?.org_id) {
+        return { active: [], pending: [] };
+      }
 
-      const cohortIds = cohorts.map(c => c.id);
+      const [orgUsersResponse, orgCohorts, pendingInvites] = await Promise.all([
+        base44.functions.invoke('getOrgUsers', {}),
+        base44.entities.CETrainingCohort.filter({
+          org_id: user.org_id,
+        }),
+        base44.entities.PendingRoleAssignment.filter({
+          org_id: user.org_id,
+          role: 'ce_student',
+          status: 'pending',
+        }),
+      ]);
 
-      // Get active members (students)
-      const activeMembers = await Promise.all(
-        cohortIds.map(cohortId =>
-          base44.entities.CETrainingCohortMember.filter({
-            cohort_id: cohortId,
-           cohort_role: 'member',
+      const activeUsers = Array.isArray(orgUsersResponse.data?.users)
+        ? orgUsersResponse.data.users
+        : [];
+
+      const registeredStudents = activeUsers.filter(
+        (orgUser) => orgUser.role === 'ce_student'
+      );
+
+      const activeMembersByCohort = await Promise.all(
+        orgCohorts.map(async (cohort) => {
+          const members = await base44.entities.CETrainingCohortMember.filter({
+            cohort_id: cohort.id,
+            cohort_role: 'member',
             is_active: true,
-          })
-        )
-      ).then(results => results.flat());
+          });
 
-      // Get user details for active members
-      const activeWithDetails = await Promise.all(
-        activeMembers.map(async (member) => {
-          const cohort = cohorts.find(c => c.id === member.cohort_id);
-          try {
-            const userDetail = await base44.entities.User.get(member.user_id);
-            return { ...member, cohort, user: userDetail, status: 'active' };
-          } catch {
-            return { ...member, cohort, user: null, status: 'active' };
-          }
+          return members.map((member) => ({
+            ...member,
+            cohort,
+          }));
         })
       );
 
-      // Get pending invites (CE students only)
-      const pendingInvites = await base44.entities.PendingRoleAssignment.filter({
-        role: 'ce_student',
+      const cohortMemberships = activeMembersByCohort.flat();
+
+      const cohortsByStudentId = cohortMemberships.reduce((result, membership) => {
+        if (!result[membership.user_id]) {
+          result[membership.user_id] = [];
+        }
+
+        result[membership.user_id].push(membership.cohort);
+        return result;
+      }, {});
+
+      const active = registeredStudents.map((student) => ({
+        id: student.id,
+        email: student.email,
+        user: student,
+        cohorts: cohortsByStudentId[student.id] || [],
+        status: 'active',
+      }));
+
+      const pending = pendingInvites.map((invite) => ({
+        id: invite.id,
+        email: invite.email,
+        user: null,
+        cohorts: [],
         status: 'pending',
-      });
+      }));
 
-      // Filter to only those in instructor's cohorts
-      const pendingForInstructor = pendingInvites
-        .filter(p => cohortIds.includes(p.cohort_id))
-        .map(p => ({
-          ...p,
-          cohort: cohorts.find(c => c.id === p.cohort_id),
-          status: 'pending',
-        }));
-
-      return {
-        active: activeWithDetails,
-        pending: pendingForInstructor,
-      };
+      return { active, pending };
     },
-    enabled: cohorts.length > 0,
+    enabled: !!user?.org_id,
   });
 
-  const allStudents = [...(studentsData.active || []), ...(studentsData.pending || [])];
+  const allStudents = [
+    ...(studentsData.active || []),
+    ...(studentsData.pending || []),
+  ];
+
   const isLoading = cohortsLoading || studentsLoading;
 
   if (isLoading) {
@@ -103,23 +131,29 @@ export default function CEInstructorStudents() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">CE Students</h1>
-        <p className="text-slate-600 mt-2">
-          Manage students across your {cohorts.length} cohort{cohorts.length !== 1 ? 's' : ''}.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">CE Students</h1>
+          <p className="text-slate-600 mt-2">
+            Invite CE students, track registration, and assign registered students to cohorts.
+          </p>
+        </div>
+
+        <Button onClick={() => setShowInviteStudentDialog(true)} className="gap-2">
+          <Mail className="w-4 h-4" />
+          Invite Student
+        </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4 border-violet-200">
           <div className="text-sm text-slate-600 mb-1">Total Students</div>
           <div className="text-3xl font-bold text-violet-600">{allStudents.length}</div>
           <div className="text-xs text-slate-500 mt-2">
-            {studentsData.active?.length || 0} active · {studentsData.pending?.length || 0} pending
+            {studentsData.active?.length || 0} registered · {studentsData.pending?.length || 0} pending
           </div>
         </Card>
+
         <Card className="p-4 border-blue-200">
           <div className="text-sm text-slate-600 mb-1">Your Cohorts</div>
           <div className="text-3xl font-bold text-blue-600">{cohorts.length}</div>
@@ -129,24 +163,27 @@ export default function CEInstructorStudents() {
             </Button>
           </Link>
         </Card>
+
         <Card className="p-4 border-slate-200">
           <div className="text-sm text-slate-600 mb-1">Pending Invitations</div>
-          <div className="text-3xl font-bold text-slate-900">{studentsData.pending?.length || 0}</div>
+          <div className="text-3xl font-bold text-slate-900">
+            {studentsData.pending?.length || 0}
+          </div>
           <p className="text-xs text-slate-500 mt-2">Awaiting registration</p>
         </Card>
       </div>
 
-      {/* Students Table */}
       {allStudents.length === 0 ? (
         <Card className="p-12 text-center border-slate-200">
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-slate-900 mb-1">No Students Yet</h3>
           <p className="text-slate-600 mb-4">
-            You haven't invited any students. Create a cohort and invite students to get started.
+            Invite a CE student here. Assign the student to a cohort after registration.
           </p>
-          <Link to="/Cohorts">
-            <Button>Create Cohort & Invite Students</Button>
-          </Link>
+          <Button onClick={() => setShowInviteStudentDialog(true)} className="gap-2">
+            <Mail className="w-4 h-4" />
+            Invite Student
+          </Button>
         </Card>
       ) : (
         <Card className="border-slate-200 overflow-hidden">
@@ -161,30 +198,50 @@ export default function CEInstructorStudents() {
                   <th className="px-4 py-3 text-left font-semibold text-slate-900">Action</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-200">
                 {allStudents.map((student) => (
-                  <tr key={student.id || student.email} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={student.id || student.email}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
                     <td className="px-4 py-3">
                       <div className="font-medium text-slate-900">
                         {student.user?.full_name || student.email?.split('@')[0] || '—'}
                       </div>
+
                       {!student.user && student.email && (
                         <div className="text-xs text-slate-500">Not yet registered</div>
                       )}
                     </td>
+
                     <td className="px-4 py-3 text-slate-600">
-                      {student.email || (student.user?.email || '—')}
+                      {student.email || student.user?.email || '—'}
                     </td>
+
                     <td className="px-4 py-3">
-                      <div className="text-slate-900 font-medium">{student.cohort?.name || '—'}</div>
-                      {student.cohort?.code && (
-                        <div className="text-xs text-slate-500">{student.cohort.code}</div>
+                      {student.cohorts?.length > 0 ? (
+                        <div className="space-y-1">
+                          {student.cohorts.map((cohort) => (
+                            <div key={cohort.id}>
+                              <div className="font-medium text-slate-900">{cohort.name}</div>
+                              {cohort.code && (
+                                <div className="text-xs text-slate-500">{cohort.code}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-slate-500">
+                          {student.status === 'pending' ? 'Assign after registration' : 'Unassigned'}
+                        </span>
                       )}
                     </td>
+
                     <td className="px-4 py-3">
                       {student.status === 'active' ? (
                         <Badge className="bg-green-100 text-green-800 border-green-300">
-                          ✓ Active
+                          ✓ Registered
                         </Badge>
                       ) : (
                         <Badge className="bg-amber-100 text-amber-800 border-amber-300">
@@ -192,13 +249,25 @@ export default function CEInstructorStudents() {
                         </Badge>
                       )}
                     </td>
+
                     <td className="px-4 py-3">
-                      <Link to={`/CohortDetail?cohort_id=${student.cohort?.id}`}>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          View
-                          <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      </Link>
+                      {student.status === 'pending' ? (
+                        <span className="text-xs text-slate-500">Awaiting registration</span>
+                      ) : student.cohorts?.length > 0 ? (
+                        <Link to={`/CohortDetail?cohort_id=${student.cohorts[0].id}`}>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            View Cohort
+                            <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Link to="/Cohorts">
+                          <Button variant="outline" size="sm" className="gap-1">
+                            Assign to Cohort
+                            <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -208,16 +277,23 @@ export default function CEInstructorStudents() {
         </Card>
       )}
 
-      {/* Info Card */}
       <Card className="p-6 bg-violet-50 border-violet-200">
         <h3 className="font-semibold text-violet-900 mb-2">📚 Managing Students</h3>
         <ol className="text-sm text-violet-800 space-y-1.5">
-          <li><span className="font-medium">1. Go to Cohorts</span> — Create or select a cohort</li>
-          <li><span className="font-medium">2. Invite Students</span> — Use the "Invite Student" button in cohort detail</li>
-          <li><span className="font-medium">3. Track Status</span> — See pending and active students here</li>
-          <li><span className="font-medium">4. Open Cohort</span> — Click "View" to manage students for a cohort</li>
+          <li><span className="font-medium">1. Invite Student</span> — Send the invitation from this Students page</li>
+          <li><span className="font-medium">2. Registration</span> — The student registers for CE Training Portal access</li>
+          <li><span className="font-medium">3. Open Cohort Detail</span> — Select the cohort after registration is complete</li>
+          <li><span className="font-medium">4. Assign Registered Student</span> — Add the student from Cohort Detail</li>
         </ol>
       </Card>
+
+      <InviteStudentDialog
+        open={showInviteStudentDialog}
+        onOpenChange={setShowInviteStudentDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['ce-students-instructor'] });
+        }}
+      />
     </div>
   );
 }
