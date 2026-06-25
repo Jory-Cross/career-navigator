@@ -36,11 +36,12 @@ export default function CEInstructorDashboard() {
     enabled: !!user?.id,
   });
 
-  // Fetch student counts for each cohort
+    // Fetch assigned registered-student counts for each cohort.
   const { data: cohortStats = {} } = useQuery({
     queryKey: ['ce-cohort-stats', cohorts.map(c => c.id).join(',')],
     queryFn: async () => {
       const stats = {};
+
       await Promise.all(
         cohorts.map(async (cohort) => {
           const activeMembers = await base44.entities.CETrainingCohortMember.filter({
@@ -48,22 +49,17 @@ export default function CEInstructorDashboard() {
             cohort_role: 'member',
             is_active: true,
           });
-          const pendingInvites = await base44.entities.PendingRoleAssignment.filter({
-            cohort_id: cohort.id,
-            role: 'ce_student',
-            status: 'pending',
-          });
+
           stats[cohort.id] = {
             activeStudents: activeMembers.length,
-            pendingStudents: pendingInvites.length,
           };
         })
       );
+
       return stats;
     },
     enabled: cohorts.length > 0,
   });
-
   const isLoading = cohortsLoading;
 
   return (
