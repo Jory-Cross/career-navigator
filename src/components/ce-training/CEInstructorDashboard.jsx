@@ -214,10 +214,10 @@ export default function CEInstructorDashboard() {
       <Card className="p-6 bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200">
         <h3 className="font-semibold text-slate-900 mb-3">👨‍🏫 Instructor Workflow</h3>
         <ol className="text-sm text-slate-700 space-y-2">
-          <li><span className="font-medium text-violet-900">1. Create Cohort:</span> Use "Create Cohort" to start a new CE training group.</li>
-          <li><span className="font-medium text-violet-900">2. Open Cohort:</span> Click on your cohort to manage it.</li>
-          <li><span className="font-medium text-violet-900">3. Invite Students:</span> Use "Invite Student" button in cohort detail to add students.</li>
-          <li><span className="font-medium text-violet-900">4. Track Students:</span> View your student roster and invitation status.</li>
+                   <li><span className="font-medium text-violet-900">1. Invite Student:</span> Open Students and send the CE Training Portal invitation.</li>
+          <li><span className="font-medium text-violet-900">2. Registration:</span> The student registers for CE Training Portal access.</li>
+          <li><span className="font-medium text-violet-900">3. Open Cohort:</span> Open the cohort where the registered student belongs.</li>
+          <li><span className="font-medium text-violet-900">4. Assign Registered Student:</span> Use Cohort Detail to assign the student.</li>
         </ol>
       </Card>
     </div>
