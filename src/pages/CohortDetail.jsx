@@ -170,7 +170,6 @@ console.log("USER MAP", userById);
 
   const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
-
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
     try {
@@ -180,16 +179,50 @@ console.log("USER MAP", userById);
         user_id: selectedUser.id,
         cohort_role: "manager",
       });
-      if (res.data?.ok) {
-        toast.success("Manager added");
-        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
-      } else {
+
+      if (!res.data?.ok) {
         throw new Error(res.data?.error || "Unknown error");
       }
+
+      toast.success("Manager added");
+
+      await queryClient.refetchQueries({
+        queryKey: ["cohorts", "memberships", cohort_id],
+      });
     } catch (err) {
       toast.error(err?.message || "Failed to add manager");
     } finally {
       setAddingManager(false);
+    }
+  };
+
+  const handleAddTrainer = async (selectedUser) => {
+    setAddingTrainer(true);
+
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "add",
+        cohort_id,
+        user_id: selectedUser.id,
+        cohort_role: "trainer",
+      });
+
+      if (!res.data?.ok) {
+        throw new Error(res.data?.error || "Unable to add trainer");
+      }
+
+      toast.success("Trainer added");
+
+      await queryClient.refetchQueries({
+        queryKey: ["cohorts", "memberships", cohort_id],
+      });
+
+      return res.data;
+    } catch (err) {
+      toast.error(err?.message || "Failed to add trainer");
+      throw err;
+    } finally {
+      setAddingTrainer(false);
     }
   };
 
