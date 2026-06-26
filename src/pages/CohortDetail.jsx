@@ -77,24 +77,44 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
-   // Memberships for this cohort.
-  const { data: memberships = [] } = useQuery({
+    // Secure roster query. The backend function can read every active
+  // membership row in this cohort, including student rows.
+  const {
+    data: cohortRoster = { memberships: [], users: [] },
+  } = useQuery({
     queryKey: ["cohorts", "memberships", cohort_id],
     queryFn: async () => {
-      if (!cohort_id) return [];
+      if (!cohort_id) {
+        return { memberships: [], users: [] };
+      }
 
-      const list = await base44.entities.CETrainingCohortMember.filter({
-        cohort_id,
-      });
-
-      return (Array.isArray(list) ? list : []).filter(
-        (membership) => membership.is_active !== false
+      const res = await base44.functions.invoke(
+        "getCohortMemberships",
+        { cohort_id }
       );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error || "Unable to load cohort roster"
+        );
+      }
+
+      return {
+        memberships: Array.isArray(res.data.memberships)
+          ? res.data.memberships
+          : [],
+        users: Array.isArray(res.data.users)
+          ? res.data.users
+          : [],
+      };
     },
     enabled: !!cohort_id && !!user,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const memberships = cohortRoster.memberships;
+  const rosterUsers = cohortRoster.users;
    // Resolve user display information for the membership rows.
   const { data: orgUsers = [] } = useQuery({
     queryKey: ["cohortDetail", "users"],
