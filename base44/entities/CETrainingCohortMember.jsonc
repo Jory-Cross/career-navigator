@@ -19,9 +19,10 @@
       "type": "string",
       "enum": [
         "manager",
+        "trainer",
         "member"
       ],
-      "description": "manager = cohort-local manager with visibility over the whole cohort (clients, feedback, view-only time entries); member = staff/student whose assigned clients become visible to cohort managers and whose feedback is attributed as reviewer_user_id. Cohort role does NOT change platform role or access_level."
+      "description": "manager = cohort-local manager with visibility over the whole cohort; trainer = cohort-local instructional staff; member = registered CE student. Cohort role does NOT change platform role or access_level."
     },
     "is_active": {
       "type": "boolean",
