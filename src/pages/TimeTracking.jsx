@@ -1174,23 +1174,30 @@ if (entryTypeFilter !== "all") {
     nonAttendanceForm,
   ]);
   
-  const handleDeleteEntry = useCallback((entry) => {
-    if (!canMutate(entry)) {
-      toast.error("View-only access — this entry belongs to a cohort member.");
-      return;
-    }
-    setDeletingEntry(entry);
-  }, []);
+    const handleDeleteEntry = useCallback(
+    (entry) => {
+      if (!canMutate(entry)) {
+        toast.error("View-only access — this entry belongs to a cohort member.");
+        return;
+      }
+
+      setDeletingEntry(entry);
+    },
+    [canMutate]
+  );
 
   const confirmDelete = useCallback(async () => {
     if (!deletingEntry?.id) return;
+
     if (!canMutate(deletingEntry)) {
       toast.error("View-only access — this entry belongs to a cohort member.");
       setIsDeleting(false);
       setDeletingEntry(null);
       return;
     }
+
     setIsDeleting(true);
+
     try {
       await base44.entities.TimeEntry.delete(deletingEntry.id);
       setSelectedEntry(null);
@@ -1203,7 +1210,7 @@ if (entryTypeFilter !== "all") {
       setIsDeleting(false);
       setDeletingEntry(null);
     }
-  }, [deletingEntry, handleRefresh]);
+  }, [deletingEntry, canMutate, handleRefresh]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
