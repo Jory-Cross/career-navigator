@@ -116,7 +116,7 @@ function StatCard({ icon: Icon, label, value, detail }) {
   );
 }
 
-export default function CEPractitionerCertificationManager() {
+export default function CECertificationPipelineManager() {
   const [data, setData] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
