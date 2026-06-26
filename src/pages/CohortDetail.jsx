@@ -4,7 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, GraduationCap, Users, UserCog, Plus } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  GraduationCap,
+  Users,
+  UserCog,
+  Plus,
+  CheckCircle2,
+} from "lucide-react";
 import { toast } from "sonner";
 import MemberRow from "@/components/cohorts/MemberRow";
 import AddMemberDialog from "@/components/cohorts/AddMemberDialog";
