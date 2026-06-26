@@ -144,16 +144,32 @@ console.log("MEMBERS", members);
 console.log("ORG USERS", orgUsers);
 console.log("USER MAP", userById);
   
-  const existingManagerUserIds = useMemo(() => managers.map((m) => m.user_id), [managers]);
-  const existingMemberUserIds = useMemo(() => members.map((m) => m.user_id), [members]);
+    const existingManagerUserIds = useMemo(
+    () => managers.map((m) => m.user_id),
+    [managers]
+  );
 
-  // Determine if current user can add members: admin OR is active manager of this cohort
-  const canAddMember = useMemo(() => {
+  const existingTrainerUserIds = useMemo(
+    () => trainers.map((m) => m.user_id),
+    [trainers]
+  );
+
+  const existingMemberUserIds = useMemo(
+    () => members.map((m) => m.user_id),
+    [members]
+  );
+
+  // Admins and active cohort managers can manage trainers and students.
+  const canManageCohortRoster = useMemo(() => {
     if (!user) return false;
+
     if (user.role === "admin") return true;
-    if (user.role === "ce_instructor") return managers.some((m) => m.user_id === user.id);
+
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
+
+  const canAddTrainer = canManageCohortRoster;
+  const canAddMember = canManageCohortRoster;
 
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
