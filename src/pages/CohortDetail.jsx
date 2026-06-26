@@ -45,8 +45,10 @@ export default function CohortDetail() {
   const cohort_id = searchParams.get("cohort_id");
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
+    const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
   const [addingManager, setAddingManager] = useState(false);
+  const [showAddTrainerDialog, setShowAddTrainerDialog] = useState(false);
+  const [addingTrainer, setAddingTrainer] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
 
