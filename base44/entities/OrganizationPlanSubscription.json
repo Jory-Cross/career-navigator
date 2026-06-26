@@ -6,11 +6,19 @@
       "type": "string",
       "description": "Paying organization tenant subscribed to this platform plan."
     },
-    "platform_plan_id": {
-      "type": "string",
-      "description": "PlatformPlan record currently purchased or previously purchased by this organization."
-    },
-    "subscription_key": {
+  "platform_plan_id": {
+  "type": "string",
+  "description": "PlatformPlan record currently purchased or previously purchased by this organization."
+},
+"pricing_schedule_id": {
+  "type": "string",
+  "description": "PlatformPricingSchedule assigned to this subscription. The subscription remains on this pricing version until explicitly moved."
+},
+"pricing_schedule_key_snapshot": {
+  "type": "string",
+  "description": "Copied pricing schedule key retained for readable subscription and legacy-pricing history."
+},
+"subscription_key": {
       "type": "string",
       "description": "Stable unique subscription identifier. Use the Stripe subscription ID when available; otherwise use a platform-generated value."
     },
