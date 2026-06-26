@@ -1,0 +1,91 @@
+{
+  "name": "OrganizationPricingScheduleAssignment",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Canonical Organization record ID pinned to this pricing schedule."
+    },
+    "pricing_schedule_id": {
+      "type": "string",
+      "description": "PlatformPricingSchedule record assigned to this organization."
+    },
+    "pricing_schedule_key_snapshot": {
+      "type": "string",
+      "description": "Copied pricing_schedule_key retained for readable historical billing records."
+    },
+    "assignment_status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "active",
+        "ended",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "description": "Lifecycle of this organization's pricing-schedule assignment. Only one active assignment should exist per organization."
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this pricing schedule begins controlling new charges for the organization."
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this schedule stopped controlling new charges for the organization."
+    },
+    "organization_plan_subscription_id": {
+      "type": "string",
+      "description": "Optional current OrganizationPlanSubscription record connected to this pricing assignment."
+    },
+    "assignment_source": {
+      "type": "string",
+      "enum": [
+        "new_account",
+        "platform_admin",
+        "migration",
+        "plan_change",
+        "contract_renewal"
+      ],
+      "description": "How the organization was assigned to this pricing schedule."
+    },
+    "assigned_by_user_id": {
+      "type": "string",
+      "description": "Platform user who created the assignment, when applicable."
+    },
+    "change_reason": {
+      "type": "string",
+      "description": "Required internal explanation when an organization moves from one pricing schedule to another."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes for grandfathering, contract terms, or approved exceptions."
+    }
+  },
+  "required": [
+    "organization_id",
+    "pricing_schedule_id",
+    "assignment_status",
+    "effective_at",
+    "assignment_source"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}
