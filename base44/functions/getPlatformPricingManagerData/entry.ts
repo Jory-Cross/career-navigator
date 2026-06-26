@@ -8,15 +8,16 @@ const ALLOWED_PLATFORM_ROLES = new Set([
 /**
  * getPlatformPricingManagerData
  *
- * Read-only source for the future internal Platform Pricing Manager.
+ * Read-only source for the internal Platform Pricing Manager.
  *
  * Important:
- * - Reads pricing schedules and their exact schedule items.
+ * - Reads pricing schedules, exact schedule items, and locked
+ *   schedule-specific feature/capacity snapshots.
  * - Does not modify pricing, plans, customers, subscriptions, or billing.
  * - Existing organizations remain pinned to their assigned pricing schedule.
- * - PlatformPlan.price_cents and PlatformBillingRate.amount_cents are
- *   catalog/template values only; schedule items become the locked source
- *   for organization-specific billing once subscriptions are provisioned.
+ * - PlatformPlanFeature remains the current global product template.
+ * - PlatformPricingSchedulePlanFeature is the schedule-specific snapshot that
+ *   becomes the historical entitlement source once a schedule is activated.
  */
 Deno.serve(async (req) => {
   try {
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
     const [
       scheduleRows,
       scheduleItemRows,
+      schedulePlanFeatureRows,
       planRows,
       featureRows,
       billingRateRows,
@@ -70,6 +72,7 @@ Deno.serve(async (req) => {
     ] = await Promise.all([
       base44.asServiceRole.entities.PlatformPricingSchedule.list(),
       base44.asServiceRole.entities.PlatformPricingScheduleItem.list(),
+      base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.list(),
       base44.asServiceRole.entities.PlatformPlan.list(),
       base44.asServiceRole.entities.PlatformFeature.list(),
       base44.asServiceRole.entities.PlatformBillingRate.list(),
@@ -79,6 +82,9 @@ Deno.serve(async (req) => {
     const schedules = Array.isArray(scheduleRows) ? scheduleRows : [];
     const scheduleItems = Array.isArray(scheduleItemRows)
       ? scheduleItemRows
+      : [];
+    const schedulePlanFeatures = Array.isArray(schedulePlanFeatureRows)
+      ? schedulePlanFeatureRows
       : [];
     const plans = Array.isArray(planRows) ? planRows : [];
     const features = Array.isArray(featureRows) ? featureRows : [];
@@ -121,6 +127,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    const featureSnapshotCountByScheduleId = new Map<string, number>();
+    const activeFeatureSnapshotCountByScheduleId = new Map<string, number>();
+
+    for (const snapshot of schedulePlanFeatures) {
+      if (!snapshot?.pricing_schedule_id) {
+        continue;
+      }
+
+      featureSnapshotCountByScheduleId.set(
+        snapshot.pricing_schedule_id,
+        (featureSnapshotCountByScheduleId.get(
+          snapshot.pricing_schedule_id
+        ) || 0) + 1
+      );
+
+      if (snapshot.is_active !== false) {
+        activeFeatureSnapshotCountByScheduleId.set(
+          snapshot.pricing_schedule_id,
+          (activeFeatureSnapshotCountByScheduleId.get(
+            snapshot.pricing_schedule_id
+          ) || 0) + 1
+        );
+      }
+    }
+
     const normalizedSchedules = schedules
       .map((schedule) => ({
         id: schedule.id,
@@ -139,6 +170,10 @@ Deno.serve(async (req) => {
         notes: schedule.notes || "",
         pricing_item_count:
           scheduleItemCountByScheduleId.get(schedule.id) || 0,
+        feature_snapshot_count:
+          featureSnapshotCountByScheduleId.get(schedule.id) || 0,
+        active_feature_snapshot_count:
+          activeFeatureSnapshotCountByScheduleId.get(schedule.id) || 0,
         active_organization_count:
           activeAssignmentCountByScheduleId.get(schedule.id) || 0,
       }))
@@ -173,6 +208,50 @@ Deno.serve(async (req) => {
           String(b.pricing_item_key)
         )
       );
+
+    const normalizedSchedulePlanFeatures = schedulePlanFeatures
+      .map((snapshot) => ({
+        id: snapshot.id,
+        pricing_schedule_id: snapshot.pricing_schedule_id,
+        pricing_schedule_plan_feature_key:
+          snapshot.pricing_schedule_plan_feature_key,
+        platform_plan_id: snapshot.platform_plan_id || null,
+        platform_feature_id: snapshot.platform_feature_id || null,
+        platform_plan_feature_id: snapshot.platform_plan_feature_id || null,
+        plan_key_snapshot: snapshot.plan_key_snapshot || null,
+        feature_key: snapshot.feature_key || null,
+        feature_name_snapshot: snapshot.feature_name_snapshot || null,
+        is_included: snapshot.is_included === true,
+        is_add_on_available: snapshot.is_add_on_available === true,
+        default_limit_value:
+          typeof snapshot.default_limit_value === "number"
+            ? snapshot.default_limit_value
+            : null,
+        is_active: snapshot.is_active !== false,
+        effective_at: snapshot.effective_at || null,
+        notes: snapshot.notes || "",
+      }))
+      .sort((a, b) => {
+        const scheduleCompare = String(a.pricing_schedule_id).localeCompare(
+          String(b.pricing_schedule_id)
+        );
+
+        if (scheduleCompare !== 0) {
+          return scheduleCompare;
+        }
+
+        const planCompare = String(a.plan_key_snapshot).localeCompare(
+          String(b.plan_key_snapshot)
+        );
+
+        if (planCompare !== 0) {
+          return planCompare;
+        }
+
+        return String(a.feature_name_snapshot || a.feature_key).localeCompare(
+          String(b.feature_name_snapshot || b.feature_key)
+        );
+      });
 
     const normalizedPlans = plans
       .map((plan) => ({
@@ -230,6 +309,7 @@ Deno.serve(async (req) => {
       },
       schedules: normalizedSchedules,
       pricing_schedule_items: normalizedScheduleItems,
+      pricing_schedule_plan_features: normalizedSchedulePlanFeatures,
       plans: normalizedPlans,
       features: normalizedFeatures,
       billing_rate_templates: normalizedBillingRates,
