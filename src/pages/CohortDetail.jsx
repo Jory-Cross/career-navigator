@@ -541,7 +541,51 @@ console.log("USER MAP", userById);
         </div>
       </section>
 
-      {/* 4. Active Students section */}
+         {/* 4. Trainers section */}
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+          <UserCog className="w-4 h-4 text-violet-600" />
+          <h2 className="text-sm font-semibold text-slate-900">Trainers</h2>
+
+          <span className="ml-auto text-xs text-slate-400">
+            {trainers.length} active
+          </span>
+
+          {canAddTrainer && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddTrainerDialog(true)}
+              disabled={addingTrainer}
+              className="ml-2"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Trainer
+            </Button>
+          )}
+        </div>
+
+        <div className="p-2">
+          {trainers.length === 0 ? (
+            <p className="text-sm text-slate-400 px-3 py-4">
+              No active trainers.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {trainers.map((trainer) => (
+                <MemberRow
+                  key={trainer.id}
+                  member={trainer}
+                  user={userById[trainer.user_id]}
+                  onRemove={handleRemoveTrainer}
+                  canRemove={canAddTrainer}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 5. Active Students section */}
              <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
            <Users className="w-4 h-4 text-green-600" />
