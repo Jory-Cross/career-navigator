@@ -2,6 +2,21 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
 
 const PRICING_SCHEDULE_KEY = "launch_2026";
 
+function getPlanFeaturePairKey(
+  platformPlanId: string,
+  platformFeatureId: string
+) {
+  return `${platformPlanId}::${platformFeatureId}`;
+}
+
+function getSnapshotKey(
+  pricingScheduleKey: string,
+  planKey: string,
+  featureKey: string
+) {
+  return `${pricingScheduleKey}:${planKey}:${featureKey}`;
+}
+
 /**
  * seedLaunchPricingSchedulePlanFeatures
  *
@@ -17,6 +32,7 @@ const PRICING_SCHEDULE_KEY = "launch_2026";
  * - Requires Launch Pricing 2026 to still be an unlocked draft.
  * - Creates missing snapshot rows only.
  * - Never overwrites an existing schedule-specific snapshot.
+ * - Refuses to write if duplicate or malformed template/snapshot data exists.
  * - Does not assign pricing to any organization.
  */
 Deno.serve(async (req) => {
@@ -128,95 +144,275 @@ Deno.serve(async (req) => {
       : [];
 
     const existingByKey = new Map<string, any>();
+    const existingByPlanFeaturePair = new Map<string, any>();
     const duplicateSnapshotKeys: string[] = [];
+    const duplicateSnapshotPlanFeaturePairs: string[] = [];
+    const malformedSnapshotRecordIds: string[] = [];
 
     for (const snapshot of existingSnapshots) {
-      const key = snapshot?.pricing_schedule_plan_feature_key;
+      const snapshotKey = snapshot?.pricing_schedule_plan_feature_key;
+      const platformPlanId = snapshot?.platform_plan_id;
+      const platformFeatureId = snapshot?.platform_feature_id;
 
-      if (!key) {
+      if (!snapshotKey || !platformPlanId || !platformFeatureId) {
+        malformedSnapshotRecordIds.push(
+          String(snapshot?.id || "(missing snapshot id)")
+        );
         continue;
       }
 
-      if (existingByKey.has(key)) {
-        duplicateSnapshotKeys.push(key);
-        continue;
+      const planFeaturePairKey = getPlanFeaturePairKey(
+        platformPlanId,
+        platformFeatureId
+      );
+
+      if (existingByKey.has(snapshotKey)) {
+        duplicateSnapshotKeys.push(snapshotKey);
+      } else {
+        existingByKey.set(snapshotKey, snapshot);
       }
 
-      existingByKey.set(key, snapshot);
+      if (existingByPlanFeaturePair.has(planFeaturePairKey)) {
+        duplicateSnapshotPlanFeaturePairs.push(planFeaturePairKey);
+      } else {
+        existingByPlanFeaturePair.set(planFeaturePairKey, snapshot);
+      }
     }
 
-    if (duplicateSnapshotKeys.length > 0) {
+    if (
+      malformedSnapshotRecordIds.length > 0 ||
+      duplicateSnapshotKeys.length > 0 ||
+      duplicateSnapshotPlanFeaturePairs.length > 0
+    ) {
       return Response.json(
         {
           ok: false,
           error:
-            "Duplicate pricing-schedule plan-feature snapshots already exist. No new snapshots were created.",
+            "Launch Pricing 2026 has malformed or duplicate schedule-specific feature snapshots. No new snapshots were created.",
+          malformed_snapshot_record_ids: Array.from(
+            new Set(malformedSnapshotRecordIds)
+          ),
           duplicate_snapshot_keys: Array.from(
             new Set(duplicateSnapshotKeys)
+          ),
+          duplicate_snapshot_plan_feature_pairs: Array.from(
+            new Set(duplicateSnapshotPlanFeaturePairs)
           ),
         },
         { status: 409 }
       );
     }
 
-    const activeTemplateMappings = (
-      Array.isArray(templateMappingRows) ? templateMappingRows : []
-    ).filter((mapping) => {
+    const allTemplateMappings = Array.isArray(templateMappingRows)
+      ? templateMappingRows
+      : [];
+
+    const skippedTemplateMappingIds: string[] = [];
+    const malformedTemplateMappingIds: string[] = [];
+    const templateCandidates: Array<{
+      mapping: any;
+      plan: any;
+      feature: any;
+      planFeaturePairKey: string;
+      snapshotKey: string;
+    }> = [];
+
+    for (const mapping of allTemplateMappings) {
       if (mapping?.is_active === false) {
-        return false;
+        continue;
       }
 
-      return (
-        activePlansById.has(mapping?.platform_plan_id) &&
-        activeFeaturesById.has(mapping?.platform_feature_id)
+      const plan = activePlansById.get(mapping?.platform_plan_id);
+      const feature = activeFeaturesById.get(mapping?.platform_feature_id);
+
+      if (!plan || !feature) {
+        skippedTemplateMappingIds.push(
+          String(mapping?.id || "(missing template mapping id)")
+        );
+        continue;
+      }
+
+      if (
+        !mapping?.id ||
+        !plan?.plan_key ||
+        !feature?.feature_key ||
+        !plan?.id ||
+        !feature?.id
+      ) {
+        malformedTemplateMappingIds.push(
+          String(mapping?.id || "(missing template mapping id)")
+        );
+        continue;
+      }
+
+      const planFeaturePairKey = getPlanFeaturePairKey(plan.id, feature.id);
+      const snapshotKey = getSnapshotKey(
+        pricingSchedule.pricing_schedule_key,
+        plan.plan_key,
+        feature.feature_key
       );
-    });
+
+      templateCandidates.push({
+        mapping,
+        plan,
+        feature,
+        planFeaturePairKey,
+        snapshotKey,
+      });
+    }
+
+    if (malformedTemplateMappingIds.length > 0) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "One or more active PlatformPlanFeature template mappings are incomplete. No new snapshots were created.",
+          malformed_template_mapping_ids: Array.from(
+            new Set(malformedTemplateMappingIds)
+          ),
+        },
+        { status: 409 }
+      );
+    }
+
+    const templateByPlanFeaturePair = new Map<string, any>();
+    const templateBySnapshotKey = new Map<string, any>();
+    const duplicateTemplatePlanFeaturePairs: string[] = [];
+    const duplicateTemplateSnapshotKeys: string[] = [];
+
+    for (const candidate of templateCandidates) {
+      if (templateByPlanFeaturePair.has(candidate.planFeaturePairKey)) {
+        duplicateTemplatePlanFeaturePairs.push(candidate.planFeaturePairKey);
+      } else {
+        templateByPlanFeaturePair.set(
+          candidate.planFeaturePairKey,
+          candidate
+        );
+      }
+
+      if (templateBySnapshotKey.has(candidate.snapshotKey)) {
+        duplicateTemplateSnapshotKeys.push(candidate.snapshotKey);
+      } else {
+        templateBySnapshotKey.set(candidate.snapshotKey, candidate);
+      }
+    }
+
+    if (
+      duplicateTemplatePlanFeaturePairs.length > 0 ||
+      duplicateTemplateSnapshotKeys.length > 0
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Duplicate active PlatformPlanFeature template mappings exist. No new snapshots were created.",
+          duplicate_template_plan_feature_pairs: Array.from(
+            new Set(duplicateTemplatePlanFeaturePairs)
+          ),
+          duplicate_template_snapshot_keys: Array.from(
+            new Set(duplicateTemplateSnapshotKeys)
+          ),
+        },
+        { status: 409 }
+      );
+    }
+
+    const snapshotIdentityConflicts: Array<{
+      snapshot_key: string;
+      plan_feature_pair: string;
+      issue: string;
+    }> = [];
+
+    for (const candidate of templateCandidates) {
+      const snapshotByKey = existingByKey.get(candidate.snapshotKey);
+      const snapshotByPlanFeaturePair = existingByPlanFeaturePair.get(
+        candidate.planFeaturePairKey
+      );
+
+      if (snapshotByKey) {
+        const snapshotPairKey = getPlanFeaturePairKey(
+          snapshotByKey.platform_plan_id,
+          snapshotByKey.platform_feature_id
+        );
+
+        if (snapshotPairKey !== candidate.planFeaturePairKey) {
+          snapshotIdentityConflicts.push({
+            snapshot_key: candidate.snapshotKey,
+            plan_feature_pair: candidate.planFeaturePairKey,
+            issue:
+              "The existing deterministic snapshot key belongs to a different plan-feature pair.",
+          });
+        }
+      }
+
+      if (
+        snapshotByPlanFeaturePair &&
+        snapshotByPlanFeaturePair.pricing_schedule_plan_feature_key !==
+          candidate.snapshotKey
+      ) {
+        snapshotIdentityConflicts.push({
+          snapshot_key: candidate.snapshotKey,
+          plan_feature_pair: candidate.planFeaturePairKey,
+          issue:
+            "The existing plan-feature pair has a different deterministic snapshot key.",
+        });
+      }
+    }
+
+    if (snapshotIdentityConflicts.length > 0) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Existing schedule-specific feature snapshots have inconsistent deterministic identities. No new snapshots were created.",
+          snapshot_identity_conflicts: snapshotIdentityConflicts,
+        },
+        { status: 409 }
+      );
+    }
 
     const now = new Date().toISOString();
     const createdSnapshotKeys: string[] = [];
     const existingSnapshotKeys: string[] = [];
-    const skippedTemplateMappingIds: string[] = [];
 
-    for (const mapping of activeTemplateMappings) {
-      const plan = activePlansById.get(mapping.platform_plan_id);
-      const feature = activeFeaturesById.get(mapping.platform_feature_id);
+    for (const candidate of templateCandidates) {
+      const snapshotAlreadyExists =
+        existingByKey.has(candidate.snapshotKey) ||
+        existingByPlanFeaturePair.has(candidate.planFeaturePairKey);
 
-      if (!plan || !feature) {
-        skippedTemplateMappingIds.push(mapping.id);
+      if (snapshotAlreadyExists) {
+        existingSnapshotKeys.push(candidate.snapshotKey);
         continue;
       }
 
-      const snapshotKey =
-        `${pricingSchedule.pricing_schedule_key}:` +
-        `${plan.plan_key}:` +
-        `${feature.feature_key}`;
+      const createdSnapshot =
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.create(
+          {
+            pricing_schedule_id: pricingSchedule.id,
+            platform_plan_id: candidate.plan.id,
+            platform_feature_id: candidate.feature.id,
+            platform_plan_feature_id: candidate.mapping.id,
+            pricing_schedule_plan_feature_key: candidate.snapshotKey,
+            plan_key_snapshot: candidate.plan.plan_key,
+            feature_key: candidate.feature.feature_key,
+            feature_name_snapshot: candidate.feature.feature_name,
+            is_included: candidate.mapping.is_included === true,
+            is_add_on_available:
+              candidate.mapping.is_add_on_available === true,
+            default_limit_value: candidate.mapping.default_limit_value,
+            is_active: true,
+            effective_at: now,
+            notes:
+              "Launch Pricing 2026 feature and capacity snapshot created from the active PlatformPlanFeature template.",
+          }
+        );
 
-      if (existingByKey.has(snapshotKey)) {
-        existingSnapshotKeys.push(snapshotKey);
-        continue;
-      }
-
-      await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.create(
-        {
-          pricing_schedule_id: pricingSchedule.id,
-          platform_plan_id: plan.id,
-          platform_feature_id: feature.id,
-          platform_plan_feature_id: mapping.id,
-          pricing_schedule_plan_feature_key: snapshotKey,
-          plan_key_snapshot: plan.plan_key,
-          feature_key: feature.feature_key,
-          feature_name_snapshot: feature.feature_name,
-          is_included: mapping.is_included === true,
-          is_add_on_available: mapping.is_add_on_available === true,
-          default_limit_value: mapping.default_limit_value,
-          is_active: true,
-          effective_at: now,
-          notes:
-            "Launch Pricing 2026 feature and capacity snapshot created from the active PlatformPlanFeature template.",
-        }
+      existingByKey.set(candidate.snapshotKey, createdSnapshot);
+      existingByPlanFeaturePair.set(
+        candidate.planFeaturePairKey,
+        createdSnapshot
       );
-
-      createdSnapshotKeys.push(snapshotKey);
+      createdSnapshotKeys.push(candidate.snapshotKey);
     }
 
     await base44.asServiceRole.entities.PlatformAuditLog.create({
