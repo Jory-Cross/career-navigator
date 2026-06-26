@@ -1,0 +1,91 @@
+{
+  "name": "PlatformPermission",
+  "type": "object",
+  "properties": {
+    "permission_key": {
+      "type": "string",
+      "description": "Stable unique permission identifier, such as organization.manage_members, clients.read_assigned, ce_training.manage_cohorts, or time_tracking.approve_entries."
+    },
+    "permission_name": {
+      "type": "string",
+      "description": "Human-readable permission name shown in future organization role-management screens."
+    },
+    "description": {
+      "type": "string",
+      "description": "Plain-language explanation of what this permission allows."
+    },
+    "permission_category": {
+      "type": "string",
+      "enum": [
+        "organization_administration",
+        "membership_and_roles",
+        "billing",
+        "client_management",
+        "ce_training",
+        "ce_practice",
+        "workforce_management",
+        "time_tracking",
+        "assessments",
+        "documents",
+        "ai_tools",
+        "reporting",
+        "platform_support"
+      ],
+      "description": "Platform area this permission belongs to."
+    },
+    "requires_feature_key": {
+      "type": "string",
+      "description": "Optional PlatformFeature key that must be enabled for this permission to take effect."
+    },
+    "is_sensitive": {
+      "type": "boolean",
+      "default": false,
+      "description": "Marks permissions involving billing, organization ownership, role administration, broad client visibility, or other high-impact access."
+    },
+    "is_platform_only": {
+      "type": "boolean",
+      "default": false,
+      "description": "True only for permissions reserved for PlatformAdmin users. Customer organizations cannot assign these permissions."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this permission may be included in new or updated organization roles."
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 100,
+      "description": "Display order for future permission-management screens."
+    }
+  },
+  "required": [
+    "permission_key",
+    "permission_name",
+    "permission_category",
+    "is_sensitive",
+    "is_platform_only",
+    "is_active"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
