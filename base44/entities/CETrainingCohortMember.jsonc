@@ -1,7 +1,7 @@
 {
   "name": "CETrainingCohortMember",
   "type": "object",
-  "description": "Membership edge linking a user to a CETrainingCohort with a cohort-local role. Manager (cohort_role='manager') and member/staff/student (cohort_role='member') are both stored here. Cohort role is independent of the user's platform role \u2014 a platform employee can be a cohort manager without gaining platform management rights. One row per (cohort_id, user_id, cohort_role). A user may appear in multiple cohorts and may hold different cohort roles in different cohorts.",
+  "description": "Membership edge linking a user to a CETrainingCohort with a cohort-local role. Manager (cohort_role='manager') and member/staff/student (cohort_role='member') are both stored here. Cohort role is independent of the user's platform role — a platform employee can be a cohort manager without gaining platform management rights. One row per (cohort_id, user_id, cohort_role). A user may appear in multiple cohorts and may hold different cohort roles in different cohorts.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -28,6 +28,25 @@
       "type": "boolean",
       "default": true,
       "description": "Soft-delete (mirrors ManagerEmployeeAssignment pattern)"
+    },
+    "training_status": {
+      "type": "string",
+      "enum": [
+        "in_training",
+        "completed",
+        "withdrawn"
+      ],
+      "default": "in_training",
+      "description": "Individual CE course progress for a student member. completed means training requirements are finished and the student is ready for certification review; it does not itself grant certification."
+    },
+    "training_completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when this individual student completed the CE training requirements."
+    },
+    "training_completed_by_user_id": {
+      "type": "string",
+      "description": "User ID of the trainer or authorized person who recorded this student's training completion."
     },
     "joined_at": {
       "type": "string",
