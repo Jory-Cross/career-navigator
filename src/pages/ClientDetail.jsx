@@ -315,9 +315,10 @@ const handleDocumentsChanged = useCallback(() => {
   };
 
   const shouldLoadApplications = !!clientId && activeTab === "applications";
-  const shouldLoadTime =
-    !!clientId && (activeTab === "time" || activeTab === "job_supports");
 
+  // Load client time entries as soon as the client detail page opens so the
+  // Time tab badge always reflects the real entry count.
+  const shouldLoadTime = !!clientId;
   const { data: applications = [] } = useQuery({
   queryKey: queryKeys.applications(clientId),
   queryFn: () => getApplications(clientId),
