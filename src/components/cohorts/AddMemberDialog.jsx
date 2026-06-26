@@ -86,19 +86,33 @@ export default function AddMemberDialog({
     orgUsersLoading ||
     (cohortRole === "member" && assignedStudentsLoading);
 
-  // Filter: by role + exclude existing + search match
+   // Filter by role, current-cohort assignment, other-cohort student
+  // assignment, and the optional name/email search.
   const filtered = useMemo(() => {
     return orgUsers
       .filter((u) => allowedRoles.includes(u.role))
       .filter((u) => !existingMemberUserIds.includes(u.id))
+      .filter(
+        (u) =>
+          cohortRole !== "member" ||
+          !assignedStudentIds.includes(u.id)
+      )
       .filter((u) => {
         if (!search.trim()) return true;
+
         const q = search.trim().toLowerCase();
         const hay = `${u.full_name || ""} ${u.email || ""}`.toLowerCase();
+
         return hay.includes(q);
       });
-  }, [orgUsers, allowedRoles, existingMemberUserIds, search]);
-
+  }, [
+    orgUsers,
+    allowedRoles,
+    existingMemberUserIds,
+    cohortRole,
+    assignedStudentIds,
+    search,
+  ]);
   const handleSubmit = async () => {
     if (!selectedUser) {
       toast.error("Please select a user");
