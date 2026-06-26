@@ -183,7 +183,7 @@ const AuthenticatedApp = () => {
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
           <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
           <Route path="/PlatformPricingManager" element={<LayoutWrapper currentPageName="PlatformPricingManager"><PlatformPricingManager /></LayoutWrapper>} />
-      <Route path="/CEPractitionerCertificationManager" element={<LayoutWrapper currentPageName="CEPractitionerCertificationManager"><CEPractitionerCertificationManager /></LayoutWrapper>} />
+     <Route path="/CEPractitionerCertificationManager" element={<LayoutWrapper currentPageName="CECertificationPipelineManager"><CECertificationPipelineManager /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
       <Route path="/OrgSignup" element={<OrgSignup />} />
       <Route path="/OrgDashboard" element={<LayoutWrapper currentPageName="OrgDashboard"><OrgDashboard /></LayoutWrapper>} />
