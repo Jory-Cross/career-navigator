@@ -232,10 +232,39 @@ console.log("USER MAP", userById);
     }
   };
 
-  const handleRemoveMember = async (membership) => {
-    if (!window.confirm(`Remove ${orgUsers?.find(u => u.id === membership.user_id)?.full_name || membership.user_id} as member?`)) {
+   const handleRemoveMember = async (membership) => {
+    if (
+      !window.confirm(
+        `Remove ${
+          orgUsers?.find((u) => u.id === membership.user_id)?.full_name ||
+          membership.user_id
+        } as member?`
+      )
+    ) {
       return;
     }
+
+    const rosterQueryKey = ["cohorts", "memberships", cohort_id];
+
+    await queryClient.cancelQueries({
+      queryKey: rosterQueryKey,
+    });
+
+    const previousRoster = queryClient.getQueryData(rosterQueryKey);
+
+    queryClient.setQueryData(rosterQueryKey, (currentRoster) => {
+      const currentMemberships = Array.isArray(currentRoster?.memberships)
+        ? currentRoster.memberships
+        : [];
+
+      return {
+        ...(currentRoster || {}),
+        memberships: currentMemberships.filter(
+          (row) => row.id !== membership.id
+        ),
+      };
+    });
+
     try {
       const res = await base44.functions.invoke("manageCohortMembership", {
         action: "remove",
@@ -243,13 +272,19 @@ console.log("USER MAP", userById);
         membership_id: membership.id,
         cohort_role: "member",
       });
-      if (res.data?.ok) {
-        toast.success("Member removed");
-        queryClient.invalidateQueries({ queryKey: ["cohorts", "memberships", cohort_id] });
-      } else {
+
+      if (!res.data?.ok) {
         throw new Error(res.data?.error || "Unknown error");
       }
+
+      toast.success("Member removed");
+
+      await queryClient.invalidateQueries({
+        queryKey: rosterQueryKey,
+        refetchType: "none",
+      });
     } catch (err) {
+      queryClient.setQueryData(rosterQueryKey, previousRoster);
       toast.error(err?.message || "Failed to remove member");
     }
   };
