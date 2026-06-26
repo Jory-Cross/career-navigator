@@ -179,6 +179,22 @@ console.log("USER MAP", userById);
 
   const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
+
+  const canRecordStudentTrainingCompletion = useMemo(() => {
+    if (!user || cohort?.cohort_type !== "training") {
+      return false;
+    }
+
+    if (user.role === "admin") {
+      return true;
+    }
+
+    return [...managers, ...trainers].some(
+      (membership) =>
+        membership.user_id === user.id &&
+        membership.is_active !== false
+    );
+  }, [user, cohort?.cohort_type, managers, trainers]);
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
     try {
