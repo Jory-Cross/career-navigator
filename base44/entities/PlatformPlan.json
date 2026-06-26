@@ -1,0 +1,101 @@
+{
+  "name": "PlatformPlan",
+  "type": "object",
+  "properties": {
+    "plan_key": {
+      "type": "string",
+      "description": "Stable unique machine-readable plan identifier, such as trainer_business_standard, business_ce_growth, or individual_ce."
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Customer-facing name for this paid plan."
+    },
+    "account_model": {
+      "type": "string",
+      "enum": [
+        "trainer_business",
+        "business_ce",
+        "individual_ce"
+      ],
+      "description": "Customer account model this plan creates. Trainer business plans run training cohorts; business CE plans support employed practitioners; individual CE plans support one independent practitioner."
+    },
+    "description": {
+      "type": "string",
+      "description": "Customer-facing explanation of the plan."
+    },
+    "billing_interval": {
+      "type": "string",
+      "enum": [
+        "monthly",
+        "annual"
+      ],
+      "description": "Default billing frequency for this plan."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO currency code for the displayed plan price."
+    },
+    "price_cents": {
+      "type": "number",
+      "description": "Displayed base plan price in cents. Stripe remains the payment source of truth once billing is connected."
+    },
+    "stripe_product_id": {
+      "type": "string",
+      "description": "Stripe Product ID for this plan, when billing is connected."
+    },
+    "stripe_price_id": {
+      "type": "string",
+      "description": "Stripe Price ID for this specific billing interval, when billing is connected."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether new organizations may purchase or be assigned this plan."
+    },
+    "is_publicly_available": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this plan appears in future self-service purchase and upgrade screens."
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 100,
+      "description": "Display order for future plan-selection screens."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal platform notes about grandfathering, migration, or plan setup."
+    }
+  },
+  "required": [
+    "plan_key",
+    "plan_name",
+    "account_model",
+    "billing_interval",
+    "is_active",
+    "is_publicly_available"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
