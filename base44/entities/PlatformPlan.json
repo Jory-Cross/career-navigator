@@ -30,6 +30,15 @@
   ],
   "description": "Named service tier within the account model. Trainer Business and Business CE use starter, growth, and enterprise. Individual CE uses starter and pro."
 },
+"navigation_scope": {
+  "type": "string",
+  "enum": [
+    "full_platform",
+    "ce_only",
+    "ce_training_only"
+  ],
+  "description": "Controls the app surface shown to organizations on this plan. full_platform shows general Career Navigator pages, with CE pages added only when CE entitlements are active. ce_only shows CE practitioner and CE client pages only. ce_training_only shows CE Training Portal, cohorts, trainers, students, and cohort-scoped CE client work only."
+},
 "description": {
       "type": "string",
       "description": "Customer-facing explanation of the plan."
