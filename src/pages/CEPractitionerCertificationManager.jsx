@@ -16,25 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const CERTIFICATION_SOURCES = [
-  {
-    value: "trainer_business",
-    label: "In-platform Trainer Business program",
-  },
-  {
-    value: "external_provider",
-    label: "External CE training provider",
-  },
-  {
-    value: "legacy_migration",
-    label: "Legacy migration",
-  },
-  {
-    value: "manual_verification",
-    label: "Manual verification",
-  },
-];
-
 function formatDate(value) {
   if (!value) {
     return "—";
@@ -53,37 +34,23 @@ function formatDate(value) {
   });
 }
 
-function toDateInput(value) {
-  if (!value) {
-    return "";
-  }
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return parsed.toISOString().slice(0, 10);
-}
-
-function getStatusLabel(status) {
+function getPipelineStatusLabel(status) {
   const labels = {
-    none: "No record",
-    pending_verification: "Pending verification",
-    verified: "Verified",
+    in_training: "In Training",
+    pending_certification: "Pending Certification",
+    certified: "Certified",
     revoked: "Revoked",
   };
 
   return labels[status] || "Unknown";
 }
 
-function getStatusClass(status) {
-  if (status === "verified") {
+function getPipelineStatusClass(status) {
+  if (status === "certified") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
-  if (status === "pending_verification") {
+  if (status === "pending_certification") {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
 
@@ -91,25 +58,19 @@ function getStatusClass(status) {
     return "border-red-200 bg-red-50 text-red-700";
   }
 
-  return "border-slate-200 bg-slate-100 text-slate-600";
+  return "border-blue-200 bg-blue-50 text-blue-700";
 }
 
-function getSourceLabel(source) {
-  return (
-    CERTIFICATION_SOURCES.find((option) => option.value === source)?.label ||
-    "—"
-  );
-}
-
-function getRoleLabel(role) {
-  if (!role) {
-    return "No legacy role";
+function getTrainingStatusLabel(status) {
+  if (status === "completed") {
+    return "Training requirements complete";
   }
 
-  return role
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  if (status === "withdrawn") {
+    return "Withdrawn";
+  }
+
+  return "In Training";
 }
 
 function getInitials(person) {
@@ -130,9 +91,6 @@ function buildFormState(person, certifications) {
   );
 
   return {
-    certification_source:
-      certification?.certification_source || "trainer_business",
-    completed_at: toDateInput(certification?.completed_at),
     notes: certification?.notes || "",
     revocation_notes: "",
   };
@@ -168,8 +126,6 @@ export default function CEPractitionerCertificationManager() {
   const [savingAction, setSavingAction] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    certification_source: "trainer_business",
-    completed_at: "",
     notes: "",
     revocation_notes: "",
   });
@@ -199,8 +155,7 @@ export default function CEPractitionerCertificationManager() {
 
     return people.filter((person) => {
       const matchesStatus =
-        statusFilter === "all" ||
-        person.certification_status === statusFilter;
+        statusFilter === "all" || person.pipeline_status === statusFilter;
 
       if (!matchesStatus) {
         return false;
@@ -213,8 +168,9 @@ export default function CEPractitionerCertificationManager() {
       return [
         person.display_name,
         person.email,
-        person.role,
-        person.certification_status,
+        person.cohort_name,
+        person.course_name,
+        person.pipeline_status_label,
       ]
         .filter(Boolean)
         .some((value) =>
@@ -287,20 +243,28 @@ export default function CEPractitionerCertificationManager() {
 
   async function runCertificationAction(action) {
     if (!selectedPerson) {
-      toast.error("Select a person first.");
-      return;
-    }
-
-    if (
-      (action === "create_pending" || action === "verify") &&
-      !form.certification_source
-    ) {
-      toast.error("Select a certification source.");
+      toast.error("Select a CE student first.");
       return;
     }
 
     if (action === "revoke" && !form.revocation_notes.trim()) {
       toast.error("A revocation explanation is required.");
+      return;
+    }
+
+    const confirmationMessages = {
+      create_pending:
+        "Create a Pending Certification record for this student? Their paid training completion will be linked automatically.",
+      verify:
+        "Verify this student's CE practitioner certification? This confirms certification eligibility but does not grant CE workspace access.",
+      revoke:
+        "Revoke this verified certification? Revocation history will remain and cannot be overwritten in this workflow.",
+    };
+
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(confirmationMessages[action])
+    ) {
       return;
     }
 
@@ -310,8 +274,6 @@ export default function CEPractitionerCertificationManager() {
     };
 
     if (action === "create_pending" || action === "verify") {
-      payload.certification_source = form.certification_source;
-      payload.completed_at = form.completed_at || undefined;
       payload.notes = form.notes.trim() || undefined;
     }
 
@@ -336,12 +298,14 @@ export default function CEPractitionerCertificationManager() {
       }
 
       const successMessages = {
-        create_pending: "Certification record created as pending verification.",
+        create_pending:
+          "The student is now in Pending Certification.",
         verify: "CE practitioner certification verified.",
         revoke: "CE practitioner certification revoked.",
       };
 
       toast.success(successMessages[action]);
+
       await loadManagerData({
         preferredUserId: selectedPerson.id,
       });
@@ -360,7 +324,7 @@ export default function CEPractitionerCertificationManager() {
       <div className="flex min-h-[360px] items-center justify-center">
         <div className="flex items-center gap-3 text-sm text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Loading CE practitioner certification administration...
+          Loading CE certification pipeline...
         </div>
       </div>
     );
@@ -402,6 +366,18 @@ export default function CEPractitionerCertificationManager() {
     );
   }
 
+  const canCreatePending =
+    selectedPerson?.pipeline_status === "pending_certification" &&
+    selectedPerson?.certification_status === "none";
+
+  const canVerify =
+    selectedPerson?.pipeline_status === "pending_certification" &&
+    selectedPerson?.certification_status === "pending_verification";
+
+  const canRevoke =
+    selectedPerson?.pipeline_status === "certified" &&
+    selectedPerson?.certification_status === "verified";
+
   return (
     <div className="max-w-7xl space-y-6 pb-8">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
@@ -414,8 +390,8 @@ export default function CEPractitionerCertificationManager() {
           </div>
 
           <p className="mt-1 text-sm text-slate-500">
-            Verify CE practitioner eligibility before a future organization
-            grants CE Practitioner Workspace access.
+            Paid CE course students only. Track training progress through
+            certification without exposing unrelated platform users.
           </p>
         </div>
 
@@ -442,8 +418,9 @@ export default function CEPractitionerCertificationManager() {
             <span className="font-semibold">Certification is eligibility only.</span>{" "}
             It does not grant CE Practitioner Workspace access, organization
             membership, a CE role, billing entitlement, or trainer controls.
-            Future practitioner access requires certification, an organization
-            CE add-on, and an explicit organization-scoped practitioner role.
+            Future CE workspace access still requires an organization add-on,
+            verified certification, and an explicit organization-scoped
+            practitioner role.
           </p>
         </div>
       </div>
@@ -454,10 +431,10 @@ export default function CEPractitionerCertificationManager() {
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
             <p className="text-sm text-red-700">
               Duplicate certification records were detected for{" "}
-              {data.integrity.duplicate_certification_count} user
+              {data.integrity.duplicate_certification_count} student
               {data.integrity.duplicate_certification_count === 1 ? "" : "s"}.
-              Do not issue new certification actions for affected people until
-              the records are resolved.
+              Do not issue certification actions for affected students until
+              the duplicate records are resolved.
             </p>
           </div>
         </div>
@@ -465,28 +442,28 @@ export default function CEPractitionerCertificationManager() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          icon={UserRound}
-          label="Platform People"
-          value={counts.people_count || 0}
-          detail="Available for certification review"
+          icon={Clock3}
+          label="In Training"
+          value={counts.in_training_count || 0}
+          detail="Paid students actively taking CE training"
         />
         <StatCard
-          icon={Clock3}
-          label="Pending"
-          value={counts.pending_verification_count || 0}
-          detail="Awaiting verification"
+          icon={UserRound}
+          label="Pending Certification"
+          value={counts.pending_certification_count || 0}
+          detail="Training complete and ready for review"
         />
         <StatCard
           icon={CheckCircle2}
-          label="Verified"
-          value={counts.verified_count || 0}
-          detail="Certification eligibility confirmed"
+          label="Certified"
+          value={counts.certified_count || 0}
+          detail="Certification eligibility verified"
         />
         <StatCard
           icon={XCircle}
           label="Revoked"
           value={counts.revoked_count || 0}
-          detail="Historical records retained"
+          detail="Historical certification records retained"
         />
       </div>
 
@@ -494,11 +471,11 @@ export default function CEPractitionerCertificationManager() {
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-5 py-4">
             <h2 className="text-base font-semibold text-slate-900">
-              People
+              CE Students
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Search platform users, then select the person whose
-              certification you need to review.
+              Only students with a paid CE training registration or
+              reactivation are included.
             </p>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -507,7 +484,7 @@ export default function CEPractitionerCertificationManager() {
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search name, email, role, or certification status"
+                  placeholder="Search student, email, cohort, or course"
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </label>
@@ -517,12 +494,12 @@ export default function CEPractitionerCertificationManager() {
                 onChange={(event) => setStatusFilter(event.target.value)}
                 className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
-                <option value="all">All statuses</option>
-                <option value="none">No record</option>
-                <option value="pending_verification">
-                  Pending verification
+                <option value="all">All pipeline stages</option>
+                <option value="in_training">In Training</option>
+                <option value="pending_certification">
+                  Pending Certification
                 </option>
-                <option value="verified">Verified</option>
+                <option value="certified">Certified</option>
                 <option value="revoked">Revoked</option>
               </select>
             </div>
@@ -530,7 +507,7 @@ export default function CEPractitionerCertificationManager() {
 
           {filteredPeople.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-slate-500">
-              No people match the current search and status filter.
+              No paid CE students match the current search and pipeline filter.
             </div>
           ) : (
             <div className="max-h-[680px] divide-y divide-slate-100 overflow-y-auto">
@@ -559,18 +536,19 @@ export default function CEPractitionerCertificationManager() {
                       <p className="truncate text-xs text-slate-500">
                         {person.email || "No email available"}
                       </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {getRoleLabel(person.role)}
-                        {person.is_active ? "" : " · Inactive account"}
+                      <p className="mt-1 truncate text-xs text-slate-400">
+                        {person.course_name || "CE training course"}
+                        {person.cohort_name ? ` · ${person.cohort_name}` : ""}
                       </p>
                     </div>
 
                     <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusClass(
-                        person.certification_status
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${getPipelineStatusClass(
+                        person.pipeline_status
                       )}`}
                     >
-                      {getStatusLabel(person.certification_status)}
+                      {person.pipeline_status_label ||
+                        getPipelineStatusLabel(person.pipeline_status)}
                     </span>
                   </button>
                 );
@@ -582,8 +560,8 @@ export default function CEPractitionerCertificationManager() {
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           {!selectedPerson ? (
             <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
-              Select a person to review or manage CE practitioner
-              certification.
+              Select a paid CE student to review their certification pipeline
+              status.
             </div>
           ) : (
             <div>
@@ -600,130 +578,130 @@ export default function CEPractitionerCertificationManager() {
                     <p className="truncate text-sm text-slate-500">
                       {selectedPerson.email || "No email available"}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {getRoleLabel(selectedPerson.role)}
-                      {selectedPerson.is_active
-                        ? " · Active account"
-                        : " · Inactive account"}
+                    <p className="mt-1 truncate text-xs text-slate-400">
+                      {selectedPerson.course_name || "CE training course"}
+                      {selectedPerson.cohort_name
+                        ? ` · ${selectedPerson.cohort_name}`
+                        : ""}
                     </p>
                   </div>
 
                   <span
-                    className={`rounded-full border px-2 py-1 text-xs font-medium ${getStatusClass(
-                      selectedPerson.certification_status
+                    className={`rounded-full border px-2 py-1 text-xs font-medium ${getPipelineStatusClass(
+                      selectedPerson.pipeline_status
                     )}`}
                   >
-                    {getStatusLabel(selectedPerson.certification_status)}
+                    {selectedPerson.pipeline_status_label ||
+                      getPipelineStatusLabel(selectedPerson.pipeline_status)}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-5 p-5">
+                <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Training status
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-700">
+                      {getTrainingStatusLabel(selectedPerson.training_status)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Training completion
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-700">
+                      {formatDate(selectedPerson.training_completed_at)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Cohort status
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-700">
+                      {selectedPerson.cohort_status || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Paid CE enrollments
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-700">
+                      {selectedPerson.paid_training_enrollment_count || 0}
+                    </p>
+                  </div>
+                </div>
+
                 {selectedCertification ? (
-                  <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+                  <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Certification source
+                        Certification record
                       </p>
                       <p className="mt-1 text-sm font-medium text-slate-700">
-                        {getSourceLabel(
-                          selectedCertification.certification_source
-                        )}
+                        {selectedCertification.certification_status ===
+                        "pending_verification"
+                          ? "Pending Certification"
+                          : selectedCertification.certification_status ===
+                              "verified"
+                            ? "Certified"
+                            : "Revoked"}
                       </p>
                     </div>
 
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Training completion
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-slate-700">
-                        {formatDate(selectedCertification.completed_at)}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Verification date
+                        Verified date
                       </p>
                       <p className="mt-1 text-sm font-medium text-slate-700">
                         {formatDate(selectedCertification.verified_at)}
                       </p>
                     </div>
 
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Training cohort
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-slate-700">
-                        {selectedCertification.source_cohort_id
-                          ? "Linked in-platform cohort"
-                          : "No linked in-platform cohort"}
-                      </p>
-                    </div>
+                    {selectedCertification.notes ? (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Internal notes
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                          {selectedCertification.notes}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                    This person does not yet have a CE practitioner
-                    certification record.
-                  </div>
-                )}
+                ) : null}
 
-                {selectedPerson.certification_status !== "revoked" ? (
-                  <div className="space-y-4">
+                {selectedPerson.pipeline_status === "in_training" ? (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
+                    <h3 className="text-sm font-semibold text-blue-900">
+                      Student is currently in training
+                    </h3>
+                    <p className="mt-1 text-sm text-blue-700">
+                      Certification actions remain unavailable until a trainer
+                      records this individual student&apos;s training completion.
+                    </p>
+                  </div>
+                ) : null}
+
+                {canCreatePending ? (
+                  <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900">
-                        Certification Details
+                      <h3 className="text-sm font-semibold text-amber-900">
+                        Start Certification Review
                       </h3>
-                      <p className="mt-1 text-xs text-slate-500">
-                        This information documents eligibility. It does not
-                        grant CE workspace access.
+                      <p className="mt-1 text-sm text-amber-700">
+                        Training completion is already recorded. Create the
+                        Pending Certification record before verification.
                       </p>
                     </div>
 
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">
-                        Certification source
-                      </span>
-                      <select
-                        value={form.certification_source}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            certification_source: event.target.value,
-                          }))
-                        }
-                        disabled={savingAction !== ""}
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                      >
-                        {CERTIFICATION_SOURCES.map((source) => (
-                          <option key={source.value} value={source.value}>
-                            {source.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="text-sm font-medium text-slate-700">
-                        Training completion date
-                      </span>
-                      <input
-                        type="date"
-                        value={form.completed_at}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            completed_at: event.target.value,
-                          }))
-                        }
-                        disabled={savingAction !== ""}
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="text-sm font-medium text-slate-700">
-                        Internal notes
+                      <span className="text-sm font-medium text-amber-900">
+                        Certification review notes
                       </span>
                       <textarea
                         value={form.notes}
@@ -734,19 +712,14 @@ export default function CEPractitionerCertificationManager() {
                           }))
                         }
                         disabled={savingAction !== ""}
-                        rows={4}
-                        placeholder="Optional verification notes"
-                        className="mt-1 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        rows={3}
+                        placeholder="Optional notes about the certification review"
+                        className="mt-1 w-full resize-y rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-amber-100"
                       />
                     </label>
-                  </div>
-                ) : null}
 
-                {selectedPerson.certification_status === "none" ? (
-                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       type="button"
-                      variant="outline"
                       disabled={savingAction !== ""}
                       onClick={() =>
                         runCertificationAction("create_pending")
@@ -758,8 +731,42 @@ export default function CEPractitionerCertificationManager() {
                       ) : (
                         <Clock3 className="h-4 w-4" />
                       )}
-                      Create Pending Record
+                      Create Pending Certification Record
                     </Button>
+                  </div>
+                ) : null}
+
+                {canVerify ? (
+                  <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-emerald-900">
+                        Verify Certification
+                      </h3>
+                      <p className="mt-1 text-sm text-emerald-700">
+                        This confirms CE practitioner certification eligibility.
+                        It does not grant organization access or CE workspace
+                        permissions.
+                      </p>
+                    </div>
+
+                    <label className="block">
+                      <span className="text-sm font-medium text-emerald-900">
+                        Verification notes
+                      </span>
+                      <textarea
+                        value={form.notes}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            notes: event.target.value,
+                          }))
+                        }
+                        disabled={savingAction !== ""}
+                        rows={3}
+                        placeholder="Optional verification notes"
+                        className="mt-1 w-full resize-y rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-emerald-100"
+                      />
+                    </label>
 
                     <Button
                       type="button"
@@ -772,37 +779,21 @@ export default function CEPractitionerCertificationManager() {
                       ) : (
                         <UserCheck className="h-4 w-4" />
                       )}
-                      Verify Now
+                      Verify Certification
                     </Button>
                   </div>
                 ) : null}
 
-                {selectedPerson.certification_status ===
-                "pending_verification" ? (
-                  <Button
-                    type="button"
-                    disabled={savingAction !== ""}
-                    onClick={() => runCertificationAction("verify")}
-                    className="gap-2"
-                  >
-                    {savingAction === "verify" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserCheck className="h-4 w-4" />
-                    )}
-                    Verify Certification
-                  </Button>
-                ) : null}
-
-                {selectedPerson.certification_status === "verified" ? (
+                {canRevoke ? (
                   <div className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4">
                     <div>
                       <h3 className="text-sm font-semibold text-red-900">
                         Revoke Certification
                       </h3>
                       <p className="mt-1 text-xs text-red-700">
-                        Revocation is retained as history. Re-verification is
-                        intentionally not available in this first workflow.
+                        Revocation history remains intact. This first workflow
+                        does not allow re-certification by overwriting the
+                        record.
                       </p>
                     </div>
 
@@ -841,11 +832,11 @@ export default function CEPractitionerCertificationManager() {
                   </div>
                 ) : null}
 
-                {selectedPerson.certification_status === "revoked" ? (
+                {selectedPerson.pipeline_status === "revoked" ? (
                   <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
-                    This certification record is revoked. This workflow does
-                    not allow re-verification because revocation history must
-                    remain intact.
+                    This certification record is revoked. Re-certification
+                    requires a future, separate workflow so revocation history
+                    cannot be overwritten.
                   </div>
                 ) : null}
               </div>
