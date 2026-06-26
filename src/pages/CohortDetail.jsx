@@ -287,6 +287,60 @@ console.log("USER MAP", userById);
     }
   };
 
+  const handleMarkStudentTrainingComplete = async (membership) => {
+    const student =
+      orgUsers?.find((row) => row.id === membership.user_id) || null;
+
+    const studentName =
+      student?.full_name ||
+      student?.email ||
+      "this student";
+
+    if (
+      !window.confirm(
+        `Mark ${studentName} as having completed CE training requirements? This makes the student eligible for Pending Certification review.`
+      )
+    ) {
+      return;
+    }
+
+    setCompletingMembershipId(membership.id);
+
+    try {
+      const res = await base44.functions.invoke(
+        "markCEStudentTrainingComplete",
+        {
+          action: "mark_completed",
+          cohort_id,
+          membership_id: membership.id,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to record CE student training completion."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Student training completion recorded."
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["cohorts", "memberships", cohort_id],
+      });
+    } catch (err) {
+      toast.error(
+        err?.message ||
+          "Unable to record CE student training completion."
+      );
+    } finally {
+      setCompletingMembershipId("");
+    }
+  };
+
   const handleRemoveManager = async (membership) => {
     if (managers.length === 1) {
       toast.error("Cannot remove the last active manager");
