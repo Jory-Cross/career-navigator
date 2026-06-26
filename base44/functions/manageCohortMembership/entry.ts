@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     // ── ADD ───────────────────────────────────────────────────────────────
     if (action === 'add') {
-              if (cohort_role === 'member') {
+      if (cohort_role === 'member' || cohort_role === 'trainer') {
         const allUsers = await base44.asServiceRole.entities.User.list();
 
         const targetUser = (Array.isArray(allUsers) ? allUsers : []).find(
@@ -141,24 +141,45 @@ Deno.serve(async (req) => {
 
         if (targetUser.is_active === false) {
           return Response.json(
-            { error: 'Only active registered CE students may be assigned to a cohort' },
+            { error: 'Only active users may be assigned to a cohort' },
             { status: 400 }
           );
         }
 
-        if (targetUser.role !== 'ce_student') {
+        if (
+          cohort_role === 'member' &&
+          targetUser.role !== 'ce_student'
+        ) {
           return Response.json(
-            { error: 'Only registered CE students may be assigned to a cohort' },
+            {
+              error:
+                'Only registered CE students may be assigned as cohort students',
+            },
             { status: 400 }
           );
         }
 
-              if (
+        if (
+          cohort_role === 'trainer' &&
+          !['admin', 'management', 'employee', 'ce_instructor'].includes(
+            targetUser.role
+          )
+        ) {
+          return Response.json(
+            {
+              error:
+                'Only active CE instructors, employees, managers, or admins may be assigned as trainers',
+            },
+            { status: 400 }
+          );
+        }
+
+        if (
           targetUser.org_id &&
           targetUser.org_id !== membershipOrgId
         ) {
           return Response.json(
-            { error: 'Student does not belong to this cohort organization' },
+            { error: 'User does not belong to this cohort organization' },
             { status: 403 }
           );
         }
