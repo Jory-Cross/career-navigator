@@ -180,7 +180,8 @@ const AuthenticatedApp = () => {
 <Route path="/Cohorts" element={<LayoutWrapper currentPageName="Cohorts"><Cohorts /></LayoutWrapper>} />
 <Route path="/CohortDetail" element={<LayoutWrapper currentPageName="CohortDetail"><CohortDetail /></LayoutWrapper>} />
       <Route path="/Tasks" element={<LayoutWrapper currentPageName="Tasks"><Tasks /></LayoutWrapper>} />
-      <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
+          <Route path="/FeaturePermissions" element={<LayoutWrapper currentPageName="FeaturePermissions"><FeaturePermissionsGated /></LayoutWrapper>} />
+      <Route path="/PlatformPricingManager" element={<LayoutWrapper currentPageName="PlatformPricingManager"><PlatformPricingManager /></LayoutWrapper>} />
       <Route path="/Pricing" element={<Pricing />} />
       <Route path="/OrgSignup" element={<OrgSignup />} />
       <Route path="/OrgDashboard" element={<LayoutWrapper currentPageName="OrgDashboard"><OrgDashboard /></LayoutWrapper>} />
