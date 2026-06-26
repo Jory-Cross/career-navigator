@@ -37,21 +37,27 @@ export default function CEInstructorStudents() {
     enabled: !!user?.id,
   });
 
+   const managedCohortIds = cohorts
+    .map((cohort) => cohort.id)
+    .sort()
+    .join(',');
+
   const {
     data: studentsData = { active: [], pending: [] },
     isLoading: studentsLoading,
   } = useQuery({
-    queryKey: ['ce-students-instructor', user?.org_id],
+    queryKey: [
+      'ce-students-instructor',
+      user?.org_id,
+      managedCohortIds,
+    ],
     queryFn: async () => {
       if (!user?.org_id) {
         return { active: [], pending: [] };
       }
 
-      const [orgUsersResponse, orgCohorts, pendingInvites] = await Promise.all([
+      const [orgUsersResponse, pendingInvites] = await Promise.all([
         base44.functions.invoke('getOrgUsers', {}),
-        base44.entities.CETrainingCohort.filter({
-          org_id: user.org_id,
-        }),
         base44.entities.PendingRoleAssignment.filter({
           org_id: user.org_id,
           role: 'ce_student',
@@ -68,30 +74,51 @@ export default function CEInstructorStudents() {
       );
 
       const activeMembersByCohort = await Promise.all(
-        orgCohorts.map(async (cohort) => {
-          const members = await base44.entities.CETrainingCohortMember.filter({
-            cohort_id: cohort.id,
-            cohort_role: 'member',
-            is_active: true,
-          });
+        cohorts.map(async (cohort) => {
+          const res = await base44.functions.invoke(
+            'getCohortMemberships',
+            {
+              cohort_id: cohort.id,
+            }
+          );
 
-          return members.map((member) => ({
-            ...member,
-            cohort,
-          }));
+          if (!res.data?.ok) {
+            throw new Error(
+              res.data?.error ||
+                `Unable to load members for ${cohort.name || 'cohort'}`
+            );
+          }
+
+          const memberships = Array.isArray(res.data?.memberships)
+            ? res.data.memberships
+            : [];
+
+          return memberships
+            .filter(
+              (membership) =>
+                membership.cohort_role === 'member' &&
+                membership.is_active !== false
+            )
+            .map((membership) => ({
+              ...membership,
+              cohort,
+            }));
         })
       );
 
       const cohortMemberships = activeMembersByCohort.flat();
 
-      const cohortsByStudentId = cohortMemberships.reduce((result, membership) => {
-        if (!result[membership.user_id]) {
-          result[membership.user_id] = [];
-        }
+      const cohortsByStudentId = cohortMemberships.reduce(
+        (result, membership) => {
+          if (!result[membership.user_id]) {
+            result[membership.user_id] = [];
+          }
 
-        result[membership.user_id].push(membership.cohort);
-        return result;
-      }, {});
+          result[membership.user_id].push(membership.cohort);
+          return result;
+        },
+        {}
+      );
 
       const active = registeredStudents.map((student) => ({
         id: student.id,
@@ -111,7 +138,7 @@ export default function CEInstructorStudents() {
 
       return { active, pending };
     },
-    enabled: !!user?.org_id,
+    enabled: !!user?.org_id && !cohortsLoading,
   });
 
   const allStudents = [
