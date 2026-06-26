@@ -100,11 +100,22 @@ const FEATURE_CATALOG = [
     is_billable_add_on: true,
     sort_order: 130,
   },
+   {
+    feature_key: "ce_training_client_workspace",
+    feature_name: "CE Training Client Workspace",
+    description:
+      "Allows actively enrolled CE students and their assigned trainers to create, enter, review, and manage CE client work within an active training cohort. This feature is cohort-scoped and does not provide post-graduation independent practitioner access.",
+    feature_category: "ce_training",
+    supports_limit: false,
+    limit_label: "",
+    is_billable_add_on: true,
+    sort_order: 140,
+  },
   {
     feature_key: "ce_practitioner_workspace",
     feature_name: "CE Practitioner Workspace",
     description:
-      "Allows CE practitioners to manage Discovery, CE client work, and ongoing Customized Employment services.",
+      "Allows CE practitioners to manage Discovery, CE client work, and ongoing Customized Employment services after they are connected to a Business CE Account or Individual CE Account.",
     feature_category: "ce_practice",
     supports_limit: false,
     limit_label: "",
