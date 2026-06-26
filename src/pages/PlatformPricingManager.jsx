@@ -106,6 +106,84 @@ function StatCard({ icon: Icon, label, value, detail }) {
   );
 }
 
+function getSnapshotFeatureLabel(snapshot, featureByKey) {
+  return (
+    snapshot.feature_name_snapshot ||
+    featureByKey.get(snapshot.feature_key)?.feature_name ||
+    snapshot.feature_key ||
+    "Unnamed feature"
+  );
+}
+
+function getSnapshotLimitText(snapshot, featureByKey) {
+  if (typeof snapshot?.default_limit_value !== "number") {
+    return null;
+  }
+
+  const feature = featureByKey.get(snapshot.feature_key);
+  const limitLabel = feature?.limit_label || "Included limit";
+
+  return `${snapshot.default_limit_value.toLocaleString()} ${limitLabel}`;
+}
+
+function SnapshotFeatureList({
+  title,
+  items,
+  emptyMessage,
+  featureByKey,
+  accentClass,
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {title}
+      </p>
+
+      {items.length === 0 ? (
+        <p className="mt-2 text-xs text-slate-400">{emptyMessage}</p>
+      ) : (
+        <div className="mt-2 space-y-2">
+          {items.map((snapshot) => {
+            const limitText = getSnapshotLimitText(snapshot, featureByKey);
+
+            return (
+              <div
+                key={snapshot.id}
+                className="rounded-md border border-slate-200 bg-white px-2.5 py-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">
+                      {getSnapshotFeatureLabel(snapshot, featureByKey)}
+                    </p>
+                    <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">
+                      {snapshot.feature_key || "feature_key unavailable"}
+                    </p>
+                  </div>
+
+                  {snapshot.is_active === false ? (
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      Archived
+                    </span>
+                  ) : null}
+                </div>
+
+                {limitText ? (
+                  <p
+                    className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${accentClass}`}
+                  >
+                    {limitText}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PlatformPricingManager() {
   const [data, setData] = useState(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState("");
@@ -115,6 +193,8 @@ export default function PlatformPricingManager() {
 
   const schedules = data?.schedules || [];
   const pricingScheduleItems = data?.pricing_schedule_items || [];
+  const pricingSchedulePlanFeatures =
+    data?.pricing_schedule_plan_features || [];
   const plans = data?.plans || [];
   const features = data?.features || [];
   const billingRateTemplates = data?.billing_rate_templates || [];
@@ -122,6 +202,14 @@ export default function PlatformPricingManager() {
   const planNameById = useMemo(() => {
     return new Map(plans.map((plan) => [plan.id, plan.plan_name]));
   }, [plans]);
+
+  const planNameByKey = useMemo(() => {
+    return new Map(plans.map((plan) => [plan.plan_key, plan.plan_name]));
+  }, [plans]);
+
+  const featureByKey = useMemo(() => {
+    return new Map(features.map((feature) => [feature.feature_key, feature]));
+  }, [features]);
 
   const selectedSchedule = useMemo(() => {
     return (
@@ -140,6 +228,63 @@ export default function PlatformPricingManager() {
       (item) => item.pricing_schedule_id === selectedSchedule.id
     );
   }, [pricingScheduleItems, selectedSchedule]);
+
+  const selectedSchedulePlanFeatures = useMemo(() => {
+    if (!selectedSchedule?.id) {
+      return [];
+    }
+
+    return pricingSchedulePlanFeatures.filter(
+      (snapshot) => snapshot.pricing_schedule_id === selectedSchedule.id
+    );
+  }, [pricingSchedulePlanFeatures, selectedSchedule]);
+
+  const selectedScheduleSnapshotGroups = useMemo(() => {
+    const groupsByPlanKey = new Map();
+
+    for (const snapshot of selectedSchedulePlanFeatures) {
+      const planKey =
+        snapshot.plan_key_snapshot ||
+        snapshot.platform_plan_id ||
+        "unmapped_plan";
+
+      if (!groupsByPlanKey.has(planKey)) {
+        groupsByPlanKey.set(planKey, {
+          planKey,
+          planName: planNameByKey.get(planKey) || planKey,
+          snapshots: [],
+        });
+      }
+
+      groupsByPlanKey.get(planKey).snapshots.push(snapshot);
+    }
+
+    return Array.from(groupsByPlanKey.values())
+      .map((group) => ({
+        ...group,
+        activeSnapshotCount: group.snapshots.filter(
+          (snapshot) => snapshot.is_active !== false
+        ).length,
+        includedSnapshots: group.snapshots.filter(
+          (snapshot) => snapshot.is_included === true
+        ),
+        addOnSnapshots: group.snapshots.filter(
+          (snapshot) =>
+            snapshot.is_included !== true &&
+            snapshot.is_add_on_available === true
+        ),
+        unavailableSnapshots: group.snapshots.filter(
+          (snapshot) =>
+            snapshot.is_included !== true &&
+            snapshot.is_add_on_available !== true
+        ),
+        capacitySnapshots: group.snapshots.filter(
+          (snapshot) =>
+            typeof snapshot.default_limit_value === "number"
+        ),
+      }))
+      .sort((a, b) => a.planName.localeCompare(b.planName));
+  }, [planNameByKey, selectedSchedulePlanFeatures]);
 
   const activeScheduleCount = schedules.filter(
     (schedule) => schedule.schedule_status === "active"
@@ -402,11 +547,17 @@ export default function PlatformPricingManager() {
                       ) : null}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-slate-600">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600 sm:grid-cols-4">
                       <div>
                         <p className="text-xs text-slate-400">Price items</p>
                         <p className="font-medium text-slate-800">
                           {schedule.pricing_item_count}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Snapshots</p>
+                        <p className="font-medium text-slate-800">
+                          {schedule.feature_snapshot_count || 0}
                         </p>
                       </div>
                       <div>
@@ -463,7 +614,7 @@ export default function PlatformPricingManager() {
             </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-100 px-5 py-4 md:grid-cols-3">
+          <div className="grid gap-4 border-b border-slate-100 px-5 py-4 md:grid-cols-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Active organization assignments
@@ -479,6 +630,15 @@ export default function PlatformPricingManager() {
               </p>
               <p className="mt-1 text-lg font-semibold text-slate-900">
                 {selectedSchedule.pricing_item_count}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Feature/capacity snapshots
+              </p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">
+                {selectedSchedulePlanFeatures.length}
               </p>
             </div>
 
@@ -502,6 +662,108 @@ export default function PlatformPricingManager() {
               </p>
             </div>
           ) : null}
+
+          <div className="border-b border-slate-100 px-5 py-4">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-start gap-2">
+                <Package className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Schedule Feature & Capacity Snapshots
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Versioned plan bundles captured for this schedule. These
+                    remain separate from the current global plan templates.
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-sm text-slate-500">
+                {selectedSchedulePlanFeatures.length} total ·{" "}
+                {
+                  selectedSchedulePlanFeatures.filter(
+                    (snapshot) => snapshot.is_active !== false
+                  ).length
+                } active
+              </div>
+            </div>
+
+            {selectedScheduleSnapshotGroups.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                No feature or capacity snapshots have been added to this
+                pricing schedule.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {selectedScheduleSnapshotGroups.map((group) => (
+                  <div
+                    key={group.planKey}
+                    className="rounded-lg border border-slate-200 bg-white"
+                  >
+                    <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {group.planName}
+                        </p>
+                        <p className="mt-0.5 font-mono text-xs text-slate-400">
+                          {group.planKey}
+                        </p>
+                      </div>
+
+                      <div className="text-xs text-slate-500">
+                        {group.snapshots.length} snapshots ·{" "}
+                        {group.activeSnapshotCount} active
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 p-3 xl:grid-cols-3">
+                      <SnapshotFeatureList
+                        title="Included"
+                        items={group.includedSnapshots}
+                        emptyMessage="No included features."
+                        featureByKey={featureByKey}
+                        accentClass="bg-emerald-50 text-emerald-700"
+                      />
+
+                      <SnapshotFeatureList
+                        title="Available Add-ons"
+                        items={group.addOnSnapshots}
+                        emptyMessage="No add-ons available."
+                        featureByKey={featureByKey}
+                        accentClass="bg-indigo-50 text-indigo-700"
+                      />
+
+                      <SnapshotFeatureList
+                        title="Capacity Limits"
+                        items={group.capacitySnapshots}
+                        emptyMessage="No capacity limits."
+                        featureByKey={featureByKey}
+                        accentClass="bg-amber-50 text-amber-700"
+                      />
+                    </div>
+
+                    {group.unavailableSnapshots.length > 0 ? (
+                      <div className="border-t border-slate-100 px-4 py-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Not Included / Not Available
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {group.unavailableSnapshots.map((snapshot) => (
+                            <span
+                              key={snapshot.id}
+                              className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                            >
+                              {getSnapshotFeatureLabel(snapshot, featureByKey)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="px-5 py-4">
             <div className="mb-3 flex items-center gap-2">
@@ -724,10 +986,9 @@ export default function PlatformPricingManager() {
           <p className="text-sm text-amber-800">
             <span className="font-semibold">Current draft safety:</span>{" "}
             schedule feature/capacity snapshots exist separately from the
-            global plan catalog. This read-only page will show schedule pricing
-            items once you decide plan and add-on amounts. No activation should
-            occur until the full price book and provisioning workflow are
-            complete.
+            global plan catalog. Schedule pricing items will remain empty until
+            you decide plan and add-on amounts. No activation should occur until
+            the full price book and provisioning workflow are complete.
           </p>
         </div>
       </div>
