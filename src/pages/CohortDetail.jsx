@@ -437,7 +437,7 @@ console.log("USER MAP", userById);
   return (
     <div className="space-y-6">
 
-      {/* Add Manager Dialog */}
+          {/* Add Manager Dialog */}
       <AddMemberDialog
         open={showAddManagerDialog}
         onOpenChange={setShowAddManagerDialog}
@@ -448,7 +448,18 @@ console.log("USER MAP", userById);
         onSubmit={handleAddManager}
       />
 
-          {/* Assign Registered Student Dialog */}
+      {/* Add Trainer Dialog */}
+      <AddMemberDialog
+        open={showAddTrainerDialog}
+        onOpenChange={setShowAddTrainerDialog}
+        title="Add Trainer"
+        cohortRole="trainer"
+        allowedRoles={["admin", "management", "employee", "ce_instructor"]}
+        existingMemberUserIds={existingTrainerUserIds}
+        onSubmit={handleAddTrainer}
+      />
+
+      {/* Assign Registered Student Dialog */}
       <AddMemberDialog
         open={showAddMemberDialog}
         onOpenChange={setShowAddMemberDialog}
