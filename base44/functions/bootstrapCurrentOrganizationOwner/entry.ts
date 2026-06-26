@@ -83,10 +83,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organizationId =
+     const legacyTenantKey =
       typeof user.org_id === "string" ? user.org_id.trim() : "";
 
-    if (!organizationId) {
+    if (!legacyTenantKey) {
       return Response.json(
         {
           ok: false,
@@ -97,14 +97,84 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organizationRows =
+    const organizationsByTenantKey =
       await base44.asServiceRole.entities.Organization.filter({
-        id: organizationId,
+        tenant_key: legacyTenantKey,
       });
 
-    const organization = Array.isArray(organizationRows)
-      ? organizationRows[0] || null
-      : null;
+    let matchingOrganizations = Array.isArray(organizationsByTenantKey)
+      ? organizationsByTenantKey
+      : [];
+
+    // Safe one-time bridge for the existing legacy organization:
+    // when no tenant_key is stored yet, use exactly one organization owned by
+    // the signed-in admin, then stamp the legacy tenant key onto that record.
+    if (matchingOrganizations.length === 0) {
+      const organizationsByOwner =
+        await base44.asServiceRole.entities.Organization.filter({
+          owner_email: user.email,
+        });
+
+      const activeOwnedOrganizations = (
+        Array.isArray(organizationsByOwner) ? organizationsByOwner : []
+      ).filter((row) => row?.is_active !== false);
+
+      if (activeOwnedOrganizations.length !== 1) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Could not safely match the legacy organization. Set tenant_key on the correct Organization record, then run this bootstrap again.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const ownedOrganization = activeOwnedOrganizations[0];
+
+      if (
+        ownedOrganization.tenant_key &&
+        ownedOrganization.tenant_key !== legacyTenantKey
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The organization owned by the current user already has a different tenant_key. Bootstrap stopped to prevent an incorrect tenant mapping.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (!ownedOrganization.tenant_key) {
+        await base44.asServiceRole.entities.Organization.update(
+          ownedOrganization.id,
+          {
+            tenant_key: legacyTenantKey,
+          }
+        );
+      }
+
+      matchingOrganizations = [
+        {
+          ...ownedOrganization,
+          tenant_key: legacyTenantKey,
+        },
+      ];
+    }
+
+    if (matchingOrganizations.length > 1) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "More than one Organization record uses this tenant_key. Bootstrap stopped to prevent an incorrect tenant mapping.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const organization = matchingOrganizations[0] || null;
 
     if (!organization) {
       return Response.json(
@@ -128,6 +198,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    const organizationId = organization.id;
     const now = new Date().toISOString();
 
     const existingMembershipRows =
