@@ -10,16 +10,26 @@
       "type": "string",
       "description": "Customer-facing name for this paid plan."
     },
-    "account_model": {
-      "type": "string",
-      "enum": [
-        "trainer_business",
-        "business_ce",
-        "individual_ce"
-      ],
-      "description": "Customer account model this plan creates. Trainer business plans run training cohorts; business CE plans support employed practitioners; individual CE plans support one independent practitioner."
-    },
-    "description": {
+   "account_model": {
+  "type": "string",
+  "enum": [
+    "trainer_business",
+    "business_ce",
+    "individual_ce"
+  ],
+  "description": "Customer account model this plan creates. Trainer business plans run training cohorts; business CE plans support employed practitioners; individual CE plans support one independent practitioner."
+},
+"plan_tier": {
+  "type": "string",
+  "enum": [
+    "starter",
+    "growth",
+    "enterprise",
+    "pro"
+  ],
+  "description": "Named service tier within the account model. Trainer Business and Business CE use starter, growth, and enterprise. Individual CE uses starter and pro."
+},
+"description": {
       "type": "string",
       "description": "Customer-facing explanation of the plan."
     },
