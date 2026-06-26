@@ -115,17 +115,8 @@ export default function CohortDetail() {
 
   const memberships = cohortRoster.memberships;
   const rosterUsers = cohortRoster.users;
-   // Resolve user display information for the membership rows.
-  const { data: orgUsers = [] } = useQuery({
-    queryKey: ["cohortDetail", "users"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("getOrgUsers", {});
-      return Array.isArray(res.data?.users) ? res.data.users : [];
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  // Display information is returned with the secure roster.
+  const orgUsers = rosterUsers;
    const userById = useMemo(() => {
      const map = {};
      for (const u of orgUsers) map[u.id] = u;
