@@ -2,12 +2,14 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
 
 const ALLOWED_VERIFIER_ROLES = new Set(["platform_owner"]);
 
-const VALID_CERTIFICATION_SOURCES = new Set([
-  "trainer_business",
-  "external_provider",
-  "legacy_migration",
-  "manual_verification",
+const PAID_TRAINING_FEE_KINDS = new Set([
+  "training_registration",
+  "training_reactivation",
 ]);
+
+const TRAINING_COHORT_TYPE = "training";
+const STUDENT_COHORT_ROLE = "member";
+const TRAINER_BUSINESS_SOURCE = "trainer_business";
 
 function getRequiredString(value: unknown, fieldName: string) {
   const normalized = String(value || "").trim();
@@ -24,20 +26,29 @@ function getOptionalString(value: unknown) {
   return normalized || undefined;
 }
 
-function getOptionalIsoTimestamp(value: unknown, fieldName: string) {
-  const normalized = getOptionalString(value);
+function normalizeTrainingStatus(member: any) {
+  const status = String(member?.training_status || "").trim();
 
-  if (!normalized) {
-    return undefined;
+  if (
+    status === "in_training" ||
+    status === "completed" ||
+    status === "withdrawn"
+  ) {
+    return status;
   }
 
-  const parsed = new Date(normalized);
+  return "in_training";
+}
 
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`${fieldName} must be a valid ISO timestamp.`);
-  }
+function sortNewestFirst(left: any, right: any) {
+  const leftDate = String(
+    left?.training_completed_at || left?.joined_at || ""
+  );
+  const rightDate = String(
+    right?.training_completed_at || right?.joined_at || ""
+  );
 
-  return parsed.toISOString();
+  return rightDate.localeCompare(leftDate);
 }
 
 async function getPlatformRoles(base44: any, userId: string) {
@@ -73,6 +84,113 @@ async function getSingleCertificationForUser(base44: any, userId: string) {
   return certifications[0] || null;
 }
 
+async function getStudentTrainingEligibility(base44: any, userId: string) {
+  const [memberRows, cohortRows, billingRows] = await Promise.all([
+    base44.asServiceRole.entities.CETrainingCohortMember.filter({
+      user_id: userId,
+    }),
+    base44.asServiceRole.entities.CETrainingCohort.list(),
+    base44.asServiceRole.entities.OrganizationBillingEvent.list(),
+  ]);
+
+  const cohorts = Array.isArray(cohortRows) ? cohortRows : [];
+  const members = Array.isArray(memberRows) ? memberRows : [];
+  const billingEvents = Array.isArray(billingRows) ? billingRows : [];
+
+  const cohortById = new Map(
+    cohorts
+      .filter((cohort) => cohort?.id)
+      .map((cohort) => [cohort.id, cohort])
+  );
+
+  const paidTrainingCohortIds = new Set(
+    billingEvents
+      .filter((event) => {
+        return (
+          event?.event_status === "paid" &&
+          event?.billing_subject_type === "student" &&
+          event?.subject_user_id === userId &&
+          PAID_TRAINING_FEE_KINDS.has(event?.fee_kind) &&
+          String(event?.cohort_id || "").trim()
+        );
+      })
+      .map((event) => String(event.cohort_id))
+  );
+
+  const paidTrainingEnrollments = members
+    .filter((member) => {
+      const cohort = cohortById.get(member?.cohort_id);
+
+      return (
+        member?.cohort_role === STUDENT_COHORT_ROLE &&
+        cohort?.cohort_type === TRAINING_COHORT_TYPE &&
+        paidTrainingCohortIds.has(String(member?.cohort_id || ""))
+      );
+    })
+    .map((member) => {
+      const cohort = cohortById.get(member.cohort_id);
+
+      return {
+        membership_id: member.id,
+        cohort_id: member.cohort_id,
+        cohort_name: cohort?.name || "Unnamed CE training cohort",
+        cohort_status: cohort?.status || null,
+        membership_is_active: member?.is_active !== false,
+        training_status: normalizeTrainingStatus(member),
+        training_completed_at: member?.training_completed_at || null,
+        joined_at: member?.joined_at || null,
+      };
+    })
+    .sort(sortNewestFirst);
+
+  const activePaidTrainingEnrollments = paidTrainingEnrollments.filter(
+    (enrollment) => enrollment.membership_is_active
+  );
+
+  const completedActiveEnrollments = activePaidTrainingEnrollments
+    .filter(
+      (enrollment) =>
+        enrollment.training_status === "completed" &&
+        enrollment.training_completed_at
+    )
+    .sort(sortNewestFirst);
+
+  const activeInTrainingEnrollments = activePaidTrainingEnrollments
+    .filter(
+      (enrollment) =>
+        enrollment.training_status === "in_training" &&
+        enrollment.cohort_status === "active"
+    )
+    .sort(sortNewestFirst);
+
+  return {
+    has_paid_training_history: paidTrainingEnrollments.length > 0,
+    paid_training_enrollments: paidTrainingEnrollments,
+    active_paid_training_enrollments: activePaidTrainingEnrollments,
+    completed_active_enrollments: completedActiveEnrollments,
+    active_in_training_enrollments: activeInTrainingEnrollments,
+    preferred_completed_enrollment: completedActiveEnrollments[0] || null,
+  };
+}
+
+function getCompletedEnrollmentForCertification(
+  eligibility: any,
+  sourceCohortId?: string | null
+) {
+  const completedEnrollments =
+    eligibility?.completed_active_enrollments || [];
+
+  if (sourceCohortId) {
+    return (
+      completedEnrollments.find(
+        (enrollment: any) => enrollment.cohort_id === sourceCohortId
+      ) || null
+    );
+  }
+
+  return eligibility?.preferred_completed_enrollment || null;
+}
+
 async function writeAuditLog(
   base44: any,
   userId: string,
@@ -104,23 +222,13 @@ async function writeAuditLog(
 /**
  * manageCEPractitionerCertification
  *
- * Supported actions:
- * - list_all
- * - read_user
- * - create_pending
- * - verify
- * - revoke
+ * CE certification pipeline:
+ * - In Training: active paid CE student with training_status=in_training
+ * - Pending Certification: active paid CE student with training_status=completed
+ * - Certified: pending record verified by Platform Owner
+ * - Revoked: verified record later revoked
  *
- * Current authority:
- * - Platform Owner only.
- *
- * Important:
- * - This function records certification status only.
- * - It does not grant CE Practitioner Workspace access.
- * - Future workspace eligibility must still require:
- *   1. Organization CE Practitioner Workspace entitlement
- *   2. Verified certification
- *   3. Explicit organization-scoped practitioner role assignment
+ * Certification alone never grants CE Practitioner Workspace access.
  */
 Deno.serve(async (req) => {
   try {
@@ -216,24 +324,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const certificationSource = String(
-      body?.certification_source || ""
-    ).trim();
-
-    if (
-      (action === "create_pending" || action === "verify") &&
-      !VALID_CERTIFICATION_SOURCES.has(certificationSource)
-    ) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "A valid certification_source is required for pending or verified certification records.",
-        },
-        { status: 400 }
-      );
-    }
-
     const existingCertification = await getSingleCertificationForUser(
       base44,
       targetUserId
@@ -253,19 +343,34 @@ Deno.serve(async (req) => {
         );
       }
 
-      const now = new Date().toISOString();
+      const eligibility = await getStudentTrainingEligibility(
+        base44,
+        targetUserId
+      );
+
+      const completedEnrollment = getCompletedEnrollmentForCertification(
+        eligibility
+      );
+
+      if (!completedEnrollment) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Pending Certification is available only after an active paid CE student has completed individual training requirements and has a recorded training completion date.",
+          },
+          { status: 409 }
+        );
+      }
 
       const createdCertification =
         await base44.asServiceRole.entities.CEPractitionerCertification.create(
           {
             user_id: targetUserId,
             certification_status: "pending_verification",
-            completed_at: getOptionalIsoTimestamp(
-              body?.completed_at,
-              "completed_at"
-            ),
-            certification_source: certificationSource,
-            source_cohort_id: getOptionalString(body?.source_cohort_id),
+            completed_at: completedEnrollment.training_completed_at,
+            certification_source: TRAINER_BUSINESS_SOURCE,
+            source_cohort_id: completedEnrollment.cohort_id,
             notes: getOptionalString(body?.notes),
           }
         );
@@ -274,13 +379,13 @@ Deno.serve(async (req) => {
         base44,
         user.id,
         "ce_practitioner_certification_pending_created",
-        "A CE practitioner certification record was created pending verification.",
+        "A paid CE student who completed training entered Pending Certification.",
         createdCertification.id,
         {
           user_id: targetUserId,
-          certification_source: certificationSource,
-          source_cohort_id:
-            getOptionalString(body?.source_cohort_id) || null,
+          cohort_id: completedEnrollment.cohort_id,
+          cohort_name: completedEnrollment.cohort_name,
+          training_completed_at: completedEnrollment.training_completed_at,
         }
       );
 
@@ -292,7 +397,18 @@ Deno.serve(async (req) => {
     }
 
     if (action === "verify") {
-      if (existingCertification?.certification_status === "verified") {
+      if (!existingCertification) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "A CE student must first be placed in Pending Certification before certification can be verified.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (existingCertification.certification_status === "verified") {
         return Response.json(
           {
             ok: false,
@@ -303,12 +419,47 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (existingCertification?.certification_status === "revoked") {
+      if (existingCertification.certification_status === "revoked") {
         return Response.json(
           {
             ok: false,
             error:
-              "This certification record was revoked. Create a future re-verification workflow rather than overwriting revocation history.",
+              "This certification record was revoked. A future re-certification workflow is required rather than overwriting revocation history.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        existingCertification.certification_status !==
+        "pending_verification"
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Only a Pending Certification record may be verified.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const eligibility = await getStudentTrainingEligibility(
+        base44,
+        targetUserId
+      );
+
+      const completedEnrollment = getCompletedEnrollmentForCertification(
+        eligibility,
+        existingCertification.source_cohort_id
+      );
+
+      if (!completedEnrollment) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Certification cannot be verified because the required paid CE training completion record is not available.",
           },
           { status: 409 }
         );
@@ -316,67 +467,42 @@ Deno.serve(async (req) => {
 
       const now = new Date().toISOString();
 
-      const certificationData = {
-        user_id: targetUserId,
-        certification_status: "verified",
-        completed_at:
-          getOptionalIsoTimestamp(body?.completed_at, "completed_at") ||
-          existingCertification?.completed_at ||
-          undefined,
-        verified_at: now,
-        verified_by_user_id: user.id,
-        certification_source: certificationSource,
-        source_cohort_id:
-          getOptionalString(body?.source_cohort_id) ||
-          existingCertification?.source_cohort_id ||
-          undefined,
-        notes:
-          getOptionalString(body?.notes) ||
-          existingCertification?.notes ||
-          undefined,
-      };
-
-      let certificationRecordId = existingCertification?.id || null;
-      let created = false;
-
-      if (existingCertification) {
-        await base44.asServiceRole.entities.CEPractitionerCertification.update(
-          existingCertification.id,
-          certificationData
-        );
-      } else {
-        const createdCertification =
-          await base44.asServiceRole.entities.CEPractitionerCertification.create(
-            certificationData
-          );
-
-        certificationRecordId = createdCertification.id;
-        created = true;
-      }
+      await base44.asServiceRole.entities.CEPractitionerCertification.update(
+        existingCertification.id,
+        {
+          certification_status: "verified",
+          completed_at:
+            existingCertification.completed_at ||
+            completedEnrollment.training_completed_at,
+          verified_at: now,
+          verified_by_user_id: user.id,
+          certification_source: TRAINER_BUSINESS_SOURCE,
+          source_cohort_id: completedEnrollment.cohort_id,
+          notes:
+            getOptionalString(body?.notes) ||
+            existingCertification.notes ||
+            undefined,
+        }
+      );
 
       await writeAuditLog(
         base44,
         user.id,
-        created
-          ? "ce_practitioner_certification_verified_created"
-          : "ce_practitioner_certification_verified",
-        created
-          ? "A verified CE practitioner certification record was created."
-          : "A pending CE practitioner certification record was verified.",
-        certificationRecordId,
+        "ce_practitioner_certification_verified",
+        "A Pending Certification record was verified for a paid CE student.",
+        existingCertification.id,
         {
           user_id: targetUserId,
-          certification_source: certificationSource,
-          source_cohort_id:
-            certificationData.source_cohort_id || null,
+          cohort_id: completedEnrollment.cohort_id,
+          cohort_name: completedEnrollment.cohort_name,
+          training_completed_at: completedEnrollment.training_completed_at,
         }
       );
 
       return Response.json({
         ok: true,
         action,
-        created,
-        certification_record_id: certificationRecordId,
+        certification_record_id: existingCertification.id,
         certification_status: "verified",
       });
     }
@@ -398,7 +524,23 @@ Deno.serve(async (req) => {
           {
             ok: false,
             error:
-              "Only a verified CE practitioner certification record may be revoked.",
+              "Only a Certified CE practitioner record may be revoked.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const eligibility = await getStudentTrainingEligibility(
+        base44,
+        targetUserId
+      );
+
+      if (!eligibility.has_paid_training_history) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "This record cannot be changed through the CE student certification pipeline because no paid CE training enrollment history was found.",
           },
           { status: 409 }
         );
@@ -425,11 +567,11 @@ Deno.serve(async (req) => {
         base44,
         user.id,
         "ce_practitioner_certification_revoked",
-        "A verified CE practitioner certification record was revoked.",
+        "A Certified CE practitioner record was revoked.",
         existingCertification.id,
         {
           user_id: targetUserId,
-          certification_source: existingCertification.certification_source,
+          source_cohort_id: existingCertification.source_cohort_id || null,
         }
       );
 
