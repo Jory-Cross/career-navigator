@@ -28,6 +28,7 @@ import SmartLanding from '@/components/SmartLanding';
 import CETrainingPortal from './pages/CETrainingPortal';
 import CETrainingNav from '@/components/ce-training/CETrainingNav';
 import CEInstructorStudents from './pages/CEInstructorStudents';
+import PlatformPricingManager from './pages/PlatformPricingManager';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
