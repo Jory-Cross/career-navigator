@@ -1,0 +1,79 @@
+{
+  "name": "OrganizationFeatureEntitlement",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization tenant receiving this entitlement."
+    },
+    "entitlement_key": {
+      "type": "string",
+      "description": "Stable unique key for this organization entitlement, formatted as organization_id:feature_key."
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Platform feature or limit identifier, such as ce_training_portal, ce_cohorts, employee_seats, client_records, time_tracking, assessments, or custom_roles."
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this organization may use the feature."
+    },
+    "limit_value": {
+      "type": "number",
+      "description": "Optional numeric limit for this entitlement, such as allowed employee seats, client records, cohorts, trainer seats, or practitioner seats. Leave blank for features without a numeric limit."
+    },
+    "entitlement_source": {
+      "type": "string",
+      "enum": [
+        "trial",
+        "plan",
+        "add_on",
+        "manual_override"
+      ],
+      "default": "plan",
+      "description": "Why the organization has this entitlement."
+    },
+    "starts_at": {
+      "type": "string",
+      "description": "ISO timestamp when this entitlement becomes active."
+    },
+    "ends_at": {
+      "type": "string",
+      "description": "ISO timestamp when this entitlement expires, if applicable."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal platform note explaining a custom entitlement or override."
+    }
+  },
+  "required": [
+    "organization_id",
+    "entitlement_key",
+    "feature_key",
+    "is_enabled",
+    "entitlement_source"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
