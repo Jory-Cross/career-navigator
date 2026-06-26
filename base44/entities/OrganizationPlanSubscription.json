@@ -1,0 +1,123 @@
+{
+  "name": "OrganizationPlanSubscription",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Paying organization tenant subscribed to this platform plan."
+    },
+    "platform_plan_id": {
+      "type": "string",
+      "description": "PlatformPlan record currently purchased or previously purchased by this organization."
+    },
+    "subscription_key": {
+      "type": "string",
+      "description": "Stable unique subscription identifier. Use the Stripe subscription ID when available; otherwise use a platform-generated value."
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "trialing",
+        "active",
+        "past_due",
+        "cancelled",
+        "incomplete",
+        "suspended",
+        "expired"
+      ],
+      "description": "Current lifecycle and billing status for this organization plan subscription."
+    },
+    "billing_interval": {
+      "type": "string",
+      "enum": [
+        "monthly",
+        "annual"
+      ],
+      "description": "Billing frequency for this subscription."
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "Stripe customer ID once Stripe billing is connected."
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "Stripe subscription ID once Stripe billing is connected."
+    },
+    "starts_at": {
+      "type": "string",
+      "description": "ISO timestamp when this subscription began."
+    },
+    "trial_ends_at": {
+      "type": "string",
+      "description": "ISO timestamp when the trial ends, if this subscription includes a trial."
+    },
+    "current_period_starts_at": {
+      "type": "string",
+      "description": "ISO timestamp for the current billing period start."
+    },
+    "current_period_ends_at": {
+      "type": "string",
+      "description": "ISO timestamp for the current billing period end."
+    },
+    "cancelled_at": {
+      "type": "string",
+      "description": "ISO timestamp when cancellation was requested or completed."
+    },
+    "ends_at": {
+      "type": "string",
+      "description": "ISO timestamp when access under this subscription ends."
+    },
+    "is_current": {
+      "type": "boolean",
+      "default": true,
+      "description": "True only for the organization’s current active subscription record. Prior plan records remain for billing history."
+    },
+    "subscription_source": {
+      "type": "string",
+      "enum": [
+        "self_service",
+        "platform_admin",
+        "migration",
+        "manual_invoice"
+      ],
+      "default": "self_service",
+      "description": "How this subscription was created or assigned."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes for migrations, grandfathered pricing, or special subscription handling."
+    }
+  },
+  "required": [
+    "organization_id",
+    "platform_plan_id",
+    "subscription_key",
+    "subscription_status",
+    "billing_interval",
+    "starts_at",
+    "is_current",
+    "subscription_source"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
