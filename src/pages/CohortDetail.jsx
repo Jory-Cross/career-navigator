@@ -125,15 +125,20 @@ export default function CohortDetail() {
      return map;
    }, [orgUsers]);
 
-  const managers = useMemo(
+    const managers = useMemo(
     () => memberships.filter((m) => m.cohort_role === "manager"),
     [memberships]
   );
+
+  const trainers = useMemo(
+    () => memberships.filter((m) => m.cohort_role === "trainer"),
+    [memberships]
+  );
+
   const members = useMemo(
     () => memberships.filter((m) => m.cohort_role === "member"),
     [memberships]
   );
-
 console.log("MEMBERSHIPS", memberships);
 console.log("MEMBERS", members);
 console.log("ORG USERS", orgUsers);
