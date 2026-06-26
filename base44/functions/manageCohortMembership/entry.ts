@@ -55,8 +55,14 @@ Deno.serve(async (req) => {
     if (!cohort_id) {
       return Response.json({ error: 'cohort_id is required' }, { status: 400 });
     }
-    if (!['manager', 'member'].includes(cohort_role)) {
-      return Response.json({ error: 'cohort_role must be "manager" or "member"' }, { status: 400 });
+    if (!['manager', 'trainer', 'member'].includes(cohort_role)) {
+      return Response.json(
+        {
+          error:
+            'cohort_role must be "manager", "trainer", or "member"',
+        },
+        { status: 400 }
+      );
     }
     if (action === 'add' && !user_id) {
       return Response.json({ error: 'user_id is required for action "add"' }, { status: 400 });
