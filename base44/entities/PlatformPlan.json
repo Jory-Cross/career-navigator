@@ -10,14 +10,15 @@
       "type": "string",
       "description": "Customer-facing name for this paid plan."
     },
-   "account_model": {
+ "account_model": {
   "type": "string",
   "enum": [
     "trainer_business",
+    "business_platform",
     "business_ce",
     "individual_ce"
   ],
-  "description": "Customer account model this plan creates. Trainer business plans run training cohorts; business CE plans support employed practitioners; individual CE plans support one independent practitioner."
+  "description": "Customer account model this plan creates. business_platform is the full Career Navigator business product and may later purchase CE modules as add-ons. business_ce is the standalone CE-focused business product. trainer_business runs CE training cohorts. individual_ce supports one independent CE practitioner."
 },
 "plan_tier": {
   "type": "string",
