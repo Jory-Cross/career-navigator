@@ -689,15 +689,64 @@ console.log("USER MAP", userById);
             <p className="text-sm text-slate-400 px-3 py-4">No active students.</p>
           ) : (
             <div className="divide-y divide-slate-50">
-               {members.map((m) => (
-                 <MemberRow
-                   key={m.id}
-                   member={m}
-                   user={userById[m.user_id]}
-                   onRemove={handleRemoveMember}
-                   canRemove={canAddMember}
-                 />
-               ))}
+                         {members.map((m) => {
+                 const trainingStatus =
+                   m.training_status || "in_training";
+
+                 const isCompleted =
+                   trainingStatus === "completed";
+
+                 const isMarkingComplete =
+                   completingMembershipId === m.id;
+
+                 return (
+                   <div
+                     key={m.id}
+                     className="flex items-center gap-2"
+                   >
+                     <div className="min-w-0 flex-1">
+                       <MemberRow
+                         member={m}
+                         user={userById[m.user_id]}
+                         onRemove={handleRemoveMember}
+                         canRemove={canAddMember}
+                       />
+                     </div>
+
+                     {cohort?.cohort_type === "training" ? (
+                       <div className="mr-3 flex shrink-0 items-center gap-2">
+                         {isCompleted ? (
+                           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                             Training Complete
+                           </span>
+                         ) : canRecordStudentTrainingCompletion ? (
+                           <Button
+                             type="button"
+                             size="sm"
+                             variant="outline"
+                             disabled={isMarkingComplete}
+                             onClick={() =>
+                               handleMarkStudentTrainingComplete(m)
+                             }
+                             className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                           >
+                             {isMarkingComplete ? (
+                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                             ) : (
+                               <CheckCircle2 className="h-3.5 w-3.5" />
+                             )}
+                             Mark Training Complete
+                           </Button>
+                         ) : (
+                           <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                             In Training
+                           </span>
+                         )}
+                       </div>
+                     ) : null}
+                   </div>
+                 );
+               })}
              </div>
           )}
         </div>
