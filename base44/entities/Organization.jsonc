@@ -2,11 +2,15 @@
   "name": "Organization",
   "type": "object",
   "properties": {
-    "name": {
-      "type": "string",
-      "description": "Business/organization name"
-    },
-    "industry": {
+  "name": {
+  "type": "string",
+  "description": "Business/organization name"
+},
+"tenant_key": {
+  "type": "string",
+  "description": "Stable tenant identifier used by the app and legacy org_id fields, such as COMOP. This is not the Base44 Organization record ID."
+},
+"industry": {
       "type": "string",
       "description": "Business industry"
     },
