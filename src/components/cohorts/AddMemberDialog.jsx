@@ -38,8 +38,11 @@ export default function AddMemberDialog({
   const [selectedUser, setSelectedUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch org users
-  const { data: orgUsers = [], isLoading } = useQuery({
+   // Fetch organization users.
+  const {
+    data: orgUsers = [],
+    isLoading: orgUsersLoading,
+  } = useQuery({
     queryKey: ["orgUsers", "addMember"],
     queryFn: async () => {
       const res = await base44.functions.invoke("getOrgUsers", {});
@@ -50,6 +53,38 @@ export default function AddMemberDialog({
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // Active CE students may belong to only one cohort at a time.
+  // This query is only needed for the student-assignment dialog.
+  const {
+    data: assignedStudentIds = [],
+    isLoading: assignedStudentsLoading,
+  } = useQuery({
+    queryKey: ["ceTraining", "assignedStudentIds"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke(
+        "getAssignedCEStudentIds",
+        {}
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error || "Unable to load assigned CE students"
+        );
+      }
+
+      return Array.isArray(res.data.assigned_user_ids)
+        ? res.data.assigned_user_ids
+        : [];
+    },
+    enabled: open && cohortRole === "member",
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const isLoading =
+    orgUsersLoading ||
+    (cohortRole === "member" && assignedStudentsLoading);
 
   // Filter: by role + exclude existing + search match
   const filtered = useMemo(() => {
