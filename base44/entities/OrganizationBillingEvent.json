@@ -69,11 +69,27 @@
       "type": "string",
       "description": "CETrainingCohort record connected to this event, when applicable."
     },
-    "organization_plan_subscription_id": {
-      "type": "string",
-      "description": "OrganizationPlanSubscription record connected to this billing event, when applicable."
-    },
-    "feature_key": {
+   "organization_plan_subscription_id": {
+  "type": "string",
+  "description": "OrganizationPlanSubscription record connected to this billing event, when applicable."
+},
+"pricing_schedule_id": {
+  "type": "string",
+  "description": "PlatformPricingSchedule record that supplied the locked price for this billing event."
+},
+"pricing_schedule_key_snapshot": {
+  "type": "string",
+  "description": "Copied pricing schedule key retained for readable legacy-pricing history."
+},
+"pricing_schedule_item_id": {
+  "type": "string",
+  "description": "PlatformPricingScheduleItem record that supplied the exact amount for this billing event."
+},
+"pricing_item_key_snapshot": {
+  "type": "string",
+  "description": "Copied pricing item key retained for readable billing history even after future pricing changes."
+},
+"feature_key": {
       "type": "string",
       "description": "Platform feature or capacity key connected to this event, such as ce_cohorts or employee_seats."
     },
