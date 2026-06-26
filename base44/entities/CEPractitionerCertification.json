@@ -1,0 +1,92 @@
+{
+  "name": "CEPractitionerCertification",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Registered platform user who earned or is being reviewed for CE practitioner certification."
+    },
+    "certification_status": {
+      "type": "string",
+      "enum": [
+        "pending_verification",
+        "verified",
+        "revoked"
+      ],
+      "default": "pending_verification",
+      "description": "Certification eligibility status. Only verified records may later support CE Practitioner Workspace access."
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "ISO timestamp when the CE training or certification requirements were completed."
+    },
+    "verified_at": {
+      "type": "string",
+      "description": "ISO timestamp when a Platform Owner or authorized verifier confirmed the certification."
+    },
+    "verified_by_user_id": {
+      "type": "string",
+      "description": "Platform user ID of the person who verified the certification."
+    },
+    "revoked_at": {
+      "type": "string",
+      "description": "ISO timestamp when verification was revoked, if applicable."
+    },
+    "revoked_by_user_id": {
+      "type": "string",
+      "description": "Platform user ID of the person who revoked the certification, if applicable."
+    },
+    "certification_source": {
+      "type": "string",
+      "enum": [
+        "trainer_business",
+        "external_provider",
+        "legacy_migration",
+        "manual_verification"
+      ],
+      "description": "Source used to establish certification eligibility."
+    },
+    "source_cohort_id": {
+      "type": "string",
+      "description": "Optional CETrainingCohort ID when certification was earned through an in-platform Trainer Business cohort."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal verification notes. Never shown to the practitioner or customer organization by default."
+    }
+  },
+  "required": [
+    "user_id",
+    "certification_status",
+    "certification_source"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
