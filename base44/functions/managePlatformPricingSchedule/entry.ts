@@ -39,6 +39,173 @@ function isValidAmount(value: unknown) {
   );
 }
 
+function hasOwnProperty(value: unknown, key: string) {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    Object.prototype.hasOwnProperty.call(value, key)
+  );
+}
+
+function isValidOptionalLimit(value: unknown) {
+  return (
+    value === undefined ||
+    (typeof value === "number" &&
+      Number.isFinite(value) &&
+      Number.isInteger(value) &&
+      value >= 0)
+  );
+}
+
+function getPlanFeaturePairKey(
+  platformPlanId: string,
+  platformFeatureId: string
+) {
+  return `${platformPlanId}::${platformFeatureId}`;
+}
+
+function getPricingSchedulePlanFeatureKey(
+  pricingScheduleKey: string,
+  planKey: string,
+  featureKey: string
+) {
+  return `${pricingScheduleKey}:${planKey}:${featureKey}`;
+}
+
+function inspectSchedulePlanFeatureSnapshots(
+  rows: any[],
+  pricingScheduleKey: string
+) {
+  const snapshots = Array.isArray(rows) ? rows : [];
+  const byKey = new Map<string, any>();
+  const byPlanFeaturePair = new Map<string, any>();
+  const malformedSnapshotIds: string[] = [];
+  const duplicateSnapshotKeys: string[] = [];
+  const duplicatePlanFeaturePairs: string[] = [];
+  const inconsistentSnapshotKeys: string[] = [];
+
+  for (const snapshot of snapshots) {
+    const snapshotId = String(snapshot?.id || "(missing snapshot id)");
+    const snapshotKey = String(
+      snapshot?.pricing_schedule_plan_feature_key || ""
+    ).trim();
+    const platformPlanId = String(snapshot?.platform_plan_id || "").trim();
+    const platformFeatureId = String(
+      snapshot?.platform_feature_id || ""
+    ).trim();
+    const platformPlanFeatureId = String(
+      snapshot?.platform_plan_feature_id || ""
+    ).trim();
+    const planKeySnapshot = String(snapshot?.plan_key_snapshot || "").trim();
+    const featureKey = String(snapshot?.feature_key || "").trim();
+
+    if (
+      !snapshotKey ||
+      !platformPlanId ||
+      !platformFeatureId ||
+      !platformPlanFeatureId ||
+      !planKeySnapshot ||
+      !featureKey
+    ) {
+      malformedSnapshotIds.push(snapshotId);
+      continue;
+    }
+
+    const expectedSnapshotKey = getPricingSchedulePlanFeatureKey(
+      pricingScheduleKey,
+      planKeySnapshot,
+      featureKey
+    );
+
+    if (snapshotKey !== expectedSnapshotKey) {
+      inconsistentSnapshotKeys.push(snapshotKey);
+    }
+
+    const planFeaturePairKey = getPlanFeaturePairKey(
+      platformPlanId,
+      platformFeatureId
+    );
+
+    if (byKey.has(snapshotKey)) {
+      duplicateSnapshotKeys.push(snapshotKey);
+    } else {
+      byKey.set(snapshotKey, snapshot);
+    }
+
+    if (byPlanFeaturePair.has(planFeaturePairKey)) {
+      duplicatePlanFeaturePairs.push(planFeaturePairKey);
+    } else {
+      byPlanFeaturePair.set(planFeaturePairKey, snapshot);
+    }
+  }
+
+  return {
+    byKey,
+    byPlanFeaturePair,
+    malformedSnapshotIds: Array.from(new Set(malformedSnapshotIds)),
+    duplicateSnapshotKeys: Array.from(new Set(duplicateSnapshotKeys)),
+    duplicatePlanFeaturePairs: Array.from(
+      new Set(duplicatePlanFeaturePairs)
+    ),
+    inconsistentSnapshotKeys: Array.from(
+      new Set(inconsistentSnapshotKeys)
+    ),
+  };
+}
+
+function hasSnapshotIntegrityIssues(inspection: any) {
+  return (
+    inspection.malformedSnapshotIds.length > 0 ||
+    inspection.duplicateSnapshotKeys.length > 0 ||
+    inspection.duplicatePlanFeaturePairs.length > 0 ||
+    inspection.inconsistentSnapshotKeys.length > 0
+  );
+}
+
+async function getPlatformPlanById(base44: any, planId: string) {
+  const rows = await base44.asServiceRole.entities.PlatformPlan.filter({
+    id: planId,
+  });
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function getPlatformFeatureById(base44: any, featureId: string) {
+  const rows = await base44.asServiceRole.entities.PlatformFeature.filter({
+    id: featureId,
+  });
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function getSingleActiveTemplateMapping(
+  base44: any,
+  platformPlanId: string,
+  platformFeatureId: string
+) {
+  const rows =
+    await base44.asServiceRole.entities.PlatformPlanFeature.filter({
+      platform_plan_id: platformPlanId,
+      platform_feature_id: platformFeatureId,
+    });
+
+  const activeRows = (Array.isArray(rows) ? rows : []).filter(
+    (row) => row?.is_active !== false
+  );
+
+  if (activeRows.length !== 1) {
+    return {
+      mapping: null,
+      activeMappingCount: activeRows.length,
+    };
+  }
+
+  return {
+    mapping: activeRows[0],
+    activeMappingCount: 1,
+  };
+}
+
 async function getPlatformRoles(base44: any, userId: string) {
   const rows = await base44.asServiceRole.entities.PlatformAdmin.filter({
     user_id: userId,
@@ -118,6 +285,8 @@ async function writeAuditLog(
  * - update_draft_details
  * - upsert_draft_item
  * - archive_draft_item
+ * - upsert_draft_plan_feature_snapshot
+ * - archive_draft_plan_feature_snapshot
  * - activate_for_new_accounts
  * - retire_schedule
  *
@@ -164,6 +333,8 @@ Deno.serve(async (req) => {
         "update_draft_details",
         "upsert_draft_item",
         "archive_draft_item",
+        "upsert_draft_plan_feature_snapshot",
+        "archive_draft_plan_feature_snapshot",
         "activate_for_new_accounts",
         "retire_schedule",
       ].includes(action)
@@ -293,6 +464,47 @@ Deno.serve(async (req) => {
         );
       }
 
+      const [sourceItemRows, sourceSnapshotRows] = await Promise.all([
+        base44.asServiceRole.entities.PlatformPricingScheduleItem.filter({
+          pricing_schedule_id: sourceSchedule.id,
+        }),
+        base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
+          {
+            pricing_schedule_id: sourceSchedule.id,
+          }
+        ),
+      ]);
+
+      const sourceItems = Array.isArray(sourceItemRows)
+        ? sourceItemRows
+        : [];
+      const sourceSnapshots = Array.isArray(sourceSnapshotRows)
+        ? sourceSnapshotRows
+        : [];
+      const sourceSnapshotInspection = inspectSchedulePlanFeatureSnapshots(
+        sourceSnapshots,
+        sourceSchedule.pricing_schedule_key
+      );
+
+      if (hasSnapshotIntegrityIssues(sourceSnapshotInspection)) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The source pricing schedule has malformed or duplicate feature snapshots. No draft was created.",
+            malformed_snapshot_ids:
+              sourceSnapshotInspection.malformedSnapshotIds,
+            duplicate_snapshot_keys:
+              sourceSnapshotInspection.duplicateSnapshotKeys,
+            duplicate_plan_feature_pairs:
+              sourceSnapshotInspection.duplicatePlanFeaturePairs,
+            inconsistent_snapshot_keys:
+              sourceSnapshotInspection.inconsistentSnapshotKeys,
+          },
+          { status: 409 }
+        );
+      }
+
       const now = new Date().toISOString();
 
       const newSchedule =
@@ -310,18 +522,8 @@ Deno.serve(async (req) => {
           notes: String(body?.notes || "").trim(),
         });
 
-      const sourceItemRows =
-        await base44.asServiceRole.entities.PlatformPricingScheduleItem.filter(
-          {
-            pricing_schedule_id: sourceSchedule.id,
-          }
-        );
-
-      const sourceItems = Array.isArray(sourceItemRows)
-        ? sourceItemRows
-        : [];
-
       let copiedItemCount = 0;
+      let copiedPlanFeatureSnapshotCount = 0;
 
       for (const sourceItem of sourceItems) {
         const suffix = String(sourceItem.pricing_item_key || "")
@@ -357,6 +559,39 @@ Deno.serve(async (req) => {
         copiedItemCount += 1;
       }
 
+      for (const sourceSnapshot of sourceSnapshots) {
+        const copiedSnapshotKey = getPricingSchedulePlanFeatureKey(
+          pricingScheduleKey,
+          sourceSnapshot.plan_key_snapshot,
+          sourceSnapshot.feature_key
+        );
+
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.create(
+          {
+            pricing_schedule_id: newSchedule.id,
+            platform_plan_id: sourceSnapshot.platform_plan_id,
+            platform_feature_id: sourceSnapshot.platform_feature_id,
+            platform_plan_feature_id:
+              sourceSnapshot.platform_plan_feature_id || undefined,
+            pricing_schedule_plan_feature_key: copiedSnapshotKey,
+            plan_key_snapshot: sourceSnapshot.plan_key_snapshot,
+            feature_key: sourceSnapshot.feature_key,
+            feature_name_snapshot:
+              sourceSnapshot.feature_name_snapshot || "",
+            is_included: sourceSnapshot.is_included === true,
+            is_add_on_available:
+              sourceSnapshot.is_add_on_available === true,
+            default_limit_value:
+              sourceSnapshot.default_limit_value ?? undefined,
+            is_active: sourceSnapshot.is_active !== false,
+            effective_at: now,
+            notes: sourceSnapshot.notes || "",
+          }
+        );
+
+        copiedPlanFeatureSnapshotCount += 1;
+      }
+
       await writeAuditLog(
         base44,
         user.id,
@@ -368,6 +603,8 @@ Deno.serve(async (req) => {
           source_pricing_schedule_id: sourceSchedule.id,
           source_pricing_schedule_key: sourceSchedule.pricing_schedule_key,
           copied_item_count: copiedItemCount,
+          copied_plan_feature_snapshot_count:
+            copiedPlanFeatureSnapshotCount,
         }
       );
 
@@ -376,6 +613,8 @@ Deno.serve(async (req) => {
         action,
         pricing_schedule: newSchedule,
         copied_item_count: copiedItemCount,
+        copied_plan_feature_snapshot_count:
+          copiedPlanFeatureSnapshotCount,
       });
     }
 
@@ -751,6 +990,598 @@ Deno.serve(async (req) => {
       });
     }
 
+
+    // ── Create or update one feature snapshot inside an editable draft ─────
+    if (action === "upsert_draft_plan_feature_snapshot") {
+      const scheduleId = String(body?.pricing_schedule_id || "").trim();
+      const suppliedSnapshotId = String(
+        body?.pricing_schedule_plan_feature_id || ""
+      ).trim();
+      const suppliedPlanId = String(body?.platform_plan_id || "").trim();
+      const suppliedFeatureId = String(
+        body?.platform_feature_id || ""
+      ).trim();
+
+      if (!scheduleId) {
+        return Response.json(
+          { ok: false, error: "pricing_schedule_id is required." },
+          { status: 400 }
+        );
+      }
+
+      const schedule = await assertEditableDraft(base44, scheduleId);
+
+      const snapshotRows =
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
+          {
+            pricing_schedule_id: schedule.id,
+          }
+        );
+
+      const snapshotInspection = inspectSchedulePlanFeatureSnapshots(
+        Array.isArray(snapshotRows) ? snapshotRows : [],
+        schedule.pricing_schedule_key
+      );
+
+      if (hasSnapshotIntegrityIssues(snapshotInspection)) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "This pricing schedule has malformed or duplicate feature snapshots. No snapshot was changed.",
+            malformed_snapshot_ids:
+              snapshotInspection.malformedSnapshotIds,
+            duplicate_snapshot_keys:
+              snapshotInspection.duplicateSnapshotKeys,
+            duplicate_plan_feature_pairs:
+              snapshotInspection.duplicatePlanFeaturePairs,
+            inconsistent_snapshot_keys:
+              snapshotInspection.inconsistentSnapshotKeys,
+          },
+          { status: 409 }
+        );
+      }
+
+      let existingSnapshot: any = null;
+      let platformPlanId = "";
+      let platformFeatureId = "";
+      let platformPlanFeatureId = "";
+      let planKeySnapshot = "";
+      let featureKey = "";
+      let featureNameSnapshot = "";
+      let templateMapping: any = null;
+
+      if (suppliedSnapshotId) {
+        const suppliedSnapshotRows =
+          await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
+            {
+              id: suppliedSnapshotId,
+              pricing_schedule_id: schedule.id,
+            }
+          );
+
+        existingSnapshot = Array.isArray(suppliedSnapshotRows)
+          ? suppliedSnapshotRows[0] || null
+          : null;
+
+        if (!existingSnapshot) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "pricing_schedule_plan_feature_id was not found in this pricing schedule.",
+            },
+            { status: 404 }
+          );
+        }
+
+        if (
+          (suppliedPlanId &&
+            suppliedPlanId !== existingSnapshot.platform_plan_id) ||
+          (suppliedFeatureId &&
+            suppliedFeatureId !== existingSnapshot.platform_feature_id)
+        ) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "A schedule feature snapshot identity cannot be changed. Create a separate snapshot for a different plan-feature pair.",
+            },
+            { status: 409 }
+          );
+        }
+
+        platformPlanId = existingSnapshot.platform_plan_id;
+        platformFeatureId = existingSnapshot.platform_feature_id;
+        platformPlanFeatureId =
+          existingSnapshot.platform_plan_feature_id;
+        planKeySnapshot = existingSnapshot.plan_key_snapshot;
+        featureKey = existingSnapshot.feature_key;
+        featureNameSnapshot =
+          existingSnapshot.feature_name_snapshot || "";
+      } else {
+        if (!suppliedPlanId || !suppliedFeatureId) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "platform_plan_id and platform_feature_id are required when pricing_schedule_plan_feature_id is not supplied.",
+            },
+            { status: 400 }
+          );
+        }
+
+        const [plan, feature] = await Promise.all([
+          getPlatformPlanById(base44, suppliedPlanId),
+          getPlatformFeatureById(base44, suppliedFeatureId),
+        ]);
+
+        if (!plan || !feature) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "platform_plan_id and platform_feature_id must reference existing catalog records.",
+            },
+            { status: 404 }
+          );
+        }
+
+        if (plan.is_active === false || feature.is_active === false) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "Only active PlatformPlan and PlatformFeature catalog records may be added to a pricing draft.",
+            },
+            { status: 409 }
+          );
+        }
+
+        platformPlanId = plan.id;
+        platformFeatureId = feature.id;
+        planKeySnapshot = plan.plan_key;
+        featureKey = feature.feature_key;
+        featureNameSnapshot = feature.feature_name || "";
+
+        if (!planKeySnapshot || !featureKey) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "The selected PlatformPlan or PlatformFeature is missing its immutable catalog key.",
+            },
+            { status: 409 }
+          );
+        }
+
+        const candidateSnapshotKey = getPricingSchedulePlanFeatureKey(
+          schedule.pricing_schedule_key,
+          planKeySnapshot,
+          featureKey
+        );
+        const candidatePairKey = getPlanFeaturePairKey(
+          platformPlanId,
+          platformFeatureId
+        );
+        const snapshotByKey =
+          snapshotInspection.byKey.get(candidateSnapshotKey) || null;
+        const snapshotByPair =
+          snapshotInspection.byPlanFeaturePair.get(candidatePairKey) || null;
+
+        if (
+          snapshotByKey &&
+          getPlanFeaturePairKey(
+            snapshotByKey.platform_plan_id,
+            snapshotByKey.platform_feature_id
+          ) !== candidatePairKey
+        ) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "The deterministic snapshot key is already associated with a different plan-feature pair. No snapshot was changed.",
+            },
+            { status: 409 }
+          );
+        }
+
+        if (
+          snapshotByPair &&
+          snapshotByPair.pricing_schedule_plan_feature_key !==
+            candidateSnapshotKey
+        ) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "The selected plan-feature pair already has a different deterministic snapshot key. No snapshot was changed.",
+            },
+            { status: 409 }
+          );
+        }
+
+        if (
+          snapshotByKey &&
+          snapshotByPair &&
+          snapshotByKey.id !== snapshotByPair.id
+        ) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "The selected schedule feature snapshot identity is inconsistent. No snapshot was changed.",
+            },
+            { status: 409 }
+          );
+        }
+
+        existingSnapshot = snapshotByKey || snapshotByPair || null;
+
+        if (existingSnapshot) {
+          platformPlanFeatureId =
+            existingSnapshot.platform_plan_feature_id;
+          planKeySnapshot = existingSnapshot.plan_key_snapshot;
+          featureKey = existingSnapshot.feature_key;
+          featureNameSnapshot =
+            existingSnapshot.feature_name_snapshot || featureNameSnapshot;
+        } else {
+          const templateLookup = await getSingleActiveTemplateMapping(
+            base44,
+            platformPlanId,
+            platformFeatureId
+          );
+
+          if (!templateLookup.mapping) {
+            return Response.json(
+              {
+                ok: false,
+                error:
+                  "The selected plan-feature pair must have exactly one active PlatformPlanFeature template mapping before it can be snapshotted.",
+                active_template_mapping_count:
+                  templateLookup.activeMappingCount,
+              },
+              { status: 409 }
+            );
+          }
+
+          templateMapping = templateLookup.mapping;
+          platformPlanFeatureId = templateMapping.id;
+        }
+      }
+
+      const snapshotKey = getPricingSchedulePlanFeatureKey(
+        schedule.pricing_schedule_key,
+        planKeySnapshot,
+        featureKey
+      );
+      const planFeaturePairKey = getPlanFeaturePairKey(
+        platformPlanId,
+        platformFeatureId
+      );
+      const snapshotByKey =
+        snapshotInspection.byKey.get(snapshotKey) || null;
+      const snapshotByPair =
+        snapshotInspection.byPlanFeaturePair.get(planFeaturePairKey) || null;
+
+      if (
+        snapshotByKey &&
+        snapshotByPair &&
+        snapshotByKey.id !== snapshotByPair.id
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The selected schedule feature snapshot identity is inconsistent. No snapshot was changed.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        existingSnapshot &&
+        ((snapshotByKey && snapshotByKey.id !== existingSnapshot.id) ||
+          (snapshotByPair && snapshotByPair.id !== existingSnapshot.id))
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "A different schedule feature snapshot already uses this deterministic identity. No snapshot was changed.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "is_included") &&
+        typeof body.is_included !== "boolean"
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error: "is_included must be true or false when supplied.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "is_add_on_available") &&
+        typeof body.is_add_on_available !== "boolean"
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "is_add_on_available must be true or false when supplied.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "is_active") &&
+        typeof body.is_active !== "boolean"
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error: "is_active must be true or false when supplied.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "default_limit_value") &&
+        !isValidOptionalLimit(body.default_limit_value)
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "default_limit_value must be a non-negative whole number when supplied.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "effective_at") &&
+        (typeof body.effective_at !== "string" ||
+          !body.effective_at.trim())
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error: "effective_at must be a non-empty ISO datetime string.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        hasOwnProperty(body, "notes") &&
+        typeof body.notes !== "string"
+      ) {
+        return Response.json(
+          {
+            ok: false,
+            error: "notes must be a string when supplied.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const now = new Date().toISOString();
+      const nextData = {
+        pricing_schedule_id: schedule.id,
+        platform_plan_id: platformPlanId,
+        platform_feature_id: platformFeatureId,
+        platform_plan_feature_id:
+          existingSnapshot?.platform_plan_feature_id ||
+          platformPlanFeatureId ||
+          undefined,
+        pricing_schedule_plan_feature_key: snapshotKey,
+        plan_key_snapshot: planKeySnapshot,
+        feature_key: featureKey,
+        feature_name_snapshot: featureNameSnapshot,
+        is_included: hasOwnProperty(body, "is_included")
+          ? body.is_included
+          : existingSnapshot
+            ? existingSnapshot.is_included === true
+            : templateMapping.is_included === true,
+        is_add_on_available: hasOwnProperty(
+          body,
+          "is_add_on_available"
+        )
+          ? body.is_add_on_available
+          : existingSnapshot
+            ? existingSnapshot.is_add_on_available === true
+            : templateMapping.is_add_on_available === true,
+        default_limit_value: hasOwnProperty(body, "default_limit_value")
+          ? body.default_limit_value
+          : existingSnapshot
+            ? existingSnapshot.default_limit_value ?? undefined
+            : templateMapping.default_limit_value ?? undefined,
+        is_active: hasOwnProperty(body, "is_active")
+          ? body.is_active
+          : existingSnapshot
+            ? existingSnapshot.is_active !== false
+            : true,
+        effective_at: hasOwnProperty(body, "effective_at")
+          ? body.effective_at.trim()
+          : existingSnapshot?.effective_at || now,
+        notes: hasOwnProperty(body, "notes")
+          ? body.notes.trim()
+          : existingSnapshot?.notes ||
+            "Pricing schedule feature and capacity snapshot.",
+      };
+
+      let pricingSchedulePlanFeatureId = existingSnapshot?.id || null;
+      let created = false;
+
+      if (existingSnapshot) {
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.update(
+          existingSnapshot.id,
+          nextData
+        );
+      } else {
+        const createdSnapshot =
+          await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.create(
+            nextData
+          );
+
+        pricingSchedulePlanFeatureId = createdSnapshot.id;
+        created = true;
+      }
+
+      await writeAuditLog(
+        base44,
+        user.id,
+        created
+          ? "pricing_schedule_draft_plan_feature_snapshot_created"
+          : "pricing_schedule_draft_plan_feature_snapshot_updated",
+        created
+          ? "A feature and capacity snapshot was added to an editable pricing schedule draft."
+          : "A feature and capacity snapshot in an editable pricing schedule draft was updated.",
+        "PlatformPricingSchedulePlanFeature",
+        pricingSchedulePlanFeatureId,
+        {
+          pricing_schedule_id: schedule.id,
+          pricing_schedule_plan_feature_key: snapshotKey,
+          platform_plan_id: platformPlanId,
+          platform_feature_id: platformFeatureId,
+          is_included: nextData.is_included,
+          is_add_on_available: nextData.is_add_on_available,
+          default_limit_value: nextData.default_limit_value,
+        }
+      );
+
+      return Response.json({
+        ok: true,
+        action,
+        created,
+        pricing_schedule_plan_feature_id:
+          pricingSchedulePlanFeatureId,
+        pricing_schedule_plan_feature_key: snapshotKey,
+      });
+    }
+
+    // ── Archive one feature snapshot from an editable draft ────────────────
+    if (action === "archive_draft_plan_feature_snapshot") {
+      const scheduleId = String(body?.pricing_schedule_id || "").trim();
+      const snapshotId = String(
+        body?.pricing_schedule_plan_feature_id || ""
+      ).trim();
+
+      if (!scheduleId || !snapshotId) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "pricing_schedule_id and pricing_schedule_plan_feature_id are required.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const schedule = await assertEditableDraft(base44, scheduleId);
+
+      const snapshotRows =
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
+          {
+            pricing_schedule_id: schedule.id,
+          }
+        );
+
+      const snapshotInspection = inspectSchedulePlanFeatureSnapshots(
+        Array.isArray(snapshotRows) ? snapshotRows : [],
+        schedule.pricing_schedule_key
+      );
+
+      if (hasSnapshotIntegrityIssues(snapshotInspection)) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "This pricing schedule has malformed or duplicate feature snapshots. No snapshot was changed.",
+            malformed_snapshot_ids:
+              snapshotInspection.malformedSnapshotIds,
+            duplicate_snapshot_keys:
+              snapshotInspection.duplicateSnapshotKeys,
+            duplicate_plan_feature_pairs:
+              snapshotInspection.duplicatePlanFeaturePairs,
+            inconsistent_snapshot_keys:
+              snapshotInspection.inconsistentSnapshotKeys,
+          },
+          { status: 409 }
+        );
+      }
+
+      const snapshotRowsById =
+        await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
+          {
+            id: snapshotId,
+            pricing_schedule_id: schedule.id,
+          }
+        );
+
+      const snapshot = Array.isArray(snapshotRowsById)
+        ? snapshotRowsById[0] || null
+        : null;
+
+      if (!snapshot) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Pricing schedule feature snapshot was not found in this pricing schedule.",
+          },
+          { status: 404 }
+        );
+      }
+
+      if (snapshot.is_active === false) {
+        return Response.json({
+          ok: true,
+          action,
+          already_archived: true,
+          pricing_schedule_plan_feature_id: snapshot.id,
+        });
+      }
+
+      await base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.update(
+        snapshot.id,
+        {
+          is_active: false,
+        }
+      );
+
+      await writeAuditLog(
+        base44,
+        user.id,
+        "pricing_schedule_draft_plan_feature_snapshot_archived",
+        "A feature and capacity snapshot was archived from an editable pricing schedule draft.",
+        "PlatformPricingSchedulePlanFeature",
+        snapshot.id,
+        {
+          pricing_schedule_id: schedule.id,
+          pricing_schedule_plan_feature_key:
+            snapshot.pricing_schedule_plan_feature_key,
+        }
+      );
+
+      return Response.json({
+        ok: true,
+        action,
+        already_archived: false,
+        pricing_schedule_plan_feature_id: snapshot.id,
+      });
+    }
+
     // ── Lock and activate schedule for future new accounts only ────────────
     if (action === "activate_for_new_accounts") {
       const scheduleId = String(body?.pricing_schedule_id || "").trim();
@@ -782,15 +1613,26 @@ Deno.serve(async (req) => {
         );
       }
 
-      const itemRows =
-        await base44.asServiceRole.entities.PlatformPricingScheduleItem.filter(
+      const [itemRows, snapshotRows] = await Promise.all([
+        base44.asServiceRole.entities.PlatformPricingScheduleItem.filter({
+          pricing_schedule_id: schedule.id,
+          is_active: true,
+        }),
+        base44.asServiceRole.entities.PlatformPricingSchedulePlanFeature.filter(
           {
             pricing_schedule_id: schedule.id,
-            is_active: true,
           }
-        );
+        ),
+      ]);
 
       const activeItems = Array.isArray(itemRows) ? itemRows : [];
+      const scheduleSnapshots = Array.isArray(snapshotRows)
+        ? snapshotRows
+        : [];
+      const snapshotInspection = inspectSchedulePlanFeatureSnapshots(
+        scheduleSnapshots,
+        schedule.pricing_schedule_key
+      );
 
       if (activeItems.length === 0) {
         return Response.json(
@@ -798,6 +1640,36 @@ Deno.serve(async (req) => {
             ok: false,
             error:
               "A pricing schedule needs at least one active pricing item before activation.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (scheduleSnapshots.length === 0) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "A pricing schedule needs feature and capacity snapshots before activation.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (hasSnapshotIntegrityIssues(snapshotInspection)) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "A pricing schedule with malformed or duplicate feature snapshots cannot be activated.",
+            malformed_snapshot_ids:
+              snapshotInspection.malformedSnapshotIds,
+            duplicate_snapshot_keys:
+              snapshotInspection.duplicateSnapshotKeys,
+            duplicate_plan_feature_pairs:
+              snapshotInspection.duplicatePlanFeaturePairs,
+            inconsistent_snapshot_keys:
+              snapshotInspection.inconsistentSnapshotKeys,
           },
           { status: 409 }
         );
@@ -845,6 +1717,8 @@ Deno.serve(async (req) => {
         {
           pricing_schedule_key: schedule.pricing_schedule_key,
           active_pricing_item_count: activeItems.length,
+          pricing_schedule_plan_feature_snapshot_count:
+            scheduleSnapshots.length,
           prior_default_schedule_count: currentDefaultSchedules.length,
         }
       );
@@ -855,6 +1729,8 @@ Deno.serve(async (req) => {
         pricing_schedule_id: schedule.id,
         pricing_schedule_key: schedule.pricing_schedule_key,
         pricing_item_count: activeItems.length,
+        pricing_schedule_plan_feature_snapshot_count:
+          scheduleSnapshots.length,
       });
     }
 
