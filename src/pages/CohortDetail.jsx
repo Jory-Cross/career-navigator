@@ -288,7 +288,64 @@ console.log("USER MAP", userById);
     }
   };
 
-   const handleRemoveMember = async (membership) => {
+    const handleRemoveTrainer = async (membership) => {
+    if (
+      !window.confirm(
+        `Remove ${
+          orgUsers?.find((u) => u.id === membership.user_id)?.full_name ||
+          membership.user_id
+        } as trainer?`
+      )
+    ) {
+      return;
+    }
+
+    const rosterQueryKey = ["cohorts", "memberships", cohort_id];
+
+    await queryClient.cancelQueries({
+      queryKey: rosterQueryKey,
+    });
+
+    const previousRoster = queryClient.getQueryData(rosterQueryKey);
+
+    queryClient.setQueryData(rosterQueryKey, (currentRoster) => {
+      const currentMemberships = Array.isArray(currentRoster?.memberships)
+        ? currentRoster.memberships
+        : [];
+
+      return {
+        ...(currentRoster || {}),
+        memberships: currentMemberships.filter(
+          (row) => row.id !== membership.id
+        ),
+      };
+    });
+
+    try {
+      const res = await base44.functions.invoke("manageCohortMembership", {
+        action: "remove",
+        cohort_id,
+        membership_id: membership.id,
+        cohort_role: "trainer",
+      });
+
+      if (!res.data?.ok) {
+        throw new Error(res.data?.error || "Unable to remove trainer");
+      }
+
+      toast.success("Trainer removed");
+
+      await queryClient.invalidateQueries({
+        queryKey: rosterQueryKey,
+        refetchType: "none",
+      });
+    } catch (err) {
+      queryClient.setQueryData(rosterQueryKey, previousRoster);
+      toast.error(err?.message || "Failed to remove trainer");
+    }
+  };
+
+  const handleRemoveMember = async (membership) => {
     if (
       !window.confirm(
         `Remove ${
