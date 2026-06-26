@@ -59,6 +59,7 @@ export default function CohortDetail() {
   const [addingTrainer, setAddingTrainer] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [completingMembershipId, setCompletingMembershipId] = useState("");
 
   useEffect(() => {
     let active = true;
