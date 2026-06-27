@@ -562,8 +562,8 @@ export default function CECertificationPipelineManager() {
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           {!selectedPerson ? (
             <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
-              Select a paid CE student to review their certification pipeline
-              status.
+                       Select an authorized CE student to review their certification
+              pipeline status.
             </div>
           ) : (
             <div>
