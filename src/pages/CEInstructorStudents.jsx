@@ -397,15 +397,15 @@ export default function CEInstructorStudents() {
         </ol>
       </Card>
 
-      <InviteStudentDialog
-        open={showInviteStudentDialog}
-        onOpenChange={setShowInviteStudentDialog}
-        onSuccess={() => {
-          queryClient.invalidateQueries({
-            queryKey: ["ce-students-instructor-secure"],
-          });
-        }}
-      />
+     <InviteStudentPaymentDialog
+  open={showInviteStudentDialog}
+  onOpenChange={setShowInviteStudentDialog}
+  onSuccess={() => {
+    queryClient.invalidateQueries({
+      queryKey: ["ce-students-instructor-secure"],
+    });
+  }}
+/>
     </div>
   );
 }
