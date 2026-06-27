@@ -630,7 +630,7 @@ export default function CECertificationPipelineManager() {
 
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Paid CE enrollments
+                                          Settled registrations
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-700">
                       {selectedPerson.paid_training_enrollment_count || 0}
