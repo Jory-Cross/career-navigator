@@ -3,9 +3,16 @@ import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Mail, Users, ArrowRight } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  Users,
+  ArrowRight,
+  XCircle,
+} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import InviteStudentDialog from "@/components/cohorts/InviteStudentDialog";
 
 export default function CEInstructorStudents() {
@@ -13,6 +20,7 @@ export default function CEInstructorStudents() {
   const [authChecked, setAuthChecked] = useState(false);
   const [showInviteStudentDialog, setShowInviteStudentDialog] =
     useState(false);
+  const [revokingInviteId, setRevokingInviteId] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -80,6 +88,47 @@ export default function CEInstructorStudents() {
     ...(studentsData.active || []),
     ...(studentsData.pending || []),
   ];
+
+  const handleRevokeInvite = async (student) => {
+    const email = student.email || "this student";
+
+    if (
+      !window.confirm(
+        `Revoke the pending CE student invitation for ${email}? The student will not be able to use this invitation to register.`
+      )
+    ) {
+      return;
+    }
+
+    setRevokingInviteId(student.id);
+
+    try {
+      const res = await base44.functions.invoke(
+        "revokeCEStudentInvite",
+        {
+          pending_invite_id: student.id,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error || "Unable to revoke the CE student invitation."
+        );
+      }
+
+      toast.success("CE student invitation revoked.");
+
+      await queryClient.invalidateQueries({
+        queryKey: ["ce-students-instructor-secure"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message || "Unable to revoke the CE student invitation."
+      );
+    } finally {
+      setRevokingInviteId("");
+    }
+  };
 
   if (!authChecked || studentsLoading) {
     return (
@@ -272,9 +321,21 @@ export default function CEInstructorStudents() {
 
                     <td className="px-4 py-3">
                       {student.status === "pending" ? (
-                        <span className="text-xs text-slate-500">
-                          Awaiting registration
-                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={revokingInviteId === student.id}
+                          onClick={() => handleRevokeInvite(student)}
+                          className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
+                        >
+                          {revokingInviteId === student.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <XCircle className="h-3 w-3" />
+                          )}
+                          Revoke Invite
+                        </Button>
                       ) : student.cohorts?.length > 0 ? (
                         <Link
                           to={`/CohortDetail?cohort_id=${student.cohorts[0].id}`}
