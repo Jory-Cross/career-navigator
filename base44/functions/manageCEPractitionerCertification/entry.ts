@@ -7,10 +7,14 @@ const PAID_TRAINING_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
+const SETTLED_TRAINING_REGISTRATION_STATUSES = new Set([
+  "paid",
+  "waived",
+]);
+
 const TRAINING_COHORT_TYPE = "training";
 const STUDENT_COHORT_ROLE = "member";
 const TRAINER_BUSINESS_SOURCE = "trainer_business";
-
 function getRequiredString(value: unknown, fieldName: string) {
   const normalized = String(value || "").trim();
 
