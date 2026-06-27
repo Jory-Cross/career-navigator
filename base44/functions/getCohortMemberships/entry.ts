@@ -72,8 +72,41 @@ Deno.serve(async (req) => {
         cohort_id,
       });
 
-    const memberships = (Array.isArray(allMemberships) ? allMemberships : [])
-      .filter((membership) => membership.is_active !== false);
+    const activeMemberships = (
+      Array.isArray(allMemberships) ? allMemberships : []
+    ).filter((membership) => membership.is_active !== false);
+
+    const billingEvents =
+      await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+        cohort_id,
+      });
+
+    const settledStudentUserIds = new Set(
+      (Array.isArray(billingEvents) ? billingEvents : [])
+        .filter((event) => {
+          const isStudent =
+            event.billing_subject_type === 'student';
+
+          const isRegistrationOrReactivation =
+            event.fee_kind === 'training_registration' ||
+            event.fee_kind === 'training_reactivation';
+
+          const isSettled =
+            event.event_status === 'paid' ||
+            event.event_status === 'waived';
+
+          return isStudent && isRegistrationOrReactivation && isSettled;
+        })
+        .map((event) => String(event.subject_user_id || '').trim())
+        .filter(Boolean)
+    );
+
+    const memberships = activeMemberships.map((membership) => ({
+      ...membership,
+      has_settled_registration:
+        membership.cohort_role === 'member' &&
+        settledStudentUserIds.has(String(membership.user_id || '').trim()),
+    }));
 
     const memberUserIds = new Set(
       memberships
