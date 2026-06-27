@@ -10,8 +10,9 @@ import {
   GraduationCap,
   Users,
   UserCog,
-  Plus,
+   Plus,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import MemberRow from "@/components/cohorts/MemberRow";
