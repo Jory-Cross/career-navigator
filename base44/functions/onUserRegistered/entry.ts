@@ -2,6 +2,22 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CLIENT_ROLES = ['client', 'pre_ets', 'dspd'];
 
+const OPEN_PENDING_ASSIGNMENT_STATUSES = [
+  'pending',
+  'invite_email_sent',
+  'pending_email_failed',
+];
+
+const SETTLED_CE_REGISTRATION_STATUSES = new Set([
+  'paid',
+  'waived',
+]);
+
+const CE_REGISTRATION_FEE_KINDS = new Set([
+  'training_registration',
+  'training_reactivation',
+]);
+
 function normalizeEmail(value) {
   return String(value || '').toLowerCase().trim();
 }
@@ -25,6 +41,73 @@ function getMostRecentAssignment(assignments) {
 
     return bTime - aTime;
   })[0];
+}
+
+async function getSettledCeStudentRegistration({
+  base44,
+  assignment,
+  user,
+  email,
+}) {
+  const cohortId = String(assignment?.cohort_id || '').trim();
+  const orgId = String(assignment?.org_id || '').trim();
+  const userId = String(user?.id || '').trim();
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!cohortId) {
+    return {
+      settled: false,
+      reason: 'ce_student_invite_missing_cohort',
+    };
+  }
+
+  const billingRows =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      cohort_id: cohortId,
+    });
+
+  const matchingEvent = (Array.isArray(billingRows) ? billingRows : []).find(
+    (billingEvent) => {
+      const matchesOrganization =
+        String(billingEvent?.organization_id || '').trim() === orgId;
+
+      const isStudentRegistration =
+        billingEvent?.billing_subject_type === 'student' &&
+        CE_REGISTRATION_FEE_KINDS.has(billingEvent?.fee_kind);
+
+      const isSettled =
+        SETTLED_CE_REGISTRATION_STATUSES.has(
+          billingEvent?.event_status
+        );
+
+      const matchesUser =
+        userId &&
+        String(billingEvent?.subject_user_id || '').trim() === userId;
+
+      const matchesVerifiedEmail =
+        normalizeEmail(billingEvent?.subject_verified_email) ===
+        normalizedEmail;
+
+      return (
+        matchesOrganization &&
+        isStudentRegistration &&
+        isSettled &&
+        (matchesUser || matchesVerifiedEmail)
+      );
+    }
+  );
+
+  if (!matchingEvent) {
+    return {
+      settled: false,
+      reason: 'ce_student_registration_not_settled',
+    };
+  }
+
+  return {
+    settled: true,
+    billingEvent: matchingEvent,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -83,11 +166,7 @@ Deno.serve(async (req) => {
         (assignment) => normalizeEmail(assignment.email) === email
       )
       .filter((assignment) =>
-        [
-          'pending',
-          'invite_email_sent',
-          'pending_email_failed',
-        ].includes(assignment.status)
+        OPEN_PENDING_ASSIGNMENT_STATUSES.includes(assignment.status)
       )
       .filter(isValidAssignment);
 
@@ -99,6 +178,25 @@ Deno.serve(async (req) => {
     }
 
     const assignment = getMostRecentAssignment(validPending);
+
+    if (assignment.role === 'ce_student') {
+      const registration = await getSettledCeStudentRegistration({
+        base44,
+        assignment,
+        user,
+        email,
+      });
+
+      if (!registration.settled) {
+        return Response.json({
+          skipped: true,
+          reason: registration.reason,
+          email,
+          user_id: user.id,
+          pending_assignment_id: assignment.id,
+        });
+      }
+    }
 
     const updateData = {
       role: assignment.role,
