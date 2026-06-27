@@ -169,15 +169,21 @@ Deno.serve(async (req) => {
       status: "active",
     }));
 
-    const pending = invites
-      .filter((invite) => OPEN_INVITE_STATUSES.has(invite.status))
-      .map((invite) => ({
-        id: invite.id,
-        email: invite.email,
-        user: null,
-        cohorts: [],
-        status: "pending",
-      }));
+  const pending = invites
+  .filter((invite) => OPEN_INVITE_STATUSES.has(invite.status))
+  .map((invite) => ({
+    id: invite.id,
+    email: invite.email,
+    user: null,
+    cohorts: [],
+    status: "pending",
+    payment_responsibility:
+      invite.payment_responsibility || "student_paid",
+    instructor_payment_mode:
+      invite.payment_responsibility === "instructor_paid"
+        ? invite.instructor_payment_mode || "pay_now"
+        : null,
+  }));
 
     return Response.json({
       ok: true,
