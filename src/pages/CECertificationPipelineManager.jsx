@@ -388,8 +388,8 @@ export default function CECertificationPipelineManager() {
             </h1>
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Paid CE course students only. Track training progress through
+                          <p className="mt-1 text-sm text-slate-500">
+            Authorized CE course students only. Track training progress through
             certification without exposing unrelated platform users.
           </p>
         </div>
