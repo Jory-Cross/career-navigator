@@ -839,16 +839,12 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("[inviteCEStudent] Error:", error);
 
-    return Response.json(
-      {
-        ok: false,
-        error:
-          error?.message ||
-          "Unable to create CE Student invitation.",
-      },
-      {
-        status: Number(error?.status) || 500,
-      }
-    );
+    return Response.json({
+  ok: false,
+  error:
+    error?.message ||
+    "Unable to create CE Student invitation.",
+  error_status: Number(error?.status) || 500,
+});
   }
 });
