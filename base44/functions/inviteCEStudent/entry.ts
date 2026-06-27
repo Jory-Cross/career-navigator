@@ -4,6 +4,8 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
 
+const CE_STUDENT_REGISTRATION_RATE_KEY = "ce_student_registration";
+
 const FREE_DOMAINS = [
   "gmail.com",
   "yahoo.com",
@@ -12,13 +14,6 @@ const FREE_DOMAINS = [
   "live.com",
   "icloud.com",
 ];
-
-const fromDomain = RESEND_FROM_EMAIL.split("@")[1] || "";
-
-const RESEND_FROM =
-  RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
-    ? RESEND_FROM_EMAIL
-    : "onboarding@resend.dev";
 
 const OPEN_INVITE_STATUSES = [
   "pending",
@@ -35,6 +30,24 @@ const INSTRUCTOR_PAYMENT_MODES = [
   "pay_now",
   "invoice_with_cohort",
 ];
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
+  "active",
+  "trialing",
+]);
+
+const fromDomain = RESEND_FROM_EMAIL.split("@")[1] || "";
+
+const RESEND_FROM =
+  RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
+    ? RESEND_FROM_EMAIL
+    : "onboarding@resend.dev";
+
+function createHttpError(status, message) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
 
 function normalizeEmail(value) {
   return String(value || "").toLowerCase().trim();
@@ -82,6 +95,37 @@ function isNeutralExistingAccount(user) {
     !managerId &&
     !linkedClientId
   );
+}
+
+function buildRegistrationBillingEventKey(orgId, email) {
+  return `ce_student_registration:${orgId}:${encodeURIComponent(
+    normalizeEmail(email)
+  )}`;
+}
+
+function isPriceItemAvailableNow(item, nowMs) {
+  if (item?.is_active === false) {
+    return false;
+  }
+
+  const effectiveAtMs = Date.parse(
+    String(item?.effective_at || "")
+  );
+
+  if (
+    Number.isFinite(effectiveAtMs) &&
+    effectiveAtMs > nowMs
+  ) {
+    return false;
+  }
+
+  const endsAtMs = Date.parse(String(item?.ends_at || ""));
+
+  if (Number.isFinite(endsAtMs) && endsAtMs <= nowMs) {
+    return false;
+  }
+
+  return true;
 }
 
 async function findExistingUserByEmail(base44, email) {
@@ -192,6 +236,279 @@ async function sendInviteEmail({
   return response.json();
 }
 
+async function getLockedRegistrationPricing(
+  base44,
+  organizationId
+) {
+  const subscriptionRows =
+    await base44.asServiceRole.entities.OrganizationPlanSubscription.filter({
+      organization_id: organizationId,
+    });
+
+  const currentSubscriptions = (
+    Array.isArray(subscriptionRows) ? subscriptionRows : []
+  ).filter(
+    (subscription) =>
+      subscription?.is_current === true &&
+      ACTIVE_SUBSCRIPTION_STATUSES.has(
+        subscription?.subscription_status
+      )
+  );
+
+  if (currentSubscriptions.length === 0) {
+    throw createHttpError(
+      409,
+      "This organization has no current active pricing subscription. A CE student registration billing event cannot be created yet."
+    );
+  }
+
+  if (currentSubscriptions.length > 1) {
+    throw createHttpError(
+      409,
+      "This organization has multiple current active pricing subscriptions. Resolve the subscription records before creating CE student registration billing events."
+    );
+  }
+
+  const subscription = currentSubscriptions[0];
+  const pricingScheduleId = String(
+    subscription?.pricing_schedule_id || ""
+  ).trim();
+
+  if (!pricingScheduleId) {
+    throw createHttpError(
+      409,
+      "The organization's current subscription is missing its locked pricing schedule."
+    );
+  }
+
+  const pricingScheduleRows =
+    await base44.asServiceRole.entities.PlatformPricingSchedule.filter({
+      id: pricingScheduleId,
+    });
+
+  const pricingSchedules = Array.isArray(pricingScheduleRows)
+    ? pricingScheduleRows
+    : [];
+
+  if (pricingSchedules.length !== 1) {
+    throw createHttpError(
+      409,
+      "The pricing schedule assigned to this organization could not be resolved."
+    );
+  }
+
+  const pricingSchedule = pricingSchedules[0];
+
+  if (pricingSchedule.schedule_status === "draft") {
+    throw createHttpError(
+      409,
+      "The organization's assigned pricing schedule is still a draft and cannot be used for billing."
+    );
+  }
+
+  const [rateRows, scheduleItemRows] = await Promise.all([
+    base44.asServiceRole.entities.PlatformBillingRate.filter({
+      rate_key: CE_STUDENT_REGISTRATION_RATE_KEY,
+    }),
+    base44.asServiceRole.entities.PlatformPricingScheduleItem.filter({
+      pricing_schedule_id: pricingSchedule.id,
+    }),
+  ]);
+
+  const matchingRates = (Array.isArray(rateRows) ? rateRows : []).filter(
+    (rate) =>
+      rate?.rate_key === CE_STUDENT_REGISTRATION_RATE_KEY &&
+      rate?.billing_subject_type === "student" &&
+      rate?.charge_model === "one_time"
+  );
+
+  if (matchingRates.length !== 1) {
+    throw createHttpError(
+      409,
+      "The CE student registration billing rate could not be resolved to exactly one record."
+    );
+  }
+
+  const billingRate = matchingRates[0];
+  const nowMs = Date.now();
+
+  const matchingScheduleItems = (
+    Array.isArray(scheduleItemRows) ? scheduleItemRows : []
+  ).filter((item) => {
+    const matchesRateKey =
+      String(item?.billing_rate_key_snapshot || "").trim() ===
+      CE_STUDENT_REGISTRATION_RATE_KEY;
+
+    const matchesRateId =
+      String(item?.platform_billing_rate_id || "").trim() ===
+      String(billingRate.id || "").trim();
+
+    return (
+      item?.pricing_item_type === "billing_rate" &&
+      item?.charge_model === "one_time" &&
+      (matchesRateKey || matchesRateId) &&
+      isPriceItemAvailableNow(item, nowMs)
+    );
+  });
+
+  if (matchingScheduleItems.length === 0) {
+    throw createHttpError(
+      409,
+      "The organization's locked pricing schedule does not contain an active CE student registration price item."
+    );
+  }
+
+  if (matchingScheduleItems.length > 1) {
+    throw createHttpError(
+      409,
+      "The organization's locked pricing schedule contains multiple active CE student registration price items. Resolve duplicate pricing items before creating billing events."
+    );
+  }
+
+  const pricingItem = matchingScheduleItems[0];
+  const unitAmountCents = Number(pricingItem.amount_cents);
+
+  if (
+    !Number.isInteger(unitAmountCents) ||
+    unitAmountCents < 0
+  ) {
+    throw createHttpError(
+      409,
+      "The locked CE student registration price item has an invalid amount."
+    );
+  }
+
+  const currency = String(
+    pricingItem.currency ||
+      pricingSchedule.currency ||
+      billingRate.currency ||
+      "USD"
+  )
+    .trim()
+    .toUpperCase();
+
+  if (!currency) {
+    throw createHttpError(
+      409,
+      "The locked CE student registration price item is missing a currency."
+    );
+  }
+
+  return {
+    subscription,
+    pricingSchedule,
+    pricingItem,
+    billingRate,
+    unitAmountCents,
+    currency,
+  };
+}
+
+async function ensureRegistrationBillingEvent({
+  base44,
+  organizationId,
+  email,
+  subjectUserId,
+  cohortId,
+}) {
+  const billingEventKey = buildRegistrationBillingEventKey(
+    organizationId,
+    email
+  );
+
+  const existingRows =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      billing_event_key: billingEventKey,
+    });
+
+  const existingEvents = Array.isArray(existingRows)
+    ? existingRows
+    : [];
+
+  if (existingEvents.length > 1) {
+    throw createHttpError(
+      409,
+      "Multiple CE student registration billing events already exist for this organization and student email. Resolve duplicate billing events before continuing."
+    );
+  }
+
+  if (existingEvents.length === 1) {
+    const billingEvent = existingEvents[0];
+
+    const belongsToOrganization =
+      String(billingEvent?.organization_id || "").trim() ===
+      organizationId;
+
+    const matchesEmail =
+      normalizeEmail(billingEvent?.subject_verified_email) ===
+      normalizeEmail(email);
+
+    const isStudentRegistration =
+      billingEvent?.fee_kind === "training_registration" &&
+      billingEvent?.billing_subject_type === "student";
+
+    if (
+      !belongsToOrganization ||
+      !matchesEmail ||
+      !isStudentRegistration
+    ) {
+      throw createHttpError(
+        409,
+        "The existing CE student registration billing event has an invalid identity and cannot be safely reused."
+      );
+    }
+
+    return {
+      billingEvent,
+      created: false,
+    };
+  }
+
+  const pricing = await getLockedRegistrationPricing(
+    base44,
+    organizationId
+  );
+
+  const now = new Date().toISOString();
+
+  const billingEvent =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.create({
+      organization_id: organizationId,
+      billing_event_key: billingEventKey,
+      fee_kind: "training_registration",
+      event_status: "pending",
+      billing_subject_type: "student",
+      ...(subjectUserId
+        ? { subject_user_id: subjectUserId }
+        : {}),
+      subject_verified_email: normalizeEmail(email),
+      ...(cohortId ? { cohort_id: cohortId } : {}),
+      organization_plan_subscription_id: pricing.subscription.id,
+      pricing_schedule_id: pricing.pricingSchedule.id,
+      pricing_schedule_key_snapshot:
+        pricing.pricingSchedule.pricing_schedule_key,
+      pricing_schedule_item_id: pricing.pricingItem.id,
+      pricing_item_key_snapshot:
+        pricing.pricingItem.pricing_item_key,
+      feature_key:
+        pricing.pricingItem.feature_key ||
+        pricing.billingRate.feature_key ||
+        "ce_training_portal",
+      quantity: 1,
+      unit_amount_cents: pricing.unitAmountCents,
+      amount_cents: pricing.unitAmountCents,
+      currency: pricing.currency,
+      triggered_at: now,
+      notes:
+        "Pending CE student registration billing event. Payment responsibility is controlled by the related PendingRoleAssignment until payment collection begins.",
+    });
+
+  return {
+    billingEvent,
+    created: true,
+  };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -199,14 +516,17 @@ Deno.serve(async (req) => {
 
     if (!user) {
       return Response.json(
-        { error: "Unauthorized" },
+        { ok: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     if (user.role !== "ce_instructor") {
       return Response.json(
-        { error: "Only CE instructors can invite students" },
+        {
+          ok: false,
+          error: "Only CE instructors can invite students.",
+        },
         { status: 403 }
       );
     }
@@ -216,24 +536,32 @@ Deno.serve(async (req) => {
     const email = normalizeEmail(body.email);
     const cohortId = String(body?.cohort_id || "").trim();
 
-    const paymentResponsibility = String(
+    const requestedPaymentResponsibility = String(
       body?.payment_responsibility || "student_paid"
     ).trim();
 
-    const instructorPaymentMode = String(
+    const requestedInstructorPaymentMode = String(
       body?.instructor_payment_mode || ""
     ).trim();
 
     if (!isValidEmail(email)) {
       return Response.json(
-        { error: "A valid student email address is required" },
+        {
+          ok: false,
+          error: "A valid student email address is required.",
+        },
         { status: 400 }
       );
     }
 
-    if (!PAYMENT_RESPONSIBILITIES.includes(paymentResponsibility)) {
+    if (
+      !PAYMENT_RESPONSIBILITIES.includes(
+        requestedPaymentResponsibility
+      )
+    ) {
       return Response.json(
         {
+          ok: false,
           error:
             'payment_responsibility must be "student_paid" or "instructor_paid".',
         },
@@ -242,11 +570,14 @@ Deno.serve(async (req) => {
     }
 
     if (
-      paymentResponsibility === "instructor_paid" &&
-      !INSTRUCTOR_PAYMENT_MODES.includes(instructorPaymentMode)
+      requestedPaymentResponsibility === "instructor_paid" &&
+      !INSTRUCTOR_PAYMENT_MODES.includes(
+        requestedInstructorPaymentMode
+      )
     ) {
       return Response.json(
         {
+          ok: false,
           error:
             'instructor_payment_mode must be "pay_now" or "invoice_with_cohort" when instructor_paid is selected.',
         },
@@ -259,8 +590,9 @@ Deno.serve(async (req) => {
     if (!orgId) {
       return Response.json(
         {
+          ok: false,
           error:
-            "Your instructor account is missing organization access",
+            "Your instructor account is missing organization access.",
         },
         { status: 400 }
       );
@@ -278,7 +610,10 @@ Deno.serve(async (req) => {
 
       if (!cohort) {
         return Response.json(
-          { error: "Selected CE training cohort was not found." },
+          {
+            ok: false,
+            error: "Selected CE training cohort was not found.",
+          },
           { status: 404 }
         );
       }
@@ -286,6 +621,7 @@ Deno.serve(async (req) => {
       if (cohort.org_id && cohort.org_id !== orgId) {
         return Response.json(
           {
+            ok: false,
             error:
               "Selected CE training cohort does not belong to your organization.",
           },
@@ -296,6 +632,7 @@ Deno.serve(async (req) => {
       if (cohort.cohort_type !== "training") {
         return Response.json(
           {
+            ok: false,
             error:
               "CE student invitations may only reference Training cohorts.",
           },
@@ -313,6 +650,7 @@ Deno.serve(async (req) => {
       if (existingUser.is_active === false) {
         return Response.json(
           {
+            ok: false,
             error:
               "This email belongs to a deactivated account and cannot be invited.",
           },
@@ -327,6 +665,7 @@ Deno.serve(async (req) => {
         ) {
           return Response.json(
             {
+              ok: false,
               error:
                 "This CE Student account belongs to a different organization.",
             },
@@ -336,7 +675,7 @@ Deno.serve(async (req) => {
 
         return Response.json({
           ok: true,
-          message: "This CE Student is already registered",
+          message: "This CE Student is already registered.",
           email,
           user_id: existingUser.id,
           existing_user: true,
@@ -348,6 +687,7 @@ Deno.serve(async (req) => {
       if (!isNeutralExistingAccount(existingUser)) {
         return Response.json(
           {
+            ok: false,
             error:
               "An active non-CE account already exists for this email and cannot be used for CE student enrollment.",
           },
@@ -367,22 +707,45 @@ Deno.serve(async (req) => {
         OPEN_INVITE_STATUSES.includes(assignment.status)
     );
 
+    const effectivePaymentResponsibility = existingInvite
+      ? existingInvite.payment_responsibility || "student_paid"
+      : requestedPaymentResponsibility;
+
+    const effectiveInstructorPaymentMode = existingInvite
+      ? existingInvite.instructor_payment_mode || null
+      : requestedPaymentResponsibility === "instructor_paid"
+        ? requestedInstructorPaymentMode
+        : null;
+
+    const effectiveCohortId = existingInvite
+      ? String(existingInvite.cohort_id || "").trim()
+      : cohortId;
+
+    const billingResult = await ensureRegistrationBillingEvent({
+      base44,
+      organizationId: orgId,
+      email,
+      subjectUserId: existingUser?.id || "",
+      cohortId: effectiveCohortId,
+    });
+
     if (existingInvite) {
       return Response.json({
         ok: true,
         message:
-          "A CE Student invitation already exists for this email",
+          "A CE Student invitation already exists for this email.",
         email,
         pending_id: existingInvite.id,
         status: existingInvite.status,
         already_invited: true,
         email_sent:
           existingInvite.status === "invite_email_sent",
-        payment_responsibility:
-          existingInvite.payment_responsibility ||
-          "student_paid",
-        instructor_payment_mode:
-          existingInvite.instructor_payment_mode || null,
+        payment_responsibility: effectivePaymentResponsibility,
+        instructor_payment_mode: effectiveInstructorPaymentMode,
+        billing_event_id: billingResult.billingEvent.id,
+        billing_event_status:
+          billingResult.billingEvent.event_status,
+        billing_event_created: billingResult.created,
       });
     }
 
@@ -396,10 +759,10 @@ Deno.serve(async (req) => {
         invited_by_name: user.full_name || user.email || "",
         invited_at: new Date().toISOString(),
         cohort_id: cohortId || undefined,
-        payment_responsibility: paymentResponsibility,
+        payment_responsibility: requestedPaymentResponsibility,
         instructor_payment_mode:
-          paymentResponsibility === "instructor_paid"
-            ? instructorPaymentMode
+          requestedPaymentResponsibility === "instructor_paid"
+            ? requestedInstructorPaymentMode
             : undefined,
         status: "pending",
       });
@@ -414,10 +777,11 @@ Deno.serve(async (req) => {
           inviterName:
             user.full_name || user.email || "Your instructor",
           appUrl: APP_URL,
-          paymentResponsibility,
+          paymentResponsibility:
+            requestedPaymentResponsibility,
           instructorPaymentMode:
-            paymentResponsibility === "instructor_paid"
-              ? instructorPaymentMode
+            requestedPaymentResponsibility === "instructor_paid"
+              ? requestedInstructorPaymentMode
               : "",
         });
 
@@ -450,19 +814,27 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: true,
       message: emailSent
-        ? "CE Student enrollment invitation created and email sent"
-        : "CE Student enrollment invitation created",
+        ? "CE Student enrollment invitation created and email sent."
+        : "CE Student enrollment invitation created.",
       pending_id: pending.id,
       email,
       status: finalStatus,
       email_sent: emailSent,
       existing_user: !!existingUser?.id,
-      payment_responsibility: paymentResponsibility,
+      payment_responsibility: requestedPaymentResponsibility,
       instructor_payment_mode:
-        paymentResponsibility === "instructor_paid"
-          ? instructorPaymentMode
+        requestedPaymentResponsibility === "instructor_paid"
+          ? requestedInstructorPaymentMode
           : null,
       cohort_id: cohortId || null,
+      billing_event_id: billingResult.billingEvent.id,
+      billing_event_status:
+        billingResult.billingEvent.event_status,
+      billing_event_created: billingResult.created,
+      billing_event_amount_cents:
+        billingResult.billingEvent.amount_cents,
+      billing_event_currency:
+        billingResult.billingEvent.currency,
     });
   } catch (error) {
     console.error("[inviteCEStudent] Error:", error);
@@ -471,10 +843,12 @@ Deno.serve(async (req) => {
       {
         ok: false,
         error:
-          error.message ||
-          "Unable to create CE Student invitation",
+          error?.message ||
+          "Unable to create CE Student invitation.",
       },
-      { status: 500 }
+      {
+        status: Number(error?.status) || 500,
+      }
     );
   }
 });
