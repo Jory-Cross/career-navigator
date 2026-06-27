@@ -178,8 +178,12 @@ console.log("USER MAP", userById);
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
 
-  const canAddTrainer = canManageCohortRoster;
+   const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
+
+  const canRecordTestRegistrationWaiver =
+    user?.role === "admin" &&
+    cohort?.cohort_type === "training";
 
   const canRecordStudentTrainingCompletion = useMemo(() => {
     if (!user || cohort?.cohort_type !== "training") {
