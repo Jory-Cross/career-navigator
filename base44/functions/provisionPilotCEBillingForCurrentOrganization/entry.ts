@@ -14,6 +14,116 @@ function normalizeText(value: unknown) {
   return String(value || "").trim();
 }
 
+function normalizeEmail(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getOrganizationLegacyIdentifiers(organization: any) {
+  return [
+    organization?.id,
+    organization?.org_id,
+    organization?.organization_id,
+    organization?.organization_code,
+    organization?.code,
+  ]
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
+}
+
+async function resolveOrganizationForProvisioning({
+  base44,
+  caller,
+  requestedOrganizationId,
+}: {
+  base44: any;
+  caller: any;
+  requestedOrganizationId: string;
+}) {
+  const organizationRows =
+    await base44.asServiceRole.entities.Organization.list();
+
+  const organizations = Array.isArray(organizationRows)
+    ? organizationRows.filter(Boolean)
+    : [];
+
+  const requestedId = normalizeText(requestedOrganizationId);
+  const callerOrgValue = normalizeText(caller?.org_id);
+  const callerEmail = normalizeEmail(caller?.email);
+
+  if (requestedId) {
+    const requestedMatches = organizations.filter((organization) =>
+      getOrganizationLegacyIdentifiers(organization).includes(requestedId)
+    );
+
+    if (requestedMatches.length === 1) {
+      return {
+        organization: requestedMatches[0],
+        resolution_method: "requested_organization_id",
+      };
+    }
+
+    if (requestedMatches.length > 1) {
+      throw createHttpError(
+        409,
+        "The supplied organization identifier matches multiple Organization records. Resolve the duplicate organization identifiers before provisioning pilot billing."
+      );
+    }
+
+    throw createHttpError(
+      404,
+      "The supplied organization identifier does not match an Organization record."
+    );
+  }
+
+  if (callerOrgValue) {
+    const callerOrgMatches = organizations.filter((organization) =>
+      getOrganizationLegacyIdentifiers(organization).includes(
+        callerOrgValue
+      )
+    );
+
+    if (callerOrgMatches.length === 1) {
+      return {
+        organization: callerOrgMatches[0],
+        resolution_method: "caller_org_id",
+      };
+    }
+
+    if (callerOrgMatches.length > 1) {
+      throw createHttpError(
+        409,
+        "Your account organization identifier matches multiple Organization records. Resolve the duplicate organization identifiers before provisioning pilot billing."
+      );
+    }
+  }
+
+  if (callerEmail) {
+    const ownerEmailMatches = organizations.filter(
+      (organization) =>
+        normalizeEmail(organization?.owner_email) === callerEmail
+    );
+
+    if (ownerEmailMatches.length === 1) {
+      return {
+        organization: ownerEmailMatches[0],
+        resolution_method: "owner_email",
+      };
+    }
+
+    if (ownerEmailMatches.length > 1) {
+      throw createHttpError(
+        409,
+        "Your email is listed as owner on multiple Organization records. Run this function again with the exact Organization record ID in organization_id."
+      );
+    }
+  }
+
+  throw createHttpError(
+    409,
+    "No canonical Organization record could be resolved for this Platform Owner. Add your email as the Organization owner or run this function with a valid Organization record ID."
+  );
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -50,30 +160,22 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
-    const organizationId =
-      normalizeText(body?.organization_id) ||
-      normalizeText(caller.org_id);
+    const organizationResolution =
+      await resolveOrganizationForProvisioning({
+        base44,
+        caller,
+        requestedOrganizationId: normalizeText(
+          body?.organization_id
+        ),
+      });
+
+    const organization = organizationResolution.organization;
+    const organizationId = normalizeText(organization?.id);
 
     if (!organizationId) {
       throw createHttpError(
-        400,
-        "No organization ID was provided and your account is not connected to an organization."
-      );
-    }
-
-    const organizationRows =
-      await base44.asServiceRole.entities.Organization.filter({
-        id: organizationId,
-      });
-
-    const organization = Array.isArray(organizationRows)
-      ? organizationRows[0]
-      : null;
-
-    if (!organization) {
-      throw createHttpError(
-        404,
-        "The selected organization could not be found."
+        409,
+        "The resolved Organization record is missing its canonical ID."
       );
     }
 
@@ -220,25 +322,27 @@ Deno.serve(async (req) => {
 
     if (!pricingItem) {
       pricingItem =
-        await base44.asServiceRole.entities.PlatformPricingScheduleItem.create({
-          pricing_schedule_id: pricingSchedule.id,
-          pricing_item_key:
-            `${PILOT_PRICING_SCHEDULE_KEY}:` +
-            `${CE_STUDENT_REGISTRATION_RATE_KEY}:billing_rate`,
-          pricing_item_type: "billing_rate",
-          platform_billing_rate_id: registrationRate.id,
-          billing_rate_key_snapshot:
-            CE_STUDENT_REGISTRATION_RATE_KEY,
-          feature_key:
-            registrationRate.feature_key || "ce_training_portal",
-          charge_model: "one_time",
-          amount_cents: registrationRate.amount_cents,
-          currency: registrationRate.currency || "USD",
-          is_active: true,
-          effective_at: now,
-          notes:
-            "Locked $49 CE student registration price for the pilot CE Training enrollment workflow.",
-        });
+        await base44.asServiceRole.entities.PlatformPricingScheduleItem.create(
+          {
+            pricing_schedule_id: pricingSchedule.id,
+            pricing_item_key:
+              `${PILOT_PRICING_SCHEDULE_KEY}:` +
+              `${CE_STUDENT_REGISTRATION_RATE_KEY}:billing_rate`,
+            pricing_item_type: "billing_rate",
+            platform_billing_rate_id: registrationRate.id,
+            billing_rate_key_snapshot:
+              CE_STUDENT_REGISTRATION_RATE_KEY,
+            feature_key:
+              registrationRate.feature_key || "ce_training_portal",
+            charge_model: "one_time",
+            amount_cents: registrationRate.amount_cents,
+            currency: registrationRate.currency || "USD",
+            is_active: true,
+            effective_at: now,
+            notes:
+              "Locked $49 CE student registration price for the pilot CE Training enrollment workflow.",
+          }
+        );
 
       pricingItemCreated = true;
     }
@@ -260,21 +364,23 @@ Deno.serve(async (req) => {
       TRAINER_BUSINESS_PLAN_KEY;
 
     const subscription =
-      await base44.asServiceRole.entities.OrganizationPlanSubscription.create({
-        organization_id: organizationId,
-        platform_plan_id: trainerPlan.id,
-        pricing_schedule_id: pricingSchedule.id,
-        pricing_schedule_key_snapshot:
-          pricingSchedule.pricing_schedule_key,
-        subscription_key: subscriptionKey,
-        subscription_status: "active",
-        billing_interval: "monthly",
-        starts_at: now,
-        is_current: true,
-        subscription_source: "migration",
-        notes:
-          "Platform Owner-provisioned pilot Trainer Business subscription. No Stripe subscription or recurring charge is created by this record.",
-      });
+      await base44.asServiceRole.entities.OrganizationPlanSubscription.create(
+        {
+          organization_id: organizationId,
+          platform_plan_id: trainerPlan.id,
+          pricing_schedule_id: pricingSchedule.id,
+          pricing_schedule_key_snapshot:
+            pricingSchedule.pricing_schedule_key,
+          subscription_key: subscriptionKey,
+          subscription_status: "active",
+          billing_interval: "monthly",
+          starts_at: now,
+          is_current: true,
+          subscription_source: "migration",
+          notes:
+            "Platform Owner-provisioned pilot Trainer Business subscription. No Stripe subscription or recurring charge is created by this record.",
+        }
+      );
 
     try {
       await base44.asServiceRole.entities.PlatformAuditLog.create({
@@ -289,6 +395,8 @@ Deno.serve(async (req) => {
         occurred_at: now,
         details: {
           organization_id: organizationId,
+          organization_resolution_method:
+            organizationResolution.resolution_method,
           pricing_schedule_id: pricingSchedule.id,
           pricing_schedule_key:
             pricingSchedule.pricing_schedule_key,
@@ -312,6 +420,8 @@ Deno.serve(async (req) => {
       ok: true,
       organization_id: organizationId,
       organization_name: organization.name || null,
+      organization_resolution_method:
+        organizationResolution.resolution_method,
       pricing_schedule_id: pricingSchedule.id,
       pricing_schedule_key: pricingSchedule.pricing_schedule_key,
       pricing_schedule_created: scheduleCreated,
