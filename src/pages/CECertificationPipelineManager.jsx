@@ -253,8 +253,10 @@ export default function CECertificationPipelineManager() {
     }
 
     const confirmationMessages = {
-      create_pending:
-        "Create a Pending Certification record for this student? Their paid training completion will be linked automatically.",
+                <p className="mt-1 text-sm text-slate-500">
+            Paid CE course students only. Track training progress through
+            certification without exposing unrelated platform users.
+          </p>
       verify:
         "Verify this student's CE practitioner certification? This confirms certification eligibility but does not grant CE workspace access.",
       revoke:
