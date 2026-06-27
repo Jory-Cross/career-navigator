@@ -1,8 +1,14 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
+import Stripe from "npm:stripe@14.21.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
+
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY)
+  : null;
 
 const CE_STUDENT_REGISTRATION_RATE_KEY = "ce_student_registration";
 
@@ -36,6 +42,13 @@ const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
   "trialing",
 ]);
 
+const CHECKOUT_ELIGIBLE_EVENT_STATUSES = new Set([
+  "pending",
+  "ready_for_checkout",
+  "payment_processing",
+  "failed",
+]);
+
 const fromDomain = RESEND_FROM_EMAIL.split("@")[1] || "";
 
 const RESEND_FROM =
@@ -53,6 +66,10 @@ function normalizeEmail(value) {
   return String(value || "").toLowerCase().trim();
 }
 
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -64,6 +81,16 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function formatMoney(amountCents, currency) {
+  const amount = Number(amountCents);
+
+  if (!Number.isFinite(amount)) {
+    return "";
+  }
+
+  return `${String(currency || "USD").toUpperCase()} ${(amount / 100).toFixed(2)}`;
 }
 
 function getCanonicalUser(users) {
@@ -101,6 +128,21 @@ function buildRegistrationBillingEventKey(orgId, email) {
   return `ce_student_registration:${orgId}:${encodeURIComponent(
     normalizeEmail(email)
   )}`;
+}
+
+function getAppUrl() {
+  return APP_URL.replace(/\/+$/, "");
+}
+
+function buildCheckoutRedirectUrls() {
+  const appUrl = getAppUrl();
+
+  return {
+    successUrl:
+      `${appUrl}/?ce_registration=success` +
+      `&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${appUrl}/?ce_registration=cancelled`,
+  };
 }
 
 function isPriceItemAvailableNow(item, nowMs) {
@@ -157,7 +199,7 @@ function getEnrollmentMessage(
   instructorPaymentMode
 ) {
   if (paymentResponsibility === "student_paid") {
-    return "Your CE Training registration fee must be settled before CE Training Portal access is activated.";
+    return "Your CE Training registration fee must be paid before CE Training Portal access is activated.";
   }
 
   if (instructorPaymentMode === "pay_now") {
@@ -167,21 +209,278 @@ function getEnrollmentMessage(
   return "Your instructor will include your CE Training registration on a cohort invoice. CE Training Portal access will be activated after that invoice is settled.";
 }
 
+async function getExistingCheckoutSessionIfUsable(billingEvent) {
+  if (!stripe) {
+    throw createHttpError(
+      500,
+      "Stripe is not configured for CE registration checkout."
+    );
+  }
+
+  const existingSessionId = normalizeText(
+    billingEvent?.stripe_checkout_session_id
+  );
+
+  if (!existingSessionId) {
+    return null;
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(
+      existingSessionId
+    );
+
+    if (session.status === "open" && session.url) {
+      return {
+        reusable: true,
+        session,
+      };
+    }
+
+    if (session.status === "complete") {
+      return {
+        reusable: false,
+        completed: true,
+        session,
+      };
+    }
+
+    return {
+      reusable: false,
+      expired: true,
+      session,
+    };
+  } catch (error) {
+    console.error(
+      "[inviteCEStudent] Unable to retrieve existing Stripe checkout session:",
+      error?.message || error
+    );
+
+    return {
+      reusable: false,
+      expired: true,
+      session: null,
+    };
+  }
+}
+
+async function createStudentPaidCheckout({
+  base44,
+  billingEvent,
+  organizationId,
+  studentEmail,
+}) {
+  if (!stripe) {
+    throw createHttpError(
+      500,
+      "Stripe is not configured for CE registration checkout."
+    );
+  }
+
+  if (
+    !CHECKOUT_ELIGIBLE_EVENT_STATUSES.has(
+      billingEvent?.event_status
+    )
+  ) {
+    throw createHttpError(
+      409,
+      `This CE registration billing event cannot create checkout while its status is "${billingEvent?.event_status}".`
+    );
+  }
+
+  const amountCents = Number(billingEvent?.amount_cents);
+  const currency = normalizeText(
+    billingEvent?.currency || "USD"
+  ).toLowerCase();
+
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    throw createHttpError(
+      409,
+      "The CE registration billing event has an invalid locked amount."
+    );
+  }
+
+  if (!currency) {
+    throw createHttpError(
+      409,
+      "The CE registration billing event is missing its locked currency."
+    );
+  }
+
+  const existingCheckout =
+    await getExistingCheckoutSessionIfUsable(billingEvent);
+
+  if (existingCheckout?.reusable) {
+    return {
+      checkoutUrl: existingCheckout.session.url,
+      checkoutSessionId: existingCheckout.session.id,
+      reusedExistingCheckout: true,
+      amountCents,
+      currency: currency.toUpperCase(),
+    };
+  }
+
+  if (
+    existingCheckout?.completed &&
+    existingCheckout.session.payment_status === "paid"
+  ) {
+    throw createHttpError(
+      409,
+      "Payment has already completed for this registration. A new checkout link cannot be created."
+    );
+  }
+
+  const { successUrl, cancelUrl } = buildCheckoutRedirectUrls();
+
+  const checkoutAttemptKey = existingCheckout?.expired
+    ? `${billingEvent.id}:retry:${Date.now()}`
+    : `${billingEvent.id}:initial`;
+
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      payment_method_types: ["card"],
+      customer_email: studentEmail,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency,
+            unit_amount: amountCents,
+            product_data: {
+              name: "CE Student Registration",
+              description:
+                "One-time CE Training Portal registration fee.",
+            },
+          },
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: String(billingEvent.id),
+      metadata: {
+        billing_flow: "ce_student_registration",
+        billing_event_id: String(billingEvent.id),
+        billing_event_key: String(
+          billingEvent.billing_event_key
+        ),
+        organization_id: organizationId,
+        subject_verified_email: studentEmail,
+        payment_responsibility: "student_paid",
+        instructor_payment_mode: "",
+      },
+      payment_intent_data: {
+        metadata: {
+          billing_flow: "ce_student_registration",
+          billing_event_id: String(billingEvent.id),
+          billing_event_key: String(
+            billingEvent.billing_event_key
+          ),
+          organization_id: organizationId,
+          subject_verified_email: studentEmail,
+        },
+      },
+    },
+    {
+      idempotencyKey: checkoutAttemptKey,
+    }
+  );
+
+  if (!session.url) {
+    throw createHttpError(
+      500,
+      "Stripe created the CE registration checkout session without a checkout URL."
+    );
+  }
+
+  await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+    billingEvent.id,
+    {
+      event_status: "ready_for_checkout",
+      stripe_checkout_session_id: session.id,
+      notes:
+        "CE registration checkout session created automatically when the CE student invitation email was sent.",
+    }
+  );
+
+  return {
+    checkoutUrl: session.url,
+    checkoutSessionId: session.id,
+    reusedExistingCheckout: false,
+    amountCents,
+    currency: currency.toUpperCase(),
+  };
+}
+
 async function sendInviteEmail({
   toEmail,
   inviterName,
   appUrl,
   paymentResponsibility,
   instructorPaymentMode,
+  checkoutUrl,
+  amountCents,
+  currency,
 }) {
   const safeEmail = escapeHtml(toEmail);
   const safeInviterName = escapeHtml(inviterName);
+  const safeAppUrl = escapeHtml(appUrl);
   const safeEnrollmentMessage = escapeHtml(
     getEnrollmentMessage(
       paymentResponsibility,
       instructorPaymentMode
     )
   );
+
+  const isStudentPaid =
+    paymentResponsibility === "student_paid";
+
+  if (isStudentPaid && !checkoutUrl) {
+    throw new Error(
+      "A student-paid CE invitation cannot be emailed without a secure Stripe checkout link."
+    );
+  }
+
+  const paymentAmount = formatMoney(amountCents, currency);
+
+  const paymentSection = isStudentPaid
+    ? `
+      <div style="margin: 24px 0; padding: 20px; border: 1px solid #ddd6fe; background: #f5f3ff; border-radius: 8px;">
+        <div style="font-size: 12px; color: #6d28d9; font-weight: 700; letter-spacing: .04em; margin-bottom: 6px;">
+          CE TRAINING REGISTRATION FEE
+        </div>
+        <div style="font-size: 24px; color: #4c1d95; font-weight: 700; margin-bottom: 10px;">
+          ${escapeHtml(paymentAmount)}
+        </div>
+        <p style="margin: 0; color: #4c1d95; line-height: 1.5;">
+          Complete payment first. CE Training access becomes available after payment is confirmed and you register or sign in using this invited email address.
+        </p>
+      </div>
+
+      <a
+        href="${escapeHtml(checkoutUrl)}"
+        style="display: inline-block; background: #7c3aed; color: white; padding: 13px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 0 0 18px;"
+      >
+        Pay Registration Fee →
+      </a>
+    `
+    : "";
+
+  const steps = isStudentPaid
+    ? `
+      <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
+        <li>Use the secure payment button below to pay the registration fee</li>
+        <li>Return to Career Navigator after Stripe confirms payment</li>
+        <li>Register or sign in using <strong>${safeEmail}</strong></li>
+      </ol>
+    `
+    : `
+      <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
+        <li>Open the CE Training Portal</li>
+        <li>Register or sign in using <strong>${safeEmail}</strong></li>
+        <li>CE Training access will appear after your registration payment is settled</li>
+      </ol>
+    `;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -192,7 +491,9 @@ async function sendInviteEmail({
     body: JSON.stringify({
       from: `CE Training <${RESEND_FROM}>`,
       to: [toEmail],
-      subject: "You're invited to CE Training",
+      subject: isStudentPaid
+        ? "Complete your CE Training registration"
+        : "You're invited to CE Training",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
           <h2 style="color: #7c3aed; margin-bottom: 8px;">You're invited to CE Training!</h2>
@@ -205,23 +506,21 @@ async function sendInviteEmail({
             ${safeEnrollmentMessage}
           </p>
 
+          ${paymentSection}
+
           <p style="margin-bottom: 8px;">To get started:</p>
 
-          <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
-            <li>Click the link below to open the CE Training Portal</li>
-            <li>Register or sign in using <strong>${safeEmail}</strong></li>
-            <li>CE Training access will appear after your registration is settled</li>
-          </ol>
+          ${steps}
 
           <a
-            href="${appUrl}"
-            style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
+            href="${safeAppUrl}"
+            style="display: inline-block; background: #1e293b; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
           >
-            View Enrollment →
+            Register or Sign In →
           </a>
 
           <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-            Use <strong>${safeEmail}</strong>. A different email address will not connect to this invitation.
+            Use <strong>${safeEmail}</strong>. A different email address will not connect to this invitation or its registration payment.
           </p>
         </div>
       `,
@@ -733,7 +1032,7 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: true,
         message:
-          "A CE Student invitation already exists for this email.",
+          "A CE Student invitation already exists for this email. Revoke it before creating a new invitation.",
         email,
         pending_id: existingInvite.id,
         status: existingInvite.status,
@@ -769,6 +1068,54 @@ Deno.serve(async (req) => {
 
     let emailSent = false;
     let finalStatus = "pending";
+    let checkoutResult = null;
+
+    if (
+      requestedPaymentResponsibility === "student_paid" &&
+      RESEND_API_KEY
+    ) {
+      try {
+        checkoutResult = await createStudentPaidCheckout({
+          base44,
+          billingEvent: billingResult.billingEvent,
+          organizationId: orgId,
+          studentEmail: email,
+        });
+      } catch (checkoutError) {
+        finalStatus = "pending_email_failed";
+
+        await base44.entities.PendingRoleAssignment.update(
+          pending.id,
+          {
+            status: finalStatus,
+          }
+        );
+
+        console.error(
+          "[inviteCEStudent] Checkout preparation failed:",
+          String(checkoutError)
+        );
+
+        return Response.json(
+          {
+            ok: false,
+            invitation_created: true,
+            pending_id: pending.id,
+            email,
+            status: finalStatus,
+            error:
+              "The CE invitation was created, but the payment-link email could not be prepared. Revoke this invitation before creating a new invitation.",
+            billing_event_id: billingResult.billingEvent.id,
+            billing_event_status:
+              billingResult.billingEvent.event_status,
+          },
+          {
+            status:
+              Number(checkoutError?.status) || 500,
+          }
+        );
+      }
+    }
 
     if (RESEND_API_KEY) {
       try {
@@ -776,13 +1123,20 @@ Deno.serve(async (req) => {
           toEmail: email,
           inviterName:
             user.full_name || user.email || "Your instructor",
-          appUrl: APP_URL,
+          appUrl: getAppUrl(),
           paymentResponsibility:
             requestedPaymentResponsibility,
           instructorPaymentMode:
             requestedPaymentResponsibility === "instructor_paid"
               ? requestedInstructorPaymentMode
               : "",
+          checkoutUrl: checkoutResult?.checkoutUrl || "",
+          amountCents:
+            checkoutResult?.amountCents ||
+            billingResult.billingEvent.amount_cents,
+          currency:
+            checkoutResult?.currency ||
+            billingResult.billingEvent.currency,
         });
 
         emailSent = true;
@@ -814,12 +1168,22 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: true,
       message: emailSent
-        ? "CE Student enrollment invitation created and email sent."
+        ? requestedPaymentResponsibility === "student_paid"
+          ? "CE Student invitation created and the secure registration payment link was emailed."
+          : "CE Student enrollment invitation created and email sent."
         : "CE Student enrollment invitation created.",
       pending_id: pending.id,
       email,
       status: finalStatus,
       email_sent: emailSent,
+      payment_link_emailed:
+        emailSent &&
+        requestedPaymentResponsibility === "student_paid",
+      checkout_created:
+        requestedPaymentResponsibility === "student_paid" &&
+        !!checkoutResult,
+      checkout_reused:
+        !!checkoutResult?.reusedExistingCheckout,
       existing_user: !!existingUser?.id,
       payment_responsibility: requestedPaymentResponsibility,
       instructor_payment_mode:
@@ -829,7 +1193,10 @@ Deno.serve(async (req) => {
       cohort_id: cohortId || null,
       billing_event_id: billingResult.billingEvent.id,
       billing_event_status:
-        billingResult.billingEvent.event_status,
+        requestedPaymentResponsibility === "student_paid" &&
+        checkoutResult
+          ? "ready_for_checkout"
+          : billingResult.billingEvent.event_status,
       billing_event_created: billingResult.created,
       billing_event_amount_cents:
         billingResult.billingEvent.amount_cents,
@@ -839,12 +1206,16 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("[inviteCEStudent] Error:", error);
 
-    return Response.json({
-  ok: false,
-  error:
-    error?.message ||
-    "Unable to create CE Student invitation.",
-  error_status: Number(error?.status) || 500,
-});
+    return Response.json(
+      {
+        ok: false,
+        error:
+          error?.message ||
+          "Unable to create CE Student invitation.",
+      },
+      {
+        status: Number(error?.status) || 500,
+      }
+    );
   }
 });
