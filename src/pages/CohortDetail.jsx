@@ -292,6 +292,71 @@ console.log("USER MAP", userById);
     }
   };
 
+  const handleRecordTestRegistrationWaiver = async (membership) => {
+    const student =
+      orgUsers?.find((row) => row.id === membership.user_id) || null;
+
+    const studentName =
+      student?.full_name ||
+      student?.email ||
+      "this student";
+
+    const waiverReason = window.prompt(
+      `Record a test registration waiver for ${studentName}?`,
+      "Internal end-to-end CE training test account."
+    );
+
+    if (waiverReason === null) {
+      return;
+    }
+
+    if (!waiverReason.trim()) {
+      toast.error("A waiver reason is required.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Confirm test registration waiver for ${studentName}. No payment will be recorded.`
+      )
+    ) {
+      return;
+    }
+
+    setWaivingMembershipId(membership.id);
+
+    try {
+      const res = await base44.functions.invoke(
+        "recordCEStudentTestRegistrationWaiver",
+        {
+          action: "record_test_waiver",
+          cohort_id,
+          user_id: membership.user_id,
+          waiver_reason: waiverReason.trim(),
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to record the CE student test registration waiver."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Test registration waiver recorded."
+      );
+    } catch (err) {
+      toast.error(
+        err?.message ||
+          "Unable to record the CE student test registration waiver."
+      );
+    } finally {
+      setWaivingMembershipId("");
+    }
+  };
+
   const handleMarkStudentTrainingComplete = async (membership) => {
     const student =
       orgUsers?.find((row) => row.id === membership.user_id) || null;
