@@ -602,15 +602,15 @@ await queryClient.invalidateQueries({
 />
 
       {/* Add Trainer Dialog */}
-      <AddMemberDialog
-        open={showAddTrainerDialog}
-        onOpenChange={setShowAddTrainerDialog}
-        title="Add Trainer"
-        cohortRole="trainer"
-        allowedRoles={["admin", "management", "employee", "ce_instructor"]}
-        existingMemberUserIds={existingTrainerUserIds}
-        onSubmit={handleAddTrainer}
-      />
+    <AddMemberDialog
+  open={showAddTrainerDialog}
+  onOpenChange={setShowAddTrainerDialog}
+  title="Add Trainer"
+  cohortRole="trainer"
+  allowedRoles={["ce_instructor"]}
+  existingMemberUserIds={existingTrainerUserIds}
+  onSubmit={handleAddTrainer}
+/>
 
       {/* Assign Registered Student Dialog */}
       <AddMemberDialog
