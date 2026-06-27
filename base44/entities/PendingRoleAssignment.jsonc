@@ -55,7 +55,7 @@
     },
     "cohort_id": {
       "type": "string",
-      "description": "CE Training cohort ID this invite is linked to (for ce_student role)"
+      "description": "Optional intended CE Training cohort ID for a CE student invite. This may remain blank until an instructor creates or selects the cohort."
     },
     "cohort_role": {
       "type": "string",
@@ -65,6 +65,22 @@
         "student"
       ],
       "description": "Cohort-local role for CE training users (student for ce_student role)"
+    },
+    "payment_responsibility": {
+      "type": "string",
+      "enum": [
+        "student_paid",
+        "instructor_paid"
+      ],
+      "description": "For CE student invites only: whether the student pays the registration fee or the instructor/business pays it."
+    },
+    "instructor_payment_mode": {
+      "type": "string",
+      "enum": [
+        "pay_now",
+        "invoice_with_cohort"
+      ],
+      "description": "For instructor_paid CE student invites only: whether the registration fee is paid immediately or included on a later cohort invoice."
     },
     "status": {
       "type": "string",
@@ -77,7 +93,7 @@
         "revoked"
       ],
       "default": "pending",
-      "description": "Current invitation status"
+      "description": "Current invitation status. Payment settlement remains authoritative in OrganizationBillingEvent."
     }
   },
   "required": [
