@@ -107,11 +107,13 @@ async function getStudentTrainingEligibility(base44: any, userId: string) {
       .map((cohort) => [cohort.id, cohort])
   );
 
-  const paidTrainingCohortIds = new Set(
+   const paidTrainingCohortIds = new Set(
     billingEvents
       .filter((event) => {
         return (
-          event?.event_status === "paid" &&
+          SETTLED_TRAINING_REGISTRATION_STATUSES.has(
+            event?.event_status
+          ) &&
           event?.billing_subject_type === "student" &&
           event?.subject_user_id === userId &&
           PAID_TRAINING_FEE_KINDS.has(event?.fee_kind) &&
