@@ -256,11 +256,13 @@ Deno.serve(async (req) => {
         .map((cohort) => [cohort.id, cohort])
     );
 
-    const paidEnrollmentKeys = new Set(
+       const paidEnrollmentKeys = new Set(
       (Array.isArray(billingEventRows) ? billingEventRows : [])
         .filter((event) => {
           return (
-            event?.event_status === "paid" &&
+            SETTLED_TRAINING_REGISTRATION_STATUSES.has(
+              event?.event_status
+            ) &&
             event?.billing_subject_type === "student" &&
             PAID_TRAINING_FEE_KINDS.has(event?.fee_kind) &&
             String(event?.subject_user_id || "").trim() &&
@@ -271,7 +273,6 @@ Deno.serve(async (req) => {
           getEnrollmentKey(event.subject_user_id, event.cohort_id)
         )
     );
-
     const paidStudentEnrollments = (
       Array.isArray(cohortMemberRows) ? cohortMemberRows : []
     )
