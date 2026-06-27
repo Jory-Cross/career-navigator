@@ -1,25 +1,25 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
-const CLIENT_ROLES = ['client', 'pre_ets', 'dspd'];
+const CLIENT_ROLES = ["client", "pre_ets", "dspd"];
 
 const OPEN_PENDING_ASSIGNMENT_STATUSES = [
-  'pending',
-  'invite_email_sent',
-  'pending_email_failed',
+  "pending",
+  "invite_email_sent",
+  "pending_email_failed",
 ];
 
 const SETTLED_CE_REGISTRATION_STATUSES = new Set([
-  'paid',
-  'waived',
+  "paid",
+  "waived",
 ]);
 
 const CE_REGISTRATION_FEE_KINDS = new Set([
-  'training_registration',
-  'training_reactivation',
+  "training_registration",
+  "training_reactivation",
 ]);
 
 function normalizeEmail(value) {
-  return String(value || '').toLowerCase().trim();
+  return String(value || "").toLowerCase().trim();
 }
 
 function isValidAssignment(assignment) {
@@ -49,30 +49,23 @@ async function getSettledCeStudentRegistration({
   user,
   email,
 }) {
-  const cohortId = String(assignment?.cohort_id || '').trim();
-  const orgId = String(assignment?.org_id || '').trim();
-  const userId = String(user?.id || '').trim();
+  const cohortId = String(assignment?.cohort_id || "").trim();
+  const orgId = String(assignment?.org_id || "").trim();
+  const userId = String(user?.id || "").trim();
   const normalizedEmail = normalizeEmail(email);
-
-  if (!cohortId) {
-    return {
-      settled: false,
-      reason: 'ce_student_invite_missing_cohort',
-    };
-  }
 
   const billingRows =
     await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
-      cohort_id: cohortId,
+      organization_id: orgId,
     });
 
   const matchingEvent = (Array.isArray(billingRows) ? billingRows : []).find(
     (billingEvent) => {
       const matchesOrganization =
-        String(billingEvent?.organization_id || '').trim() === orgId;
+        String(billingEvent?.organization_id || "").trim() === orgId;
 
       const isStudentRegistration =
-        billingEvent?.billing_subject_type === 'student' &&
+        billingEvent?.billing_subject_type === "student" &&
         CE_REGISTRATION_FEE_KINDS.has(billingEvent?.fee_kind);
 
       const isSettled =
@@ -82,16 +75,21 @@ async function getSettledCeStudentRegistration({
 
       const matchesUser =
         userId &&
-        String(billingEvent?.subject_user_id || '').trim() === userId;
+        String(billingEvent?.subject_user_id || "").trim() === userId;
 
       const matchesVerifiedEmail =
         normalizeEmail(billingEvent?.subject_verified_email) ===
         normalizedEmail;
 
+      const matchesCohort =
+        !cohortId ||
+        String(billingEvent?.cohort_id || "").trim() === cohortId;
+
       return (
         matchesOrganization &&
         isStudentRegistration &&
         isSettled &&
+        matchesCohort &&
         (matchesUser || matchesVerifiedEmail)
       );
     }
@@ -100,7 +98,7 @@ async function getSettledCeStudentRegistration({
   if (!matchingEvent) {
     return {
       settled: false,
-      reason: 'ce_student_registration_not_settled',
+      reason: "ce_student_registration_not_settled",
     };
   }
 
@@ -129,7 +127,7 @@ Deno.serve(async (req) => {
     if (!user?.email) {
       return Response.json({
         skipped: true,
-        reason: 'no_user_email',
+        reason: "no_user_email",
       });
     }
 
@@ -173,13 +171,13 @@ Deno.serve(async (req) => {
     if (validPending.length === 0) {
       return Response.json({
         skipped: true,
-        reason: 'no_valid_pending_assignment',
+        reason: "no_valid_pending_assignment",
       });
     }
 
     const assignment = getMostRecentAssignment(validPending);
 
-    if (assignment.role === 'ce_student') {
+    if (assignment.role === "ce_student") {
       const registration = await getSettledCeStudentRegistration({
         base44,
         assignment,
@@ -208,7 +206,7 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.entities.User.update(user.id, updateData);
 
-    const staffRoles = ['employee', 'management'];
+    const staffRoles = ["employee", "management"];
 
     if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
       const existingAssignment =
@@ -237,7 +235,7 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.PendingRoleAssignment.update(
       assignment.id,
       {
-        status: 'accepted',
+        status: "accepted",
       }
     );
 
@@ -248,7 +246,7 @@ Deno.serve(async (req) => {
       applied: updateData,
     });
   } catch (error) {
-    console.error('[onUserRegistered] Error:', error.message);
+    console.error("[onUserRegistered] Error:", error.message);
 
     return Response.json(
       {
