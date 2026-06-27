@@ -785,26 +785,26 @@ console.log("USER MAP", userById);
 
                                     {cohort?.cohort_type === "training" ? (
                        <div className="mr-3 flex shrink-0 items-center gap-2">
-                         {canRecordTestRegistrationWaiver ? (
-                           <Button
-                             type="button"
-                             size="sm"
-                             variant="outline"
-                             disabled={waivingMembershipId === m.id}
-                             onClick={() =>
-                               handleRecordTestRegistrationWaiver(m)
-                             }
-                             className="gap-1.5 border-violet-200 text-violet-700 hover:bg-violet-50"
-                           >
-                             {waivingMembershipId === m.id ? (
-                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                             ) : (
-                               <ShieldCheck className="h-3.5 w-3.5" />
-                             )}
-                             Record Test Waiver
-                           </Button>
-                         ) : null}
-
+                         {canRecordTestRegistrationWaiver &&
+!m.has_settled_registration ? (
+  <Button
+    type="button"
+    size="sm"
+    variant="outline"
+    disabled={waivingMembershipId === m.id}
+    onClick={() =>
+      handleRecordTestRegistrationWaiver(m)
+    }
+    className="gap-1.5 border-violet-200 text-violet-700 hover:bg-violet-50"
+  >
+    {waivingMembershipId === m.id ? (
+      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+    ) : (
+      <ShieldCheck className="h-3.5 w-3.5" />
+    )}
+    Record Test Waiver
+  </Button>
+) : null}
                          {isCompleted ? (
                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
                              Training Complete
