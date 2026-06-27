@@ -59,9 +59,9 @@ export default function CohortDetail() {
   const [showAddTrainerDialog, setShowAddTrainerDialog] = useState(false);
   const [addingTrainer, setAddingTrainer] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-  const [addingMember, setAddingMember] = useState(false);
+    const [addingMember, setAddingMember] = useState(false);
   const [completingMembershipId, setCompletingMembershipId] = useState("");
-
+  const [waivingMembershipId, setWaivingMembershipId] = useState("");
   useEffect(() => {
     let active = true;
     base44.auth.me().then((u) => {
