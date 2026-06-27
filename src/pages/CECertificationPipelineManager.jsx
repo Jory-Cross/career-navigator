@@ -252,17 +252,14 @@ export default function CECertificationPipelineManager() {
       return;
     }
 
-    const confirmationMessages = {
-                        <p className="mt-1 text-sm text-slate-500">
-            Authorized CE course students only. Track training progress through
-            certification without exposing unrelated platform users.
-          </p>
+       const confirmationMessages = {
+      create_pending:
+        "Create a Pending Certification record for this student? Their recorded training completion will be linked automatically.",
       verify:
         "Verify this student's CE practitioner certification? This confirms certification eligibility but does not grant CE workspace access.",
       revoke:
         "Revoke this verified certification? Revocation history will remain and cannot be overwritten in this workflow.",
     };
-
     if (
       typeof window !== "undefined" &&
       !window.confirm(confirmationMessages[action])
