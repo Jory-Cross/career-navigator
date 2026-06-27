@@ -447,7 +447,7 @@ export default function CECertificationPipelineManager() {
           icon={Clock3}
           label="In Training"
           value={counts.in_training_count || 0}
-          detail="Paid students actively taking CE training"
+          detail="Authorized students actively taking CE training"
         />
         <StatCard
           icon={UserRound}
