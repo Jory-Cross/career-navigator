@@ -209,22 +209,22 @@ Deno.serve(async (req) => {
         cohort_id: cohortId,
       });
 
-    const hasPaidRegistration = (Array.isArray(paidBillingRows)
+      const hasSettledRegistration = (Array.isArray(paidBillingRows)
       ? paidBillingRows
       : []
     ).some(
       (event) =>
-        event?.event_status === "paid" &&
+        SETTLED_TRAINING_REGISTRATION_STATUSES.has(event?.event_status) &&
         event?.billing_subject_type === "student" &&
         PAID_TRAINING_FEE_KINDS.has(event?.fee_kind)
     );
 
-    if (!hasPaidRegistration) {
+    if (!hasSettledRegistration) {
       return Response.json(
         {
           ok: false,
           error:
-            "A matching paid CE student registration or reactivation is required before training completion can be recorded.",
+            "A matching settled CE student registration or reactivation is required before training completion can be recorded.",
         },
         { status: 409 }
       );
