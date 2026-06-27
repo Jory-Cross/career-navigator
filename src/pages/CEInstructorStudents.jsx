@@ -13,7 +13,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import InviteStudentDialog from "@/components/cohorts/InviteStudentDialog";
+import InviteStudentPaymentDialog from "@/components/cohorts/InviteStudentPaymentDialog";
 
 export default function CEInstructorStudents() {
   const [user, setUser] = useState(null);
