@@ -7,6 +7,11 @@ const PAID_TRAINING_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
+const SETTLED_TRAINING_REGISTRATION_STATUSES = new Set([
+  "paid",
+  "waived",
+]);
+
 const TRAINING_COHORT_TYPE = "training";
 const STUDENT_COHORT_ROLE = "member";
 
