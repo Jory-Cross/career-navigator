@@ -19,11 +19,31 @@ import {
   Pencil,
   CreditCard,
   Building2,
+  ExternalLink,
+  Copy,
+  AlertTriangle,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import InviteStudentPaymentDialog from "@/components/cohorts/InviteStudentPaymentDialog";
+
+function formatMoney(amountCents, currency = "USD") {
+  const amount = Number(amountCents);
+
+  if (!Number.isFinite(amount)) {
+    return "";
+  }
+
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
+    }).format(amount / 100);
+  } catch {
+    return `$${(amount / 100).toFixed(2)}`;
+  }
+}
 
 export default function CEInstructorStudents() {
   const [user, setUser] = useState(null);
@@ -37,6 +57,9 @@ export default function CEInstructorStudents() {
   const [editingInstructorPaymentMode, setEditingInstructorPaymentMode] =
     useState("pay_now");
   const [savingPaymentOption, setSavingPaymentOption] = useState(false);
+  const [generatingPaymentLinkId, setGeneratingPaymentLinkId] =
+    useState("");
+  const [paymentLinkInfo, setPaymentLinkInfo] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -117,6 +140,57 @@ export default function CEInstructorStudents() {
     return "Business pays now";
   };
 
+  const getPendingBillingLabel = (student) => {
+    if (student.billing_event_missing) {
+      return "Billing setup missing";
+    }
+
+    if (student.billing_event_conflict) {
+      return "Billing record conflict";
+    }
+
+    if (student.billing_event_status === "paid") {
+      return "Registration paid";
+    }
+
+    if (student.billing_event_status === "waived") {
+      return "Registration waived";
+    }
+
+    if (
+      student.payment_responsibility === "instructor_paid" &&
+      student.instructor_payment_mode === "invoice_with_cohort"
+    ) {
+      return "Awaiting cohort invoice";
+    }
+
+    if (student.billing_event_status === "ready_for_checkout") {
+      return "Payment link ready";
+    }
+
+    if (student.billing_event_status === "payment_processing") {
+      return "Payment processing";
+    }
+
+    if (student.billing_event_status === "failed") {
+      return "Payment link can be regenerated";
+    }
+
+    if (student.billing_event_status === "pending") {
+      return "Payment link available";
+    }
+
+    return "Billing pending";
+  };
+
+  const getPaymentActionLabel = (student) => {
+    if (student.payment_responsibility === "instructor_paid") {
+      return "Generate Business Checkout";
+    }
+
+    return "Generate Payment Link";
+  };
+
   const handleOpenPaymentEditor = (student) => {
     setEditingInvite(student);
     setEditingPaymentResponsibility(
@@ -179,6 +253,90 @@ export default function CEInstructorStudents() {
     }
   };
 
+  const handleGeneratePaymentLink = async (student) => {
+    if (!student?.billing_event_id) {
+      toast.error(
+        "This invitation does not have a CE registration billing event yet."
+      );
+      return;
+    }
+
+    setGeneratingPaymentLinkId(student.id);
+
+    try {
+      const res = await base44.functions.invoke(
+        "createCEStudentRegistrationCheckout",
+        {
+          billing_event_id: student.billing_event_id,
+        }
+      );
+
+      if (!res.data?.ok || !res.data?.checkout_url) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to create the CE registration payment link."
+        );
+      }
+
+      setPaymentLinkInfo({
+        email: student.email,
+        checkoutUrl: res.data.checkout_url,
+        checkoutSessionId: res.data.checkout_session_id || "",
+        paymentResponsibility:
+          res.data.payment_responsibility ||
+          student.payment_responsibility ||
+          "student_paid",
+        instructorPaymentMode:
+          res.data.instructor_payment_mode ||
+          student.instructor_payment_mode ||
+          null,
+        amountCents:
+          res.data.amount_cents ?? student.billing_event_amount_cents,
+        currency:
+          res.data.currency ||
+          student.billing_event_currency ||
+          "USD",
+        reusedExistingCheckout:
+          res.data.reused_existing_checkout === true,
+      });
+
+      toast.success(
+        res.data.reused_existing_checkout
+          ? "Existing payment link is ready."
+          : "Payment link created."
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["ce-students-instructor-secure"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          "Unable to create the CE registration payment link."
+      );
+    } finally {
+      setGeneratingPaymentLinkId("");
+    }
+  };
+
+  const handleCopyPaymentLink = async () => {
+    const checkoutUrl = paymentLinkInfo?.checkoutUrl;
+
+    if (!checkoutUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(checkoutUrl);
+      toast.success("Payment link copied.");
+    } catch {
+      window.prompt(
+        "Copy this CE registration payment link:",
+        checkoutUrl
+      );
+    }
+  };
+
   const handleRevokeInvite = async (student) => {
     const email = student.email || "this student";
 
@@ -222,8 +380,8 @@ export default function CEInstructorStudents() {
 
   if (!authChecked || studentsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
       </div>
     );
   }
@@ -246,7 +404,7 @@ export default function CEInstructorStudents() {
           onClick={() => setShowInviteStudentDialog(true)}
           className="gap-2"
         >
-          <Mail className="w-4 h-4" />
+          <Mail className="h-4 w-4" />
           Invite Student
         </Button>
       </div>
@@ -319,7 +477,7 @@ export default function CEInstructorStudents() {
             onClick={() => setShowInviteStudentDialog(true)}
             className="gap-2"
           >
-            <Mail className="w-4 h-4" />
+            <Mail className="h-4 w-4" />
             Invite Student
           </Button>
         </Card>
@@ -411,6 +569,28 @@ export default function CEInstructorStudents() {
                           <p className="text-xs text-slate-500">
                             {getPendingPaymentLabel(student)}
                           </p>
+
+                          <p
+                            className={`text-xs ${
+                              student.billing_event_missing ||
+                              student.billing_event_conflict
+                                ? "text-rose-600"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            {getPendingBillingLabel(student)}
+                          </p>
+
+                          {student.billing_event_amount_cents !== null &&
+                            student.billing_event_amount_cents !==
+                              undefined && (
+                              <p className="text-xs text-slate-500">
+                                {formatMoney(
+                                  student.billing_event_amount_cents,
+                                  student.billing_event_currency
+                                )}
+                              </p>
+                            )}
                         </div>
                       )}
                     </td>
@@ -418,6 +598,43 @@ export default function CEInstructorStudents() {
                     <td className="px-4 py-3">
                       {student.status === "pending" ? (
                         <div className="flex flex-wrap gap-2">
+                          {student.checkout_available &&
+                            student.billing_event_id && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={
+                                  generatingPaymentLinkId === student.id
+                                }
+                                onClick={() =>
+                                  handleGeneratePaymentLink(student)
+                                }
+                                className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                              >
+                                {generatingPaymentLinkId === student.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <CreditCard className="h-3 w-3" />
+                                )}
+                                {getPaymentActionLabel(student)}
+                              </Button>
+                            )}
+
+                          {student.billing_event_missing && (
+                            <span className="inline-flex items-center gap-1 self-center text-xs text-rose-600">
+                              <AlertTriangle className="h-3 w-3" />
+                              Billing required
+                            </span>
+                          )}
+
+                          {student.billing_event_conflict && (
+                            <span className="inline-flex items-center gap-1 self-center text-xs text-rose-600">
+                              <AlertTriangle className="h-3 w-3" />
+                              Billing conflict
+                            </span>
+                          )}
+
                           <Button
                             type="button"
                             size="sm"
@@ -493,17 +710,16 @@ export default function CEInstructorStudents() {
             invitation from this Students page
           </li>
           <li>
-            <span className="font-medium">2. Registration</span> — The student
-            registers for CE Training Portal access
+            <span className="font-medium">2. Payment</span> — Send the
+            registration payment link or include the registration on a future
+            cohort invoice
           </li>
           <li>
-            <span className="font-medium">3. Open Cohort Detail</span> —
-            Select the cohort after registration is complete
+            <span className="font-medium">3. Registration</span> — The student
+            registers after payment is settled
           </li>
           <li>
-            <span className="font-medium">
-              4. Assign Registered Student
-            </span>{" "}
+            <span className="font-medium">4. Assign Registered Student</span>{" "}
             — Add the student from Cohort Detail
           </li>
         </ol>
@@ -701,6 +917,94 @@ export default function CEInstructorStudents() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
               Save Payment Option
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!paymentLinkInfo}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setPaymentLinkInfo(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {paymentLinkInfo?.paymentResponsibility === "instructor_paid"
+                ? "Business Registration Checkout"
+                : "Student Registration Payment Link"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-sm font-medium text-slate-900">
+                {paymentLinkInfo?.email}
+              </p>
+
+              <p className="mt-1 text-sm text-slate-600">
+                {paymentLinkInfo?.paymentResponsibility ===
+                "instructor_paid"
+                  ? "Open this secure Stripe checkout to pay the student's CE registration fee."
+                  : "Copy this secure Stripe checkout link and send it to the student."}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-violet-200 bg-violet-50 p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-violet-700">
+                Registration Fee
+              </div>
+
+              <div className="mt-1 text-2xl font-bold text-violet-900">
+                {formatMoney(
+                  paymentLinkInfo?.amountCents,
+                  paymentLinkInfo?.currency
+                )}
+              </div>
+
+              <p className="mt-1 text-xs text-violet-800">
+                CE Training Portal access activates only after Stripe confirms
+                successful payment.
+              </p>
+            </div>
+
+            {paymentLinkInfo?.reusedExistingCheckout && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+                An existing open checkout session was reused. No duplicate
+                payment link was created.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setPaymentLinkInfo(null)}
+            >
+              Close
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleCopyPaymentLink}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy Link
+            </Button>
+
+            <Button asChild className="gap-2">
+              <a
+                href={paymentLinkInfo?.checkoutUrl || "#"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Checkout
+              </a>
             </Button>
           </DialogFooter>
         </DialogContent>
