@@ -591,15 +591,15 @@ await queryClient.invalidateQueries({
     <div className="space-y-6">
 
           {/* Add Manager Dialog */}
-      <AddMemberDialog
-        open={showAddManagerDialog}
-        onOpenChange={setShowAddManagerDialog}
-        title="Add Manager"
-        cohortRole="manager"
-        allowedRoles={["admin", "management", "employee", "ce_instructor"]}
-        existingMemberUserIds={existingManagerUserIds}
-        onSubmit={handleAddManager}
-      />
+    <AddMemberDialog
+  open={showAddTrainerDialog}
+  onOpenChange={setShowAddTrainerDialog}
+  title="Add Trainer"
+  cohortRole="trainer"
+  allowedRoles={["trainer"]}
+  existingMemberUserIds={existingTrainerUserIds}
+  onSubmit={handleAddTrainer}
+/>
 
       {/* Add Trainer Dialog */}
       <AddMemberDialog
