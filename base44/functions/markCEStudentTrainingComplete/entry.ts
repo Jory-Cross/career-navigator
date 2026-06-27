@@ -5,8 +5,12 @@ const PAID_TRAINING_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
-const ALLOWED_COHORT_STATUSES = new Set(["active", "completed"]);
+const SETTLED_TRAINING_REGISTRATION_STATUSES = new Set([
+  "paid",
+  "waived",
+]);
 
+const ALLOWED_COHORT_STATUSES = new Set(["active", "completed"]);
 function getRequiredString(value: unknown, fieldName: string) {
   const normalized = String(value || "").trim();
 
