@@ -16,22 +16,24 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
  *   - Everyone else             → denied (403)
  *
  * Operations:
- *   - action: 'add'      add a member/manager to a cohort (idempotent:
- *                       re-activates an inactive existing row rather than
- *                       creating a duplicate)
+ *   - action: 'add'      add a manager, trainer, or student to a cohort
+ *                        (idempotent: re-activates an inactive existing row
+ *                        rather than creating a duplicate)
  *   - action: 'remove'   soft-delete a membership row (is_active=false).
- *                       Removing a manager is blocked if it would leave the
- *                       cohort with zero active managers (last-manager guard).
+ *                        Removing a manager is blocked if it would leave the
+ *                        cohort with zero active managers (last-manager guard).
+ *
+ * Trainer eligibility:
+ *   - Only a registered CE trainer may be assigned as cohort_role='trainer'.
+ *   - Registered CE trainers have User.role='ce_instructor'.
  *
  * Payload:
  *   {
  *     action: 'add' | 'remove',
  *     cohort_id: string,
- *     user_id: string,            // target user being enrolled/removed
- *     cohort_role: 'manager' | 'member',
- *     membership_id?: string      // for 'remove' — the CETrainingCohortMember row id
- *                                 // (preferred). If omitted, lookup by
- *                                 // (cohort_id, user_id, cohort_role).
+ *     user_id: string,
+ *     cohort_role: 'manager' | 'trainer' | 'member',
+ *     membership_id?: string
  *   }
  *
  * Returns 200 with { ok: true, ... } on success, 403 when unauthorized,
@@ -41,20 +43,30 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const caller = await base44.auth.me();
+
     if (!caller) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
-    const { action, cohort_id, user_id, cohort_role, membership_id } = body || {};
+    const { action, cohort_id, user_id, cohort_role, membership_id } =
+      body || {};
 
     // ── Input validation ──────────────────────────────────────────────────
     if (!['add', 'remove'].includes(action)) {
-      return Response.json({ error: 'action must be "add" or "remove"' }, { status: 400 });
+      return Response.json(
+        { error: 'action must be "add" or "remove"' },
+        { status: 400 }
+      );
     }
+
     if (!cohort_id) {
-      return Response.json({ error: 'cohort_id is required' }, { status: 400 });
+      return Response.json(
+        { error: 'cohort_id is required' },
+        { status: 400 }
+      );
     }
+
     if (!['manager', 'trainer', 'member'].includes(cohort_role)) {
       return Response.json(
         {
@@ -64,14 +76,23 @@ Deno.serve(async (req) => {
         { status: 400 }
       );
     }
+
     if (action === 'add' && !user_id) {
-      return Response.json({ error: 'user_id is required for action "add"' }, { status: 400 });
+      return Response.json(
+        { error: 'user_id is required for action "add"' },
+        { status: 400 }
+      );
     }
 
-    // ── Resolve org_id (same pattern as inviteEmployee/getClientsForUser) ──
+    // ── Resolve org_id ─────────────────────────────────────────────────────
     let orgId = caller.org_id || null;
+
     if (!orgId) {
-      const orgs = await base44.asServiceRole.entities.Organization.filter({ owner_email: caller.email });
+      const orgs =
+        await base44.asServiceRole.entities.Organization.filter({
+          owner_email: caller.email,
+        });
+
       orgId = orgs[0]?.id || null;
     }
 
@@ -80,22 +101,29 @@ Deno.serve(async (req) => {
     let authorized = isAdmin;
 
     if (!authorized) {
-      const managerRows = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        user_id: caller.id,
-        cohort_role: 'manager',
-        is_active: true,
-        cohort_id,
-      });
-      authorized = Array.isArray(managerRows) && managerRows.length > 0;
+      const managerRows =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          user_id: caller.id,
+          cohort_role: 'manager',
+          is_active: true,
+          cohort_id,
+        });
+
+      authorized =
+        Array.isArray(managerRows) && managerRows.length > 0;
     }
 
     if (!authorized) {
-      return Response.json({
-        error: 'Forbidden — only admins or the cohort manager may manage membership',
-      }, { status: 403 });
+      return Response.json(
+        {
+          error:
+            'Forbidden — only admins or the cohort manager may manage membership',
+        },
+        { status: 403 }
+      );
     }
 
-        // ── Validate cohort exists & caller org matches ──────────────────────
+    // ── Validate cohort exists and caller organization matches ─────────────
     const matchingCohorts =
       await base44.asServiceRole.entities.CETrainingCohort.filter({
         id: cohort_id,
@@ -106,7 +134,10 @@ Deno.serve(async (req) => {
       : null;
 
     if (!cohort) {
-      return Response.json({ error: 'Cohort not found' }, { status: 404 });
+      return Response.json(
+        { error: 'Cohort not found' },
+        { status: 404 }
+      );
     }
 
     if (orgId && cohort.org_id && cohort.org_id !== orgId) {
@@ -126,17 +157,22 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date().toISOString();
+
     // ── ADD ───────────────────────────────────────────────────────────────
     if (action === 'add') {
       if (cohort_role === 'member' || cohort_role === 'trainer') {
-        const allUsers = await base44.asServiceRole.entities.User.list();
+        const allUsers =
+          await base44.asServiceRole.entities.User.list();
 
-        const targetUser = (Array.isArray(allUsers) ? allUsers : []).find(
-          (candidate) => candidate.id === user_id
-        );
+        const targetUser = (
+          Array.isArray(allUsers) ? allUsers : []
+        ).find((candidate) => candidate.id === user_id);
 
         if (!targetUser) {
-          return Response.json({ error: 'User not found' }, { status: 404 });
+          return Response.json(
+            { error: 'User not found' },
+            { status: 404 }
+          );
         }
 
         if (targetUser.is_active === false) {
@@ -161,14 +197,12 @@ Deno.serve(async (req) => {
 
         if (
           cohort_role === 'trainer' &&
-          !['admin', 'management', 'employee', 'ce_instructor'].includes(
-            targetUser.role
-          )
+          targetUser.role !== 'ce_instructor'
         ) {
           return Response.json(
             {
               error:
-                'Only active CE instructors, employees, managers, or admins may be assigned as trainers',
+                'Only registered CE trainers may be assigned as cohort trainers',
             },
             { status: 400 }
           );
@@ -185,83 +219,136 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Idempotent: find existing membership row (any is_active) for this
-      // (cohort, user, role) and re-activate it; otherwise create one.
-      const existing = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id,
-        user_id,
-        cohort_role,
-      });
+      // Idempotent: reactivate an existing inactive membership row rather
+      // than creating a duplicate.
+      const existing =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id,
+          user_id,
+          cohort_role,
+        });
+
       const row = Array.isArray(existing) ? existing[0] : null;
 
       if (row) {
         if (row.is_active) {
-          return Response.json({ ok: true, message: 'Already a member', membership_id: row.id });
+          return Response.json({
+            ok: true,
+            message: 'Already a member',
+            membership_id: row.id,
+          });
         }
 
-        await base44.asServiceRole.entities.CETrainingCohortMember.update(row.id, {
+        await base44.asServiceRole.entities.CETrainingCohortMember.update(
+          row.id,
+          {
+            is_active: true,
+            joined_at: row.joined_at || now,
+            added_by: caller.id,
+          }
+        );
+
+        return Response.json({
+          ok: true,
+          message: 'Re-activated',
+          membership_id: row.id,
+        });
+      }
+
+      const created =
+        await base44.asServiceRole.entities.CETrainingCohortMember.create({
+          org_id: membershipOrgId,
+          cohort_id,
+          user_id,
+          cohort_role,
           is_active: true,
-          joined_at: row.joined_at || now,
+          joined_at: now,
           added_by: caller.id,
         });
 
-        return Response.json({ ok: true, message: 'Re-activated', membership_id: row.id });
-      }
-      const created = await base44.asServiceRole.entities.CETrainingCohortMember.create({
-        org_id: membershipOrgId,
-        cohort_id,
-        user_id,
-        cohort_role,
-        is_active: true,
-        joined_at: now,
-        added_by: caller.id,
+      return Response.json({
+        ok: true,
+        message: 'Added',
+        membership_id: created.id,
       });
-      return Response.json({ ok: true, message: 'Added', membership_id: created.id });
     }
 
     // ── REMOVE ────────────────────────────────────────────────────────────
-    // Resolve the target membership row.
     let targetRow = null;
+
     if (membership_id) {
-      const allRows = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id,
-      });
-      targetRow = (allRows || []).find((r) => r.id === membership_id && r.is_active);
+      const allRows =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id,
+        });
+
+      targetRow = (allRows || []).find(
+        (row) => row.id === membership_id && row.is_active
+      );
     } else if (user_id) {
-      const rows = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id,
-        user_id,
-        cohort_role,
-        is_active: true,
-      });
+      const rows =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id,
+          user_id,
+          cohort_role,
+          is_active: true,
+        });
+
       targetRow = (rows || [])[0];
     }
 
     if (!targetRow) {
-      return Response.json({ error: 'Active membership not found' }, { status: 404 });
+      return Response.json(
+        { error: 'Active membership not found' },
+        { status: 404 }
+      );
     }
 
-    // Last-manager guard: never allow removing the last active manager.
+    // Last-manager guard: a cohort must always retain one active manager.
     if (targetRow.cohort_role === 'manager') {
-      const allManagers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id,
-        cohort_role: 'manager',
-        is_active: true,
-      });
-      const activeManagers = (allManagers || []).filter((m) => m.is_active);
+      const allManagers =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id,
+          cohort_role: 'manager',
+          is_active: true,
+        });
+
+      const activeManagers = (allManagers || []).filter(
+        (manager) => manager.is_active
+      );
+
       if (activeManagers.length <= 1) {
-        return Response.json({
-          error: 'Cannot remove the last active manager — a cohort must retain at least one active manager',
-        }, { status: 409 });
+        return Response.json(
+          {
+            error:
+              'Cannot remove the last active manager — a cohort must retain at least one active manager',
+          },
+          { status: 409 }
+        );
       }
     }
 
-    await base44.asServiceRole.entities.CETrainingCohortMember.update(targetRow.id, {
-      is_active: false,
+    await base44.asServiceRole.entities.CETrainingCohortMember.update(
+      targetRow.id,
+      {
+        is_active: false,
+      }
+    );
+
+    return Response.json({
+      ok: true,
+      message: 'Removed',
+      membership_id: targetRow.id,
     });
-    return Response.json({ ok: true, message: 'Removed', membership_id: targetRow.id });
   } catch (error) {
-    console.error('manageCohortMembership error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error(
+      'manageCohortMembership error:',
+      error.message
+    );
+
+    return Response.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 });
