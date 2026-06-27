@@ -343,10 +343,14 @@ console.log("USER MAP", userById);
         );
       }
 
-      toast.success(
-        res.data?.message ||
-          "Test registration waiver recorded."
-      );
+     toast.success(
+  res.data?.message ||
+    "Test registration waiver recorded."
+);
+
+await queryClient.invalidateQueries({
+  queryKey: ["cohorts", "memberships", cohort_id],
+});
     } catch (err) {
       toast.error(
         err?.message ||
