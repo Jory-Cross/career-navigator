@@ -4,11 +4,21 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Mail,
   Users,
   ArrowRight,
   XCircle,
+  Pencil,
+  CreditCard,
+  Building2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -21,6 +31,12 @@ export default function CEInstructorStudents() {
   const [showInviteStudentDialog, setShowInviteStudentDialog] =
     useState(false);
   const [revokingInviteId, setRevokingInviteId] = useState("");
+  const [editingInvite, setEditingInvite] = useState(null);
+  const [editingPaymentResponsibility, setEditingPaymentResponsibility] =
+    useState("student_paid");
+  const [editingInstructorPaymentMode, setEditingInstructorPaymentMode] =
+    useState("pay_now");
+  const [savingPaymentOption, setSavingPaymentOption] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -88,6 +104,80 @@ export default function CEInstructorStudents() {
     ...(studentsData.active || []),
     ...(studentsData.pending || []),
   ];
+
+  const getPendingPaymentLabel = (student) => {
+    if (student.payment_responsibility !== "instructor_paid") {
+      return "Student pays registration fee";
+    }
+
+    if (student.instructor_payment_mode === "invoice_with_cohort") {
+      return "Business pays by cohort invoice";
+    }
+
+    return "Business pays now";
+  };
+
+  const handleOpenPaymentEditor = (student) => {
+    setEditingInvite(student);
+    setEditingPaymentResponsibility(
+      student.payment_responsibility || "student_paid"
+    );
+    setEditingInstructorPaymentMode(
+      student.instructor_payment_mode || "pay_now"
+    );
+  };
+
+  const handleClosePaymentEditor = () => {
+    if (savingPaymentOption) {
+      return;
+    }
+
+    setEditingInvite(null);
+  };
+
+  const handleSavePaymentOption = async () => {
+    if (!editingInvite?.id) {
+      return;
+    }
+
+    setSavingPaymentOption(true);
+
+    try {
+      const res = await base44.functions.invoke(
+        "updateCEStudentInvitePayment",
+        {
+          pending_invite_id: editingInvite.id,
+          payment_responsibility: editingPaymentResponsibility,
+          instructor_payment_mode:
+            editingPaymentResponsibility === "instructor_paid"
+              ? editingInstructorPaymentMode
+              : undefined,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to update the CE student payment option."
+        );
+      }
+
+      toast.success("CE student payment option updated.");
+
+      setEditingInvite(null);
+
+      await queryClient.invalidateQueries({
+        queryKey: ["ce-students-instructor-secure"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          "Unable to update the CE student payment option."
+      );
+    } finally {
+      setSavingPaymentOption(false);
+    }
+  };
 
   const handleRevokeInvite = async (student) => {
     const email = student.email || "this student";
@@ -313,29 +403,51 @@ export default function CEInstructorStudents() {
                           ✓ Registered
                         </Badge>
                       ) : (
-                        <Badge className="border-amber-300 bg-amber-100 text-amber-800">
-                          ⏳ Pending
-                        </Badge>
+                        <div className="space-y-1">
+                          <Badge className="border-amber-300 bg-amber-100 text-amber-800">
+                            ⏳ Pending
+                          </Badge>
+
+                          <p className="text-xs text-slate-500">
+                            {getPendingPaymentLabel(student)}
+                          </p>
+                        </div>
                       )}
                     </td>
 
                     <td className="px-4 py-3">
                       {student.status === "pending" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={revokingInviteId === student.id}
-                          onClick={() => handleRevokeInvite(student)}
-                          className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
-                        >
-                          {revokingInviteId === student.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <XCircle className="h-3 w-3" />
-                          )}
-                          Revoke Invite
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={revokingInviteId === student.id}
+                            onClick={() =>
+                              handleOpenPaymentEditor(student)
+                            }
+                            className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Edit Payment
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={revokingInviteId === student.id}
+                            onClick={() => handleRevokeInvite(student)}
+                            className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
+                          >
+                            {revokingInviteId === student.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <XCircle className="h-3 w-3" />
+                            )}
+                            Revoke Invite
+                          </Button>
+                        </div>
                       ) : student.cohorts?.length > 0 ? (
                         <Link
                           to={`/CohortDetail?cohort_id=${student.cohorts[0].id}`}
@@ -397,15 +509,202 @@ export default function CEInstructorStudents() {
         </ol>
       </Card>
 
-     <InviteStudentPaymentDialog
-  open={showInviteStudentDialog}
-  onOpenChange={setShowInviteStudentDialog}
-  onSuccess={() => {
-    queryClient.invalidateQueries({
-      queryKey: ["ce-students-instructor-secure"],
-    });
-  }}
-/>
+      <InviteStudentPaymentDialog
+        open={showInviteStudentDialog}
+        onOpenChange={setShowInviteStudentDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["ce-students-instructor-secure"],
+          });
+        }}
+      />
+
+      <Dialog
+        open={!!editingInvite}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            handleClosePaymentEditor();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Registration Payment Option</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            <div>
+              <p className="text-sm font-medium text-slate-900">
+                {editingInvite?.email}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                This changes the selected payment responsibility for the
+                pending CE student invite. It does not mark registration as
+                paid or activate CE Training Portal access.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label
+                className={`block cursor-pointer rounded-lg border p-3 transition-colors ${
+                  editingPaymentResponsibility === "student_paid"
+                    ? "border-violet-400 bg-violet-50"
+                    : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="edit-payment-responsibility"
+                    value="student_paid"
+                    checked={
+                      editingPaymentResponsibility === "student_paid"
+                    }
+                    onChange={() =>
+                      setEditingPaymentResponsibility("student_paid")
+                    }
+                    disabled={savingPaymentOption}
+                    className="mt-1"
+                  />
+
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                      <CreditCard className="h-4 w-4 text-violet-600" />
+                      Student Pays Registration Fee
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600">
+                      The student must pay before CE Training Portal access is
+                      activated.
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`block cursor-pointer rounded-lg border p-3 transition-colors ${
+                  editingPaymentResponsibility === "instructor_paid"
+                    ? "border-violet-400 bg-violet-50"
+                    : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="edit-payment-responsibility"
+                    value="instructor_paid"
+                    checked={
+                      editingPaymentResponsibility === "instructor_paid"
+                    }
+                    onChange={() =>
+                      setEditingPaymentResponsibility("instructor_paid")
+                    }
+                    disabled={savingPaymentOption}
+                    className="mt-1"
+                  />
+
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                      <Building2 className="h-4 w-4 text-violet-600" />
+                      Instructor / Business Pays Registration Fee
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600">
+                      The business handles the registration fee before CE
+                      Training Portal access is activated.
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              {editingPaymentResponsibility === "instructor_paid" && (
+                <div className="ml-4 space-y-3 border-l-2 border-violet-200 pl-4">
+                  <p className="text-sm font-medium text-slate-800">
+                    Instructor Payment Method
+                  </p>
+
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <input
+                      type="radio"
+                      name="edit-instructor-payment-mode"
+                      value="pay_now"
+                      checked={editingInstructorPaymentMode === "pay_now"}
+                      onChange={() =>
+                        setEditingInstructorPaymentMode("pay_now")
+                      }
+                      disabled={savingPaymentOption}
+                      className="mt-1"
+                    />
+
+                    <span>
+                      <span className="block text-sm font-medium text-slate-800">
+                        Pay registration fee now
+                      </span>
+
+                      <span className="block text-xs text-slate-500">
+                        Use when the instructor/business will complete
+                        immediate payment.
+                      </span>
+                    </span>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <input
+                      type="radio"
+                      name="edit-instructor-payment-mode"
+                      value="invoice_with_cohort"
+                      checked={
+                        editingInstructorPaymentMode ===
+                        "invoice_with_cohort"
+                      }
+                      onChange={() =>
+                        setEditingInstructorPaymentMode(
+                          "invoice_with_cohort"
+                        )
+                      }
+                      disabled={savingPaymentOption}
+                      className="mt-1"
+                    />
+
+                    <span>
+                      <span className="block text-sm font-medium text-slate-800">
+                        Include on future cohort invoice
+                      </span>
+
+                      <span className="block text-xs text-slate-500">
+                        Keep the student pending until the applicable invoice
+                        is settled.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleClosePaymentEditor}
+              disabled={savingPaymentOption}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              onClick={handleSavePaymentOption}
+              disabled={savingPaymentOption}
+              className="gap-2"
+            >
+              {savingPaymentOption && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Save Payment Option
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
