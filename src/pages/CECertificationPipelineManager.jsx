@@ -509,7 +509,7 @@ export default function CECertificationPipelineManager() {
 
           {filteredPeople.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-slate-500">
-              No paid CE students match the current search and pipeline filter.
+                            No authorized CE students match the current search and pipeline filter.
             </div>
           ) : (
             <div className="max-h-[680px] divide-y divide-slate-100 overflow-y-auto">
