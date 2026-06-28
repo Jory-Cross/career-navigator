@@ -51,6 +51,7 @@ export default function CEInstructorStudents() {
   const [showInviteStudentDialog, setShowInviteStudentDialog] =
     useState(false);
   const [revokingInviteId, setRevokingInviteId] = useState("");
+  const [resendingInviteId, setResendingInviteId] = useState("");
   const [editingInvite, setEditingInvite] = useState(null);
   const [editingPaymentResponsibility, setEditingPaymentResponsibility] =
     useState("student_paid");
@@ -316,6 +317,46 @@ export default function CEInstructorStudents() {
       );
     } finally {
       setGeneratingPaymentLinkId("");
+    }
+  };
+
+  const handleResendInvitation = async (student) => {
+    if (!student?.id) {
+      toast.error("This CE student invitation could not be identified.");
+      return;
+    }
+
+    setResendingInviteId(student.id);
+
+    try {
+      const res = await base44.functions.invoke(
+        "resendCEStudentInvitation",
+        {
+          pending_assignment_id: student.id,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to resend the CE student invitation."
+        );
+      }
+
+      toast.success(
+        res.data?.message || "CE student invitation resent."
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["ce-students-instructor-secure"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          "Unable to resend the CE student invitation."
+      );
+    } finally {
+      setResendingInviteId("");
     }
   };
 
@@ -598,6 +639,30 @@ export default function CEInstructorStudents() {
                     <td className="px-4 py-3">
                       {student.status === "pending" ? (
                         <div className="flex flex-wrap gap-2">
+                          {!student.billing_event_missing &&
+                            !student.billing_event_conflict && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={
+                                  resendingInviteId === student.id ||
+                                  revokingInviteId === student.id
+                                }
+                                onClick={() =>
+                                  handleResendInvitation(student)
+                                }
+                                className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                              >
+                                {resendingInviteId === student.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Mail className="h-3 w-3" />
+                                )}
+                                Resend Invitation
+                              </Button>
+                            )}
+
                           {student.checkout_available &&
                             student.billing_event_id && (
                               <Button
@@ -605,7 +670,9 @@ export default function CEInstructorStudents() {
                                 size="sm"
                                 variant="outline"
                                 disabled={
-                                  generatingPaymentLinkId === student.id
+                                  generatingPaymentLinkId === student.id ||
+                                  resendingInviteId === student.id ||
+                                  revokingInviteId === student.id
                                 }
                                 onClick={() =>
                                   handleGeneratePaymentLink(student)
@@ -639,7 +706,11 @@ export default function CEInstructorStudents() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={revokingInviteId === student.id}
+                            disabled={
+                              savingPaymentOption ||
+                              resendingInviteId === student.id ||
+                              revokingInviteId === student.id
+                            }
                             onClick={() =>
                               handleOpenPaymentEditor(student)
                             }
@@ -653,7 +724,10 @@ export default function CEInstructorStudents() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={revokingInviteId === student.id}
+                            disabled={
+                              revokingInviteId === student.id ||
+                              resendingInviteId === student.id
+                            }
                             onClick={() => handleRevokeInvite(student)}
                             className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
                           >
@@ -710,9 +784,9 @@ export default function CEInstructorStudents() {
             invitation from this Students page
           </li>
           <li>
-            <span className="font-medium">2. Payment</span> — Send the
-            registration payment link or include the registration on a future
-            cohort invoice
+            <span className="font-medium">2. Payment</span> — Student-paid
+            invitations include the secure payment link; instructors may resend
+            an invitation when the same student email has not registered yet
           </li>
           <li>
             <span className="font-medium">3. Registration</span> — The student
