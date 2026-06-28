@@ -904,21 +904,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (
-      requestedPaymentResponsibility === "instructor_paid" &&
-      requestedInstructorPaymentMode === "invoice_with_cohort" &&
-      !cohortId
-    ) {
+      if (!cohortId) {
       return Response.json(
         {
           ok: false,
           error:
-            "A Training cohort must be selected when CE registration will be included on a future cohort invoice.",
+            "A Training cohort must be selected for every CE student enrollment.",
         },
         { status: 400 }
       );
     }
-
     if (cohortId) {
       const cohortRows =
         await base44.asServiceRole.entities.CETrainingCohort.filter({
