@@ -554,12 +554,28 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const cohortId = text(body?.cohort_id);
-    const requestedEventIds = selectedIds(body?.billing_event_ids);
+    const requestedCohortInvoiceId = text(
+      body?.cohort_invoice_id
+    );
+
+    if (
+      requestedCohortInvoiceId &&
+      Array.isArray(body?.billing_event_ids) &&
+      body.billing_event_ids.length > 0
+    ) {
+      throw fail(
+        400,
+        "Provide either cohort_invoice_id to resume one saved invoice or billing_event_ids to create a new invoice, not both."
+      );
+    }
+
+    const requestedEventIds = requestedCohortInvoiceId
+      ? []
+      : selectedIds(body?.billing_event_ids);
 
     if (!cohortId) {
       throw fail(400, "cohort_id is required.");
     }
-
     const callerRecord = await getCallerRecord(base44, caller);
     const callerRole = text(callerRecord?.role || caller.role);
     const callerEmail = email(callerRecord?.email || caller.email);
