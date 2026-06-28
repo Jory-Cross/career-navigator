@@ -1259,13 +1259,22 @@ Deno.serve(async (req) => {
           existingInvite.status === "invite_email_sent",
         payment_responsibility: effectivePaymentResponsibility,
         instructor_payment_mode: effectiveInstructorPaymentMode,
-        billing_event_id: billingResult.billingEvent.id,
-        billing_event_status:
-          billingResult.billingEvent.event_status,
+               billing_event_id: billingResult.billingEvent.id,
+        billing_event_status: instructorCheckoutResult
+          ? "ready_for_checkout"
+          : billingResult.billingEvent.event_status,
         billing_event_created: billingResult.created,
+        checkout_created:
+          !!instructorCheckoutResult &&
+          !instructorCheckoutResult.reusedExistingCheckout,
+        checkout_reused:
+          !!instructorCheckoutResult?.reusedExistingCheckout,
+        checkout_url:
+          instructorCheckoutResult?.checkoutUrl || null,
+        checkout_session_id:
+          instructorCheckoutResult?.checkoutSessionId || null,
       });
     }
-
     const pending =
       await base44.entities.PendingRoleAssignment.create({
         email,
