@@ -344,27 +344,45 @@ export default function CERegistrationPaymentStatus() {
                   </div>
                 ) : null}
 
-                {paymentSettled ? (
-                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
-                    <p className="text-sm font-semibold text-violet-950">
-                      Next step: create your account or sign in.
-                    </p>
+                               {paymentSettled ? (
+                  instructorPaidReceipt ? (
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
+                      <p className="text-sm font-semibold text-violet-950">
+                        Payment receipt
+                      </p>
 
-                                      <p className="mt-2 text-sm leading-6 text-violet-900">
-                      Your CE Training enrollment is already linked to its
-                      Training cohort. Register or sign in using the invited
-                      email address above so Career Navigator can safely
-                      activate your CE Training access.
-                    </p>
+                      <p className="mt-2 text-sm leading-6 text-violet-900">
+                        {statusData?.student_registration_email_state ===
+                        "sent"
+                          ? "Payment is confirmed. The student has been emailed instructions to register using their invited email address."
+                          : statusData?.student_registration_email_state ===
+                              "pending"
+                            ? "Payment is confirmed. The student registration email is still being processed."
+                            : "Payment is confirmed, but the student registration email needs attention. Please contact your CE administrator before asking the student to register."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
+                      <p className="text-sm font-semibold text-violet-950">
+                        Next step: create your account or sign in.
+                      </p>
 
-                    <button
-                      type="button"
-                      onClick={goToRegistration}
-                      className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white transition hover:bg-violet-700"
-                    >
-                      Register or Sign In
-                    </button>
-                  </div>
+                      <p className="mt-2 text-sm leading-6 text-violet-900">
+                        Your CE Training enrollment is already linked to its
+                        Training cohort. Register or sign in using the invited
+                        email address above so Career Navigator can safely
+                        activate your CE Training access.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={goToRegistration}
+                        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white transition hover:bg-violet-700"
+                      >
+                        Register or Sign In
+                      </button>
+                    </div>
+                  )
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <button
