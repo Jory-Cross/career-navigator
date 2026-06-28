@@ -673,9 +673,47 @@ Deno.serve(async (req) => {
       events.map((event) => [text(event.id), event]),
     );
 
-    const invoiceById = new Map(
+      const invoiceById = new Map(
       invoices.map((invoice) => [text(invoice.id), invoice]),
     );
+
+    if (requestedCohortInvoiceId) {
+      const requestedInvoice = invoiceById.get(
+        requestedCohortInvoiceId
+      );
+
+      if (!requestedInvoice) {
+        throw fail(
+          404,
+          "The requested CE Training cohort invoice was not found for this organization and cohort."
+        );
+      }
+
+      const requestedInvoiceLines = linesForInvoice(
+        lines,
+        requestedCohortInvoiceId
+      );
+
+      if (!requestedInvoiceLines.length) {
+        throw fail(
+          409,
+          "The requested CE Training cohort invoice has no saved student lines and cannot be resumed."
+        );
+      }
+
+      return Response.json(
+        await ensureCheckout({
+          base44,
+          invoice: requestedInvoice,
+          lines: requestedInvoiceLines,
+          organizationId,
+          cohort,
+          callerEmail,
+          inviteById,
+          eventById,
+        })
+      );
+    }
 
     const attachedRequestedLines = lines.filter(
       (line) =>
