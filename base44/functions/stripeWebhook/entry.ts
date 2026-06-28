@@ -74,6 +74,111 @@ function getMostRecentAssignment(assignments: any[]) {
   })[0];
 }
 
+async function ensurePaidCeStudentCohortMembership(
+  base44: any,
+  assignment: any,
+  registeredUser: any,
+  organizationId: string
+) {
+  const cohortId = normalizeText(assignment?.cohort_id);
+
+  if (!cohortId) {
+    return {
+      membership_created: false,
+      membership_reactivated: false,
+      membership_status: "no_cohort_selected",
+      membership_id: null,
+    };
+  }
+
+  const cohortRows =
+    await base44.asServiceRole.entities.CETrainingCohort.filter({
+      id: cohortId,
+    });
+
+  const cohort = Array.isArray(cohortRows)
+    ? cohortRows[0]
+    : null;
+
+  if (!cohort) {
+    throw new Error(
+      "The Training cohort connected to this CE enrollment could not be found."
+    );
+  }
+
+  if (
+    normalizeText(cohort.org_id) !== organizationId ||
+    cohort.cohort_type !== "training"
+  ) {
+    throw new Error(
+      "The Training cohort connected to this CE enrollment is not valid for this organization."
+    );
+  }
+
+  const membershipRows =
+    await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+      cohort_id: cohortId,
+      user_id: registeredUser.id,
+      cohort_role: "member",
+    });
+
+  const memberships = Array.isArray(membershipRows)
+    ? membershipRows
+    : [];
+
+  const activeMembership = memberships.find(
+    (membership) => membership.is_active !== false
+  );
+
+  if (activeMembership) {
+    return {
+      membership_created: false,
+      membership_reactivated: false,
+      membership_status: "already_active",
+      membership_id: activeMembership.id,
+    };
+  }
+
+  const existingMembership = memberships[0];
+  const now = new Date().toISOString();
+
+  if (existingMembership) {
+    await base44.asServiceRole.entities.CETrainingCohortMember.update(
+      existingMembership.id,
+      {
+        is_active: true,
+        joined_at: existingMembership.joined_at || now,
+        added_by: assignment.invited_by_id || undefined,
+      }
+    );
+
+    return {
+      membership_created: false,
+      membership_reactivated: true,
+      membership_status: "reactivated",
+      membership_id: existingMembership.id,
+    };
+  }
+
+  const createdMembership =
+    await base44.asServiceRole.entities.CETrainingCohortMember.create({
+      org_id: organizationId,
+      cohort_id: cohortId,
+      user_id: registeredUser.id,
+      cohort_role: "member",
+      is_active: true,
+      joined_at: now,
+      added_by: assignment.invited_by_id || undefined,
+    });
+
+  return {
+    membership_created: true,
+    membership_reactivated: false,
+    membership_status: "created",
+    membership_id: createdMembership.id,
+  };
+}
+
 async function activateExistingPaidCEStudentIfEligible(
   base44: any,
   billingRecord: any
@@ -143,6 +248,17 @@ async function activateExistingPaidCEStudentIfEligible(
   );
 
   if (
+    registeredUser.role === "ce_student" &&
+    normalizeText(registeredUser.org_id) &&
+    normalizeText(registeredUser.org_id) !== organizationId
+  ) {
+    return {
+      activated: false,
+      reason: "existing_ce_student_belongs_to_different_organization",
+    };
+  }
+
+  if (
     registeredUser.role !== "ce_student" &&
     !isNeutralExistingAccount(registeredUser)
   ) {
@@ -164,6 +280,14 @@ async function activateExistingPaidCEStudentIfEligible(
     );
   }
 
+  const cohortMembership =
+    await ensurePaidCeStudentCohortMembership(
+      base44,
+      assignment,
+      registeredUser,
+      organizationId
+    );
+
   await base44.asServiceRole.entities.PendingRoleAssignment.update(
     assignment.id,
     {
@@ -175,9 +299,9 @@ async function activateExistingPaidCEStudentIfEligible(
     activated: true,
     user_id: registeredUser.id,
     pending_assignment_id: assignment.id,
+    cohort_membership: cohortMembership,
   };
 }
-
 async function handleCERegistrationCheckoutCompleted(
   base44: any,
   session: Stripe.Checkout.Session
