@@ -584,14 +584,21 @@ Deno.serve(async (req) => {
         ? normalizeText(assignment.instructor_payment_mode)
         : "";
 
-    let checkoutUrl = "";
+        let checkoutUrl = "";
     let checkoutState = "not_required";
 
-    const isPaid =
-      billingEvent.event_status === "paid" ||
-      billingEvent.event_status === "waived";
+    const registrationIsSettled = ["paid", "waived"].includes(
+      normalizeText(billingEvent.event_status)
+    );
 
-    if (!isPaid && paymentResponsibility === "student_paid") {
+    if (registrationIsSettled) {
+      throw createHttpError(
+        409,
+        "This registration payment is settled. Use Resend Registration Instructions instead."
+      );
+    }
+
+    if (paymentResponsibility === "student_paid") {
       const checkout = await createOrReuseStudentCheckout({
         base44,
         billingEvent,
