@@ -217,7 +217,23 @@ console.log("USER MAP", userById);
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
 
-   const canAddTrainer = canManageCohortRoster;
+  const canPreviewCohortInvoice = useMemo(() => {
+    if (!user || cohort?.cohort_type !== "training") {
+      return false;
+    }
+
+    if (["admin", "management"].includes(user.role)) {
+      return true;
+    }
+
+    return managers.some(
+      (membership) =>
+        membership.user_id === user.id &&
+        membership.is_active !== false
+    );
+  }, [user, cohort?.cohort_type, managers]);
+
+  const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
 
   const canRecordTestRegistrationWaiver =
