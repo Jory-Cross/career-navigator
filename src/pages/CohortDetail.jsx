@@ -128,6 +128,42 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
+    const {
+    data: invoicePreview = null,
+    isFetching: loadingInvoicePreview,
+    error: invoicePreviewError,
+  } = useQuery({
+    queryKey: [
+      "ce-training-cohort-invoice-preview",
+      cohort_id,
+      invoicePreviewRequestKey,
+    ],
+    queryFn: async () => {
+      const res = await base44.functions.invoke(
+        "getCETrainingCohortInvoicePreview",
+        {
+          cohort_id,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to preview CE Training registration invoice."
+        );
+      }
+
+      return res.data;
+    },
+    enabled:
+      !!cohort_id &&
+      !!user?.id &&
+      cohort?.cohort_type === "training" &&
+      showInvoicePreview,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+
   const memberships = cohortRoster.memberships;
   const rosterUsers = cohortRoster.users;
   // Display information is returned with the secure roster.
