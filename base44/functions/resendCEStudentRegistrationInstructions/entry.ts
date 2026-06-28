@@ -91,13 +91,21 @@ async function sendRegistrationInstructionsEmail({
   inviterName: string;
   billingEvent: any;
 }) {
-  if (!RESEND_API_KEY) {
+  const configuredSender = normalizeEmail(RESEND_FROM_EMAIL);
+  const senderDomain =
+    configuredSender.split("@")[1] || "";
+
+  const senderIsUsable =
+    !!RESEND_API_KEY &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredSender) &&
+    !FREE_DOMAINS.includes(senderDomain);
+
+  if (!senderIsUsable) {
     throw createHttpError(
-      500,
-      "Email delivery is not configured for CE invitations."
+      503,
+      "CE registration email is not configured. Add RESEND_API_KEY and a valid RESEND_FROM_EMAIL on your verified business domain before resending registration instructions."
     );
   }
-
   const eventStatus = normalizeText(billingEvent.event_status);
   const safeEmail = escapeHtml(toEmail);
   const safeInviterName = escapeHtml(inviterName);
