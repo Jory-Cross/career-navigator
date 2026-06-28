@@ -1852,9 +1852,22 @@ await queryClient.invalidateQueries({
               Pending Students
             </h2>
 
-            <span className="ml-auto text-xs text-slate-400">
+                       <span className="ml-auto text-xs text-slate-400">
               {pendingEnrollments.length} invited
             </span>
+
+            {canInviteCEStudents && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowInviteStudentDialog(true)}
+                className="ml-2 gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Invite CE Student
+              </Button>
+            )}
           </div>
 
           <div className="p-2">
