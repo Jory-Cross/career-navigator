@@ -1585,7 +1585,7 @@ await queryClient.invalidateQueries({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                                                       <div className="flex flex-wrap items-center justify-end gap-2">
                               <Badge
                                 variant="outline"
                                 className={
@@ -1610,6 +1610,35 @@ await queryClient.invalidateQueries({
                                 >
                                   Review required
                                 </Badge>
+                              ) : null}
+
+                              {invoice.integrity_status === "valid" &&
+                              ["ready_for_checkout", "failed"].includes(
+                                invoice.invoice_status
+                              ) ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={
+                                    !!resumingCohortInvoiceId &&
+                                    resumingCohortInvoiceId !== invoice.id
+                                  }
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    handleResumeCohortInvoicePayment(
+                                      invoice
+                                    );
+                                  }}
+                                  className="gap-2 border-violet-200 text-violet-700 hover:bg-violet-50"
+                                >
+                                  {resumingCohortInvoiceId ===
+                                  invoice.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : null}
+                                  Resume Payment
+                                </Button>
                               ) : null}
                             </div>
                           </div>
