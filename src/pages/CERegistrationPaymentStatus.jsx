@@ -196,9 +196,13 @@ export default function CERegistrationPaymentStatus() {
     [statusData?.payment_state]
   );
 
-  const paymentSettled =
+   const paymentSettled =
     statusData?.payment_state ===
     "registration_payment_settled";
+
+  const instructorPaidReceipt =
+    paymentSettled &&
+    statusData?.is_instructor_paid_receipt === true;
 
   const canShowPaymentDetails =
     Number.isFinite(Number(statusData?.amount_cents)) &&
