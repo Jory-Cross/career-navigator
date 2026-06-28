@@ -60,7 +60,9 @@ export default function CohortDetail() {
   const [showAddTrainerDialog, setShowAddTrainerDialog] = useState(false);
   const [addingTrainer, setAddingTrainer] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-    const [addingMember, setAddingMember] = useState(false);
+  const [showInviteStudentDialog, setShowInviteStudentDialog] =
+    useState(false);
+  const [addingMember, setAddingMember] = useState(false);
   const [completingMembershipId, setCompletingMembershipId] = useState("");
   const [waivingMembershipId, setWaivingMembershipId] = useState("");
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
