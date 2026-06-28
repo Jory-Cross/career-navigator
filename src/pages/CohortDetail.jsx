@@ -176,7 +176,9 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
-  const memberships = cohortRoster.memberships;
+   const memberships = cohortRoster.memberships;
+  const pendingEnrollments =
+    cohortRoster.pending_enrollments || [];
   const rosterUsers = cohortRoster.users;
   // Display information is returned with the secure roster.
   const orgUsers = rosterUsers;
