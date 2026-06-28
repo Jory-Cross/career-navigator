@@ -887,12 +887,27 @@ Deno.serve(async (req) => {
 
     const orgId = String(user.org_id || "").trim();
 
-    if (!orgId) {
+       if (!orgId) {
       return Response.json(
         {
           ok: false,
           error:
             "Your instructor account is missing organization access.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      requestedPaymentResponsibility === "instructor_paid" &&
+      requestedInstructorPaymentMode === "invoice_with_cohort" &&
+      !cohortId
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "A Training cohort must be selected when CE registration will be included on a future cohort invoice.",
         },
         { status: 400 }
       );
