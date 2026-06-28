@@ -1222,13 +1222,29 @@ Deno.serve(async (req) => {
       ? String(existingInvite.cohort_id || "").trim()
       : cohortId;
 
-    const billingResult = await ensureRegistrationBillingEvent({
+       const billingResult = await ensureRegistrationBillingEvent({
       base44,
       organizationId: orgId,
       email,
       subjectUserId: existingUser?.id || "",
       cohortId: effectiveCohortId,
     });
+
+    let instructorCheckoutResult = null;
+
+    if (
+      effectivePaymentResponsibility === "instructor_paid" &&
+      effectiveInstructorPaymentMode === "pay_now"
+    ) {
+      instructorCheckoutResult =
+        await createInstructorPaidCheckout({
+          base44,
+          billingEvent: billingResult.billingEvent,
+          organizationId: orgId,
+          instructorEmail: user.email,
+          studentEmail: email,
+        });
+    }
 
     if (existingInvite) {
       return Response.json({
