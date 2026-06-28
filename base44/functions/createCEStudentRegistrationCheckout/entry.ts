@@ -326,6 +326,13 @@ Deno.serve(async (req) => {
       );
     }
 
+       if (paymentResponsibility === "student_paid") {
+      throw createHttpError(
+        409,
+        "Student-paid CE registration checkout is delivered through the invitation email. Use Resend Invitation when the student needs the payment link again."
+      );
+    }
+
     if (
       paymentResponsibility === "instructor_paid" &&
       instructorPaymentMode === "invoice_with_cohort"
@@ -345,7 +352,6 @@ Deno.serve(async (req) => {
         "Only the instructor or organization may open checkout for an instructor-paid registration."
       );
     }
-
     const amountCents = Number(billingEvent.amount_cents);
     const currency = normalizeText(
       billingEvent.currency || "USD"
