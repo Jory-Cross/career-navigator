@@ -698,7 +698,7 @@ await queryClient.invalidateQueries({
           </Badge>
         </div>
 
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <InfoField label="Cohort Type" value={TYPE_LABELS[cohort.cohort_type] || cohort.cohort_type} />
           <InfoField label="Status" value={cohort.status} />
           <InfoField label="Course Name" value={cohort.course_name} />
@@ -708,6 +708,222 @@ await queryClient.invalidateQueries({
           <InfoField label="Description" value={cohort.description} multiline />
           <InfoField label="Instructor Notes" value={cohort.instructor_notes} multiline />
         </dl>
+
+        {canPreviewCohortInvoice && (
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Registration Invoice Preview
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Review pending students whose locked CE registration fees
+                  are eligible for this cohort invoice. Preview only — no
+                  invoice, payment, access, or enrollment changes are made.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                {showInvoicePreview && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={loadingInvoicePreview}
+                    onClick={() =>
+                      setShowInvoicePreview(false)
+                    }
+                  >
+                    Close Preview
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={loadingInvoicePreview}
+                  onClick={() => {
+                    setShowInvoicePreview(true);
+                    setInvoicePreviewRequestKey(
+                      (currentValue) => currentValue + 1
+                    );
+                  }}
+                  className="gap-2"
+                >
+                  {loadingInvoicePreview ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                  {showInvoicePreview
+                    ? "Refresh Preview"
+                    : "Preview Registration Invoice"}
+                </Button>
+              </div>
+            </div>
+
+            {showInvoicePreview && (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                {loadingInvoicePreview && !invoicePreview ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Preparing registration invoice preview...
+                  </div>
+                ) : null}
+
+                {invoicePreviewError ? (
+                  <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                    {invoicePreviewError.message ||
+                      "Unable to prepare the registration invoice preview."}
+                  </div>
+                ) : null}
+
+                {invoicePreview ? (
+                  <div className="space-y-5">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-md border border-slate-200 bg-white p-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Invoice-Billed Invitations
+                        </div>
+                        <div className="mt-1 text-xl font-bold text-slate-900">
+                          {invoicePreview.summary
+                            ?.invoice_billed_invitation_count || 0}
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                          Eligible Students
+                        </div>
+                        <div className="mt-1 text-xl font-bold text-emerald-800">
+                          {invoicePreview.summary
+                            ?.eligible_student_count || 0}
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                          Blocked Students
+                        </div>
+                        <div className="mt-1 text-xl font-bold text-amber-800">
+                          {invoicePreview.summary
+                            ?.blocked_student_count || 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        Invoice Totals
+                      </h3>
+
+                      {(invoicePreview.summary?.totals_by_currency || [])
+                        .length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {invoicePreview.summary.totals_by_currency.map(
+                            (total) => (
+                              <div
+                                key={total.currency}
+                                className="rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900"
+                              >
+                                <span className="font-medium">
+                                  {total.student_count} student
+                                  {total.student_count === 1 ? "" : "s"}:
+                                </span>{" "}
+                                {total.currency}{" "}
+                                {(
+                                  Number(total.total_amount_cents || 0) / 100
+                                ).toFixed(2)}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-500">
+                          No invoice-eligible registration fees are currently
+                          available for this cohort.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        Eligible Students
+                      </h3>
+
+                      {(invoicePreview.eligible_students || []).length > 0 ? (
+                        <div className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-white">
+                          <table className="w-full text-sm">
+                            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">Student Email</th>
+                                <th className="px-3 py-2">Locked Fee</th>
+                                <th className="px-3 py-2">Billing Status</th>
+                              </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-slate-100">
+                              {invoicePreview.eligible_students.map(
+                                (student) => (
+                                  <tr key={student.pending_invite_id}>
+                                    <td className="px-3 py-2 text-slate-800">
+                                      {student.email}
+                                    </td>
+                                    <td className="px-3 py-2 text-slate-800">
+                                      {student.currency}{" "}
+                                      {(
+                                        Number(student.amount_cents || 0) / 100
+                                      ).toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-2 text-slate-600">
+                                      {student.billing_event_status}
+                                    </td>
+                                  </tr>
+                                )
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-500">
+                          No students are currently eligible for cohort invoice
+                          billing.
+                        </p>
+                      )}
+                    </div>
+
+                    {(invoicePreview.blocked_students || []).length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">
+                          Blocked Students
+                        </h3>
+
+                        <div className="mt-2 space-y-2">
+                          {invoicePreview.blocked_students.map((student) => (
+                            <div
+                              key={
+                                student.pending_invite_id ||
+                                `${student.email}-${student.reason_code}`
+                              }
+                              className="rounded-md border border-amber-200 bg-amber-50 p-3"
+                            >
+                              <div className="text-sm font-medium text-amber-900">
+                                {student.email || "Student email unavailable"}
+                              </div>
+
+                              <div className="mt-1 text-xs text-amber-800">
+                                {student.reason}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 3. Managers section */}
