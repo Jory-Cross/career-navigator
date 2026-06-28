@@ -62,6 +62,9 @@ export default function CohortDetail() {
     const [addingMember, setAddingMember] = useState(false);
   const [completingMembershipId, setCompletingMembershipId] = useState("");
   const [waivingMembershipId, setWaivingMembershipId] = useState("");
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoicePreviewRequestKey, setInvoicePreviewRequestKey] =
+    useState(0);
   useEffect(() => {
     let active = true;
     base44.auth.me().then((u) => {
