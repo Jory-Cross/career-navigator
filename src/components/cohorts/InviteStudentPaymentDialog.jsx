@@ -158,6 +158,37 @@ export default function InviteStudentPaymentDialog({
         );
       }
 
+          const checkoutUrl = String(
+        res.data?.checkout_url || ""
+      ).trim();
+
+      const isInstructorPayNow =
+        res.data?.payment_responsibility === "instructor_paid" &&
+        res.data?.instructor_payment_mode === "pay_now";
+
+      if (isInstructorPayNow) {
+        if (
+          !/^https:\/\/checkout\.stripe\.com(?:\/|$)/i.test(
+            checkoutUrl
+          )
+        ) {
+          throw new Error(
+            "The server did not return a valid Stripe Checkout URL for this business registration payment."
+          );
+        }
+
+        toast.success(
+          "CE student enrollment invitation created. Opening secure business checkout."
+        );
+
+        resetForm();
+        onOpenChange(false);
+        onSuccess?.();
+
+        window.location.assign(checkoutUrl);
+        return;
+      }
+
       toast.success(
         res.data?.email_sent
           ? `Enrollment invitation sent to ${email.trim()}.`
