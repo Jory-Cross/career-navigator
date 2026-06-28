@@ -12,8 +12,30 @@ const REVOCABLE_INVITE_STATUSES = new Set([
   "pending_email_failed",
 ]);
 
+const CE_REGISTRATION_FEE_KINDS = new Set([
+  "training_registration",
+  "training_reactivation",
+]);
+
+function normalizeText(value: unknown) {
+  return String(value || "").trim();
+}
+
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
+function buildRegistrationBillingEventKey(
+  organizationId: string,
+  email: string
+) {
+  return `ce_student_registration:${organizationId}:${encodeURIComponent(
+    normalizeEmail(email)
+  )}`;
+}
+
 async function resolveOrganizationId(base44: any, caller: any) {
-  const directOrgId = String(caller?.org_id || "").trim();
+  const directOrgId = normalizeText(caller?.org_id);
 
   if (directOrgId) {
     return directOrgId;
@@ -24,7 +46,60 @@ async function resolveOrganizationId(base44: any, caller: any) {
       owner_email: caller.email,
     });
 
-  return String(organizations?.[0]?.id || "").trim();
+  return normalizeText(organizations?.[0]?.id);
+}
+
+async function getMatchingRegistrationBillingEvent({
+  base44,
+  organizationId,
+  email,
+}: {
+  base44: any;
+  organizationId: string;
+  email: string;
+}) {
+  const billingEventKey = buildRegistrationBillingEventKey(
+    organizationId,
+    email
+  );
+
+  const billingRows =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      billing_event_key: billingEventKey,
+    });
+
+  const billingEvents = Array.isArray(billingRows)
+    ? billingRows
+    : [];
+
+  if (billingEvents.length === 0) {
+    return null;
+  }
+
+  if (billingEvents.length > 1) {
+    throw new Error(
+      "Multiple CE registration billing events exist for this invitation. Resolve the billing conflict before revoking the invitation."
+    );
+  }
+
+  const billingEvent = billingEvents[0];
+
+  const identityMatches =
+    normalizeText(billingEvent.organization_id) === organizationId &&
+    normalizeEmail(billingEvent.subject_verified_email) ===
+      normalizeEmail(email) &&
+    CE_REGISTRATION_FEE_KINDS.has(
+      normalizeText(billingEvent.fee_kind)
+    ) &&
+    billingEvent.billing_subject_type === "student";
+
+  if (!identityMatches) {
+    throw new Error(
+      "The CE registration billing event does not safely match this invitation. Resolve the billing record before revoking the invitation."
+    );
+  }
+
+  return billingEvent;
 }
 
 Deno.serve(async (req) => {
@@ -51,7 +126,9 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const pendingInviteId = String(body?.pending_invite_id || "").trim();
+    const pendingInviteId = normalizeText(
+      body?.pending_invite_id
+    );
 
     if (!pendingInviteId) {
       return Response.json(
@@ -63,7 +140,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organizationId = await resolveOrganizationId(base44, caller);
+    const organizationId = await resolveOrganizationId(
+      base44,
+      caller
+    );
 
     if (!organizationId) {
       return Response.json(
@@ -96,7 +176,7 @@ Deno.serve(async (req) => {
 
     if (
       invite.role !== "ce_student" ||
-      String(invite.org_id || "").trim() !== organizationId
+      normalizeText(invite.org_id) !== organizationId
     ) {
       return Response.json(
         {
@@ -119,6 +199,42 @@ Deno.serve(async (req) => {
       );
     }
 
+    const invitedEmail = normalizeEmail(invite.email);
+
+    if (!invitedEmail) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "This CE student invitation is missing its invited email address.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const billingEvent = await getMatchingRegistrationBillingEvent({
+      base44,
+      organizationId,
+      email: invitedEmail,
+    });
+
+    if (
+      billingEvent &&
+      ["paid", "waived"].includes(
+        normalizeText(billingEvent.event_status)
+      )
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "This invitation cannot be revoked because its CE registration payment is settled. Use Resend Invitation so the student can register with the same invited email.",
+          billing_event_status: billingEvent.event_status,
+        },
+        { status: 409 }
+      );
+    }
+
     await base44.asServiceRole.entities.PendingRoleAssignment.update(
       invite.id,
       {
@@ -132,6 +248,7 @@ Deno.serve(async (req) => {
       pending_invite_id: invite.id,
       email: invite.email,
       status: "revoked",
+      billing_event_status: billingEvent?.event_status || null,
     });
   } catch (error) {
     console.error(
