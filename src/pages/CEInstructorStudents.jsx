@@ -702,23 +702,27 @@ export default function CEInstructorStudents() {
                             </span>
                           )}
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={
-                              savingPaymentOption ||
-                              resendingInviteId === student.id ||
-                              revokingInviteId === student.id
-                            }
-                            onClick={() =>
-                              handleOpenPaymentEditor(student)
-                            }
-                            className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
-                          >
-                            <Pencil className="h-3 w-3" />
-                            Edit Payment
-                          </Button>
+                                                   {!["paid", "waived"].includes(
+                            student.billing_event_status
+                          ) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={
+                                savingPaymentOption ||
+                                resendingInviteId === student.id ||
+                                revokingInviteId === student.id
+                              }
+                              onClick={() =>
+                                handleOpenPaymentEditor(student)
+                              }
+                              className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit Payment
+                            </Button>
+                          )}
 
                           <Button
                             type="button"
