@@ -202,6 +202,216 @@ async function ensurePaidCeStudentCohortMembership(
   };
 }
 
+function escapeHtml(value: unknown) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatMoney(amountCents: unknown, currency: unknown) {
+  const amount = Number(amountCents);
+
+  if (!Number.isFinite(amount)) {
+    return "";
+  }
+
+  return `${normalizeText(currency || "USD").toUpperCase()} ${(
+    amount / 100
+  ).toFixed(2)}`;
+}
+
+function getRegistrationUrl() {
+  return APP_URL.replace(/\/+$/, "");
+}
+
+async function updateSettlementEmailTracking(
+  base44: any,
+  billingEventId: string,
+  updates: Record<string, unknown>
+) {
+  try {
+    await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+      billingEventId,
+      updates
+    );
+  } catch (trackingError) {
+    console.error(
+      "[stripeWebhook] Unable to update CE settlement-email tracking:",
+      trackingError?.message || trackingError
+    );
+  }
+}
+
+async function sendCEStudentSettlementEmail(
+  base44: any,
+  billingRecord: any
+) {
+  const billingEventId = normalizeText(billingRecord?.id);
+  const studentEmail = normalizeEmail(
+    billingRecord?.subject_verified_email
+  );
+
+  const isEligibleRegistration =
+    CE_REGISTRATION_FEE_KINDS.has(
+      normalizeText(billingRecord?.fee_kind)
+    ) &&
+    billingRecord?.billing_subject_type === "student";
+
+  if (!billingEventId || !studentEmail || !isEligibleRegistration) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "not_an_eligible_ce_student_registration",
+    };
+  }
+
+  if (
+    normalizeText(
+      billingRecord?.registration_settlement_email_sent_at
+    )
+  ) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "settlement_email_already_recorded",
+    };
+  }
+
+  const attemptedAt = new Date().toISOString();
+
+  if (!RESEND_API_KEY) {
+    await updateSettlementEmailTracking(base44, billingEventId, {
+      registration_settlement_email_last_attempt_at: attemptedAt,
+      registration_settlement_email_last_error:
+        "RESEND_API_KEY is not configured.",
+    });
+
+    return {
+      sent: false,
+      skipped: false,
+      reason: "email_not_configured",
+    };
+  }
+
+  const registrationUrl = getRegistrationUrl();
+  const paymentAmount = formatMoney(
+    billingRecord?.amount_cents,
+    billingRecord?.currency
+  );
+
+  const safeStudentEmail = escapeHtml(studentEmail);
+  const safeRegistrationUrl = escapeHtml(registrationUrl);
+  const safePaymentAmount = escapeHtml(paymentAmount);
+
+  await updateSettlementEmailTracking(base44, billingEventId, {
+    registration_settlement_email_last_attempt_at: attemptedAt,
+    registration_settlement_email_last_error: "",
+  });
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `ce-registration-settlement:${billingEventId}`,
+      },
+      body: JSON.stringify({
+        from: `CE Training <${RESEND_FROM}>`,
+        to: [studentEmail],
+        subject:
+          "Your CE Training registration payment is confirmed",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+            <h2 style="color: #7c3aed; margin-bottom: 12px;">
+              Your CE Training payment is confirmed
+            </h2>
+
+            <p style="font-size: 16px; line-height: 1.6;">
+              Your CE Training registration payment of
+              <strong>${safePaymentAmount}</strong> has been received.
+            </p>
+
+            <p style="font-size: 16px; line-height: 1.6;">
+              Your enrollment is already linked to a Training cohort. To
+              activate CE Training Portal access, create your account or sign
+              in using this exact invited email address:
+              <strong>${safeStudentEmail}</strong>.
+            </p>
+
+            <a
+              href="${safeRegistrationUrl}"
+              style="display: inline-block; background: #7c3aed; color: #ffffff; padding: 13px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 12px 0 18px;"
+            >
+              Register or Sign In →
+            </a>
+
+            <p style="color: #64748b; font-size: 13px; line-height: 1.6; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+              Use the invited email address above. A different email cannot be
+              connected to this CE Training enrollment.
+            </p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        `[stripeWebhook] CE settlement email failed for billing event ${billingEventId}: ${response.status}`
+      );
+
+      await updateSettlementEmailTracking(base44, billingEventId, {
+        registration_settlement_email_last_attempt_at: attemptedAt,
+        registration_settlement_email_last_error:
+          `Resend delivery failed with status ${response.status}.`,
+      });
+
+      return {
+        sent: false,
+        skipped: false,
+        reason: "email_delivery_failed",
+      };
+    }
+
+    const providerPayload = await response.json().catch(() => ({}));
+
+    await updateSettlementEmailTracking(base44, billingEventId, {
+      registration_settlement_email_sent_at: attemptedAt,
+      registration_settlement_email_provider_id:
+        normalizeText(providerPayload?.id),
+      registration_settlement_email_last_attempt_at: attemptedAt,
+      registration_settlement_email_last_error: "",
+    });
+
+    return {
+      sent: true,
+      skipped: false,
+      provider_id: normalizeText(providerPayload?.id) || null,
+    };
+  } catch (emailError) {
+    console.error(
+      `[stripeWebhook] CE settlement email error for billing event ${billingEventId}:`,
+      emailError?.message || emailError
+    );
+
+    await updateSettlementEmailTracking(base44, billingEventId, {
+      registration_settlement_email_last_attempt_at: attemptedAt,
+      registration_settlement_email_last_error: String(
+        emailError?.message || "Unable to send settlement email."
+      ).slice(0, 500),
+    });
+
+    return {
+      sent: false,
+      skipped: false,
+      reason: "email_delivery_error",
+    };
+  }
+}
+
 async function activateExistingPaidCEStudentIfEligible(
   base44: any,
   billingRecord: any
