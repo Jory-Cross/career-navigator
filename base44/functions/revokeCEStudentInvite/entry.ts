@@ -1,4 +1,11 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
+import Stripe from "npm:stripe@14.21.0";
+
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
+
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY)
+  : null;
 
 const ALLOWED_ROLES = new Set([
   "admin",
@@ -100,6 +107,52 @@ async function getMatchingRegistrationBillingEvent({
   }
 
   return billingEvent;
+}
+
+async function expireOpenCheckoutIfNeeded(billingEvent: any) {
+  const checkoutSessionId = normalizeText(
+    billingEvent?.stripe_checkout_session_id
+  );
+
+  if (!checkoutSessionId) {
+    return {
+      checkout_expired: false,
+      checkout_state: "no_checkout_session",
+    };
+  }
+
+  if (!stripe) {
+    throw new Error(
+      "Stripe is not configured, so this invitation cannot be safely revoked while a checkout session may still be active."
+    );
+  }
+
+  let session: Stripe.Checkout.Session;
+
+  try {
+    session = await stripe.checkout.sessions.retrieve(
+      checkoutSessionId
+    );
+  } catch {
+    return {
+      checkout_expired: false,
+      checkout_state: "checkout_session_not_found",
+    };
+  }
+
+  if (session.status !== "open") {
+    return {
+      checkout_expired: false,
+      checkout_state: session.status || "not_open",
+    };
+  }
+
+  await stripe.checkout.sessions.expire(checkoutSessionId);
+
+  return {
+    checkout_expired: true,
+    checkout_state: "expired",
+  };
 }
 
 Deno.serve(async (req) => {
@@ -228,10 +281,28 @@ Deno.serve(async (req) => {
         {
           ok: false,
           error:
-            "This invitation cannot be revoked because its CE registration payment is settled. Use Resend Invitation so the student can register with the same invited email.",
+            "This invitation cannot be revoked because its CE registration payment is settled. Use Resend Registration Instructions so the student can register with the same invited email.",
           billing_event_status: billingEvent.event_status,
         },
         { status: 409 }
+      );
+    }
+
+    const checkoutResult = billingEvent
+      ? await expireOpenCheckoutIfNeeded(billingEvent)
+      : {
+          checkout_expired: false,
+          checkout_state: "no_billing_event",
+        };
+
+    if (billingEvent) {
+      await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+        billingEvent.id,
+        {
+          event_status: "failed",
+          notes:
+            "CE student invitation revoked before payment. Any open Stripe Checkout session was expired.",
+        }
       );
     }
 
@@ -248,7 +319,9 @@ Deno.serve(async (req) => {
       pending_invite_id: invite.id,
       email: invite.email,
       status: "revoked",
-      billing_event_status: billingEvent?.event_status || null,
+      billing_event_status: billingEvent ? "failed" : null,
+      checkout_expired: checkoutResult.checkout_expired,
+      checkout_state: checkoutResult.checkout_state,
     });
   } catch (error) {
     console.error(
