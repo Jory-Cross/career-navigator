@@ -152,9 +152,27 @@
       "type": "string",
       "description": "Stripe Invoice ID once billing is connected."
     },
-    "stripe_payment_intent_id": {
+      "stripe_payment_intent_id": {
       "type": "string",
       "description": "Stripe Payment Intent ID once billing is connected."
+    },
+    "registration_settlement_email_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the student was sent post-settlement CE registration instructions after this billing event was paid or waived."
+    },
+    "registration_settlement_email_provider_id": {
+      "type": "string",
+      "description": "Transactional email provider message ID for the post-settlement CE registration instructions."
+    },
+    "registration_settlement_email_last_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Most recent attempted delivery time for the post-settlement CE registration instructions."
+    },
+    "registration_settlement_email_last_error": {
+      "type": "string",
+      "description": "Most recent non-sensitive delivery error for post-settlement CE registration instructions. Blank after a successful send."
     },
     "notes": {
       "type": "string",
