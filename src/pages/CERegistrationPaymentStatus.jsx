@@ -346,9 +346,11 @@ export default function CERegistrationPaymentStatus() {
                       Next step: create your account or sign in.
                     </p>
 
-                    <p className="mt-2 text-sm leading-6 text-violet-900">
-                      You do not need to be assigned to a cohort before your CE
-                      Training registration can be recognized.
+                                      <p className="mt-2 text-sm leading-6 text-violet-900">
+                      Your CE Training enrollment is already linked to its
+                      Training cohort. Register or sign in using the invited
+                      email address above so Career Navigator can safely
+                      activate your CE Training access.
                     </p>
 
                     <button
