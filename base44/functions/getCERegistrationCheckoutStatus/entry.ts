@@ -373,11 +373,25 @@ Deno.serve(async (req) => {
 
     return Response.json({
       ok: true,
-      payment_state: paymentState,
-      next_step: getNextStep(paymentState),
+          payment_state: paymentState,
+      next_step: getNextStep(
+        paymentState,
+        paymentResponsibility,
+        instructorPaymentMode,
+        studentSettlementEmailState
+      ),
       registration_payment_settled:
         billingEventStatus === "paid" ||
         billingEventStatus === "waived",
+      payment_responsibility: paymentResponsibility,
+      instructor_payment_mode:
+        instructorPaymentMode || null,
+      is_instructor_paid_receipt: instructorPaidReceipt,
+      student_registration_email_state:
+        studentSettlementEmailState,
+      student_registration_email_sent_at:
+        billingEvent.registration_settlement_email_sent_at ||
+        null,
       billing_event_status: billingEventStatus,
       stripe_session_status: stripeSessionStatus,
       stripe_payment_status: stripePaymentStatus,
@@ -385,14 +399,12 @@ Deno.serve(async (req) => {
       currency: lockedCurrency,
       invited_email_hint: maskEmail(billingEmail),
       paid_at: billingEvent.paid_at || null,
-      message:
-        paymentState === "registration_payment_settled"
-          ? "Registration payment is confirmed. Register or sign in using the invited email address to continue."
-          : paymentState === "payment_confirmed_processing"
-            ? "Stripe received the payment. Career Navigator is confirming the registration."
-            : paymentState === "payment_not_completed"
-              ? "The registration payment has not been completed."
-              : "Registration payment status is still being finalized.",
+      message: getStatusMessage(
+        paymentState,
+        paymentResponsibility,
+        instructorPaymentMode,
+        studentSettlementEmailState
+      ),
     });
   } catch (error) {
     const status = Number(
