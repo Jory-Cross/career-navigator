@@ -94,13 +94,21 @@ export default function CohortDetail() {
 
     // Secure roster query. The backend function can read every active
   // membership row in this cohort, including student rows.
-  const {
-    data: cohortRoster = { memberships: [], users: [] },
+   const {
+    data: cohortRoster = {
+      memberships: [],
+      users: [],
+      pending_enrollments: [],
+    },
   } = useQuery({
     queryKey: ["cohorts", "memberships", cohort_id],
     queryFn: async () => {
       if (!cohort_id) {
-        return { memberships: [], users: [] };
+        return {
+          memberships: [],
+          users: [],
+          pending_enrollments: [],
+        };
       }
 
       const res = await base44.functions.invoke(
@@ -121,13 +129,17 @@ export default function CohortDetail() {
         users: Array.isArray(res.data.users)
           ? res.data.users
           : [],
+        pending_enrollments: Array.isArray(
+          res.data.pending_enrollments
+        )
+          ? res.data.pending_enrollments
+          : [],
       };
     },
     enabled: !!cohort_id && !!user,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
-
     const {
     data: invoicePreview = null,
     isFetching: loadingInvoicePreview,
