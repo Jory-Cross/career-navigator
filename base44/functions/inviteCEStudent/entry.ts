@@ -1403,14 +1403,29 @@ Deno.serve(async (req) => {
       email,
       status: finalStatus,
       email_sent: emailSent,
-      payment_link_emailed:
+          payment_link_emailed:
         emailSent &&
         requestedPaymentResponsibility === "student_paid",
       checkout_created:
-        requestedPaymentResponsibility === "student_paid" &&
-        !!checkoutResult,
+        (requestedPaymentResponsibility === "student_paid" &&
+          !!checkoutResult) ||
+        (effectivePaymentResponsibility === "instructor_paid" &&
+          effectiveInstructorPaymentMode === "pay_now" &&
+          !!instructorCheckoutResult &&
+          !instructorCheckoutResult.reusedExistingCheckout),
       checkout_reused:
-        !!checkoutResult?.reusedExistingCheckout,
+        !!checkoutResult?.reusedExistingCheckout ||
+        !!instructorCheckoutResult?.reusedExistingCheckout,
+      checkout_url:
+        effectivePaymentResponsibility === "instructor_paid" &&
+        effectiveInstructorPaymentMode === "pay_now"
+          ? instructorCheckoutResult?.checkoutUrl || null
+          : null,
+      checkout_session_id:
+        effectivePaymentResponsibility === "instructor_paid" &&
+        effectiveInstructorPaymentMode === "pay_now"
+          ? instructorCheckoutResult?.checkoutSessionId || null
+          : null,
       existing_user: !!existingUser?.id,
       payment_responsibility: requestedPaymentResponsibility,
       instructor_payment_mode:
@@ -1420,8 +1435,13 @@ Deno.serve(async (req) => {
       cohort_id: cohortId || null,
       billing_event_id: billingResult.billingEvent.id,
       billing_event_status:
-        requestedPaymentResponsibility === "student_paid" &&
-        checkoutResult
+        (
+          (requestedPaymentResponsibility === "student_paid" &&
+            !!checkoutResult) ||
+          (effectivePaymentResponsibility === "instructor_paid" &&
+            effectiveInstructorPaymentMode === "pay_now" &&
+            !!instructorCheckoutResult)
+        )
           ? "ready_for_checkout"
           : billingResult.billingEvent.event_status,
       billing_event_created: billingResult.created,
