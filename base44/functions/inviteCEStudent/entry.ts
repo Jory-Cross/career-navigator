@@ -914,49 +914,73 @@ Deno.serve(async (req) => {
         { status: 400 }
       );
     }
-    if (cohortId) {
       const cohortRows =
-        await base44.asServiceRole.entities.CETrainingCohort.filter({
-          id: cohortId,
+      await base44.asServiceRole.entities.CETrainingCohort.filter({
+        id: cohortId,
+      });
+
+    const cohort = Array.isArray(cohortRows)
+      ? cohortRows[0]
+      : null;
+
+    if (!cohort) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Selected CE training cohort was not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (cohort.org_id !== orgId) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Selected CE training cohort does not belong to your organization.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (cohort.cohort_type !== "training") {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "CE student invitations may only reference Training cohorts.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (inviterRole !== "admin") {
+      const membershipRows =
+        await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+          cohort_id: cohortId,
+          user_id: user.id,
         });
 
-      const cohort = Array.isArray(cohortRows)
-        ? cohortRows[0]
-        : null;
+      const isActiveManager = (
+        Array.isArray(membershipRows) ? membershipRows : []
+      ).some(
+        (membership) =>
+          membership.cohort_role === "manager" &&
+          membership.is_active !== false
+      );
 
-      if (!cohort) {
-        return Response.json(
-          {
-            ok: false,
-            error: "Selected CE training cohort was not found.",
-          },
-          { status: 404 }
-        );
-      }
-
-      if (cohort.org_id && cohort.org_id !== orgId) {
+      if (!isActiveManager) {
         return Response.json(
           {
             ok: false,
             error:
-              "Selected CE training cohort does not belong to your organization.",
+              "You must be an active manager of this Training cohort to invite CE students.",
           },
           { status: 403 }
         );
       }
-
-      if (cohort.cohort_type !== "training") {
-        return Response.json(
-          {
-            ok: false,
-            error:
-              "CE student invitations may only reference Training cohorts.",
-          },
-          { status: 400 }
-        );
-      }
     }
-
     const existingUser = await findExistingUserByEmail(
       base44,
       email
