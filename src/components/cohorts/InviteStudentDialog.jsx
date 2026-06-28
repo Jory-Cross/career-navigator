@@ -46,8 +46,18 @@ export default function InviteStudentDialog({
       return;
     }
 
-    setInviting(true);
+    if (
+      paymentResponsibility === "instructor_paid" &&
+      instructorPaymentMode === "invoice_with_cohort" &&
+      !cohortId
+    ) {
+      toast.error(
+        "A Training cohort must be selected before this student can be included on a future cohort invoice."
+      );
+      return;
+    }
 
+    setInviting(true);
     try {
       const res = await base44.functions.invoke("inviteCEStudent", {
         email: email.trim(),
