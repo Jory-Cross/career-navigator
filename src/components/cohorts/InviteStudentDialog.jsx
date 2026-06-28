@@ -17,6 +17,7 @@ export default function InviteStudentDialog({
   open,
   onOpenChange,
   onSuccess,
+  cohortId,
 }) {
   const [email, setEmail] = useState("");
   const [paymentResponsibility, setPaymentResponsibility] =
