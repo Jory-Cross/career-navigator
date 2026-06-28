@@ -360,6 +360,372 @@ async function handleCERegistrationCheckoutCompleted(
   };
 }
 
+async function handleCETrainingCohortInvoiceCheckoutCompleted(
+  base44: any,
+  session: Stripe.Checkout.Session
+) {
+  const metadata = session.metadata || {};
+  const cohortInvoiceId = normalizeText(
+    metadata.cohort_invoice_id
+  );
+
+  if (!cohortInvoiceId) {
+    throw new Error(
+      "CE Training cohort invoice checkout is missing cohort_invoice_id metadata."
+    );
+  }
+
+  const invoiceRows =
+    await base44.asServiceRole.entities.CETrainingCohortInvoice.filter({
+      id: cohortInvoiceId,
+    });
+
+  const cohortInvoice = Array.isArray(invoiceRows)
+    ? invoiceRows[0]
+    : null;
+
+  if (!cohortInvoice) {
+    throw new Error(
+      "The CE Training cohort invoice referenced by Stripe could not be found."
+    );
+  }
+
+  const metadataOrganizationId = normalizeText(
+    metadata.organization_id
+  );
+
+  if (
+    metadataOrganizationId &&
+    metadataOrganizationId !==
+      normalizeText(cohortInvoice.organization_id)
+  ) {
+    throw new Error(
+      "Stripe checkout organization metadata does not match the cohort invoice."
+    );
+  }
+
+  const metadataCohortId = normalizeText(metadata.cohort_id);
+
+  if (
+    metadataCohortId &&
+    metadataCohortId !== normalizeText(cohortInvoice.cohort_id)
+  ) {
+    throw new Error(
+      "Stripe checkout cohort metadata does not match the cohort invoice."
+    );
+  }
+
+  const metadataInvoiceKey = normalizeText(metadata.invoice_key);
+
+  if (
+    metadataInvoiceKey &&
+    metadataInvoiceKey !== normalizeText(cohortInvoice.invoice_key)
+  ) {
+    throw new Error(
+      "Stripe checkout invoice metadata does not match the cohort invoice."
+    );
+  }
+
+  const checkoutSessionId = normalizeText(session.id);
+  const paymentIntentId = getStripeId(session.payment_intent);
+  const paymentStatus = normalizeText(session.payment_status);
+
+  const expectedCheckoutSessionId = normalizeText(
+    cohortInvoice.stripe_checkout_session_id
+  );
+
+  if (
+    expectedCheckoutSessionId &&
+    expectedCheckoutSessionId !== checkoutSessionId
+  ) {
+    throw new Error(
+      "Stripe checkout session does not match the cohort invoice checkout session."
+    );
+  }
+
+  const expectedAmount = Number(cohortInvoice.amount_cents);
+  const checkoutAmount = Number(session.amount_total);
+
+  if (
+    !Number.isFinite(expectedAmount) ||
+    expectedAmount <= 0 ||
+    !Number.isFinite(checkoutAmount) ||
+    checkoutAmount !== expectedAmount
+  ) {
+    throw new Error(
+      "Stripe checkout amount does not match the locked cohort invoice amount."
+    );
+  }
+
+  const expectedCurrency = normalizeText(
+    cohortInvoice.currency
+  ).toLowerCase();
+
+  const checkoutCurrency = normalizeText(
+    session.currency
+  ).toLowerCase();
+
+  if (
+    !expectedCurrency ||
+    !checkoutCurrency ||
+    expectedCurrency !== checkoutCurrency
+  ) {
+    throw new Error(
+      "Stripe checkout currency does not match the locked cohort invoice currency."
+    );
+  }
+
+  if (cohortInvoice.invoice_status === "paid") {
+    return {
+      handled: true,
+      paid: true,
+      ignored: true,
+      reason: "cohort_invoice_already_paid",
+      cohort_invoice_id: cohortInvoice.id,
+    };
+  }
+
+  if (
+    ["cancelled", "refunded"].includes(
+      normalizeText(cohortInvoice.invoice_status)
+    )
+  ) {
+    return {
+      handled: true,
+      paid: false,
+      ignored: true,
+      reason: "cohort_invoice_not_payable",
+      cohort_invoice_id: cohortInvoice.id,
+    };
+  }
+
+  const invoiceLineRows =
+    await base44.asServiceRole.entities.CETrainingCohortInvoiceLine.filter({
+      cohort_invoice_id: cohortInvoice.id,
+    });
+
+  const invoiceLines = Array.isArray(invoiceLineRows)
+    ? invoiceLineRows
+    : [];
+
+  const expectedStudentCount = Number(cohortInvoice.student_count);
+
+  if (
+    !Number.isInteger(expectedStudentCount) ||
+    expectedStudentCount <= 0 ||
+    invoiceLines.length !== expectedStudentCount
+  ) {
+    throw new Error(
+      "The cohort invoice line count does not match its locked student count."
+    );
+  }
+
+  const billingEventIds = new Set<string>();
+
+  for (const invoiceLine of invoiceLines) {
+    if (
+      normalizeText(invoiceLine.organization_id) !==
+        normalizeText(cohortInvoice.organization_id) ||
+      normalizeText(invoiceLine.cohort_id) !==
+        normalizeText(cohortInvoice.cohort_id) ||
+      normalizeText(invoiceLine.cohort_invoice_id) !==
+        normalizeText(cohortInvoice.id)
+    ) {
+      throw new Error(
+        "A cohort invoice line does not safely match its parent cohort invoice."
+      );
+    }
+
+    if (
+      normalizeText(invoiceLine.currency).toLowerCase() !==
+      expectedCurrency
+    ) {
+      throw new Error(
+        "A cohort invoice line currency does not match its parent invoice."
+      );
+    }
+
+    if (
+      !Number.isInteger(Number(invoiceLine.amount_cents)) ||
+      Number(invoiceLine.amount_cents) < 0
+    ) {
+      throw new Error(
+        "A cohort invoice line has an invalid locked registration amount."
+      );
+    }
+
+    if (
+      !["included", "paid"].includes(
+        normalizeText(invoiceLine.line_status)
+      )
+    ) {
+      throw new Error(
+        "A cohort invoice contains a line that is no longer payable."
+      );
+    }
+
+    const billingEventId = normalizeText(
+      invoiceLine.organization_billing_event_id
+    );
+
+    if (!billingEventId || billingEventIds.has(billingEventId)) {
+      throw new Error(
+        "A cohort invoice contains duplicate or missing student billing-event references."
+      );
+    }
+
+    billingEventIds.add(billingEventId);
+  }
+
+  const billingEventRows =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      organization_id: cohortInvoice.organization_id,
+    });
+
+  const billingEventsById = new Map(
+    (Array.isArray(billingEventRows) ? billingEventRows : []).map(
+      (billingEvent) => [billingEvent.id, billingEvent]
+    )
+  );
+
+  if (paymentStatus !== "paid") {
+    await base44.asServiceRole.entities.CETrainingCohortInvoice.update(
+      cohortInvoice.id,
+      {
+        invoice_status: "payment_processing",
+        stripe_checkout_session_id: checkoutSessionId,
+        ...(paymentIntentId
+          ? { stripe_payment_intent_id: paymentIntentId }
+          : {}),
+      }
+    );
+
+    return {
+      handled: true,
+      paid: false,
+      payment_status: paymentStatus || "unknown",
+      cohort_invoice_id: cohortInvoice.id,
+    };
+  }
+
+  const paidAt = new Date().toISOString();
+  const activations = [];
+
+  for (const invoiceLine of invoiceLines) {
+    const billingEventId = normalizeText(
+      invoiceLine.organization_billing_event_id
+    );
+
+    const billingEvent = billingEventsById.get(billingEventId);
+
+    if (!billingEvent) {
+      throw new Error(
+        "A cohort invoice line references a missing CE registration billing event."
+      );
+    }
+
+    const billingEventMatchesLine =
+      normalizeText(billingEvent.organization_id) ===
+        normalizeText(cohortInvoice.organization_id) &&
+      normalizeText(billingEvent.cohort_id) ===
+        normalizeText(cohortInvoice.cohort_id) &&
+      CE_REGISTRATION_FEE_KINDS.has(
+        normalizeText(billingEvent.fee_kind)
+      ) &&
+      billingEvent.billing_subject_type === "student" &&
+      normalizeEmail(billingEvent.subject_verified_email) ===
+        normalizeEmail(invoiceLine.subject_verified_email) &&
+      Number(billingEvent.amount_cents) ===
+        Number(invoiceLine.amount_cents) &&
+      normalizeText(billingEvent.currency).toLowerCase() ===
+        expectedCurrency;
+
+    if (!billingEventMatchesLine) {
+      throw new Error(
+        "A cohort invoice line does not safely match its student registration billing event."
+      );
+    }
+
+    const billingEventStatus = normalizeText(
+      billingEvent.event_status
+    );
+
+    const alreadySettledByThisInvoice =
+      billingEventStatus === "paid" &&
+      normalizeText(billingEvent.stripe_checkout_session_id) ===
+        checkoutSessionId;
+
+    if (
+      !alreadySettledByThisInvoice &&
+      !["pending", "ready_for_checkout", "payment_processing"].includes(
+        billingEventStatus
+      )
+    ) {
+      throw new Error(
+        "A cohort invoice includes a student registration billing event that cannot be settled."
+      );
+    }
+
+    if (!alreadySettledByThisInvoice) {
+      await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+        billingEvent.id,
+        {
+          event_status: "paid",
+          paid_at: paidAt,
+          stripe_checkout_session_id: checkoutSessionId,
+          ...(paymentIntentId
+            ? { stripe_payment_intent_id: paymentIntentId }
+            : {}),
+          notes:
+            "CE registration settled through a paid CE Training cohort invoice.",
+        }
+      );
+    }
+
+    if (normalizeText(invoiceLine.line_status) !== "paid") {
+      await base44.asServiceRole.entities.CETrainingCohortInvoiceLine.update(
+        invoiceLine.id,
+        {
+          line_status: "paid",
+          paid_at: paidAt,
+        }
+      );
+    }
+
+    const activation =
+      await activateExistingPaidCEStudentIfEligible(
+        base44,
+        billingEvent
+      );
+
+    activations.push({
+      billing_event_id: billingEvent.id,
+      email: billingEvent.subject_verified_email,
+      activation,
+    });
+  }
+
+  await base44.asServiceRole.entities.CETrainingCohortInvoice.update(
+    cohortInvoice.id,
+    {
+      invoice_status: "paid",
+      paid_at: paidAt,
+      stripe_checkout_session_id: checkoutSessionId,
+      ...(paymentIntentId
+        ? { stripe_payment_intent_id: paymentIntentId }
+        : {}),
+    }
+  );
+
+  return {
+    handled: true,
+    paid: true,
+    cohort_invoice_id: cohortInvoice.id,
+    settled_student_count: invoiceLines.length,
+    existing_user_activations: activations,
+  };
+}
+
 async function handleLegacyOrganizationCheckoutCompleted(
   base44: any,
   session: Stripe.Checkout.Session
@@ -426,6 +792,20 @@ Deno.serve(async (req) => {
       const metadata = session.metadata || {};
 
       if (
+        metadata.billing_flow === "ce_training_cohort_invoice" ||
+        metadata.cohort_invoice_id
+      ) {
+        const result =
+          await handleCETrainingCohortInvoiceCheckoutCompleted(
+            base44,
+            session
+          );
+
+        console.log(
+          "CE Training cohort invoice checkout handled:",
+          JSON.stringify(result)
+        );
+      } else if (
         metadata.billing_flow === "ce_student_registration" ||
         metadata.billing_event_id
       ) {
