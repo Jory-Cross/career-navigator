@@ -65,6 +65,14 @@ export default function CohortDetail() {
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoicePreviewRequestKey, setInvoicePreviewRequestKey] =
     useState(0);
+  const [
+    selectedInvoiceBillingEventIds,
+    setSelectedInvoiceBillingEventIds,
+  ] = useState([]);
+  const [
+    creatingCohortInvoiceCheckout,
+    setCreatingCohortInvoiceCheckout,
+  ] = useState(false);
   useEffect(() => {
     let active = true;
     base44.auth.me().then((u) => {
@@ -176,6 +184,20 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
+  useEffect(() => {
+    const eligibleBillingEventIds = new Set(
+      (invoicePreview?.eligible_students || [])
+        .map((student) => student?.billing_event_id)
+        .filter(Boolean)
+    );
+
+    setSelectedInvoiceBillingEventIds((currentIds) =>
+      currentIds.filter((billingEventId) =>
+        eligibleBillingEventIds.has(billingEventId)
+      )
+    );
+  }, [invoicePreview]);
+
    const memberships = cohortRoster.memberships;
   const pendingEnrollments =
     cohortRoster.pending_enrollments || [];
@@ -269,6 +291,205 @@ console.log("USER MAP", userById);
         membership.is_active !== false
     );
   }, [user, cohort?.cohort_type, managers, trainers]);
+
+  const selectedInvoiceStudents = useMemo(() => {
+    const selectedIdSet = new Set(
+      selectedInvoiceBillingEventIds
+    );
+
+    return (invoicePreview?.eligible_students || []).filter(
+      (student) =>
+        selectedIdSet.has(student?.billing_event_id)
+    );
+  }, [invoicePreview, selectedInvoiceBillingEventIds]);
+
+  const selectedInvoiceCurrencies = useMemo(() => {
+    return Array.from(
+      new Set(
+        selectedInvoiceStudents
+          .map((student) =>
+            String(student?.currency || "").trim().toUpperCase()
+          )
+          .filter(Boolean)
+      )
+    );
+  }, [selectedInvoiceStudents]);
+
+  const selectedInvoiceCurrency =
+    selectedInvoiceCurrencies.length === 1
+      ? selectedInvoiceCurrencies[0]
+      : "";
+
+  const selectedInvoiceHasMixedCurrencies =
+    selectedInvoiceCurrencies.length > 1;
+
+  const selectedInvoiceTotalCents = useMemo(() => {
+    return selectedInvoiceStudents.reduce(
+      (total, student) =>
+        total + Number(student?.amount_cents || 0),
+      0
+    );
+  }, [selectedInvoiceStudents]);
+
+  const handleToggleInvoiceStudent = (student) => {
+    const billingEventId = String(
+      student?.billing_event_id || ""
+    ).trim();
+
+    if (!billingEventId) {
+      toast.error(
+        "This student is missing the billing event required for cohort invoice checkout."
+      );
+      return;
+    }
+
+    const studentCurrency = String(
+      student?.currency || ""
+    ).trim().toUpperCase();
+
+    const isSelected =
+      selectedInvoiceBillingEventIds.includes(billingEventId);
+
+    if (
+      !isSelected &&
+      selectedInvoiceCurrency &&
+      studentCurrency &&
+      selectedInvoiceCurrency !== studentCurrency
+    ) {
+      toast.error(
+        `A cohort invoice may contain only one currency. This selection is currently locked to ${selectedInvoiceCurrency}.`
+      );
+      return;
+    }
+
+    setSelectedInvoiceBillingEventIds((currentIds) =>
+      isSelected
+        ? currentIds.filter(
+            (currentId) => currentId !== billingEventId
+          )
+        : [...currentIds, billingEventId]
+    );
+  };
+
+  const handleCreateCohortInvoiceCheckout = async () => {
+    const billingEventIds = selectedInvoiceBillingEventIds.filter(
+      Boolean
+    );
+
+    if (!billingEventIds.length) {
+      toast.error(
+        "Select at least one eligible CE student registration before creating an invoice."
+      );
+      return;
+    }
+
+    if (
+      selectedInvoiceHasMixedCurrencies ||
+      !selectedInvoiceCurrency
+    ) {
+      toast.error(
+        "A cohort invoice may contain only one currency. Select students with the same currency."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(selectedInvoiceTotalCents) ||
+      selectedInvoiceTotalCents <= 0
+    ) {
+      toast.error(
+        "The selected registrations do not produce a valid positive invoice total."
+      );
+      return;
+    }
+
+    const studentLabel =
+      selectedInvoiceStudents.length === 1
+        ? "1 student"
+        : `${selectedInvoiceStudents.length} students`;
+
+    const totalLabel = `${selectedInvoiceCurrency} ${(
+      selectedInvoiceTotalCents / 100
+    ).toFixed(2)}`;
+
+    if (
+      !window.confirm(
+        `Create a secure Stripe cohort invoice checkout for ${studentLabel} totaling ${totalLabel}? No CE account access or cohort enrollment will be granted until Stripe confirms the full invoice payment.`
+      )
+    ) {
+      return;
+    }
+
+    setCreatingCohortInvoiceCheckout(true);
+
+    try {
+      const res = await base44.functions.invoke(
+        "createCETrainingCohortInvoiceCheckout",
+        {
+          cohort_id,
+          billing_event_ids: billingEventIds,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to create the CE Training cohort invoice checkout."
+        );
+      }
+
+      if (res.data?.paid) {
+        toast.success(
+          res.data?.message ||
+            "This CE Training cohort invoice is already paid."
+        );
+
+        setSelectedInvoiceBillingEventIds([]);
+
+        await queryClient.invalidateQueries({
+          queryKey: [
+            "ce-training-cohort-invoice-preview",
+            cohort_id,
+          ],
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["cohorts", "memberships", cohort_id],
+        });
+
+        return;
+      }
+
+      const checkoutUrl = String(
+        res.data?.checkout_url || ""
+      ).trim();
+
+      if (
+        !/^https:\/\/checkout\.stripe\.com(?:\/|$)/i.test(
+          checkoutUrl
+        )
+      ) {
+        throw new Error(
+          "The server did not return a valid Stripe Checkout URL."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Secure cohort invoice checkout created."
+      );
+
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      toast.error(
+        err?.message ||
+          "Unable to create the CE Training cohort invoice checkout."
+      );
+    } finally {
+      setCreatingCohortInvoiceCheckout(false);
+    }
+  };
+
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
     try {
@@ -732,9 +953,11 @@ await queryClient.invalidateQueries({
                 </h2>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Review pending students whose locked CE registration fees
-                  are eligible for this cohort invoice. Preview only — no
-                  invoice, payment, access, or enrollment changes are made.
+                  Review and select pending students whose locked CE
+                  registration fees are eligible for this cohort invoice.
+                  One secure checkout may contain only one currency. No CE
+                  account access or enrollment is granted until Stripe
+                  confirms the full invoice payment.
                 </p>
               </div>
 
@@ -745,9 +968,10 @@ await queryClient.invalidateQueries({
                     size="sm"
                     variant="outline"
                     disabled={loadingInvoicePreview}
-                    onClick={() =>
-                      setShowInvoicePreview(false)
-                    }
+                    onClick={() => {
+                      setShowInvoicePreview(false);
+                      setSelectedInvoiceBillingEventIds([]);
+                    }}
                   >
                     Close Preview
                   </Button>
@@ -758,6 +982,7 @@ await queryClient.invalidateQueries({
                   size="sm"
                   disabled={loadingInvoicePreview}
                   onClick={() => {
+                    setSelectedInvoiceBillingEventIds([]);
                     setShowInvoicePreview(true);
                     setInvoicePreviewRequestKey(
                       (currentValue) => currentValue + 1
@@ -860,43 +1085,195 @@ await queryClient.invalidateQueries({
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900">
-                        Eligible Students
-                      </h3>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900">
+                            Eligible Students
+                          </h3>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Select the students to include in one secure Stripe
+                            checkout. Students with a different currency are
+                            unavailable once you make your first selection.
+                          </p>
+                        </div>
+
+                        {selectedInvoiceStudents.length > 0 ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={creatingCohortInvoiceCheckout}
+                            onClick={() =>
+                              setSelectedInvoiceBillingEventIds([])
+                            }
+                          >
+                            Clear Selection
+                          </Button>
+                        ) : null}
+                      </div>
 
                       {(invoicePreview.eligible_students || []).length > 0 ? (
-                        <div className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-white">
-                          <table className="w-full text-sm">
-                            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                              <tr>
-                                <th className="px-3 py-2">Student Email</th>
-                                <th className="px-3 py-2">Locked Fee</th>
-                                <th className="px-3 py-2">Billing Status</th>
-                              </tr>
-                            </thead>
+                        <>
+                          <div className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-white">
+                            <table className="w-full text-sm">
+                              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                  <th className="w-12 px-3 py-2">
+                                    <span className="sr-only">Select</span>
+                                  </th>
+                                  <th className="px-3 py-2">Student Email</th>
+                                  <th className="px-3 py-2">Locked Fee</th>
+                                  <th className="px-3 py-2">Billing Status</th>
+                                </tr>
+                              </thead>
 
-                            <tbody className="divide-y divide-slate-100">
-                              {invoicePreview.eligible_students.map(
-                                (student) => (
-                                  <tr key={student.pending_invite_id}>
-                                    <td className="px-3 py-2 text-slate-800">
-                                      {student.email}
-                                    </td>
-                                    <td className="px-3 py-2 text-slate-800">
-                                      {student.currency}{" "}
-                                      {(
-                                        Number(student.amount_cents || 0) / 100
-                                      ).toFixed(2)}
-                                    </td>
-                                    <td className="px-3 py-2 text-slate-600">
-                                      {student.billing_event_status}
-                                    </td>
-                                  </tr>
-                                )
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                              <tbody className="divide-y divide-slate-100">
+                                {invoicePreview.eligible_students.map(
+                                  (student) => {
+                                    const billingEventId = String(
+                                      student?.billing_event_id || ""
+                                    ).trim();
+
+                                    const studentCurrency = String(
+                                      student?.currency || ""
+                                    ).trim().toUpperCase();
+
+                                    const studentAmountCents = Number(
+                                      student?.amount_cents || 0
+                                    );
+
+                                    const isSelected =
+                                      selectedInvoiceBillingEventIds.includes(
+                                        billingEventId
+                                      );
+
+                                    const isDifferentCurrency =
+                                      !isSelected &&
+                                      !!selectedInvoiceCurrency &&
+                                      studentCurrency !==
+                                        selectedInvoiceCurrency;
+
+                                    const hasInvalidAmount =
+                                      !Number.isInteger(
+                                        studentAmountCents
+                                      ) || studentAmountCents <= 0;
+
+                                    const selectionDisabled =
+                                      creatingCohortInvoiceCheckout ||
+                                      !billingEventId ||
+                                      hasInvalidAmount ||
+                                      isDifferentCurrency;
+
+                                    const selectionTitle =
+                                      isDifferentCurrency
+                                        ? `This checkout is currently limited to ${selectedInvoiceCurrency}.`
+                                        : hasInvalidAmount
+                                          ? "A zero-dollar or invalid registration fee cannot be included in Stripe Checkout."
+                                          : "";
+
+                                    return (
+                                      <tr
+                                        key={
+                                          student.pending_invite_id ||
+                                          billingEventId
+                                        }
+                                        className={
+                                          isSelected
+                                            ? "bg-violet-50"
+                                            : ""
+                                        }
+                                      >
+                                        <td className="px-3 py-2">
+                                          <input
+                                            type="checkbox"
+                                            aria-label={`Select ${
+                                              student.email ||
+                                              "this student"
+                                            } for cohort invoice checkout`}
+                                            checked={isSelected}
+                                            disabled={selectionDisabled}
+                                            title={selectionTitle}
+                                            onChange={() =>
+                                              handleToggleInvoiceStudent(
+                                                student
+                                              )
+                                            }
+                                            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                                          />
+                                        </td>
+
+                                        <td className="px-3 py-2 text-slate-800">
+                                          {student.email}
+                                        </td>
+
+                                        <td className="px-3 py-2 text-slate-800">
+                                          {student.currency}{" "}
+                                          {(
+                                            Number(
+                                              student.amount_cents || 0
+                                            ) / 100
+                                          ).toFixed(2)}
+                                        </td>
+
+                                        <td className="px-3 py-2 text-slate-600">
+                                          {student.billing_event_status}
+                                        </td>
+                                      </tr>
+                                    );
+                                  }
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="mt-3 rounded-md border border-violet-200 bg-violet-50 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <div className="text-xs font-medium uppercase tracking-wide text-violet-700">
+                                  Selected for one secure checkout
+                                </div>
+
+                                <div className="mt-1 text-sm font-semibold text-violet-950">
+                                  {selectedInvoiceStudents.length} student
+                                  {selectedInvoiceStudents.length === 1
+                                    ? ""
+                                    : "s"}
+                                  {selectedInvoiceCurrency
+                                    ? ` · ${selectedInvoiceCurrency} ${(
+                                        selectedInvoiceTotalCents / 100
+                                      ).toFixed(2)}`
+                                    : ""}
+                                </div>
+
+                                <p className="mt-1 text-xs text-violet-800">
+                                  The invoice and individual student billing
+                                  records remain unpaid until Stripe confirms
+                                  payment.
+                                </p>
+                              </div>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={
+                                  creatingCohortInvoiceCheckout ||
+                                  selectedInvoiceStudents.length === 0 ||
+                                  selectedInvoiceHasMixedCurrencies ||
+                                  !selectedInvoiceCurrency
+                                }
+                                onClick={
+                                  handleCreateCohortInvoiceCheckout
+                                }
+                                className="gap-2"
+                              >
+                                {creatingCohortInvoiceCheckout ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : null}
+                                Create & Pay Selected Invoice
+                              </Button>
+                            </div>
+                          </div>
+                        </>
                       ) : (
                         <p className="mt-2 text-sm text-slate-500">
                           No students are currently eligible for cohort invoice
@@ -904,6 +1281,7 @@ await queryClient.invalidateQueries({
                         </p>
                       )}
                     </div>
+
 
                     {(invoicePreview.blocked_students || []).length > 0 && (
                       <div>
