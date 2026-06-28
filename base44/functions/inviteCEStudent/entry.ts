@@ -404,6 +404,167 @@ async function createStudentPaidCheckout({
     }
   );
 
+   return {
+    checkoutUrl: session.url,
+    checkoutSessionId: session.id,
+    reusedExistingCheckout: false,
+    amountCents,
+    currency: currency.toUpperCase(),
+  };
+}
+
+async function createInstructorPaidCheckout({
+  base44,
+  billingEvent,
+  organizationId,
+  instructorEmail,
+  studentEmail,
+}) {
+  if (!stripe) {
+    throw createHttpError(
+      500,
+      "Stripe is not configured for instructor-paid CE registration checkout."
+    );
+  }
+
+  const normalizedInstructorEmail =
+    normalizeEmail(instructorEmail);
+
+  if (!isValidEmail(normalizedInstructorEmail)) {
+    throw createHttpError(
+      409,
+      "Your instructor account is missing the email address required for Stripe Checkout."
+    );
+  }
+
+  if (
+    !CHECKOUT_ELIGIBLE_EVENT_STATUSES.has(
+      billingEvent?.event_status
+    )
+  ) {
+    throw createHttpError(
+      409,
+      `This CE registration billing event cannot create checkout while its status is "${billingEvent?.event_status}".`
+    );
+  }
+
+  const amountCents = Number(billingEvent?.amount_cents);
+  const currency = normalizeText(
+    billingEvent?.currency || "USD"
+  ).toLowerCase();
+
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    throw createHttpError(
+      409,
+      "The CE registration billing event has an invalid locked amount."
+    );
+  }
+
+  if (!currency) {
+    throw createHttpError(
+      409,
+      "The CE registration billing event is missing its locked currency."
+    );
+  }
+
+  const existingCheckout =
+    await getExistingCheckoutSessionIfUsable(billingEvent);
+
+  if (existingCheckout?.reusable) {
+    return {
+      checkoutUrl: existingCheckout.session.url,
+      checkoutSessionId: existingCheckout.session.id,
+      reusedExistingCheckout: true,
+      amountCents,
+      currency: currency.toUpperCase(),
+    };
+  }
+
+  if (
+    existingCheckout?.completed &&
+    existingCheckout.session.payment_status === "paid"
+  ) {
+    throw createHttpError(
+      409,
+      "Payment has already completed for this registration. A new checkout link cannot be created."
+    );
+  }
+
+  const { successUrl, cancelUrl } = buildCheckoutRedirectUrls();
+
+  const checkoutAttemptKey = existingCheckout?.expired
+    ? `${billingEvent.id}:instructor_retry:${Date.now()}`
+    : `${billingEvent.id}:instructor_initial`;
+
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      payment_method_types: ["card"],
+      customer_email: normalizedInstructorEmail,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency,
+            unit_amount: amountCents,
+            product_data: {
+              name: "CE Student Registration",
+              description:
+                `One-time CE Training Portal registration fee for ${studentEmail}.`,
+            },
+          },
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: String(billingEvent.id),
+      metadata: {
+        billing_flow: "ce_student_registration",
+        billing_event_id: String(billingEvent.id),
+        billing_event_key: String(
+          billingEvent.billing_event_key
+        ),
+        organization_id: organizationId,
+        subject_verified_email: studentEmail,
+        payment_responsibility: "instructor_paid",
+        instructor_payment_mode: "pay_now",
+      },
+      payment_intent_data: {
+        metadata: {
+          billing_flow: "ce_student_registration",
+          billing_event_id: String(billingEvent.id),
+          billing_event_key: String(
+            billingEvent.billing_event_key
+          ),
+          organization_id: organizationId,
+          subject_verified_email: studentEmail,
+          payment_responsibility: "instructor_paid",
+          instructor_payment_mode: "pay_now",
+        },
+      },
+    },
+    {
+      idempotencyKey: checkoutAttemptKey,
+    }
+  );
+
+  if (!session.url) {
+    throw createHttpError(
+      500,
+      "Stripe created the instructor-paid CE registration checkout session without a checkout URL."
+    );
+  }
+
+  await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+    billingEvent.id,
+    {
+      event_status: "ready_for_checkout",
+      stripe_checkout_session_id: session.id,
+      notes:
+        "Instructor-paid CE registration checkout session created. CE access remains blocked until Stripe confirms payment.",
+    }
+  );
+
   return {
     checkoutUrl: session.url,
     checkoutSessionId: session.id,
