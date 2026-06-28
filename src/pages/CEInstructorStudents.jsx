@@ -724,24 +724,32 @@ export default function CEInstructorStudents() {
                             </Button>
                           )}
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={
-                              revokingInviteId === student.id ||
-                              resendingInviteId === student.id
-                            }
-                            onClick={() => handleRevokeInvite(student)}
-                            className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
-                          >
-                            {revokingInviteId === student.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <XCircle className="h-3 w-3" />
-                            )}
-                            Revoke Invite
-                          </Button>
+                                                 {!["paid", "waived"].includes(
+                            student.billing_event_status
+                          ) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={
+                                revokingInviteId === student.id ||
+                                resendingInviteId === student.id
+                              }
+                              onClick={() => handleRevokeInvite(student)}
+                              className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
+                            >
+                              {revokingInviteId === student.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <XCircle className="h-3 w-3" />
+                              )}
+                              Revoke Invite
+                            </Button>
+                          ) : (
+                            <span className="inline-flex items-center self-center text-xs text-slate-500">
+                              Paid registration locked
+                            </span>
+                          )}
                         </div>
                       ) : student.cohorts?.length > 0 ? (
                         <Link
