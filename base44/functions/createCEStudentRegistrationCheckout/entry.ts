@@ -68,12 +68,11 @@ function buildRedirectUrls() {
 
   return {
     successUrl:
-      `${appUrl}/?ce_registration=success` +
-      `&session_id={CHECKOUT_SESSION_ID}`,
+      `${appUrl}/CERegistrationPaymentStatus` +
+      `?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${appUrl}/?ce_registration=cancelled`,
   };
 }
-
 async function getCurrentCallerRecord(base44: any, caller: any) {
   const rows = await base44.asServiceRole.entities.User.filter({
     id: caller.id,
