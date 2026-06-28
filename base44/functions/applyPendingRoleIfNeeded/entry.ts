@@ -1,97 +1,428 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
 // Called on login for any authenticated user.
-// If the user has role="user" or blank access_level AND a valid pending PendingRoleAssignment exists,
-// upgrade their account. Safe to call repeatedly — no-ops if already upgraded.
 //
-// A "valid" assignment MUST have:
-//   - role (non-empty)
-//   - accesas_level (non-empty)
-//   - org_id (non-empty)
-//   - client_id (non-empty, required for client/pre_ets/dspd roles)
+// Normal pending-role upgrades remain unchanged for employees, management,
+// clients, Pre-ETS, DSPD, and other supported roles.
 //
-// Incomplete assignments (missing any of the above) are IGNORED to prevent bad upgrades.
+// CE student upgrades have an additional hard requirement:
+// - A matching CE registration/re-activation billing event must be paid or waived.
+// - No ce_student role, CE portal access, cohort membership, or accepted invite
+//   status is granted before that settlement exists.
 
-const CLIENT_ROLES = ['client', 'pre_ets', 'dspd'];
+const CLIENT_ROLES = ["client", "pre_ets", "dspd"];
 
-function isValidAssignment(assignment) {
-  if (!assignment.role || !assignment.access_level || !assignment.org_id) {
+const OPEN_PENDING_ASSIGNMENT_STATUSES = [
+  "pending",
+  "invite_email_sent",
+  "pending_email_failed",
+];
+
+const SETTLED_CE_REGISTRATION_STATUSES = new Set([
+  "paid",
+  "waived",
+]);
+
+const CE_REGISTRATION_FEE_KINDS = new Set([
+  "training_registration",
+  "training_reactivation",
+]);
+
+function normalizeText(value: unknown) {
+  return String(value || "").trim();
+}
+
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
+function isValidAssignment(assignment: any) {
+  if (
+    !assignment?.role ||
+    !assignment?.access_level ||
+    !assignment?.org_id
+  ) {
     return false;
   }
-  // Client portal roles must also have a client_id
-  if (CLIENT_ROLES.includes(assignment.role) && !assignment.client_id) {
+
+  if (
+    CLIENT_ROLES.includes(assignment.role) &&
+    !assignment.client_id
+  ) {
     return false;
   }
+
   return true;
+}
+
+function isNeutralExistingAccount(user: any) {
+  const role = normalizeText(user?.role);
+  const accessLevel = normalizeText(user?.access_level);
+  const orgId = normalizeText(user?.org_id);
+  const managerId = normalizeText(user?.manager_id);
+  const linkedClientId = normalizeText(user?.linked_client_id);
+
+  return (
+    ["", "user", "employee"].includes(role) &&
+    !accessLevel &&
+    !orgId &&
+    !managerId &&
+    !linkedClientId
+  );
+}
+
+function getMostRecentAssignment(assignments: any[]) {
+  return [...assignments].sort((a, b) => {
+    const bTime = new Date(
+      b?.invited_at || b?.created_date || 0
+    ).getTime();
+
+    const aTime = new Date(
+      a?.invited_at || a?.created_date || 0
+    ).getTime();
+
+    return bTime - aTime;
+  })[0];
+}
+
+async function getSettledCeStudentRegistration(
+  base44: any,
+  assignment: any,
+  user: any,
+  email: string
+) {
+  const organizationId = normalizeText(assignment?.org_id);
+  const cohortId = normalizeText(assignment?.cohort_id);
+  const userId = normalizeText(user?.id);
+  const studentEmail = normalizeEmail(email);
+
+  if (!organizationId || !studentEmail) {
+    return {
+      settled: false,
+      reason: "ce_student_invite_missing_required_identity",
+    };
+  }
+
+  const billingRows =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      organization_id: organizationId,
+    });
+
+  const matchingEvents = (
+    Array.isArray(billingRows) ? billingRows : []
+  ).filter((billingEvent) => {
+    const matchesOrganization =
+      normalizeText(billingEvent?.organization_id) === organizationId;
+
+    const isStudentRegistration =
+      billingEvent?.billing_subject_type === "student" &&
+      CE_REGISTRATION_FEE_KINDS.has(
+        normalizeText(billingEvent?.fee_kind)
+      );
+
+    const isSettled =
+      SETTLED_CE_REGISTRATION_STATUSES.has(
+        normalizeText(billingEvent?.event_status)
+      );
+
+    const matchesEmail =
+      normalizeEmail(billingEvent?.subject_verified_email) ===
+      studentEmail;
+
+    const matchesCohort =
+      !cohortId ||
+      normalizeText(billingEvent?.cohort_id) === cohortId;
+
+    return (
+      matchesOrganization &&
+      isStudentRegistration &&
+      isSettled &&
+      matchesEmail &&
+      matchesCohort
+    );
+  });
+
+  if (matchingEvents.length === 0) {
+    return {
+      settled: false,
+      reason: "ce_student_registration_not_settled",
+    };
+  }
+
+  if (matchingEvents.length > 1) {
+    return {
+      settled: false,
+      reason: "multiple_matching_ce_registration_events",
+    };
+  }
+
+  const billingEvent = matchingEvents[0];
+  const billedUserId = normalizeText(billingEvent?.subject_user_id);
+
+  if (billedUserId && billedUserId !== userId) {
+    return {
+      settled: false,
+      reason: "ce_registration_is_bound_to_a_different_user",
+    };
+  }
+
+  return {
+    settled: true,
+    billingEvent,
+  };
+}
+
+async function ensureSettledCeStudentCohortMembership(
+  base44: any,
+  assignment: any,
+  user: any
+) {
+  const cohortId = normalizeText(assignment?.cohort_id);
+  const organizationId = normalizeText(assignment?.org_id);
+
+  if (!cohortId) {
+    return {
+      membership_created: false,
+      membership_reactivated: false,
+      membership_status: "no_cohort_selected",
+      membership_id: null,
+    };
+  }
+
+  const cohortRows =
+    await base44.asServiceRole.entities.CETrainingCohort.filter({
+      id: cohortId,
+    });
+
+  const cohort = Array.isArray(cohortRows)
+    ? cohortRows[0]
+    : null;
+
+  if (!cohort) {
+    throw new Error(
+      "The Training cohort connected to this CE enrollment could not be found."
+    );
+  }
+
+  if (
+    normalizeText(cohort.org_id) !== organizationId ||
+    normalizeText(cohort.cohort_type) !== "training"
+  ) {
+    throw new Error(
+      "The Training cohort connected to this CE enrollment is not valid for this organization."
+    );
+  }
+
+  if (cohort.is_active === false) {
+    throw new Error(
+      "The Training cohort connected to this CE enrollment is inactive."
+    );
+  }
+
+  const membershipRows =
+    await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+      cohort_id: cohortId,
+      user_id: user.id,
+      cohort_role: "member",
+    });
+
+  const memberships = Array.isArray(membershipRows)
+    ? membershipRows
+    : [];
+
+  const activeMembership = memberships.find(
+    (membership) => membership.is_active !== false
+  );
+
+  if (activeMembership) {
+    return {
+      membership_created: false,
+      membership_reactivated: false,
+      membership_status: "already_active",
+      membership_id: activeMembership.id,
+    };
+  }
+
+  const existingMembership = memberships[0];
+  const now = new Date().toISOString();
+
+  if (existingMembership) {
+    await base44.asServiceRole.entities.CETrainingCohortMember.update(
+      existingMembership.id,
+      {
+        is_active: true,
+        joined_at: existingMembership.joined_at || now,
+        added_by: assignment.invited_by_id || undefined,
+      }
+    );
+
+    return {
+      membership_created: false,
+      membership_reactivated: true,
+      membership_status: "reactivated",
+      membership_id: existingMembership.id,
+    };
+  }
+
+  const createdMembership =
+    await base44.asServiceRole.entities.CETrainingCohortMember.create({
+      org_id: organizationId,
+      cohort_id: cohortId,
+      user_id: user.id,
+      cohort_role: "member",
+      is_active: true,
+      joined_at: now,
+      added_by: assignment.invited_by_id || undefined,
+    });
+
+  return {
+    membership_created: true,
+    membership_reactivated: false,
+    membership_status: "created",
+    membership_id: createdMembership.id,
+  };
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Must be authenticated
     const user = await base44.auth.me();
+
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json(
+        { upgraded: false, reason: "unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const email = user.email.toLowerCase().trim();
-    const currentRole = user.role;
-    const currentAccess = user.access_level;
+    const email = normalizeEmail(user.email);
+    const currentRole = normalizeText(user.role);
+    const currentAccess = normalizeText(user.access_level);
 
-    // Block deactivated users — they must never be re-activated by an old invite
     if (user.is_active === false) {
-      console.log(`[applyPendingRoleIfNeeded] ${email} is deactivated (is_active=false) — blocking upgrade.`);
-      return Response.json({ upgraded: false, reason: 'deactivated' });
+      console.log(
+        `[applyPendingRoleIfNeeded] ${email} is deactivated — blocking upgrade.`
+      );
+
+      return Response.json({
+        upgraded: false,
+        reason: "deactivated",
+      });
     }
 
-    // Only attempt upgrade if the user is in a "default/blank" state
-    const needsUpgrade = !currentRole || currentRole === 'user' || !currentAccess;
+    const needsUpgrade =
+      !currentRole ||
+      currentRole === "user" ||
+      !currentAccess;
+
     if (!needsUpgrade) {
-      console.log(`[applyPendingRoleIfNeeded] ${email} already has role=${currentRole} access=${currentAccess} — no upgrade needed.`);
-      return Response.json({ upgraded: false, reason: 'already_assigned' });
+      console.log(
+        `[applyPendingRoleIfNeeded] ${email} already has role=${currentRole} access=${currentAccess} — no upgrade needed.`
+      );
+
+      return Response.json({
+        upgraded: false,
+        reason: "already_assigned",
+      });
     }
 
-    console.log(`[applyPendingRoleIfNeeded] ── Invite upgrade check ──`);
-    console.log(`[applyPendingRoleIfNeeded] Invited email: ${email} | current role=${currentRole} | access=${currentAccess}`);
+    const allAssignments =
+      await base44.asServiceRole.entities.PendingRoleAssignment.list();
 
-    // Look up pending assignments case-insensitively.
-    // Some invite records may have been saved with uppercase letters or extra spaces.
-    const allAssignments = await base44.asServiceRole.entities.PendingRoleAssignment.list();
-    const pending = (allAssignments || []).filter(p =>
-      String(p.email || '').toLowerCase().trim() === email
+    const matchingAssignments = (
+      Array.isArray(allAssignments) ? allAssignments : []
+    ).filter(
+      (assignment) =>
+        normalizeEmail(assignment?.email) === email
     );
 
-    const pendingOnly = pending.filter(p =>
-      p.status === 'pending' || p.status === 'invite_email_sent' || p.status === 'pending_email_failed'
+    const openAssignments = matchingAssignments.filter(
+      (assignment) =>
+        OPEN_PENDING_ASSIGNMENT_STATUSES.includes(
+          normalizeText(assignment?.status)
+        )
     );
 
-    // Filter to only VALID assignments (complete records)
-    const validPending = pendingOnly.filter(isValidAssignment);
+    const validPendingAssignments =
+      openAssignments.filter(isValidAssignment);
 
-    if (validPending.length === 0) {
-      const invalidCount = pendingOnly.length;
-      if (invalidCount > 0) {
-        console.warn(`[applyPendingRoleIfNeeded] Found ${invalidCount} pending assignment(s) for ${email} but all are incomplete (missing access_level/org_id/client_id). Skipping upgrade.`);
-        // Log the bad ones for debugging
-        pendingOnly.forEach(p => {
-          console.warn(`  [invalid] id=${p.id} role=${p.role} access_level=${p.access_level} org_id=${p.org_id} client_id=${p.client_id}`);
-        });
-      } else {
-        console.log(`[applyPendingRoleIfNeeded] No pending assignment for ${email}.`);
+    if (validPendingAssignments.length === 0) {
+      if (openAssignments.length > 0) {
+        console.warn(
+          `[applyPendingRoleIfNeeded] Found incomplete pending role assignment(s) for ${email}; no upgrade applied.`
+        );
       }
-      return Response.json({ upgraded: false, reason: 'no_valid_pending_assignment' });
+
+      return Response.json({
+        upgraded: false,
+        reason: "no_valid_pending_assignment",
+      });
     }
 
-    // Most recent VALID assignment wins
-    const assignment = validPending.sort((a, b) => {
-      const bTime = new Date(b.invited_at || b.created_date || 0).getTime();
-      const aTime = new Date(a.invited_at || a.created_date || 0).getTime();
-      return bTime - aTime;
-    })[0];
+    const assignment = getMostRecentAssignment(
+      validPendingAssignments
+    );
 
-    console.log(`[applyPendingRoleIfNeeded] Matching PendingRoleAssignment found: id=${assignment.id} role=${assignment.role} access_level=${assignment.access_level} org_id=${assignment.org_id} invited_by_id=${assignment.invited_by_id}`);
-    console.log(`[applyPendingRoleIfNeeded] Applying role=${assignment.role} access_level=${assignment.access_level} to ${email}`);
+    let ceRegistration = null;
+    let cohortMembership = null;
+
+    if (assignment.role === "ce_student") {
+      const assignmentOrganizationId = normalizeText(
+        assignment.org_id
+      );
+
+      if (
+        currentRole === "ce_student" &&
+        normalizeText(user.org_id) &&
+        normalizeText(user.org_id) !== assignmentOrganizationId
+      ) {
+        return Response.json({
+          upgraded: false,
+          reason:
+            "existing_ce_student_belongs_to_different_organization",
+          pending_assignment_id: assignment.id,
+        });
+      }
+
+      if (
+        currentRole !== "ce_student" &&
+        !isNeutralExistingAccount(user)
+      ) {
+        return Response.json({
+          upgraded: false,
+          reason: "existing_user_is_not_safe_to_repurpose",
+          pending_assignment_id: assignment.id,
+        });
+      }
+
+      ceRegistration = await getSettledCeStudentRegistration(
+        base44,
+        assignment,
+        user,
+        email
+      );
+
+      if (!ceRegistration.settled) {
+        console.log(
+          `[applyPendingRoleIfNeeded] CE student ${email} remains blocked: ${ceRegistration.reason}`
+        );
+
+        return Response.json({
+          upgraded: false,
+          reason: ceRegistration.reason,
+          payment_required: true,
+          pending_assignment_id: assignment.id,
+        });
+      }
+
+      cohortMembership =
+        await ensureSettledCeStudentCohortMembership(
+          base44,
+          assignment,
+          user
+        );
+    }
 
     const updateData = {
       role: assignment.role,
@@ -101,52 +432,105 @@ Deno.serve(async (req) => {
       linked_client_id: assignment.client_id || undefined,
     };
 
-    // Use the authenticated user's own ID directly — no need to filter by email
-    // (base44.auth.me() already returned the correct user object with their id)
-    const userId = user.id;
-    if (!userId) {
-      return Response.json({ error: 'Could not determine user ID from session' }, { status: 400 });
+    await base44.asServiceRole.entities.User.update(
+      user.id,
+      updateData
+    );
+
+    if (
+      assignment.role === "ce_student" &&
+      ceRegistration?.billingEvent
+    ) {
+      const billedUserId = normalizeText(
+        ceRegistration.billingEvent.subject_user_id
+      );
+
+      if (!billedUserId) {
+        await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+          ceRegistration.billingEvent.id,
+          {
+            subject_user_id: user.id,
+          }
+        );
+      }
     }
 
-    await base44.asServiceRole.entities.User.update(userId, updateData);
-    console.log(`[applyPendingRoleIfNeeded] Updated user id=${userId} email=${email}:`, updateData);
+    const staffRoles = ["employee", "management"];
 
-    // Create ManagerEmployeeAssignment for staff roles with a manager link
-    const staffRoles = ['employee', 'management'];
-    if (staffRoles.includes(assignment.role) && assignment.invited_by_id) {
-     try {
-       const existing = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
-         manager_user_id: assignment.invited_by_id,
-         employee_user_id: userId,
-       });
-       if (!existing || existing.length === 0) {
-         await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
-           org_id: assignment.org_id,
-           manager_user_id: assignment.invited_by_id,
-           employee_user_id: userId,
-           is_active: true,
-         });
-         console.log(`[applyPendingRoleIfNeeded] Created ManagerEmployeeAssignment manager=${assignment.invited_by_id} employee=${userId}`);
-       } else {
-         console.log(`[applyPendingRoleIfNeeded] ManagerEmployeeAssignment already exists, skipping.`);
-       }
-     } catch (assignErr) {
-       console.warn('[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:', assignErr.message);
-     }
+    if (
+      staffRoles.includes(assignment.role) &&
+      assignment.invited_by_id
+    ) {
+      try {
+        const existingRows =
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter(
+            {
+              manager_user_id: assignment.invited_by_id,
+              employee_user_id: user.id,
+            }
+          );
+
+        const existingAssignment = Array.isArray(existingRows)
+          ? existingRows[0]
+          : null;
+
+        if (!existingAssignment) {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.create(
+            {
+              org_id: assignment.org_id,
+              manager_user_id: assignment.invited_by_id,
+              employee_user_id: user.id,
+              is_active: true,
+            }
+          );
+        } else if (existingAssignment.is_active === false) {
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(
+            existingAssignment.id,
+            {
+              is_active: true,
+            }
+          );
+        }
+      } catch (assignmentError) {
+        console.warn(
+          "[applyPendingRoleIfNeeded] ManagerEmployeeAssignment error:",
+          assignmentError?.message || assignmentError
+        );
+      }
     }
-    // CE students are registered here only.
-    // Cohort membership is assigned later from Cohort Detail.
 
-    // Mark the applied assignment as accepted — keep it for audit, do NOT delete.
-    await base44.asServiceRole.entities.PendingRoleAssignment.update(assignment.id, { status: 'accepted' });
+    await base44.asServiceRole.entities.PendingRoleAssignment.update(
+      assignment.id,
+      {
+        status: "accepted",
+      }
+    );
 
-    console.log(`[applyPendingRoleIfNeeded] ✓ User ${email} upgraded: role=${updateData.role} access_level=${updateData.access_level} org_id=${updateData.org_id}`);
-    console.log(`[applyPendingRoleIfNeeded] ✓ PendingRoleAssignment ${assignment.id} marked accepted`);
-    console.log(`[applyPendingRoleIfNeeded] ► Employee must sign out and back in for session claims to refresh`);
+    console.log(
+      `[applyPendingRoleIfNeeded] User ${email} upgraded: role=${updateData.role} access=${updateData.access_level}`
+    );
 
-    return Response.json({ upgraded: true, applied: updateData });
+    return Response.json({
+      upgraded: true,
+      applied: updateData,
+      ce_registration_billing_event_id:
+        ceRegistration?.billingEvent?.id || null,
+      cohort_membership: cohortMembership,
+    });
   } catch (error) {
-    console.error('[applyPendingRoleIfNeeded] Error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error(
+      "[applyPendingRoleIfNeeded] Error:",
+      error?.message || error
+    );
+
+    return Response.json(
+      {
+        upgraded: false,
+        error:
+          error?.message ||
+          "Unable to apply the pending role assignment.",
+      },
+      { status: 500 }
+    );
   }
 });
