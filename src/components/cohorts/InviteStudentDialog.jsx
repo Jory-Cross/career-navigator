@@ -59,8 +59,9 @@ export default function InviteStudentDialog({
 
     setInviting(true);
     try {
-      const res = await base44.functions.invoke("inviteCEStudent", {
+           const res = await base44.functions.invoke("inviteCEStudent", {
         email: email.trim(),
+        cohort_id: cohortId || undefined,
         payment_responsibility: paymentResponsibility,
         instructor_payment_mode:
           paymentResponsibility === "instructor_paid"
