@@ -344,11 +344,32 @@ Deno.serve(async (req) => {
       session.payment_status
     );
 
-    const paymentState = getPaymentState(
+       const paymentState = getPaymentState(
       billingEventStatus,
       stripeSessionStatus,
       stripePaymentStatus
     );
+
+    const paymentResponsibility =
+      normalizeText(metadata.payment_responsibility) ===
+      "instructor_paid"
+        ? "instructor_paid"
+        : "student_paid";
+
+    const instructorPaymentMode =
+      paymentResponsibility === "instructor_paid"
+        ? normalizeText(metadata.instructor_payment_mode)
+        : "";
+
+    const studentSettlementEmailState =
+      getStudentSettlementEmailState(billingEvent);
+
+    const instructorPaidReceipt = isInstructorPaidReceipt(
+      paymentResponsibility,
+      instructorPaymentMode
+    );
+
+    return Response.json({
 
     return Response.json({
       ok: true,
