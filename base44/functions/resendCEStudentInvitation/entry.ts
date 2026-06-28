@@ -575,7 +575,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const paymentResponsibility =
+       const paymentResponsibility =
       normalizeText(assignment.payment_responsibility) ||
       "student_paid";
 
@@ -584,7 +584,23 @@ Deno.serve(async (req) => {
         ? normalizeText(assignment.instructor_payment_mode)
         : "";
 
-        let checkoutUrl = "";
+    const configuredSender = normalizeEmail(RESEND_FROM_EMAIL);
+    const senderDomain =
+      configuredSender.split("@")[1] || "";
+
+    const senderIsUsable =
+      !!RESEND_API_KEY &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredSender) &&
+      !FREE_DOMAINS.includes(senderDomain);
+
+    if (!senderIsUsable) {
+      throw createHttpError(
+        503,
+        "CE invitation email is not configured. Add RESEND_API_KEY and a valid RESEND_FROM_EMAIL on your verified business domain before resending invitations."
+      );
+    }
+
+    let checkoutUrl = "";
     let checkoutState = "not_required";
 
     const registrationIsSettled = ["paid", "waived"].includes(
