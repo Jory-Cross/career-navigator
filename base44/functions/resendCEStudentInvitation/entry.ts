@@ -585,11 +585,17 @@ Deno.serve(async (req) => {
         ? normalizeText(assignment.instructor_payment_mode)
         : "";
 
+       const emailDeliveryEnabled =
+      normalizeText(
+        Deno.env.get("CE_INVITATION_EMAIL_DELIVERY_ENABLED")
+      ).toLowerCase() === "true";
+
     const configuredSender = normalizeEmail(RESEND_FROM_EMAIL);
     const senderDomain =
       configuredSender.split("@")[1] || "";
 
     const senderIsUsable =
+      emailDeliveryEnabled &&
       !!RESEND_API_KEY &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredSender) &&
       !FREE_DOMAINS.includes(senderDomain);
@@ -597,10 +603,11 @@ Deno.serve(async (req) => {
     if (!senderIsUsable) {
       throw createHttpError(
         503,
-        "CE invitation email is not configured. Add RESEND_API_KEY and a valid RESEND_FROM_EMAIL on your verified business domain before resending invitations."
+        emailDeliveryEnabled
+          ? "CE invitation email is not configured. Add RESEND_API_KEY and a valid RESEND_FROM_EMAIL on your verified business domain before resending invitations."
+          : "CE invitation email delivery is paused until the organization-owned sender has been verified in Resend. No invitation email or Checkout link was created."
       );
     }
-
     let checkoutUrl = "";
     let checkoutState = "not_required";
 
