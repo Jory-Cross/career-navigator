@@ -528,6 +528,119 @@ console.log("USER MAP", userById);
     }
   };
 
+    const handleResumeCohortInvoicePayment = async (invoice) => {
+    const cohortInvoiceId = String(invoice?.id || "").trim();
+
+    if (!cohortInvoiceId) {
+      toast.error(
+        "This saved cohort invoice is missing the ID required to resume payment."
+      );
+      return;
+    }
+
+    const studentLabel =
+      Number(invoice?.student_count || 0) === 1
+        ? "1 student"
+        : `${Number(invoice?.student_count || 0)} students`;
+
+    const totalLabel = `${String(
+      invoice?.currency || "USD"
+    ).toUpperCase()} ${(
+      Number(invoice?.amount_cents || 0) / 100
+    ).toFixed(2)}`;
+
+    if (
+      !window.confirm(
+        `Resume secure Stripe payment for this cohort invoice covering ${studentLabel} totaling ${totalLabel}? No CE account access or cohort enrollment will be granted until Stripe confirms the full invoice payment.`
+      )
+    ) {
+      return;
+    }
+
+    setResumingCohortInvoiceId(cohortInvoiceId);
+
+    try {
+      const res = await base44.functions.invoke(
+        "createCETrainingCohortInvoiceCheckout",
+        {
+          cohort_id,
+          cohort_invoice_id: cohortInvoiceId,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to resume the CE Training cohort invoice payment."
+        );
+      }
+
+      if (res.data?.paid) {
+        toast.success(
+          res.data?.message ||
+            "This CE Training cohort invoice is already paid."
+        );
+
+        await queryClient.invalidateQueries({
+          queryKey: [
+            "ce-training-cohort-invoice-history",
+            cohort_id,
+          ],
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["cohorts", "memberships", cohort_id],
+        });
+
+        return;
+      }
+
+      const checkoutUrl = String(
+        res.data?.checkout_url || ""
+      ).trim();
+
+      if (!checkoutUrl) {
+        toast.success(
+          res.data?.message ||
+            "Payment is already processing. Wait briefly, then refresh the invoice history."
+        );
+
+        await queryClient.invalidateQueries({
+          queryKey: [
+            "ce-training-cohort-invoice-history",
+            cohort_id,
+          ],
+        });
+
+        return;
+      }
+
+      if (
+        !/^https:\/\/checkout\.stripe\.com(?:\/|$)/i.test(
+          checkoutUrl
+        )
+      ) {
+        throw new Error(
+          "The server did not return a valid Stripe Checkout URL."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Secure cohort invoice checkout is ready."
+      );
+
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      toast.error(
+        err?.message ||
+          "Unable to resume the CE Training cohort invoice payment."
+      );
+    } finally {
+      setResumingCohortInvoiceId("");
+    }
+  };
+
   const handleAddManager = async (selectedUser) => {
     setAddingManager(true);
     try {
