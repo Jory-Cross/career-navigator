@@ -74,8 +74,68 @@ function getPaymentState(
   return "payment_processing";
 }
 
-function getNextStep(paymentState: string) {
+function isInstructorPaidReceipt(
+  paymentResponsibility: string,
+  instructorPaymentMode: string
+) {
+  return (
+    paymentResponsibility === "instructor_paid" &&
+    instructorPaymentMode === "pay_now"
+  );
+}
+
+function getStudentSettlementEmailState(billingEvent: any) {
+  if (
+    normalizeText(
+      billingEvent?.registration_settlement_email_sent_at
+    )
+  ) {
+    return "sent";
+  }
+
+  if (
+    normalizeText(
+      billingEvent?.registration_settlement_email_last_error
+    )
+  ) {
+    return "failed";
+  }
+
+  if (
+    normalizeText(
+      billingEvent?.registration_settlement_email_last_attempt_at
+    )
+  ) {
+    return "pending";
+  }
+
+  return "not_recorded";
+}
+
+function getNextStep(
+  paymentState: string,
+  paymentResponsibility: string,
+  instructorPaymentMode: string,
+  studentSettlementEmailState: string
+) {
   if (paymentState === "registration_payment_settled") {
+    if (
+      isInstructorPaidReceipt(
+        paymentResponsibility,
+        instructorPaymentMode
+      )
+    ) {
+      if (studentSettlementEmailState === "sent") {
+        return "student_has_been_emailed_registration_instructions";
+      }
+
+      if (studentSettlementEmailState === "pending") {
+        return "student_registration_email_delivery_pending";
+      }
+
+      return "student_registration_email_needs_attention";
+    }
+
     return "register_or_sign_in_with_invited_email";
   }
 
@@ -88,6 +148,44 @@ function getNextStep(paymentState: string) {
   }
 
   return "contact_your_instructor";
+}
+
+function getStatusMessage(
+  paymentState: string,
+  paymentResponsibility: string,
+  instructorPaymentMode: string,
+  studentSettlementEmailState: string
+) {
+  if (paymentState === "registration_payment_settled") {
+    if (
+      isInstructorPaidReceipt(
+        paymentResponsibility,
+        instructorPaymentMode
+      )
+    ) {
+      if (studentSettlementEmailState === "sent") {
+        return "Payment is confirmed. The student has been emailed instructions to register using their invited email address.";
+      }
+
+      if (studentSettlementEmailState === "pending") {
+        return "Payment is confirmed. The student registration email is still being processed.";
+      }
+
+      return "Payment is confirmed, but the student registration email needs attention before the student can be notified.";
+    }
+
+    return "Registration payment is confirmed. Register or sign in using the invited email address to continue.";
+  }
+
+  if (paymentState === "payment_confirmed_processing") {
+    return "Stripe received the payment. Career Navigator is confirming the registration.";
+  }
+
+  if (paymentState === "payment_not_completed") {
+    return "The registration payment has not been completed.";
+  }
+
+  return "Registration payment status is still being finalized.";
 }
 
 Deno.serve(async (req) => {
