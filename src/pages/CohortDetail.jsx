@@ -311,8 +311,45 @@ console.log("USER MAP", userById);
     refetchOnWindowFocus: false,
   });
 
-  const canAddTrainer = canManageCohortRoster;
+   const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
+
+  const canInviteCEStudents = useMemo(() => {
+    if (!user || cohort?.cohort_type !== "training") {
+      return false;
+    }
+
+    if (user.role === "admin") {
+      return true;
+    }
+
+    return managers.some(
+      (membership) =>
+        membership.user_id === user.id &&
+        membership.is_active !== false
+    );
+  }, [user, cohort?.cohort_type, managers]);
+
+  const handleInviteCEStudentSuccess = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["cohorts", "memberships", cohort_id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: [
+          "ce-training-cohort-invoice-preview",
+          cohort_id,
+        ],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: [
+          "ce-training-cohort-invoice-history",
+          cohort_id,
+        ],
+      }),
+    ]);
+  };
+
   const canRecordTestRegistrationWaiver =
     user?.role === "admin" &&
     cohort?.cohort_type === "training";
