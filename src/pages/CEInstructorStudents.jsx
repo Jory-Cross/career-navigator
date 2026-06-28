@@ -320,41 +320,46 @@ export default function CEInstructorStudents() {
     }
   };
 
-  const handleResendInvitation = async (student) => {
+    const handleResendInvitation = async (student) => {
     if (!student?.id) {
       toast.error("This CE student invitation could not be identified.");
       return;
     }
 
+    const registrationIsSettled = ["paid", "waived"].includes(
+      student.billing_event_status
+    );
+
+    const functionName = registrationIsSettled
+      ? "resendCEStudentRegistrationInstructions"
+      : "resendCEStudentInvitation";
+
+    const fallbackError = registrationIsSettled
+      ? "Unable to resend CE registration instructions."
+      : "Unable to resend the CE student invitation.";
+
+    const fallbackSuccess = registrationIsSettled
+      ? "CE registration instructions resent."
+      : "CE student invitation resent.";
+
     setResendingInviteId(student.id);
 
     try {
-      const res = await base44.functions.invoke(
-        "resendCEStudentInvitation",
-        {
-          pending_assignment_id: student.id,
-        }
-      );
+      const res = await base44.functions.invoke(functionName, {
+        pending_assignment_id: student.id,
+      });
 
       if (!res.data?.ok) {
-        throw new Error(
-          res.data?.error ||
-            "Unable to resend the CE student invitation."
-        );
+        throw new Error(res.data?.error || fallbackError);
       }
 
-      toast.success(
-        res.data?.message || "CE student invitation resent."
-      );
+      toast.success(res.data?.message || fallbackSuccess);
 
       await queryClient.invalidateQueries({
         queryKey: ["ce-students-instructor-secure"],
       });
     } catch (error) {
-      toast.error(
-        error?.message ||
-          "Unable to resend the CE student invitation."
-      );
+      toast.error(error?.message || fallbackError);
     } finally {
       setResendingInviteId("");
     }
