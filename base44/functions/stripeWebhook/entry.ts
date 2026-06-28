@@ -1050,6 +1050,16 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       );
     }
 
+      const settledBillingEvent = {
+      ...billingEvent,
+      event_status: "paid",
+      paid_at: paidAt,
+      stripe_checkout_session_id: checkoutSessionId,
+      ...(paymentIntentId
+        ? { stripe_payment_intent_id: paymentIntentId }
+        : {}),
+    };
+
     if (!alreadySettledByThisInvoice) {
       await base44.asServiceRole.entities.OrganizationBillingEvent.update(
         billingEvent.id,
@@ -1076,16 +1086,23 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       );
     }
 
+    const studentRegistrationEmail =
+      await sendCEStudentSettlementEmail(
+        base44,
+        settledBillingEvent
+      );
+
     const activation =
       await activateExistingPaidCEStudentIfEligible(
         base44,
-        billingEvent
+        settledBillingEvent
       );
 
     activations.push({
       billing_event_id: billingEvent.id,
       email: billingEvent.subject_verified_email,
       activation,
+      student_registration_email: studentRegistrationEmail,
     });
   }
 
