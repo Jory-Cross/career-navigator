@@ -1023,7 +1023,147 @@ await queryClient.invalidateQueries({
         </div>
       </section>
 
-      {/* 5. Active Students section */}
+        {/* 5. Pending Students section */}
+      {cohort?.cohort_type === "training" && (
+        <section className="bg-white rounded-xl border border-amber-200 shadow-sm">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-amber-100">
+            <Users className="w-4 h-4 text-amber-600" />
+
+            <h2 className="text-sm font-semibold text-slate-900">
+              Pending Students
+            </h2>
+
+            <span className="ml-auto text-xs text-slate-400">
+              {pendingEnrollments.length} invited
+            </span>
+          </div>
+
+          <div className="p-2">
+            {pendingEnrollments.length === 0 ? (
+              <p className="text-sm text-slate-400 px-3 py-4">
+                No pending student invitations for this cohort.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="px-3 py-2">Student</th>
+                      <th className="px-3 py-2">Payment Plan</th>
+                      <th className="px-3 py-2">Registration Status</th>
+                      <th className="px-3 py-2">Invitation Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {pendingEnrollments.map((student) => {
+                      const paymentPlan =
+                        student.payment_responsibility ===
+                        "instructor_paid"
+                          ? student.instructor_payment_mode ===
+                            "invoice_with_cohort"
+                            ? "Business pays by cohort invoice"
+                            : "Business pays now"
+                          : "Student pays registration fee";
+
+                      const registrationStatus =
+                        student.billing_issue
+                          ? student.billing_issue
+                          : ["paid", "waived"].includes(
+                              student.billing_event_status
+                            )
+                            ? student.billing_event_status === "waived"
+                              ? "Registration waived — awaiting account registration"
+                              : "Registration paid — awaiting account registration"
+                            : student.billing_event_status ===
+                                "ready_for_checkout"
+                              ? "Payment link ready"
+                              : student.billing_event_status ===
+                                  "payment_processing"
+                                ? "Payment processing"
+                                : student.billing_event_status === "failed"
+                                  ? "Payment needs attention"
+                                  : student.payment_responsibility ===
+                                        "instructor_paid" &&
+                                      student.instructor_payment_mode ===
+                                        "invoice_with_cohort"
+                                    ? "Awaiting cohort invoice"
+                                    : "Awaiting registration payment";
+
+                      const invitationStatus =
+                        student.invite_status === "invite_email_sent"
+                          ? "Invitation sent"
+                          : student.invite_status ===
+                              "pending_email_failed"
+                            ? "Invitation email needs attention"
+                            : "Invitation pending";
+
+                      return (
+                        <tr key={student.id}>
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-slate-900">
+                              {student.email || "Student email unavailable"}
+                            </div>
+
+                            <div className="mt-1 text-xs text-slate-500">
+                              Pending cohort enrollment
+                            </div>
+                          </td>
+
+                          <td className="px-3 py-3 text-slate-700">
+                            {paymentPlan}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <div
+                              className={`text-sm ${
+                                student.billing_issue
+                                  ? "text-rose-700"
+                                  : "text-slate-700"
+                              }`}
+                            >
+                              {registrationStatus}
+                            </div>
+
+                            {student.billing_event_amount_cents !== null &&
+                              student.billing_event_amount_cents !==
+                                undefined && (
+                                <div className="mt-1 text-xs text-slate-500">
+                                  {student.billing_event_currency || "USD"}{" "}
+                                  {(
+                                    Number(
+                                      student.billing_event_amount_cents
+                                    ) / 100
+                                  ).toFixed(2)}
+                                </div>
+                              )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={
+                                student.invite_status ===
+                                "pending_email_failed"
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-800"
+                              }
+                            >
+                              {invitationStatus}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 6. Active Students section */}
              <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
            <Users className="w-4 h-4 text-green-600" />
