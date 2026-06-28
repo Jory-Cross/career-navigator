@@ -1093,7 +1093,7 @@ await queryClient.invalidateQueries({
   onSubmit={handleAddTrainer}
 />
 
-      {/* Assign Registered Student Dialog */}
+           {/* Assign Registered Student Dialog */}
       <AddMemberDialog
         open={showAddMemberDialog}
         onOpenChange={setShowAddMemberDialog}
@@ -1102,6 +1102,13 @@ await queryClient.invalidateQueries({
         allowedRoles={["ce_student"]}
         existingMemberUserIds={existingMemberUserIds}
         onSubmit={handleAddMember}
+      />
+
+      <InviteStudentDialog
+        open={showInviteStudentDialog}
+        onOpenChange={setShowInviteStudentDialog}
+        onSuccess={handleInviteCEStudentSuccess}
+        cohortId={cohort_id}
       />
 
       {/* 1. Back link */}
