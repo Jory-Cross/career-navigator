@@ -139,8 +139,8 @@ function buildCheckoutRedirectUrls() {
 
   return {
     successUrl:
-      `${appUrl}/?ce_registration=success` +
-      `&session_id={CHECKOUT_SESSION_ID}`,
+      `${appUrl}/CERegistrationPaymentStatus` +
+      `?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${appUrl}/?ce_registration=cancelled`,
   };
 }
