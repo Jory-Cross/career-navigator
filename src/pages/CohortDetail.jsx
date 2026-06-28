@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import MemberRow from "@/components/cohorts/MemberRow";
 import AddMemberDialog from "@/components/cohorts/AddMemberDialog";
+import InviteStudentDialog from "@/components/cohorts/InviteStudentDialog";
 
 const STATUS_STYLES = {
   planned: "bg-slate-100 text-slate-700 border-slate-200",
