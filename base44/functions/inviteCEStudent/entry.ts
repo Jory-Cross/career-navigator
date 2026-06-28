@@ -19,6 +19,7 @@ const FREE_DOMAINS = [
   "hotmail.com",
   "live.com",
   "icloud.com",
+  "resend.dev",
 ];
 
 const OPEN_INVITE_STATUSES = [
