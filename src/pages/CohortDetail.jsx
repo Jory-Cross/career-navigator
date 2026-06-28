@@ -253,7 +253,7 @@ console.log("USER MAP", userById);
     return managers.some((m) => m.user_id === user.id);
   }, [user, managers]);
 
-  const canPreviewCohortInvoice = useMemo(() => {
+   const canPreviewCohortInvoice = useMemo(() => {
     if (!user || cohort?.cohort_type !== "training") {
       return false;
     }
@@ -269,9 +269,43 @@ console.log("USER MAP", userById);
     );
   }, [user, cohort?.cohort_type, managers]);
 
+  const {
+    data: cohortInvoiceHistory = null,
+    isFetching: loadingCohortInvoiceHistory,
+    error: cohortInvoiceHistoryError,
+    refetch: refetchCohortInvoiceHistory,
+  } = useQuery({
+    queryKey: [
+      "ce-training-cohort-invoice-history",
+      cohort_id,
+    ],
+    queryFn: async () => {
+      const res = await base44.functions.invoke(
+        "getCETrainingCohortInvoiceHistory",
+        {
+          cohort_id,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to load CE Training cohort invoice history."
+        );
+      }
+
+      return res.data;
+    },
+    enabled:
+      !!cohort_id &&
+      !!user?.id &&
+      canPreviewCohortInvoice,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+
   const canAddTrainer = canManageCohortRoster;
   const canAddMember = canManageCohortRoster;
-
   const canRecordTestRegistrationWaiver =
     user?.role === "admin" &&
     cohort?.cohort_type === "training";
