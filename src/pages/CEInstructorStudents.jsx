@@ -644,7 +644,7 @@ export default function CEInstructorStudents() {
                     <td className="px-4 py-3">
                       {student.status === "pending" ? (
                         <div className="flex flex-wrap gap-2">
-                          {!student.billing_event_missing &&
+                                              {!student.billing_event_missing &&
                             !student.billing_event_conflict && (
                               <Button
                                 type="button"
@@ -664,10 +664,13 @@ export default function CEInstructorStudents() {
                                 ) : (
                                   <Mail className="h-3 w-3" />
                                 )}
-                                Resend Invitation
+                                {["paid", "waived"].includes(
+                                  student.billing_event_status
+                                )
+                                  ? "Resend Registration Instructions"
+                                  : "Resend Invitation"}
                               </Button>
                             )}
-
                           {student.checkout_available &&
                             student.billing_event_id && (
                               <Button
