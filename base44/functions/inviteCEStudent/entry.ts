@@ -1006,7 +1006,7 @@ Deno.serve(async (req) => {
         OPEN_INVITE_STATUSES.includes(assignment.status)
     );
 
-    const effectivePaymentResponsibility = existingInvite
+      const effectivePaymentResponsibility = existingInvite
       ? existingInvite.payment_responsibility || "student_paid"
       : requestedPaymentResponsibility;
 
@@ -1019,6 +1019,34 @@ Deno.serve(async (req) => {
     const effectiveCohortId = existingInvite
       ? String(existingInvite.cohort_id || "").trim()
       : cohortId;
+
+    if (!existingInvite) {
+      const configuredSender = normalizeEmail(RESEND_FROM_EMAIL);
+      const senderDomain =
+        configuredSender.split("@")[1] || "";
+
+      const deliveryConfigurationError =
+        !RESEND_API_KEY
+          ? "CE invitation email is not configured. Add RESEND_API_KEY before inviting students."
+          : !configuredSender || !isValidEmail(configuredSender)
+            ? "CE invitation email is not configured. Add a valid RESEND_FROM_EMAIL on your verified business domain before inviting students."
+            : FREE_DOMAINS.includes(senderDomain)
+              ? "CE invitation email is not configured. RESEND_FROM_EMAIL must use your verified business domain, not a free email domain."
+              : null;
+
+      if (deliveryConfigurationError) {
+        return Response.json(
+          {
+            ok: false,
+            error: deliveryConfigurationError,
+            email_delivery_configuration_required: true,
+            invitation_created: false,
+            email,
+          },
+          { status: 503 }
+        );
+      }
+    }
 
     const billingResult = await ensureRegistrationBillingEvent({
       base44,
