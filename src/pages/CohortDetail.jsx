@@ -69,10 +69,14 @@ export default function CohortDetail() {
     selectedInvoiceBillingEventIds,
     setSelectedInvoiceBillingEventIds,
   ] = useState([]);
-  const [
+   const [
     creatingCohortInvoiceCheckout,
     setCreatingCohortInvoiceCheckout,
   ] = useState(false);
+  const [
+    resumingCohortInvoiceId,
+    setResumingCohortInvoiceId,
+  ] = useState("");
   useEffect(() => {
     let active = true;
     base44.auth.me().then((u) => {
