@@ -821,20 +821,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (user.role !== "ce_instructor") {
+       const body = await req.json().catch(() => ({}));
+
+    const email = normalizeEmail(body.email);
+    const cohortId = String(body?.cohort_id || "").trim();
+    const inviterRole = normalizeText(user.role);
+
+    if (
+      !["admin", "management", "ce_instructor"].includes(
+        inviterRole
+      )
+    ) {
       return Response.json(
         {
           ok: false,
-          error: "Only CE instructors can invite students.",
+          error:
+            "Only administrators and active Training cohort managers can invite CE students.",
         },
         { status: 403 }
       );
     }
-
-    const body = await req.json().catch(() => ({}));
-
-    const email = normalizeEmail(body.email);
-    const cohortId = String(body?.cohort_id || "").trim();
 
     const requestedPaymentResponsibility = String(
       body?.payment_responsibility || "student_paid"
