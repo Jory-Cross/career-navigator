@@ -3,6 +3,29 @@ import Stripe from "npm:stripe@14.21.0";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
+const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
+
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "icloud.com",
+  "resend.dev",
+]);
+
+const resendFromDomain =
+  RESEND_FROM_EMAIL.split("@")[1]?.toLowerCase() || "";
+
+const RESEND_FROM =
+  RESEND_FROM_EMAIL &&
+  !FREE_EMAIL_DOMAINS.has(resendFromDomain)
+    ? RESEND_FROM_EMAIL
+    : "onboarding@resend.dev";
+
 const TIER_LIMITS = {
   starter: { max_employees: 3, max_clients: 25 },
   professional: { max_employees: 10, max_clients: 100 },
