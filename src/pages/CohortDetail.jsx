@@ -1349,8 +1349,222 @@ await queryClient.invalidateQueries({
               </div>
             )}
           </div>
-        )}
+               )}
       </section>
+
+      {canPreviewCohortInvoice && (
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Cohort Invoice History
+              </h2>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Read-only record of saved CE Training cohort invoices and
+                their student registration lines.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={loadingCohortInvoiceHistory}
+              onClick={() => refetchCohortInvoiceHistory()}
+              className="gap-2"
+            >
+              {loadingCohortInvoiceHistory ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : null}
+              Refresh History
+            </Button>
+          </div>
+
+          <div className="p-4">
+            {loadingCohortInvoiceHistory && !cohortInvoiceHistory ? (
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading cohort invoice history...
+              </div>
+            ) : null}
+
+            {cohortInvoiceHistoryError ? (
+              <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                {cohortInvoiceHistoryError.message ||
+                  "Unable to load CE Training cohort invoice history."}
+              </div>
+            ) : null}
+
+            {cohortInvoiceHistory ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Saved Invoices
+                    </div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">
+                      {cohortInvoiceHistory.summary?.invoice_count || 0}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                      Paid
+                    </div>
+                    <div className="mt-1 text-xl font-bold text-emerald-800">
+                      {cohortInvoiceHistory.summary?.paid_invoice_count || 0}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <div className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                      Open / Review Needed
+                    </div>
+                    <div className="mt-1 text-xl font-bold text-amber-800">
+                      {(cohortInvoiceHistory.summary?.open_invoice_count || 0) +
+                        (
+                          cohortInvoiceHistory.summary
+                            ?.review_required_count || 0
+                        )}
+                    </div>
+                  </div>
+                </div>
+
+                {(cohortInvoiceHistory.invoices || []).length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No cohort invoices have been created for this Training
+                    cohort yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {cohortInvoiceHistory.invoices.map((invoice) => (
+                      <details
+                        key={invoice.id}
+                        className="rounded-lg border border-slate-200 bg-white"
+                      >
+                        <summary className="cursor-pointer list-none px-4 py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                {invoice.student_count} student
+                                {invoice.student_count === 1 ? "" : "s"} ·{" "}
+                                {invoice.currency}{" "}
+                                {(
+                                  Number(invoice.amount_cents || 0) / 100
+                                ).toFixed(2)}
+                              </div>
+
+                              <div className="mt-1 text-xs text-slate-500">
+                                {invoice.paid_at
+                                  ? `Paid ${new Date(
+                                      invoice.paid_at
+                                    ).toLocaleString()}`
+                                  : invoice.issued_at
+                                    ? `Issued ${new Date(
+                                        invoice.issued_at
+                                      ).toLocaleString()}`
+                                    : "Draft invoice"}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  invoice.invoice_status === "paid"
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : invoice.invoice_status ===
+                                        "payment_processing"
+                                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                                      : invoice.invoice_status === "failed"
+                                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                                        : "border-amber-200 bg-amber-50 text-amber-800"
+                                }
+                              >
+                                {invoice.invoice_status}
+                              </Badge>
+
+                              {invoice.integrity_status ===
+                              "review_required" ? (
+                                <Badge
+                                  variant="outline"
+                                  className="border-rose-200 bg-rose-50 text-rose-700"
+                                >
+                                  Review required
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </div>
+                        </summary>
+
+                        <div className="border-t border-slate-100 px-4 py-3">
+                          {invoice.integrity_issues?.length > 0 ? (
+                            <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                              {invoice.integrity_issues.map((issue) => (
+                                <div key={issue}>{issue}</div>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          <div className="overflow-x-auto rounded-md border border-slate-200">
+                            <table className="w-full text-sm">
+                              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                  <th className="px-3 py-2">
+                                    Student Email
+                                  </th>
+                                  <th className="px-3 py-2">
+                                    Locked Fee
+                                  </th>
+                                  <th className="px-3 py-2">
+                                    Line Status
+                                  </th>
+                                </tr>
+                              </thead>
+
+                              <tbody className="divide-y divide-slate-100">
+                                {(invoice.lines || []).map((line) => (
+                                  <tr key={line.id}>
+                                    <td className="px-3 py-2 text-slate-800">
+                                      {line.subject_verified_email ||
+                                        "Student email unavailable"}
+                                    </td>
+
+                                    <td className="px-3 py-2 text-slate-800">
+                                      {line.currency}{" "}
+                                      {(
+                                        Number(line.amount_cents || 0) / 100
+                                      ).toFixed(2)}
+                                    </td>
+
+                                    <td className="px-3 py-2 text-slate-600">
+                                      <div>{line.line_status}</div>
+
+                                      {line.paid_at ? (
+                                        <div className="mt-1 text-xs text-slate-500">
+                                          Paid{" "}
+                                          {new Date(
+                                            line.paid_at
+                                          ).toLocaleString()}
+                                        </div>
+                                      ) : null}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      )}
 
       {/* 3. Managers section */}
       <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
