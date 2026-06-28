@@ -279,9 +279,44 @@ export default function CEInstructorStudents() {
         );
       }
 
+        const checkoutUrl = String(
+        res.data.checkout_url || ""
+      ).trim();
+
+      const isInstructorPayNow =
+        (res.data.payment_responsibility ||
+          student.payment_responsibility) === "instructor_paid" &&
+        (res.data.instructor_payment_mode ||
+          student.instructor_payment_mode) === "pay_now";
+
+      if (isInstructorPayNow) {
+        if (
+          !/^https:\/\/checkout\.stripe\.com(?:\/|$)/i.test(
+            checkoutUrl
+          )
+        ) {
+          throw new Error(
+            "The server did not return a valid Stripe Checkout URL for this business registration payment."
+          );
+        }
+
+        toast.success(
+          res.data.reused_existing_checkout
+            ? "Opening the existing secure business checkout."
+            : "Opening secure business checkout."
+        );
+
+        await queryClient.invalidateQueries({
+          queryKey: ["ce-students-instructor-secure"],
+        });
+
+        window.location.assign(checkoutUrl);
+        return;
+      }
+
       setPaymentLinkInfo({
         email: student.email,
-        checkoutUrl: res.data.checkout_url,
+        checkoutUrl,
         checkoutSessionId: res.data.checkout_session_id || "",
         paymentResponsibility:
           res.data.payment_responsibility ||
