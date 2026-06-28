@@ -69,10 +69,41 @@ export default function InviteStudentDialog({
             : undefined,
       });
 
-      if (!res.data?.ok) {
+           if (!res.data?.ok) {
         throw new Error(
           res.data?.error || "Failed to send CE student invitation"
         );
+      }
+
+      const checkoutUrl = String(
+        res.data?.checkout_url || ""
+      ).trim();
+
+      const isInstructorPayNow =
+        res.data?.payment_responsibility === "instructor_paid" &&
+        res.data?.instructor_payment_mode === "pay_now";
+
+      if (isInstructorPayNow) {
+        if (
+          !/^https:\/\/checkout\.stripe\.com(?:\/|$)/i.test(
+            checkoutUrl
+          )
+        ) {
+          throw new Error(
+            "The server did not return a valid Stripe Checkout URL for this instructor-paid registration."
+          );
+        }
+
+        toast.success(
+          "CE student enrollment invitation created. Opening secure payment checkout."
+        );
+
+        resetForm();
+        onOpenChange(false);
+        onSuccess?.();
+
+        window.location.assign(checkoutUrl);
+        return;
       }
 
       toast.success(
