@@ -629,9 +629,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       ok: true,
-      message: isPaid
-        ? "CE Training invitation resent with payment-confirmed registration instructions."
-        : "CE Training invitation resent.",
+           message: "CE Training invitation resent.",
       pending_assignment_id: assignment.id,
       billing_event_id: billingEvent.id,
       billing_event_status: billingEvent.event_status,
