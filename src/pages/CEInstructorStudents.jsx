@@ -671,8 +671,12 @@ export default function CEInstructorStudents() {
                                   : "Resend Invitation"}
                               </Button>
                             )}
-                          {student.checkout_available &&
-                            student.billing_event_id && (
+                                                   {student.checkout_available &&
+                            student.billing_event_id &&
+                            student.payment_responsibility ===
+                              "instructor_paid" &&
+                            student.instructor_payment_mode ===
+                              "pay_now" && (
                               <Button
                                 type="button"
                                 size="sm"
@@ -692,7 +696,7 @@ export default function CEInstructorStudents() {
                                 ) : (
                                   <CreditCard className="h-3 w-3" />
                                 )}
-                                {getPaymentActionLabel(student)}
+                                Generate Business Checkout
                               </Button>
                             )}
 
