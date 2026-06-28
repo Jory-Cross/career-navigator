@@ -34,12 +34,16 @@ const BILLING_STATUSES_THAT_LOCK_PAYMENT_CHOICE = new Set([
   "waived",
 ]);
 
+function normalizeText(value: unknown) {
+  return String(value || "").trim();
+}
+
 function normalizeEmail(value: unknown) {
-  return String(value || "").trim().toLowerCase();
+  return normalizeText(value).toLowerCase();
 }
 
 async function resolveOrganizationId(base44: any, caller: any) {
-  const directOrgId = String(caller?.org_id || "").trim();
+  const directOrgId = normalizeText(caller?.org_id);
 
   if (directOrgId) {
     return directOrgId;
@@ -50,7 +54,7 @@ async function resolveOrganizationId(base44: any, caller: any) {
       owner_email: caller.email,
     });
 
-  return String(organizations?.[0]?.id || "").trim();
+  return normalizeText(organizations?.[0]?.id);
 }
 
 Deno.serve(async (req) => {
@@ -78,17 +82,17 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
-    const pendingInviteId = String(
-      body?.pending_invite_id || ""
-    ).trim();
+    const pendingInviteId = normalizeText(
+      body?.pending_invite_id
+    );
 
-    const paymentResponsibility = String(
-      body?.payment_responsibility || ""
-    ).trim();
+    const paymentResponsibility = normalizeText(
+      body?.payment_responsibility
+    );
 
-    const instructorPaymentMode = String(
-      body?.instructor_payment_mode || ""
-    ).trim();
+    const instructorPaymentMode = normalizeText(
+      body?.instructor_payment_mode
+    );
 
     if (!pendingInviteId) {
       return Response.json(
@@ -125,7 +129,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organizationId = await resolveOrganizationId(base44, caller);
+    const organizationId = await resolveOrganizationId(
+      base44,
+      caller
+    );
 
     if (!organizationId) {
       return Response.json(
@@ -158,7 +165,7 @@ Deno.serve(async (req) => {
 
     if (
       invite.role !== "ce_student" ||
-      String(invite.org_id || "").trim() !== organizationId
+      normalizeText(invite.org_id) !== organizationId
     ) {
       return Response.json(
         {
@@ -179,6 +186,77 @@ Deno.serve(async (req) => {
         },
         { status: 409 }
       );
+    }
+
+    if (
+      paymentResponsibility === "instructor_paid" &&
+      instructorPaymentMode === "invoice_with_cohort"
+    ) {
+      const cohortId = normalizeText(invite.cohort_id);
+
+      if (!cohortId) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "A Training cohort must be selected before this CE student can be included on a future cohort invoice.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const cohortRows =
+        await base44.asServiceRole.entities.CETrainingCohort.filter({
+          id: cohortId,
+        });
+
+      const cohort = Array.isArray(cohortRows)
+        ? cohortRows[0]
+        : null;
+
+      if (!cohort) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The Training cohort connected to this invitation could not be found.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (normalizeText(cohort.org_id) !== organizationId) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The Training cohort connected to this invitation belongs to a different organization.",
+          },
+          { status: 403 }
+        );
+      }
+
+      if (cohort.cohort_type !== "training") {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "Only Training cohorts may be used for CE registration invoice billing.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (cohort.is_active === false) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "The selected Training cohort is inactive and cannot receive new invoice-billed CE registrations.",
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const billingRows =
@@ -241,6 +319,7 @@ Deno.serve(async (req) => {
         paymentResponsibility === "instructor_paid"
           ? instructorPaymentMode
           : null,
+      cohort_id: normalizeText(invite.cohort_id) || null,
     });
   } catch (error) {
     console.error(
