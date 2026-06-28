@@ -644,7 +644,8 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
     );
   }
 
-  const billingEventIds = new Set<string>();
+   const billingEventIds = new Set<string>();
+  let invoiceLineTotalAmountCents = 0;
 
   for (const invoiceLine of invoiceLines) {
     if (
@@ -669,9 +670,11 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       );
     }
 
+    const lineAmountCents = Number(invoiceLine.amount_cents);
+
     if (
-      !Number.isInteger(Number(invoiceLine.amount_cents)) ||
-      Number(invoiceLine.amount_cents) < 0
+      !Number.isInteger(lineAmountCents) ||
+      lineAmountCents < 0
     ) {
       throw new Error(
         "A cohort invoice line has an invalid locked registration amount."
@@ -699,6 +702,13 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
     }
 
     billingEventIds.add(billingEventId);
+    invoiceLineTotalAmountCents += lineAmountCents;
+  }
+
+  if (invoiceLineTotalAmountCents !== expectedAmount) {
+    throw new Error(
+      "The total of the cohort invoice lines does not match the locked cohort invoice amount."
+    );
   }
 
   const billingEventRows =
