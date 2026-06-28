@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import {
@@ -11,7 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, CreditCard, Building2 } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  CreditCard,
+  Building2,
+  GraduationCap,
+} from "lucide-react";
 
 export default function InviteStudentPaymentDialog({
   open,
@@ -19,16 +25,88 @@ export default function InviteStudentPaymentDialog({
   onSuccess,
 }) {
   const [email, setEmail] = useState("");
+  const [cohortId, setCohortId] = useState("");
+  const [trainingCohorts, setTrainingCohorts] = useState([]);
+  const [loadingCohorts, setLoadingCohorts] = useState(false);
+  const [cohortLoadError, setCohortLoadError] = useState("");
   const [paymentResponsibility, setPaymentResponsibility] =
     useState("student_paid");
   const [instructorPaymentMode, setInstructorPaymentMode] =
     useState("pay_now");
   const [inviting, setInviting] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!open) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadTrainingCohorts = async () => {
+      setLoadingCohorts(true);
+      setCohortLoadError("");
+
+      try {
+        const res = await base44.functions.invoke(
+          "getCEInstructorStudents",
+          {}
+        );
+
+        if (!res.data?.ok) {
+          throw new Error(
+            res.data?.error ||
+              "Unable to load Training cohorts for enrollment."
+          );
+        }
+
+        const availableCohorts = (
+          Array.isArray(res.data.cohorts)
+            ? res.data.cohorts
+            : []
+        ).filter(
+          (cohort) =>
+            cohort?.cohort_type === "training" &&
+            cohort?.is_active !== false &&
+            !["completed", "archived"].includes(cohort?.status)
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setTrainingCohorts(availableCohorts);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setTrainingCohorts([]);
+        setCohortLoadError(
+          error?.message ||
+            "Unable to load Training cohorts for enrollment."
+        );
+      } finally {
+        if (active) {
+          setLoadingCohorts(false);
+        }
+      }
+    };
+
+    loadTrainingCohorts();
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
   const resetForm = () => {
     setEmail("");
+    setCohortId("");
     setPaymentResponsibility("student_paid");
     setInstructorPaymentMode("pay_now");
+    setCohortLoadError("");
   };
 
   const handleOpenChange = (nextOpen) => {
@@ -41,7 +119,23 @@ export default function InviteStudentPaymentDialog({
 
   const handleInvite = async () => {
     if (!email.trim()) {
-      toast.error("Please enter a student email");
+      toast.error("Please enter a student email.");
+      return;
+    }
+
+    if (!cohortId) {
+      toast.error("Please select a Training cohort.");
+      return;
+    }
+
+    const selectedCohort = trainingCohorts.find(
+      (cohort) => cohort.id === cohortId
+    );
+
+    if (!selectedCohort) {
+      toast.error(
+        "The selected Training cohort is unavailable. Refresh the dialog and try again."
+      );
       return;
     }
 
@@ -50,6 +144,7 @@ export default function InviteStudentPaymentDialog({
     try {
       const res = await base44.functions.invoke("inviteCEStudent", {
         email: email.trim(),
+        cohort_id: cohortId,
         payment_responsibility: paymentResponsibility,
         instructor_payment_mode:
           paymentResponsibility === "instructor_paid"
@@ -59,14 +154,14 @@ export default function InviteStudentPaymentDialog({
 
       if (!res.data?.ok) {
         throw new Error(
-          res.data?.error || "Failed to send CE student invitation"
+          res.data?.error || "Failed to send CE student invitation."
         );
       }
 
       toast.success(
         res.data?.email_sent
-          ? `Enrollment invitation sent to ${email.trim()}`
-          : "CE student enrollment invitation created"
+          ? `Enrollment invitation sent to ${email.trim()}.`
+          : "CE student enrollment invitation created."
       );
 
       resetForm();
@@ -74,12 +169,17 @@ export default function InviteStudentPaymentDialog({
       onSuccess?.();
     } catch (error) {
       toast.error(
-        error?.message || "Failed to invite CE student"
+        error?.message || "Failed to invite CE student."
       );
     } finally {
       setInviting(false);
     }
   };
+
+  const noTrainingCohortsAvailable =
+    !loadingCohorts &&
+    !cohortLoadError &&
+    trainingCohorts.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -112,6 +212,60 @@ export default function InviteStudentPaymentDialog({
               The student will receive a CE Training enrollment invitation
               for this exact email address.
             </p>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="training-cohort">
+              Training Cohort
+            </Label>
+
+            <div className="relative">
+              <GraduationCap className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+
+              <select
+                id="training-cohort"
+                value={cohortId}
+                onChange={(event) => setCohortId(event.target.value)}
+                disabled={
+                  inviting ||
+                  loadingCohorts ||
+                  !!cohortLoadError ||
+                  noTrainingCohortsAvailable
+                }
+                className="h-10 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none ring-offset-background focus:border-violet-400 focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:bg-slate-100"
+              >
+                <option value="">
+                  {loadingCohorts
+                    ? "Loading Training cohorts..."
+                    : "Select a Training cohort"}
+                </option>
+
+                {trainingCohorts.map((cohort) => (
+                  <option key={cohort.id} value={cohort.id}>
+                    {cohort.name}
+                    {cohort.code ? ` (${cohort.code})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {cohortLoadError ? (
+              <p className="text-xs text-rose-600">
+                {cohortLoadError}
+              </p>
+            ) : null}
+
+            {noTrainingCohortsAvailable ? (
+              <p className="text-xs text-amber-700">
+                Create or activate a Training cohort before inviting
+                students.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                The invited student appears as pending in this cohort until
+                payment is settled and registration is completed.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -233,7 +387,9 @@ export default function InviteStudentPaymentDialog({
                       instructorPaymentMode === "invoice_with_cohort"
                     }
                     onChange={() =>
-                      setInstructorPaymentMode("invoice_with_cohort")
+                      setInstructorPaymentMode(
+                        "invoice_with_cohort"
+                      )
                     }
                     disabled={inviting}
                     className="mt-1"
@@ -266,7 +422,12 @@ export default function InviteStudentPaymentDialog({
 
           <Button
             onClick={handleInvite}
-            disabled={inviting}
+            disabled={
+              inviting ||
+              loadingCohorts ||
+              !!cohortLoadError ||
+              noTrainingCohortsAvailable
+            }
             className="gap-2"
           >
             {inviting ? (
