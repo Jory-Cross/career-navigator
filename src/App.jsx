@@ -110,8 +110,12 @@ const AuthenticatedApp = () => {
               path="/CETrainingPortal"
               element={<CETrainingPortal />}
             />
-            <Route path="/Cohorts" element={<Cohorts />} />
+                       <Route path="/Cohorts" element={<Cohorts />} />
             <Route path="/CohortDetail" element={<CohortDetail />} />
+            <Route
+              path="/CETrainingStudentDetail"
+              element={<CETrainingStudentDetail />}
+            />
             <Route
               path="/CEInstructorStudents"
               element={<CEInstructorStudents />}
