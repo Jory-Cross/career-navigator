@@ -643,7 +643,7 @@ Deno.serve(async (req) => {
           ? "payment_settled_registration_pending"
           : "payment_pending");
 
-    const [
+     const [
       activeCallerMembershipRows,
       platformAdminRows,
       studentCertificationRows,
@@ -663,6 +663,8 @@ Deno.serve(async (req) => {
           })
         : Promise.resolve([]),
     ]);
+
+    mark("permission_source_reads_complete");
 
     const activeCallerMemberships = Array.isArray(
       activeCallerMembershipRows
