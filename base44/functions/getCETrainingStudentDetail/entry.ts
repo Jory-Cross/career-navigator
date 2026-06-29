@@ -680,24 +680,14 @@ Deno.serve(async (req) => {
     const trainingStatus =
       normalizeText(membership?.training_status) || "in_training";
 
-    const matchingRegistrationBillingEvents =
-      registrationBillingEvents.filter(
-        (billingRecord) =>
-          normalizeText(billingRecord?.cohort_id) === cohortId &&
-          normalizeText(billingRecord?.subject_user_id) ===
-            studentUserId
-      );
+        const hasAnyRegistrationBillingEvent = Boolean(billingEvent);
 
-    const hasAnyRegistrationBillingEvent =
-      matchingRegistrationBillingEvents.length > 0;
-
-    const hasSettledRegistration = matchingRegistrationBillingEvents.some(
-      (billingRecord) =>
+    const hasSettledRegistration = Boolean(
+      billingEvent &&
         ["paid", "waived"].includes(
-          normalizeText(billingRecord?.event_status)
+          normalizeText(billingEvent?.event_status)
         )
     );
-
        const accountRegistrationIsComplete = Boolean(
       studentUser &&
         studentUser.is_active !== false &&
