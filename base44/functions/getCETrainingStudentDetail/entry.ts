@@ -567,13 +567,13 @@ Deno.serve(async (req) => {
 
     mark("student_identity_resolved");
 
-    const billingRows =
+     const billingRows =
       await base44.asServiceRole.entities.OrganizationBillingEvent.filter(
         {
           organization_id: organizationId,
+          cohort_id: cohortId,
         }
       );
-
        const registrationBillingEvents = (
       Array.isArray(billingRows) ? billingRows : []
     ).filter(
