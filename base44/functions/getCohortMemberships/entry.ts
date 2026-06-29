@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
 
     mark("cohort_access_verified");
 
-    const [
+       const [
       allMemberships,
       pendingInviteRows,
       organizationBillingEvents,
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
         role: "ce_student",
         cohort_id: cohortId,
       }),
-            base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      base44.asServiceRole.entities.OrganizationBillingEvent.filter({
         organization_id: organizationId,
         cohort_id: cohortId,
       }),
@@ -270,6 +270,8 @@ Deno.serve(async (req) => {
         cohort_id: cohortId,
       }),
     ]);
+
+    mark("roster_source_reads_complete");
 
     const activeMemberships = (
       Array.isArray(allMemberships) ? allMemberships : []
