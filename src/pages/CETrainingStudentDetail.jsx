@@ -367,10 +367,180 @@ export default function CETrainingStudentDetail() {
         ? formatLabel(detail.cohort_membership.training_status)
         : "Not started";
 
-  const paymentIntegrityWarning =
+   const paymentIntegrityWarning =
     !["valid", "valid_legacy_match"].includes(
       detail.payment?.integrity_status
     );
+
+  const permissions = detail.permissions || {};
+  const membershipId = String(
+    detail.cohort_membership?.id || ""
+  ).trim();
+
+  const studentUserId = String(
+    detail.student?.user_id || ""
+  ).trim();
+
+  const hasStudentActions =
+    permissions.can_record_test_registration_waiver ||
+    permissions.can_mark_training_complete ||
+    permissions.can_remove_cohort_membership;
+
+  const handleRecordTestWaiver = async () => {
+    const waiverReason = window.prompt(
+      `Record a test registration waiver for ${
+        detail.student?.display_name || "this student"
+      }?`,
+      "Internal end-to-end CE training test account."
+    );
+
+    if (waiverReason === null) {
+      return;
+    }
+
+    if (!waiverReason.trim()) {
+      toast.error("A waiver reason is required.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Confirm test registration waiver for ${
+          detail.student?.display_name || "this student"
+        }. No payment will be recorded.`
+      )
+    ) {
+      return;
+    }
+
+    setActiveAction("record_test_waiver");
+
+    try {
+      const res = await base44.functions.invoke(
+        "recordCEStudentTestRegistrationWaiver",
+        {
+          action: "record_test_waiver",
+          cohort_id: cohortId,
+          user_id: studentUserId,
+          waiver_reason: waiverReason.trim(),
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to record the CE student test registration waiver."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Test registration waiver recorded."
+      );
+
+      await refetch();
+    } catch (actionError) {
+      toast.error(
+        actionError?.message ||
+          "Unable to record the CE student test registration waiver."
+      );
+    } finally {
+      setActiveAction("");
+    }
+  };
+
+  const handleMarkTrainingComplete = async () => {
+    if (
+      !window.confirm(
+        `Mark ${
+          detail.student?.display_name || "this student"
+        } as having completed CE training requirements? This makes the student eligible for Pending Certification review.`
+      )
+    ) {
+      return;
+    }
+
+    setActiveAction("mark_training_complete");
+
+    try {
+      const res = await base44.functions.invoke(
+        "markCEStudentTrainingComplete",
+        {
+          action: "mark_completed",
+          cohort_id: cohortId,
+          membership_id: membershipId,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to record CE student training completion."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Student training completion recorded."
+      );
+
+      await refetch();
+    } catch (actionError) {
+      toast.error(
+        actionError?.message ||
+          "Unable to record CE student training completion."
+      );
+    } finally {
+      setActiveAction("");
+    }
+  };
+
+  const handleRemoveCohortMembership = async () => {
+    if (
+      !window.confirm(
+        `Remove ${
+          detail.student?.display_name || "this student"
+        } from this CE training cohort? Their enrollment and payment history will remain available for audit.`
+      )
+    ) {
+      return;
+    }
+
+    setActiveAction("remove_cohort_membership");
+
+    try {
+      const res = await base44.functions.invoke(
+        "manageCohortMembership",
+        {
+          action: "remove",
+          cohort_id: cohortId,
+          membership_id: membershipId,
+          cohort_role: "member",
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to remove the student from this cohort."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Student removed from this cohort."
+      );
+
+      navigate(backUrl);
+    } catch (actionError) {
+      toast.error(
+        actionError?.message ||
+          "Unable to remove the student from this cohort."
+      );
+    } finally {
+      setActiveAction("");
+    }
+  };
 
   return (
     <div className="space-y-6">
