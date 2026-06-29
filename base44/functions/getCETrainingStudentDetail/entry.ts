@@ -602,7 +602,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const billingStatus = normalizeText(
+      const billingStatus = normalizeText(
       billingEvent?.event_status
     );
 
@@ -626,6 +626,106 @@ Deno.serve(async (req) => {
           ? "payment_settled_registration_pending"
           : "payment_pending");
 
+    const [
+      activeCallerMembershipRows,
+      platformAdminRows,
+      studentCertificationRows,
+    ] = await Promise.all([
+      base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        cohort_id: cohortId,
+        user_id: caller.id,
+        is_active: true,
+      }),
+      base44.asServiceRole.entities.PlatformAdmin.filter({
+        user_id: caller.id,
+        is_active: true,
+      }),
+      studentUserId
+        ? base44.asServiceRole.entities.CEPractitionerCertification.filter({
+            user_id: studentUserId,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const activeCallerMemberships = Array.isArray(
+      activeCallerMembershipRows
+    )
+      ? activeCallerMembershipRows
+      : [];
+
+    const callerIsCohortManager = activeCallerMemberships.some(
+      (row) => row?.cohort_role === "manager"
+    );
+
+    const callerIsCohortTrainer = activeCallerMemberships.some(
+      (row) => row?.cohort_role === "trainer"
+    );
+
+    const callerIsPlatformOwner = (
+      Array.isArray(platformAdminRows) ? platformAdminRows : []
+    ).some(
+      (row) =>
+        row?.is_active !== false &&
+        normalizeText(row?.platform_role) === "platform_owner"
+    );
+
+    const studentHasCertification =
+      Array.isArray(studentCertificationRows) &&
+      studentCertificationRows.length > 0;
+
+    const membershipIsActive = Boolean(
+      membership && isActive(membership)
+    );
+
+    const trainingStatus =
+      normalizeText(membership?.training_status) || "in_training";
+
+    const matchingRegistrationBillingEvents =
+      registrationBillingEvents.filter(
+        (billingRecord) =>
+          normalizeText(billingRecord?.cohort_id) === cohortId &&
+          normalizeText(billingRecord?.subject_user_id) ===
+            studentUserId
+      );
+
+    const hasAnyRegistrationBillingEvent =
+      matchingRegistrationBillingEvents.length > 0;
+
+    const hasSettledRegistration = matchingRegistrationBillingEvents.some(
+      (billingRecord) =>
+        ["paid", "waived"].includes(
+          normalizeText(billingRecord?.event_status)
+        )
+    );
+
+    const actionPermissions = {
+      can_record_test_registration_waiver: Boolean(
+        callerIsPlatformOwner &&
+          membershipIsActive &&
+          studentUser?.is_active !== false &&
+          normalizeText(studentUser?.role) === "ce_student" &&
+          !hasAnyRegistrationBillingEvent
+      ),
+      can_mark_training_complete: Boolean(
+        membershipIsActive &&
+          hasSettledRegistration &&
+          !studentHasCertification &&
+          ["active", "completed"].includes(
+            normalizeText(cohort?.status)
+          ) &&
+          !["completed", "withdrawn"].includes(trainingStatus) &&
+          !["withdrawn", "revoked"].includes(
+            resolvedEnrollmentStatus
+          ) &&
+          (caller.role === "admin" ||
+            callerIsCohortManager ||
+            callerIsCohortTrainer)
+      ),
+      can_remove_cohort_membership: Boolean(
+        membershipIsActive &&
+          (caller.role === "admin" || callerIsCohortManager)
+      ),
+    };
     return Response.json({
       ok: true,
       cohort: {
