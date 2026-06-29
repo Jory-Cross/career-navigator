@@ -663,21 +663,46 @@ Deno.serve(async (req) => {
           ? "payment_settled_registration_pending"
           : "payment_pending");
 
-     const [
+       const membershipIsActive = Boolean(
+      membership && isActive(membership)
+    );
+
+    const trainingStatus =
+      normalizeText(membership?.training_status) || "in_training";
+
+    const hasAnyRegistrationBillingEvent = Boolean(
+      billingEvent
+    );
+
+    const hasSettledRegistration = Boolean(
+      billingEvent &&
+        ["paid", "waived"].includes(
+          normalizeText(billingEvent?.event_status)
+        )
+    );
+
+    const shouldLoadMembershipActionSources =
+      membershipIsActive;
+
+    const [
       activeCallerMembershipRows,
       platformAdminRows,
       studentCertificationRows,
     ] = await Promise.all([
-      base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id: cohortId,
-        user_id: caller.id,
-        is_active: true,
-      }),
-      base44.asServiceRole.entities.PlatformAdmin.filter({
-        user_id: caller.id,
-        is_active: true,
-      }),
-      studentUserId
+      shouldLoadMembershipActionSources
+        ? base44.asServiceRole.entities.CETrainingCohortMember.filter({
+            cohort_id: cohortId,
+            user_id: caller.id,
+            is_active: true,
+          })
+        : Promise.resolve([]),
+      shouldLoadMembershipActionSources
+        ? base44.asServiceRole.entities.PlatformAdmin.filter({
+            user_id: caller.id,
+            is_active: true,
+          })
+        : Promise.resolve([]),
+      shouldLoadMembershipActionSources && studentUserId
         ? base44.asServiceRole.entities.CEPractitionerCertification.filter({
             user_id: studentUserId,
           })
@@ -711,22 +736,6 @@ Deno.serve(async (req) => {
     const studentHasCertification =
       Array.isArray(studentCertificationRows) &&
       studentCertificationRows.length > 0;
-
-    const membershipIsActive = Boolean(
-      membership && isActive(membership)
-    );
-
-    const trainingStatus =
-      normalizeText(membership?.training_status) || "in_training";
-
-        const hasAnyRegistrationBillingEvent = Boolean(billingEvent);
-
-    const hasSettledRegistration = Boolean(
-      billingEvent &&
-        ["paid", "waived"].includes(
-          normalizeText(billingEvent?.event_status)
-        )
-    );
        const accountRegistrationIsComplete = Boolean(
       studentUser &&
         studentUser.is_active !== false &&
