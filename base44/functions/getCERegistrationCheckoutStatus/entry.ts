@@ -12,6 +12,87 @@ const CE_REGISTRATION_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
+const CE_PAYMENT_ASSIGNMENT_STATUSES = new Set([
+  "pending",
+  "invite_email_sent",
+  "pending_email_failed",
+  "accepted",
+]);
+
+async function getEnrollmentPaymentContext(
+  base44: any,
+  billingEvent: any
+) {
+  const organizationId = normalizeText(
+    billingEvent?.organization_id
+  );
+
+  const studentEmail = normalizeEmail(
+    billingEvent?.subject_verified_email
+  );
+
+  const cohortId = normalizeText(billingEvent?.cohort_id);
+
+  if (!organizationId || !studentEmail) {
+    return {
+      paymentResponsibility: "",
+      instructorPaymentMode: "",
+    };
+  }
+
+  const assignmentRows =
+    await base44.asServiceRole.entities.PendingRoleAssignment.filter({
+      org_id: organizationId,
+      role: "ce_student",
+    });
+
+  const matchingAssignments = (
+    Array.isArray(assignmentRows) ? assignmentRows : []
+  )
+    .filter(
+      (assignment) =>
+        normalizeEmail(assignment?.email) === studentEmail &&
+        CE_PAYMENT_ASSIGNMENT_STATUSES.has(
+          normalizeText(assignment?.status)
+        ) &&
+        (!cohortId ||
+          normalizeText(assignment?.cohort_id) === cohortId)
+    )
+    .sort((a, b) => {
+      const bTime = new Date(
+        b?.invited_at || b?.created_date || 0
+      ).getTime();
+
+      const aTime = new Date(
+        a?.invited_at || a?.created_date || 0
+      ).getTime();
+
+      return bTime - aTime;
+    });
+
+  const assignment = matchingAssignments[0];
+
+  const paymentResponsibility = normalizeText(
+    assignment?.payment_responsibility
+  );
+
+  const instructorPaymentMode = normalizeText(
+    assignment?.instructor_payment_mode
+  );
+
+  return {
+    paymentResponsibility:
+      paymentResponsibility === "instructor_paid" ||
+      paymentResponsibility === "student_paid"
+        ? paymentResponsibility
+        : "",
+    instructorPaymentMode:
+      instructorPaymentMode === "pay_now" ||
+      instructorPaymentMode === "invoice_with_cohort"
+        ? instructorPaymentMode
+        : "",
+  };
+}
 function createHttpError(status: number, message: string) {
   const error = new Error(message) as Error & { status?: number };
   error.status = status;
