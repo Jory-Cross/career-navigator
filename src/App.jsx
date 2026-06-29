@@ -40,6 +40,7 @@ import CEInstructorStudents from "./pages/CEInstructorStudents";
 import PlatformPricingManager from "./pages/PlatformPricingManager";
 import CECertificationPipelineManager from "./pages/CECertificationPipelineManager";
 import CERegistrationPaymentStatus from "./pages/CERegistrationPaymentStatus";
+import CETrainingStudentDetail from "./pages/CETrainingStudentDetail";
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
