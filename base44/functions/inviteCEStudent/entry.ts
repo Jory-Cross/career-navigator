@@ -1485,7 +1485,9 @@ Deno.serve(async (req) => {
           existingInvite.status === "invite_email_sent",
         payment_responsibility: effectivePaymentResponsibility,
         instructor_payment_mode: effectiveInstructorPaymentMode,
-               billing_event_id: billingResult.billingEvent.id,
+           billing_event_id: billingResult.billingEvent.id,
+        ce_training_student_enrollment_id:
+          existingEnrollmentResult.enrollment?.id || null,
         billing_event_status: instructorCheckoutResult
           ? "ready_for_checkout"
           : billingResult.billingEvent.event_status,
