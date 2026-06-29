@@ -306,12 +306,14 @@ Deno.serve(async (req) => {
       caller
     );
 
-    const cohort = await requireCohortAccess(
+        const cohort = await requireCohortAccess(
       base44,
       caller,
       organizationId,
       cohortId
     );
+
+    mark("cohort_access_verified");
 
     let enrollment = null;
     let membership = null;
