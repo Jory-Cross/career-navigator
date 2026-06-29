@@ -32,6 +32,131 @@ const TYPE_LABELS = {
   production: "Production",
 };
 
+const STUDENT_ENROLLMENT_BADGES = {
+  invited: {
+    label: "Invited",
+    className:
+      "border-slate-200 bg-slate-50 text-slate-700",
+  },
+  payment_pending: {
+    label: "Payment pending",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  payment_settled_registration_pending: {
+    label: "Payment settled — awaiting account registration",
+    className:
+      "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  active: {
+    label: "Active — in training",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  training_completed: {
+    label: "Training complete",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  withdrawn: {
+    label: "Withdrawn",
+    className:
+      "border-slate-200 bg-slate-50 text-slate-600",
+  },
+  revoked: {
+    label: "Revoked",
+    className:
+      "border-rose-200 bg-rose-50 text-rose-700",
+  },
+};
+
+const STUDENT_PAYMENT_BADGES = {
+  paid: {
+    label: "Payment paid",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  waived: {
+    label: "Registration waived",
+    className:
+      "border-violet-200 bg-violet-50 text-violet-700",
+  },
+  ready_for_checkout: {
+    label: "Payment link ready",
+    className:
+      "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  payment_processing: {
+    label: "Payment processing",
+    className:
+      "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  failed: {
+    label: "Payment needs attention",
+    className:
+      "border-rose-200 bg-rose-50 text-rose-700",
+  },
+};
+
+const STUDENT_TRAINING_BADGES = {
+  in_training: {
+    label: "In training",
+    className:
+      "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  completed: {
+    label: "Training complete",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+};
+
+function formatStatusLabel(value) {
+  return String(value || "")
+    .trim()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getStudentStatusBadge(status, badgeMap) {
+  const statusKey = String(status || "").trim().toLowerCase();
+
+  return (
+    badgeMap[statusKey] || {
+      label: formatStatusLabel(statusKey) || "Status unavailable",
+      className:
+        "border-slate-200 bg-slate-50 text-slate-600",
+    }
+  );
+}
+
+function getCETrainingStudentDetailPath(cohortId, student) {
+  const normalizedCohortId = String(cohortId || "").trim();
+
+  if (!normalizedCohortId) {
+    return "";
+  }
+
+  const params = new URLSearchParams({
+    cohort_id: normalizedCohortId,
+  });
+
+  if (student?.enrollment_id) {
+    params.set("enrollment_id", student.enrollment_id);
+  } else if (student?.cohort_member_id) {
+    params.set("cohort_member_id", student.cohort_member_id);
+  } else if (student?.pending_role_assignment_id) {
+    params.set(
+      "pending_role_assignment_id",
+      student.pending_role_assignment_id
+    );
+  } else {
+    return "";
+  }
+
+  return `/CETrainingStudentDetail?${params.toString()}`;
+}
+
 function InfoField({ label, value, multiline }) {
   return (
     <div className={multiline ? "sm:col-span-2 space-y-1" : "space-y-1"}>
@@ -42,7 +167,6 @@ function InfoField({ label, value, multiline }) {
     </div>
   );
 }
-
 /**
  * CohortDetail — Phase 6B (view-only).
  *
