@@ -429,11 +429,230 @@ Deno.serve(async (req) => {
           getRecordTimestamp(b) - getRecordTimestamp(a)
       );
 
+        const coveredStudentEmails = new Set<string>();
+    const coveredStudentUserIds = new Set<string>();
+    const studentRoster: any[] = [];
+
+    for (const enrollment of durableEnrollments) {
+      const studentEmail = normalizeEmail(enrollment.student_email);
+      const userId = normalizeText(enrollment.user_id);
+      const membershipId = normalizeText(
+        enrollment.cohort_member_id
+      );
+
+      const membership =
+        studentMembershipById.get(membershipId) ||
+        studentMembershipByUserId.get(userId) ||
+        null;
+
+      const billingEvent =
+        billingEventsById.get(
+          normalizeText(
+            enrollment.organization_billing_event_id
+          )
+        ) || null;
+
+      const linkedInvite =
+        invitesById.get(
+          normalizeText(enrollment.pending_role_assignment_id)
+        ) ||
+        cohortInvites.find(
+          (invite) =>
+            normalizeEmail(invite?.email) === studentEmail
+        ) ||
+        null;
+
+      const studentUser = userId
+        ? usersById.get(userId) || null
+        : null;
+
+      const paymentStatus = normalizeText(
+        billingEvent?.event_status
+      );
+
+      const enrollmentStatus =
+        normalizeText(enrollment.enrollment_status) ||
+        (membership
+          ? membership.training_status === "completed"
+            ? "training_completed"
+            : "active"
+          : ["paid", "waived"].includes(paymentStatus)
+            ? "payment_settled_registration_pending"
+            : "payment_pending");
+
+      studentRoster.push({
+        id: enrollment.id,
+        enrollment_id: enrollment.id,
+        detail_available: true,
+        is_legacy: false,
+        student_email: studentEmail,
+        display_name:
+          normalizeText(studentUser?.full_name) ||
+          studentEmail ||
+          "Unnamed CE student",
+        user_id: userId || null,
+        cohort_member_id: membership?.id || null,
+        pending_role_assignment_id:
+          normalizeText(
+            enrollment.pending_role_assignment_id
+          ) || null,
+        billing_event_id:
+          normalizeText(
+            enrollment.organization_billing_event_id
+          ) || null,
+        payment_responsibility:
+          normalizeText(enrollment.payment_responsibility) ||
+          normalizeText(linkedInvite?.payment_responsibility) ||
+          "student_paid",
+        instructor_payment_mode:
+          normalizeText(enrollment.instructor_payment_mode) ||
+          normalizeText(
+            linkedInvite?.instructor_payment_mode
+          ) ||
+          null,
+        enrollment_status: enrollmentStatus,
+        payment_status: paymentStatus || null,
+        payment_settled_at:
+          enrollment.payment_settled_at ||
+          billingEvent?.paid_at ||
+          billingEvent?.waived_at ||
+          null,
+        registered_at: enrollment.registered_at || null,
+        training_status:
+          membership?.training_status || null,
+        training_completed_at:
+          membership?.training_completed_at ||
+          enrollment.training_completed_at ||
+          null,
+      });
+
+      if (studentEmail) {
+        coveredStudentEmails.add(studentEmail);
+      }
+
+      if (userId) {
+        coveredStudentUserIds.add(userId);
+      }
+    }
+
+    for (const membership of studentMemberships) {
+      const userId = normalizeText(membership.user_id);
+
+      if (!userId || coveredStudentUserIds.has(userId)) {
+        continue;
+      }
+
+      const studentUser = usersById.get(userId) || null;
+      const studentEmail = normalizeEmail(studentUser?.email);
+
+      const billingEvent = registrationBillingEvents
+        .filter(
+          (event) =>
+            normalizeText(event?.cohort_id) === cohortId &&
+            normalizeText(event?.subject_user_id) === userId
+        )
+        .sort(
+          (a, b) =>
+            getRecordTimestamp(b) - getRecordTimestamp(a)
+        )[0];
+
+      studentRoster.push({
+        id: `legacy-membership:${membership.id}`,
+        enrollment_id: null,
+        detail_available: false,
+        is_legacy: true,
+        student_email: studentEmail,
+        display_name:
+          normalizeText(studentUser?.full_name) ||
+          studentEmail ||
+          "Legacy CE student",
+        user_id: userId,
+        cohort_member_id: membership.id,
+        pending_role_assignment_id: null,
+        billing_event_id: billingEvent?.id || null,
+        payment_responsibility: null,
+        instructor_payment_mode: null,
+        enrollment_status:
+          membership.training_status === "completed"
+            ? "training_completed"
+            : "active",
+        payment_status:
+          normalizeText(billingEvent?.event_status) || null,
+        payment_settled_at:
+          billingEvent?.paid_at ||
+          billingEvent?.waived_at ||
+          null,
+        registered_at: membership.joined_at || null,
+        training_status:
+          membership.training_status || "in_training",
+        training_completed_at:
+          membership.training_completed_at || null,
+      });
+
+      if (studentEmail) {
+        coveredStudentEmails.add(studentEmail);
+      }
+
+      coveredStudentUserIds.add(userId);
+    }
+
+    for (const pendingEnrollment of pendingEnrollments) {
+      const studentEmail = normalizeEmail(
+        pendingEnrollment.email
+      );
+
+      if (!studentEmail || coveredStudentEmails.has(studentEmail)) {
+        continue;
+      }
+
+      const paymentStatus = normalizeText(
+        pendingEnrollment.billing_event_status
+      );
+
+      studentRoster.push({
+        id: `legacy-invite:${pendingEnrollment.id}`,
+        enrollment_id: null,
+        detail_available: false,
+        is_legacy: true,
+        student_email: studentEmail,
+        display_name: studentEmail,
+        user_id: null,
+        cohort_member_id: null,
+        pending_role_assignment_id: pendingEnrollment.id,
+        billing_event_id:
+          pendingEnrollment.billing_event_id || null,
+        payment_responsibility:
+          pendingEnrollment.payment_responsibility ||
+          "student_paid",
+        instructor_payment_mode:
+          pendingEnrollment.instructor_payment_mode || null,
+        enrollment_status: ["paid", "waived"].includes(
+          paymentStatus
+        )
+          ? "payment_settled_registration_pending"
+          : "payment_pending",
+        payment_status: paymentStatus || null,
+        payment_settled_at: null,
+        registered_at: null,
+        training_status: null,
+        training_completed_at: null,
+      });
+
+      coveredStudentEmails.add(studentEmail);
+    }
+
+    studentRoster.sort((a, b) =>
+      String(a.display_name || a.student_email).localeCompare(
+        String(b.display_name || b.student_email)
+      )
+    );
+
     return Response.json({
       ok: true,
       memberships,
       users,
       pending_enrollments: pendingEnrollments,
+      student_roster: studentRoster,
     });
   } catch (error) {
     console.error(
