@@ -248,8 +248,9 @@ Deno.serve(async (req) => {
         role: "ce_student",
         cohort_id: cohortId,
       }),
-      base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+            base44.asServiceRole.entities.OrganizationBillingEvent.filter({
         organization_id: organizationId,
+        cohort_id: cohortId,
       }),
       base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
         org_id: organizationId,
