@@ -2284,8 +2284,11 @@ await queryClient.invalidateQueries({
                  const isCompleted =
                    trainingStatus === "completed";
 
-                 const isMarkingComplete =
+                                const isMarkingComplete =
                    completingMembershipId === m.id;
+
+                 const hasSettledRegistration =
+                   m.has_settled_registration === true;
 
                  return (
                    <div
