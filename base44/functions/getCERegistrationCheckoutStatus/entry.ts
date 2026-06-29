@@ -431,15 +431,28 @@ Deno.serve(async (req) => {
       stripePaymentStatus
     );
 
+      const enrollmentPaymentContext =
+      await getEnrollmentPaymentContext(base44, billingEvent);
+
+    const sessionPaymentResponsibility = normalizeText(
+      metadata.payment_responsibility
+    );
+
+    const sessionInstructorPaymentMode = normalizeText(
+      metadata.instructor_payment_mode
+    );
+
     const paymentResponsibility =
-      normalizeText(metadata.payment_responsibility) ===
-      "instructor_paid"
-        ? "instructor_paid"
-        : "student_paid";
+      sessionPaymentResponsibility === "instructor_paid" ||
+      sessionPaymentResponsibility === "student_paid"
+        ? sessionPaymentResponsibility
+        : enrollmentPaymentContext.paymentResponsibility ||
+          "student_paid";
 
     const instructorPaymentMode =
       paymentResponsibility === "instructor_paid"
-        ? normalizeText(metadata.instructor_payment_mode)
+        ? sessionInstructorPaymentMode ||
+          enrollmentPaymentContext.instructorPaymentMode
         : "";
 
     const studentSettlementEmailState =
