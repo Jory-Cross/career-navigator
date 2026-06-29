@@ -1,0 +1,184 @@
+{
+  "name": "CETrainingStudentEnrollment",
+  "type": "object",
+  "description": "Durable CE Training enrollment record. Created when a CE student enrollment is initiated and retained through payment, account registration, cohort membership, training completion, withdrawal, and historical review. This record is the stable identity for the CE student detail workspace; PendingRoleAssignment remains temporary and CETrainingCohortMember begins only after the student account exists.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Tenant organization that owns this CE Training enrollment."
+    },
+    "enrollment_key": {
+      "type": "string",
+      "description": "Stable idempotency key for one CE Training enrollment. Format: ce_training_enrollment:{org_id}:{cohort_id}:{normalized_student_email}."
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "Required Training cohort that owns this enrollment."
+    },
+    "student_email": {
+      "type": "string",
+      "description": "Normalized invited student email permanently associated with this enrollment."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Registered CE student User ID after the invited email creates or matches a safe account."
+    },
+    "pending_role_assignment_id": {
+      "type": "string",
+      "description": "Original PendingRoleAssignment ID created for this enrollment, retained for audit and invitation history."
+    },
+    "cohort_member_id": {
+      "type": "string",
+      "description": "CETrainingCohortMember ID created or reactivated when the paid student account becomes an active cohort member."
+    },
+    "organization_billing_event_id": {
+      "type": "string",
+      "description": "OrganizationBillingEvent ID for the registration or reactivation charge tied to this enrollment."
+    },
+    "payment_responsibility": {
+      "type": "string",
+      "enum": [
+        "student_paid",
+        "instructor_paid"
+      ],
+      "description": "Locked enrollment payment responsibility."
+    },
+    "instructor_payment_mode": {
+      "type": "string",
+      "enum": [
+        "pay_now",
+        "invoice_with_cohort"
+      ],
+      "description": "Locked instructor payment method when payment_responsibility is instructor_paid."
+    },
+    "enrollment_status": {
+      "type": "string",
+      "enum": [
+        "invited",
+        "payment_pending",
+        "payment_settled_registration_pending",
+        "active",
+        "training_completed",
+        "withdrawn",
+        "revoked"
+      ],
+      "default": "invited",
+      "description": "High-level CE enrollment lifecycle. OrganizationBillingEvent remains authoritative for detailed payment state."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this enrollment remains operational. Historical withdrawn and revoked records remain retained."
+    },
+    "invited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the CE student enrollment was initiated."
+    },
+    "payment_settled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the related registration or reactivation payment was confirmed paid or waived."
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invited email became an active CE student account and cohort member."
+    },
+    "training_completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the student's CE training requirements were completed. Certification remains a separate lifecycle."
+    },
+    "withdrawn_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this enrollment was withdrawn or revoked."
+    },
+    "withdrawn_by_user_id": {
+      "type": "string",
+      "description": "Authorized staff user who withdrew or revoked the enrollment."
+    },
+    "withdrawal_reason": {
+      "type": "string",
+      "description": "Required internal explanation when an enrollment is withdrawn or revoked."
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "Instructor, manager, or administrator who initiated the enrollment."
+    },
+    "status_updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Most recent time enrollment_status changed."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal, non-sensitive enrollment note."
+    }
+  },
+  "required": [
+    "org_id",
+    "enrollment_key",
+    "cohort_id",
+    "student_email",
+    "payment_responsibility",
+    "enrollment_status",
+    "is_active",
+    "invited_at",
+    "created_by_user_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "management"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ce_instructor"
+          }
+        }
+      ],
+      "data.org_id": "{{user.org_id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "data.org_id": "{{user.org_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "management"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ce_instructor"
+          }
+        }
+      ],
+      "data.org_id": "{{user.org_id}}"
+    },
+    "delete": false
+  }
+}
