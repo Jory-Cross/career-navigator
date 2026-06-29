@@ -604,7 +604,7 @@ export default function CETrainingStudentDetail() {
         ) : null}
       </section>
 
-      {paymentIntegrityWarning ? (
+           {paymentIntegrityWarning ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
@@ -623,6 +623,75 @@ export default function CETrainingStudentDetail() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {hasStudentActions ? (
+        <SectionCard icon={UserRound} title="Student Actions">
+          <div className="flex flex-wrap gap-2 py-3">
+            {permissions.can_record_test_registration_waiver ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={
+                  activeAction === "record_test_waiver" ||
+                  !studentUserId
+                }
+                onClick={handleRecordTestWaiver}
+                className="gap-2 border-violet-200 text-violet-700 hover:bg-violet-50"
+              >
+                {activeAction === "record_test_waiver" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                )}
+                Record Test Waiver
+              </Button>
+            ) : null}
+
+            {permissions.can_mark_training_complete ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={
+                  activeAction === "mark_training_complete" ||
+                  !membershipId
+                }
+                onClick={handleMarkTrainingComplete}
+                className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                {activeAction === "mark_training_complete" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Mark Training Complete
+              </Button>
+            ) : null}
+
+            {permissions.can_remove_cohort_membership ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={
+                  activeAction === "remove_cohort_membership" ||
+                  !membershipId
+                }
+                onClick={handleRemoveCohortMembership}
+                className="gap-2 border-rose-200 text-rose-700 hover:bg-rose-50"
+              >
+                {activeAction === "remove_cohort_membership" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <UserX className="h-3.5 w-3.5" />
+                )}
+                Remove From Cohort
+              </Button>
+            ) : null}
+          </div>
+        </SectionCard>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
