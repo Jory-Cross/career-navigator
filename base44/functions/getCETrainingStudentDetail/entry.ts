@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
         }
       );
 
-    const registrationBillingEvents = (
+       const registrationBillingEvents = (
       Array.isArray(billingRows) ? billingRows : []
     ).filter(
       (billingEvent) =>
@@ -563,6 +563,8 @@ Deno.serve(async (req) => {
         ) &&
         billingEvent?.billing_subject_type === "student"
     );
+
+    mark("billing_events_loaded");
 
     const linkedBillingEventId = normalizeText(
       enrollment?.organization_billing_event_id
