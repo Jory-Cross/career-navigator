@@ -674,12 +674,18 @@ Deno.serve(async (req) => {
       )
     );
 
+     mark("response_ready");
+
     return Response.json({
       ok: true,
       memberships,
       users,
       pending_enrollments: pendingEnrollments,
       student_roster: studentRoster,
+      debug_timing_ms: {
+        ...timing,
+        total: Math.round(performance.now() - startedAt),
+      },
     });
   } catch (error) {
     console.error(
