@@ -290,6 +290,43 @@ Deno.serve(async (req) => {
       billingEventsByKey.get(billingEventKey)?.push(billingEvent);
     }
 
+    const billingEventsById = new Map(
+      registrationBillingEvents
+        .filter((billingEvent) =>
+          Boolean(normalizeText(billingEvent?.id))
+        )
+        .map((billingEvent) => [
+          billingEvent.id,
+          billingEvent,
+        ])
+    );
+
+    const cohortInvites = Array.isArray(pendingInviteRows)
+      ? pendingInviteRows
+      : [];
+
+    const invitesById = new Map(
+      cohortInvites
+        .filter((invite) => Boolean(normalizeText(invite?.id)))
+        .map((invite) => [invite.id, invite])
+    );
+
+    const durableEnrollments = (
+      Array.isArray(durableEnrollmentRows)
+        ? durableEnrollmentRows
+        : []
+    )
+      .filter(
+        (enrollment) =>
+          normalizeText(enrollment?.org_id) === organizationId &&
+          normalizeText(enrollment?.cohort_id) === cohortId &&
+          Boolean(normalizeEmail(enrollment?.student_email))
+      )
+      .sort(
+        (a, b) =>
+          getRecordTimestamp(b) - getRecordTimestamp(a)
+      );
+
     const settledStudentUserIds = new Set(
       registrationBillingEvents
         .filter((event) => {
