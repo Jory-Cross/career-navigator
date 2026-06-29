@@ -964,9 +964,218 @@ async function ensureRegistrationBillingEvent({
         "Pending CE student registration billing event. Payment responsibility is controlled by the related PendingRoleAssignment until payment collection begins.",
     });
 
-  return {
+   return {
     billingEvent,
     created: true,
+  };
+}
+
+function buildCETrainingEnrollmentKey(
+  organizationId,
+  cohortId,
+  email
+) {
+  return `ce_training_enrollment:${organizationId}:${cohortId}:${encodeURIComponent(
+    normalizeEmail(email)
+  )}`;
+}
+
+async function ensureCETrainingStudentEnrollment({
+  base44,
+  organizationId,
+  cohortId,
+  email,
+  pendingRoleAssignmentId,
+  billingEventId,
+  paymentResponsibility,
+  instructorPaymentMode,
+  createdByUserId,
+  invitedAt,
+}) {
+  const normalizedCohortId = normalizeText(cohortId);
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedBillingEventId = normalizeText(billingEventId);
+  const normalizedPendingAssignmentId = normalizeText(
+    pendingRoleAssignmentId
+  );
+
+  if (!normalizedCohortId) {
+    return {
+      enrollment: null,
+      created: false,
+      skipped: true,
+      reason: "legacy_invitation_has_no_training_cohort",
+    };
+  }
+
+  if (
+    !organizationId ||
+    !normalizedEmail ||
+    !normalizedBillingEventId ||
+    !normalizedPendingAssignmentId
+  ) {
+    throw createHttpError(
+      409,
+      "A CE Training enrollment requires an organization, Training cohort, student email, pending invitation, and billing event."
+    );
+  }
+
+  const enrollmentKey = buildCETrainingEnrollmentKey(
+    organizationId,
+    normalizedCohortId,
+    normalizedEmail
+  );
+
+  const enrollmentRows =
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+      enrollment_key: enrollmentKey,
+    });
+
+  const enrollments = Array.isArray(enrollmentRows)
+    ? enrollmentRows
+    : [];
+
+  if (enrollments.length > 1) {
+    throw createHttpError(
+      409,
+      "Multiple CE Training enrollment records exist for this cohort and student email. Resolve the duplicate enrollment records before continuing."
+    );
+  }
+
+  const now = new Date().toISOString();
+  const existingEnrollment = enrollments[0] || null;
+
+  if (existingEnrollment) {
+    const identityMatches =
+      normalizeText(existingEnrollment.org_id) === organizationId &&
+      normalizeText(existingEnrollment.cohort_id) ===
+        normalizedCohortId &&
+      normalizeEmail(existingEnrollment.student_email) ===
+        normalizedEmail;
+
+    if (!identityMatches) {
+      throw createHttpError(
+        409,
+        "The existing CE Training enrollment record does not safely match this organization, cohort, and student email."
+      );
+    }
+
+    const existingBillingEventId = normalizeText(
+      existingEnrollment.organization_billing_event_id
+    );
+
+    if (
+      existingBillingEventId &&
+      existingBillingEventId !== normalizedBillingEventId
+    ) {
+      throw createHttpError(
+        409,
+        "The existing CE Training enrollment is linked to a different registration billing event."
+      );
+    }
+
+    const existingPaymentResponsibility = normalizeText(
+      existingEnrollment.payment_responsibility
+    );
+
+    if (
+      existingPaymentResponsibility &&
+      existingPaymentResponsibility !== paymentResponsibility
+    ) {
+      throw createHttpError(
+        409,
+        "The existing CE Training enrollment has a different locked payment responsibility."
+      );
+    }
+
+    const existingInstructorPaymentMode = normalizeText(
+      existingEnrollment.instructor_payment_mode
+    );
+
+    if (
+      existingInstructorPaymentMode &&
+      existingInstructorPaymentMode !==
+        normalizeText(instructorPaymentMode)
+    ) {
+      throw createHttpError(
+        409,
+        "The existing CE Training enrollment has a different locked instructor payment method."
+      );
+    }
+
+    const updates = {};
+
+    if (!normalizeText(existingEnrollment.pending_role_assignment_id)) {
+      updates.pending_role_assignment_id =
+        normalizedPendingAssignmentId;
+    }
+
+    if (!existingBillingEventId) {
+      updates.organization_billing_event_id =
+        normalizedBillingEventId;
+    }
+
+    if (!normalizeText(existingEnrollment.created_by_user_id)) {
+      updates.created_by_user_id = createdByUserId;
+    }
+
+    if (!normalizeText(existingEnrollment.invited_at)) {
+      updates.invited_at = invitedAt || now;
+    }
+
+    if (
+      existingEnrollment.enrollment_status === "invited" ||
+      !normalizeText(existingEnrollment.enrollment_status)
+    ) {
+      updates.enrollment_status = "payment_pending";
+      updates.status_updated_at = now;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+        existingEnrollment.id,
+        updates
+      );
+    }
+
+    return {
+      enrollment: {
+        ...existingEnrollment,
+        ...updates,
+      },
+      created: false,
+      skipped: false,
+    };
+  }
+
+  const enrollment =
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.create({
+      org_id: organizationId,
+      enrollment_key: enrollmentKey,
+      cohort_id: normalizedCohortId,
+      student_email: normalizedEmail,
+      pending_role_assignment_id: normalizedPendingAssignmentId,
+      organization_billing_event_id: normalizedBillingEventId,
+      payment_responsibility: paymentResponsibility,
+      ...(instructorPaymentMode
+        ? {
+            instructor_payment_mode:
+              normalizeText(instructorPaymentMode),
+          }
+        : {}),
+      enrollment_status: "payment_pending",
+      is_active: true,
+      invited_at: invitedAt || now,
+      created_by_user_id: createdByUserId,
+      status_updated_at: now,
+      notes:
+        "CE Training enrollment created from the student invitation and linked registration billing event.",
+    });
+
+  return {
+    enrollment,
+    created: true,
+    skipped: false,
   };
 }
 
