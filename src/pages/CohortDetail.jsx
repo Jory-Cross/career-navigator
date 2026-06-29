@@ -1972,7 +1972,135 @@ await queryClient.invalidateQueries({
         </div>
       </section>
 
-        {/* 5. Pending Students section */}
+         {/* 5. Compact Student Roster */}
+      {cohort?.cohort_type === "training" && (
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+            <Users className="w-4 h-4 text-blue-600" />
+
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Student Roster
+              </h2>
+
+              <p className="mt-0.5 text-xs text-slate-500">
+                Select a student to open their CE Student Detail workspace.
+              </p>
+            </div>
+
+            <span className="ml-auto text-xs text-slate-400">
+              {studentRoster.length} total
+            </span>
+          </div>
+
+          <div className="p-2">
+            {studentRoster.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-slate-400">
+                No CE student records are available for this cohort.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {studentRoster.map((student) => {
+                  const detailPath = getCETrainingStudentDetailPath(
+                    cohort_id,
+                    student
+                  );
+
+                  const enrollmentBadge = getStudentStatusBadge(
+                    student.enrollment_status,
+                    STUDENT_ENROLLMENT_BADGES
+                  );
+
+                  const paymentBadge = student.payment_status
+                    ? getStudentStatusBadge(
+                        student.payment_status,
+                        STUDENT_PAYMENT_BADGES
+                      )
+                    : null;
+
+                  const trainingBadge =
+                    student.training_status &&
+                    student.training_status !== "completed"
+                      ? getStudentStatusBadge(
+                          student.training_status,
+                          STUDENT_TRAINING_BADGES
+                        )
+                      : null;
+
+                  return (
+                    <button
+                      key={student.id}
+                      type="button"
+                      disabled={!detailPath}
+                      onClick={() => {
+                        if (detailPath) {
+                          navigate(detailPath);
+                        }
+                      }}
+                      className="w-full px-3 py-3 text-left transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">
+                            {student.display_name ||
+                              student.student_email ||
+                              "Unnamed CE student"}
+                          </div>
+
+                          {student.student_email &&
+                          student.student_email !== student.display_name ? (
+                            <div className="mt-0.5 truncate text-xs text-slate-500">
+                              {student.student_email}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={enrollmentBadge.className}
+                          >
+                            {enrollmentBadge.label}
+                          </Badge>
+
+                          {paymentBadge ? (
+                            <Badge
+                              variant="outline"
+                              className={paymentBadge.className}
+                            >
+                              {paymentBadge.label}
+                            </Badge>
+                          ) : null}
+
+                          {trainingBadge ? (
+                            <Badge
+                              variant="outline"
+                              className={trainingBadge.className}
+                            >
+                              {trainingBadge.label}
+                            </Badge>
+                          ) : null}
+
+                          {student.is_legacy ? (
+                            <Badge
+                              variant="outline"
+                              className="border-slate-200 bg-slate-50 text-slate-500"
+                            >
+                              Legacy record
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 6. Pending Students section */}
       {cohort?.cohort_type === "training" && (
         <section className="bg-white rounded-xl border border-amber-200 shadow-sm">
           <div className="flex items-center gap-2 px-5 py-3 border-b border-amber-100">
@@ -2124,7 +2252,6 @@ await queryClient.invalidateQueries({
           </div>
         </section>
       )}
-
       {/* 6. Active Students section */}
              <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
