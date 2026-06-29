@@ -215,32 +215,24 @@ Deno.serve(async (req) => {
       );
     }
 
-       let authorized = ["admin", "management"].includes(
+      let authorized = ["admin", "management"].includes(
       caller.role
     );
 
-    let accessCheckedMembershipRows: any[] | null = null;
-
     if (!authorized && caller.role === "ce_instructor") {
-      const cohortMembershipRows =
+      const managerRows =
         await base44.asServiceRole.entities.CETrainingCohortMember.filter(
           {
             cohort_id: cohortId,
+            user_id: caller.id,
+            cohort_role: "manager",
+            is_active: true,
           }
         );
 
-      accessCheckedMembershipRows = Array.isArray(
-        cohortMembershipRows
-      )
-        ? cohortMembershipRows
-        : [];
-
-      authorized = accessCheckedMembershipRows.some(
-        (membership) =>
-          normalizeText(membership?.user_id) === caller.id &&
-          normalizeText(membership?.cohort_role) === "manager" &&
-          membership?.is_active !== false
-      );
+      authorized =
+        Array.isArray(managerRows) &&
+        managerRows.length > 0;
     }
 
     if (!authorized) {
@@ -262,11 +254,9 @@ Deno.serve(async (req) => {
       durableEnrollmentRows,
       organizationUserRows,
     ] = await Promise.all([
-      accessCheckedMembershipRows
-        ? Promise.resolve(accessCheckedMembershipRows)
-        : base44.asServiceRole.entities.CETrainingCohortMember.filter({
-            cohort_id: cohortId,
-          }),
+      base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        cohort_id: cohortId,
+      }),
       base44.asServiceRole.entities.PendingRoleAssignment.filter({
         org_id: organizationId,
         role: "ce_student",
