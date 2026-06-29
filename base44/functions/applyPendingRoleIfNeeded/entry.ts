@@ -607,7 +607,7 @@ Deno.serve(async (req) => {
       updateData
     );
 
-    if (
+     if (
       assignment.role === "ce_student" &&
       ceRegistration?.billingEvent
     ) {
@@ -623,6 +623,14 @@ Deno.serve(async (req) => {
           }
         );
       }
+
+      await syncCETrainingStudentEnrollmentActivation(
+        base44,
+        assignment,
+        user,
+        ceRegistration.billingEvent,
+        cohortMembership
+      );
     }
 
     const staffRoles = ["employee", "management"];
