@@ -23,26 +23,53 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const ENROLLMENT_STATUS_META = {
+const PAYMENT_STATUS_META = {
+  paid: {
+    label: "Registration paid",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  waived: {
+    label: "Registration waived",
+    className: "border-violet-200 bg-violet-50 text-violet-700",
+  },
+  pending: {
+    label: "Payment pending",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  ready_for_checkout: {
+    label: "Payment link ready",
+    className: "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  payment_processing: {
+    label: "Payment processing",
+    className: "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  failed: {
+    label: "Payment needs attention",
+    className: "border-rose-200 bg-rose-50 text-rose-700",
+  },
+};
+
+const PRIMARY_STATUS_META = {
   invited: {
     label: "Invited",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
   payment_pending: {
-    label: "Payment Pending",
+    label: "Payment pending",
     className: "border-amber-200 bg-amber-50 text-amber-800",
   },
   payment_settled_registration_pending: {
-    label: "Paid · Registration Pending",
+    label: "Payment settled — awaiting account registration",
     className: "border-blue-200 bg-blue-50 text-blue-700",
   },
   active: {
-    label: "Active",
+    label: "In training",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   training_completed: {
-    label: "Training Complete",
-    className: "border-violet-200 bg-violet-50 text-violet-700",
+    label: "Training complete",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   withdrawn: {
     label: "Withdrawn",
@@ -50,33 +77,6 @@ const ENROLLMENT_STATUS_META = {
   },
   revoked: {
     label: "Revoked",
-    className: "border-rose-200 bg-rose-50 text-rose-700",
-  },
-};
-
-const PAYMENT_STATUS_META = {
-  paid: {
-    label: "Paid",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  waived: {
-    label: "Waived",
-    className: "border-violet-200 bg-violet-50 text-violet-700",
-  },
-  pending: {
-    label: "Pending",
-    className: "border-amber-200 bg-amber-50 text-amber-800",
-  },
-  ready_for_checkout: {
-    label: "Ready for Payment",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
-  },
-  payment_processing: {
-    label: "Payment Processing",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
-  },
-  failed: {
-    label: "Payment Needs Attention",
     className: "border-rose-200 bg-rose-50 text-rose-700",
   },
 };
@@ -126,50 +126,110 @@ function getPaymentPlanLabel(paymentResponsibility, instructorPaymentMode) {
   return "Business pays now";
 }
 
-function getEnrollmentStatusMeta(status) {
-  return (
-    ENROLLMENT_STATUS_META[status] || {
-      label: formatLabel(status) || "Status Unavailable",
-      className: "border-slate-200 bg-slate-50 text-slate-700",
-    }
-  );
-}
-
 function getPaymentStatusMeta(status) {
+  const normalizedStatus = String(status || "").trim();
+
   return (
-    PAYMENT_STATUS_META[status] || {
-      label: formatLabel(status) || "Not Recorded",
+    PAYMENT_STATUS_META[normalizedStatus] || {
+      label: normalizedStatus
+        ? formatLabel(normalizedStatus)
+        : "Not recorded",
       className: "border-slate-200 bg-slate-50 text-slate-700",
     }
   );
 }
 
-function InfoRow({ label, value }) {
+function getPrimaryStatusMeta(detail) {
+  const enrollmentStatus = String(
+    detail.enrollment?.enrollment_status || ""
+  ).trim();
+
+  const trainingStatus = String(
+    detail.cohort_membership?.training_status || ""
+  ).trim();
+
+  if (
+    enrollmentStatus === "training_completed" ||
+    trainingStatus === "completed"
+  ) {
+    return PRIMARY_STATUS_META.training_completed;
+  }
+
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-b-0">
-      <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">
+    PRIMARY_STATUS_META[enrollmentStatus] || {
+      label: enrollmentStatus
+        ? formatLabel(enrollmentStatus)
+        : "Status unavailable",
+      className: "border-slate-200 bg-slate-50 text-slate-700",
+    }
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-5 border-b border-slate-100 py-3 last:border-b-0">
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </dt>
 
-      <dd className="text-right text-sm text-slate-800">
+      <dd className="max-w-[65%] text-right text-sm text-slate-800">
         {value || "—"}
       </dd>
     </div>
   );
 }
 
-function SectionCard({ icon: Icon, title, children }) {
+function ProgressItem({ label, value, detail }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
-        <Icon className="h-4 w-4 text-violet-600" />
-        <h2 className="text-sm font-semibold text-slate-900">
-          {title}
-        </h2>
+    <div className="min-w-0 px-4 py-3 first:pl-0 last:pr-0">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
       </div>
 
-      <div className="px-5 py-2">{children}</div>
-    </section>
+      <div className="mt-1 text-sm font-semibold text-slate-900">
+        {value}
+      </div>
+
+      {detail ? (
+        <div className="mt-1 text-xs text-slate-500">
+          {detail}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  icon: Icon,
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="rounded-xl border border-slate-200 bg-white shadow-sm"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="h-4 w-4 shrink-0 text-violet-600" />
+          <span className="text-sm font-semibold text-slate-900">
+            {title}
+          </span>
+        </div>
+
+        {summary ? (
+          <span className="max-w-[55%] truncate text-right text-xs text-slate-500">
+            {summary}
+          </span>
+        ) : null}
+      </summary>
+
+      <div className="border-t border-slate-100 px-5 py-2">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -342,10 +402,7 @@ export default function CETrainingStudentDetail() {
     );
   }
 
-  const enrollmentMeta = getEnrollmentStatusMeta(
-    detail.enrollment?.enrollment_status
-  );
-
+  const primaryStatus = getPrimaryStatusMeta(detail);
   const paymentMeta = getPaymentStatusMeta(
     detail.payment?.status
   );
@@ -354,25 +411,8 @@ export default function CETrainingStudentDetail() {
   const receipt = detail.payment?.receipt || {};
   const receiptUrl = String(receipt.receipt_url || "").trim();
 
-  const accountLabel = detail.student?.user_id
-    ? detail.student?.user_is_active
-      ? "Registered account active"
-      : "Registered account inactive"
-    : "No account registered";
-
-  const trainingLabel =
-    detail.cohort_membership?.training_status === "completed"
-      ? "Training complete"
-      : detail.cohort_membership?.training_status
-        ? formatLabel(detail.cohort_membership.training_status)
-        : "Not started";
-
-   const paymentIntegrityWarning =
-    !["valid", "valid_legacy_match"].includes(
-      detail.payment?.integrity_status
-    );
-
   const permissions = detail.permissions || {};
+
   const membershipId = String(
     detail.cohort_membership?.id || ""
   ).trim();
@@ -380,6 +420,39 @@ export default function CETrainingStudentDetail() {
   const studentUserId = String(
     detail.student?.user_id || ""
   ).trim();
+
+  const trainingCompleted =
+    detail.cohort_membership?.training_status === "completed";
+
+  const accountSummary = detail.student?.user_id
+    ? detail.student?.user_is_active
+      ? "Account active"
+      : "Account inactive"
+    : "Awaiting account registration";
+
+  const registrationSummary =
+    detail.payment?.status === "waived"
+      ? "Registration waived"
+      : detail.payment?.status === "paid"
+        ? "Registration paid"
+        : paymentMeta.label;
+
+  const trainingSummary = trainingCompleted
+    ? "Training complete"
+    : detail.cohort_membership?.is_active
+      ? "In training"
+      : "Not started";
+
+  const registrationDate =
+    detail.enrollment?.payment_settled_at ||
+    detail.payment?.paid_at ||
+    detail.payment?.waived_at ||
+    null;
+
+  const paymentIntegrityWarning =
+    !["valid", "valid_legacy_match"].includes(
+      detail.payment?.integrity_status
+    );
 
   const hasStudentActions =
     permissions.can_record_test_registration_waiver ||
@@ -543,7 +616,7 @@ export default function CETrainingStudentDetail() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-5">
       <Link
         to={backUrl}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800"
@@ -552,8 +625,8 @@ export default function CETrainingStudentDetail() {
         Back to {detail.cohort?.name || "CE Cohort"}
       </Link>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 text-white">
               <UserRound className="h-5 w-5" />
@@ -577,56 +650,57 @@ export default function CETrainingStudentDetail() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="outline"
-              className={enrollmentMeta.className}
-            >
-              {enrollmentMeta.label}
-            </Badge>
-
-            {isLegacy ? (
-              <Badge
-                variant="outline"
-                className="border-slate-200 bg-slate-50 text-slate-600"
-              >
-                Legacy record
-              </Badge>
-            ) : null}
-          </div>
+          <Badge
+            variant="outline"
+            className={primaryStatus.className}
+          >
+            {primaryStatus.label}
+          </Badge>
         </div>
 
-        {isLegacy ? (
-          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-            This student is shown from an existing invitation or cohort
-            membership. New CE invitations use a durable enrollment record.
-          </div>
-        ) : null}
+        <div className="grid divide-y divide-slate-100 border-t border-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <ProgressItem
+            label="Registration"
+            value={registrationSummary}
+            detail={
+              registrationDate
+                ? formatDate(registrationDate)
+                : null
+            }
+          />
+
+          <ProgressItem
+            label="Account"
+            value={accountSummary}
+            detail={
+              detail.enrollment?.registered_at
+                ? `Registered ${formatDate(
+                    detail.enrollment.registered_at
+                  )}`
+                : null
+            }
+          />
+
+          <ProgressItem
+            label="Training"
+            value={trainingSummary}
+            detail={
+              detail.enrollment?.training_completed_at
+                ? formatDate(
+                    detail.enrollment.training_completed_at
+                  )
+                : null
+            }
+          />
+        </div>
       </section>
 
-           {paymentIntegrityWarning ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
-
-            <div>
-              <h2 className="text-sm font-semibold text-amber-950">
-                Payment record needs review
-              </h2>
-
-              <p className="mt-1 text-sm text-amber-800">
-                {detail.payment?.integrity_status ===
-                "multiple_legacy_matches"
-                  ? "More than one historical registration billing record matches this student and cohort."
-                  : "A complete matching registration billing record was not found for this student."}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {hasStudentActions ? (
-        <SectionCard icon={UserRound} title="Student Actions">
+        <CollapsibleSection
+          icon={UserRound}
+          title="Actions"
+          summary="Authorized actions only"
+        >
           <div className="flex flex-wrap gap-2 py-3">
             {permissions.can_record_test_registration_waiver ? (
               <Button
@@ -691,153 +765,157 @@ export default function CETrainingStudentDetail() {
               </Button>
             ) : null}
           </div>
-        </SectionCard>
+        </CollapsibleSection>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SectionCard icon={GraduationCap} title="Enrollment & Training">
-          <dl>
-            <InfoRow
-              label="Enrollment Status"
-              value={enrollmentMeta.label}
-            />
-            <InfoRow label="Account" value={accountLabel} />
-            <InfoRow
-              label="Cohort Membership"
-              value={
-                detail.cohort_membership?.is_active
-                  ? "Active cohort member"
-                  : "Not yet active"
-              }
-            />
-            <InfoRow label="Training Status" value={trainingLabel} />
-            <InfoRow
-              label="Invited"
-              value={formatDate(detail.enrollment?.invited_at)}
-            />
-            <InfoRow
-              label="Registered"
-              value={formatDate(detail.enrollment?.registered_at)}
-            />
-            <InfoRow
-              label="Training Completed"
-              value={formatDate(
-                detail.enrollment?.training_completed_at
-              )}
-            />
-          </dl>
-        </SectionCard>
+      <CollapsibleSection
+        icon={CreditCard}
+        title="Registration & Payment"
+        summary={paymentMeta.label}
+        defaultOpen={paymentIntegrityWarning}
+      >
+        {paymentIntegrityWarning ? (
+          <div className="my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
 
-        <SectionCard icon={CreditCard} title="Registration Payment">
-          <dl>
-            <InfoRow label="Payment Status" value={paymentMeta.label} />
-            <InfoRow
-              label="Payment Plan"
-              value={getPaymentPlanLabel(
-                detail.invitation?.payment_responsibility,
-                detail.invitation?.instructor_payment_mode
-              )}
-            />
-            <InfoRow
-              label="Locked Registration Fee"
-              value={formatMoney(
-                detail.payment?.amount_cents,
-                detail.payment?.currency
-              )}
-            />
-            <InfoRow
-              label="Payment Settled"
-              value={formatDate(
-                detail.enrollment?.payment_settled_at
-              )}
-            />
-            <InfoRow
-              label="Payment Record"
-              value={
-                detail.payment?.integrity_status ===
-                "valid_legacy_match"
-                  ? "Historical match confirmed"
-                  : detail.payment?.integrity_status === "valid"
-                    ? "Confirmed"
-                    : "Needs review"
-              }
-            />
-          </dl>
+              <p>
+                {detail.payment?.integrity_status ===
+                "multiple_legacy_matches"
+                  ? "More than one historical registration billing record matches this student and cohort."
+                  : "A complete matching registration billing record was not found for this student."}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
-          <div className="border-t border-slate-100 py-4">
-            {receiptUrl ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  window.open(
-                    receiptUrl,
-                    "_blank",
-                    "noopener,noreferrer"
-                  )
-                }
-                className="gap-2 border-violet-200 text-violet-700 hover:bg-violet-50"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                View Payment Receipt
-              </Button>
-            ) : receipt.status === "not_applicable_waived" ? (
-              <p className="text-sm text-violet-700">
-                Registration was waived. No Stripe receipt applies.
-              </p>
-            ) : receipt.status === "payment_not_settled" ? (
-              <p className="text-sm text-slate-500">
-                A receipt becomes available after payment settles.
-              </p>
-            ) : receipt.status === "checkout_session_not_recorded" ? (
-              <p className="text-sm text-slate-500">
-                No Stripe receipt link is recorded for this historical payment.
-              </p>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Receipt unavailable. Refresh this page to retry the secure
-                Stripe receipt lookup.
-              </p>
+        <dl>
+          <DetailRow
+            label="Registration status"
+            value={paymentMeta.label}
+          />
+
+          <DetailRow
+            label="Payment plan"
+            value={getPaymentPlanLabel(
+              detail.invitation?.payment_responsibility,
+              detail.invitation?.instructor_payment_mode
             )}
-          </div>
-        </SectionCard>
+          />
 
-        <SectionCard icon={UserRound} title="Invitation">
-          <dl>
-            <InfoRow
-              label="Invitation Status"
-              value={
-                detail.invitation?.status
-                  ? formatLabel(detail.invitation.status)
-                  : "No current invitation"
+          <DetailRow
+            label="Registration fee"
+            value={formatMoney(
+              detail.payment?.amount_cents,
+              detail.payment?.currency
+            )}
+          />
+
+          <DetailRow
+            label="Payment settled"
+            value={formatDate(
+              detail.enrollment?.payment_settled_at
+            )}
+          />
+        </dl>
+
+        <div className="py-4">
+          {receiptUrl ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                window.open(
+                  receiptUrl,
+                  "_blank",
+                  "noopener,noreferrer"
+                )
               }
-            />
-            <InfoRow
-              label="Invited By"
-              value={detail.invitation?.invited_by_name || "—"}
-            />
-            <InfoRow
-              label="Invitation Sent"
-              value={formatDate(detail.invitation?.invited_at)}
-            />
-          </dl>
-        </SectionCard>
-
-        <SectionCard icon={GraduationCap} title="CE Client Work">
-          <div className="py-3">
-            <p className="text-sm text-slate-700">
-              No CE client work is linked to this student yet.
+              className="gap-2 border-violet-200 text-violet-700 hover:bg-violet-50"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View Payment Receipt
+            </Button>
+          ) : receipt.status === "not_applicable_waived" ? (
+            <p className="text-sm text-violet-700">
+              Registration was waived. No Stripe receipt applies.
             </p>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Future CE practitioner work, client relationships, Discovery
-              progress, and service activity will appear here without changing
-              this student’s enrollment or payment history.
+          ) : receipt.status === "payment_not_settled" ? (
+            <p className="text-sm text-slate-500">
+              A receipt becomes available after payment settles.
             </p>
-          </div>
-        </SectionCard>
-      </div>
+          ) : receipt.status === "checkout_session_not_recorded" ? (
+            <p className="text-sm text-slate-500">
+              No Stripe receipt link is recorded for this historical payment.
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Receipt unavailable. Refresh this page to retry the secure
+              Stripe receipt lookup.
+            </p>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        icon={GraduationCap}
+        title="Record History"
+        summary={
+          isLegacy
+            ? "Existing cohort record"
+            : "Enrollment and invitation history"
+        }
+      >
+        {isLegacy ? (
+          <p className="py-3 text-sm text-slate-600">
+            This student record was carried forward from an earlier invitation
+            or cohort membership workflow.
+          </p>
+        ) : null}
+
+        <dl>
+          <DetailRow
+            label="Cohort membership"
+            value={
+              detail.cohort_membership?.is_active
+                ? "Active cohort member"
+                : "Not currently active"
+            }
+          />
+
+          <DetailRow
+            label="Registered"
+            value={formatDate(detail.enrollment?.registered_at)}
+          />
+
+          <DetailRow
+            label="Training completed"
+            value={formatDate(
+              detail.enrollment?.training_completed_at
+            )}
+          />
+
+          {detail.invitation?.status ? (
+            <>
+              <DetailRow
+                label="Invitation status"
+                value={formatLabel(detail.invitation.status)}
+              />
+
+              <DetailRow
+                label="Invited by"
+                value={detail.invitation?.invited_by_name}
+              />
+
+              <DetailRow
+                label="Invitation sent"
+                value={formatDate(detail.invitation?.invited_at)}
+              />
+            </>
+          ) : null}
+        </dl>
+      </CollapsibleSection>
     </div>
   );
 }
