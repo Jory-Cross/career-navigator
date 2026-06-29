@@ -215,27 +215,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    let authorized = ["admin", "management"].includes(
+       let authorized = ["admin", "management"].includes(
       caller.role
     );
 
+    let accessCheckedMembershipRows: any[] | null = null;
+
     if (!authorized && caller.role === "ce_instructor") {
-      const managerRows =
+      const cohortMembershipRows =
         await base44.asServiceRole.entities.CETrainingCohortMember.filter(
           {
             cohort_id: cohortId,
-            user_id: caller.id,
-            cohort_role: "manager",
-            is_active: true,
           }
         );
 
-      authorized =
-        Array.isArray(managerRows) &&
-        managerRows.length > 0;
+      accessCheckedMembershipRows = Array.isArray(
+        cohortMembershipRows
+      )
+        ? cohortMembershipRows
+        : [];
+
+      authorized = accessCheckedMembershipRows.some(
+        (membership) =>
+          normalizeText(membership?.user_id) === caller.id &&
+          normalizeText(membership?.cohort_role) === "manager" &&
+          membership?.is_active !== false
+      );
     }
 
-      if (!authorized) {
+    if (!authorized) {
       return Response.json(
         {
           error:
@@ -247,16 +255,18 @@ Deno.serve(async (req) => {
 
     mark("cohort_access_verified");
 
-          const [
+    const [
       allMemberships,
       pendingInviteRows,
       organizationBillingEvents,
       durableEnrollmentRows,
       organizationUserRows,
     ] = await Promise.all([
-      base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        cohort_id: cohortId,
-      }),
+      accessCheckedMembershipRows
+        ? Promise.resolve(accessCheckedMembershipRows)
+        : base44.asServiceRole.entities.CETrainingCohortMember.filter({
+            cohort_id: cohortId,
+          }),
       base44.asServiceRole.entities.PendingRoleAssignment.filter({
         org_id: organizationId,
         role: "ce_student",
@@ -276,7 +286,6 @@ Deno.serve(async (req) => {
     ]);
 
     mark("roster_source_reads_complete");
-
     const activeMemberships = (
       Array.isArray(allMemberships) ? allMemberships : []
     ).filter((membership) => membership.is_active !== false);
