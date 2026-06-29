@@ -240,11 +240,20 @@ const AuthenticatedApp = () => {
         }
       />
 
-      <Route
+           <Route
         path="/CohortDetail"
         element={
           <LayoutWrapper currentPageName="CohortDetail">
             <CohortDetail />
+          </LayoutWrapper>
+        }
+      />
+
+      <Route
+        path="/CETrainingStudentDetail"
+        element={
+          <LayoutWrapper currentPageName="CETrainingStudentDetail">
+            <CETrainingStudentDetail />
           </LayoutWrapper>
         }
       />
