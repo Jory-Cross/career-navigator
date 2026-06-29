@@ -586,7 +586,7 @@ export default function CETrainingStudentDetail() {
     }
   };
 
-  const handleRemoveCohortMembership = async () => {
+   const handleRemoveCohortMembership = async () => {
     if (
       !window.confirm(
         `Remove ${
@@ -627,6 +627,50 @@ export default function CETrainingStudentDetail() {
       toast.error(
         actionError?.message ||
           "Unable to remove the student from this cohort."
+      );
+    } finally {
+      setActiveAction("");
+    }
+  };
+
+  const handleResendStudentInstructions = async (
+    instructionType
+  ) => {
+    const actionKey =
+      instructionType === "registration"
+        ? "resend_registration_instructions"
+        : "resend_invitation";
+
+    setActiveAction(actionKey);
+
+    try {
+      const res = await base44.functions.invoke(
+        "resendCETrainingStudentInstructions",
+        {
+          cohort_id: cohortId,
+          ...studentDetailIdentifier,
+        }
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to resend CE Training instructions."
+        );
+      }
+
+      toast.success(
+        res.data?.message ||
+          (instructionType === "registration"
+            ? "Registration instructions were resent."
+            : "CE Training invitation was resent.")
+      );
+
+      await refetch();
+    } catch (actionError) {
+      toast.error(
+        actionError?.message ||
+          "Unable to resend CE Training instructions."
       );
     } finally {
       setActiveAction("");
