@@ -387,17 +387,26 @@ Deno.serve(async (req) => {
       ].filter(Boolean)
     );
 
-    const allUsers =
-      await base44.asServiceRole.entities.User.list();
+       const rosterUserIdsToLoad = Array.from(rosterUserIds);
 
-    const users = (
-      Array.isArray(allUsers) ? allUsers : []
-    ).filter((candidate) => rosterUserIds.has(candidate.id));
+    const requestedUserRows = await Promise.all(
+      rosterUserIdsToLoad.map(async (userId) => {
+        const userRows =
+          await base44.asServiceRole.entities.User.filter({
+            id: userId,
+          });
+
+        return Array.isArray(userRows)
+          ? userRows[0] || null
+          : null;
+      })
+    );
+
+    const users = requestedUserRows.filter(Boolean);
 
     const usersById = new Map(
       users.map((candidate) => [candidate.id, candidate])
     );
-
     const pendingEnrollments = (
       Array.isArray(pendingInviteRows) ? pendingInviteRows : []
     )
