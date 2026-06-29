@@ -435,10 +435,11 @@ console.log("USER MAP", userById);
 
       return res.data;
     },
-    enabled:
+       enabled:
       !!cohort_id &&
       !!user?.id &&
-      canPreviewCohortInvoice,
+      canPreviewCohortInvoice &&
+      showInvoiceHistory,
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
