@@ -283,6 +283,176 @@ async function ensureSettledCeStudentCohortMembership(
   };
 }
 
+async function syncCETrainingStudentEnrollmentActivation(
+  base44: any,
+  assignment: any,
+  user: any,
+  billingEvent: any,
+  cohortMembership: any
+) {
+  try {
+    const organizationId = normalizeText(assignment?.org_id);
+    const cohortId = normalizeText(assignment?.cohort_id);
+    const studentEmail = normalizeEmail(user?.email);
+    const billingEventId = normalizeText(billingEvent?.id);
+    const cohortMemberId = normalizeText(
+      cohortMembership?.membership_id
+    );
+
+    if (
+      !organizationId ||
+      !cohortId ||
+      !studentEmail ||
+      !billingEventId ||
+      !cohortMemberId
+    ) {
+      return {
+        updated: false,
+        skipped: true,
+        reason: "missing_durable_enrollment_activation_identity",
+      };
+    }
+
+    const enrollmentRows =
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+        {
+          organization_billing_event_id: billingEventId,
+        }
+      );
+
+    const enrollments = Array.isArray(enrollmentRows)
+      ? enrollmentRows
+      : [];
+
+    if (enrollments.length === 0) {
+      return {
+        updated: false,
+        skipped: true,
+        reason: "no_durable_enrollment_record_found",
+      };
+    }
+
+    if (enrollments.length > 1) {
+      console.error(
+        `[applyPendingRoleIfNeeded] Multiple CE Training enrollment records reference billing event ${billingEventId}.`
+      );
+
+      return {
+        updated: false,
+        skipped: true,
+        reason: "multiple_durable_enrollment_records_found",
+      };
+    }
+
+    const enrollment = enrollments[0];
+
+    const identityMatches =
+      normalizeText(enrollment.org_id) === organizationId &&
+      normalizeText(enrollment.cohort_id) === cohortId &&
+      normalizeEmail(enrollment.student_email) === studentEmail &&
+      normalizeText(enrollment.organization_billing_event_id) ===
+        billingEventId;
+
+    const storedPendingAssignmentId = normalizeText(
+      enrollment.pending_role_assignment_id
+    );
+
+    const pendingAssignmentMatches =
+      !storedPendingAssignmentId ||
+      storedPendingAssignmentId === normalizeText(assignment.id);
+
+    if (!identityMatches || !pendingAssignmentMatches) {
+      console.error(
+        `[applyPendingRoleIfNeeded] CE Training enrollment identity mismatch for billing event ${billingEventId}.`
+      );
+
+      return {
+        updated: false,
+        skipped: true,
+        reason: "durable_enrollment_identity_mismatch",
+      };
+    }
+
+    const currentStatus = normalizeText(
+      enrollment.enrollment_status
+    );
+
+    if (
+      enrollment.is_active === false ||
+      ["withdrawn", "revoked"].includes(currentStatus)
+    ) {
+      return {
+        updated: false,
+        skipped: true,
+        reason: "durable_enrollment_is_not_active",
+        enrollment_id: enrollment.id,
+      };
+    }
+
+    const now = new Date().toISOString();
+    const paymentSettledAt =
+      normalizeText(billingEvent.paid_at) ||
+      normalizeText(billingEvent.waived_at) ||
+      now;
+
+    const updates: Record<string, unknown> = {};
+
+    if (!normalizeText(enrollment.user_id)) {
+      updates.user_id = user.id;
+    }
+
+    if (!normalizeText(enrollment.cohort_member_id)) {
+      updates.cohort_member_id = cohortMemberId;
+    }
+
+    if (!normalizeText(enrollment.payment_settled_at)) {
+      updates.payment_settled_at = paymentSettledAt;
+    }
+
+    if (!normalizeText(enrollment.registered_at)) {
+      updates.registered_at = now;
+    }
+
+    if (currentStatus !== "training_completed") {
+      updates.enrollment_status = "active";
+      updates.status_updated_at = now;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return {
+        updated: false,
+        skipped: true,
+        reason: "durable_enrollment_already_current",
+        enrollment_id: enrollment.id,
+      };
+    }
+
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+      enrollment.id,
+      updates
+    );
+
+    return {
+      updated: true,
+      skipped: false,
+      enrollment_id: enrollment.id,
+      enrollment_status:
+        updates.enrollment_status || currentStatus,
+    };
+  } catch (error) {
+    console.error(
+      "[applyPendingRoleIfNeeded] CE Training enrollment sync error:",
+      error?.message || error
+    );
+
+    return {
+      updated: false,
+      skipped: true,
+      reason: "durable_enrollment_sync_failed",
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
