@@ -1678,7 +1678,9 @@ Deno.serve(async (req) => {
           ? requestedInstructorPaymentMode
           : null,
       cohort_id: cohortId || null,
-      billing_event_id: billingResult.billingEvent.id,
+            billing_event_id: billingResult.billingEvent.id,
+      ce_training_student_enrollment_id:
+        enrollmentResult.enrollment?.id || null,
       billing_event_status:
         (
           (requestedPaymentResponsibility === "student_paid" &&
