@@ -1663,18 +1663,27 @@ await queryClient.invalidateQueries({
               </p>
             </div>
 
-            <Button
+                       <Button
               type="button"
               size="sm"
               variant="outline"
               disabled={loadingCohortInvoiceHistory}
-              onClick={() => refetchCohortInvoiceHistory()}
+              onClick={() => {
+                if (showInvoiceHistory) {
+                  refetchCohortInvoiceHistory();
+                  return;
+                }
+
+                setShowInvoiceHistory(true);
+              }}
               className="gap-2"
             >
               {loadingCohortInvoiceHistory ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : null}
-              Refresh History
+              {showInvoiceHistory
+                ? "Refresh History"
+                : "Load History"}
             </Button>
           </div>
 
