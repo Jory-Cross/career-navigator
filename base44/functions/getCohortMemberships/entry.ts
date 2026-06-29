@@ -247,11 +247,12 @@ Deno.serve(async (req) => {
 
     mark("cohort_access_verified");
 
-       const [
+          const [
       allMemberships,
       pendingInviteRows,
       organizationBillingEvents,
       durableEnrollmentRows,
+      organizationUserRows,
     ] = await Promise.all([
       base44.asServiceRole.entities.CETrainingCohortMember.filter({
         cohort_id: cohortId,
@@ -268,6 +269,9 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
         org_id: organizationId,
         cohort_id: cohortId,
+      }),
+      base44.asServiceRole.entities.User.filter({
+        org_id: organizationId,
       }),
     ]);
 
