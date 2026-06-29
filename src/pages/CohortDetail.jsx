@@ -189,7 +189,9 @@ export default function CohortDetail() {
   const [addingMember, setAddingMember] = useState(false);
   const [completingMembershipId, setCompletingMembershipId] = useState("");
   const [waivingMembershipId, setWaivingMembershipId] = useState("");
-  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [showInvoiceHistory, setShowInvoiceHistory] =
+    useState(false);
   const [invoicePreviewRequestKey, setInvoicePreviewRequestKey] =
     useState(0);
   const [
