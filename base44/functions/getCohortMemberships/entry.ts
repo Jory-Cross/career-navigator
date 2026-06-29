@@ -234,10 +234,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const [
+      const [
       allMemberships,
       pendingInviteRows,
       organizationBillingEvents,
+      durableEnrollmentRows,
     ] = await Promise.all([
       base44.asServiceRole.entities.CETrainingCohortMember.filter({
         cohort_id: cohortId,
@@ -249,6 +250,10 @@ Deno.serve(async (req) => {
       }),
       base44.asServiceRole.entities.OrganizationBillingEvent.filter({
         organization_id: organizationId,
+      }),
+      base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+        org_id: organizationId,
+        cohort_id: cohortId,
       }),
     ]);
 
