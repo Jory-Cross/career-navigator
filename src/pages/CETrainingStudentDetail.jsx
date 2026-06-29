@@ -757,6 +757,71 @@ export default function CETrainingStudentDetail() {
         </div>
       </section>
 
+           {canResendRegistrationInstructions ||
+      canResendInvitation ? (
+        <section className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-blue-950">
+                {canResendRegistrationInstructions
+                  ? "Account registration is still needed"
+                  : "Payment and account registration are still needed"}
+              </h2>
+
+              <p className="mt-1 text-sm text-blue-800">
+                {canResendRegistrationInstructions
+                  ? "Payment is settled. Send the student another secure reminder to register or sign in with their invited email address."
+                  : "Send the existing CE Training invitation again. Student-paid invitations include the current secure registration payment link."}
+              </p>
+            </div>
+
+            {canResendRegistrationInstructions ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  activeAction ===
+                  "resend_registration_instructions"
+                }
+                onClick={() =>
+                  handleResendStudentInstructions(
+                    "registration"
+                  )
+                }
+                className="shrink-0 gap-2"
+              >
+                {activeAction ===
+                "resend_registration_instructions" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
+                Resend Registration Instructions
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  activeAction === "resend_invitation"
+                }
+                onClick={() =>
+                  handleResendStudentInstructions("invitation")
+                }
+                className="shrink-0 gap-2"
+              >
+                {activeAction === "resend_invitation" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
+                Resend Invitation
+              </Button>
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {hasStudentActions ? (
         <CollapsibleSection
           icon={UserRound}
