@@ -418,11 +418,13 @@ Deno.serve(async (req) => {
       })
     );
 
-    const users = requestedUserRows.filter(Boolean);
+        const users = requestedUserRows.filter(Boolean);
 
     const usersById = new Map(
       users.map((candidate) => [candidate.id, candidate])
     );
+
+    mark("user_profiles_loaded");
     const pendingEnrollments = (
       Array.isArray(pendingInviteRows) ? pendingInviteRows : []
     )
