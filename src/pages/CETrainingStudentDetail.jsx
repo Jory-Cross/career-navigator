@@ -16,6 +16,7 @@ import {
   ExternalLink,
   GraduationCap,
   Loader2,
+  Mail,
   RefreshCw,
   ShieldCheck,
   UserRound,
