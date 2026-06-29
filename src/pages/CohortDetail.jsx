@@ -213,6 +213,7 @@ export default function CohortDetail() {
    const memberships = cohortRoster.memberships;
   const pendingEnrollments =
     cohortRoster.pending_enrollments || [];
+  const studentRoster = cohortRoster.student_roster || [];
   const rosterUsers = cohortRoster.users;
   // Display information is returned with the secure roster.
   const orgUsers = rosterUsers;
