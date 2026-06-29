@@ -376,9 +376,9 @@ Deno.serve(async (req) => {
         ])
     );
 
-    const studentUserIds = new Set(
+    const rosterUserIds = new Set(
       [
-        ...studentMemberships.map(
+        ...memberships.map(
           (membership) => membership.user_id
         ),
         ...durableEnrollments.map(
@@ -392,7 +392,7 @@ Deno.serve(async (req) => {
 
     const users = (
       Array.isArray(allUsers) ? allUsers : []
-    ).filter((candidate) => studentUserIds.has(candidate.id));
+    ).filter((candidate) => rosterUserIds.has(candidate.id));
 
     const usersById = new Map(
       users.map((candidate) => [candidate.id, candidate])
