@@ -791,7 +791,7 @@ Deno.serve(async (req) => {
         waived_at: billingEvent?.waived_at || null,
         receipt,
       },
-      cohort_membership: {
+          cohort_membership: {
         id: membership?.id || null,
         is_active: membership ? isActive(membership) : false,
         joined_at: membership?.joined_at || null,
@@ -799,6 +799,7 @@ Deno.serve(async (req) => {
         training_completed_at:
           membership?.training_completed_at || null,
       },
+      permissions: actionPermissions,
     });
   } catch (error) {
     const status =
