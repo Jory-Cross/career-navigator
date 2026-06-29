@@ -1273,6 +1273,13 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       );
     }
 
+      const enrollmentPaymentSettlement =
+      await syncCETrainingStudentEnrollmentSettlement(
+        base44,
+        settledBillingEvent,
+        paidAt
+      );
+
     const studentRegistrationEmail =
       await sendCEStudentSettlementEmail(
         base44,
@@ -1285,11 +1292,22 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
         settledBillingEvent
       );
 
+    const enrollmentActivation =
+      await syncCETrainingStudentEnrollmentSettlement(
+        base44,
+        settledBillingEvent,
+        paidAt,
+        activation
+      );
+
     activations.push({
       billing_event_id: billingEvent.id,
       email: billingEvent.subject_verified_email,
       activation,
       student_registration_email: studentRegistrationEmail,
+      durable_enrollment_payment_settlement:
+        enrollmentPaymentSettlement,
+      durable_enrollment_activation: enrollmentActivation,
     });
   }
 
