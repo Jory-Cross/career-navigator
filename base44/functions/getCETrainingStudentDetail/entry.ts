@@ -841,7 +841,11 @@ Deno.serve(async (req) => {
         training_completed_at:
           membership?.training_completed_at || null,
       },
-      permissions: actionPermissions,
+          permissions: actionPermissions,
+      debug_timing_ms: {
+        ...timing,
+        total: Math.round(performance.now() - startedAt),
+      },
     });
   } catch (error) {
     const status =
