@@ -527,7 +527,7 @@ Deno.serve(async (req) => {
       membership = matchingMemberships[0] || null;
     }
 
-    if (!invitation && enrollment?.pending_role_assignment_id) {
+       if (!invitation && enrollment?.pending_role_assignment_id) {
       const enrollmentInvite = await getOneById(
         base44.asServiceRole.entities.PendingRoleAssignment,
         normalizeText(enrollment.pending_role_assignment_id)
@@ -544,6 +544,8 @@ Deno.serve(async (req) => {
         invitation = enrollmentInvite;
       }
     }
+
+    mark("student_identity_resolved");
 
     const billingRows =
       await base44.asServiceRole.entities.OrganizationBillingEvent.filter(
