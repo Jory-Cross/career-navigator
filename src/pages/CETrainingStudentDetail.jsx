@@ -412,7 +412,7 @@ export default function CETrainingStudentDetail() {
   const receipt = detail.payment?.receipt || {};
   const receiptUrl = String(receipt.receipt_url || "").trim();
 
-  const permissions = detail.permissions || {};
+    const permissions = detail.permissions || {};
 
   const membershipId = String(
     detail.cohort_membership?.id || ""
@@ -421,6 +421,23 @@ export default function CETrainingStudentDetail() {
   const studentUserId = String(
     detail.student?.user_id || ""
   ).trim();
+
+  const studentDetailIdentifier = enrollmentId
+    ? { enrollment_id: enrollmentId }
+    : cohortMemberId
+      ? { cohort_member_id: cohortMemberId }
+      : pendingRoleAssignmentId
+        ? {
+            pending_role_assignment_id:
+              pendingRoleAssignmentId,
+          }
+        : {};
+
+  const canResendRegistrationInstructions =
+    permissions.can_resend_registration_instructions === true;
+
+  const canResendInvitation =
+    permissions.can_resend_invitation === true;
 
   const trainingCompleted =
     detail.cohort_membership?.training_status === "completed";
