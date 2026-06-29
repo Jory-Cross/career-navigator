@@ -1,5 +1,9 @@
-import React from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import React, { useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -7,13 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   CreditCard,
   ExternalLink,
   GraduationCap,
   Loader2,
   RefreshCw,
+  ShieldCheck,
   UserRound,
+  UserX,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const ENROLLMENT_STATUS_META = {
   invited: {
