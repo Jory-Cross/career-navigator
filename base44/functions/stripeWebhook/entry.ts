@@ -202,6 +202,175 @@ async function ensurePaidCeStudentCohortMembership(
   };
 }
 
+async function syncCETrainingStudentEnrollmentSettlement(
+  base44: any,
+  billingRecord: any,
+  paidAt: string,
+  activation?: any
+) {
+  const billingEventId = normalizeText(billingRecord?.id);
+  const organizationId = normalizeText(
+    billingRecord?.organization_id
+  );
+  const cohortId = normalizeText(billingRecord?.cohort_id);
+  const studentEmail = normalizeEmail(
+    billingRecord?.subject_verified_email
+  );
+
+  const isEligibleRegistration =
+    CE_REGISTRATION_FEE_KINDS.has(
+      normalizeText(billingRecord?.fee_kind)
+    ) &&
+    billingRecord?.billing_subject_type === "student";
+
+  if (
+    !billingEventId ||
+    !organizationId ||
+    !cohortId ||
+    !studentEmail ||
+    !isEligibleRegistration
+  ) {
+    return {
+      updated: false,
+      skipped: true,
+      reason: "billing_event_is_not_a_complete_ce_training_enrollment",
+    };
+  }
+
+  const enrollmentRows =
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+      organization_billing_event_id: billingEventId,
+    });
+
+  const enrollments = Array.isArray(enrollmentRows)
+    ? enrollmentRows
+    : [];
+
+  if (enrollments.length === 0) {
+    return {
+      updated: false,
+      skipped: true,
+      reason: "no_durable_enrollment_record_found",
+    };
+  }
+
+  if (enrollments.length > 1) {
+    console.error(
+      `[stripeWebhook] Multiple durable CE enrollments reference billing event ${billingEventId}.`
+    );
+
+    return {
+      updated: false,
+      skipped: true,
+      reason: "multiple_durable_enrollment_records_found",
+    };
+  }
+
+  const enrollment = enrollments[0];
+
+  const identityMatches =
+    normalizeText(enrollment.org_id) === organizationId &&
+    normalizeText(enrollment.cohort_id) === cohortId &&
+    normalizeEmail(enrollment.student_email) === studentEmail &&
+    normalizeText(enrollment.organization_billing_event_id) ===
+      billingEventId;
+
+  if (!identityMatches) {
+    console.error(
+      `[stripeWebhook] Durable CE enrollment identity mismatch for billing event ${billingEventId}.`
+    );
+
+    return {
+      updated: false,
+      skipped: true,
+      reason: "durable_enrollment_identity_mismatch",
+    };
+  }
+
+  const currentStatus = normalizeText(
+    enrollment.enrollment_status
+  );
+
+  if (
+    enrollment.is_active === false ||
+    ["withdrawn", "revoked"].includes(currentStatus)
+  ) {
+    return {
+      updated: false,
+      skipped: true,
+      reason: "durable_enrollment_is_not_active",
+      enrollment_id: enrollment.id,
+    };
+  }
+
+  const updates: Record<string, unknown> = {};
+  const now = new Date().toISOString();
+
+  if (!normalizeText(enrollment.payment_settled_at)) {
+    updates.payment_settled_at = paidAt;
+  }
+
+  const activationMatchesEnrollment =
+    activation?.activated === true &&
+    (!normalizeText(enrollment.pending_role_assignment_id) ||
+      normalizeText(enrollment.pending_role_assignment_id) ===
+        normalizeText(activation.pending_assignment_id));
+
+  if (activationMatchesEnrollment) {
+    if (normalizeText(activation.user_id)) {
+      updates.user_id = normalizeText(activation.user_id);
+    }
+
+    if (
+      normalizeText(
+        activation?.cohort_membership?.membership_id
+      )
+    ) {
+      updates.cohort_member_id = normalizeText(
+        activation.cohort_membership.membership_id
+      );
+    }
+
+    if (!normalizeText(enrollment.registered_at)) {
+      updates.registered_at = paidAt;
+    }
+
+    if (currentStatus !== "training_completed") {
+      updates.enrollment_status = "active";
+      updates.status_updated_at = now;
+    }
+  } else if (
+    !["active", "training_completed"].includes(currentStatus)
+  ) {
+    updates.enrollment_status =
+      "payment_settled_registration_pending";
+    updates.status_updated_at = now;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return {
+      updated: false,
+      skipped: true,
+      reason: "durable_enrollment_already_current",
+      enrollment_id: enrollment.id,
+      enrollment_status: currentStatus,
+    };
+  }
+
+  await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+    enrollment.id,
+    updates
+  );
+
+  return {
+    updated: true,
+    skipped: false,
+    enrollment_id: enrollment.id,
+    enrollment_status:
+      updates.enrollment_status || currentStatus,
+  };
+}
+
 function escapeHtml(value: unknown) {
   return String(value || "")
     .replace(/&/g, "&amp;")
