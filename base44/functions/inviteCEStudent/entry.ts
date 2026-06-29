@@ -1456,6 +1456,23 @@ Deno.serve(async (req) => {
     }
 
     if (existingInvite) {
+      const existingEnrollmentResult =
+        await ensureCETrainingStudentEnrollment({
+          base44,
+          organizationId: orgId,
+          cohortId: effectiveCohortId,
+          email,
+          pendingRoleAssignmentId: existingInvite.id,
+          billingEventId: billingResult.billingEvent.id,
+          paymentResponsibility:
+            effectivePaymentResponsibility,
+          instructorPaymentMode:
+            effectiveInstructorPaymentMode,
+          createdByUserId:
+            existingInvite.invited_by_id || user.id,
+          invitedAt: existingInvite.invited_at,
+        });
+
       return Response.json({
         ok: true,
         message:
