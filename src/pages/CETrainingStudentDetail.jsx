@@ -174,7 +174,9 @@ function SectionCard({ icon: Icon, title, children }) {
 }
 
 export default function CETrainingStudentDetail() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [activeAction, setActiveAction] = useState("");
 
   const cohortId = String(
     searchParams.get("cohort_id") || ""
