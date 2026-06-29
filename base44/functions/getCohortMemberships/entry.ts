@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
         managerRows.length > 0;
     }
 
-    if (!authorized) {
+      if (!authorized) {
       return Response.json(
         {
           error:
@@ -245,7 +245,9 @@ Deno.serve(async (req) => {
       );
     }
 
-      const [
+    mark("cohort_access_verified");
+
+    const [
       allMemberships,
       pendingInviteRows,
       organizationBillingEvents,
