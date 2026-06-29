@@ -264,6 +264,47 @@ Deno.serve(async (req) => {
       });
     }
 
+     const durableEnrollmentRows =
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+        org_id: cohort.org_id,
+        cohort_id: cohortId,
+        user_id: studentMembership.user_id,
+      });
+
+    const durableEnrollments = Array.isArray(durableEnrollmentRows)
+      ? durableEnrollmentRows
+      : [];
+
+    if (durableEnrollments.length > 1) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "More than one durable CE student enrollment matches this cohort membership. No training status change was made.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const durableEnrollment = durableEnrollments[0] || null;
+    const durableEnrollmentStatus = String(
+      durableEnrollment?.enrollment_status || ""
+    ).trim();
+
+    if (
+      durableEnrollment &&
+      ["withdrawn", "revoked"].includes(durableEnrollmentStatus)
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "This student's durable CE enrollment is withdrawn or revoked. No training status change was made.",
+        },
+        { status: 409 }
+      );
+    }
+
     const now = new Date().toISOString();
 
     await base44.asServiceRole.entities.CETrainingCohortMember.update(
@@ -274,6 +315,16 @@ Deno.serve(async (req) => {
         training_completed_by_user_id: actor.id,
       }
     );
+
+    if (durableEnrollment) {
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+        durableEnrollment.id,
+        {
+          enrollment_status: "training_completed",
+          training_completed_at: now,
+        }
+      );
+    }
 
     const studentUserRows = await base44.asServiceRole.entities.User.filter({
       id: studentMembership.user_id,
