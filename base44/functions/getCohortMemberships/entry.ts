@@ -187,10 +187,12 @@ Deno.serve(async (req) => {
       organizationId = normalizeText(organizations?.[0]?.id);
     }
 
-    const cohort =
+       const cohort =
       await base44.asServiceRole.entities.CETrainingCohort.get(
         cohortId
       );
+
+    mark("organization_and_cohort_resolved");
 
     if (!cohort) {
       return Response.json(
