@@ -456,18 +456,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!enrollment) {
+      if (!enrollment) {
+      const enrollmentLookup = invitation?.id
+        ? {
+            pending_role_assignment_id: invitation.id,
+          }
+        : membership?.id
+          ? {
+              cohort_member_id: membership.id,
+            }
+          : {
+              org_id: organizationId,
+              cohort_id: cohortId,
+              student_email: studentEmail,
+            };
+
       const enrollmentRows =
         await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
-          {
-            org_id: organizationId,
-            cohort_id: cohortId,
-          }
+          enrollmentLookup
         );
 
       const matchingEnrollments = (
         Array.isArray(enrollmentRows) ? enrollmentRows : []
       ).filter((candidate) => {
+        const matchesCohort = isValidEnrollmentForCohort(
+          candidate,
+          organizationId,
+          cohortId
+        );
+
         const matchesEmail =
           normalizeEmail(candidate?.student_email) === studentEmail;
 
@@ -483,9 +500,12 @@ Deno.serve(async (req) => {
           ) === normalizeText(invitation.id);
 
         return (
-          matchesEmail ||
-          matchesMembership ||
-          matchesInvitation
+          matchesCohort &&
+          (
+            matchesEmail ||
+            matchesMembership ||
+            matchesInvitation
+          )
         );
       });
 
