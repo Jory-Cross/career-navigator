@@ -1521,6 +1521,23 @@ Deno.serve(async (req) => {
         status: "pending",
       });
 
+      const enrollmentResult =
+      await ensureCETrainingStudentEnrollment({
+        base44,
+        organizationId: orgId,
+        cohortId,
+        email,
+        pendingRoleAssignmentId: pending.id,
+        billingEventId: billingResult.billingEvent.id,
+        paymentResponsibility: requestedPaymentResponsibility,
+        instructorPaymentMode:
+          requestedPaymentResponsibility === "instructor_paid"
+            ? requestedInstructorPaymentMode
+            : "",
+        createdByUserId: user.id,
+        invitedAt: pending.invited_at,
+      });
+
     let emailSent = false;
     let finalStatus = "pending";
     let checkoutResult = null;
