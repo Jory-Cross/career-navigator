@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
         .filter(Boolean)
     );
 
-    const memberships = activeMemberships.map((membership) => ({
+      const memberships = activeMemberships.map((membership) => ({
       ...membership,
       has_settled_registration:
         membership.cohort_role === "member" &&
@@ -354,10 +354,37 @@ Deno.serve(async (req) => {
         ),
     }));
 
-    const memberUserIds = new Set(
-      memberships
-        .map((membership) => membership.user_id)
-        .filter(Boolean)
+    const studentMemberships = memberships.filter(
+      (membership) => membership.cohort_role === "member"
+    );
+
+    const studentMembershipById = new Map(
+      studentMemberships.map((membership) => [
+        membership.id,
+        membership,
+      ])
+    );
+
+    const studentMembershipByUserId = new Map(
+      studentMemberships
+        .filter((membership) =>
+          Boolean(normalizeText(membership.user_id))
+        )
+        .map((membership) => [
+          membership.user_id,
+          membership,
+        ])
+    );
+
+    const studentUserIds = new Set(
+      [
+        ...studentMemberships.map(
+          (membership) => membership.user_id
+        ),
+        ...durableEnrollments.map(
+          (enrollment) => enrollment.user_id
+        ),
+      ].filter(Boolean)
     );
 
     const allUsers =
@@ -365,7 +392,11 @@ Deno.serve(async (req) => {
 
     const users = (
       Array.isArray(allUsers) ? allUsers : []
-    ).filter((candidate) => memberUserIds.has(candidate.id));
+    ).filter((candidate) => studentUserIds.has(candidate.id));
+
+    const usersById = new Map(
+      users.map((candidate) => [candidate.id, candidate])
+    );
 
     const pendingEnrollments = (
       Array.isArray(pendingInviteRows) ? pendingInviteRows : []
