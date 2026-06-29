@@ -621,10 +621,12 @@ Deno.serve(async (req) => {
       billingEvent?.event_status
     );
 
-    const receipt = await getReceiptDetails(
+       const receipt = await getReceiptDetails(
       normalizeText(billingEvent?.stripe_checkout_session_id),
       billingStatus
     );
+
+    mark("receipt_lookup_complete");
 
     const enrollmentStatus = normalizeText(
       enrollment?.enrollment_status
