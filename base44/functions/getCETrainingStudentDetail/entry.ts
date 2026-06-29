@@ -146,11 +146,10 @@ function isValidEnrollmentForCohort(
 
 function isValidMemberForCohort(
   membership: any,
-  organizationId: string,
+  _organizationId: string,
   cohortId: string
 ) {
   return (
-    normalizeText(membership?.org_id) === organizationId &&
     normalizeText(membership?.cohort_id) === cohortId &&
     normalizeText(membership?.cohort_role) === "member"
   );
