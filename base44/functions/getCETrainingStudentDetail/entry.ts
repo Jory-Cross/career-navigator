@@ -698,6 +698,31 @@ Deno.serve(async (req) => {
         )
     );
 
+       const accountRegistrationIsComplete = Boolean(
+      studentUser &&
+        studentUser.is_active !== false &&
+        normalizeText(studentUser?.role) === "ce_student"
+    );
+
+    const invitationIsOpen = Boolean(
+      !invitation ||
+        [
+          "pending",
+          "invite_email_sent",
+          "pending_email_failed",
+        ].includes(normalizeText(invitation?.status))
+    );
+
+    const paymentCanStillBeCollected = Boolean(
+      !hasSettledRegistration &&
+        [
+          "pending",
+          "ready_for_checkout",
+          "payment_processing",
+          "failed",
+        ].includes(billingStatus)
+    );
+
     const actionPermissions = {
       can_record_test_registration_waiver: Boolean(
         callerIsPlatformOwner &&
@@ -724,6 +749,14 @@ Deno.serve(async (req) => {
       can_remove_cohort_membership: Boolean(
         membershipIsActive &&
           (caller.role === "admin" || callerIsCohortManager)
+      ),
+      can_resend_registration_instructions: Boolean(
+        hasSettledRegistration &&
+          !accountRegistrationIsComplete
+      ),
+      can_resend_invitation: Boolean(
+        paymentCanStillBeCollected &&
+          invitationIsOpen
       ),
     };
     return Response.json({
