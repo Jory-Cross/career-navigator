@@ -248,8 +248,17 @@ async function getReceiptDetails(
 
 Deno.serve(async (req) => {
   try {
+    const startedAt = performance.now();
+    const timing: Record<string, number> = {};
+
+    const mark = (stage: string) => {
+      timing[stage] = Math.round(performance.now() - startedAt);
+    };
+
     const base44 = createClientFromRequest(req);
     const caller = await base44.auth.me();
+
+    mark("auth_complete");
 
     if (!caller) {
       throw new RequestError(401, "Unauthorized.");
