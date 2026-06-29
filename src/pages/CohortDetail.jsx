@@ -107,13 +107,14 @@ export default function CohortDetail() {
     refetchOnWindowFocus: false,
   });
 
-    // Secure roster query. The backend function can read every active
-  // membership row in this cohort, including student rows.
-   const {
+     // Secure roster query. The backend function returns all original
+  // membership data plus the compact, server-authorized student roster.
+  const {
     data: cohortRoster = {
       memberships: [],
       users: [],
       pending_enrollments: [],
+      student_roster: [],
     },
   } = useQuery({
     queryKey: ["cohorts", "memberships", cohort_id],
@@ -123,6 +124,7 @@ export default function CohortDetail() {
           memberships: [],
           users: [],
           pending_enrollments: [],
+          student_roster: [],
         };
       }
 
@@ -148,6 +150,9 @@ export default function CohortDetail() {
           res.data.pending_enrollments
         )
           ? res.data.pending_enrollments
+          : [],
+        student_roster: Array.isArray(res.data.student_roster)
+          ? res.data.student_roster
           : [],
       };
     },
