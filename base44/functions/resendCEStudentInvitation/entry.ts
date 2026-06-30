@@ -384,11 +384,11 @@ async function sendResendEmail({
   } else if (isStudentPaid && checkoutUrl) {
     emailSubject = "Complete your CE Training registration";
     paymentSection = unpaidStudentSection;
-    steps = `
+      steps = `
       <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
         <li>Use the secure payment button above</li>
-        <li>Return to Career Navigator after payment</li>
-        <li>Register or sign in using <strong>${safeEmail}</strong></li>
+        <li>After payment succeeds, continue to account registration from the payment-confirmation page</li>
+        <li>Use <strong>${safeEmail}</strong> when you create an account or sign in</li>
       </ol>
     `;
   } else if (
