@@ -38,6 +38,7 @@ import CETrainingPortal from "./pages/CETrainingPortal";
 import CETrainingNav from "@/components/ce-training/CETrainingNav";
 import CEInstructorStudents from "./pages/CEInstructorStudents";
 import PlatformPricingManager from "./pages/PlatformPricingManager";
+import PlatformOwnerOrganizations from "./pages/PlatformOwnerOrganizations";
 import CECertificationPipelineManager from "./pages/CECertificationPipelineManager";
 import CERegistrationPaymentStatus from "./pages/CERegistrationPaymentStatus";
 import CETrainingStudentDetail from "./pages/CETrainingStudentDetail";
