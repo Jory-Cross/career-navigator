@@ -1,14 +1,21 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-function normalize(value) {
+function normalize(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function getClientName(client) {
-  return `${client.first_name || ""} ${client.last_name || ""}`.trim() || "Unnamed client";
+function getClientName(client: any) {
+  return (
+    `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+    "Unnamed client"
+  );
 }
 
-function belongsToMember(client, memberIds, memberEmails) {
+function belongsToMember(
+  client: any,
+  memberIds: Set<string>,
+  memberEmails: Set<string>
+) {
   const possibleUserIds = [
     client.assigned_employee_id,
     client.created_by_user_id,
@@ -20,23 +27,29 @@ function belongsToMember(client, memberIds, memberEmails) {
   ];
 
   return (
-    possibleUserIds.some((value) => memberIds.has(value)) ||
+    possibleUserIds.some(
+      (value) => typeof value === "string" && memberIds.has(value)
+    ) ||
     possibleEmails.some((value) => memberEmails.has(normalize(value)))
   );
 }
 
-async function updateRecords(entity, records, orgId) {
-  const updated = [];
-  const failed = [];
+async function updateRecords(
+  entity: any,
+  records: any[],
+  orgId: string
+) {
+  const updated: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
 
   for (const record of records) {
     try {
       await entity.update(record.id, { org_id: orgId });
       updated.push(record.id);
-    } catch (error) {
+    } catch (error: any) {
       failed.push({
         id: record.id,
-        error: error.message || "Unknown update error",
+        error: error?.message || "Unknown update error",
       });
     }
   }
@@ -54,42 +67,50 @@ Deno.serve(async (req) => {
     }
 
     const platformAdminRecords =
-  await base44.asServiceRole.entities.PlatformAdmin.list();
+      await base44.asServiceRole.entities.PlatformAdmin.list();
 
-const platformOwnerRecord = platformAdminRecords.find(
-  (record) =>
-    record.user_id === user.id &&
-    record.platform_role === "platform_owner" &&
-    record.is_active !== false
-);
+    const platformOwnerRecord = platformAdminRecords.find(
+      (record: any) =>
+        record.user_id === user.id &&
+        record.platform_role === "platform_owner" &&
+        record.is_active !== false
+    );
 
-if (!platformOwnerRecord) {
-  return Response.json(
-    { error: "Only an active Platform Owner can run organization repairs." },
-    { status: 403 }
-  );
-}
+    if (!platformOwnerRecord) {
+      return Response.json(
+        { error: "Only an active Platform Owner can run organization repairs." },
+        { status: 403 }
+      );
+    }
 
-    const body = await req.json().catch(() => ({}));
+    const body: any = await req.json().catch(() => ({}));
 
-    const organizationId = typeof body.organization_id === "string"
-      ? body.organization_id.trim()
-      : "";
+    const organizationId =
+      typeof body.organization_id === "string"
+        ? body.organization_id.trim()
+        : "";
 
-    const memberEmailDomain = normalize(body.member_email_domain)
-  .replace(/^@/, "");
+    const memberEmailDomain = normalize(body.member_email_domain).replace(
+      /^@/,
+      ""
+    );
 
-const additionalMemberEmails = Array.isArray(body.additional_member_emails)
-  ? body.additional_member_emails.map(normalize).filter(Boolean)
-  : [];
-
-const additionalClientIds = Array.isArray(body.additional_client_ids)
-  ? body.additional_client_ids.filter(
-      (clientId) => typeof clientId === "string" && clientId.trim()
+    const additionalMemberEmails = Array.isArray(
+      body.additional_member_emails
     )
-  : [];
+      ? body.additional_member_emails.map(normalize).filter(Boolean)
+      : [];
 
-const apply = body.apply === true;
+    const additionalClientIds = Array.isArray(
+      body.additional_client_ids
+    )
+      ? body.additional_client_ids.filter(
+          (clientId: unknown) =>
+            typeof clientId === "string" && clientId.trim()
+        )
+      : [];
+
+    const apply = body.apply === true;
 
     if (!organizationId) {
       return Response.json(
@@ -100,17 +121,23 @@ const apply = body.apply === true;
 
     if (!memberEmailDomain || !memberEmailDomain.includes(".")) {
       return Response.json(
-        { error: "member_email_domain must be a valid domain such as comop.org." },
+        {
+          error:
+            "member_email_domain must be a valid domain such as comop.org.",
+        },
         { status: 400 }
       );
     }
 
-    const organizationMatches =
-      await base44.asServiceRole.entities.Organization.filter({
-        id: organizationId,
-      });
+    const [allOrganizations, allUsers, allClients] = await Promise.all([
+      base44.asServiceRole.entities.Organization.list(),
+      base44.asServiceRole.entities.User.list(),
+      base44.asServiceRole.entities.Client.list("-created_date"),
+    ]);
 
-    const organization = organizationMatches?.[0];
+    const organization = allOrganizations.find(
+      (record: any) => record.id === organizationId
+    );
 
     if (!organization) {
       return Response.json(
@@ -119,31 +146,28 @@ const apply = body.apply === true;
       );
     }
 
-    const [allUsers, allClients] = await Promise.all([
-      base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.Client.list("-created_date"),
-    ]);
-
     const domainSuffix = `@${memberEmailDomain}`;
 
-   const domainUsers = allUsers.filter((member) => {
-  const memberEmail = normalize(member.email);
+    const domainUsers = allUsers.filter((member: any) => {
+      const memberEmail = normalize(member.email);
 
-  return (
-    memberEmail.endsWith(domainSuffix) ||
-    additionalMemberEmails.includes(memberEmail)
-  );
-});
+      return (
+        memberEmail.endsWith(domainSuffix) ||
+        additionalMemberEmails.includes(memberEmail)
+      );
+    });
 
     const conflictingUsers = domainUsers.filter(
-      (member) => member.org_id && member.org_id !== organizationId
+      (member: any) =>
+        member.org_id && member.org_id !== organizationId
     );
 
     if (conflictingUsers.length > 0) {
       return Response.json(
         {
-          error: "Repair stopped because one or more matching users already belong to another organization.",
-          conflicting_users: conflictingUsers.map((member) => ({
+          error:
+            "Repair stopped because one or more matching users already belong to another organization.",
+          conflicting_users: conflictingUsers.map((member: any) => ({
             id: member.id,
             email: member.email || null,
             current_org_id: member.org_id || null,
@@ -154,66 +178,82 @@ const apply = body.apply === true;
     }
 
     const membersToScope = domainUsers.filter(
-      (member) => member.org_id !== organizationId
+      (member: any) => member.org_id !== organizationId
     );
 
-   const clientsToScope = allClients.filter((client) => {
-  if (client.org_id === organizationId) {
-    return false;
-  }
+    const memberIds = new Set<string>(
+      domainUsers.map((member: any) => member.id).filter(Boolean)
+    );
 
-  if (client.org_id && client.org_id !== organizationId) {
-    return false;
-  }
+    const memberEmails = new Set<string>(
+      domainUsers
+        .map((member: any) => normalize(member.email))
+        .filter(Boolean)
+    );
 
-  return (
-    additionalClientIds.includes(client.id) ||
-    belongsToMember(client, memberIds, memberEmails)
-  );
-});
+    const clientsToScope = allClients.filter((client: any) => {
+      if (client.org_id === organizationId) {
         return false;
       }
 
-      return belongsToMember(client, memberIds, memberEmails);
+      if (client.org_id && client.org_id !== organizationId) {
+        return false;
+      }
+
+      return (
+        additionalClientIds.includes(client.id) ||
+        belongsToMember(client, memberIds, memberEmails)
+      );
     });
 
-    const unscopedClientsNotTouched = allClients.filter((client) => (
-      !client.org_id &&
-      !clientsToScope.some((candidate) => candidate.id === client.id)
-    ));
+    const unscopedClientsNotTouched = allClients.filter(
+      (client: any) =>
+        !client.org_id &&
+        !clientsToScope.some(
+          (candidate: any) => candidate.id === client.id
+        )
+    );
 
     const preview = {
       preview_only: !apply,
       organization: {
         id: organization.id,
-        name: organization.name || organization.organization_name || "Organization",
+        name:
+          organization.name ||
+          organization.organization_name ||
+          "Organization",
         owner_email: organization.owner_email || null,
       },
       member_email_domain: memberEmailDomain,
+      additional_member_emails: additionalMemberEmails,
+      additional_client_ids: additionalClientIds,
       counts: {
         users_to_scope: membersToScope.length,
         clients_to_scope: clientsToScope.length,
         already_scoped_clients: allClients.filter(
-          (client) => client.org_id === organizationId
+          (client: any) => client.org_id === organizationId
         ).length,
-        unscoped_clients_not_touched: unscopedClientsNotTouched.length,
+        unscoped_clients_not_touched:
+          unscopedClientsNotTouched.length,
       },
-      users_to_scope: membersToScope.map((member) => ({
+      users_to_scope: membersToScope.map((member: any) => ({
         id: member.id,
         email: member.email || null,
         role: member.role || null,
         current_org_id: member.org_id || null,
       })),
-      sample_clients_to_scope: clientsToScope.slice(0, 25).map((client) => ({
-        id: client.id,
-        name: getClientName(client),
-        assigned_employee_id: client.assigned_employee_id || null,
-        created_by: client.created_by || null,
-        current_org_id: client.org_id || null,
-      })),
+      sample_clients_to_scope: clientsToScope.slice(0, 25).map(
+        (client: any) => ({
+          id: client.id,
+          name: getClientName(client),
+          assigned_employee_id: client.assigned_employee_id || null,
+          created_by: client.created_by || null,
+          current_org_id: client.org_id || null,
+        })
+      ),
       sample_unscoped_clients_not_touched: unscopedClientsNotTouched
         .slice(0, 25)
-        .map((client) => ({
+        .map((client: any) => ({
           id: client.id,
           name: getClientName(client),
           assigned_employee_id: client.assigned_employee_id || null,
@@ -251,11 +291,17 @@ const apply = body.apply === true;
         clients: clientRepair.failed,
       },
     });
-  } catch (error) {
-    console.error("backfillClientOrganizationScope error:", error.message);
+  } catch (error: any) {
+    console.error(
+      "backfillClientOrganizationScope error:",
+      error?.message
+    );
 
     return Response.json(
-      { error: error.message || "Organization repair failed." },
+      {
+        error:
+          error?.message || "Organization repair failed.",
+      },
       { status: 500 }
     );
   }
