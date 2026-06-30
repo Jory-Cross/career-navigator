@@ -32,8 +32,15 @@ const navItems = [
   { name: "AI Agents",      icon: Bot,             page: "Agents",         featureKey: "ai_agents" },
   { name: "CE Cohorts",      icon: GraduationCap,   page: "Cohorts",        featureKey: null,         roles: ["admin", "management"] },
   { name: "App Analytics",  icon: BarChart3,       page: "AppAnalytics",   featureKey: "app_analytics" },
-  { name: "My Organization",icon: Building2,       page: "OrgDashboard",   featureKey: "org_dashboard", roles: ["admin"] },
-  { name: "Permissions",    icon: Shield,          page: "FeaturePermissions", featureKey: null,        roles: ["admin"] },
+   { name: "My Organization", icon: Building2, page: "OrgDashboard", featureKey: "org_dashboard", roles: ["admin"] },
+  {
+    name: "Platform Owner",
+    icon: Building2,
+    page: "PlatformOwnerOrganizations",
+    featureKey: null,
+    requiresPlatformOwner: true,
+  },
+  { name: "Permissions", icon: Shield, page: "FeaturePermissions", featureKey: null, roles: ["admin"] },
 ];
 
 const ROLE_LABELS = {
