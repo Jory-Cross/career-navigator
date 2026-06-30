@@ -67,9 +67,19 @@ Deno.serve(async (req) => {
       : "";
 
     const memberEmailDomain = normalize(body.member_email_domain)
-      .replace(/^@/, "");
+  .replace(/^@/, "");
 
-    const apply = body.apply === true;
+const additionalMemberEmails = Array.isArray(body.additional_member_emails)
+  ? body.additional_member_emails.map(normalize).filter(Boolean)
+  : [];
+
+const additionalClientIds = Array.isArray(body.additional_client_ids)
+  ? body.additional_client_ids.filter(
+      (clientId) => typeof clientId === "string" && clientId.trim()
+    )
+  : [];
+
+const apply = body.apply === true;
 
     if (!organizationId) {
       return Response.json(
