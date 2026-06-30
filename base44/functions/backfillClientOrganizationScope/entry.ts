@@ -147,17 +147,20 @@ const apply = body.apply === true;
       (member) => member.org_id !== organizationId
     );
 
-    const memberIds = new Set(domainUsers.map((member) => member.id));
-    const memberEmails = new Set(
-      domainUsers.map((member) => normalize(member.email)).filter(Boolean)
-    );
+   const clientsToScope = allClients.filter((client) => {
+  if (client.org_id === organizationId) {
+    return false;
+  }
 
-    const clientsToScope = allClients.filter((client) => {
-      if (client.org_id === organizationId) {
-        return false;
-      }
+  if (client.org_id && client.org_id !== organizationId) {
+    return false;
+  }
 
-      if (client.org_id && client.org_id !== organizationId) {
+  return (
+    additionalClientIds.includes(client.id) ||
+    belongsToMember(client, memberIds, memberEmails)
+  );
+});
         return false;
       }
 
