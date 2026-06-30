@@ -53,12 +53,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role !== "admin" && user.access_level !== "admin") {
-      return Response.json(
-        { error: "Only a platform administrator can run organization repairs." },
-        { status: 403 }
-      );
-    }
+    const platformAdminRecords =
+  await base44.asServiceRole.entities.PlatformAdmin.list();
+
+const platformOwnerRecord = platformAdminRecords.find(
+  (record) =>
+    record.user_id === user.id &&
+    record.platform_role === "platform_owner" &&
+    record.is_active !== false
+);
+
+if (!platformOwnerRecord) {
+  return Response.json(
+    { error: "Only an active Platform Owner can run organization repairs." },
+    { status: 403 }
+  );
+}
 
     const body = await req.json().catch(() => ({}));
 
