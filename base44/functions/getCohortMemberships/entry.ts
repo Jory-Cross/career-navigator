@@ -143,15 +143,46 @@ Deno.serve(async (req) => {
       timing[stage] = Math.round(performance.now() - startedAt);
     };
 
-    const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
+        const base44 = createClientFromRequest(req);
+    const authenticatedCaller = await base44.auth.me();
 
     mark("auth_complete");
 
-    if (!caller) {
+    if (!authenticatedCaller) {
       return Response.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const cohortId = normalizeText(body?.cohort_id);
+
+    if (!cohortId) {
+      return Response.json(
+        { error: "cohort_id is required" },
+        { status: 400 }
+      );
+    }
+
+    const [allUsers, allOrganizations, cohort] = await Promise.all([
+      base44.asServiceRole.entities.User.list(),
+      base44.asServiceRole.entities.Organization.list(),
+      base44.asServiceRole.entities.CETrainingCohort.get(
+        cohortId
+      ),
+    ]);
+
+    const caller = (
+      Array.isArray(allUsers) ? allUsers : []
+    ).find(
+      (record: any) => record.id === authenticatedCaller.id
+    );
+
+    if (!caller) {
+      return Response.json(
+        { error: "Authenticated user record was not found." },
+        { status: 403 }
       );
     }
 
@@ -166,31 +197,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const cohortId = normalizeText(body?.cohort_id);
-
-    if (!cohortId) {
-      return Response.json(
-        { error: "cohort_id is required" },
-        { status: 400 }
-      );
-    }
-
-    let organizationId = normalizeText(caller.org_id);
+    const organizationId = normalizeText(caller.org_id);
 
     if (!organizationId) {
-      const organizations =
-        await base44.asServiceRole.entities.Organization.filter({
-          owner_email: caller.email,
-        });
-
-      organizationId = normalizeText(organizations?.[0]?.id);
+      return Response.json(
+        {
+          error:
+            "Your account is not assigned to an organization.",
+        },
+        { status: 403 }
+      );
     }
 
-       const cohort =
-      await base44.asServiceRole.entities.CETrainingCohort.get(
-        cohortId
+    const organization = (
+      Array.isArray(allOrganizations)
+        ? allOrganizations
+        : []
+    ).find(
+      (record: any) => record.id === organizationId
+    );
+
+    if (!organization) {
+      return Response.json(
+        {
+          error:
+            "Your account has an invalid organization assignment.",
+        },
+        { status: 403 }
       );
+    }
 
     mark("organization_and_cohort_resolved");
 
@@ -202,51 +237,52 @@ Deno.serve(async (req) => {
     }
 
     if (
-      organizationId &&
-      cohort.org_id &&
-      cohort.org_id !== organizationId
+      normalizeText(cohort.org_id) !== organizationId
     ) {
       return Response.json(
         {
           error:
-            "Cohort does not belong to caller organization",
+            "Cohort does not belong to caller organization.",
         },
         { status: 403 }
       );
     }
 
-      let authorized = ["admin", "management"].includes(
+    let authorized = ["admin", "management"].includes(
       caller.role
     );
 
     if (!authorized && caller.role === "ce_instructor") {
-      const managerRows =
+      const instructorMemberships =
         await base44.asServiceRole.entities.CETrainingCohortMember.filter(
           {
+            org_id: organizationId,
             cohort_id: cohortId,
             user_id: caller.id,
-            cohort_role: "manager",
             is_active: true,
           }
         );
 
       authorized =
-        Array.isArray(managerRows) &&
-        managerRows.length > 0;
+        Array.isArray(instructorMemberships) &&
+        instructorMemberships.some((membership: any) =>
+          ["manager", "trainer"].includes(
+            normalizeText(membership.cohort_role)
+          )
+        );
     }
 
     if (!authorized) {
       return Response.json(
         {
           error:
-            "Only cohort managers may view this cohort roster",
+            "Only authorized cohort managers or trainers may view this cohort roster.",
         },
         { status: 403 }
       );
     }
 
     mark("cohort_access_verified");
-
     const [
       allMemberships,
       pendingInviteRows,
