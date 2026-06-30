@@ -164,11 +164,12 @@ async function sendRegistrationInstructionsEmail({
 
           ${paymentSection}
 
-          <p style="margin-bottom: 8px;">To continue:</p>
+                  <p style="margin-bottom: 8px;">Next steps:</p>
 
           <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
             <li>Open Career Navigator below</li>
-            <li>Register or sign in using <strong>${safeEmail}</strong></li>
+            <li>New to Career Navigator? Choose <strong>Sign up</strong> on the next screen using <strong>${safeEmail}</strong></li>
+            <li>Already have an account? Choose <strong>Sign in</strong> using <strong>${safeEmail}</strong></li>
             <li>Your CE Training Portal access will appear once your account is recognized</li>
           </ol>
 
@@ -176,7 +177,7 @@ async function sendRegistrationInstructionsEmail({
             href="${safeAppUrl}"
             style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
           >
-            Register or Sign In →
+            Open Career Navigator →
           </a>
 
           <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
