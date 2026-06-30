@@ -380,7 +380,7 @@ export default function CERegistrationPaymentStatus() {
                     </div>
                   )
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                                <div className="flex flex-col gap-3">
                     <button
                       type="button"
                       onClick={() => void loadStatus()}
@@ -392,13 +392,11 @@ export default function CERegistrationPaymentStatus() {
                         : "Refresh Payment Status"}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={goToRegistration}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                    >
-                      Go to Career Navigator
-                    </button>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Do not create an account yet. Complete payment from the
+                      secure link in your invitation email, then return here
+                      after Stripe confirms payment.
+                    </p>
                   </div>
                 )}
               </div>
