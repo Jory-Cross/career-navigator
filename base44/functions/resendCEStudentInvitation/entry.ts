@@ -361,13 +361,13 @@ async function sendResendEmail({
     </div>
   `;
 
-  let paymentSection = "";
+   let paymentSection = "";
   let emailSubject = "Your CE Training invitation";
   let steps = `
     <ol style="margin-bottom: 24px; padding-left: 20px; line-height: 1.8;">
-      <li>Open Career Navigator below</li>
-      <li>Register or sign in using <strong>${safeEmail}</strong></li>
-      <li>Your CE Training access will appear after the registration payment is settled</li>
+      <li>Your CE Training registration is being prepared</li>
+      <li>Your instructor will confirm when payment is settled</li>
+      <li>Account-registration instructions will be sent after payment is confirmed</li>
     </ol>
   `;
 
