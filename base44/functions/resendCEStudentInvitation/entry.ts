@@ -439,16 +439,11 @@ async function sendResendEmail({
 
           ${paymentSection}
 
-          <p style="margin-bottom: 8px;">To continue:</p>
+              <p style="margin-bottom: 8px;">Next steps:</p>
 
           ${steps}
 
-          <a
-            href="${safeAppUrl}"
-            style="display: inline-block; background: #1e293b; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
-          >
-            Register or Sign In →
-          </a>
+          ${registrationAction}
 
           <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
             Use <strong>${safeEmail}</strong>. A different email address cannot be connected to this CE Training invitation.
