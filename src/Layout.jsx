@@ -313,10 +313,15 @@ export default function Layout({ children, currentPageName }) {
                   });
                   if (!allowed) return false;
                 }
+                              if (item.requiresPlatformOwner && !isPlatformOwner) {
+                  return false;
+                }
+
                 // Feature-based filter (null featureKey = always show for matching role)
                 if (item.featureKey !== null && item.featureKey !== undefined) {
                   if (!canView(item.featureKey)) return false;
                 }
+
                 return true;
               }).map(item => {
                 const currentSearch = window.location.search;
