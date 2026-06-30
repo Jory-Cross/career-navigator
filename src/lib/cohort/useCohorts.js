@@ -25,11 +25,35 @@ export function useCohorts(user) {
   // Resolve org_id up front so create/edit can assert it exists (org scoping rule).
   const orgId = user?.org_id || null;
 
-  const { data: cohorts = [], isLoading: loadingCohorts } = useQuery({
+   const {
+    data: cohortDirectory = {
+      cohorts: [],
+      memberships: [],
+    },
+    isLoading: loadingCohorts,
+  } = useQuery({
     queryKey: COHORT_QUERY_KEYS.cohorts,
     queryFn: async () => {
-      const list = await base44.entities.CETrainingCohort.list("-created_date", 200);
-      return Array.isArray(list) ? list : [];
+      const res = await base44.functions.invoke(
+        "getAuthorizedCohorts",
+        {}
+      );
+
+      if (!res.data?.ok) {
+        throw new Error(
+          res.data?.error ||
+            "Unable to load authorized CE Training cohorts."
+        );
+      }
+
+      return {
+        cohorts: Array.isArray(res.data.cohorts)
+          ? res.data.cohorts
+          : [],
+        memberships: Array.isArray(res.data.memberships)
+          ? res.data.memberships
+          : [],
+      };
     },
     enabled,
     staleTime: 60 * 1000,
@@ -37,17 +61,8 @@ export function useCohorts(user) {
     refetchOnWindowFocus: false,
   });
 
-  const { data: memberships = [] } = useQuery({
-    queryKey: COHORT_QUERY_KEYS.memberships,
-    queryFn: async () => {
-      const list = await base44.entities.CETrainingCohortMember.list("-created_date", 500);
-      return Array.isArray(list) ? list.filter((m) => m.is_active !== false) : [];
-    },
-    enabled,
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const cohorts = cohortDirectory.cohorts;
+  const memberships = cohortDirectory.memberships;
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["cohorts"] });
