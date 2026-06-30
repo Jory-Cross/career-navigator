@@ -355,7 +355,7 @@ export default function CEInstructorStudents() {
     }
   };
 
-    const handleResendInvitation = async (student) => {
+     const handleResendInvitation = async (student) => {
     if (!student?.id) {
       toast.error("This CE student invitation could not be identified.");
       return;
@@ -377,29 +377,12 @@ export default function CEInstructorStudents() {
       ? "CE registration instructions resent."
       : "CE student invitation resent.";
 
-    let timeoutId;
-
     setResendingInviteId(student.id);
 
     try {
-      const resendRequest = base44.functions.invoke(functionName, {
+      const res = await base44.functions.invoke(functionName, {
         pending_assignment_id: student.id,
       });
-
-      const timeoutRequest = new Promise((_, reject) => {
-        timeoutId = window.setTimeout(() => {
-          reject(
-            new Error(
-              "The resend request did not receive a response. No email delivery can be confirmed."
-            )
-          );
-        }, 15000);
-      });
-
-      const res = await Promise.race([
-        resendRequest,
-        timeoutRequest,
-      ]);
 
       if (!res?.data?.ok) {
         throw new Error(res?.data?.error || fallbackError);
@@ -413,10 +396,6 @@ export default function CEInstructorStudents() {
     } catch (error) {
       toast.error(error?.message || fallbackError);
     } finally {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-
       setResendingInviteId("");
     }
   };
