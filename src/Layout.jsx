@@ -136,6 +136,42 @@ export default function Layout({ children, currentPageName }) {
     }).catch(() => {});
   }, [currentPageName, navigate]);
 
+   React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadPlatformOwnerAccess() {
+      if (!user?.id) {
+        if (!cancelled) {
+          setIsPlatformOwner(false);
+        }
+        return;
+      }
+
+      try {
+        const result = await base44.functions.invoke(
+          "getMyPlatformAccess",
+          {}
+        );
+
+        if (!cancelled) {
+          setIsPlatformOwner(
+            result?.data?.is_platform_owner === true
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setIsPlatformOwner(false);
+        }
+      }
+    }
+
+    loadPlatformOwnerAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const switchRole = async (newRole) => {
     await base44.auth.updateMe({ role: newRole });
     setRoleMenuOpen(false);
