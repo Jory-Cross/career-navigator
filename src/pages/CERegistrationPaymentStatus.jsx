@@ -359,11 +359,15 @@ export default function CERegistrationPaymentStatus() {
                         Next step: create your account or sign in.
                       </p>
 
-                      <p className="mt-2 text-sm leading-6 text-violet-900">
+                                            <p className="mt-2 text-sm leading-6 text-violet-900">
                         Your CE Training enrollment is already linked to its
-                        Training cohort. Register or sign in using the invited
-                        email address above so Career Navigator can safely
-                        activate your CE Training access.
+                        Training cohort. Use the invited email address above
+                        on the next screen.
+                      </p>
+
+                      <p className="mt-3 text-sm leading-6 text-violet-900">
+                        New to Career Navigator? Choose <strong>Sign up</strong>.
+                        Already have an account? Choose <strong>Sign in</strong>.
                       </p>
 
                       <button
@@ -371,7 +375,7 @@ export default function CERegistrationPaymentStatus() {
                         onClick={goToRegistration}
                         className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white transition hover:bg-violet-700"
                       >
-                        Register or Sign In
+                        Open Career Navigator
                       </button>
                     </div>
                   )
