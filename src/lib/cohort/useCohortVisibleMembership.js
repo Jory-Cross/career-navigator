@@ -7,7 +7,11 @@ import { base44 } from "@/api/base44Client";
  * Additive-only cohort visibility hook for the Time Tracking page (and any
  * future staff surface that needs cohort membership context).
  *
- * Calls the existing `getCohortVisibleClients` backend oracle, which returns:
+ * Calls the existing `getCohortVisibleClients` backend oracle, which derives
+ * visibility from the authenticated caller only. No browser-supplied user ID
+ * participates in authorization.
+ *
+ * It returns:
  *   - memberUserIds : user IDs visible to the caller through cohort membership
  *                     (cohort managers → cohort members + self; cohort members → self)
  *   - clientIds     : clients assigned to those member users
