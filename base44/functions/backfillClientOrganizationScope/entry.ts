@@ -116,9 +116,14 @@ const apply = body.apply === true;
 
     const domainSuffix = `@${memberEmailDomain}`;
 
-    const domainUsers = allUsers.filter((member) =>
-      normalize(member.email).endsWith(domainSuffix)
-    );
+   const domainUsers = allUsers.filter((member) => {
+  const memberEmail = normalize(member.email);
+
+  return (
+    memberEmail.endsWith(domainSuffix) ||
+    additionalMemberEmails.includes(memberEmail)
+  );
+});
 
     const conflictingUsers = domainUsers.filter(
       (member) => member.org_id && member.org_id !== organizationId
