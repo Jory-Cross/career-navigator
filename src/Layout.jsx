@@ -106,7 +106,8 @@ export default function Layout({ children, currentPageName }) {
   const [profileForm, setProfileForm] = useState({});
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [managers, setManagers] = useState([]);
+    const [managers, setManagers] = useState([]);
+  const [isPlatformOwner, setIsPlatformOwner] = useState(false);
   const navigate = useNavigate();
 
   React.useEffect(() => {
