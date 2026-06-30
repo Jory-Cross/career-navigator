@@ -277,7 +277,7 @@ const AuthenticatedApp = () => {
         }
       />
 
-      <Route
+         <Route
         path="/PlatformPricingManager"
         element={
           <LayoutWrapper currentPageName="PlatformPricingManager">
@@ -286,6 +286,23 @@ const AuthenticatedApp = () => {
         }
       />
 
+      <Route
+        path="/PlatformOwnerOrganizations"
+        element={
+          <LayoutWrapper currentPageName="PlatformOwnerOrganizations">
+            <PlatformOwnerOrganizations />
+          </LayoutWrapper>
+        }
+      />
+
+      <Route
+        path="/CEPractitionerCertificationManager"
+        element={
+          <LayoutWrapper currentPageName="CECertificationPipelineManager">
+            <CECertificationPipelineManager />
+          </LayoutWrapper>
+        }
+      />
       <Route
         path="/CEPractitionerCertificationManager"
         element={
