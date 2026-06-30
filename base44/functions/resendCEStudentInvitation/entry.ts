@@ -398,7 +398,7 @@ async function sendResendEmail({
     paymentSection = instructorInvoiceSection;
   } else if (paymentResponsibility === "instructor_paid") {
     paymentSection = instructorPayNowSection;
-  } else {
+   } else {
     paymentSection = `
       <div style="margin: 24px 0; padding: 20px; border: 1px solid #fecaca; background: #fef2f2; border-radius: 8px;">
         <p style="margin: 0; color: #991b1b; line-height: 1.5;">
@@ -407,6 +407,17 @@ async function sendResendEmail({
       </div>
     `;
   }
+
+  const registrationAction = isPaid
+    ? `
+      <a
+        href="${safeAppUrl}"
+        style="display: inline-block; background: #1e293b; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;"
+      >
+        Create Account or Sign In →
+      </a>
+    `
+    : "";
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
