@@ -4,6 +4,7 @@ const PLATFORM_OWNER_ROLE = "platform_owner";
 const INTERNAL_ORG_TENANT_KEY = "ABILITY4HIRE_INTERNAL";
 const INTERNAL_ORG_NAME = "Ability4Hire Platform";
 const INTERNAL_OWNER_EMAIL = "admin@ability4hire.com";
+
 const TEST_CLIENT_IDS = [
   "6a3af0d1de7caa233ba24c40", // Test Client
   "6a332f852408a884208e6fb5", // test test
@@ -23,6 +24,13 @@ const TEST_CLIENT_IDS = [
 
 function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function getClientName(client: any) {
+  return (
+    `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+    "Unnamed test client"
+  );
 }
 
 Deno.serve(async (req) => {
@@ -50,7 +58,7 @@ Deno.serve(async (req) => {
     ]);
 
     const activePlatformOwner = allPlatformAdmins.find(
-      (record) =>
+      (record: any) =>
         record.user_id === currentUser.id &&
         record.platform_role === PLATFORM_OWNER_ROLE &&
         record.is_active !== false
@@ -60,14 +68,15 @@ Deno.serve(async (req) => {
       return Response.json(
         {
           error:
-            "Active Platform Owner access is required to create the internal Ability4Hire workspace.",
+            "Active Platform Owner access is required to manage the internal Ability4Hire workspace.",
         },
         { status: 403 }
       );
     }
 
     const internalOwner = allUsers.find(
-      (user) => normalizeEmail(user.email) === INTERNAL_OWNER_EMAIL
+      (user: any) =>
+        normalizeEmail(user.email) === INTERNAL_OWNER_EMAIL
     );
 
     if (!internalOwner) {
@@ -79,21 +88,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    const testClient = allClients.find(
-      (client) => client.id === TEST_CLIENT_ID
-    );
+ const testClients: any[] = allClients.filter((client: any) =>
+  TEST_CLIENT_IDS.includes(client.id)
+);
 
-    if (!testClient) {
-      return Response.json(
-        {
-          error: `Test Client record ${TEST_CLIENT_ID} was not found.`,
-        },
-        { status: 404 }
-      );
-    }
+const foundTestClientIds = new Set(
+  testClients.map((client: any) => client.id)
+);
+
+const missingTestClientIds = TEST_CLIENT_IDS.filter(
+  (clientId) => !foundTestClientIds.has(clientId)
+);
+
+if (missingTestClientIds.length > 0) {
+  return Response.json(
+    {
+      error: "One or more designated test client records were not found.",
+      missing_client_ids: missingTestClientIds,
+    },
+    { status: 404 }
+  );
+}
 
     let internalOrganization = allOrganizations.find(
-      (organization) =>
+      (organization: any) =>
         organization.tenant_key === INTERNAL_ORG_TENANT_KEY
     );
 
@@ -116,19 +134,20 @@ Deno.serve(async (req) => {
         email: internalOwner.email,
         current_org_id: internalOwner.org_id || null,
       },
-      test_client: {
-        id: testClient.id,
-        name:
-          `${testClient.first_name || ""} ${testClient.last_name || ""}`.trim() ||
-          "Test Client",
-        current_org_id: testClient.org_id || null,
-      },
+      test_clients: testClients.map((client: any) => ({
+        id: client.id,
+        name: getClientName(client),
+        client_type: client.client_type || "job_seeker",
+        is_archived: client.is_archived === true,
+        current_org_id: client.org_id || null,
+      })),
       changes_to_apply: {
         create_internal_organization: !internalOrganization,
         assign_admin_to_internal_organization:
           internalOwner.org_id !== internalOrganization?.id,
-        assign_test_client_to_internal_organization:
-          testClient.org_id !== internalOrganization?.id,
+        assign_test_clients_to_internal_organization: testClients.filter(
+          (client: any) => client.org_id !== internalOrganization?.id
+        ).length,
       },
     };
 
@@ -166,7 +185,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (testClient.org_id !== internalOrganization.id) {
+    for (const testClient of testClients) {
+      if (testClient.org_id === internalOrganization.id) {
+        continue;
+      }
+
       await base44.asServiceRole.entities.Client.update(testClient.id, {
         org_id: internalOrganization.id,
       });
@@ -174,9 +197,8 @@ Deno.serve(async (req) => {
       updates.push({
         type: "client",
         id: testClient.id,
-        name:
-          `${testClient.first_name || ""} ${testClient.last_name || ""}`.trim() ||
-          "Test Client",
+        name: getClientName(testClient),
+        client_type: testClient.client_type || "job_seeker",
         org_id: internalOrganization.id,
       });
     }
@@ -192,9 +214,9 @@ Deno.serve(async (req) => {
       },
       updates,
       message:
-        "Ability4Hire Platform is ready. admin@ability4hire.com can now use its own internal workspace and view Test Client through the normal Clients page.",
+        "Ability4Hire Platform is ready. admin@ability4hire.com can view all designated test and demo clients through the normal Clients page.",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "ensureAbility4HireInternalOrganization error:",
       error.message
@@ -204,7 +226,7 @@ Deno.serve(async (req) => {
       {
         error:
           error.message ||
-          "Unable to create the internal Ability4Hire workspace.",
+          "Unable to create or update the internal Ability4Hire workspace.",
       },
       { status: 500 }
     );
