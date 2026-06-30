@@ -1,129 +1,180 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
 /**
- * Cohort Visibility Engine — Phase 2
+ * Cohort Visibility Engine
  *
- * Determines which clients a given user may see through their CE certification
- * cohort membership. This is SEPARATE from platform management hierarchy
- * (getClientsForUser). A cohort manager does NOT have platform management
- * rights — they only get cohort-scoped visibility.
+ * Determines only the authenticated caller's CE cohort-based client visibility.
  *
- * Resolution rules:
- *  - Platform Admin     → returns ALL clients in the org (true scoping is the
- *                         caller's responsibility; we surface an isAdmin flag so
- *                         the UI can choose to call getClientsForUser instead).
- *                         We still return the full set so this function is a
- *                         complete visibility oracle on its own.
- *  - Cohort Manager      → active members of cohorts they manage, plus all
- *                         clients assigned to those members.
- *  - Cohort Member       → only their own assigned clients (cohort membership
- *                         does NOT grant access to peers' clients).
- *  - User in both roles  → manager permissions win (manager is a strict
- *                         superset of member for that cohort). If the same
- *                         user is a member of one cohort and manager of
- *                         another, manager visibility applies to the
- *                         manager-cohort's members' clients only — membership
- *                         in the member-cohort never exposes peers there.
- *  - User in no cohort   → returns their own assigned clients only (mirrors
- *                         straight-employee behavior; keeps the function a
- *                         complete oracle and avoids surprising UI emptiness).
+ * SECURITY RULE:
+ * - Browser-supplied user_id is never accepted as authorization.
+ * - The authenticated database User determines the tenant and visibility scope.
+ * - The caller must have a valid canonical Organization.org_id.
  *
- * Server-side enforcement only. Frontend must NOT rely on hiding rows.
- *
- * Payload: { user_id } — user being queried. The caller's own session is also
- * validated (must be authenticated) to prevent anonymous probing, but no
- * caller-vs-user_id equality is enforced here; that's the UI's job when it
- * decides what to display. Server-side RLS / feedback visibility functions
- * will re-derive this membership themselves.
+ * Response shape remains compatible with existing UI callers:
+ *   { isAdmin, cohortIds, memberUserIds, clientIds, clients }
  */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Validate the caller's session — no anonymous access to this oracle.
-    const caller = await base44.auth.me();
-    if (!caller) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const authenticatedUser = await base44.auth.me();
+
+    if (!authenticatedUser) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const { user_id } = body;
+    const [
+      allUsers,
+      allOrganizations,
+    ] = await Promise.all([
+      base44.asServiceRole.entities.User.list(),
+      base44.asServiceRole.entities.Organization.list(),
+    ]);
 
-    if (!user_id) {
-      return Response.json({ error: 'user_id is required' }, { status: 400 });
+    const callerUser = allUsers.find(
+      (record) => record.id === authenticatedUser.id
+    );
+
+    if (!callerUser) {
+      return Response.json(
+        { error: "Authenticated user record was not found." },
+        { status: 403 }
+      );
     }
 
-    // Resolve the user being queried. Use service role — we need cross-user lookup.
-    const allUsers = await base44.asServiceRole.entities.User.list();
-    const targetUser = allUsers.find(u => u.id === user_id);
+    const orgId =
+      typeof callerUser.org_id === "string"
+        ? callerUser.org_id.trim()
+        : "";
 
-    if (!targetUser) {
-      return Response.json({ error: 'User not found' }, { status: 404 });
+    if (!orgId) {
+      return Response.json(
+        {
+          error:
+            "Your account is not assigned to an organization. Cohort visibility is unavailable.",
+        },
+        { status: 403 }
+      );
     }
 
-    const orgId = targetUser.org_id;
-    const isAdmin = targetUser.role === 'admin';
+    const organization = allOrganizations.find(
+      (record) => record.id === orgId
+    );
 
-    // ── Admin → everything in their org ───────────────────────────────────
+    if (!organization) {
+      return Response.json(
+        {
+          error:
+            "Your account has an invalid organization assignment. Cohort visibility is unavailable.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const isAdmin =
+      callerUser.role === "admin" ||
+      callerUser.access_level === "admin";
+
+    const [
+      orgClients,
+      orgCohorts,
+      activeOrgMemberships,
+    ] = await Promise.all([
+      base44.asServiceRole.entities.Client.filter({
+        org_id: orgId,
+        is_archived: false,
+      }),
+      base44.asServiceRole.entities.CETrainingCohort.filter({
+        org_id: orgId,
+      }),
+      base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        org_id: orgId,
+        is_active: true,
+      }),
+    ]);
+
+    const orgUserIds = new Set(
+      allUsers
+        .filter((record) => record.org_id === orgId)
+        .map((record) => record.id)
+        .filter(Boolean)
+    );
+
+    if (!orgUserIds.has(callerUser.id)) {
+      return Response.json(
+        {
+          error:
+            "Your account is not validly scoped to this organization.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Organization admins can view all active clients in their own organization.
     if (isAdmin) {
-      const allClients = orgId
-        ? await base44.asServiceRole.entities.Client.filter({ org_id: orgId, is_archived: false })
-        : await base44.asServiceRole.entities.Client.filter({ is_archived: false });
       return Response.json({
         isAdmin: true,
         cohortIds: [],
         memberUserIds: [],
-        clientIds: allClients.map(c => c.id),
-        clients: allClients,
+        clientIds: orgClients.map((client) => client.id),
+        clients: orgClients,
       });
     }
 
-    // ── Cohort lookups via CETrainingCohortMember ────────────────────────
-    const managerMemberships = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-      user_id,
-      cohort_role: 'manager',
-      is_active: true,
-    });
+    const orgCohortIds = new Set(
+      orgCohorts.map((cohort) => cohort.id).filter(Boolean)
+    );
 
-    // If this user manages any cohorts, expand to members of those cohorts.
-    let managerCohortIds = [];
-    let visibleMemberUserIds = new Set();
+    const managerCohortIds = activeOrgMemberships
+      .filter(
+        (membership) =>
+          membership.user_id === callerUser.id &&
+          membership.cohort_role === "manager" &&
+          orgCohortIds.has(membership.cohort_id)
+      )
+      .map((membership) => membership.cohort_id);
 
-    if (Array.isArray(managerMemberships) && managerMemberships.length > 0) {
-      managerCohortIds = managerMemberships.map(m => m.cohort_id);
-      // Active members of the cohorts this user manages (any cohort_role).
-      const cohortMembers = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        is_active: true,
-      });
-      const ids = new Set([user_id]); // a manager sees their own clients too
-      for (const cm of cohortMembers) {
-        if (managerCohortIds.includes(cm.cohort_id)) {
-          ids.add(cm.user_id);
+    const visibleMemberUserIds = new Set([callerUser.id]);
+
+    if (managerCohortIds.length > 0) {
+      const managedCohortIdSet = new Set(managerCohortIds);
+
+      for (const membership of activeOrgMemberships) {
+        if (
+          managedCohortIdSet.has(membership.cohort_id) &&
+          orgUserIds.has(membership.user_id)
+        ) {
+          visibleMemberUserIds.add(membership.user_id);
         }
       }
-      visibleMemberUserIds = ids;
-    } else {
-      // Cohort member (or no cohort at all) → only see own clients.
-      visibleMemberUserIds = new Set([user_id]);
     }
 
-    // ── Resolve clients assigned to the visible member set ──────────────
-    // Filter by org first to keep the in-memory set small, then intersect.
-    const orgClients = orgId
-      ? await base44.asServiceRole.entities.Client.filter({ org_id: orgId, is_archived: false })
-      : await base44.asServiceRole.entities.Client.filter({ is_archived: false });
-
-    const visibleClients = orgClients.filter(c => visibleMemberUserIds.has(c.assigned_employee_id));
+    const visibleClients = orgClients.filter(
+      (client) =>
+        client.assigned_employee_id &&
+        visibleMemberUserIds.has(client.assigned_employee_id)
+    );
 
     return Response.json({
       isAdmin: false,
       cohortIds: managerCohortIds,
       memberUserIds: Array.from(visibleMemberUserIds),
-      clientIds: visibleClients.map(c => c.id),
+      clientIds: visibleClients.map((client) => client.id),
       clients: visibleClients,
     });
   } catch (error) {
-    console.error('getCohortVisibleClients error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error(
+      "getCohortVisibleClients error:",
+      error?.message
+    );
+
+    return Response.json(
+      {
+        error:
+          error?.message ||
+          "Unable to determine cohort client visibility.",
+      },
+      { status: 500 }
+    );
   }
 });
