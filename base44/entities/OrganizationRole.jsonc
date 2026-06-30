@@ -1,0 +1,74 @@
+{
+  "name": "OrganizationRole",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization tenant that owns this role."
+    },
+    "role_key": {
+      "type": "string",
+      "description": "Stable internal identifier for this role within the organization, such as owner, program_manager, ce_trainer, or employment_specialist."
+    },
+    "role_name": {
+      "type": "string",
+      "description": "Business-facing role title selected by the organization."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional explanation of the role's purpose and responsibilities."
+    },
+    "hierarchy_level": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 100,
+      "description": "Organization-defined hierarchy order. Lower numbers indicate higher organizational authority. This field alone does not grant access."
+    },
+    "permission_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Permission keys granted through this role. The future authorization resolver will validate and enforce these keys."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this role may be assigned to organization members."
+    },
+    "is_system_role": {
+      "type": "boolean",
+      "default": false,
+      "description": "Reserved for protected roles created by platform setup, such as the initial organization owner role."
+    }
+  },
+  "required": [
+    "organization_id",
+    "role_key",
+    "role_name",
+    "permission_keys"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

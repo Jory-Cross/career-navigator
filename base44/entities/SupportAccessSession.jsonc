@@ -1,0 +1,93 @@
+{
+  "name": "SupportAccessSession",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Customer organization receiving platform support."
+    },
+    "platform_admin_user_id": {
+      "type": "string",
+      "description": "PlatformAdmin user requesting or using the support session."
+    },
+    "access_mode": {
+      "type": "string",
+      "enum": [
+        "read_only",
+        "elevated"
+      ],
+      "description": "Read-only is the default support mode. Elevated access permits approved support changes."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "active",
+        "ended",
+        "expired",
+        "revoked"
+      ],
+      "default": "requested",
+      "description": "Lifecycle status of this support session."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Required explanation for why platform support access is needed."
+    },
+    "requested_at": {
+      "type": "string",
+      "description": "ISO timestamp when support access was requested."
+    },
+    "started_at": {
+      "type": "string",
+      "description": "ISO timestamp when the support session became active."
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "ISO timestamp when the support session automatically expires."
+    },
+    "ended_at": {
+      "type": "string",
+      "description": "ISO timestamp when the support session ended."
+    },
+    "ended_by": {
+      "type": "string",
+      "description": "User ID of the platform administrator or process that ended the session."
+    },
+    "tenant_notified_at": {
+      "type": "string",
+      "description": "ISO timestamp when the customer organization was notified of the support session."
+    }
+  },
+  "required": [
+    "organization_id",
+    "platform_admin_user_id",
+    "access_mode",
+    "status",
+    "reason",
+    "requested_at",
+    "expires_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

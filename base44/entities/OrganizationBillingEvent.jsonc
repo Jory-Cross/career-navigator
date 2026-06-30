@@ -1,0 +1,210 @@
+{
+  "name": "OrganizationBillingEvent",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Canonical Organization record ID responsible for this billing event."
+    },
+    "billing_event_key": {
+      "type": "string",
+      "description": "Stable unique idempotency key for this billing event, used to prevent duplicate charges."
+    },
+    "fee_kind": {
+      "type": "string",
+      "enum": [
+        "training_registration",
+        "training_reactivation",
+        "cohort_monthly_overage",
+        "employee_registration",
+        "employee_reactivation",
+        "employee_monthly_service",
+        "plan_base_subscription",
+        "add_on_subscription",
+        "manual_adjustment"
+      ],
+      "description": "Type of charge or billing adjustment."
+    },
+    "event_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "ready_for_checkout",
+        "payment_processing",
+        "paid",
+        "waived",
+        "failed",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Billing lifecycle status. Pending records do not charge anyone."
+    },
+    "billing_subject_type": {
+      "type": "string",
+      "enum": [
+        "trainer",
+        "student",
+        "employee",
+        "practitioner",
+        "cohort",
+        "organization",
+        "add_on"
+      ],
+      "description": "What the billing event applies to."
+    },
+    "subject_user_id": {
+      "type": "string",
+      "description": "Registered User ID associated with this event, when the event concerns a person."
+    },
+    "subject_verified_email": {
+      "type": "string",
+      "description": "Verified email permanently associated with the billed person at the time this event was created."
+    },
+    "organization_membership_id": {
+      "type": "string",
+      "description": "OrganizationMembership record connected to this billing event, when applicable."
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "CETrainingCohort record connected to this event, when applicable."
+    },
+    "organization_plan_subscription_id": {
+      "type": "string",
+      "description": "OrganizationPlanSubscription record connected to this billing event, when applicable."
+    },
+    "pricing_schedule_id": {
+      "type": "string",
+      "description": "PlatformPricingSchedule record that supplied the locked price for this billing event."
+    },
+    "pricing_schedule_key_snapshot": {
+      "type": "string",
+      "description": "Copied pricing schedule key retained for readable legacy-pricing history."
+    },
+    "pricing_schedule_item_id": {
+      "type": "string",
+      "description": "PlatformPricingScheduleItem record that supplied the exact amount for this billing event."
+    },
+    "pricing_item_key_snapshot": {
+      "type": "string",
+      "description": "Copied pricing item key retained for readable billing history even after future pricing changes."
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Platform feature or capacity key connected to this event, such as ce_cohorts or employee_seats."
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Billable quantity represented by this event."
+    },
+    "unit_amount_cents": {
+      "type": "number",
+      "description": "Charge per unit in cents. For example, 4900 represents a $49 registration fee."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Total event amount in cents after quantity and any approved adjustments."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO currency code."
+    },
+    "billing_period_starts_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Beginning of the recurring billing period when this is a monthly charge."
+    },
+    "billing_period_ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of the recurring billing period when this is a monthly charge."
+    },
+    "triggered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the billing event was created."
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When payment was confirmed, if applicable."
+    },
+    "waived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When an authorized platform user waived the charge, if applicable."
+    },
+    "waived_by_user_id": {
+      "type": "string",
+      "description": "Platform user who authorized a fee waiver, if applicable."
+    },
+    "waiver_reason": {
+      "type": "string",
+      "description": "Required internal reason when a charge is waived."
+    },
+    "stripe_checkout_session_id": {
+      "type": "string",
+      "description": "Stripe Checkout Session ID once payment collection is connected."
+    },
+    "stripe_invoice_id": {
+      "type": "string",
+      "description": "Stripe Invoice ID once billing is connected."
+    },
+    "stripe_payment_intent_id": {
+      "type": "string",
+      "description": "Stripe Payment Intent ID once billing is connected."
+    },
+    "registration_settlement_email_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the student was sent post-settlement CE registration instructions after this billing event was paid or waived."
+    },
+    "registration_settlement_email_provider_id": {
+      "type": "string",
+      "description": "Transactional email provider message ID for the post-settlement CE registration instructions."
+    },
+    "registration_settlement_email_last_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Most recent attempted delivery time for the post-settlement CE registration instructions."
+    },
+    "registration_settlement_email_last_error": {
+      "type": "string",
+      "description": "Most recent non-sensitive delivery error for post-settlement CE registration instructions. Blank after a successful send."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal, non-sensitive billing note."
+    }
+  },
+  "required": [
+    "organization_id",
+    "billing_event_key",
+    "fee_kind",
+    "event_status",
+    "billing_subject_type",
+    "quantity",
+    "currency",
+    "triggered_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}

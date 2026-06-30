@@ -1,0 +1,85 @@
+{
+  "name": "PlatformAuditLog",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Customer organization affected by this platform event, when applicable."
+    },
+    "platform_admin_user_id": {
+      "type": "string",
+      "description": "Platform administrator who performed the action, when the actor is a person."
+    },
+    "support_access_session_id": {
+      "type": "string",
+      "description": "Related SupportAccessSession record when this event concerns support access."
+    },
+    "event_key": {
+      "type": "string",
+      "description": "Stable event identifier, such as support_session_requested, support_session_started, entitlement_changed, or subscription_changed."
+    },
+    "event_summary": {
+      "type": "string",
+      "description": "Short human-readable description of what occurred. Do not include client-sensitive narrative content."
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": [
+        "platform_admin",
+        "system"
+      ],
+      "description": "Identifies whether the event was performed by an internal platform administrator or an automated platform process."
+    },
+    "target_entity": {
+      "type": "string",
+      "description": "Entity or platform resource affected by the action."
+    },
+    "target_record_id": {
+      "type": "string",
+      "description": "ID of the affected entity record, when applicable."
+    },
+    "access_mode": {
+      "type": "string",
+      "enum": [
+        "read_only",
+        "elevated"
+      ],
+      "description": "Support access mode, when applicable."
+    },
+    "details": {
+      "type": "object",
+      "default": {},
+      "description": "Structured, non-sensitive internal audit details. Never store CE client narratives, assessment answers, or documents here."
+    },
+    "tenant_visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Marks whether this event should appear in the future customer-facing support and security history."
+    },
+    "occurred_at": {
+      "type": "string",
+      "description": "ISO timestamp for when the event occurred."
+    }
+  },
+  "required": [
+    "event_key",
+    "event_summary",
+    "actor_type",
+    "tenant_visible",
+    "occurred_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": false,
+    "delete": false
+  }
+}

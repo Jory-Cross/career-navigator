@@ -1,0 +1,112 @@
+{
+  "name": "PlatformPricingScheduleItem",
+  "type": "object",
+  "properties": {
+    "pricing_schedule_id": {
+      "type": "string",
+      "description": "PlatformPricingSchedule record this exact price belongs to."
+    },
+    "pricing_item_key": {
+      "type": "string",
+      "description": "Stable unique item key within the pricing schedule, such as launch_2026:trainer_business_growth_monthly:plan_monthly."
+    },
+    "pricing_item_type": {
+      "type": "string",
+      "enum": [
+        "plan_monthly",
+        "plan_activation",
+        "billing_rate",
+        "add_on_monthly",
+        "add_on_activation",
+        "manual_adjustment"
+      ],
+      "description": "What this scheduled price represents."
+    },
+    "platform_plan_id": {
+      "type": "string",
+      "description": "PlatformPlan record this price applies to, when the item is plan-related."
+    },
+    "plan_key_snapshot": {
+      "type": "string",
+      "description": "Copied PlatformPlan plan_key retained for readable pricing history."
+    },
+    "platform_billing_rate_id": {
+      "type": "string",
+      "description": "PlatformBillingRate record this price is based on, when the item is a registration, reactivation, overage, or other billing rate."
+    },
+    "billing_rate_key_snapshot": {
+      "type": "string",
+      "description": "Copied PlatformBillingRate rate_key retained for readable pricing history."
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Optional PlatformFeature key for an add-on or capacity-related price."
+    },
+    "charge_model": {
+      "type": "string",
+      "enum": [
+        "one_time",
+        "monthly_flat",
+        "monthly_per_active_unit",
+        "usage_based"
+      ],
+      "description": "How this exact scheduled price is billed."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Locked unit amount in cents for this pricing schedule item."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO currency code."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this item may be used for accounts assigned to this pricing schedule."
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this price becomes available within its pricing schedule."
+    },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this item stops being available, if replaced within the same draft schedule."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal pricing notes, including grandfathering or special terms."
+    }
+  },
+  "required": [
+    "pricing_schedule_id",
+    "pricing_item_key",
+    "pricing_item_type",
+    "charge_model",
+    "amount_cents",
+    "currency",
+    "is_active",
+    "effective_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}

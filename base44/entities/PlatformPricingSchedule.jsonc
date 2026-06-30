@@ -1,0 +1,91 @@
+{
+  "name": "PlatformPricingSchedule",
+  "type": "object",
+  "properties": {
+    "pricing_schedule_key": {
+      "type": "string",
+      "description": "Stable unique identifier for this complete pricing version, such as launch_2026, standard_2027, or legacy_comop_2026."
+    },
+    "pricing_schedule_name": {
+      "type": "string",
+      "description": "Human-readable name for this pricing version."
+    },
+    "description": {
+      "type": "string",
+      "description": "Internal description of the pricing policy, included plans, rates, and intended customer group."
+    },
+    "schedule_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "retired"
+      ],
+      "default": "draft",
+      "description": "Draft schedules cannot be assigned to new accounts. Active schedules may be assigned. Retired schedules remain available for legacy accounts but cannot be assigned to new accounts."
+    },
+    "is_default_for_new_accounts": {
+      "type": "boolean",
+      "default": false,
+      "description": "True only for the pricing schedule assigned to newly created subscriptions and newly registered accounts."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "Default ISO currency code for prices in this schedule."
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this pricing schedule becomes available for assignment."
+    },
+    "retired_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this schedule stopped being assignable to new accounts. Existing accounts remain pinned to it."
+    },
+    "supersedes_pricing_schedule_id": {
+      "type": "string",
+      "description": "Optional prior PlatformPricingSchedule record replaced by this schedule."
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this schedule was locked for use. Future pricing changes should create a new schedule instead of altering a locked one."
+    },
+    "locked_by_user_id": {
+      "type": "string",
+      "description": "Platform user who locked this pricing schedule."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes for grandfathering, exceptions, or pricing-version history."
+    }
+  },
+  "required": [
+    "pricing_schedule_key",
+    "pricing_schedule_name",
+    "schedule_status",
+    "is_default_for_new_accounts",
+    "currency",
+    "effective_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}

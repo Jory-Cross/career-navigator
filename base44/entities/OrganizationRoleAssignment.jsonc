@@ -1,0 +1,67 @@
+{
+  "name": "OrganizationRoleAssignment",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization tenant that owns this role assignment."
+    },
+    "organization_membership_id": {
+      "type": "string",
+      "description": "OrganizationMembership record for the person receiving this role."
+    },
+    "organization_role_id": {
+      "type": "string",
+      "description": "OrganizationRole record assigned to this membership."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this role assignment currently grants permissions."
+    },
+    "assigned_at": {
+      "type": "string",
+      "description": "ISO timestamp when the role was assigned."
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "User ID of the person or platform process that assigned the role."
+    },
+    "revoked_at": {
+      "type": "string",
+      "description": "ISO timestamp when this role assignment was ended, if applicable."
+    },
+    "revoked_by": {
+      "type": "string",
+      "description": "User ID of the person or platform process that ended this role assignment."
+    }
+  },
+  "required": [
+    "organization_id",
+    "organization_membership_id",
+    "organization_role_id",
+    "is_active"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

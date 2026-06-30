@@ -4,7 +4,22 @@ const PLATFORM_OWNER_ROLE = "platform_owner";
 const INTERNAL_ORG_TENANT_KEY = "ABILITY4HIRE_INTERNAL";
 const INTERNAL_ORG_NAME = "Ability4Hire Platform";
 const INTERNAL_OWNER_EMAIL = "admin@ability4hire.com";
-const TEST_CLIENT_ID = "6a3af0d1de7caa233ba24c40";
+const TEST_CLIENT_IDS = [
+  "6a3af0d1de7caa233ba24c40", // Test Client
+  "6a332f852408a884208e6fb5", // test test
+  "6a332f60292f496073fa9b5d", // test testing
+  "6a0dc94249f9fbe63c3c17aa", // test test
+  "6a3b5e0da40cf81b181d835f", // Riley Thompson Demo
+  "6a3b5e0db57d1b34cfc781d8", // Casey Nguyen Demo
+  "6a3b5e0d13302b6a94b11902", // Jordan Fields Demo
+  "6a3b5e0c4313452938c66a7d", // Sarah Martinez Demo
+  "6a3b3cfb62df6eea397c9e5f", // Riley Thompson Demo
+  "6a3b3cfb7b6bc44271684a2e", // Casey Nguyen Demo
+  "6a3b3cfbd054a78e4b214b44", // Jordan Fields Demo
+  "6a3b3cfb19411611ffaf46a3", // Sarah Martinez Demo
+  "6a3af4dc2f601f1d715acd8c", // Concurrent Test
+  "6a3af3bacc42decbdad697c5", // Sequential Dup
+];
 
 function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";

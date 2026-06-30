@@ -1,0 +1,85 @@
+{
+  "name": "PlatformPlanFeature",
+  "type": "object",
+  "properties": {
+    "platform_plan_id": {
+      "type": "string",
+      "description": "PlatformPlan record that includes or offers this feature."
+    },
+    "platform_feature_id": {
+      "type": "string",
+      "description": "PlatformFeature record connected to this plan."
+    },
+    "plan_feature_key": {
+      "type": "string",
+      "description": "Stable unique key formatted as plan_key:feature_key."
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Copied PlatformFeature feature_key used for fast entitlement resolution."
+    },
+    "is_included": {
+      "type": "boolean",
+      "default": true,
+      "description": "True when this feature is included in the base plan."
+    },
+    "default_limit_value": {
+      "type": "number",
+      "description": "Default numeric limit provided by this plan, such as employee seats, client records, cohorts, trainer seats, or practitioner seats. Leave blank when no numeric limit applies."
+    },
+    "is_add_on_available": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this feature or an increased limit can be purchased separately as an add-on."
+    },
+    "add_on_price_cents": {
+      "type": "number",
+      "description": "Optional base price in cents for the add-on. Stripe remains the payment source of truth once billing is connected."
+    },
+    "stripe_add_on_price_id": {
+      "type": "string",
+      "description": "Stripe Price ID for the optional add-on."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether this feature-plan relationship can be used for new subscriptions."
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 100,
+      "description": "Display order in future plan-selection and platform administration screens."
+    }
+  },
+  "required": [
+    "platform_plan_id",
+    "platform_feature_id",
+    "plan_feature_key",
+    "feature_key",
+    "is_included",
+    "is_add_on_available",
+    "is_active"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

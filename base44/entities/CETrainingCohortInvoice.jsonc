@@ -1,0 +1,100 @@
+{
+  "name": "CETrainingCohortInvoice",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Canonical Organization record ID responsible for this cohort invoice."
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "Training CETrainingCohort record billed by this invoice."
+    },
+    "invoice_key": {
+      "type": "string",
+      "description": "Stable idempotency key that prevents duplicate cohort invoices for the same selected registration events."
+    },
+    "invoice_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "ready_for_checkout",
+        "payment_processing",
+        "paid",
+        "failed",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "draft",
+      "description": "Cohort invoice lifecycle. A draft invoice does not charge anyone or grant CE access."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "Single ISO currency used by this invoice."
+    },
+    "student_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of individual student registration events included in this invoice."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Locked total invoice amount in cents."
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "Authorized user who created the cohort invoice batch."
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invoice was prepared for Stripe Checkout."
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When Stripe confirmed payment for the full cohort invoice."
+    },
+    "stripe_checkout_session_id": {
+      "type": "string",
+      "description": "Stripe Checkout Session ID for this cohort invoice."
+    },
+    "stripe_payment_intent_id": {
+      "type": "string",
+      "description": "Stripe Payment Intent ID after payment collection begins."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal non-sensitive invoice note."
+    }
+  },
+  "required": [
+    "organization_id",
+    "cohort_id",
+    "invoice_key",
+    "invoice_status",
+    "currency",
+    "student_count",
+    "amount_cents",
+    "created_by_user_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}

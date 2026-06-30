@@ -1,0 +1,105 @@
+{
+  "name": "PlatformBillingRate",
+  "type": "object",
+  "properties": {
+    "rate_key": {
+      "type": "string",
+      "description": "Stable unique billing-rate key, such as ce_trainer_registration, ce_student_reactivation, or ce_cohort_monthly_overage."
+    },
+    "rate_name": {
+      "type": "string",
+      "description": "Human-readable billing-rate name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Internal explanation of what triggers this rate."
+    },
+    "charge_model": {
+      "type": "string",
+      "enum": [
+        "one_time",
+        "monthly_per_active_unit",
+        "monthly_flat",
+        "usage_based"
+      ],
+      "description": "How this rate is billed."
+    },
+    "billing_subject_type": {
+      "type": "string",
+      "enum": [
+        "trainer",
+        "student",
+        "employee",
+        "practitioner",
+        "cohort",
+        "organization",
+        "add_on"
+      ],
+      "description": "Type of item or person this rate applies to."
+    },
+    "feature_key": {
+      "type": "string",
+      "description": "Optional related PlatformFeature key, such as ce_cohorts."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Current unit price in cents. For example, 4900 represents $49."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO currency code."
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this rate becomes usable."
+    },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this rate stops being usable, if replaced."
+    },
+    "stripe_price_id": {
+      "type": "string",
+      "description": "Stripe Price ID once Stripe collection is connected."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether new billing events may use this rate."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal billing notes, including grandfathered terms or replacement-rate details."
+    }
+  },
+  "required": [
+    "rate_key",
+    "rate_name",
+    "charge_model",
+    "billing_subject_type",
+    "amount_cents",
+    "currency",
+    "effective_at",
+    "is_active"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}

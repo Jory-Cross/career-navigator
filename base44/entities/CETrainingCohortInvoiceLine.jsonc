@@ -1,0 +1,93 @@
+{
+  "name": "CETrainingCohortInvoiceLine",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Canonical Organization record ID responsible for this cohort invoice line."
+    },
+    "cohort_id": {
+      "type": "string",
+      "description": "Training CETrainingCohort record associated with this invoice line."
+    },
+    "cohort_invoice_id": {
+      "type": "string",
+      "description": "Parent CETrainingCohortInvoice record."
+    },
+    "invoice_line_key": {
+      "type": "string",
+      "description": "Stable idempotency key that prevents the same student registration billing event from being added twice to the same cohort invoice."
+    },
+    "organization_billing_event_id": {
+      "type": "string",
+      "description": "Existing OrganizationBillingEvent for this individual student's locked registration fee."
+    },
+    "pending_role_assignment_id": {
+      "type": "string",
+      "description": "PendingRoleAssignment representing the invited, not-yet-registered CE student."
+    },
+    "subject_verified_email": {
+      "type": "string",
+      "description": "Invited student email locked onto this invoice line."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Locked individual CE registration fee in cents."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO currency for this invoice line. Must match the parent invoice currency."
+    },
+    "line_status": {
+      "type": "string",
+      "enum": [
+        "included",
+        "paid",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "included",
+      "description": "Invoice-line lifecycle. Included does not grant access. Paid is set only after the parent cohort invoice payment is confirmed."
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the parent cohort invoice payment settled for this line."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal non-sensitive invoice-line note."
+    }
+  },
+  "required": [
+    "organization_id",
+    "cohort_id",
+    "cohort_invoice_id",
+    "invoice_line_key",
+    "organization_billing_event_id",
+    "pending_role_assignment_id",
+    "subject_verified_email",
+    "amount_cents",
+    "currency",
+    "line_status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  }
+}
