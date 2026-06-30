@@ -9,14 +9,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const platformAdminRecords =
-      await base44.asServiceRole.entities.PlatformAdmin.filter({
-        user_id: currentUser.id,
-      });
+  const allPlatformAdminRecords =
+  await base44.asServiceRole.entities.PlatformAdmin.list();
 
-    const activePlatformRecord = platformAdminRecords.find(
-      (record) => record.is_active !== false
-    );
+const activePlatformRecord = allPlatformAdminRecords.find(
+  (record) =>
+    record.user_id === currentUser.id &&
+    record.is_active !== false
+);
 
     const platformRole = activePlatformRecord?.platform_role || null;
 
