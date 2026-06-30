@@ -263,21 +263,13 @@ export default function CERegistrationPaymentStatus() {
                 {error}
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                           <div className="mt-7">
                 <button
                   type="button"
                   onClick={() => void loadStatus()}
                   className="inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white transition hover:bg-violet-700"
                 >
                   Try Again
-                </button>
-
-                <button
-                  type="button"
-                  onClick={goToRegistration}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                >
-                  Go to Career Navigator
                 </button>
               </div>
             </div>
