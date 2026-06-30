@@ -27,11 +27,12 @@ export function useCohortVisibleMembership(user) {
 
   const { data } = useQuery({
     queryKey: ["cohortVisibility", user?.id, user?.role],
-    queryFn: async () => {
-      // Pass user_id to resolve the cohort visibility oracle for THIS user.
-      const res = await base44.functions.invoke("getCohortVisibleClients", {
-        user_id: user.id,
-      });
+       queryFn: async () => {
+      const res = await base44.functions.invoke(
+        "getCohortVisibleClients",
+        {}
+      );
+
       const payload = res.data || {};
       return {
         memberUserIds: Array.isArray(payload.memberUserIds) ? payload.memberUserIds : [],
