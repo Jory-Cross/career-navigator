@@ -400,8 +400,8 @@ Deno.serve(async (req) => {
         unresolved: unresolved.length,
         candidates_by_organization: candidateCountsByOrganization,
       },
-      candidates,
-      already_scoped,
+          candidates,
+      already_scoped: alreadyScoped,
       conflicts,
       unresolved,
     };
