@@ -31,6 +31,16 @@ const LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE: Record<
     "resume_writing",
     "job_interview_process",
   ]),
+  life_skills: new Set([
+    "billable_service_date",
+    "billable_hours",
+    "life_skills_area",
+    "specific_skill_taught",
+    "client_progress_mastery_level",
+    "practice_homework_assigned",
+    "activity_description",
+    "observations_comments",
+  ]),
 };
 
 function getLegacyStaticFormFields(entryTypeCode: unknown) {
