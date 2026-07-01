@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
 
     const body: any = await req.json().catch(() => ({}));
 
-    if (
+        if (
       body?.apply !== undefined &&
       typeof body.apply !== "boolean"
     ) {
@@ -298,16 +298,44 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apply = body?.apply === true;
+    if (
+      body?.diagnose_authorization !== undefined &&
+      typeof body.diagnose_authorization !== "boolean"
+    ) {
+      throw httpError(
+        400,
+        "diagnose_authorization must be a boolean when provided."
+      );
+    }
+
+    const diagnoseAuthorization =
+      body?.diagnose_authorization === true;
+
+    const apply =
+      !diagnoseAuthorization &&
+      body?.apply === true;
+
+    const repairOperator =
+      await getVerifiedTemporaryRepairOperator(
+        base44,
+        authenticatedUser,
+        diagnoseAuthorization
+      );
+
+    if (diagnoseAuthorization) {
+      return Response.json({
+        ok: true,
+        action: "diagnose_authorization",
+        apply_ignored: true,
+        repair_authorized: repairOperator.authorized,
+        diagnostic: repairOperator.diagnostic,
+      });
+    }
 
     const {
       caller,
       organizationId: callerOrganizationId,
-    } = await getVerifiedTemporaryRepairOperator(
-      base44,
-      authenticatedUser
-    );
-
+    } = repairOperator;
     const targetEntryType =
       await base44.asServiceRole.entities.EntryType.get(
         TARGET_ENTRY_TYPE_ID
