@@ -1710,10 +1710,11 @@ Deno.serve(async (req) => {
       entryType
     );
 
-    const formData = assertAndMergeFormData(
+        const formData = assertAndMergeFormData(
       getRequestedFormData(timeEntryInput),
       existingEntry.form_data,
       activeTemplates,
+      entryType.code,
       true
     );
 
@@ -1721,7 +1722,8 @@ Deno.serve(async (req) => {
       activeTemplates,
       formData,
       preparedEntry.status,
-      entryType.requires_field_answers === true
+      entryType.requires_field_answers === true,
+      entryType.code
     );
 
     preparedEntry.form_data = formData;
