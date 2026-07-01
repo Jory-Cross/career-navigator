@@ -49,8 +49,8 @@ const BASE_ENTRY_TYPES = [
     active: true,
     group: "time_entry",
   },
-  {
-    code: "end_of_month_reporting",
+   {
+    code: "eom_reporting",
     label: "End-of-Month Reporting",
     schemaKey: "simple_time",
     category: "simple",
