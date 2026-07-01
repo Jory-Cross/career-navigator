@@ -28,14 +28,41 @@ const dynamicEntryFormApi = {
       try {
         const results = await base44.entities.EntryType.filter({ code });
 
-        if (results?.length) {
-          const resolved = results[0];
+            try {
+        const results = await base44.entities.EntryType.filter({ code });
+
+        const normalizedCandidateCode = String(code)
+          .trim()
+          .toLowerCase();
+
+        const exactMatches = (
+          Array.isArray(results) ? results : []
+        ).filter((entryType) => {
+          const resolvedCode = String(entryType?.code || "")
+            .trim()
+            .toLowerCase();
+
+          return (
+            resolvedCode === normalizedCandidateCode &&
+            entryType?.is_active !== false &&
+            entryType?.is_archived !== true
+          );
+        });
+
+        if (exactMatches.length === 1) {
+          const resolved = exactMatches[0];
 
           for (const candidate of candidateCodes) {
             entryTypeCache.set(candidate, resolved);
           }
 
           return resolved;
+        }
+
+        if (exactMatches.length > 1) {
+          console.error(
+            `[DynamicEntryForm] Found ${exactMatches.length} active EntryType records for code "${normalizedCandidateCode}".`
+          );
         }
       } catch (err) {
         console.error(
