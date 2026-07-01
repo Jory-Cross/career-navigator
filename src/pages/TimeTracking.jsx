@@ -1186,7 +1186,7 @@ if (entryTypeFilter !== "all") {
     [canMutate]
   );
 
-  const confirmDelete = useCallback(async () => {
+   const confirmDelete = useCallback(async () => {
     if (!deletingEntry?.id) return;
 
     if (!canMutate(deletingEntry)) {
@@ -1199,12 +1199,30 @@ if (entryTypeFilter !== "all") {
     setIsDeleting(true);
 
     try {
-      await base44.entities.TimeEntry.delete(deletingEntry.id);
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedTimeEntry",
+        {
+          action: "delete",
+          entry_id: deletingEntry.id,
+          time_entry: {},
+        }
+      );
+
+      const data = response?.data || response || {};
+
+      if (!data.ok || data.action !== "delete") {
+        throw new Error(
+          data.error || "Secure TimeEntry deletion failed."
+        );
+      }
+
       setSelectedEntry(null);
       toast.success("Entry deleted");
       await handleRefresh();
     } catch (error) {
-      toast.error("Failed to delete entry");
+      toast.error(
+        error?.message || "Failed to delete entry"
+      );
       console.error("Delete error:", error);
     } finally {
       setIsDeleting(false);
