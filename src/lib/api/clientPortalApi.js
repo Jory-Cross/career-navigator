@@ -519,14 +519,34 @@ export async function getAllClients() {
   const rows = await base44.entities.Client.list();
   return asArray(rows).map(mapClient).filter(Boolean);
 }
+async function getAuthorizedTimeEntryRows() {
+  const response = await base44.functions.invoke(
+    "getAuthorizedTimeEntries",
+    {}
+  );
+
+  const payload = response?.data ?? response ?? {};
+
+  if (!payload?.ok) {
+    throw new Error(
+      payload?.error || "Unable to load authorized Time Entries."
+    );
+  }
+
+  return asArray(payload.entries);
+}
+
 export async function getAllTimeEntries() {
-  const rows = await base44.entities.TimeEntry.list("-created_date");
+  const rows = await getAuthorizedTimeEntryRows();
   return asArray(rows).map(mapTimeEntry).filter(Boolean);
 }
 
 export async function getTimeEntryById(id) {
   if (!id) return null;
-  const raw = await base44.entities.TimeEntry.get(id);
+
+  const rows = await getAuthorizedTimeEntryRows();
+  const raw = asArray(rows).find((entry) => entry?.id === id) || null;
+
   return mapTimeEntry(raw);
 }
 
