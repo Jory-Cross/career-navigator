@@ -415,67 +415,10 @@ const cohortOnlyMemberIds = useMemo(() => {
   );
 }, [platformScopedUsers, cohortMembership.memberUserIds]);
   
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeTracking", "entries", effectiveUser?.id, managedEmployeeIds.join(","), cohortMemberIdList.join(",")],
-    queryFn: async () => {
-      // Admin: fetch everything
-      if (effectiveUser?.role === "admin" && !viewAsUser) {
-        return getAllTimeEntries();
-      }
-      // Cohort member IDs to additionally fetch (subtract ones already fetched
-      // by the management branch so we don't double-fetch).
-      const reportIdSet = new Set(
-        effectiveUser?.role === "management" ? managedEmployeeIds : []
-      );
-      const additionalCohortIds = cohortMemberIdList.filter(
-        (id) => !reportIdSet.has(id) && id !== effectiveUser?.id
-      );
-
-      // Management: fetch own entries + each direct report's entries in parallel
-      if (effectiveUser?.role === "management" && managedEmployeeIds.length > 0) {
-        const [ownEntries, ...reportEntries] = await Promise.all([
-          getAllTimeEntries(), // returns entries the current user can see (own entries)
-          ...managedEmployeeIds.map((empId) =>
-            base44.entities.TimeEntry.filter({ employee_id: empId })
-          ),
-          // Additive cohort fetches
-          ...additionalCohortIds.map((empId) =>
-            base44.entities.TimeEntry.filter({ employee_id: empId })
-          ),
-        ]);
-        // Deduplicate by id
-        const seen = new Set();
-        const combined = [];
-        for (const entry of [...ownEntries, ...reportEntries.flat()]) {
-          if (entry?.id && !seen.has(entry.id)) {
-            seen.add(entry.id);
-            combined.push(entry);
-          }
-        }
-        return combined;
-      }
-      // Employee or management with no direct reports: own entries + cohort-only entries
-      if (additionalCohortIds.length > 0) {
-        const [ownEntries, ...cohortEntryBatches] = await Promise.all([
-          getAllTimeEntries(),
-          ...additionalCohortIds.map((empId) =>
-            base44.entities.TimeEntry.filter({ employee_id: empId })
-          ),
-        ]);
-        const seen = new Set();
-        const combined = [];
-        for (const entry of [...ownEntries, ...cohortEntryBatches.flat()]) {
-          if (entry?.id && !seen.has(entry.id)) {
-            seen.add(entry.id);
-            combined.push(entry);
-          }
-        }
-        return combined;
-      }
-      // Employee or management with no direct reports: just own entries
-      return getAllTimeEntries();
-    },
-    enabled: !!effectiveUser && (effectiveUser.role !== "management" || allUsers.length > 0 || managedEmployeeIds.length >= 0 || cohortMemberIdList.length >= 0),
+   const { data: timeEntries = [] } = useQuery({
+    queryKey: ["timeTracking", "entries", effectiveUser?.id],
+    queryFn: getAllTimeEntries,
+    enabled: !!effectiveUser,
     staleTime: 0,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: true,
