@@ -1,53 +1,89 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
+const COHORT_AUTHORIZATION_ROLES = new Set([
+  "manager",
+  "trainer",
+]);
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
+}
+
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function isActiveMembership(
+  membership: any,
+  organizationId: string,
+  activeCohortIds: Set<string>
+) {
+  return (
+    membership?.is_active === true &&
+    membership?.is_archived !== true &&
+    normalizeText(membership?.org_id) === organizationId &&
+    activeCohortIds.has(normalizeText(membership?.cohort_id))
+  );
+}
+
+function isCanonicalOrganizationAdmin(user: any) {
+  return normalizeText(user?.role).toLowerCase() === "admin";
+}
+
 /**
  * Cohort Visibility Engine
  *
- * Determines only the authenticated caller's CE cohort-based client visibility.
+ * Determines the authenticated caller's CE cohort-based client visibility.
  *
- * SECURITY RULE:
+ * SECURITY RULES:
  * - Browser-supplied user_id is never accepted as authorization.
- * - The authenticated database User determines the tenant and visibility scope.
- * - The caller must have a valid canonical Organization.org_id.
+ * - The canonical database User determines caller identity and organization.
+ * - Only an active organization admin, or an active cohort manager/trainer,
+ *   can receive cohort-based client visibility.
+ * - Cohort visibility never starts with the caller's own assigned clients.
+ * - All returned users, cohorts, memberships, and clients are exact-org scoped.
  *
  * Response shape remains compatible with existing UI callers:
  *   { isAdmin, cohortIds, memberUserIds, clientIds, clients }
  */
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (req.method !== "POST") {
+      return Response.json(
+        { error: "Method not allowed." },
+        { status: 405 }
+      );
     }
 
-    const [
-      allUsers,
-      allOrganizations,
-    ] = await Promise.all([
-      base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.Organization.list(),
-    ]);
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me();
 
-    const callerUser = allUsers.find(
-      (record) => record.id === authenticatedUser.id
-    );
-
-    if (!callerUser) {
+    if (!authenticatedUser?.id) {
       return Response.json(
-        { error: "Authenticated user record was not found." },
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
+    const callerUser =
+      await base44.asServiceRole.entities.User.get(
+        authenticatedUser.id
+      ).catch(() => null);
+
+    if (!callerUser || !isActive(callerUser)) {
+      return Response.json(
+        { error: "Authenticated user record was not found or is inactive." },
         { status: 403 }
       );
     }
 
-    const orgId =
-      typeof callerUser.org_id === "string"
-        ? callerUser.org_id.trim()
-        : "";
+    const organizationId = normalizeText(callerUser.org_id);
 
-    if (!orgId) {
+    if (!organizationId) {
       return Response.json(
         {
           error:
@@ -57,50 +93,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organization = allOrganizations.find(
-      (record) => record.id === orgId
-    );
+    const organization =
+      await base44.asServiceRole.entities.Organization.get(
+        organizationId
+      ).catch(() => null);
 
-    if (!organization) {
+    if (!organization || !isActive(organization)) {
       return Response.json(
         {
           error:
-            "Your account has an invalid organization assignment. Cohort visibility is unavailable.",
+            "Your account has an invalid or inactive organization assignment. Cohort visibility is unavailable.",
         },
         { status: 403 }
       );
     }
 
-    const isAdmin =
-      callerUser.role === "admin" ||
-      callerUser.access_level === "admin";
-
     const [
-      orgClients,
-      orgCohorts,
-      activeOrgMemberships,
+      organizationUsers,
+      organizationClients,
+      organizationCohorts,
+      organizationMemberships,
     ] = await Promise.all([
+      base44.asServiceRole.entities.User.filter({
+        org_id: organizationId,
+      }),
       base44.asServiceRole.entities.Client.filter({
-        org_id: orgId,
-        is_archived: false,
+        org_id: organizationId,
       }),
       base44.asServiceRole.entities.CETrainingCohort.filter({
-        org_id: orgId,
+        org_id: organizationId,
       }),
       base44.asServiceRole.entities.CETrainingCohortMember.filter({
-        org_id: orgId,
-        is_active: true,
+        org_id: organizationId,
       }),
     ]);
 
-    const orgUserIds = new Set(
-      allUsers
-        .filter((record) => record.org_id === orgId)
-        .map((record) => record.id)
+    const activeOrganizationUsers = asArray(organizationUsers).filter(
+      (user: any) =>
+        isActive(user) &&
+        normalizeText(user?.org_id) === organizationId
+    );
+
+    const activeOrganizationUserIds = new Set(
+      activeOrganizationUsers
+        .map((user: any) => normalizeText(user?.id))
         .filter(Boolean)
     );
 
-    if (!orgUserIds.has(callerUser.id)) {
+    if (!activeOrganizationUserIds.has(callerUser.id)) {
       return Response.json(
         {
           error:
@@ -110,62 +150,103 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Organization admins can view all active clients in their own organization.
-    if (isAdmin) {
+    const activeCohortIds = new Set(
+      asArray(organizationCohorts)
+        .filter(
+          (cohort: any) =>
+            isActive(cohort) &&
+            normalizeText(cohort?.org_id) === organizationId
+        )
+        .map((cohort: any) => normalizeText(cohort?.id))
+        .filter(Boolean)
+    );
+
+    const activeMemberships = asArray(organizationMemberships).filter(
+      (membership: any) =>
+        isActiveMembership(
+          membership,
+          organizationId,
+          activeCohortIds
+        )
+    );
+
+    const activeOrganizationClients = asArray(organizationClients).filter(
+      (client: any) =>
+        isActive(client) &&
+        normalizeText(client?.org_id) === organizationId
+    );
+
+    if (isCanonicalOrganizationAdmin(callerUser)) {
       return Response.json({
         isAdmin: true,
         cohortIds: [],
         memberUserIds: [],
-        clientIds: orgClients.map((client) => client.id),
-        clients: orgClients,
+        clientIds: activeOrganizationClients
+          .map((client: any) => client.id)
+          .filter(Boolean),
+        clients: activeOrganizationClients,
       });
     }
 
-    const orgCohortIds = new Set(
-      orgCohorts.map((cohort) => cohort.id).filter(Boolean)
+    const authorizedCohortIds = new Set(
+      activeMemberships
+        .filter(
+          (membership: any) =>
+            normalizeText(membership?.user_id) === callerUser.id &&
+            COHORT_AUTHORIZATION_ROLES.has(
+              normalizeText(membership?.cohort_role).toLowerCase()
+            )
+        )
+        .map((membership: any) =>
+          normalizeText(membership?.cohort_id)
+        )
+        .filter(Boolean)
     );
 
-    const managerCohortIds = activeOrgMemberships
-      .filter(
-        (membership) =>
-          membership.user_id === callerUser.id &&
-          membership.cohort_role === "manager" &&
-          orgCohortIds.has(membership.cohort_id)
-      )
-      .map((membership) => membership.cohort_id);
+    if (authorizedCohortIds.size === 0) {
+      return Response.json({
+        isAdmin: false,
+        cohortIds: [],
+        memberUserIds: [],
+        clientIds: [],
+        clients: [],
+      });
+    }
 
-    const visibleMemberUserIds = new Set([callerUser.id]);
+    const visibleMemberUserIds = new Set<string>();
 
-    if (managerCohortIds.length > 0) {
-      const managedCohortIdSet = new Set(managerCohortIds);
+    for (const membership of activeMemberships) {
+      const cohortId = normalizeText(membership?.cohort_id);
+      const memberUserId = normalizeText(membership?.user_id);
 
-      for (const membership of activeOrgMemberships) {
-        if (
-          managedCohortIdSet.has(membership.cohort_id) &&
-          orgUserIds.has(membership.user_id)
-        ) {
-          visibleMemberUserIds.add(membership.user_id);
-        }
+      if (
+        authorizedCohortIds.has(cohortId) &&
+        activeOrganizationUserIds.has(memberUserId)
+      ) {
+        visibleMemberUserIds.add(memberUserId);
       }
     }
 
-    const visibleClients = orgClients.filter(
-      (client) =>
-        client.assigned_employee_id &&
-        visibleMemberUserIds.has(client.assigned_employee_id)
+    const visibleClients = activeOrganizationClients.filter(
+      (client: any) =>
+        visibleMemberUserIds.has(
+          normalizeText(client?.assigned_employee_id)
+        )
     );
 
     return Response.json({
       isAdmin: false,
-      cohortIds: managerCohortIds,
+      cohortIds: Array.from(authorizedCohortIds),
       memberUserIds: Array.from(visibleMemberUserIds),
-      clientIds: visibleClients.map((client) => client.id),
+      clientIds: visibleClients
+        .map((client: any) => client.id)
+        .filter(Boolean),
       clients: visibleClients,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "getCohortVisibleClients error:",
-      error?.message
+      error?.message || error
     );
 
     return Response.json(
