@@ -156,7 +156,7 @@ const BASE_ENTRY_TYPES = [
 export const ENTRY_TYPE_ALIASES = {
   pre_ets: "pre_ets_training",
   misc: "miscellaneous",
-  eom_reporting: "end_of_month_reporting",
+  end_of_month_reporting: "eom_reporting",
   wble: "work_based_learning",
   work_based_learning_experience: "work_based_learning",
 };
