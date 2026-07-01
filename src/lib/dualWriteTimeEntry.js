@@ -1,93 +1,112 @@
 import { base44 } from "@/api/base44Client";
 
 /**
- * DUAL-WRITE UTILITY
- * 
- * Applies dual-write pattern to time entry and field answer submissions.
- * Ensures:
- * 1. New structured fields written (entry_type_id, entry_type_code, report_mode)
- * 2. Old fields preserved (legacy_category)
- * 3. Schema snapshots created (field definitions frozen at time of entry)
- * 4. Both old and new code paths work during migration
- */
-
-/**
- * Submit a time entry with full dual-write enforcement.
- * 
- * Returns: { time_entry_id, field_answer_id, report_ready, completion_percent }
+ * Transitional compatibility helper.
+ *
+ * All TimeEntry creation now goes through the secure server-side
+ * mutateAuthorizedTimeEntry function. The function derives tenant,
+ * employee ownership, EntryType flags, authorization enforcement,
+ * field-answer validation, and ReportFieldAnswer persistence.
+ *
+ * The response shape remains compatible with existing callers:
+ * { success, time_entry_id, field_answer_id, report_ready, completion_percent }
  */
 export async function submitTimeEntryWithDualWrite({
   clientId,
+  employeeId = null,
   entryTypeId,
   entryTypeCode,
   date,
-  startTime,
-  endTime,
+  startTime = null,
+  endTime = null,
   durationMinutes,
-  location,
-  description,
-  serviceAuthorizationId,
+  location = null,
+  description = null,
+  employerName = null,
+  serviceAuthorizationId = null,
   fieldAnswers = {},
-  asDraft = false
+  asDraft = false,
 }) {
-  const response = await base44.functions.invoke('submitTimeEntryDualWrite', {
-    client_id: clientId,
-    entry_type_id: entryTypeId,
-    entry_type_code: entryTypeCode,
-    date,
-    start_time: startTime,
-    end_time: endTime,
-    duration_minutes: durationMinutes,
-    location,
-    description,
-    service_authorization_id: serviceAuthorizationId,
-    field_answers: fieldAnswers,
-    as_draft: asDraft
-  });
+  const safeFieldAnswers =
+    fieldAnswers &&
+    typeof fieldAnswers === "object" &&
+    !Array.isArray(fieldAnswers)
+      ? fieldAnswers
+      : {};
 
-  if (!response.data.success) {
-    throw new Error(response.data.error || 'Failed to submit time entry');
+  const response = await base44.functions.invoke(
+    "mutateAuthorizedTimeEntry",
+    {
+      action: "create",
+      time_entry: {
+        client_id: clientId || null,
+        ...(employeeId ? { employee_id: employeeId } : {}),
+        entry_type_id: entryTypeId,
+        entry_type_code: entryTypeCode,
+        date,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        duration_minutes: durationMinutes,
+        location: location || null,
+        description: description || null,
+        employer_name: employerName || null,
+        service_authorization_id: serviceAuthorizationId || null,
+        field_answers: safeFieldAnswers,
+        status: asDraft ? "draft" : "submitted",
+      },
+    }
+  );
+
+  const data = response?.data || {};
+
+  if (!data.success) {
+    throw new Error(
+      data.error || "Failed to submit TimeEntry securely."
+    );
   }
 
-  return response.data;
+  return data;
 }
 
 /**
- * Fetch and validate a time entry's dual-write status.
- * Returns both old and new field values for backward-compat checking.
+ * Transitional read helper.
+ *
+ * Do not use this helper as permission authority. Secure TimeEntry reads
+ * must use getAuthorizedTimeEntries until this compatibility helper is retired.
  */
 export async function validateTimeEntryDualWrite(timeEntryId) {
   const entry = await base44.entities.TimeEntry.read(timeEntryId);
-  
+
   return {
-    // NEW structured fields
     entry_type_id: entry.entry_type_id,
     entry_type_code: entry.entry_type_code,
     reporting_period_key: entry.reporting_period_key,
     report_ready: entry.report_ready,
-    
-    // LEGACY fields
     legacy_category: entry.legacy_category,
-    
-    // Status for dual-read compatibility
-    uses_new_structure: !!entry.entry_type_id && !!entry.entry_type_code,
-    is_legacy: !!entry.legacy_category && !entry.entry_type_id
+    uses_new_structure:
+      !!entry.entry_type_id && !!entry.entry_type_code,
+    is_legacy:
+      !!entry.legacy_category && !entry.entry_type_id,
   };
 }
 
 /**
- * Get field answer with schema snapshot for audit trail.
- * Returns immutable snapshot of field definitions at time of entry.
+ * Transitional read helper.
+ *
+ * Do not use this helper as permission authority. It remains only for
+ * compatibility while ReportFieldAnswer read paths are migrated.
  */
 export async function getFieldAnswerWithSnapshot(fieldAnswerId) {
-  const answer = await base44.entities.ReportFieldAnswer.read(fieldAnswerId);
-  
+  const answer = await base44.entities.ReportFieldAnswer.read(
+    fieldAnswerId
+  );
+
   return {
     answers: answer.answers,
     schema_snapshot: answer.field_schema_snapshot,
     schema_version: answer.field_schema_version,
     submitted_at: answer.submitted_at,
     completion_percent: answer.completion_percent,
-    validation_errors: answer.validation_errors || []
+    validation_errors: answer.validation_errors || [],
   };
 }
