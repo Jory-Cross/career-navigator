@@ -1322,10 +1322,12 @@ Deno.serve(async (req) => {
           preparedEntry.service_authorization_id,
       };
 
-      const created =
+           const created =
         await base44.asServiceRole.entities.TimeEntry.create(
           createPayload
         );
+
+      let createdReportFieldAnswer: any = null;
 
       try {
         const reportFieldAnswerPayload =
@@ -1339,9 +1341,10 @@ Deno.serve(async (req) => {
             true
           );
 
-        await base44.asServiceRole.entities.ReportFieldAnswer.create(
-          reportFieldAnswerPayload
-        );
+        createdReportFieldAnswer =
+          await base44.asServiceRole.entities.ReportFieldAnswer.create(
+            reportFieldAnswerPayload
+          );
       } catch (error) {
         await base44.asServiceRole.entities.TimeEntry.delete(
           created.id
@@ -1364,8 +1367,13 @@ Deno.serve(async (req) => {
 
       return Response.json({
         ok: true,
+        success: true,
         action,
         entry: created,
+        time_entry_id: created.id,
+        field_answer_id: createdReportFieldAnswer.id,
+        report_ready: fieldValidation.report_ready,
+        completion_percent: fieldValidation.completion_percent,
         validation: authorizationResult.validation,
         authorization_recalculation_failures:
           authorizationRecalculationFailures,
