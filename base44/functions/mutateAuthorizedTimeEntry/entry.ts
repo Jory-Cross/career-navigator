@@ -1467,20 +1467,97 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (action === "delete") {
-      await base44.asServiceRole.entities.TimeEntry.delete(
-        entryId
-      );
+        if (action === "delete") {
+      const reportFieldAnswerRestorePayload =
+        existingReportFieldAnswer?.id
+          ? {
+              org_id: organizationId,
+              time_entry_id: entryId,
+              entry_type_id:
+                normalizeText(
+                  existingReportFieldAnswer.entry_type_id
+                ) || normalizeText(existingEntry.entry_type_id),
+              entry_type_code:
+                normalizeText(
+                  existingReportFieldAnswer.entry_type_code
+                ) || normalizeText(existingEntry.entry_type_code),
+              field_schema_version: Number.isFinite(
+                Number(existingReportFieldAnswer.field_schema_version)
+              )
+                ? Number(existingReportFieldAnswer.field_schema_version)
+                : 1,
+              field_schema_snapshot: asObject(
+                existingReportFieldAnswer.field_schema_snapshot
+              ),
+              answers: asObject(existingReportFieldAnswer.answers),
+              required_fields_complete:
+                existingReportFieldAnswer.required_fields_complete ===
+                true,
+              report_ready:
+                existingReportFieldAnswer.report_ready === true,
+              submitted_at:
+                normalizeText(existingReportFieldAnswer.submitted_at) ||
+                new Date().toISOString(),
+              validation_errors: asArray(
+                existingReportFieldAnswer.validation_errors
+              ),
+              completion_percent: asNumber(
+                existingReportFieldAnswer.completion_percent,
+                0
+              ),
+            }
+          : null;
 
       if (existingReportFieldAnswer?.id) {
-        await base44.asServiceRole.entities.ReportFieldAnswer.delete(
-          existingReportFieldAnswer.id
-        ).catch((error: any) => {
+        try {
+          await base44.asServiceRole.entities.ReportFieldAnswer.delete(
+            existingReportFieldAnswer.id
+          );
+        } catch (error: any) {
           console.error(
-            "ReportFieldAnswer cleanup failed after TimeEntry deletion:",
+            "ReportFieldAnswer deletion failed before TimeEntry deletion:",
             error?.message || error
           );
-        });
+
+          throw httpError(
+            500,
+            "TimeEntry deletion was not started because its linked ReportFieldAnswer could not be deleted."
+          );
+        }
+      }
+
+      try {
+        await base44.asServiceRole.entities.TimeEntry.delete(
+          entryId
+        );
+      } catch (error: any) {
+        console.error(
+          "TimeEntry deletion failed:",
+          error?.message || error
+        );
+
+        if (reportFieldAnswerRestorePayload) {
+          try {
+            await base44.asServiceRole.entities.ReportFieldAnswer.create(
+              reportFieldAnswerRestorePayload
+            );
+          } catch (restoreError: any) {
+            console.error(
+              "ReportFieldAnswer restoration failed after TimeEntry deletion failure:",
+              restoreError?.message || restoreError
+            );
+
+            throw httpError(
+              500,
+              "TimeEntry deletion failed and the linked ReportFieldAnswer could not be restored."
+            );
+          }
+        }
+
+        throw httpError(
+          500,
+          "TimeEntry deletion failed. Its linked ReportFieldAnswer was restored."
+        );
       }
 
       const authorizationRecalculationFailures =
@@ -1502,7 +1579,6 @@ Deno.serve(async (req) => {
           authorizationRecalculationFailures,
       });
     }
-
     const requestedEntryTypeId = hasOwn(
       timeEntryInput,
       "entry_type_id"
