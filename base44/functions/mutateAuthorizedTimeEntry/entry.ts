@@ -547,6 +547,7 @@ function assertAndMergeFormData(
   incomingFormData: any,
   existingFormData: any,
   activeTemplates: any[],
+  entryTypeCode: string,
   isUpdate: boolean
 ) {
   const incoming = incomingFormData || {};
@@ -557,6 +558,10 @@ function assertAndMergeFormData(
       .map((template: any) => normalizeText(template.field_key))
       .filter(Boolean)
   );
+
+  for (const fieldKey of getLegacyStaticFormFields(entryTypeCode)) {
+    allowedNewKeys.add(fieldKey);
+  }
 
   const existingKeys = new Set(Object.keys(existing));
 
