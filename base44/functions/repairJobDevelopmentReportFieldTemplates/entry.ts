@@ -117,7 +117,8 @@ function getExpectedFieldKeys() {
 
 async function getVerifiedTemporaryRepairOperator(
   base44: any,
-  authenticatedUser: any
+  authenticatedUser: any,
+  diagnosticOnly = false
 ) {
   const caller =
     await base44.asServiceRole.entities.User.get(
@@ -131,15 +132,46 @@ async function getVerifiedTemporaryRepairOperator(
     );
   }
 
-    const callerEmail = normalizeText(
+  const callerEmail = normalizeText(
     authenticatedUser?.email
   ).toLowerCase();
 
   const callerOrgId = normalizeText(caller.org_id);
 
+  const emailMatchesAuthorizedOperator =
+    callerEmail === TEMPORARY_REPAIR_OPERATOR_EMAIL;
+
+  const organizationMatchesComop =
+    callerOrgId === COMOP_ORG_ID;
+
+  const diagnostic = {
+    authenticated_user_id: normalizeText(authenticatedUser?.id) || null,
+    authenticated_email: callerEmail || null,
+    user_record_id: normalizeText(caller.id) || null,
+    user_record_email:
+      normalizeText(caller.email).toLowerCase() || null,
+    user_record_role:
+      normalizeText(caller.role).toLowerCase() || null,
+    user_record_org_id: callerOrgId || null,
+    email_matches_authorized_operator:
+      emailMatchesAuthorizedOperator,
+    organization_matches_comop: organizationMatchesComop,
+  };
+
+  if (diagnosticOnly) {
+    return {
+      caller,
+      organizationId: callerOrgId,
+      authorized:
+        emailMatchesAuthorizedOperator &&
+        organizationMatchesComop,
+      diagnostic,
+    };
+  }
+
   if (
-    callerEmail !== TEMPORARY_REPAIR_OPERATOR_EMAIL ||
-    callerOrgId !== COMOP_ORG_ID
+    !emailMatchesAuthorizedOperator ||
+    !organizationMatchesComop
   ) {
     throw httpError(
       403,
@@ -162,9 +194,10 @@ async function getVerifiedTemporaryRepairOperator(
   return {
     caller,
     organizationId: callerOrgId,
+    authorized: true,
+    diagnostic,
   };
 }
-
 function getActiveJobDevelopmentTemplates(
   templates: any[],
   entryTypeId: string
