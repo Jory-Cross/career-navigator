@@ -1,109 +1,118 @@
 import { base44 } from "@/api/base44Client";
 
-let currentUserPromise = null;
+function isPlainObject(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
 
-const persistTimeEntryApi = {
-  async getCurrentUser() {
-    if (!currentUserPromise) {
-      currentUserPromise = base44.auth.me().catch((error) => {
-        currentUserPromise = null;
-        throw error;
-      });
-    }
+function hasOwn(record, key) {
+  return Object.prototype.hasOwnProperty.call(record || {}, key);
+}
 
-    return await currentUserPromise;
-  },
+function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
+  const source = isPlainObject(payload) ? payload : {};
 
-  async updateTimeEntry(id, payload) {
-    return await base44.entities.TimeEntry.update(id, payload);
-  },
-
-  async getTimeEntry(id) {
-    return await base44.entities.TimeEntry.get(id);
-  },
-
-  async createTimeEntry(payload) {
-    return await base44.entities.TimeEntry.create(payload);
-  },
-
-  clearUserCache() {
-    currentUserPromise = null;
-  },
-};
-
-function sanitizeCreateData(payload, clientId, employeeId) {
-  const createData = {
-    ...payload,
-    client_id: clientId ?? payload.client_id ?? null,
-    employee_id: payload.employee_id ?? employeeId ?? null,
+  const timeEntry = {
+    entry_type_id: source.entry_type_id,
+    entry_type_code: source.entry_type_code,
+    date: source.date,
+    start_time: source.start_time ?? null,
+    end_time: source.end_time ?? null,
+    duration_minutes: source.duration_minutes,
+    location: source.location ?? null,
+    description: source.description ?? null,
+    employer_name: source.employer_name ?? null,
+    service_authorization_id:
+      source.service_authorization_id ?? null,
+    form_data: isPlainObject(source.form_data)
+      ? source.form_data
+      : {},
   };
 
-  if (createData.client_id === undefined) {
-    createData.client_id = null;
+  if (hasOwn(source, "status")) {
+    timeEntry.status = source.status;
   }
 
-  return createData;
+  if (!isUpdate) {
+    timeEntry.client_id =
+      clientId ?? source.client_id ?? null;
+
+    if (source.employee_id) {
+      timeEntry.employee_id = source.employee_id;
+    }
+  }
+
+  return timeEntry;
+}
+
+async function invokeSecureTimeEntryMutation(request) {
+  const response = await base44.functions.invoke(
+    "mutateAuthorizedTimeEntry",
+    request
+  );
+
+  const data = response?.data || response || {};
+
+  if (!data.ok || !data.entry?.id) {
+    throw new Error(
+      data.error ||
+        "Secure TimeEntry mutation did not return a saved entry."
+    );
+  }
+
+  return data.entry;
 }
 
 /**
- * Thin persistence-only helper.
- * Receives a FULLY BUILT, ALREADY VALIDATED payload and writes it to the DB.
- * Does NOT build payloads.
- * Does NOT validate.
- * Does NOT call toast.
+ * Secure persistence gateway for FormEngine TimeEntry workflows.
  *
- * @param {Object} payload - Final, frozen payload from buildTimeEntryPayload
- * @param {string|null} existingEntryId - Entry ID for updates; null for creates
- * @param {string|null} clientId - Client ID to stamp on new entries
- * @returns {Promise<Object>} Saved entry record
+ * Browser code submits only the requested fields. The server derives and
+ * enforces tenant scope, employee authority, EntryType configuration,
+ * authorization rules, reporting fields, and ReportFieldAnswer persistence.
+ *
+ * @param {Object} payload - Final payload from buildTimeEntryPayload
+ * @param {string|null} existingEntryId - Existing TimeEntry ID for updates
+ * @param {string|null} clientId - Client ID used only on new entries
+ * @returns {Promise<Object>} Saved TimeEntry record
  */
-export async function persistTimeEntry(payload, existingEntryId, clientId) {
-  if (!payload || typeof payload !== "object") {
-    throw new Error("❌ Cannot persist entry: payload is missing or invalid");
+export async function persistTimeEntry(
+  payload,
+  existingEntryId,
+  clientId
+) {
+  if (!isPlainObject(payload)) {
+    throw new Error(
+      "Cannot persist entry: payload is missing or invalid."
+    );
   }
 
   if (existingEntryId) {
-    console.log("[persistTimeEntry] Updating entry:", existingEntryId);
-
-    await persistTimeEntryApi.updateTimeEntry(existingEntryId, payload);
-
-    const updated = await persistTimeEntryApi.getTimeEntry(existingEntryId);
-
-    if (!updated) {
-      throw new Error("❌ Post-update fetch failed: could not retrieve updated entry");
-    }
-
-    console.log("[persistTimeEntry] Saved entry.form_data:", JSON.stringify(updated.form_data, null, 2));
-
-    return updated;
+    return await invokeSecureTimeEntryMutation({
+      action: "update",
+      entry_id: existingEntryId,
+      time_entry: buildSecureTimeEntryInput(
+        payload,
+        null,
+        true
+      ),
+    });
   }
 
-  const currentUser = await persistTimeEntryApi.getCurrentUser();
-
-  if (!currentUser?.id) {
-    throw new Error("❌ Cannot create entry: user not authenticated");
-  }
-
-  const createData = sanitizeCreateData(payload, clientId, currentUser.id);
-
-  if (!createData.employee_id) {
-    throw new Error("❌ Create payload missing employee_id");
-  }
-
-  console.log(
-    "[persistTimeEntry] Creating entry:",
-    JSON.stringify(createData, null, 2)
-  );
-
-  const result = await persistTimeEntryApi.createTimeEntry(createData);
-
-  if (!result) {
-    throw new Error("❌ Create returned no result");
-  }
-
-  return result;
+  return await invokeSecureTimeEntryMutation({
+    action: "create",
+    time_entry: buildSecureTimeEntryInput(
+      payload,
+      clientId,
+      false
+    ),
+  });
 }
 
-export function clearPersistTimeEntryCaches() {
-  persistTimeEntryApi.clearUserCache();
-}
+/**
+ * Retained for compatibility with existing imports.
+ * TimeEntry persistence no longer keeps a browser-side user cache.
+ */
+export function clearPersistTimeEntryCaches() {}
