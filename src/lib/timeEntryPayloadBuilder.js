@@ -391,28 +391,38 @@ function buildTopLevelPayload(entryType, formData, schema) {
 function mapTemplateFields(schema, formData, existingEntry = null) {
   const result = {};
   const fields = getSchemaFields(schema);
-  const existingFormData = existingEntry?.form_data || {};
+
+  // These simple-form inputs duplicate canonical top-level TimeEntry values.
+  // Keep them available for date/duration calculation, but do not persist them
+  // as field answers because they have no active ReportFieldTemplate records.
+  const nonReportableDuplicateFormKeys = new Set([
+    "admin_hours",
+    "pto_hours",
+    "misc_hours",
+    "eom_total_hours",
+  ]);
 
   for (const field of fields) {
     const key = field.key;
     if (!key) continue;
-    // Only skip fields marked to save at top level; all others go to form_data
-    if (field.saveToTopLevel) continue;
-    
+
+    if (
+      field.saveToTopLevel ||
+      nonReportableDuplicateFormKeys.has(key)
+    ) {
+      continue;
+    }
+
     const value = formData[key];
-    
-    // In EDIT mode: only save if value is non-empty, OR if it's explicitly different from existing
+
     if (existingEntry?.id) {
-      // Skip blank/undefined values that would overwrite existing data
       if (value === undefined || value === null || value === "") {
         continue;
       }
+
       result[key] = value;
-    } else {
-      // In CREATE mode: save all defined values
-      if (value !== undefined) {
-        result[key] = value;
-      }
+    } else if (value !== undefined) {
+      result[key] = value;
     }
   }
 
