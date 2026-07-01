@@ -25,10 +25,7 @@ const dynamicEntryFormApi = {
         if (cached) return cached;
       }
 
-      try {
-        const results = await base44.entities.EntryType.filter({ code });
-
-            try {
+           try {
         const results = await base44.entities.EntryType.filter({ code });
 
         const normalizedCandidateCode = String(code)
@@ -69,8 +66,7 @@ const dynamicEntryFormApi = {
           `[DynamicEntryForm] Failed entry type lookup for code "${code}":`,
           err
         );
-      }
-    }
+      }    }
 
     for (const candidate of candidateCodes) {
       entryTypeCache.set(candidate, null);
