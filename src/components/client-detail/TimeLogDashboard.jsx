@@ -143,15 +143,6 @@ function parseDateOnly(dateString) {
   return parsed;
 }
 
-function addOneDayDateOnly(dateString) {
-  const parsed = parseDateOnly(dateString);
-  if (!parsed) return dateString || "";
-
-  const next = new Date(parsed);
-  next.setDate(next.getDate() + 1);
-  return format(next, "yyyy-MM-dd");
-}
-
 function hasActiveFilters(filters) {
   return Object.values(filters).some((value) => value && value !== "all");
 }
