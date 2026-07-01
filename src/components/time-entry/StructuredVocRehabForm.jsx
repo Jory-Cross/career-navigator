@@ -109,23 +109,28 @@ export default function StructuredVocRehabForm({
         return new Date().toISOString().split("T")[0]; // Fall back to today
       })();
 
-      if (entry?.id) {
-        // For editing: update TimeEntry and ReportFieldAnswer
-        await base44.entities.TimeEntry.update(entry.id, {
-          date: entryDate,
-          duration_minutes: durationMinutes,
-          entry_type_code: entryTypeCode,
-          entry_type_id: entryType.id
-        });
+          if (entry?.id) {
+        const response = await base44.functions.invoke(
+          "mutateAuthorizedTimeEntry",
+          {
+            action: "update",
+            entry_id: entry.id,
+            time_entry: {
+              date: entryDate,
+              duration_minutes: durationMinutes,
+              entry_type_id: entryType.id,
+              entry_type_code: entryTypeCode,
+              field_answers: fieldAnswers,
+            },
+          }
+        );
 
-        // Update ReportFieldAnswer answers
-        const answers = await base44.entities.ReportFieldAnswer.filter({
-          time_entry_id: entry.id
-        });
-        if (answers.length > 0) {
-          await base44.entities.ReportFieldAnswer.update(answers[0].id, {
-            answers: fieldAnswers
-          });
+        const data = response?.data || response || {};
+
+        if (!data.ok || !data.entry?.id) {
+          throw new Error(
+            data.error || "Secure TimeEntry update failed."
+          );
         }
 
         toast.success("Entry updated");
