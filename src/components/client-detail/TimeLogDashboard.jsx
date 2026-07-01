@@ -1055,17 +1055,6 @@ export default function TimeLogDashboard({
                             <Pencil className="h-4 w-4" />
                             Edit
                           </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => handleDuplicate(entry)}
-                            disabled={isDuplicatingId === entry.id}
-                          >
-                            <Copy className="h-4 w-4" />
-                            {isDuplicatingId === entry.id ? "Duplicating..." : "Duplicate"}
-                          </Button>
                         </>
                       )}
 
