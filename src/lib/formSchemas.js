@@ -286,15 +286,20 @@ export async function loadVocRehabSchema(entryTypeCode) {
       code: normalizedCode,
     });
 
-    const activeEntryTypes = (Array.isArray(matchingEntryTypes)
+      const activeEntryTypes = (Array.isArray(matchingEntryTypes)
       ? matchingEntryTypes
       : []
-    ).filter(
-      (entryType) =>
+    ).filter((entryType) => {
+      const entryTypeCode = String(entryType?.code || "")
+        .trim()
+        .toLowerCase();
+
+      return (
+        entryTypeCode === normalizedCode &&
         entryType?.is_active !== false &&
         entryType?.is_archived !== true
-    );
-
+      );
+    });
     if (activeEntryTypes.length !== 1) {
       console.warn(
         `[formSchemas] Expected exactly one active EntryType for ${normalizedCode}; found ${activeEntryTypes.length}.`
