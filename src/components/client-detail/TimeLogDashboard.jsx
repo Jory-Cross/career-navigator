@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Copy, Filter, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Filter, Trash2, AlertTriangle } from "lucide-react";
 import AuthorizationHoursCards from "@/components/client-detail/AuthorizationHoursCards";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
