@@ -32,15 +32,51 @@ import {
 import { resolveEntryTypeCode } from "@/lib/resolveEntryTypeCode";
 
 const timeLogDashboardApi = {
-  async listEmployees() {
+   async listEmployees() {
+    const currentUser = await base44.auth.me().catch(() => null);
+
+    if (!currentUser?.id) {
+      return [];
+    }
+
+    const currentRole = String(
+      currentUser.role || ""
+    ).toLowerCase();
+
+    if (
+      currentRole !== "admin" &&
+      currentRole !== "management"
+    ) {
+      return [
+        {
+          id: currentUser.id,
+          full_name: currentUser.full_name || "",
+          email: currentUser.email || "",
+          role: currentUser.role || "",
+        },
+      ];
+    }
+
     try {
-      const result = await base44.functions.invoke("getOrgUsers", {});
+      const result = await base44.functions.invoke(
+        "getOrgUsers",
+        {}
+      );
+
       const users = result?.data?.users || result?.data || [];
+
       return Array.isArray(users)
-        ? users.filter((u) => ["employee", "management", "admin"].includes(u.role))
+        ? users.filter((user) =>
+            ["employee", "management", "admin"].includes(
+              user.role
+            )
+          )
         : [];
     } catch (error) {
-      console.error("[TimeLogDashboard] Failed to load employees:", error);
+      console.error(
+        "[TimeLogDashboard] Failed to load employees:",
+        error
+      );
       return [];
     }
   },
