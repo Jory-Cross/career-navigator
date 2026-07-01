@@ -794,17 +794,31 @@ export default function TimeLogDashboard({
     }
   }, [clientId, nonAttendanceForm, onRefresh, resetNonAttendanceDialog]);
   
-  const handleDuplicate = useCallback(
+    const handleDuplicate = useCallback(
     async (entry) => {
       try {
         setIsDuplicatingId(entry.id);
-        const payload = buildDuplicatePayload(entry);
-        await timeLogDashboardApi.createTimeEntry(payload);
+
+        await timeLogDashboardApi.duplicateTimeEntry(entry);
+
         toast.success("Entry duplicated");
         await onRefresh?.();
       } catch (error) {
-        console.error("[TimeLogDashboard] Failed to duplicate entry:", error);
-        toast.error("Failed to duplicate entry");
+        const serverData =
+          error?.response?.data ||
+          error?.data ||
+          {};
+
+        const message =
+          serverData?.error ||
+          error?.message ||
+          "Failed to duplicate entry";
+
+        console.error(
+          "[TimeLogDashboard] Failed to duplicate entry:",
+          error
+        );
+        toast.error(message);
       } finally {
         if (mountedRef.current) {
           setIsDuplicatingId(null);
