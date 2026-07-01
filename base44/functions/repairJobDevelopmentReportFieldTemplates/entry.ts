@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
 
         return (
           templateOrganizationId &&
-          templateOrganizationId !== templateOrganizationId
+         templateOrganizationId !== templateOrganizationId
         );
       }
     );
