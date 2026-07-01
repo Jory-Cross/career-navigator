@@ -132,29 +132,37 @@ async function getVerifiedTemporaryRepairOperator(
     );
   }
 
+  const callerId = normalizeText(caller.id);
   const callerEmail = normalizeText(
     authenticatedUser?.email
   ).toLowerCase();
 
+  const callerRole = normalizeText(
+    caller.role
+  ).toLowerCase();
+
   const callerOrgId = normalizeText(caller.org_id);
 
-  const emailMatchesAuthorizedOperator =
-    callerEmail === TEMPORARY_REPAIR_OPERATOR_EMAIL;
+  const userIdMatchesAuthorizedOperator =
+    callerId === TEMPORARY_REPAIR_OPERATOR_USER_ID;
+
+  const callerIsAdmin = callerRole === "admin";
 
   const organizationMatchesComop =
     callerOrgId === COMOP_ORG_ID;
 
   const diagnostic = {
-    authenticated_user_id: normalizeText(authenticatedUser?.id) || null,
+    authenticated_user_id:
+      normalizeText(authenticatedUser?.id) || null,
     authenticated_email: callerEmail || null,
-    user_record_id: normalizeText(caller.id) || null,
+    user_record_id: callerId || null,
     user_record_email:
       normalizeText(caller.email).toLowerCase() || null,
-    user_record_role:
-      normalizeText(caller.role).toLowerCase() || null,
+    user_record_role: callerRole || null,
     user_record_org_id: callerOrgId || null,
-    email_matches_authorized_operator:
-      emailMatchesAuthorizedOperator,
+    user_id_matches_authorized_operator:
+      userIdMatchesAuthorizedOperator,
+    user_record_is_admin: callerIsAdmin,
     organization_matches_comop: organizationMatchesComop,
   };
 
@@ -163,19 +171,21 @@ async function getVerifiedTemporaryRepairOperator(
       caller,
       organizationId: callerOrgId,
       authorized:
-        emailMatchesAuthorizedOperator &&
+        userIdMatchesAuthorizedOperator &&
+        callerIsAdmin &&
         organizationMatchesComop,
       diagnostic,
     };
   }
 
   if (
-    !emailMatchesAuthorizedOperator ||
+    !userIdMatchesAuthorizedOperator ||
+    !callerIsAdmin ||
     !organizationMatchesComop
   ) {
     throw httpError(
       403,
-      "Only the specifically authorized COMOP repair operator may run this one-time repair."
+      "Only the specifically authorized active COMOP administrator may run this one-time repair."
     );
   }
 
