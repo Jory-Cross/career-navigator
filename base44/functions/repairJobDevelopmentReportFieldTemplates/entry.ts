@@ -131,7 +131,10 @@ async function getVerifiedTemporaryRepairOperator(
     );
   }
 
-  const callerEmail = normalizeText(caller.email).toLowerCase();
+    const callerEmail = normalizeText(
+    authenticatedUser?.email
+  ).toLowerCase();
+
   const callerOrgId = normalizeText(caller.org_id);
 
   if (
