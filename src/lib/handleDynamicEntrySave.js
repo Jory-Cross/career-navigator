@@ -1,157 +1,118 @@
-import { buildTimeEntryPayload } from "@/lib/timeEntryPayloadBuilder";
+import { base44 } from "@/api/base44Client";
 
-function freezePayload(payload) {
-  if (payload && typeof payload === "object") {
-    Object.freeze(payload);
+function isPlainObject(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
 
-    if (payload.form_data && typeof payload.form_data === "object") {
-      Object.freeze(payload.form_data);
+function hasOwn(record, key) {
+  return Object.prototype.hasOwnProperty.call(record || {}, key);
+}
+
+function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
+  const source = isPlainObject(payload) ? payload : {};
+
+  const timeEntry = {
+    entry_type_id: source.entry_type_id,
+    entry_type_code: source.entry_type_code,
+    date: source.date,
+    start_time: source.start_time ?? null,
+    end_time: source.end_time ?? null,
+    duration_minutes: source.duration_minutes,
+    location: source.location ?? null,
+    description: source.description ?? null,
+    employer_name: source.employer_name ?? null,
+    service_authorization_id:
+      source.service_authorization_id ?? null,
+    form_data: isPlainObject(source.form_data)
+      ? source.form_data
+      : {},
+  };
+
+  if (hasOwn(source, "status")) {
+    timeEntry.status = source.status;
+  }
+
+  if (!isUpdate) {
+    timeEntry.client_id =
+      clientId ?? source.client_id ?? null;
+
+    if (source.employee_id) {
+      timeEntry.employee_id = source.employee_id;
     }
   }
 
-  return payload;
+  return timeEntry;
 }
 
-function getSavedId(result) {
-  return (
-    result?.id ??
-    result?._id ??
-    result?.data?.id ??
-    result?.record?.id ??
-    result?.item?.id ??
-    (Array.isArray(result) ? result[0]?.id : null) ??
-    null
+async function invokeSecureTimeEntryMutation(request) {
+  const response = await base44.functions.invoke(
+    "mutateAuthorizedTimeEntry",
+    request
   );
-}
 
-function validateBeforeSave(payload) {
-  if (!payload || typeof payload !== "object") {
-    throw new Error("❌ Hard Guard Failed: payload is missing or invalid");
-  }
+  const data = response?.data || response || {};
 
-  if (!payload.entry_type_id) {
-    throw new Error("❌ Hard Guard Failed: missing entry_type_id");
-  }
-
-  if (
-    payload.duration_minutes == null ||
-    Number.isNaN(Number(payload.duration_minutes))
-  ) {
+  if (!data.ok || !data.entry?.id) {
     throw new Error(
-      `❌ Hard Guard Failed: invalid duration_minutes (${payload.duration_minutes})`
+      data.error ||
+        "Secure TimeEntry mutation did not return a saved entry."
     );
   }
 
-  if (typeof payload.form_data !== "object" || payload.form_data == null) {
-    throw new Error("❌ Hard Guard Failed: missing or invalid form_data");
-  }
-}
-
-async function runAfterSaveCallbacks({
-  refreshEntries,
-  closeModal,
-  onSuccess,
-  result,
-  mode,
-  payload,
-}) {
-  await refreshEntries?.();
-  await closeModal?.();
-  await onSuccess?.({ result, mode, payload });
+  return data.entry;
 }
 
 /**
- * Unified submit handler for all dynamic time entry forms.
- * Supports both CREATE and EDIT modes with the same payload builder.
+ * Secure persistence gateway for FormEngine TimeEntry workflows.
  *
- * @param {Object} config
- * @param {Object} config.entryType - Entry type metadata { id, code?, name? }
- * @param {Record<string, any>} config.formData - Form submission data
- * @param {Array} config.schema - Field schema
- * @param {Object|null} [config.existingEntry] - Existing entry for edit mode
- * @param {"create"|"edit"} [config.mode="create"] - Save mode
- * @param {Function} config.saveEntry - Persistence function
- * @param {Function} [config.refreshEntries] - Optional callback to refresh entry list
- * @param {Function} [config.closeModal] - Optional callback to close dialog/modal
- * @param {Function} [config.onSuccess] - Optional callback after successful save
- * @returns {Promise<Object>} Saved result
+ * Browser code submits only the requested fields. The server derives and
+ * enforces tenant scope, employee authority, EntryType configuration,
+ * authorization rules, reporting fields, and ReportFieldAnswer persistence.
+ *
+ * @param {Object} payload - Final payload from buildTimeEntryPayload
+ * @param {string|null} existingEntryId - Existing TimeEntry ID for updates
+ * @param {string|null} clientId - Client ID used only on new entries
+ * @returns {Promise<Object>} Saved TimeEntry record
  */
-export async function handleDynamicEntrySave({
-  entryType,
-  formData,
-  schema,
-  existingEntry = null,
-  mode = "create",
-  saveEntry,
-  refreshEntries,
-  closeModal,
-  onSuccess,
-}) {
-  if (typeof saveEntry !== "function") {
-    throw new Error("❌ Save failed: saveEntry must be a function");
-  }
-
-  console.log(
-    "[handleDynamicEntrySave] formData:",
-    JSON.stringify(formData, null, 2)
-  );
-  console.log(
-    "[handleDynamicEntrySave] schema:",
-    JSON.stringify(schema, null, 2)
-  );
-
-  const payload = buildTimeEntryPayload({
-    entryType,
-    formData,
-    schema,
-    existingEntry,
-  });
-
-  validateBeforeSave(payload);
-  freezePayload(payload);
-
-  const isEdit = mode === "edit" && !!existingEntry?.id;
-  const modeLabel = isEdit ? "EDIT" : "CREATE";
-
-  console.log(
-    `[handleDynamicEntrySave] ${modeLabel} FINAL PAYLOAD:`,
-    JSON.stringify(payload, null, 2)
-  );
-
-  let result;
-
-  if (isEdit) {
-    result = await saveEntry(payload, existingEntry.id);
-  } else {
-    result = await saveEntry(payload);
-  }
-
-  if (!result) {
-    throw new Error("❌ Save failed: no result returned from backend");
-  }
-
-  await runAfterSaveCallbacks({
-    refreshEntries,
-    closeModal,
-    onSuccess,
-    result,
-    mode: isEdit ? "edit" : "create",
-    payload,
-  });
-
-  const savedId = getSavedId(result);
-
-  if (savedId) {
-    console.log(
-      `✅ Entry ${isEdit ? "updated" : "created"} with ID:`,
-      savedId
-    );
-  } else {
-    console.warn(
-      "⚠️ Save succeeded but backend response had no top-level id",
-      result
+export async function persistTimeEntry(
+  payload,
+  existingEntryId,
+  clientId
+) {
+  if (!isPlainObject(payload)) {
+    throw new Error(
+      "Cannot persist entry: payload is missing or invalid."
     );
   }
 
-  return result;
+  if (existingEntryId) {
+    return await invokeSecureTimeEntryMutation({
+      action: "update",
+      entry_id: existingEntryId,
+      time_entry: buildSecureTimeEntryInput(
+        payload,
+        null,
+        true
+      ),
+    });
+  }
+
+  return await invokeSecureTimeEntryMutation({
+    action: "create",
+    time_entry: buildSecureTimeEntryInput(
+      payload,
+      clientId,
+      false
+    ),
+  });
 }
+
+/**
+ * Retained for compatibility with existing imports.
+ * TimeEntry persistence no longer keeps a browser-side user cache.
+ */
+export function clearPersistTimeEntryCaches() {}
