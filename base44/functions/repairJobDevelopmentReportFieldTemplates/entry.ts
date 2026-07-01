@@ -1,8 +1,8 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
 const COMOP_ORG_ID = "6a3df2c2de44fda1218fa2b4";
-const TEMPORARY_REPAIR_OPERATOR_EMAIL = "jory.cross@comop.org";
-
+const TEMPORARY_REPAIR_OPERATOR_USER_ID =
+  "69975ef9c220200194235cf0";
 const TARGET_ENTRY_TYPE_ID = "69d5bc80227279b112f75fe8";
 const STALE_ENTRY_TYPE_ID = "69d5a1cd88acc70a3b34db40";
 const ENTRY_TYPE_CODE = "job_development";
