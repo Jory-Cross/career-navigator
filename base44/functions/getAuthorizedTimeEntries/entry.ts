@@ -4,19 +4,15 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value: unknown) {
-  return normalizeText(value).toLowerCase();
-}
-
-function isActive(record: any) {
+function isActiveUser(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
-function resolveEntryOwnerId(
-  entry: any,
-  orgUserIds: Set<string>,
-  orgUserIdByEmail: Map<string, string>
-) {
+function isActiveManagerAssignment(record: any) {
+  return record?.is_active === true && record?.is_archived !== true;
+}
+
+function resolveEntryOwnerId(entry: any, organizationUserIds: Set<string>) {
   const idCandidates = [
     entry?.employee_id,
     entry?.staff_id,
@@ -26,23 +22,7 @@ function resolveEntryOwnerId(
   for (const candidate of idCandidates) {
     const userId = normalizeText(candidate);
 
-    if (userId && orgUserIds.has(userId)) {
-      return userId;
-    }
-  }
-
-  const emailCandidates = [
-    entry?.created_by,
-    entry?.created_by_email,
-    entry?.employee_email,
-    entry?.staff_email,
-  ];
-
-  for (const candidate of emailCandidates) {
-    const email = normalizeEmail(candidate);
-    const userId = orgUserIdByEmail.get(email);
-
-    if (userId) {
+    if (userId && organizationUserIds.has(userId)) {
       return userId;
     }
   }
@@ -63,34 +43,29 @@ Deno.serve(async (req) => {
       allUsers,
       allOrganizations,
       allClients,
-      allTimeEntries,
       allManagerAssignments,
-      allCohorts,
-      allCohortMemberships,
     ] = await Promise.all([
       base44.asServiceRole.entities.User.list(),
       base44.asServiceRole.entities.Organization.list(),
       base44.asServiceRole.entities.Client.list(),
-      base44.asServiceRole.entities.TimeEntry.list("-created_date"),
       base44.asServiceRole.entities.ManagerEmployeeAssignment.list(),
-      base44.asServiceRole.entities.CETrainingCohort.list(),
-      base44.asServiceRole.entities.CETrainingCohortMember.list(),
     ]);
 
     const caller = (Array.isArray(allUsers) ? allUsers : []).find(
       (record: any) => record.id === authenticatedUser.id
     );
 
-    if (!caller || !isActive(caller)) {
+    if (!caller || !isActiveUser(caller)) {
       return Response.json(
         { error: "Authenticated user record was not found or is inactive." },
         { status: 403 }
       );
     }
 
+    const callerId = normalizeText(caller.id);
     const organizationId = normalizeText(caller.org_id);
 
-    if (!organizationId) {
+    if (!callerId || !organizationId) {
       return Response.json(
         { error: "Your account is not assigned to an organization." },
         { status: 403 }
@@ -101,26 +76,29 @@ Deno.serve(async (req) => {
       Array.isArray(allOrganizations) ? allOrganizations : []
     ).find((record: any) => record.id === organizationId);
 
-    if (!organization || organization.is_active === false) {
+    if (
+      !organization ||
+      organization.is_active === false ||
+      organization.is_archived === true
+    ) {
       return Response.json(
         { error: "Your organization assignment is invalid or inactive." },
         { status: 403 }
       );
     }
 
+    const callerRole = normalizeText(caller.role).toLowerCase();
+    const callerAccessLevel = normalizeText(caller.access_level).toLowerCase();
+
     const isOrganizationAdmin =
-      caller.role === "admin" || caller.access_level === "admin";
+      callerRole === "admin" || callerAccessLevel === "admin";
 
-    const isManagement = caller.role === "management";
-    const isEmployee = caller.role === "employee";
-    const isCeInstructor = caller.role === "ce_instructor";
+    const isManagement =
+      callerRole === "management" || callerAccessLevel === "management";
 
-    if (
-      !isOrganizationAdmin &&
-      !isManagement &&
-      !isEmployee &&
-      !isCeInstructor
-    ) {
+    const isEmployee = callerRole === "employee";
+
+    if (!isOrganizationAdmin && !isManagement && !isEmployee) {
       return Response.json(
         { error: "You are not authorized to view staff Time Entries." },
         { status: 403 }
@@ -132,183 +110,95 @@ Deno.serve(async (req) => {
     ).filter(
       (record: any) =>
         normalizeText(record.org_id) === organizationId &&
-        isActive(record)
+        isActiveUser(record)
     );
 
-    const orgUserIds = new Set(
+    const organizationUserIds = new Set(
       organizationUsers
         .map((record: any) => normalizeText(record.id))
         .filter(Boolean)
     );
 
-    if (!orgUserIds.has(caller.id)) {
+    if (!organizationUserIds.has(callerId)) {
       return Response.json(
         { error: "Your account is not validly scoped to this organization." },
         { status: 403 }
       );
     }
 
-    const orgUserIdByEmail = new Map(
-      organizationUsers
-        .map((record: any) => [
-          normalizeEmail(record.email),
-          normalizeText(record.id),
-        ])
-        .filter(([email, userId]) => email && userId)
-    );
-
-    const clientsById = new Map(
+    const organizationClientIds = new Set(
       (Array.isArray(allClients) ? allClients : [])
         .filter(
           (client: any) =>
-            normalizeText(client.org_id) === organizationId
+            normalizeText(client?.org_id) === organizationId
         )
-        .map((client: any) => [client.id, client])
+        .map((client: any) => normalizeText(client?.id))
+        .filter(Boolean)
     );
 
-    const allowedAuthorIds = new Set<string>([caller.id]);
+    const allowedEmployeeIds = new Set<string>([callerId]);
 
     if (isOrganizationAdmin) {
-      for (const userId of orgUserIds) {
-        allowedAuthorIds.add(userId);
+      for (const userId of organizationUserIds) {
+        allowedEmployeeIds.add(userId);
       }
     }
 
     if (isManagement) {
-      const directReportIds = new Set<string>();
-
       for (const assignment of Array.isArray(allManagerAssignments)
         ? allManagerAssignments
         : []) {
-        if (
-          assignment?.manager_user_id === caller.id &&
-          assignment?.is_active !== false &&
-          orgUserIds.has(normalizeText(assignment?.employee_user_id))
-        ) {
-          directReportIds.add(
-            normalizeText(assignment.employee_user_id)
-          );
-        }
-      }
+        const assignmentOrganizationId = normalizeText(assignment?.org_id);
+        const managerUserId = normalizeText(assignment?.manager_user_id);
+        const employeeUserId = normalizeText(assignment?.employee_user_id);
 
-      for (const organizationUser of organizationUsers) {
         if (
-          organizationUser?.role === "employee" &&
-          organizationUser?.manager_id === caller.id
+          !isActiveManagerAssignment(assignment) ||
+          assignmentOrganizationId !== organizationId ||
+          managerUserId !== callerId ||
+          !organizationUserIds.has(employeeUserId)
         ) {
-          directReportIds.add(organizationUser.id);
+          continue;
         }
-      }
 
-      for (const userId of directReportIds) {
-        allowedAuthorIds.add(userId);
+        allowedEmployeeIds.add(employeeUserId);
       }
     }
 
-    const organizationCohortIds = new Set(
-      (Array.isArray(allCohorts) ? allCohorts : [])
-        .filter(
-          (cohort: any) =>
-            normalizeText(cohort.org_id) === organizationId
-        )
-        .map((cohort: any) => normalizeText(cohort.id))
-        .filter(Boolean)
+    const allTimeEntries = await base44.asServiceRole.entities.TimeEntry.list(
+      "-created_date"
     );
-
-    const activeOrganizationMemberships = (
-      Array.isArray(allCohortMemberships)
-        ? allCohortMemberships
-        : []
-    ).filter(
-      (membership: any) =>
-        membership?.is_active !== false &&
-        normalizeText(membership.org_id) === organizationId &&
-        organizationCohortIds.has(
-          normalizeText(membership.cohort_id)
-        ) &&
-        orgUserIds.has(normalizeText(membership.user_id))
-    );
-
-    const managedCohortIds = new Set(
-      activeOrganizationMemberships
-        .filter(
-          (membership: any) =>
-            membership.user_id === caller.id &&
-            normalizeText(membership.cohort_role) === "manager"
-        )
-        .map((membership: any) =>
-          normalizeText(membership.cohort_id)
-        )
-        .filter(Boolean)
-    );
-
-    for (const membership of activeOrganizationMemberships) {
-      if (managedCohortIds.has(normalizeText(membership.cohort_id))) {
-        allowedAuthorIds.add(normalizeText(membership.user_id));
-      }
-    }
 
     const visibleEntries = (
       Array.isArray(allTimeEntries) ? allTimeEntries : []
     ).filter((entry: any) => {
-      const entryOrganizationId = normalizeText(entry.org_id);
-      const clientId = normalizeText(entry.client_id);
+      const entryOrganizationId = normalizeText(entry?.org_id);
+      const clientId = normalizeText(entry?.client_id);
 
-      const ownerId = resolveEntryOwnerId(
-        entry,
-        orgUserIds,
-        orgUserIdByEmail
-      );
+      if (entryOrganizationId !== organizationId) {
+        return false;
+      }
 
-      if (clientId) {
-        const linkedClient = clientsById.get(clientId);
-
-        if (!linkedClient) {
-          return false;
-        }
-
-        if (
-          entryOrganizationId &&
-          entryOrganizationId !== organizationId
-        ) {
-          return false;
-        }
-      } else {
-        const hasValidEntryOrganization =
-          entryOrganizationId === organizationId;
-
-        const isSafeLegacyClientlessEntry =
-          !entryOrganizationId &&
-          Boolean(ownerId) &&
-          orgUserIds.has(ownerId);
-
-        if (
-          !hasValidEntryOrganization &&
-          !isSafeLegacyClientlessEntry
-        ) {
-          return false;
-        }
+      if (clientId && !organizationClientIds.has(clientId)) {
+        return false;
       }
 
       if (isOrganizationAdmin) {
         return true;
       }
 
-      return Boolean(ownerId && allowedAuthorIds.has(ownerId));
-    });
+      const ownerId = resolveEntryOwnerId(entry, organizationUserIds);
 
-    const legacyEntriesPendingBackfill = visibleEntries.filter(
-      (entry: any) => !normalizeText(entry.org_id)
-    );
+      return Boolean(ownerId && allowedEmployeeIds.has(ownerId));
+    });
 
     return Response.json({
       ok: true,
       organization_id: organizationId,
-      visible_employee_ids: Array.from(allowedAuthorIds),
+      visible_employee_ids: Array.from(allowedEmployeeIds),
       entries: visibleEntries,
       entry_count: visibleEntries.length,
-      legacy_entries_pending_org_backfill:
-        legacyEntriesPendingBackfill.length,
+      legacy_entries_pending_org_backfill: 0,
     });
   } catch (error: any) {
     console.error(
