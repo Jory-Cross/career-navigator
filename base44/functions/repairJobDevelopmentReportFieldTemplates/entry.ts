@@ -342,35 +342,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const {
-      caller,
-      organizationId: callerOrganizationId,
-    } = repairOperator;
-    const diagnoseAuthorization =
-      body?.diagnose_authorization === true;
-
-    const apply =
-      !diagnoseAuthorization &&
-      body?.apply === true;
-
-    const repairOperator =
-      await getVerifiedTemporaryRepairOperator(
-        base44,
-        authenticatedUser,
-        diagnoseAuthorization
-      );
-
-    if (diagnoseAuthorization) {
-      return Response.json({
-        ok: true,
-        action: "diagnose_authorization",
-        apply_ignored: true,
-        repair_authorized: repairOperator.authorized,
-        diagnostic: repairOperator.diagnostic,
-      });
-    }
-
-    const {
+       const {
       caller,
       organizationId: callerOrganizationId,
     } = repairOperator;
