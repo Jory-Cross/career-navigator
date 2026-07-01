@@ -327,19 +327,18 @@ Deno.serve(async (req) => {
 
     assertNoDuplicateExpectedFieldKeys(targetTemplates);
 
-    const foreignScopedTargetTemplates = targetTemplates.filter(
+      const foreignScopedTargetTemplates = targetTemplates.filter(
       (template: any) => {
-        const templateOrganizationId = normalizeText(
+        const templateRecordOrganizationId = normalizeText(
           template.org_id
         );
 
         return (
-          templateOrganizationId &&
-         templateOrganizationId !== templateOrganizationId
+          templateRecordOrganizationId &&
+          templateRecordOrganizationId !== templateOrganizationId
         );
       }
     );
-
     if (foreignScopedTargetTemplates.length > 0) {
       throw httpError(
         409,
