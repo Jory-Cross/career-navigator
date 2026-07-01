@@ -1401,8 +1401,15 @@ export async function getInterviews(clientId) {
  */
 export async function getTimeEntries(clientId) {
   if (!clientId) return [];
-  const rows = await base44.entities.TimeEntry.filter({ client_id: clientId });
-  return sortByNewest(asArray(rows).map(mapTimeEntry).filter(Boolean));
+
+  const rows = await getAuthorizedTimeEntryRows();
+
+  return sortByNewest(
+    asArray(rows)
+      .filter((entry) => entry?.client_id === clientId)
+      .map(mapTimeEntry)
+      .filter(Boolean)
+  );
 }
 
 /**
