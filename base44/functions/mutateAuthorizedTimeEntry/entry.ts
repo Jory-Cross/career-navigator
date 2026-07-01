@@ -19,6 +19,28 @@ const INTERNAL_TIME_ENTRY_ROLES = new Set([
   "employee",
 ]);
 
+const LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE: Record<
+  string,
+  Set<string>
+> = {
+  dspd: new Set([
+    "job_coaching",
+    "individual_support",
+    "community_outreach",
+    "job_application_process",
+    "resume_writing",
+    "job_interview_process",
+  ]),
+};
+
+function getLegacyStaticFormFields(entryTypeCode: unknown) {
+  return (
+    LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE[
+      normalizeText(entryTypeCode).toLowerCase()
+    ] || new Set<string>()
+  );
+}
+
 function httpError(status: number, message: string) {
   const error: any = new Error(message);
   error.status = status;
