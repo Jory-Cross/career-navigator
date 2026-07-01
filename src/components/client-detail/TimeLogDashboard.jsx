@@ -296,8 +296,7 @@ export default function TimeLogDashboard({
   });
   const [employees, setEmployees] = useState([]);
   const [resolvedEntryTypeCodes, setResolvedEntryTypeCodes] = useState({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [isDuplicatingId, setIsDuplicatingId] = useState(null);
+   const [showFilters, setShowFilters] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState(null);
   // Local override map: freshly-saved entries keyed by id.
   // Merged with the timeEntries prop so re-opening an entry uses the DB-fresh version
