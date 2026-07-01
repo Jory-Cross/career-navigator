@@ -279,17 +279,43 @@ const CONTEXT_DERIVED_FIELD_KEYS = new Set([
 
 export async function loadVocRehabSchema(entryTypeCode) {
   try {
-    const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
+       const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
     const { base44 } = await import("@/api/base44Client");
 
+    const matchingEntryTypes = await base44.entities.EntryType.filter({
+      code: normalizedCode,
+      is_active: true,
+    });
+
+    const activeEntryTypes = (Array.isArray(matchingEntryTypes)
+      ? matchingEntryTypes
+      : []
+    ).filter(
+      (entryType) =>
+        entryType?.is_active !== false &&
+        entryType?.is_archived !== true
+    );
+
+    if (activeEntryTypes.length !== 1) {
+      console.warn(
+        `[formSchemas] Expected exactly one active EntryType for ${normalizedCode}; found ${activeEntryTypes.length}.`
+      );
+      return [];
+    }
+
+    const entryType = activeEntryTypes[0];
+
     const templates = await base44.entities.ReportFieldTemplate.filter({
+      entry_type_id: entryType.id,
       entry_type_code: normalizedCode,
       is_active: true,
       is_internal_only: false,
     });
 
     if (!Array.isArray(templates) || templates.length === 0) {
-      console.warn(`[formSchemas] No ReportFieldTemplate found for ${normalizedCode}`);
+      console.warn(
+        `[formSchemas] No active ReportFieldTemplate found for ${normalizedCode} on EntryType ${entryType.id}.`
+      );
       return [];
     }
 
