@@ -81,8 +81,24 @@ const timeLogDashboardApi = {
     }
   },
 
-  async createTimeEntry(payload) {
-    return await base44.entities.TimeEntry.create(payload);
+    async duplicateTimeEntry(entry) {
+    const response = await base44.functions.invoke(
+      "mutateAuthorizedTimeEntry",
+      {
+        action: "create",
+        time_entry: buildSecureDuplicateInput(entry),
+      }
+    );
+
+    const data = response?.data || response || {};
+
+    if (!data.ok || !data.entry?.id) {
+      throw new Error(
+        data.error || "Secure TimeEntry duplication failed."
+      );
+    }
+
+    return data.entry;
   },
 
     async deleteTimeEntry(id) {
