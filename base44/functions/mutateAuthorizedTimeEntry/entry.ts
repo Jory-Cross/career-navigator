@@ -589,9 +589,16 @@ function getFieldValidation(
   templates: any[],
   formData: any,
   status: string,
-  requiresFieldAnswers: boolean
+  requiresFieldAnswers: boolean,
+  entryTypeCode: string
 ) {
-  if (requiresFieldAnswers && templates.length === 0) {
+  const legacyStaticFields = getLegacyStaticFormFields(entryTypeCode);
+
+  if (
+    requiresFieldAnswers &&
+    templates.length === 0 &&
+    legacyStaticFields.size === 0
+  ) {
     throw httpError(
       409,
       "This EntryType requires field answers but has no active field templates."
