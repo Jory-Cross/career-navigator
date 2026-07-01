@@ -49,8 +49,25 @@ const timeLogDashboardApi = {
     return await base44.entities.TimeEntry.create(payload);
   },
 
-  async deleteTimeEntry(id) {
-    return await base44.entities.TimeEntry.delete(id);
+    async deleteTimeEntry(id) {
+    const response = await base44.functions.invoke(
+      "mutateAuthorizedTimeEntry",
+      {
+        action: "delete",
+        entry_id: id,
+        time_entry: {},
+      }
+    );
+
+    const data = response?.data || response || {};
+
+    if (!data.ok || data.action !== "delete") {
+      throw new Error(
+        data.error || "Secure TimeEntry deletion failed."
+      );
+    }
+
+    return data;
   },
 };
 
