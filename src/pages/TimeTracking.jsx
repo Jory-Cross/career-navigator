@@ -152,32 +152,25 @@ const cohortMemberIds = useMemo(
   [cohortMembership.memberUserIds]
 );
 
-// Fetch cohort member user records so their names show in the staff column /
-// employee filter dropdown. Only fires when cohort returned members.
+// Cohort membership must not authorize or expand TimeEntry visibility.
+// Reuse only organization users already returned by getOrgUsers, avoiding a
+// browser-side User query that is blocked by User RLS.
 const cohortMemberIdList = useMemo(
   () => Array.from(cohortMemberIds),
   [cohortMemberIds]
 );
-const { data: cohortMemberUsers = [] } = useQuery({
-  queryKey: ["cohortMemberUsers", cohortMemberIdList.join(",")],
-  queryFn: async () => {
-    if (cohortMemberIdList.length === 0) return [];
-    try {
-      const users = await base44.entities.User.filter({
-        id: { $in: cohortMemberIdList },
-      });
-      return Array.isArray(users) ? users : [];
-    } catch {
-      return [];
-    }
-  },
-  enabled: cohortMemberIdList.length > 0,
-  staleTime: 60 * 1000,
-  gcTime: 5 * 60 * 1000,
-  refetchOnWindowFocus: false,
-  refetchOnReconnect: false,
-});
 
+const cohortMemberUsers = useMemo(() => {
+  if (cohortMemberIdList.length === 0) {
+    return [];
+  }
+
+  const cohortMemberIdSet = new Set(cohortMemberIdList);
+
+  return (allUsers || []).filter((user) =>
+    cohortMemberIdSet.has(user.id)
+  );
+}, [allUsers, cohortMemberIdList]);
 // Platform user set (from getOrgUsers) — separate from cohort users so we can
 // distinguish "platform-visible" from "cohort-only" in canMutate.
 const platformUsers = allUsers;
