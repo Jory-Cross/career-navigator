@@ -398,32 +398,77 @@ async function loadEntryType(
   requestedEntryTypeId: string,
   requestedEntryTypeCode: string
 ) {
-  if (!requestedEntryTypeId) {
-    throw httpError(400, "entry_type_id is required.");
-  }
+  let entryType: any = null;
 
-  const entryType =
-    await base44.asServiceRole.entities.EntryType.get(
-      requestedEntryTypeId
-    ).catch(() => null);
+  if (requestedEntryTypeId) {
+    entryType =
+      await base44.asServiceRole.entities.EntryType.get(
+        requestedEntryTypeId
+      ).catch(() => null);
 
-  if (!entryType || entryType.is_active === false) {
-    throw httpError(
-      404,
-      "The requested EntryType was not found or is inactive."
+    if (!entryType || entryType.is_active === false) {
+      throw httpError(
+        404,
+        "The requested EntryType was not found or is inactive."
+      );
+    }
+
+    const entryTypeOrganizationId = normalizeText(entryType.org_id);
+
+    if (
+      entryTypeOrganizationId &&
+      entryTypeOrganizationId !== organizationId
+    ) {
+      throw httpError(
+        403,
+        "The requested EntryType belongs to a different organization."
+      );
+    }
+  } else {
+    if (!requestedEntryTypeCode) {
+      throw httpError(
+        400,
+        "entry_type_id or entry_type_code is required."
+      );
+    }
+
+    const matchingEntryTypes =
+      await base44.asServiceRole.entities.EntryType.filter({
+        code: requestedEntryTypeCode,
+        is_active: true,
+      });
+
+    const allowedMatches = asArray(matchingEntryTypes).filter(
+      (candidate: any) => {
+        const candidateOrganizationId = normalizeText(
+          candidate?.org_id
+        );
+
+        return (
+          candidate?.is_active !== false &&
+          (
+            !candidateOrganizationId ||
+            candidateOrganizationId === organizationId
+          )
+        );
+      }
     );
-  }
 
-  const entryTypeOrganizationId = normalizeText(entryType.org_id);
+    if (allowedMatches.length === 0) {
+      throw httpError(
+        404,
+        "The requested EntryType was not found or is inactive."
+      );
+    }
 
-  if (
-    entryTypeOrganizationId &&
-    entryTypeOrganizationId !== organizationId
-  ) {
-    throw httpError(
-      403,
-      "The requested EntryType belongs to a different organization."
-    );
+    if (allowedMatches.length > 1) {
+      throw httpError(
+        409,
+        "Multiple active EntryTypes match this code. entry_type_id is required."
+      );
+    }
+
+    entryType = allowedMatches[0];
   }
 
   const canonicalEntryTypeCode = normalizeText(entryType.code);
@@ -447,7 +492,6 @@ async function loadEntryType(
 
   return entryType;
 }
-
 async function loadActiveTemplates(
   base44: any,
   organizationId: string,
