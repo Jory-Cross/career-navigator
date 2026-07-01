@@ -1045,14 +1045,9 @@ if (entryTypeFilter !== "all") {
     setEditingEntryTypeCode("");
   }, []);
 
-  const handleSaveNonAttendance = useCallback(async () => {
+    const handleSaveNonAttendance = useCallback(async () => {
     const client = clientById[nonAttendanceForm.client_id];
     const description = nonAttendanceForm.description.trim();
-
-    if (!effectiveUser?.id) {
-      toast.error("Staff user could not be identified.");
-      return;
-    }
 
     if (!client?.id) {
       toast.error("Please select a client.");
@@ -1069,43 +1064,61 @@ if (entryTypeFilter !== "all") {
       return;
     }
 
+    const eventLabel = nonAttendanceForm.event_type
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
     try {
       setSavingNonAttendance(true);
 
-      await base44.entities.TimeEntry.create({
-        org_id: effectiveUser.org_id || client.org_id || "",
-        client_id: client.id,
-        employee_id: effectiveUser.id,
-        entry_type_code: "client_non_attendance",
-        date: nonAttendanceForm.date,
-        start_time: "",
-        end_time: "",
-        duration_minutes: 0,
-        description,
-        form_data: {
-          event_type: nonAttendanceForm.event_type,
-          event_label: nonAttendanceForm.event_type.replace(/_/g, " "),
-          description,
-          created_from: "staff_time_tracking",
-        },
-        is_billable: false,
-        is_payroll_eligible: false,
-        is_reportable: false,
-        status: "submitted",
-      });
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedTimeEntry",
+        {
+          action: "create",
+          time_entry: {
+            client_id: client.id,
+            entry_type_code: "client_non_attendance",
+            date: nonAttendanceForm.date,
+            duration_minutes: 0,
+            description: `${eventLabel}: ${description}`,
+            status: "submitted",
+          },
+        }
+      );
+
+      const data = response?.data || response || {};
+
+      if (!data.ok || !data.entry?.id) {
+        throw new Error(
+          data.error ||
+            "Secure no-show/cancellation record creation failed."
+        );
+      }
 
       toast.success("No-show/cancellation record added");
       closeNonAttendanceDialog();
       await handleRefresh();
     } catch (error) {
-      console.error("Failed to save no-show/cancellation record", error);
-      toast.error("Failed to save record");
+      const serverData =
+        error?.response?.data ||
+        error?.data ||
+        {};
+
+      const message =
+        serverData?.error ||
+        error?.message ||
+        "Failed to save record";
+
+      console.error(
+        "Failed to save no-show/cancellation record",
+        error
+      );
+      toast.error(message);
       setSavingNonAttendance(false);
     }
   }, [
     clientById,
     closeNonAttendanceDialog,
-    effectiveUser,
     handleRefresh,
     nonAttendanceForm,
   ]);
