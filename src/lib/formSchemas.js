@@ -282,9 +282,8 @@ export async function loadVocRehabSchema(entryTypeCode) {
        const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
     const { base44 } = await import("@/api/base44Client");
 
-    const matchingEntryTypes = await base44.entities.EntryType.filter({
+        const matchingEntryTypes = await base44.entities.EntryType.filter({
       code: normalizedCode,
-      is_active: true,
     });
 
     const activeEntryTypes = (Array.isArray(matchingEntryTypes)
