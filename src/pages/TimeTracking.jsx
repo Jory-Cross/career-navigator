@@ -1011,10 +1011,50 @@ if (entryTypeFilter !== "all") {
    }
  }, [timeEntries]);
 
- const handleRefresh = useCallback(async () => {
+  const handleRefresh = useCallback(async () => {
   await queryClient.invalidateQueries({ queryKey: ["timeTracking", "entries"], refetchType: "all" });
   await queryClient.refetchQueries({ queryKey: ["timeTracking", "entries"] });
 }, [queryClient]);
+
+const handleTimeCardPeriodSelected = useCallback((period) => {
+  const periodStart =
+    typeof period?.period_start === "string"
+      ? period.period_start
+      : "";
+
+  const periodEnd =
+    typeof period?.period_end === "string"
+      ? period.period_end
+      : "";
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(periodStart) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(periodEnd) ||
+    periodStart > periodEnd
+  ) {
+    return;
+  }
+
+  setTimeCardPeriod((currentPeriod) => {
+    if (
+      currentPeriod?.period_start === periodStart &&
+      currentPeriod?.period_end === periodEnd &&
+      currentPeriod?.label === (period?.label || null)
+    ) {
+      return currentPeriod;
+    }
+
+    return {
+      period_start: periodStart,
+      period_end: periodEnd,
+      label: period?.label || null,
+    };
+  });
+
+  setSelectedMonth(periodStart.slice(0, 7));
+  setPeriodFilter("time_card");
+  setSelectedDay(null);
+}, []);
 
   // canMutate(entry) — Phase 5 view-only rule.
   // Cohort-only entries (visible exclusively through cohort membership) are
