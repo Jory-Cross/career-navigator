@@ -52,11 +52,28 @@
     },
     "approved_by": {
       "type": "string",
-      "description": "Email of staff member who approved/rejected"
+      "description": "User ID of the staff member who approved the entry"
     },
     "approved_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "rejected_by": {
+      "type": "string",
+      "description": "User ID of the staff member who rejected the entry"
+    },
+    "rejected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Required staff explanation of what the student must correct before resubmitting"
+    },
+    "resubmitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the most recent student correction/resubmission"
     }
   },
   "required": [
