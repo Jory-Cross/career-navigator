@@ -995,7 +995,12 @@ if (entryTypeFilter !== "all") {
     }
 
     return days;
-  }, [filteredWithoutDay, periodFilter, payrollRanges]);
+  }, [
+    filteredWithoutDay,
+    periodFilter,
+    payrollRanges,
+    timeCardDateRange,
+  ]);
 
   const getClientName = useCallback(
     (id) => {
