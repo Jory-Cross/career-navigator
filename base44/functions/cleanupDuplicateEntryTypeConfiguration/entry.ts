@@ -349,11 +349,12 @@ function buildPlan(
             config.canonicalCode
       );
 
-    return {
+       return {
       config,
       canonicalEntryType,
       staleEntryTypes,
       staleTemplates,
+      unsafeTemplates,
       timeEntriesNeedingUpdate,
       canonicalCodeNeedsUpdate:
         normalize(canonicalEntryType.code) !==
