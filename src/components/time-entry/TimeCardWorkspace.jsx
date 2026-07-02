@@ -254,21 +254,26 @@ function TimeCardEntries({ entries, clientById }) {
     );
   }, [entryTypeFilter, safeEntries]);
 
-  const ptoDateSet = useMemo(
-    () =>
-      new Set(
-        safeEntries
-          .filter(
-            (entry) =>
-              getEntryTypeCode(entry) === "pto" &&
-              /^\d{4}-\d{2}-\d{2}$/.test(
-                entry?.date || ""
-              )
-          )
-          .map((entry) => entry.date)
-      ),
-    [safeEntries]
-  );
+   const ptoMinutesByDate = useMemo(() => {
+    const minutesByDate = new Map();
+
+    for (const entry of safeEntries) {
+      if (
+        getEntryTypeCode(entry) !== "pto" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(entry?.date || "")
+      ) {
+        continue;
+      }
+
+      minutesByDate.set(
+        entry.date,
+        (minutesByDate.get(entry.date) || 0) +
+          Number(entry?.duration_minutes || 0)
+      );
+    }
+
+    return minutesByDate;
+  }, [safeEntries]);
 
   const entriesByDay = useMemo(() => {
     const grouped = new Map();
