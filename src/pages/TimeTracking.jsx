@@ -936,8 +936,9 @@ if (entryTypeFilter !== "all") {
     clientFilter,
     entryTypeFilter,
     resolvedEntryTypeCodes,
-    periodFilter,
+       periodFilter,
     payrollRanges,
+    timeCardDateRange,
   ]);
 
   const calendarDays = useMemo(() => {
