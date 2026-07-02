@@ -643,10 +643,18 @@ Deno.serve(async (req) => {
     const body: any = await req.json().catch(() => ({}));
     const action = normalizeText(body.action).toLowerCase();
 
-    if (!["list", "preview", "create", "replace"].includes(action)) {
+        if (
+      ![
+        "list",
+        "preview",
+        "create",
+        "replace",
+        "extend_start",
+      ].includes(action)
+    ) {
       throw httpError(
         400,
-        "action must be list, preview, create, or replace."
+        "action must be list, preview, create, replace, or extend_start."
       );
     }
 
