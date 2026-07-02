@@ -943,7 +943,9 @@ if (entryTypeFilter !== "all") {
 
   const calendarDays = useMemo(() => {
     const start =
-      periodFilter === "payroll1"
+      periodFilter === "time_card" && timeCardDateRange
+        ? timeCardDateRange.start
+        : periodFilter === "payroll1"
         ? payrollRanges.payroll1Start
         : periodFilter === "payroll2"
         ? payrollRanges.payroll2Start
@@ -952,7 +954,9 @@ if (entryTypeFilter !== "all") {
         : payrollRanges.monthStart;
 
     const end =
-      periodFilter === "payroll1"
+      periodFilter === "time_card" && timeCardDateRange
+        ? timeCardDateRange.end
+        : periodFilter === "payroll1"
         ? payrollRanges.payroll1End
         : periodFilter === "payroll2"
         ? payrollRanges.payroll2End
