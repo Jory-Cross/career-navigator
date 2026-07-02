@@ -683,8 +683,20 @@ if (entryTypeFilter !== "all") {
       continue;
     }
 
-    const parsedDate = parseDateOnly(entry.date);
+      const parsedDate = parseDateOnly(entry.date);
     if (!parsedDate) continue;
+
+    if (periodFilter === "time_card") {
+      if (
+        timeCardDateRange &&
+        parsedDate >= timeCardDateRange.start &&
+        parsedDate <= timeCardDateRange.end
+      ) {
+        result.push(entry);
+      }
+
+      continue;
+    }
 
     if (periodFilter === "payroll1") {
       if (
