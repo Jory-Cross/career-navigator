@@ -1306,9 +1306,14 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
             <input
               type="month"
               value={selectedMonth}
-              onChange={(e) => {
+                          onChange={(e) => {
                 setSelectedMonth(e.target.value);
                 setSelectedDay(null);
+
+                if (periodFilter === "time_card") {
+                  setTimeCardPeriod(null);
+                  setPeriodFilter("month");
+                }
               }}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
