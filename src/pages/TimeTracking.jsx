@@ -756,8 +756,9 @@ if (entryTypeFilter !== "all") {
   entryTypeFilter,
   resolvedEntryTypeCodes,
   periodFilter,
-  payrollRanges,
+   payrollRanges,
   selectedDay,
+  timeCardDateRange,
 ]);
 
   const duplicateIds = useMemo(() => {
