@@ -206,9 +206,19 @@ function TimeCardEntries({ entries, clientById }) {
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
   const [openDay, setOpenDay] = useState(null);
 
-  const safeEntries = useMemo(
+    const safeEntries = useMemo(
     () => asArray(entries),
     [entries]
+  );
+
+  const payPeriodTotalMinutes = useMemo(
+    () =>
+      safeEntries.reduce(
+        (total, entry) =>
+          total + Number(entry?.duration_minutes || 0),
+        0
+      ),
+    [safeEntries]
   );
 
   const entryTypeOptions = useMemo(() => {
