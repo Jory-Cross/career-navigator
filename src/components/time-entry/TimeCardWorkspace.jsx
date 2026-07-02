@@ -243,7 +243,7 @@ function TimeCardEntries({ entries, clientById }) {
       );
   }, [safeEntries]);
 
-  const filteredEntries = useMemo(() => {
+   const filteredEntries = useMemo(() => {
     if (entryTypeFilter === "all") {
       return safeEntries;
     }
@@ -253,6 +253,22 @@ function TimeCardEntries({ entries, clientById }) {
         getEntryTypeCode(entry) === entryTypeFilter
     );
   }, [entryTypeFilter, safeEntries]);
+
+  const ptoDateSet = useMemo(
+    () =>
+      new Set(
+        safeEntries
+          .filter(
+            (entry) =>
+              getEntryTypeCode(entry) === "pto" &&
+              /^\d{4}-\d{2}-\d{2}$/.test(
+                entry?.date || ""
+              )
+          )
+          .map((entry) => entry.date)
+      ),
+    [safeEntries]
+  );
 
   const entriesByDay = useMemo(() => {
     const grouped = new Map();
