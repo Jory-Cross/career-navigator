@@ -201,7 +201,7 @@ function cardContainsReferenceDate(card, referenceDate) {
   );
 }
 
-function TimeCardEntries({ entries }) {
+function TimeCardEntries({ entries, clientById }) {
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
 
   const safeEntries = useMemo(
