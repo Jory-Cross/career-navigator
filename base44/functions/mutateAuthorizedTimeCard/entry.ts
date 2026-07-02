@@ -1026,8 +1026,7 @@ function assertCardEntriesMatchSnapshot(
 function buildTimeCardSubmissionPayload(
   organizationId: string,
   employeeId: string,
-  periodStart: string,
-  periodEnd: string,
+  payPeriod: any,
   entries: any[],
   now: string,
   submittedByUserId: string,
@@ -1044,9 +1043,14 @@ function buildTimeCardSubmissionPayload(
   return {
     org_id: organizationId,
     employee_id: employeeId,
-    period_start: periodStart,
-    period_end: periodEnd,
-    period_key: getPeriodKey(periodStart, periodEnd),
+    period_start: payPeriod.period_start,
+    period_end: payPeriod.period_end,
+    period_key: payPeriod.period_key,
+    pay_period_schedule_id: payPeriod.schedule_id,
+    pay_period_schedule_version:
+      payPeriod.schedule_version,
+    pay_period_label: payPeriod.label,
+    pay_date: payPeriod.pay_date,
     status: "submitted",
     entry_ids: entryIds,
     entry_snapshot: buildEntrySnapshot(entries, now),
