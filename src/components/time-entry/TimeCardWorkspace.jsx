@@ -867,7 +867,7 @@ export default function TimeCardWorkspace({
           ) : null}
         </div>
 
-        {currentMyCard ? (
+             {currentMyCard && !preview ? (
           <div className="mt-4 rounded-lg border p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
