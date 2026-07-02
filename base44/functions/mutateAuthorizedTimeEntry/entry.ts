@@ -1880,11 +1880,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    const preparedEntry = buildBaseEntryValues(
+       const preparedEntry = buildBaseEntryValues(
       timeEntryInput,
       existingEntry,
       entryType,
       capabilities
+    );
+
+    await assertTimeCardPeriodsAreOpen(
+      base44,
+      organizationId,
+      existingEmployeeId,
+      [preparedEntry.date],
+      "changed"
     );
 
     const activeTemplates = await loadActiveTemplates(
