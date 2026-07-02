@@ -1,0 +1,115 @@
+{
+  "name": "TimeCard",
+  "type": "object",
+  "description": "Organization-scoped staff time-card record. A card captures a submitted immutable snapshot of one employee's TimeEntry records for one payroll period and supports manager return, approval, and archive review.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope. Required for every Time Card."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "User.id of the staff member who owns this Time Card."
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive first date of the payroll period."
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive last date of the payroll period."
+    },
+    "period_key": {
+      "type": "string",
+      "description": "Deterministic payroll-period identifier generated server-side from period_start and period_end."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "returned",
+        "approved"
+      ],
+      "default": "submitted",
+      "description": "submitted locks included entries from staff edits; returned reopens them for correction; approved is final and belongs in the archive."
+    },
+    "entry_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "TimeEntry IDs included in this submitted Time Card. Used for server-side lock enforcement."
+    },
+    "entry_snapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Immutable server-generated snapshot of all included entries as they existed at the most recent submission."
+    },
+    "total_minutes": {
+      "type": "number",
+      "description": "Server-calculated sum of duration_minutes for all entries in entry_ids."
+    },
+    "submission_revision": {
+      "type": "number",
+      "default": 1,
+      "description": "Starts at 1 and increments whenever a returned card is resubmitted."
+    },
+    "first_submitted_at": {
+      "type": "string",
+      "description": "Timestamp of the initial submission."
+    },
+    "last_submitted_at": {
+      "type": "string",
+      "description": "Timestamp of the most recent submission or resubmission."
+    },
+    "submitted_by_user_id": {
+      "type": "string",
+      "description": "User.id that submitted or most recently resubmitted this card."
+    },
+    "returned_at": {
+      "type": "string",
+      "description": "Timestamp of the most recent manager return-for-correction action."
+    },
+    "returned_by_user_id": {
+      "type": "string",
+      "description": "Manager User.id that most recently returned this card."
+    },
+    "return_note": {
+      "type": "string",
+      "description": "Manager explanation of corrections required before resubmission."
+    },
+    "approved_at": {
+      "type": "string",
+      "description": "Timestamp of manager approval."
+    },
+    "approved_by_user_id": {
+      "type": "string",
+      "description": "Manager User.id that approved this card."
+    },
+    "approval_note": {
+      "type": "string",
+      "description": "Optional manager approval note."
+    },
+    "archived_at": {
+      "type": "string",
+      "description": "Set server-side at approval. Approved cards remain viewable through the Time Card archive."
+    }
+  },
+  "required": [
+    "org_id",
+    "employee_id",
+    "period_start",
+    "period_end",
+    "period_key",
+    "status",
+    "entry_ids",
+    "entry_snapshot",
+    "total_minutes",
+    "submission_revision",
+    "first_submitted_at",
+    "last_submitted_at",
+    "submitted_by_user_id"
+  ]
+}
