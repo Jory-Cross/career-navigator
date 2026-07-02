@@ -319,7 +319,7 @@ function buildPlan(
         )
     );
 
-    const staleTemplates = templatesForMatchingTypes.filter(
+        const directStaleTemplates = templatesForMatchingTypes.filter(
       (template) =>
         staleEntryTypeIds.has(
           asString(template.entry_type_id)
@@ -346,6 +346,37 @@ function buildPlan(
         );
       }
     );
+
+    const approvedOrphanTemplateParentIdSet = new Set(
+      config.approvedOrphanTemplateParentIds
+    );
+
+    const approvedOrphanTemplates = codeOnlyTemplates.filter(
+      (template) =>
+        approvedOrphanTemplateParentIdSet.has(
+          asString(template.entry_type_id)
+        )
+    );
+
+    const unsafeTemplates = codeOnlyTemplates.filter(
+      (template) =>
+        !approvedOrphanTemplateParentIdSet.has(
+          asString(template.entry_type_id)
+        )
+    );
+
+    const staleTemplates = uniqueById([
+      ...directStaleTemplates,
+      ...approvedOrphanTemplates,
+    ]);
+
+    const unsafeTemplateParentEntryTypeIds = [
+      ...new Set(
+        unsafeTemplates
+          .map((template) => asString(template.entry_type_id))
+          .filter(Boolean)
+      ),
+    ];
 
           const unsafeTemplates = codeOnlyTemplates;
 
