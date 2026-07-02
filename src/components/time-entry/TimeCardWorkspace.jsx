@@ -204,6 +204,7 @@ function cardContainsReferenceDate(card, referenceDate) {
 
 function TimeCardEntries({ entries, clientById }) {
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
+  const [openDay, setOpenDay] = useState(null);
 
   const safeEntries = useMemo(
     () => asArray(entries),
