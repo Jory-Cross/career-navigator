@@ -477,10 +477,23 @@ Deno.serve(async (request) => {
       });
     }
 
-    if (confirmation !== APPLY_CONFIRMATION) {
+        if (confirmation !== APPLY_CONFIRMATION) {
       throw new RequestError(
         400,
         `Apply requires confirmation exactly equal to "${APPLY_CONFIRMATION}".`
+      );
+    }
+
+    const unsafeGroups = plan.groups.filter(
+      (group) => group.unsafeTemplates.length > 0
+    );
+
+    if (unsafeGroups.length > 0) {
+      throw new RequestError(
+        409,
+        `Cleanup cannot be applied while unsafe template references remain for: ${unsafeGroups
+          .map((group) => group.config.key)
+          .join(", ")}. Run preview and review unsafe_template_references first.`
       );
     }
 
