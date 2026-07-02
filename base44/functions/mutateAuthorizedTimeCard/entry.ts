@@ -60,8 +60,487 @@ function getTimeCardStatus(card: any) {
   return normalizeText(card?.status).toLowerCase();
 }
 
-function getPeriodKey(periodStart: string, periodEnd: string) {
-  return `${periodStart}__${periodEnd}`;
+function hasOwn(record: any, key: string) {
+  return Object.prototype.hasOwnProperty.call(record || {}, key);
+}
+
+function parseUtcDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    throw httpError(400, "A valid calendar date is required.");
+  }
+
+  return parsed;
+}
+
+function formatUtcDate(date: Date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function addDays(date: string, days: number) {
+  const parsed = parseUtcDate(date);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return formatUtcDate(parsed);
+}
+
+function daysBetween(startDate: string, endDate: string) {
+  const start = parseUtcDate(startDate).getTime();
+  const end = parseUtcDate(endDate).getTime();
+
+  return Math.round((end - start) / 86400000);
+}
+
+function getMonthStart(date: string) {
+  const parsed = parseUtcDate(date);
+
+  return formatUtcDate(
+    new Date(
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        1
+      )
+    )
+  );
+}
+
+function getMonthEnd(date: string) {
+  const parsed = parseUtcDate(date);
+
+  return formatUtcDate(
+    new Date(
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth() + 1,
+        0
+      )
+    )
+  );
+}
+
+function getSchedulePeriodKey(
+  scheduleId: string,
+  scheduleVersion: number,
+  periodStart: string,
+  periodEnd: string
+) {
+  return `${scheduleId}__v${scheduleVersion}__${periodStart}__${periodEnd}`;
+}
+
+function getScheduleVersion(schedule: any) {
+  const version = asNumber(schedule?.version, 0);
+
+  if (!Number.isInteger(version) || version < 1) {
+    throw httpError(
+      409,
+      "The active payroll schedule has an invalid version."
+    );
+  }
+
+  return version;
+}
+
+function validateScheduleTimeZone(schedule: any) {
+  const timeZone = normalizeText(schedule?.time_zone);
+
+  if (!timeZone) {
+    throw httpError(
+      409,
+      "The active payroll schedule has no time zone."
+    );
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+  } catch {
+    throw httpError(
+      409,
+      "The active payroll schedule has an invalid time zone."
+    );
+  }
+
+  return timeZone;
+}
+
+function assertResolvedPeriodFitsSchedule(
+  schedule: any,
+  periodStart: string,
+  periodEnd: string
+) {
+  const effectiveStart = normalizeDate(
+    schedule?.effective_start_date
+  );
+  const effectiveEnd = normalizeDate(
+    schedule?.effective_end_date
+  );
+
+  if (
+    (effectiveStart && periodStart < effectiveStart) ||
+    (effectiveEnd && periodEnd > effectiveEnd)
+  ) {
+    throw httpError(
+      409,
+      "The payroll schedule effective dates do not align to a complete payroll period."
+    );
+  }
+}
+
+function buildDefaultPayPeriodLabel(
+  schedule: any,
+  periodStart: string,
+  periodEnd: string
+) {
+  const scheduleName =
+    normalizeText(schedule?.name) || "Payroll Period";
+
+  return `${scheduleName}: ${periodStart} through ${periodEnd}`;
+}
+
+function resolveSemiMonthlyPeriod(
+  schedule: any,
+  referenceDate: string
+) {
+  const firstPeriodEndDay = asNumber(
+    schedule?.semi_monthly_first_period_end_day,
+    15
+  );
+
+  if (
+    !Number.isInteger(firstPeriodEndDay) ||
+    firstPeriodEndDay < 1 ||
+    firstPeriodEndDay > 28
+  ) {
+    throw httpError(
+      409,
+      "The active semi-monthly payroll schedule has an invalid first-period end day."
+    );
+  }
+
+  const parsedReferenceDate = parseUtcDate(referenceDate);
+  const referenceDay = parsedReferenceDate.getUTCDate();
+  const monthStart = getMonthStart(referenceDate);
+  const monthEnd = getMonthEnd(referenceDate);
+
+  const firstPeriodEnd = formatUtcDate(
+    new Date(
+      Date.UTC(
+        parsedReferenceDate.getUTCFullYear(),
+        parsedReferenceDate.getUTCMonth(),
+        firstPeriodEndDay
+      )
+    )
+  );
+
+  if (referenceDay <= firstPeriodEndDay) {
+    return {
+      period_start: monthStart,
+      period_end: firstPeriodEnd,
+    };
+  }
+
+  return {
+    period_start: addDays(firstPeriodEnd, 1),
+    period_end: monthEnd,
+  };
+}
+
+function resolveWeeklyPeriod(
+  schedule: any,
+  referenceDate: string
+) {
+  const dayIndexByName: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+  };
+
+  const startDayName = normalizeText(
+    schedule?.weekly_period_start_day
+  ).toLowerCase();
+
+  if (!Object.prototype.hasOwnProperty.call(dayIndexByName, startDayName)) {
+    throw httpError(
+      409,
+      "The active weekly payroll schedule has an invalid period-start day."
+    );
+  }
+
+  const referenceDayOfWeek =
+    parseUtcDate(referenceDate).getUTCDay();
+
+  const offset =
+    (referenceDayOfWeek - dayIndexByName[startDayName] + 7) % 7;
+
+  const periodStart = addDays(referenceDate, -offset);
+
+  return {
+    period_start: periodStart,
+    period_end: addDays(periodStart, 6),
+  };
+}
+
+function resolveBiweeklyPeriod(
+  schedule: any,
+  referenceDate: string
+) {
+  const anchorPeriodStart = normalizeDate(
+    schedule?.biweekly_anchor_period_start
+  );
+
+  if (!anchorPeriodStart) {
+    throw httpError(
+      409,
+      "The active biweekly payroll schedule has no anchor period start date."
+    );
+  }
+
+  const offsetDays = daysBetween(
+    anchorPeriodStart,
+    referenceDate
+  );
+
+  const wholePeriodsFromAnchor = Math.floor(offsetDays / 14);
+  const periodStart = addDays(
+    anchorPeriodStart,
+    wholePeriodsFromAnchor * 14
+  );
+
+  return {
+    period_start: periodStart,
+    period_end: addDays(periodStart, 13),
+  };
+}
+
+async function resolveOrganizationPayPeriod(
+  base44: any,
+  organizationId: string,
+  referenceDate: string
+) {
+  parseUtcDate(referenceDate);
+
+  const schedules =
+    await base44.asServiceRole.entities.PayPeriodSchedule.filter({
+      org_id: organizationId,
+    });
+
+  const matchingSchedules = asArray(schedules).filter(
+    (schedule: any) => {
+      const effectiveStart = normalizeDate(
+        schedule?.effective_start_date
+      );
+
+      const effectiveEnd = normalizeDate(
+        schedule?.effective_end_date
+      );
+
+      return (
+        normalizeText(schedule?.org_id) === organizationId &&
+        schedule?.is_active !== false &&
+        Boolean(effectiveStart) &&
+        effectiveStart <= referenceDate &&
+        (!effectiveEnd || effectiveEnd >= referenceDate)
+      );
+    }
+  );
+
+  if (matchingSchedules.length === 0) {
+    throw httpError(
+      409,
+      "No active payroll schedule applies to this date for your organization."
+    );
+  }
+
+  if (matchingSchedules.length > 1) {
+    throw httpError(
+      409,
+      "Multiple active payroll schedules apply to this date. An organization administrator must resolve the schedule overlap."
+    );
+  }
+
+  const schedule = matchingSchedules[0];
+  const scheduleId = normalizeText(schedule?.id);
+
+  if (!scheduleId) {
+    throw httpError(
+      409,
+      "The active payroll schedule has no valid ID."
+    );
+  }
+
+  const scheduleVersion = getScheduleVersion(schedule);
+  const scheduleType = normalizeText(
+    schedule?.schedule_type
+  ).toLowerCase();
+
+  const timeZone = validateScheduleTimeZone(schedule);
+
+  let resolvedPeriod: {
+    period_start: string;
+    period_end: string;
+    period_key?: string;
+    label?: string;
+    pay_date?: string | null;
+  };
+
+  if (scheduleType === "semi_monthly") {
+    resolvedPeriod = resolveSemiMonthlyPeriod(
+      schedule,
+      referenceDate
+    );
+  } else if (scheduleType === "weekly") {
+    resolvedPeriod = resolveWeeklyPeriod(
+      schedule,
+      referenceDate
+    );
+  } else if (scheduleType === "biweekly") {
+    resolvedPeriod = resolveBiweeklyPeriod(
+      schedule,
+      referenceDate
+    );
+  } else if (scheduleType === "custom_calendar") {
+    const calendarPeriods =
+      await base44.asServiceRole.entities.PayPeriodCalendarPeriod.filter({
+        pay_period_schedule_id: scheduleId,
+      });
+
+    const matchingCalendarPeriods = asArray(
+      calendarPeriods
+    ).filter(
+      (calendarPeriod: any) =>
+        normalizeText(calendarPeriod?.org_id) ===
+          organizationId &&
+        normalizeText(
+          calendarPeriod?.pay_period_schedule_id
+        ) === scheduleId &&
+        asNumber(calendarPeriod?.schedule_version, 0) ===
+          scheduleVersion &&
+        calendarPeriod?.is_active !== false &&
+        normalizeDate(calendarPeriod?.period_start) <=
+          referenceDate &&
+        normalizeDate(calendarPeriod?.period_end) >=
+          referenceDate
+    );
+
+    if (matchingCalendarPeriods.length === 0) {
+      throw httpError(
+        409,
+        "No active custom payroll period contains the selected date."
+      );
+    }
+
+    if (matchingCalendarPeriods.length > 1) {
+      throw httpError(
+        409,
+        "Multiple custom payroll periods contain the selected date. An organization administrator must resolve the overlap."
+      );
+    }
+
+    const calendarPeriod = matchingCalendarPeriods[0];
+    const periodStart = normalizeDate(
+      calendarPeriod?.period_start
+    );
+    const periodEnd = normalizeDate(
+      calendarPeriod?.period_end
+    );
+
+    if (!periodStart || !periodEnd || periodStart > periodEnd) {
+      throw httpError(
+        409,
+        "The active custom payroll period has invalid dates."
+      );
+    }
+
+    resolvedPeriod = {
+      period_start: periodStart,
+      period_end: periodEnd,
+      period_key:
+        normalizeText(calendarPeriod?.period_key) ||
+        getSchedulePeriodKey(
+          scheduleId,
+          scheduleVersion,
+          periodStart,
+          periodEnd
+        ),
+      label:
+        normalizeText(calendarPeriod?.label) ||
+        buildDefaultPayPeriodLabel(
+          schedule,
+          periodStart,
+          periodEnd
+        ),
+      pay_date:
+        normalizeDate(calendarPeriod?.pay_date) || null,
+    };
+  } else {
+    throw httpError(
+      409,
+      "The active payroll schedule has an unsupported schedule type."
+    );
+  }
+
+  const periodStart = normalizeDate(
+    resolvedPeriod.period_start
+  );
+  const periodEnd = normalizeDate(
+    resolvedPeriod.period_end
+  );
+
+  if (!periodStart || !periodEnd || periodStart > periodEnd) {
+    throw httpError(
+      409,
+      "The payroll schedule resolved an invalid payroll period."
+    );
+  }
+
+  assertResolvedPeriodFitsSchedule(
+    schedule,
+    periodStart,
+    periodEnd
+  );
+
+  return {
+    schedule_id: scheduleId,
+    schedule_version: scheduleVersion,
+    schedule_name: normalizeText(schedule?.name),
+    schedule_type: scheduleType,
+    time_zone: timeZone,
+    period_start: periodStart,
+    period_end: periodEnd,
+    period_key:
+      normalizeText(resolvedPeriod.period_key) ||
+      getSchedulePeriodKey(
+        scheduleId,
+        scheduleVersion,
+        periodStart,
+        periodEnd
+      ),
+    label:
+      normalizeText(resolvedPeriod.label) ||
+      buildDefaultPayPeriodLabel(
+        schedule,
+        periodStart,
+        periodEnd
+      ),
+    pay_date:
+      normalizeDate(resolvedPeriod.pay_date) || null,
+  };
 }
 
 function periodsOverlap(
