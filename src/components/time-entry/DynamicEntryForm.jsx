@@ -394,9 +394,29 @@ export default function DynamicEntryForm({
         if (typeof onSave === "function") {
           await onSave(savedEntry);
         }
-      } catch (err) {
+           } catch (err) {
         console.error("[DynamicEntryForm] Save failed:", err);
-        setError(err?.message || "Failed to save entry");
+
+        const serverMessage =
+          typeof err?.response?.data?.error === "string"
+            ? err.response.data.error.trim()
+            : "";
+
+        const timeCardLockMatch = serverMessage.match(
+          /^A (submitted|approved) Time Card locks this employee's entries for (.+?)\. A manager must return the Time Card for correction before this entry can be (?:changed|deleted|created)\.$/i
+        );
+
+        if (timeCardLockMatch) {
+          setError(
+            `This entry is part of a ${timeCardLockMatch[1].toLowerCase()} Time Card for ${timeCardLockMatch[2]}. It cannot be changed unless a manager returns the Time Card for correction.`
+          );
+        } else {
+          setError(
+            serverMessage ||
+              err?.message ||
+              "Failed to save entry."
+          );
+        }
       } finally {
         if (mountedRef.current) {
           setSaving(false);
