@@ -1,0 +1,170 @@
+{
+  "name": "PreEtsTimeCard",
+  "type": "object",
+  "description": "Organization-scoped Pre-ETS student payroll-period card. A student submits a locked snapshot of their PreEtsClientTimeEntry records to assigned staff; staff forwards it to manager/payroll; manager/payroll finalizes or returns it.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope."
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Pre-ETS Client.id that owns this card."
+    },
+    "assigned_staff_user_id": {
+      "type": "string",
+      "description": "Server-resolved assigned job coach/staff User.id responsible for the first review stage."
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive first date of the server-resolved payroll period."
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive last date of the server-resolved payroll period."
+    },
+    "period_key": {
+      "type": "string",
+      "description": "Deterministic payroll-period identifier resolved from the organization payroll schedule."
+    },
+    "pay_period_schedule_id": {
+      "type": "string",
+      "description": "PayPeriodSchedule.id used to resolve this card's period."
+    },
+    "pay_period_schedule_version": {
+      "type": "number",
+      "description": "Immutable version of the payroll schedule used for this card."
+    },
+    "pay_period_label": {
+      "type": "string",
+      "description": "Server-resolved human-readable payroll-period label."
+    },
+    "pay_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional server-resolved payroll disbursement date."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted_to_staff",
+        "returned_to_student",
+        "submitted_to_manager_payroll",
+        "returned_to_staff",
+        "finalized"
+      ],
+      "default": "submitted_to_staff",
+      "description": "Student submits to staff; staff forwards to manager/payroll; manager/payroll finalizes or returns to staff; staff may return to student for corrections."
+    },
+    "entry_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PreEtsClientTimeEntry IDs included in the submitted payroll-period snapshot."
+    },
+    "entry_snapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Immutable server-generated snapshot of included PreEtsClientTimeEntry records at the latest student submission."
+    },
+    "total_minutes": {
+      "type": "number",
+      "description": "Server-calculated sum of duration_minutes for all included entries."
+    },
+    "student_submission_revision": {
+      "type": "number",
+      "default": 1,
+      "description": "Starts at 1 and increments when a student corrects and resubmits after staff return."
+    },
+    "staff_submission_revision": {
+      "type": "number",
+      "default": 0,
+      "description": "Starts at 0 and increments each time staff submits or resubmits the card to manager/payroll."
+    },
+    "first_student_submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_student_submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "student_submitted_by_user_id": {
+      "type": "string",
+      "description": "Pre-ETS student User.id that most recently submitted the card."
+    },
+    "returned_to_student_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "returned_to_student_by_user_id": {
+      "type": "string",
+      "description": "Assigned staff User.id that returned the card to the student."
+    },
+    "return_to_student_note": {
+      "type": "string",
+      "description": "Required staff explanation of corrections the student must make."
+    },
+    "staff_submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "staff_submitted_by_user_id": {
+      "type": "string",
+      "description": "Assigned staff User.id that submitted the card to manager/payroll."
+    },
+    "returned_to_staff_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "returned_to_staff_by_user_id": {
+      "type": "string",
+      "description": "Manager/payroll User.id that returned the card to staff."
+    },
+    "return_to_staff_note": {
+      "type": "string",
+      "description": "Required manager/payroll explanation of what staff must resolve before resubmission."
+    },
+    "finalized_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when manager/payroll finalized this card."
+    },
+    "finalized_by_user_id": {
+      "type": "string",
+      "description": "Manager/payroll User.id that finalized the card."
+    },
+    "finalization_note": {
+      "type": "string",
+      "description": "Optional manager/payroll finalization note."
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set when finalized. Finalized cards appear in the Pre-ETS Time Card archive."
+    }
+  },
+  "required": [
+    "org_id",
+    "client_id",
+    "assigned_staff_user_id",
+    "period_start",
+    "period_end",
+    "period_key",
+    "pay_period_schedule_id",
+    "pay_period_schedule_version",
+    "pay_period_label",
+    "status",
+    "entry_ids",
+    "entry_snapshot",
+    "total_minutes",
+    "student_submission_revision",
+    "staff_submission_revision",
+    "first_student_submitted_at",
+    "last_student_submitted_at",
+    "student_submitted_by_user_id"
+  ]
+}
