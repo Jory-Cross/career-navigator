@@ -1292,27 +1292,13 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Time Tracking</h1>
-          <p className="text-sm text-slate-500">Log and review time spent with clients</p>
-        </div>
-
-                <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowNonAttendanceDialog(true)}
-            className="gap-2"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            No-Show / Cancellation
-          </Button>
-
-          <Button onClick={() => setShowNewEntry(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Entry
-          </Button>
-        </div>
+           <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Time Tracking
+        </h1>
+        <p className="text-sm text-slate-500">
+          Log and review time spent with clients
+        </p>
       </div>
 
            {!viewAsUser ? (
