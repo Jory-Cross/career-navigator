@@ -1335,7 +1335,12 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-             <SelectContent className="max-h-72 overflow-y-auto">
+                         <SelectContent className="max-h-72 overflow-y-auto">
+                {timeCardPeriod ? (
+                  <SelectItem value="time_card">
+                    Time Card Period
+                  </SelectItem>
+                ) : null}
                 <SelectItem value="payroll1">1st–15th</SelectItem>
                 <SelectItem value="payroll2">16th–End of Month</SelectItem>
                 <SelectItem value="week">This Week</SelectItem>
