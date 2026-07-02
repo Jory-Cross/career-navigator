@@ -1091,8 +1091,9 @@ Deno.serve(async (req) => {
     const body: any = await req.json().catch(() => ({}));
     const action = normalizeText(body.action).toLowerCase();
 
-    if (
+     if (
       ![
+        "resolve_period",
         "preview",
         "submit",
         "return_for_correction",
@@ -1101,10 +1102,9 @@ Deno.serve(async (req) => {
     ) {
       throw httpError(
         400,
-        "action must be preview, submit, return_for_correction, or approve."
+        "action must be resolve_period, preview, submit, return_for_correction, or approve."
       );
     }
-
     const {
       caller,
       organizationId,
