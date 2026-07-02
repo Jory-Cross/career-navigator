@@ -1447,7 +1447,15 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
           </div>
 
           <div className="flex items-end text-sm text-slate-500">
-            {periodFilter === "payroll1"
+                       {periodFilter === "time_card" && timeCardDateRange
+              ? `Time Card period: ${format(
+                  timeCardDateRange.start,
+                  "MMM d"
+                )}–${format(
+                  timeCardDateRange.end,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "payroll1"
               ? `Selected period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
                   payrollRanges.payroll1End,
                   "MMM d, yyyy"
