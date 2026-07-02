@@ -295,16 +295,17 @@ function TimeCardEntries({ entries, clientById }) {
 
           return leftKey.localeCompare(rightKey);
         }),
-        totalMinutes: dayEntries.reduce(
+               totalMinutes: dayEntries.reduce(
           (total, entry) =>
             total + Number(entry?.duration_minutes || 0),
           0
         ),
+        hasPto: ptoDateSet.has(date),
       }))
       .sort((left, right) =>
         left.date.localeCompare(right.date)
       );
-  }, [filteredEntries]);
+  }, [filteredEntries, ptoDateSet]);
 
   if (safeEntries.length === 0) {
     return (
