@@ -13,6 +13,11 @@ const AUTHORIZATION_COUNTED_STATUSES = new Set([
   "locked",
 ]);
 
+const TIME_CARD_LOCKED_STATUSES = new Set([
+  "submitted",
+  "approved",
+]);
+
 const INTERNAL_TIME_ENTRY_ROLES = new Set([
   "admin",
   "management",
