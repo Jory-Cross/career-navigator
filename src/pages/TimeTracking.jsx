@@ -887,8 +887,16 @@ if (entryTypeFilter !== "all") {
 
       if (!entry.date) return false;
 
-      const parsedDate = parseDateOnly(entry.date);
+           const parsedDate = parseDateOnly(entry.date);
       if (!parsedDate) return false;
+
+      if (periodFilter === "time_card") {
+        return Boolean(
+          timeCardDateRange &&
+            parsedDate >= timeCardDateRange.start &&
+            parsedDate <= timeCardDateRange.end
+        );
+      }
 
       if (periodFilter === "payroll1") {
         return (
