@@ -1206,8 +1206,9 @@ if (entryTypeFilter !== "all") {
       </div>
 
            {!viewAsUser ? (
-        <TimeCardWorkspace
+               <TimeCardWorkspace
           onTimeCardChanged={handleRefresh}
+          clientById={clientById}
         />
       ) : null}
 
