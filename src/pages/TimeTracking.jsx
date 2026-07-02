@@ -35,6 +35,7 @@ import {
 import { User, Filter, AlertTriangle, Pencil, Plus, Trash2, List, LayoutGrid } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
+import TimeCardWorkspace from "@/components/time-entry/TimeCardWorkspace";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { useCohortVisibleMembership } from "@/lib/cohort/useCohortVisibleMembership";
