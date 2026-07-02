@@ -653,6 +653,12 @@ function normalizeCardForResponse(card: any) {
     period_start: card.period_start,
     period_end: card.period_end,
     period_key: card.period_key,
+    pay_period_schedule_id:
+      card.pay_period_schedule_id ?? null,
+    pay_period_schedule_version:
+      asNumber(card.pay_period_schedule_version, 0) || null,
+    pay_period_label: card.pay_period_label ?? null,
+    pay_date: card.pay_date ?? null,
     status: card.status,
     entry_ids: asArray(card.entry_ids),
     total_minutes: asNumber(card.total_minutes, 0),
