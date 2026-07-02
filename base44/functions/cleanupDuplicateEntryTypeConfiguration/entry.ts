@@ -489,9 +489,13 @@ function summarizePlan(plan: ReturnType<typeof buildPlan>) {
         group.canonicalCodeNeedsUpdate,
       duplicate_entry_types_to_delete:
         group.staleEntryTypes.map(summarizeEntryType),
-      stale_templates_to_delete:
+            stale_templates_to_delete:
         group.staleTemplates.map(summarizeTemplate),
-         time_entries_to_reassign_or_normalize:
+      approved_orphan_templates_to_delete:
+        group.approvedOrphanTemplates.map(
+          summarizeTemplate
+        ),
+      time_entries_to_reassign_or_normalize:
         group.timeEntriesNeedingUpdate.map(
           summarizeTimeEntry
         ),
