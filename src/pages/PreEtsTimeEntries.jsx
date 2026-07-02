@@ -109,12 +109,87 @@ export default function PreEtsTimeEntries() {
     refetchOnMount: "always",
   });
 
+   const payrollRanges = useMemo(() => {
+    const [selectedYearRaw, selectedMonthRaw] = selectedMonth.split("-");
+    const selectedYear = Number(selectedYearRaw);
+    const selectedMonthIndex = Number(selectedMonthRaw) - 1;
+
+    const safeBaseDate =
+      Number.isFinite(selectedYear) &&
+      Number.isFinite(selectedMonthIndex) &&
+      selectedMonthIndex >= 0 &&
+      selectedMonthIndex <= 11
+        ? new Date(selectedYear, selectedMonthIndex, 1)
+        : new Date();
+
+    return {
+      payroll1Start: new Date(
+        safeBaseDate.getFullYear(),
+        safeBaseDate.getMonth(),
+        1
+      ),
+      payroll1End: new Date(
+        safeBaseDate.getFullYear(),
+        safeBaseDate.getMonth(),
+        15,
+        23,
+        59,
+        59
+      ),
+      payroll2Start: new Date(
+        safeBaseDate.getFullYear(),
+        safeBaseDate.getMonth(),
+        16
+      ),
+      payroll2End: new Date(
+        safeBaseDate.getFullYear(),
+        safeBaseDate.getMonth() + 1,
+        0,
+        23,
+        59,
+        59
+      ),
+      weekStart: startOfWeek(new Date()),
+      weekEnd: endOfWeek(new Date()),
+      monthStart: startOfMonth(safeBaseDate),
+      monthEnd: endOfMonth(safeBaseDate),
+    };
+  }, [selectedMonth]);
+
+  const students = useMemo(() => {
+    const studentById = new Map();
+
+    for (const entry of entries) {
+      const clientId = entry?.client_id;
+
+      if (!clientId || studentById.has(clientId)) {
+        continue;
+      }
+
+      studentById.set(clientId, {
+        id: clientId,
+        name: entry?.client_name || "Unknown student",
+      });
+    }
+
+    return Array.from(studentById.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [entries]);
+
   const filteredEntries = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
     return entries.filter((entry) => {
       const status = entry.status || "pending";
       const name = `${entry.client_name || ""}`.toLowerCase();
+
+      if (
+        studentFilter !== "all" &&
+        entry.client_id !== studentFilter
+      ) {
+        return false;
+      }
 
       if (statusFilter !== "all" && status !== statusFilter) {
         return false;
@@ -124,9 +199,54 @@ export default function PreEtsTimeEntries() {
         return false;
       }
 
+      if (periodFilter === "all") {
+        return true;
+      }
+
+      const entryDate = parseDateOnly(entry.date);
+
+      if (!entryDate) {
+        return false;
+      }
+
+      if (periodFilter === "payroll1") {
+        return (
+          entryDate >= payrollRanges.payroll1Start &&
+          entryDate <= payrollRanges.payroll1End
+        );
+      }
+
+      if (periodFilter === "payroll2") {
+        return (
+          entryDate >= payrollRanges.payroll2Start &&
+          entryDate <= payrollRanges.payroll2End
+        );
+      }
+
+      if (periodFilter === "week") {
+        return isWithinInterval(entryDate, {
+          start: payrollRanges.weekStart,
+          end: payrollRanges.weekEnd,
+        });
+      }
+
+      if (periodFilter === "month") {
+        return isWithinInterval(entryDate, {
+          start: payrollRanges.monthStart,
+          end: payrollRanges.monthEnd,
+        });
+      }
+
       return true;
     });
-  }, [entries, search, statusFilter]);
+  }, [
+    entries,
+    payrollRanges,
+    periodFilter,
+    search,
+    statusFilter,
+    studentFilter,
+  ]);
 
   const totalMinutes = useMemo(() => {
     return filteredEntries.reduce(
