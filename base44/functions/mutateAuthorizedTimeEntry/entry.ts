@@ -602,8 +602,15 @@ function assertAndMergeFormData(
   entryTypeCode: string,
   isUpdate: boolean
 ) {
-  const incoming = incomingFormData || {};
-  const existing = asObject(existingFormData);
+  const incoming = normalizeLegacyFormDataKeys(
+    incomingFormData,
+    entryTypeCode
+  );
+
+  const existing = normalizeLegacyFormDataKeys(
+    existingFormData,
+    entryTypeCode
+  );
 
   const allowedNewKeys = new Set(
     activeTemplates
