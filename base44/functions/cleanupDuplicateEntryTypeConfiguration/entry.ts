@@ -410,10 +410,12 @@ function summarizePlan(plan: ReturnType<typeof buildPlan>) {
         group.staleEntryTypes.map(summarizeEntryType),
       stale_templates_to_delete:
         group.staleTemplates.map(summarizeTemplate),
-      time_entries_to_reassign_or_normalize:
+         time_entries_to_reassign_or_normalize:
         group.timeEntriesNeedingUpdate.map(
           summarizeTimeEntry
         ),
+      unsafe_template_references:
+        group.unsafeTemplates.map(summarizeTemplate),
     })),
   };
 }
