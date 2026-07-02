@@ -15,12 +15,14 @@ const CONFIGS = [
     canonicalId: "69d5bc80227279b112f75feb",
     canonicalCode: "admin_time",
     acceptedCodes: ["admin_time"],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "csb_hours",
     canonicalId: "69d5bc80227279b112f75fee",
     canonicalCode: "csb_hours",
     acceptedCodes: ["csb_hours"],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "eom_reporting",
@@ -30,36 +32,46 @@ const CONFIGS = [
       "eom_reporting",
       "end_of_month_reporting",
     ],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "job_coaching",
     canonicalId: "69d5bc80227279b112f75fe9",
     canonicalCode: "job_coaching",
     acceptedCodes: ["job_coaching"],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "life_skills",
     canonicalId: "69d5bc80227279b112f75fea",
     canonicalCode: "life_skills",
     acceptedCodes: ["life_skills"],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "miscellaneous",
     canonicalId: "69d5bc80227279b112f75ff0",
     canonicalCode: "miscellaneous",
     acceptedCodes: ["misc", "miscellaneous"],
+    approvedOrphanTemplateParentIds: [],
   },
   {
     key: "pre_ets_training",
     canonicalId: "69d5bc80227279b112f75fec",
     canonicalCode: "pre_ets_training",
     acceptedCodes: ["pre_ets", "pre_ets_training"],
+    approvedOrphanTemplateParentIds: [
+      "69d57ebd852831529a9a584a",
+    ],
   },
   {
     key: "wsa",
     canonicalId: "69d5bc80227279b112f75fed",
     canonicalCode: "wsa",
     acceptedCodes: ["wsa"],
+    approvedOrphanTemplateParentIds: [
+      "69d57ebd852831529a9a584b",
+    ],
   },
 ];
 
