@@ -311,26 +311,8 @@ Deno.serve(async (req) => {
           return false;
         }
 
-        if (
-          entryOrganizationId &&
-          entryOrganizationId !== organizationId
-        ) {
-          return false;
-        }
-
-        if (
-          requestedStatus &&
-          requestedStatus !== "all" &&
-          entryStatus !== requestedStatus
-        ) {
-          return false;
-        }
-
-        if (!entryOrganizationId) {
-          legacyEntriesPendingOrgBackfill += 1;
-        }
-
-        return true;
+              legacy_entries_pending_org_backfill:
+        legacyEntriesPendingOrgBackfill,
       })
       .map((entry: any) =>
         projectEntry(
