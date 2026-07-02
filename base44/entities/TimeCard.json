@@ -21,9 +21,26 @@
       "format": "date",
       "description": "Inclusive last date of the payroll period."
     },
-    "period_key": {
+       "period_key": {
       "type": "string",
-      "description": "Deterministic payroll-period identifier generated server-side from period_start and period_end."
+      "description": "Deterministic payroll-period identifier generated server-side from the resolved organization payroll schedule."
+    },
+    "pay_period_schedule_id": {
+      "type": "string",
+      "description": "PayPeriodSchedule.id used to resolve this Time Card period."
+    },
+    "pay_period_schedule_version": {
+      "type": "number",
+      "description": "Immutable version of the payroll schedule used for this Time Card."
+    },
+    "pay_period_label": {
+      "type": "string",
+      "description": "Server-resolved human-readable payroll-period label."
+    },
+    "pay_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional server-resolved payroll disbursement date."
     },
     "status": {
       "type": "string",
