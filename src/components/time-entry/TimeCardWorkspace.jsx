@@ -1204,10 +1204,10 @@ export default function TimeCardWorkspace({
                 </div>
               ) : null}
 
-              <TimeCardEntries
+                         <TimeCardEntries
                 entries={selectedCard.entries}
+                clientById={clientById}
               />
-
               {mayReviewTimeCards &&
               selectedCard.status === "submitted" &&
               selectedCard.employee_id !== callerId ? (
