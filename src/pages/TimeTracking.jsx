@@ -76,9 +76,13 @@ export default function TimeTracking() {
   const resolveRunIdRef = useRef(0);
 
   const [periodFilter, setPeriodFilter] = useState(() => {
-  const today = new Date();
-  return today.getDate() <= 15 ? "payroll1" : "payroll2";
-});
+    const today = new Date();
+
+    return today.getDate() <= 15
+      ? "payroll1"
+      : "payroll2";
+  });
+  const [timeCardPeriod, setTimeCardPeriod] = useState(null);
   const [clientFilter, setClientFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [entryTypeFilter, setEntryTypeFilter] = useState("all");
