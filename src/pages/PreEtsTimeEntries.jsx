@@ -27,16 +27,37 @@ function getFunctionData(response) {
   return response?.data ?? response ?? {};
 }
 
-function safeDate(value) {
-  if (!value) return "—";
-
-  try {
-    return format(new Date(value), "MMM d, yyyy");
-  } catch {
-    return value;
+function parseDateOnly(value) {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    return null;
   }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
 }
 
+function safeDate(value) {
+  const parsed = parseDateOnly(value);
+
+  if (!parsed) {
+    return value || "—";
+  }
+
+  return format(parsed, "MMM d, yyyy");
+}
 function formatMinutes(minutes) {
   const value = Number(minutes || 0);
   const hours = Math.floor(value / 60);
