@@ -168,6 +168,24 @@ function getEntryTypeLabel(entry) {
     );
 }
 
+function getClientName(entry, clientById) {
+  if (!entry?.client_id) {
+    return "Staff / non-client entry";
+  }
+
+  const client = clientById?.[entry.client_id];
+
+  if (!client) {
+    return "Client record unavailable";
+  }
+
+  return (
+    `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
+    client.full_name ||
+    client.email ||
+    "Client"
+  );
+}
 function getEntryDescription(entry) {
   const description = String(entry?.description || "").trim();
 
