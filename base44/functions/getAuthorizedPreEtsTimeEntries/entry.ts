@@ -5,7 +5,6 @@ const READABLE_STATUSES = new Set([
   "pending",
   "approved",
   "rejected",
-  "paid",
 ]);
 
 function normalizeText(value: unknown) {
