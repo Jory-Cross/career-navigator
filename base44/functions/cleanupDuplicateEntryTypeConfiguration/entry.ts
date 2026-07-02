@@ -430,8 +430,9 @@ function buildPlan(
        return {
       config,
       canonicalEntryType,
-       staleEntryTypes,
+          staleEntryTypes,
       staleTemplates,
+      approvedOrphanTemplates,
       unsafeTemplates,
       unsafeTemplateParentEntryTypes,
       missingUnsafeTemplateParentEntryTypeIds,
