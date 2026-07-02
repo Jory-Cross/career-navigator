@@ -1161,6 +1161,75 @@ Deno.serve(async (req) => {
           normalizeDate(card.period_end) === periodEnd
       );
 
+        if (action === "preview" || action === "submit") {
+      const requestedEmployeeId =
+        normalizeText(timeCardInput.employee_id) || caller.id;
+
+      if (requestedEmployeeId !== caller.id) {
+        throw httpError(
+          403,
+          "Staff may only preview or submit their own Time Card."
+        );
+      }
+
+      await loadScopedEmployee(
+        base44,
+        organizationId,
+        requestedEmployeeId
+      );
+
+      if (
+        hasOwn(timeCardInput, "period_start") ||
+        hasOwn(timeCardInput, "period_end")
+      ) {
+        throw httpError(
+          400,
+          "Use reference_date to select a payroll period. period_start and period_end are resolved server-side from the organization payroll schedule."
+        );
+      }
+
+      const referenceDate = normalizeDate(
+        timeCardInput.reference_date ?? body.reference_date
+      );
+
+      if (!referenceDate) {
+        throw httpError(
+          400,
+          "reference_date is required in YYYY-MM-DD format."
+        );
+      }
+
+      const payPeriod = await resolveOrganizationPayPeriod(
+        base44,
+        organizationId,
+        referenceDate
+      );
+
+      const periodStart = payPeriod.period_start;
+      const periodEnd = payPeriod.period_end;
+
+      const existingCards = await loadEmployeeTimeCards(
+        base44,
+        organizationId,
+        requestedEmployeeId
+      );
+
+      const exactPeriodCard = existingCards.find(
+        (card: any) =>
+          normalizeText(card?.period_key) ===
+            payPeriod.period_key ||
+          (
+            normalizeDate(card?.period_start) === periodStart &&
+            normalizeDate(card?.period_end) === periodEnd &&
+            normalizeText(card?.pay_period_schedule_id) ===
+              payPeriod.schedule_id &&
+            asNumber(
+              card?.pay_period_schedule_version,
+              0
+            ) === payPeriod.schedule_version
+          )
+      );
+
       if (
         exactPeriodCard &&
         ["submitted", "approved"].includes(
@@ -1206,9 +1275,19 @@ Deno.serve(async (req) => {
           action,
           organization_id: organizationId,
           employee_id: requestedEmployeeId,
-          period_start: periodStart,
-          period_end: periodEnd,
-          period_key: getPeriodKey(periodStart, periodEnd),
+          reference_date: referenceDate,
+          pay_period: {
+            schedule_id: payPeriod.schedule_id,
+            schedule_version: payPeriod.schedule_version,
+            schedule_name: payPeriod.schedule_name,
+            schedule_type: payPeriod.schedule_type,
+            time_zone: payPeriod.time_zone,
+            period_start: periodStart,
+            period_end: periodEnd,
+            period_key: payPeriod.period_key,
+            label: payPeriod.label,
+            pay_date: payPeriod.pay_date,
+          },
           total_minutes: totalMinutes,
           total_hours: Number(
             (totalMinutes / 60).toFixed(2)
@@ -1238,8 +1317,7 @@ Deno.serve(async (req) => {
             buildTimeCardSubmissionPayload(
               organizationId,
               requestedEmployeeId,
-              periodStart,
-              periodEnd,
+              payPeriod,
               entries,
               now,
               caller.id,
@@ -1262,8 +1340,7 @@ Deno.serve(async (req) => {
           buildTimeCardSubmissionPayload(
             organizationId,
             requestedEmployeeId,
-            periodStart,
-            periodEnd,
+            payPeriod,
             entries,
             now,
             caller.id,
@@ -1279,7 +1356,6 @@ Deno.serve(async (req) => {
         time_card: normalizeCardForResponse(created),
       });
     }
-
     const timeCardId = normalizeText(
       body.time_card_id || body.id || timeCardInput.id
     );
