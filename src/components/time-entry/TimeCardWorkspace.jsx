@@ -929,11 +929,11 @@ export default function TimeCardWorkspace({
               </div>
             ) : null}
           </div>
-        ) : (
+               ) : !preview ? (
           <div className="mt-4 rounded-lg border border-dashed p-4 text-sm text-slate-500">
             No submitted or returned Time Card exists for the selected payroll period.
           </div>
-        )}
+        ) : null}
       </Card>
 
       {preview ? (
