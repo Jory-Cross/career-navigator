@@ -851,20 +851,36 @@ export default function TimeCardWorkspace({
             </p>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={loadCards}
-            disabled={loadingCards}
-            className="gap-2"
-          >
-            {loadingCards ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Refresh
-          </Button>
+                   <div className="flex flex-wrap gap-2">
+            {approvedCards.length > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setShowArchive((isVisible) => !isVisible)
+                }
+                className="gap-2"
+              >
+                <Archive className="h-4 w-4" />
+                {showArchive ? "Hide Archive" : "View Archive"}
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadCards}
+              disabled={loadingCards}
+              className="gap-2"
+            >
+              {loadingCards ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {error ? (
