@@ -891,14 +891,83 @@ export default function TimeCardWorkspace({
               Date within payroll period
             </label>
 
-            <input
+                      <input
               type="date"
               value={referenceDate}
-                               onChange={(event) => {
-                setReferenceDate(event.target.value);
+              onChange={async (event) => {
+                const nextReferenceDate = event.target.value;
+                const resolveRunId =
+                  ++periodResolveRunIdRef.current;
+
+                setReferenceDate(nextReferenceDate);
                 setPreview(null);
                 setError("");
                 setNotice("");
+
+                if (!nextReferenceDate) {
+                  return;
+                }
+
+                try {
+                  const response =
+                    await base44.functions.invoke(
+                      "mutateAuthorizedTimeCard",
+                      {
+                        action: "resolve_period",
+                        time_card: {
+                          reference_date: nextReferenceDate,
+                        },
+                      }
+                    );
+
+                  const data = getResponseData(response);
+
+                  if (
+                    !data.ok ||
+                    !data?.pay_period?.period_start ||
+                    !data?.pay_period?.period_end
+                  ) {
+                    throw new Error(
+                      data.error ||
+                        "Unable to resolve the payroll period for this date."
+                    );
+                  }
+
+                  if (
+                    resolveRunId !==
+                    periodResolveRunIdRef.current
+                  ) {
+                    return;
+                  }
+
+                  onTimeCardPeriodSelected?.({
+                    period_start:
+                      data.pay_period.period_start,
+                    period_end:
+                      data.pay_period.period_end,
+                    label:
+                      data.pay_period.label || null,
+                  });
+                } catch (periodResolveError) {
+                  if (
+                    resolveRunId !==
+                    periodResolveRunIdRef.current
+                  ) {
+                    return;
+                  }
+
+                  console.error(
+                    "[TimeCardWorkspace] Payroll-period resolution failed:",
+                    periodResolveError
+                  );
+
+                  setError(
+                    getErrorMessage(
+                      periodResolveError,
+                      "Unable to resolve the payroll period for this date."
+                    )
+                  );
+                }
               }}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
