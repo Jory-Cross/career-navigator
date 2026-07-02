@@ -335,7 +335,32 @@ function buildPlan(
       }
     );
 
-       const unsafeTemplates = codeOnlyTemplates;
+          const unsafeTemplates = codeOnlyTemplates;
+
+    const unsafeTemplateParentEntryTypeIds = [
+      ...new Set(
+        unsafeTemplates
+          .map((template) => asString(template.entry_type_id))
+          .filter(Boolean)
+      ),
+    ];
+
+    const unsafeTemplateParentEntryTypes =
+      unsafeTemplateParentEntryTypeIds
+        .map((entryTypeId) =>
+          scopedEntryTypeById.get(entryTypeId)
+        )
+        .filter(
+          (entryType): entryType is RecordLike =>
+            Boolean(entryType)
+        );
+
+    const missingUnsafeTemplateParentEntryTypeIds =
+      unsafeTemplateParentEntryTypeIds.filter(
+        (entryTypeId) =>
+          !scopedEntryTypeById.has(entryTypeId)
+      );
+
     const timeEntriesToNormalize = scopedTimeEntries.filter(
       (entry) => {
         const entryTypeId = asString(entry.entry_type_id);
