@@ -464,6 +464,7 @@ function TimeCardEntries({ entries, clientById }) {
 }
 export default function TimeCardWorkspace({
   onTimeCardChanged,
+  onTimeCardPeriodSelected,
   clientById = {},
 }) {
   const [referenceDate, setReferenceDate] = useState(
