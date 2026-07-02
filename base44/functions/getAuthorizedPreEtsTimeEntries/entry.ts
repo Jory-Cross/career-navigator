@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
       ? new Set([requestedClientId])
       : new Set(visibleClientById.keys());
 
-    let legacyEntriesPendingOrgBackfill = 0;
+      let legacyEntriesExcludedMissingOrgId = 0;
 
     const entries = asArray(allTimeEntries)
       .filter((entry: any) => {
