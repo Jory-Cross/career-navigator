@@ -370,17 +370,7 @@ function buildPlan(
       ...approvedOrphanTemplates,
     ]);
 
-    const unsafeTemplateParentEntryTypeIds = [
-      ...new Set(
-        unsafeTemplates
-          .map((template) => asString(template.entry_type_id))
-          .filter(Boolean)
-      ),
-    ];
-
-          const unsafeTemplates = codeOnlyTemplates;
-
-    const unsafeTemplateParentEntryTypeIds = [
+        const unsafeTemplateParentEntryTypeIds = [
       ...new Set(
         unsafeTemplates
           .map((template) => asString(template.entry_type_id))
