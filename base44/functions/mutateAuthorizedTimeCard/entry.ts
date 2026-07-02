@@ -1115,7 +1115,45 @@ Deno.serve(async (req) => {
 
    
 
-        if (action === "preview" || action === "submit") {
+      if (action === "resolve_period") {
+      const referenceDate = normalizeDate(
+        timeCardInput.reference_date ?? body.reference_date
+      );
+
+      if (!referenceDate) {
+        throw httpError(
+          400,
+          "reference_date is required in YYYY-MM-DD format."
+        );
+      }
+
+      const payPeriod = await resolveOrganizationPayPeriod(
+        base44,
+        organizationId,
+        referenceDate
+      );
+
+      return Response.json({
+        ok: true,
+        action,
+        organization_id: organizationId,
+        reference_date: referenceDate,
+        pay_period: {
+          schedule_id: payPeriod.schedule_id,
+          schedule_version: payPeriod.schedule_version,
+          schedule_name: payPeriod.schedule_name,
+          schedule_type: payPeriod.schedule_type,
+          time_zone: payPeriod.time_zone,
+          period_start: payPeriod.period_start,
+          period_end: payPeriod.period_end,
+          period_key: payPeriod.period_key,
+          label: payPeriod.label,
+          pay_date: payPeriod.pay_date,
+        },
+      });
+    }
+
+    if (action === "preview" || action === "submit") {
       const requestedEmployeeId =
         normalizeText(timeCardInput.employee_id) || caller.id;
 
