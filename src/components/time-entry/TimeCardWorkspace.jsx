@@ -382,6 +382,7 @@ function TimeCardEntries({ entries, clientById }) {
 }
 export default function TimeCardWorkspace({
   onTimeCardChanged,
+  clientById = {},
 }) {
   const [referenceDate, setReferenceDate] = useState(
     getTodayDateValue
