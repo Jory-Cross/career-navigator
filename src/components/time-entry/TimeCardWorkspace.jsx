@@ -647,10 +647,10 @@ export default function TimeCardWorkspace({
           "Unable to preview this Time Card."
         )
       );
-    } finally {
+       } finally {
       setPreviewLoading(false);
     }
-  }, [referenceDate]);
+  }, [onTimeCardPeriodSelected, referenceDate]);
 
   const handleSubmit = useCallback(async () => {
     if (!referenceDate) {
