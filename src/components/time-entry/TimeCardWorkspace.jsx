@@ -480,12 +480,9 @@ export default function TimeCardWorkspace({
   const [selectedCard, setSelectedCard] = useState(null);
   const [decision, setDecision] = useState(null);
   const [decisionNote, setDecisionNote] = useState("");
-   const [error, setError] = useState("");
+    const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [showActiveTimeCard, setShowActiveTimeCard] =
-    useState(true);
   const [showArchive, setShowArchive] = useState(false);
-
   const loadCards = useCallback(async () => {
     try {
       setLoadingCards(true);
