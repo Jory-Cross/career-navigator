@@ -387,9 +387,11 @@ function buildPlan(
        return {
       config,
       canonicalEntryType,
-      staleEntryTypes,
+       staleEntryTypes,
       staleTemplates,
       unsafeTemplates,
+      unsafeTemplateParentEntryTypes,
+      missingUnsafeTemplateParentEntryTypeIds,
       timeEntriesNeedingUpdate,
       canonicalCodeNeedsUpdate:
         normalize(canonicalEntryType.code) !==
