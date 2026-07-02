@@ -1321,7 +1321,17 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
 
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
-            <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); setSelectedDay(null); }}>
+                      <Select
+              value={periodFilter}
+              onValueChange={(v) => {
+                setPeriodFilter(v);
+                setSelectedDay(null);
+
+                if (v !== "time_card") {
+                  setTimeCardPeriod(null);
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
