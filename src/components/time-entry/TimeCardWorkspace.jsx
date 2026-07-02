@@ -345,7 +345,7 @@ function TimeCardEntries({ entries, clientById }) {
                   key={entry.id}
                   className="rounded-lg border bg-slate-50 p-3"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-medium text-slate-900">
                       {getEntryTypeLabel(entry)}
                     </div>
@@ -353,6 +353,10 @@ function TimeCardEntries({ entries, clientById }) {
                     <Badge variant="secondary">
                       {formatDuration(entry.duration_minutes)}
                     </Badge>
+                  </div>
+
+                  <div className="mt-1 text-sm font-medium text-slate-700">
+                    {getClientName(entry, clientById)}
                   </div>
 
                   {entry.start_time ? (
