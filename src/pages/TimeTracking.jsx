@@ -1285,8 +1285,9 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
       </div>
 
            {!viewAsUser ? (
-               <TimeCardWorkspace
+                           <TimeCardWorkspace
           onTimeCardChanged={handleRefresh}
+          onTimeCardPeriodSelected={handleTimeCardPeriodSelected}
           clientById={clientById}
         />
       ) : null}
