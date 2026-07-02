@@ -892,7 +892,10 @@ export default function TimeCardWorkspace({
           ) : null}
 
           <div className="mt-4">
-            <TimeCardEntries entries={preview.entries} />
+                      <TimeCardEntries
+              entries={preview.entries}
+              clientById={clientById}
+            />
           </div>
 
           <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-4">
