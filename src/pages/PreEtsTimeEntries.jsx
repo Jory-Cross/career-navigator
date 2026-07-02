@@ -69,7 +69,14 @@ function formatMinutes(minutes) {
 }
 
 export default function PreEtsTimeEntries() {
-  const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
+  const [periodFilter, setPeriodFilter] = useState(() => {
+    return new Date().getDate() <= 15 ? "payroll1" : "payroll2";
+  });
+  const [selectedMonth, setSelectedMonth] = useState(() =>
+    format(new Date(), "yyyy-MM")
+  );
+  const [studentFilter, setStudentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [rejectingEntryId, setRejectingEntryId] = useState(null);
