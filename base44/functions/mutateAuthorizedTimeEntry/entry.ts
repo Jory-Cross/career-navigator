@@ -103,6 +103,34 @@ function hasOwn(record: any, key: string) {
   return Object.prototype.hasOwnProperty.call(record || {}, key);
 }
 
+function normalizeLegacyFormDataKeys(
+  formData: unknown,
+  entryTypeCode: unknown
+) {
+  const source = asObject(formData);
+  const aliases =
+    LEGACY_FORM_FIELD_KEY_ALIASES_BY_ENTRY_TYPE[
+      normalizeText(entryTypeCode).toLowerCase()
+    ] || {};
+
+  const normalized = { ...source };
+
+  for (const [legacyKey, canonicalKey] of Object.entries(
+    aliases
+  )) {
+    if (
+      hasOwn(source, legacyKey) &&
+      !hasOwn(source, canonicalKey)
+    ) {
+      normalized[canonicalKey] = source[legacyKey];
+    }
+
+    delete normalized[legacyKey];
+  }
+
+  return normalized;
+}
+
 function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
