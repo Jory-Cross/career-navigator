@@ -1205,6 +1205,12 @@ if (entryTypeFilter !== "all") {
         </div>
       </div>
 
+           {!viewAsUser ? (
+        <TimeCardWorkspace
+          onTimeCardChanged={handleRefresh}
+        />
+      ) : null}
+
       {legacyEntries.length > 0 ? <LegacyDataWarning count={legacyEntries.length} /> : null}
 
       <Card className="p-4">
