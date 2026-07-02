@@ -290,11 +290,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const selectedClientIds = requestedClientId
+       const selectedClientIds = requestedClientId
       ? new Set([requestedClientId])
       : new Set(visibleClientById.keys());
 
-      let legacyEntriesExcludedMissingOrgId = 0;
+    let legacyEntriesExcludedMissingOrgId = 0;
 
     const entries = asArray(allTimeEntries)
       .filter((entry: any) => {
@@ -311,8 +311,23 @@ Deno.serve(async (req) => {
           return false;
         }
 
-              legacy_entries_pending_org_backfill:
-        legacyEntriesPendingOrgBackfill,
+        if (entryOrganizationId !== organizationId) {
+          if (!entryOrganizationId) {
+            legacyEntriesExcludedMissingOrgId += 1;
+          }
+
+          return false;
+        }
+
+        if (
+          requestedStatus &&
+          requestedStatus !== "all" &&
+          entryStatus !== requestedStatus
+        ) {
+          return false;
+        }
+
+        return true;
       })
       .map((entry: any) =>
         projectEntry(
@@ -327,8 +342,8 @@ Deno.serve(async (req) => {
       visible_client_ids: Array.from(selectedClientIds),
       entries,
       entry_count: entries.length,
-      legacy_entries_pending_org_backfill:
-        legacyEntriesPendingOrgBackfill,
+      legacy_entries_excluded_missing_org_id:
+        legacyEntriesExcludedMissingOrgId,
     });
   } catch (error: any) {
     console.error(
