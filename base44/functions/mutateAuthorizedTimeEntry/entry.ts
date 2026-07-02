@@ -1704,9 +1704,17 @@ Deno.serve(async (req) => {
         )
       : null;
 
-    if (existingClient) {
+       if (existingClient) {
       assertClientAccess(caller, capabilities, existingClient);
     }
+
+    await assertTimeCardPeriodsAreOpen(
+      base44,
+      organizationId,
+      existingEmployeeId,
+      [normalizeDate(existingEntry.date)],
+      action === "delete" ? "deleted" : "changed"
+    );
 
     if (
       hasOwn(timeEntryInput, "client_id") &&
