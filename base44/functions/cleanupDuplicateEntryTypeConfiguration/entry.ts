@@ -238,9 +238,19 @@ function buildPlan(
   allTemplates: RecordLike[],
   allTimeEntries: RecordLike[]
 ) {
-  const scopedEntryTypes = allEntryTypes.filter(isInScope);
+   const scopedEntryTypes = allEntryTypes.filter(isInScope);
   const scopedTemplates = allTemplates.filter(isInScope);
   const scopedTimeEntries = allTimeEntries.filter(isInScope);
+
+  const scopedEntryTypeById = new Map<string, RecordLike>();
+
+  for (const entryType of scopedEntryTypes) {
+    const id = recordId(entryType);
+
+    if (id) {
+      scopedEntryTypeById.set(id, entryType);
+    }
+  }
 
   const groups = CONFIGS.map((config) => {
     const acceptedCodeSet = new Set(config.acceptedCodes);
