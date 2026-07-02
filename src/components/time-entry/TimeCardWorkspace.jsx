@@ -927,10 +927,9 @@ export default function TimeCardWorkspace({
               </div>
             </div>
 
-            <Badge className="bg-blue-100 text-blue-800">
-              {formatDuration(preview.total_minutes)} ·{" "}
-              {asArray(preview.entries).length} entries
-            </Badge>
+                       <div className="text-sm text-slate-500">
+              Review all entries before submitting.
+            </div>
           </div>
 
           {preview.returned_time_card ? (
