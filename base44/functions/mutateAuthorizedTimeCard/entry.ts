@@ -1113,53 +1113,7 @@ Deno.serve(async (req) => {
 
     const timeCardInput = resolveTimeCardInput(body);
 
-    if (action === "preview" || action === "submit") {
-      const requestedEmployeeId =
-        normalizeText(timeCardInput.employee_id) || caller.id;
-
-      if (requestedEmployeeId !== caller.id) {
-        throw httpError(
-          403,
-          "Staff may only preview or submit their own Time Card."
-        );
-      }
-
-      await loadScopedEmployee(
-        base44,
-        organizationId,
-        requestedEmployeeId
-      );
-
-      const periodStart = normalizeDate(
-        timeCardInput.period_start
-      );
-      const periodEnd = normalizeDate(timeCardInput.period_end);
-
-      if (!periodStart || !periodEnd) {
-        throw httpError(
-          400,
-          "period_start and period_end are required in YYYY-MM-DD format."
-        );
-      }
-
-      if (periodStart > periodEnd) {
-        throw httpError(
-          400,
-          "period_start cannot be after period_end."
-        );
-      }
-
-      const existingCards = await loadEmployeeTimeCards(
-        base44,
-        organizationId,
-        requestedEmployeeId
-      );
-
-      const exactPeriodCard = existingCards.find(
-        (card: any) =>
-          normalizeDate(card.period_start) === periodStart &&
-          normalizeDate(card.period_end) === periodEnd
-      );
+   
 
         if (action === "preview" || action === "submit") {
       const requestedEmployeeId =
