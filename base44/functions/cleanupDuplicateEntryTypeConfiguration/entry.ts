@@ -451,8 +451,14 @@ function summarizePlan(plan: ReturnType<typeof buildPlan>) {
         group.timeEntriesNeedingUpdate.map(
           summarizeTimeEntry
         ),
-      unsafe_template_references:
+           unsafe_template_references:
         group.unsafeTemplates.map(summarizeTemplate),
+      unsafe_template_parent_entry_types:
+        group.unsafeTemplateParentEntryTypes.map(
+          summarizeEntryType
+        ),
+      unsafe_template_parent_entry_type_ids_without_record:
+        group.missingUnsafeTemplateParentEntryTypeIds,
     })),
   };
 }
