@@ -406,9 +406,9 @@ function TimeCardEntries({ entries, clientById }) {
                       : formatDate(day.date)}
                   </div>
 
-                  {day.hasPto ? (
+                                   {day.ptoMinutes > 0 ? (
                     <Badge className="bg-red-600 text-white hover:bg-red-600">
-                      PTO
+                      PTO · {formatDuration(day.ptoMinutes)}
                     </Badge>
                   ) : null}
                 </div>
