@@ -389,7 +389,7 @@ function TimeCardEntries({ entries, clientById }) {
                 }
                 className="flex w-full flex-wrap items-center justify-between gap-2 bg-slate-100 px-4 py-3 text-left transition hover:bg-slate-200"
               >
-                <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-2">
                   <ChevronDown
                     className={`h-4 w-4 text-slate-600 transition-transform ${
                       isOpen ? "rotate-180" : ""
@@ -401,6 +401,12 @@ function TimeCardEntries({ entries, clientById }) {
                       ? "Date unavailable"
                       : formatDate(day.date)}
                   </div>
+
+                  {day.hasPto ? (
+                    <Badge className="bg-red-600 text-white hover:bg-red-600">
+                      PTO
+                    </Badge>
+                  ) : null}
                 </div>
 
                 <Badge className="bg-slate-800 text-white">
