@@ -514,7 +514,7 @@ Deno.serve(async (req) => {
         organizationId
       );
 
-      const updated =
+           const updated =
         await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(
           entryId,
           {
@@ -522,6 +522,9 @@ Deno.serve(async (req) => {
             status: "pending",
             approved_by: "",
             approved_at: null,
+            rejected_by: "",
+            rejected_at: "",
+            rejection_reason: "",
             resubmitted_at: new Date().toISOString(),
           }
         );
