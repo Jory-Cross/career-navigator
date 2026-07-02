@@ -128,18 +128,44 @@ function getStatusClasses(status) {
   return "bg-slate-100 text-slate-700";
 }
 
-function getEntryTypeLabel(entry) {
-  const rawCode = String(entry?.entry_type_code || "")
-    .trim()
-    .replace(/_/g, " ");
+const ENTRY_TYPE_LABELS = {
+  admin_time: "Admin Time",
+  client_non_attendance: "No-Show / Cancellation",
+  csb: "CSB",
+  dspd: "DSPD",
+  eom_reporting: "End-of-Month Reporting",
+  job_coaching: "Job Coaching",
+  job_development: "Job Development",
+  life_skills: "Life Skills",
+  misc: "Miscellaneous",
+  miscellaneous: "Miscellaneous",
+  pre_ets: "Pre-ETS",
+  pto: "PTO",
+  wsa: "WSA",
+};
 
-  if (!rawCode) {
-    return "Time entry";
+function getEntryTypeCode(entry) {
+  return String(entry?.entry_type_code || "")
+    .trim()
+    .toLowerCase();
+}
+
+function getEntryTypeLabel(entry) {
+  const entryTypeCode = getEntryTypeCode(entry);
+
+  if (ENTRY_TYPE_LABELS[entryTypeCode]) {
+    return ENTRY_TYPE_LABELS[entryTypeCode];
   }
 
-  return rawCode.replace(/\b\w/g, (character) =>
-    character.toUpperCase()
-  );
+  if (!entryTypeCode) {
+    return "Time Entry";
+  }
+
+  return entryTypeCode
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
+    );
 }
 
 function getEntryDescription(entry) {
