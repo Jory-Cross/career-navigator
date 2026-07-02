@@ -92,7 +92,8 @@
       "description": "ID of GeneratedReport that locked this entry. Null if not yet in a final report."
     }
   },
-  "required": [
+   "required": [
+    "org_id",
     "employee_id",
     "date",
     "duration_minutes"
