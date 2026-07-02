@@ -305,13 +305,12 @@ function TimeCardEntries({ entries, clientById }) {
             total + Number(entry?.duration_minutes || 0),
           0
         ),
-        hasPto: ptoDateSet.has(date),
+               ptoMinutes: ptoMinutesByDate.get(date) || 0,
       }))
       .sort((left, right) =>
         left.date.localeCompare(right.date)
       );
-  }, [filteredEntries, ptoDateSet]);
-
+  }, [filteredEntries, ptoMinutesByDate]);
   if (safeEntries.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-4 text-sm text-slate-500">
