@@ -580,6 +580,41 @@ useEffect(() => {
   };
 }, [selectedMonth]);
 
+  const timeCardDateRange = useMemo(() => {
+    const periodStart =
+      typeof timeCardPeriod?.period_start === "string"
+        ? timeCardPeriod.period_start
+        : "";
+
+    const periodEnd =
+      typeof timeCardPeriod?.period_end === "string"
+        ? timeCardPeriod.period_end
+        : "";
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(periodStart) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(periodEnd)
+    ) {
+      return null;
+    }
+
+    const start = parseDateOnly(periodStart);
+    const end = parseDateOnly(periodEnd);
+
+    if (!start || !end || start > end) {
+      return null;
+    }
+
+    return {
+      start,
+      end,
+      label:
+        typeof timeCardPeriod?.label === "string"
+          ? timeCardPeriod.label
+          : null,
+    };
+  }, [timeCardPeriod]);
+
   const filteredClientIds = useMemo(() => {
   const result = [];
   for (const client of clients) {
