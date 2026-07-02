@@ -385,34 +385,118 @@ export default function PreEtsTimeEntries() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search student name"
-              className="md:max-w-sm"
-            />
+                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Month</label>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="md:w-48">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Period</label>
+              <Select
+                value={periodFilter}
+                onValueChange={setPeriodFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 overflow-y-auto">
+                  <SelectItem value="payroll1">1st–15th</SelectItem>
+                  <SelectItem value="payroll2">
+                    16th–End of Month
+                  </SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button
-              variant="outline"
-              onClick={refreshEntries}
-              className="gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Student</label>
+              <Select
+                value={studentFilter}
+                onValueChange={setStudentFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 overflow-y-auto">
+                  <SelectItem value="all">All Students</SelectItem>
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">
+                Search Student
+              </label>
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search student name"
+              />
+            </div>
+
+            <div className="flex flex-col justify-end gap-1">
+              <span className="min-h-5 text-xs text-slate-500">
+                {periodFilter === "payroll1"
+                  ? `Viewing: ${format(
+                      payrollRanges.payroll1Start,
+                      "MMM d"
+                    )}–${format(payrollRanges.payroll1End, "MMM d, yyyy")}`
+                  : periodFilter === "payroll2"
+                  ? `Viewing: ${format(
+                      payrollRanges.payroll2Start,
+                      "MMM d"
+                    )}–${format(payrollRanges.payroll2End, "MMM d, yyyy")}`
+                  : periodFilter === "week"
+                  ? `Viewing: ${format(
+                      payrollRanges.weekStart,
+                      "MMM d"
+                    )}–${format(payrollRanges.weekEnd, "MMM d, yyyy")}`
+                  : periodFilter === "month"
+                  ? `Viewing: ${format(
+                      payrollRanges.monthStart,
+                      "MMM d"
+                    )}–${format(payrollRanges.monthEnd, "MMM d, yyyy")}`
+                  : "Viewing: All Time"}
+              </span>
+
+              <Button
+                variant="outline"
+                onClick={refreshEntries}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
