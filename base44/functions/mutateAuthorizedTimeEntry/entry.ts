@@ -841,6 +841,109 @@ function assertMutable(
   }
 }
 
+function isDateWithinInclusivePeriod(
+  date: string,
+  periodStart: string,
+  periodEnd: string
+) {
+  return (
+    Boolean(date) &&
+    Boolean(periodStart) &&
+    Boolean(periodEnd) &&
+    periodStart <= date &&
+    date <= periodEnd
+  );
+}
+
+function getTimeCardPeriodLabel(timeCard: any) {
+  const savedLabel = normalizeText(
+    timeCard?.pay_period_label
+  );
+
+  if (savedLabel) {
+    return savedLabel;
+  }
+
+  const periodStart = normalizeDate(
+    timeCard?.period_start
+  );
+  const periodEnd = normalizeDate(
+    timeCard?.period_end
+  );
+
+  return periodStart && periodEnd
+    ? `${periodStart} through ${periodEnd}`
+    : "an invalid payroll period";
+}
+
+async function assertTimeCardPeriodsAreOpen(
+  base44: any,
+  organizationId: string,
+  employeeId: string,
+  dates: string[],
+  actionLabel: string
+) {
+  const normalizedDates = Array.from(
+    new Set(
+      dates.map(normalizeDate).filter(Boolean)
+    )
+  );
+
+  if (normalizedDates.length === 0) {
+    return;
+  }
+
+  const timeCards =
+    await base44.asServiceRole.entities.TimeCard.filter({
+      employee_id: employeeId,
+    });
+
+  const scopedLockedCards = asArray(timeCards).filter(
+    (timeCard: any) =>
+      normalizeText(timeCard?.org_id) === organizationId &&
+      normalizeText(timeCard?.employee_id) === employeeId &&
+      TIME_CARD_LOCKED_STATUSES.has(
+        normalizeText(timeCard?.status).toLowerCase()
+      )
+  );
+
+  for (const timeCard of scopedLockedCards) {
+    const periodStart = normalizeDate(
+      timeCard?.period_start
+    );
+    const periodEnd = normalizeDate(
+      timeCard?.period_end
+    );
+
+    if (!periodStart || !periodEnd || periodStart > periodEnd) {
+      throw httpError(
+        409,
+        "A submitted or approved Time Card has invalid payroll-period dates and must be repaired before Time Entries can be changed."
+      );
+    }
+
+    const locksRequestedDate = normalizedDates.some(
+      (date) =>
+        isDateWithinInclusivePeriod(
+          date,
+          periodStart,
+          periodEnd
+        )
+    );
+
+    if (locksRequestedDate) {
+      throw httpError(
+        409,
+        `A ${normalizeText(
+          timeCard.status
+        )} Time Card locks this employee's entries for ${getTimeCardPeriodLabel(
+          timeCard
+        )}. A manager must return the Time Card for correction before this entry can be ${actionLabel}.`
+      );
+    }
+  }
+}
+
 function buildBaseEntryValues(
   input: any,
   existingEntry: any,
