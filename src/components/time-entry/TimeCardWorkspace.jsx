@@ -542,35 +542,19 @@ export default function TimeCardWorkspace({
     [cards, callerId]
   );
 
-  const mostRecentSubmittedTimeCard = useMemo(() => {
-    return (
-      [...myCards]
-        .filter(
-          (card) =>
-            card.status === "submitted" ||
-            card.status === "returned"
-        )
-        .sort((left, right) => {
-          const leftSubmittedAt =
-            left.last_submitted_at ||
-            left.first_submitted_at ||
-            "";
-
-          const rightSubmittedAt =
-            right.last_submitted_at ||
-            right.first_submitted_at ||
-            "";
-
-          return rightSubmittedAt.localeCompare(
-            leftSubmittedAt
-          );
-        })[0] || null
-    );
-  }, [myCards]);
-
-  const currentMyCard = showActiveTimeCard
-    ? mostRecentSubmittedTimeCard
-    : null;
+    const currentMyCard = useMemo(
+    () =>
+      myCards.find(
+        (card) =>
+          cardContainsReferenceDate(
+            card,
+            referenceDate
+          ) &&
+          (card.status === "submitted" ||
+            card.status === "returned")
+      ) || null,
+    [myCards, referenceDate]
+  );
 
   useEffect(() => {
     if (
