@@ -668,11 +668,131 @@ Deno.serve(async (req) => {
       organizationId
     );
 
-    if (action === "list") {
+        if (action === "list") {
       return Response.json({
         ok: true,
         action,
         schedules: schedules.map(normalizeScheduleForResponse),
+      });
+    }
+
+    if (action === "extend_start") {
+      const scheduleId = normalizeText(
+        body.schedule_id ??
+          body.pay_period_schedule_id ??
+          body.id
+      );
+
+      const requestedStartDate = normalizeDate(
+        body.effective_start_date
+      );
+
+      if (!scheduleId) {
+        throw httpError(
+          400,
+          "schedule_id is required when extending a payroll schedule backward."
+        );
+      }
+
+      if (!requestedStartDate) {
+        throw httpError(
+          400,
+          "effective_start_date is required in YYYY-MM-DD format."
+        );
+      }
+
+      parseUtcDate(requestedStartDate);
+
+      const targetSchedule = schedules.find(
+        (schedule: any) =>
+          normalizeText(schedule?.id) === scheduleId &&
+          isScheduleActiveForResolver(schedule)
+      );
+
+      if (!targetSchedule) {
+        throw httpError(
+          404,
+          "The active payroll schedule selected for extension was not found."
+        );
+      }
+
+      if (normalizeDate(targetSchedule.effective_end_date)) {
+        throw httpError(
+          409,
+          "Only the currently open payroll schedule may be extended backward."
+        );
+      }
+
+      const currentStartDate = normalizeDate(
+        targetSchedule.effective_start_date
+      );
+
+      if (!currentStartDate) {
+        throw httpError(
+          409,
+          "The payroll schedule has no valid effective start date."
+        );
+      }
+
+      if (requestedStartDate >= currentStartDate) {
+        throw httpError(
+          400,
+          "effective_start_date must be earlier than the schedule's current effective start date."
+        );
+      }
+
+      const firstAddedPeriod = resolveNonCustomPeriod(
+        targetSchedule,
+        requestedStartDate
+      );
+
+      if (
+        firstAddedPeriod.period_start !==
+        requestedStartDate
+      ) {
+        throw httpError(
+          400,
+          "effective_start_date must be the first day of a complete payroll period."
+        );
+      }
+
+      const finalNewCoverageDate = addDays(
+        currentStartDate,
+        -1
+      );
+
+      const overlappingSchedule = schedules.find(
+        (schedule: any) =>
+          normalizeText(schedule?.id) !== scheduleId &&
+          isScheduleActiveForResolver(schedule) &&
+          scheduleOverlapsRange(
+            schedule,
+            requestedStartDate,
+            finalNewCoverageDate
+          )
+      );
+
+      if (overlappingSchedule) {
+        throw httpError(
+          409,
+          `Another payroll schedule already covers part of this historical period (${overlappingSchedule.id}).`
+        );
+      }
+
+      const updated =
+        await base44.asServiceRole.entities.PayPeriodSchedule.update(
+          targetSchedule.id,
+          {
+            effective_start_date: requestedStartDate,
+          }
+        );
+
+      return Response.json({
+        ok: true,
+        action,
+        prior_effective_start_date: currentStartDate,
+        first_added_period: firstAddedPeriod,
+        schedule: normalizeScheduleForResponse(updated),
       });
     }
 
