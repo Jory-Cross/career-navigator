@@ -1467,11 +1467,19 @@ Deno.serve(async (req) => {
         assertClientAccess(caller, capabilities, client);
       }
 
-      const preparedEntry = buildBaseEntryValues(
+           const preparedEntry = buildBaseEntryValues(
         timeEntryInput,
         null,
         entryType,
         capabilities
+      );
+
+      await assertTimeCardPeriodsAreOpen(
+        base44,
+        organizationId,
+        requestedEmployeeId,
+        [preparedEntry.date],
+        "created"
       );
 
       const activeTemplates = await loadActiveTemplates(
