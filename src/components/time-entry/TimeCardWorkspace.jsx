@@ -890,11 +890,23 @@ export default function TimeCardWorkspace({
             <input
               type="date"
               value={referenceDate}
-              onChange={(event) => {
-                setReferenceDate(event.target.value);
+                          onChange={(event) => {
+                const nextReferenceDate = event.target.value;
+
+                setReferenceDate(nextReferenceDate);
                 setPreview(null);
                 setError("");
                 setNotice("");
+
+                setShowActiveTimeCard(
+                  Boolean(
+                    mostRecentSubmittedTimeCard &&
+                      cardContainsReferenceDate(
+                        mostRecentSubmittedTimeCard,
+                        nextReferenceDate
+                      )
+                  )
+                );
               }}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
