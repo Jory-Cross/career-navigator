@@ -324,60 +324,85 @@ function TimeCardEntries({ entries, clientById }) {
           No entries match this entry-type filter.
         </div>
       ) : (
-        entriesByDay.map((day) => (
-          <div
-            key={day.date}
-            className="overflow-hidden rounded-lg border"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-100 px-4 py-3">
-              <div className="font-semibold text-slate-900">
-                {day.date === "undated"
-                  ? "Date unavailable"
-                  : formatDate(day.date)}
-              </div>
+         entriesByDay.map((day) => {
+          const isOpen = openDay === day.date;
 
-              <Badge className="bg-slate-800 text-white">
-                {formatDuration(day.totalMinutes)} total
-              </Badge>
-            </div>
+          return (
+            <div
+              key={day.date}
+              className="overflow-hidden rounded-lg border"
+            >
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() =>
+                  setOpenDay((currentDay) =>
+                    currentDay === day.date
+                      ? null
+                      : day.date
+                  )
+                }
+                className="flex w-full flex-wrap items-center justify-between gap-2 bg-slate-100 px-4 py-3 text-left transition hover:bg-slate-200"
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-600 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
 
-            <div className="space-y-2 p-3">
-              {day.entries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="rounded-lg border bg-slate-50 p-3"
-                >
-                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="font-medium text-slate-900">
-                      {getEntryTypeLabel(entry)}
-                    </div>
-
-                    <Badge variant="secondary">
-                      {formatDuration(entry.duration_minutes)}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-1 text-sm font-medium text-slate-700">
-                    {getClientName(entry, clientById)}
-                  </div>
-
-                  {entry.start_time ? (
-                    <div className="mt-1 text-sm text-slate-600">
-                      {entry.start_time}
-                      {entry.end_time
-                        ? ` – ${entry.end_time}`
-                        : ""}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-2 text-sm text-slate-700">
-                    {getEntryDescription(entry)}
+                  <div className="font-semibold text-slate-900">
+                    {day.date === "undated"
+                      ? "Date unavailable"
+                      : formatDate(day.date)}
                   </div>
                 </div>
-              ))}
+
+                <Badge className="bg-slate-800 text-white">
+                  {formatDuration(day.totalMinutes)} total
+                </Badge>
+              </button>
+
+              {isOpen ? (
+                <div className="space-y-2 border-t p-3">
+                  {day.entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border bg-slate-50 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="font-medium text-slate-900">
+                          {getEntryTypeLabel(entry)}
+                        </div>
+
+                        <Badge variant="secondary">
+                          {formatDuration(entry.duration_minutes)}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-1 text-sm font-medium text-slate-700">
+                        {getClientName(entry, clientById)}
+                      </div>
+
+                      {entry.start_time ? (
+                        <div className="mt-1 text-sm text-slate-600">
+                          {entry.start_time}
+                          {entry.end_time
+                            ? ` – ${entry.end_time}`
+                            : ""}
+                        </div>
+                      ) : null}
+
+                      <div className="mt-2 text-sm text-slate-700">
+                        {getEntryDescription(entry)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
