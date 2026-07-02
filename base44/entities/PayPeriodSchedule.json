@@ -1,0 +1,102 @@
+{
+  "name": "PayPeriodSchedule",
+  "type": "object",
+  "description": "Versioned organization payroll-period policy. Server-side Time Card logic resolves payroll periods from the active schedule and preserves the applied schedule version on each submitted Time Card.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope. Required for every payroll schedule."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable schedule name, such as COMOP Semi-Monthly Payroll."
+    },
+    "schedule_type": {
+      "type": "string",
+      "enum": [
+        "semi_monthly",
+        "biweekly",
+        "weekly",
+        "custom_calendar"
+      ],
+      "description": "Defines the server-side payroll-period resolution strategy."
+    },
+    "time_zone": {
+      "type": "string",
+      "description": "IANA time zone used to interpret payroll dates, such as America/Denver."
+    },
+    "effective_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "First date for which this schedule version applies."
+    },
+    "effective_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional final date for this version. Leave blank while active."
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Incremented when the organization replaces its payroll policy."
+    },
+    "supersedes_schedule_id": {
+      "type": "string",
+      "description": "Prior PayPeriodSchedule.id when this record replaces an older version."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Only one active payroll schedule version may resolve a given organization date."
+    },
+    "semi_monthly_first_period_end_day": {
+      "type": "number",
+      "default": 15,
+      "description": "For semi-monthly schedules, the first period runs from day 1 through this day; the second runs from the next day through month end."
+    },
+    "biweekly_anchor_period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "For biweekly schedules, the inclusive first day of a known 14-day pay period."
+    },
+    "weekly_period_start_day": {
+      "type": "string",
+      "enum": [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday"
+      ],
+      "description": "For weekly schedules, the first day of each payroll week."
+    },
+    "custom_calendar_note": {
+      "type": "string",
+      "description": "Optional internal note for custom-calendar schedules. Explicit periods will be stored separately."
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "User.id of the administrator who created this schedule version."
+    },
+    "retired_at": {
+      "type": "string",
+      "description": "Timestamp set when this schedule version is replaced or retired."
+    },
+    "retired_by_user_id": {
+      "type": "string",
+      "description": "User.id of the administrator who retired this schedule version."
+    }
+  },
+  "required": [
+    "org_id",
+    "name",
+    "schedule_type",
+    "time_zone",
+    "effective_start_date",
+    "version",
+    "is_active",
+    "created_by_user_id"
+  ]
+}
