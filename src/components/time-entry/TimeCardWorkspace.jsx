@@ -617,10 +617,21 @@ export default function TimeCardWorkspace({
 
       const data = getResponseData(response);
 
-      if (!data.ok) {
+           if (!data.ok) {
         throw new Error(
           data.error || "Unable to preview this Time Card."
         );
+      }
+
+      if (
+        data?.pay_period?.period_start &&
+        data?.pay_period?.period_end
+      ) {
+        onTimeCardPeriodSelected?.({
+          period_start: data.pay_period.period_start,
+          period_end: data.pay_period.period_end,
+          label: data.pay_period.label || null,
+        });
       }
 
       setPreview(data);
