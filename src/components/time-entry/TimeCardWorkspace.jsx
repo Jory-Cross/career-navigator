@@ -556,6 +556,26 @@ export default function TimeCardWorkspace({
     [myCards, referenceDate]
   );
 
+  useEffect(() => {
+    if (
+      !currentMyCard?.period_start ||
+      !currentMyCard?.period_end
+    ) {
+      return;
+    }
+
+    onTimeCardPeriodSelected?.({
+      period_start: currentMyCard.period_start,
+      period_end: currentMyCard.period_end,
+      label: currentMyCard.pay_period_label || null,
+    });
+  }, [
+    currentMyCard?.period_start,
+    currentMyCard?.period_end,
+    currentMyCard?.pay_period_label,
+    onTimeCardPeriodSelected,
+  ]);
+
   const submittedReviewCards = useMemo(
     () =>
       cards.filter(
