@@ -1200,12 +1200,13 @@ export default function TimeCardWorkspace({
         </Card>
       ) : null}
 
-      <Card className="p-4">
-        <div className="flex items-center gap-2">
-          <Archive className="h-5 w-5 text-slate-700" />
-          <h2 className="text-lg font-semibold">
-            Approved Time Card Archive
-          </h2>
+           {showArchive ? (
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <Archive className="h-5 w-5 text-slate-700" />
+            <h2 className="text-lg font-semibold">
+              Approved Time Card Archive
+            </h2>
         </div>
 
         <p className="mt-1 text-sm text-slate-500">
