@@ -184,7 +184,81 @@ function cardContainsReferenceDate(card, referenceDate) {
 }
 
 function TimeCardEntries({ entries }) {
-  const safeEntries = asArray(entries);
+  const [entryTypeFilter, setEntryTypeFilter] = useState("all");
+
+  const safeEntries = useMemo(
+    () => asArray(entries),
+    [entries]
+  );
+
+  const entryTypeOptions = useMemo(() => {
+    const optionsByCode = new Map();
+
+    for (const entry of safeEntries) {
+      const entryTypeCode =
+        getEntryTypeCode(entry) || "unknown";
+
+      if (!optionsByCode.has(entryTypeCode)) {
+        optionsByCode.set(
+          entryTypeCode,
+          getEntryTypeLabel(entry)
+        );
+      }
+    }
+
+    return Array.from(optionsByCode.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((left, right) =>
+        left.label.localeCompare(right.label)
+      );
+  }, [safeEntries]);
+
+  const filteredEntries = useMemo(() => {
+    if (entryTypeFilter === "all") {
+      return safeEntries;
+    }
+
+    return safeEntries.filter(
+      (entry) =>
+        getEntryTypeCode(entry) === entryTypeFilter
+    );
+  }, [entryTypeFilter, safeEntries]);
+
+  const entriesByDay = useMemo(() => {
+    const grouped = new Map();
+
+    for (const entry of filteredEntries) {
+      const dateKey =
+        /^\d{4}-\d{2}-\d{2}$/.test(entry?.date || "")
+          ? entry.date
+          : "undated";
+
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, []);
+      }
+
+      grouped.get(dateKey).push(entry);
+    }
+
+    return Array.from(grouped.entries())
+      .map(([date, dayEntries]) => ({
+        date,
+        entries: [...dayEntries].sort((left, right) => {
+          const leftKey = `${left?.start_time || ""}|${left?.id || ""}`;
+          const rightKey = `${right?.start_time || ""}|${right?.id || ""}`;
+
+          return leftKey.localeCompare(rightKey);
+        }),
+        totalMinutes: dayEntries.reduce(
+          (total, entry) =>
+            total + Number(entry?.duration_minutes || 0),
+          0
+        ),
+      }))
+      .sort((left, right) =>
+        left.date.localeCompare(right.date)
+      );
+  }, [filteredEntries]);
 
   if (safeEntries.length === 0) {
     return (
@@ -195,40 +269,95 @@ function TimeCardEntries({ entries }) {
   }
 
   return (
-    <div className="space-y-2">
-      {safeEntries.map((entry) => (
-        <div
-          key={entry.id}
-          className="rounded-lg border bg-slate-50 p-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="font-medium text-slate-900">
-              {getEntryTypeLabel(entry)}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 rounded-lg border bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-slate-600">
+          Showing {filteredEntries.length} of {safeEntries.length} entries
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <span>Entry type</span>
+
+          <select
+            value={entryTypeFilter}
+            onChange={(event) =>
+              setEntryTypeFilter(event.target.value)
+            }
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm text-slate-900"
+          >
+            <option value="all">All entry types</option>
+
+            {entryTypeOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {entriesByDay.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-4 text-sm text-slate-500">
+          No entries match this entry-type filter.
+        </div>
+      ) : (
+        entriesByDay.map((day) => (
+          <div
+            key={day.date}
+            className="overflow-hidden rounded-lg border"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-100 px-4 py-3">
+              <div className="font-semibold text-slate-900">
+                {day.date === "undated"
+                  ? "Date unavailable"
+                  : formatDate(day.date)}
+              </div>
+
+              <Badge className="bg-slate-800 text-white">
+                {formatDuration(day.totalMinutes)} total
+              </Badge>
             </div>
 
-            <Badge variant="secondary">
-              {formatDuration(entry.duration_minutes)}
-            </Badge>
-          </div>
+            <div className="space-y-2 p-3">
+              {day.entries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="rounded-lg border bg-slate-50 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-medium text-slate-900">
+                      {getEntryTypeLabel(entry)}
+                    </div>
 
-          <div className="mt-1 text-sm text-slate-600">
-            {formatDate(entry.date)}
-            {entry.start_time
-              ? ` · ${entry.start_time}${
-                  entry.end_time ? ` – ${entry.end_time}` : ""
-                }`
-              : ""}
-          </div>
+                    <Badge variant="secondary">
+                      {formatDuration(entry.duration_minutes)}
+                    </Badge>
+                  </div>
 
-          <div className="mt-2 text-sm text-slate-700">
-            {getEntryDescription(entry)}
+                  {entry.start_time ? (
+                    <div className="mt-1 text-sm text-slate-600">
+                      {entry.start_time}
+                      {entry.end_time
+                        ? ` – ${entry.end_time}`
+                        : ""}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-2 text-sm text-slate-700">
+                    {getEntryDescription(entry)}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }
-
 export default function TimeCardWorkspace({
   onTimeCardChanged,
 }) {
