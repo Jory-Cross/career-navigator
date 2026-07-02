@@ -43,6 +43,21 @@ const LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE: Record<
   ]),
 };
 
+const LEGACY_FORM_FIELD_KEY_ALIASES_BY_ENTRY_TYPE: Record<
+  string,
+  Record<string, string>
+> = {
+  csb_hours: {
+    billable_service_date: "billable_date",
+    life_skills_area: "skill_area",
+    specific_skill_taught: "skill_taught",
+    client_progress_mastery_level: "client_progress",
+    practice_homework_assigned: "practice_completed",
+    activity_description: "billable_activity",
+    observations_comments: "billable_observations",
+  },
+};
+
 function getLegacyStaticFormFields(entryTypeCode: unknown) {
   return (
     LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE[
@@ -50,7 +65,6 @@ function getLegacyStaticFormFields(entryTypeCode: unknown) {
     ] || new Set<string>()
   );
 }
-
 function httpError(status: number, message: string) {
   const error: any = new Error(message);
   error.status = status;
