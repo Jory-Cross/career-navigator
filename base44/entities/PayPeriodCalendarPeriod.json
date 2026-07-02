@@ -1,0 +1,70 @@
+{
+  "name": "PayPeriodCalendarPeriod",
+  "type": "object",
+  "description": "Organization-scoped explicit payroll period for a custom-calendar PayPeriodSchedule. Periods are resolved server-side and preserved on Time Cards for historical accuracy.",
+  "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope."
+    },
+    "pay_period_schedule_id": {
+      "type": "string",
+      "description": "PayPeriodSchedule.id that owns this explicit period."
+    },
+    "schedule_version": {
+      "type": "number",
+      "description": "Version of the payroll schedule when this calendar period was created."
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive first date of the payroll period."
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Inclusive final date of the payroll period."
+    },
+    "period_key": {
+      "type": "string",
+      "description": "Unique organization-scoped payroll-period key generated server-side."
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable payroll-period label."
+    },
+    "pay_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional payroll disbursement date."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "False when the period is retired or replaced before use."
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "Administrator User.id that created the explicit period."
+    },
+    "retired_at": {
+      "type": "string",
+      "description": "Timestamp when this explicit period was retired."
+    },
+    "retired_by_user_id": {
+      "type": "string",
+      "description": "Administrator User.id that retired this explicit period."
+    }
+  },
+  "required": [
+    "org_id",
+    "pay_period_schedule_id",
+    "schedule_version",
+    "period_start",
+    "period_end",
+    "period_key",
+    "label",
+    "is_active",
+    "created_by_user_id"
+  ]
+}
