@@ -300,6 +300,24 @@ function TimeCardEntries({ entries, clientById }) {
 
   return (
     <div className="space-y-4">
+          <div className="rounded-xl border-2 border-blue-200 bg-blue-50 px-5 py-4">
+        <div className="text-sm font-medium uppercase tracking-wide text-blue-800">
+          Pay Period Total
+        </div>
+
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+          <div className="text-3xl font-bold tracking-tight text-slate-900">
+            {formatDuration(payPeriodTotalMinutes)}
+          </div>
+
+          <div className="text-sm text-slate-600">
+            {safeEntries.length}{" "}
+            {safeEntries.length === 1 ? "entry" : "entries"}{" "}
+            in this payroll period
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-2 rounded-lg border bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-slate-600">
           Showing {filteredEntries.length} of {safeEntries.length} entries
