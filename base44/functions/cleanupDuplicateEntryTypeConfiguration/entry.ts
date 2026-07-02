@@ -325,13 +325,7 @@ function buildPlan(
       }
     );
 
-    if (codeOnlyTemplates.length > 0) {
-      throw new RequestError(
-        409,
-        `Unsafe template references were found for ${config.key}. Cleanup stopped.`
-      );
-    }
-
+       const unsafeTemplates = codeOnlyTemplates;
     const timeEntriesToNormalize = scopedTimeEntries.filter(
       (entry) => {
         const entryTypeId = asString(entry.entry_type_id);
