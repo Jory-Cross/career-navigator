@@ -488,7 +488,8 @@ export default function TimeCardWorkspace({
   const [decisionNote, setDecisionNote] = useState("");
     const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [showArchive, setShowArchive] = useState(false);
+   const [showArchive, setShowArchive] = useState(false);
+  const periodResolveRunIdRef = useRef(0);
   const loadCards = useCallback(async () => {
     try {
       setLoadingCards(true);
