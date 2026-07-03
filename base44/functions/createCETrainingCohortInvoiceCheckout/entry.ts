@@ -5,7 +5,11 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://ability4hire.com";
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 
-const ALLOWED_ROLES = new Set(["admin", "management", "ce_instructor"]);
+const ALLOWED_ACCESS_BY_ROLE = new Map([
+  ["admin", "admin"],
+  ["management", "staff"],
+  ["ce_instructor", "ce_training_portal"],
+]);
 
 const OPEN_ASSIGNMENT_STATUSES = new Set([
   "pending",
@@ -28,8 +32,12 @@ const OPEN_INVOICE_STATUSES = new Set([
 const PAYABLE_EVENT_STATUSES = new Set([
   "pending",
   "ready_for_checkout",
-  "payment_processing",
   "failed",
+]);
+
+const PRE_SETTLEMENT_ENROLLMENT_STATUSES = new Set([
+  "invited",
+  "payment_pending",
 ]);
 
 function fail(status: number, message: string) {
@@ -44,6 +52,20 @@ function text(value: unknown) {
 
 function email(value: unknown) {
   return text(value).toLowerCase();
+}
+
+function active(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true && text(record?.status).toLowerCase() !== "archived";
+}
+
+function validEmail(value: unknown) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email(value));
+}
+
+function publicError(error: any) {
+  return Number(error?.status)
+    ? text(error?.message)
+    : "Unable to create the CE Training cohort invoice checkout. Please try again or contact support.";
 }
 
 function registrationEventKey(orgId: string, studentEmail: string) {
@@ -89,70 +111,45 @@ async function invoiceKey(
 }
 
 async function getCallerRecord(base44: any, caller: any) {
-  const rows = await base44.asServiceRole.entities.User.filter({
-    id: caller.id,
+  const callerId = text(caller?.id);
+  if (!callerId) throw fail(401, "Sign in again before creating a cohort invoice checkout.");
+  const rows = await base44.asServiceRole.entities.User.filter({ id: callerId });
+  const record = Array.isArray(rows) ? rows.find((row) => text(row?.id) === callerId) : null;
+  if (!record) throw fail(401, "Sign in again before creating a cohort invoice checkout.");
+  if (!active(record)) throw fail(403, "Your account is inactive or archived and cannot create a cohort invoice checkout.");
+  if (!validEmail(record?.email)) throw fail(409, "Your account needs a valid email address before creating a checkout.");
+  const role = text(record?.role).toLowerCase();
+  const accessLevel = text(record?.access_level).toLowerCase();
+  if (ALLOWED_ACCESS_BY_ROLE.get(role) !== accessLevel) {
+    throw fail(403, "Only authorized CE organization users may create a cohort registration invoice.");
+  }
+  if (!text(record?.org_id)) throw fail(400, "Your account is not explicitly connected to an organization.");
+  return { ...record, role, access_level: accessLevel, org_id: text(record.org_id), email: email(record.email) };
+}
+
+async function getOrganization(base44: any, organizationId: string) {
+  const rows = await base44.asServiceRole.entities.Organization.filter({ id: organizationId });
+  const organization = Array.isArray(rows) ? rows.find((row) => text(row?.id) === organizationId) : null;
+  if (!organization) throw fail(404, "Your organization could not be found.");
+  if (!active(organization)) throw fail(409, "Your organization is inactive or archived and cannot create a cohort invoice checkout.");
+  return organization;
+}
+
+async function assertAuthorization(base44: any, caller: any, role: string, organizationId: string, cohortId: string) {
+  if (role === "admin") return;
+  const rows = await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+    org_id: organizationId,
+    cohort_id: cohortId,
+    user_id: caller.id,
   });
-
-  return Array.isArray(rows) && rows[0] ? rows[0] : caller;
-}
-
-async function resolveOrganizationId(
-  base44: any,
-  caller: any,
-  callerRecord: any,
-) {
-  const directOrgId = text(callerRecord?.org_id || caller?.org_id);
-
-  if (directOrgId) {
-    return directOrgId;
-  }
-
-  const callerEmail = email(callerRecord?.email || caller?.email);
-
-  const rows = callerEmail
-    ? await base44.asServiceRole.entities.Organization.filter({
-        owner_email: callerEmail,
-      })
-    : [];
-
-  return text(Array.isArray(rows) ? rows[0]?.id : "");
-}
-
-async function assertAuthorization(
-  base44: any,
-  caller: any,
-  role: string,
-  cohortId: string,
-) {
-  if (!ALLOWED_ROLES.has(role)) {
-    throw fail(
-      403,
-      "Only authorized CE organization users may create a cohort registration invoice.",
-    );
-  }
-
-  if (role !== "ce_instructor") {
-    return;
-  }
-
-  const rows =
-    await base44.asServiceRole.entities.CETrainingCohortMember.filter({
-      cohort_id: cohortId,
-      user_id: caller.id,
-    });
-
-  const isManager = (Array.isArray(rows) ? rows : []).some(
-    (membership) =>
-      membership.cohort_role === "manager" &&
-      membership.is_active !== false,
+  const isManager = (Array.isArray(rows) ? rows : []).some((membership) =>
+    text(membership?.org_id) === organizationId &&
+    text(membership?.cohort_id) === cohortId &&
+    text(membership?.user_id) === text(caller.id) &&
+    text(membership?.cohort_role).toLowerCase() === "manager" &&
+    active(membership)
   );
-
-  if (!isManager) {
-    throw fail(
-      403,
-      "You must be an active manager of this Training cohort to create its registration invoice.",
-    );
-  }
+  if (!isManager) throw fail(403, "You must be an active manager of this Training cohort to create its registration invoice.");
 }
 
 function selectedIds(value: unknown) {
@@ -191,8 +188,9 @@ async function getCheckout(invoice: any) {
 
   try {
     return await stripe.checkout.sessions.retrieve(sessionId);
-  } catch {
-    return null;
+  } catch (error) {
+    console.error("Unable to retrieve saved Stripe checkout session:", error);
+    throw fail(409, "The saved checkout session could not be verified. Please contact support before creating another checkout.");
   }
 }
 
@@ -223,6 +221,104 @@ function assertExactInvoiceSelection(
   }
 }
 
+function validateCompleteLineLinkage({
+  invoice,
+  line,
+  organizationId,
+  cohortId,
+  inviteById,
+  eventById,
+  enrollmentByEventId,
+}: any) {
+  const eventId = text(line.organization_billing_event_id);
+  const assignmentId = text(line.pending_role_assignment_id);
+  const lineEmail = email(line.subject_verified_email);
+  const invite = inviteById.get(assignmentId);
+  const event = eventById.get(eventId);
+  const enrollments = enrollmentByEventId.get(eventId) || [];
+  const enrollment = enrollments[0];
+  const currency = text(invoice.currency).toLowerCase();
+  const amountCents = Number(line.amount_cents);
+
+  if (text(line.invoice_line_key) !== `ce_training_cohort_invoice_line:${text(invoice.id)}:${eventId}`) {
+    throw fail(409, "A saved cohort invoice line has an invalid security key.");
+  }
+  if (!invite || !event || enrollments.length !== 1) {
+    throw fail(409, "Each cohort invoice line must have exactly one invitation, billing event, and enrollment record.");
+  }
+
+  const enrollmentStatus = text(enrollment.enrollment_status).toLowerCase();
+  if (!active(enrollment) || ["withdrawn", "revoked", "active", "completed"].includes(enrollmentStatus) || !PRE_SETTLEMENT_ENROLLMENT_STATUSES.has(enrollmentStatus)) {
+    throw fail(409, "A CE Training enrollment is not in a pre-settlement state that allows cohort checkout.");
+  }
+
+  const inviteMatches =
+    text(invite.org_id) === organizationId &&
+    text(invite.cohort_id) === cohortId &&
+    text(invite.role).toLowerCase() === "ce_student" &&
+    text(invite.access_level).toLowerCase() === "ce_training_portal" &&
+    OPEN_ASSIGNMENT_STATUSES.has(text(invite.status).toLowerCase()) &&
+    text(invite.payment_responsibility).toLowerCase() === "instructor_paid" &&
+    text(invite.instructor_payment_mode).toLowerCase() === "invoice_with_cohort" &&
+    email(invite.email) === lineEmail;
+
+  const eventMatches =
+    text(event.organization_id) === organizationId &&
+    text(event.cohort_id) === cohortId &&
+    REGISTRATION_FEE_KINDS.has(text(event.fee_kind).toLowerCase()) &&
+    text(event.billing_subject_type).toLowerCase() === "student" &&
+    email(event.subject_verified_email) === lineEmail &&
+    Number(event.amount_cents) === amountCents &&
+    text(event.currency).toLowerCase() === currency &&
+    PAYABLE_EVENT_STATUSES.has(text(event.event_status).toLowerCase());
+
+  const enrollmentMatches =
+    text(enrollment.org_id) === organizationId &&
+    text(enrollment.cohort_id) === cohortId &&
+    email(enrollment.student_email) === lineEmail &&
+    text(enrollment.pending_role_assignment_id) === assignmentId &&
+    text(enrollment.organization_billing_event_id) === eventId &&
+    text(enrollment.payment_responsibility).toLowerCase() === "instructor_paid" &&
+    text(enrollment.instructor_payment_mode).toLowerCase() === "invoice_with_cohort";
+
+  if (!inviteMatches || !eventMatches || !enrollmentMatches) {
+    throw fail(409, "A cohort invoice line no longer matches its CE invitation, enrollment, and billing records.");
+  }
+}
+
+function processingResponse(invoice: any, message: string) {
+  return {
+    ok: true,
+    paid: false,
+    checkout_created: false,
+    reused_existing_checkout: false,
+    payment_confirmed_processing: true,
+    cohort_invoice_id: invoice.id,
+    invoice_status: text(invoice.invoice_status),
+    checkout_session_id: text(invoice.stripe_checkout_session_id) || null,
+    checkout_url: null,
+    amount_cents: Number(invoice.amount_cents),
+    currency: text(invoice.currency).toUpperCase(),
+    student_count: Number(invoice.student_count),
+    message,
+  };
+}
+
+function verifyCheckoutSession(session: any, invoice: any, organizationId: string, cohortId: string) {
+  if (!session) return false;
+  const metadata = session.metadata || {};
+  return (
+    text(session.client_reference_id) === text(invoice.id) &&
+    text(metadata.billing_flow) === "ce_training_cohort_invoice" &&
+    text(metadata.cohort_invoice_id) === text(invoice.id) &&
+    text(metadata.invoice_key) === text(invoice.invoice_key) &&
+    text(metadata.organization_id) === organizationId &&
+    text(metadata.cohort_id) === cohortId &&
+    Number(session.amount_total) === Number(invoice.amount_cents) &&
+    text(session.currency).toLowerCase() === text(invoice.currency).toLowerCase()
+  );
+}
+
 function validateSavedInvoice({
   invoice,
   lines,
@@ -230,6 +326,7 @@ function validateSavedInvoice({
   cohortId,
   inviteById,
   eventById,
+  enrollmentByEventId,
 }: any) {
   if (
     text(invoice.organization_id) !== organizationId ||
@@ -299,31 +396,15 @@ function validateSavedInvoice({
       );
     }
 
-    const inviteMatches =
-      text(invite.org_id) === organizationId &&
-      text(invite.cohort_id) === cohortId &&
-      text(invite.role) === "ce_student" &&
-      OPEN_ASSIGNMENT_STATUSES.has(text(invite.status)) &&
-      text(invite.payment_responsibility) === "instructor_paid" &&
-      text(invite.instructor_payment_mode) === "invoice_with_cohort" &&
-      email(invite.email) === lineEmail;
-
-    const eventMatches =
-      text(event.organization_id) === organizationId &&
-      text(event.cohort_id) === cohortId &&
-      REGISTRATION_FEE_KINDS.has(text(event.fee_kind)) &&
-      event.billing_subject_type === "student" &&
-      email(event.subject_verified_email) === lineEmail &&
-      Number(event.amount_cents) === lineAmount &&
-      text(event.currency).toLowerCase() === currency &&
-      PAYABLE_EVENT_STATUSES.has(text(event.event_status));
-
-    if (!inviteMatches || !eventMatches) {
-      throw fail(
-        409,
-        "A saved cohort invoice line no longer matches an eligible CE student registration.",
-      );
-    }
+    validateCompleteLineLinkage({
+      invoice,
+      line,
+      organizationId,
+      cohortId,
+      inviteById,
+      eventById,
+      enrollmentByEventId,
+    });
 
     lineEventIds.add(eventId);
     lineTotal += lineAmount;
@@ -346,6 +427,7 @@ async function ensureCheckout({
   callerEmail,
   inviteById,
   eventById,
+  enrollmentByEventId,
 }: any) {
   const invoiceStatus = text(invoice.invoice_status);
 
@@ -372,9 +454,14 @@ async function ensureCheckout({
     cohortId: text(cohort.id),
     inviteById,
     eventById,
+    enrollmentByEventId,
   });
 
   const existingSession = await getCheckout(invoice);
+
+  if (existingSession && !verifyCheckoutSession(existingSession, invoice, organizationId, text(cohort.id))) {
+    return processingResponse(invoice, "The saved checkout session could not be verified for this cohort invoice. Please contact support before trying another payment.");
+  }
 
   if (existingSession?.status === "open" && existingSession.url) {
     return {
@@ -394,23 +481,14 @@ async function ensureCheckout({
     };
   }
 
-  if (existingSession?.payment_status === "paid") {
-    return {
-      ok: true,
-      paid: false,
-      checkout_created: false,
-      reused_existing_checkout: true,
-      payment_confirmed_processing: true,
-      cohort_invoice_id: invoice.id,
-      invoice_status: invoiceStatus,
-      checkout_session_id: existingSession.id,
-      checkout_url: null,
-      amount_cents: Number(invoice.amount_cents),
-      currency: text(invoice.currency).toUpperCase(),
-      student_count: Number(invoice.student_count),
-      message:
-        "Stripe has confirmed payment. Wait briefly for the webhook to settle the cohort invoice and activate eligible students.",
-    };
+  if (
+    ["paid", "complete", "processing"].includes(text(existingSession?.payment_status).toLowerCase()) ||
+    ["complete", "expired"].includes(text(existingSession?.status).toLowerCase())
+  ) {
+    return processingResponse(
+      invoice,
+      "This cohort invoice payment is already processing or complete. Wait for reconciliation before attempting another checkout.",
+    );
   }
 
   if (invoiceStatus === "payment_processing") {
@@ -418,6 +496,22 @@ async function ensureCheckout({
       409,
       "This CE Training cohort invoice is already processing payment. Do not create a second checkout session.",
     );
+  }
+
+  const freshEventById = new Map<string, any>();
+  for (const line of lines) {
+    const eventId = text(line.organization_billing_event_id);
+    const freshRows = await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+      id: eventId,
+      organization_id: organizationId,
+      cohort_id: text(cohort.id),
+    });
+    const freshEvent = Array.isArray(freshRows) ? freshRows.find((event) => text(event?.id) === eventId) : null;
+    if (!freshEvent || !PAYABLE_EVENT_STATUSES.has(text(freshEvent.event_status).toLowerCase())) {
+      throw fail(409, "A selected CE registration billing event is no longer ready for this cohort checkout.");
+    }
+    freshEventById.set(eventId, freshEvent);
+    eventById.set(eventId, freshEvent);
   }
 
   const { success_url, cancel_url } = checkoutUrls(text(cohort.id));
@@ -477,43 +571,34 @@ async function ensureCheckout({
     );
   }
 
-  await base44.asServiceRole.entities.CETrainingCohortInvoice.update(
-    invoice.id,
-    {
-      invoice_status: "ready_for_checkout",
-      issued_at: invoice.issued_at || new Date().toISOString(),
-      stripe_checkout_session_id: session.id,
-      notes:
-        "CE Training cohort invoice checkout session created from locked registration events.",
-    },
-  );
-
-  for (const line of lines) {
-    const event = eventById.get(
-      text(line.organization_billing_event_id),
-    );
-
-    if (
-      !event ||
-      !["pending", "ready_for_checkout", "failed"].includes(
-        text(event.event_status),
-      )
-    ) {
-      throw fail(
-        409,
-        "A CE registration billing event changed while the cohort checkout was being created. No CE access has been granted.",
-      );
-    }
-
-    await base44.asServiceRole.entities.OrganizationBillingEvent.update(
-      event.id,
+  try {
+    await base44.asServiceRole.entities.CETrainingCohortInvoice.update(
+      invoice.id,
       {
-        event_status: "ready_for_checkout",
+        invoice_status: "ready_for_checkout",
+        issued_at: invoice.issued_at || new Date().toISOString(),
         stripe_checkout_session_id: session.id,
         notes:
-          "Included in a CE Training cohort invoice checkout. Payment remains unsettled until Stripe confirms the parent invoice payment.",
+          "CE Training cohort invoice checkout session created from locked registration events.",
       },
     );
+
+    for (const line of lines) {
+      const event = freshEventById.get(text(line.organization_billing_event_id));
+      if (!event) throw new Error("Missing freshly validated billing event after checkout creation.");
+      await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+        event.id,
+        {
+          event_status: "ready_for_checkout",
+          stripe_checkout_session_id: session.id,
+          notes:
+            "Included in a CE Training cohort invoice checkout. Payment remains unsettled until Stripe confirms the parent invoice payment.",
+        },
+      );
+    }
+  } catch (error) {
+    console.error("Persisted Stripe checkout but failed to update all cohort invoice records:", error);
+    throw fail(409, "Checkout was created, but the invoice records need reconciliation before the checkout link can be shown. Retry later or contact support.");
   }
 
   return {
@@ -535,6 +620,10 @@ async function ensureCheckout({
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      throw fail(405, "Use POST to create or resume a CE Training cohort invoice checkout.");
+    }
+
     if (!stripe) {
       throw fail(
         500,
@@ -577,37 +666,20 @@ Deno.serve(async (req) => {
       throw fail(400, "cohort_id is required.");
     }
     const callerRecord = await getCallerRecord(base44, caller);
-    const callerRole = text(callerRecord?.role || caller.role);
-    const callerEmail = email(callerRecord?.email || caller.email);
-
-    const organizationId = await resolveOrganizationId(
-      base44,
-      caller,
-      callerRecord,
-    );
-
-    if (!callerEmail) {
-      throw fail(
-        409,
-        "Your account is missing the email address required for Stripe Checkout.",
-      );
-    }
-
-    if (!organizationId) {
-      throw fail(
-        400,
-        "Your account is not connected to an organization.",
-      );
-    }
+    const callerRole = text(callerRecord?.role).toLowerCase();
+    const callerEmail = email(callerRecord?.email);
+    const organizationId = text(callerRecord?.org_id);
+    await getOrganization(base44, organizationId);
 
     await assertAuthorization(
       base44,
-      caller,
+      callerRecord,
       callerRole,
+      organizationId,
       cohortId,
     );
 
-    const [cohortRows, inviteRows, eventRows, invoiceRows, lineRows] =
+    const [cohortRows, inviteRows, eventRows, invoiceRows, lineRows, enrollmentRows] =
       await Promise.all([
         base44.asServiceRole.entities.CETrainingCohort.filter({
           id: cohortId,
@@ -619,6 +691,7 @@ Deno.serve(async (req) => {
         }),
         base44.asServiceRole.entities.OrganizationBillingEvent.filter({
           organization_id: organizationId,
+          cohort_id: cohortId,
         }),
         base44.asServiceRole.entities.CETrainingCohortInvoice.filter({
           organization_id: organizationId,
@@ -626,6 +699,10 @@ Deno.serve(async (req) => {
         }),
         base44.asServiceRole.entities.CETrainingCohortInvoiceLine.filter({
           organization_id: organizationId,
+          cohort_id: cohortId,
+        }),
+        base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+          org_id: organizationId,
           cohort_id: cohortId,
         }),
       ]);
@@ -653,7 +730,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (cohort.is_active === false || cohort.status === "archived") {
+    if (!active(cohort)) {
       throw fail(
         409,
         "This Training cohort is inactive or archived and cannot create a new registration invoice.",
@@ -664,6 +741,7 @@ Deno.serve(async (req) => {
     const events = Array.isArray(eventRows) ? eventRows : [];
     const invoices = Array.isArray(invoiceRows) ? invoiceRows : [];
     const lines = Array.isArray(lineRows) ? lineRows : [];
+    const enrollments = Array.isArray(enrollmentRows) ? enrollmentRows : [];
 
     const inviteById = new Map(
       invites.map((invite) => [text(invite.id), invite]),
@@ -672,6 +750,14 @@ Deno.serve(async (req) => {
     const eventById = new Map(
       events.map((event) => [text(event.id), event]),
     );
+
+    const enrollmentByEventId = new Map<string, any[]>();
+    for (const enrollment of enrollments) {
+      const eventId = text(enrollment.organization_billing_event_id);
+      if (!eventId) continue;
+      if (!enrollmentByEventId.has(eventId)) enrollmentByEventId.set(eventId, []);
+      enrollmentByEventId.get(eventId)?.push(enrollment);
+    }
 
       const invoiceById = new Map(
       invoices.map((invoice) => [text(invoice.id), invoice]),
@@ -711,6 +797,7 @@ Deno.serve(async (req) => {
           callerEmail,
           inviteById,
           eventById,
+            enrollmentByEventId,
         })
       );
     }
@@ -776,14 +863,15 @@ Deno.serve(async (req) => {
           callerEmail,
           inviteById,
           eventById,
+          enrollmentByEventId,
         }),
       );
     }
 
     const registrationEvents = events.filter(
       (event) =>
-        REGISTRATION_FEE_KINDS.has(text(event.fee_kind)) &&
-        event.billing_subject_type === "student",
+        REGISTRATION_FEE_KINDS.has(text(event.fee_kind).toLowerCase()) &&
+        text(event.billing_subject_type).toLowerCase() === "student",
     );
 
     const eventsByKey = new Map<string, any[]>();
@@ -829,13 +917,27 @@ Deno.serve(async (req) => {
       const amountCents = Number(event.amount_cents);
       const currency = text(event.currency).toLowerCase();
 
+      const linkedEnrollments = enrollmentByEventId.get(text(event.id)) || [];
+      const enrollment = linkedEnrollments[0];
+      const validEnrollment = linkedEnrollments.length === 1 &&
+        active(enrollment) &&
+        PRE_SETTLEMENT_ENROLLMENT_STATUSES.has(text(enrollment.enrollment_status).toLowerCase()) &&
+        text(enrollment.org_id) === organizationId &&
+        text(enrollment.cohort_id) === cohortId &&
+        email(enrollment.student_email) === studentEmail &&
+        text(enrollment.pending_role_assignment_id) === text(invite.id) &&
+        text(enrollment.organization_billing_event_id) === text(event.id) &&
+        text(enrollment.payment_responsibility).toLowerCase() === "instructor_paid" &&
+        text(enrollment.instructor_payment_mode).toLowerCase() === "invoice_with_cohort";
+
       const valid =
+        validEnrollment &&
         text(event.organization_id) === organizationId &&
         text(event.cohort_id) === cohortId &&
         REGISTRATION_FEE_KINDS.has(text(event.fee_kind)) &&
         event.billing_subject_type === "student" &&
         email(event.subject_verified_email) === studentEmail &&
-        text(event.event_status) === "pending" &&
+        text(event.event_status).toLowerCase() === "pending" &&
         Number.isInteger(amountCents) &&
         amountCents > 0 &&
         !!currency;
@@ -923,6 +1025,7 @@ Deno.serve(async (req) => {
             callerEmail,
             inviteById,
             eventById,
+            enrollmentByEventId,
           }),
         );
       }
@@ -944,7 +1047,7 @@ Deno.serve(async (req) => {
             currency: Array.from(currencies)[0].toUpperCase(),
             student_count: selected.length,
             amount_cents: totalCents,
-            created_by_user_id: caller.id,
+            created_by_user_id: callerRecord.id,
             notes:
               "Draft CE Training cohort invoice created from selected locked student registration events.",
           },
@@ -996,6 +1099,7 @@ Deno.serve(async (req) => {
         callerEmail,
         inviteById,
         eventById,
+        enrollmentByEventId,
       }),
     );
   } catch (error) {
@@ -1007,9 +1111,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         ok: false,
-        error:
-          error?.message ||
-          "Unable to create the CE Training cohort invoice checkout.",
+        error: publicError(error),
       },
       {
         status:
