@@ -522,6 +522,13 @@ async function resolveEnrollmentAndBilling(
     );
   }
 
+  if (enrollmentStatus !== "payment_settled_registration_pending") {
+    throw new RequestError(
+      409,
+      "Registration instructions can be resent only after payment settlement is fully recorded for this CE Training enrollment."
+    );
+  }
+
   const paymentResponsibility =
     normalizeText(assignment?.payment_responsibility) ||
     "student_paid";
