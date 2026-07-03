@@ -595,17 +595,35 @@ function checkoutMatchesBillingEvent(
   email: string
 ) {
   const metadata = checkoutSession?.metadata || {};
+  const billingEventKey = normalizeText(
+    billingEvent?.billing_event_key
+  );
+  const lockedAmountCents = Number(billingEvent?.amount_cents);
+  const lockedCurrency = normalizeText(
+    billingEvent?.currency || "USD"
+  ).toLowerCase();
 
   return (
+    !!billingEventKey &&
+    Number.isInteger(lockedAmountCents) &&
+    lockedAmountCents > 0 &&
+    !!lockedCurrency &&
+    checkoutSession?.mode === "payment" &&
     checkoutSession?.client_reference_id ===
       String(billingEvent?.id) &&
     metadata?.billing_flow === "ce_student_registration" &&
     metadata?.billing_event_id === String(billingEvent?.id) &&
+    normalizeText(metadata?.billing_event_key) ===
+      billingEventKey &&
     metadata?.organization_id === organizationId &&
-    normalizeEmail(metadata?.subject_verified_email) === email
+    normalizeEmail(metadata?.subject_verified_email) === email &&
+    metadata?.payment_responsibility === "student_paid" &&
+    normalizeText(metadata?.instructor_payment_mode) === "" &&
+    Number(checkoutSession?.amount_total) === lockedAmountCents &&
+    normalizeText(checkoutSession?.currency).toLowerCase() ===
+      lockedCurrency
   );
 }
-
 async function expireOpenCheckoutForPaymentChange(
   billingEvent: any,
   organizationId: string,
