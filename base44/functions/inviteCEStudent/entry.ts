@@ -1164,8 +1164,8 @@ async function createOrReuseCheckout({
 
   const { successUrl, cancelUrl } = buildCheckoutRedirectUrls();
 
-  const checkoutAttemptKey = existingCheckout?.expired
-    ? `${billingEvent.id}:${paymentResponsibility}:retry:${Date.now()}`
+    const checkoutAttemptKey = existingCheckout?.expired
+    ? `${billingEvent.id}:${paymentResponsibility}:retry:${existingCheckout.session.id}`
     : `${billingEvent.id}:${paymentResponsibility}:initial`;
 
   const session = await stripe.checkout.sessions.create(
