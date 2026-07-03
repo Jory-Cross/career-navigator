@@ -7,12 +7,6 @@ const stripe = STRIPE_SECRET_KEY
   ? new Stripe(STRIPE_SECRET_KEY)
   : null;
 
-const ALLOWED_CALLER_ROLES = new Set([
-  "admin",
-  "management",
-  "ce_instructor",
-]);
-
 const OPEN_INVITE_STATUSES = new Set([
   "pending",
   "invite_email_sent",
@@ -39,155 +33,573 @@ const SETTLED_BILLING_STATUSES = new Set([
   "waived",
 ]);
 
-function createHttpError(status: number, message: string) {
-  const error = new Error(message) as Error & {
-    status?: number;
-  };
+const CHANGEABLE_BILLING_STATUSES = new Set([
+  "pending",
+  "ready_for_checkout",
+  "failed",
+]);
 
-  error.status = status;
+const ROLE_ACCESS_LEVELS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+  client: "client_portal",
+  pre_ets: "client_portal",
+  dspd: "client_portal",
+  pre_ets_employer: "pre_ets_employer_portal",
+  ce_instructor: "ce_training_portal",
+  ce_student: "ce_training_portal",
+};
 
-  return error;
+class RequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
 }
 
 function normalizeText(value: unknown) {
-  return String(value || "").trim();
+  return String(value ?? "").trim();
 }
 
 function normalizeEmail(value: unknown) {
   return normalizeText(value).toLowerCase();
 }
 
-function buildRegistrationBillingEventKey(
-  organizationId: string,
-  email: string
-) {
-  return `ce_student_registration:${organizationId}:${encodeURIComponent(
-    normalizeEmail(email)
-  )}`;
+function normalizeIdentifier(value: unknown) {
+  return normalizeText(value);
 }
 
-async function resolveOrganizationId(base44: any, caller: any) {
-  const directOrgId = normalizeText(caller?.org_id);
-
-  if (directOrgId) {
-    return directOrgId;
-  }
-
-  const organizations =
-    await base44.asServiceRole.entities.Organization.filter({
-      owner_email: caller.email,
-    });
-
-  return normalizeText(organizations?.[0]?.id);
-}
-
-async function getMatchingRegistrationBillingEvent(
-  base44: any,
-  organizationId: string,
-  email: string
-) {
-  const billingEventKey = buildRegistrationBillingEventKey(
-    organizationId,
-    email
+function isActiveRecord(record: any) {
+  return (
+    record &&
+    record.is_active !== false &&
+    record.is_archived !== true
   );
+}
 
-  const billingRows =
-    await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
-      billing_event_key: billingEventKey,
-    });
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
-  const billingEvents = Array.isArray(billingRows)
-    ? billingRows
-    : [];
+function getRoleProfile(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(
+    user?.access_level
+  ).toLowerCase();
 
-  if (billingEvents.length === 0) {
+  if (ROLE_ACCESS_LEVELS[role] !== accessLevel) {
     return null;
   }
 
-  if (billingEvents.length > 1) {
-    throw createHttpError(
-      409,
-      "Multiple CE registration billing events exist for this invitation. Resolve the billing conflict before changing the payment option."
-    );
-  }
-
-  const billingEvent = billingEvents[0];
-
-  const identityMatches =
-    normalizeText(billingEvent.organization_id) === organizationId &&
-    normalizeEmail(billingEvent.subject_verified_email) ===
-      normalizeEmail(email) &&
-    CE_REGISTRATION_FEE_KINDS.has(
-      normalizeText(billingEvent.fee_kind)
-    ) &&
-    billingEvent.billing_subject_type === "student";
-
-  if (!identityMatches) {
-    throw createHttpError(
-      409,
-      "The CE registration billing event does not safely match this invitation."
-    );
-  }
-
-  return billingEvent;
+  return {
+    role,
+    access_level: accessLevel,
+  };
 }
 
-async function validateInvoiceTrainingCohort(
+function isNeutralExistingAccount(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+
+  return (
+    ["", "user", "employee"].includes(role) &&
+    !normalizeText(user?.access_level) &&
+    !normalizeIdentifier(user?.org_id) &&
+    !normalizeIdentifier(user?.manager_id) &&
+    !normalizeIdentifier(user?.linked_client_id) &&
+    !normalizeIdentifier(user?.cohort_id) &&
+    !normalizeText(user?.cohort_role)
+  );
+}
+
+function getInvitePaymentResponsibility(invite: any) {
+  return (
+    normalizeText(invite?.payment_responsibility) ||
+    "student_paid"
+  );
+}
+
+function getInviteInstructorPaymentMode(invite: any) {
+  return getInvitePaymentResponsibility(invite) ===
+    "instructor_paid"
+    ? normalizeText(invite?.instructor_payment_mode)
+    : "";
+}
+
+function getEnrollmentInstructorPaymentMode(enrollment: any) {
+  return normalizeText(enrollment?.payment_responsibility) ===
+    "instructor_paid"
+    ? normalizeText(enrollment?.instructor_payment_mode)
+    : "";
+}
+
+async function resolveCanonicalCaller(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  if (!caller || !isActiveRecord(caller)) {
+    throw new RequestError(
+      403,
+      "Your account is unavailable or inactive."
+    );
+  }
+
+  const callerId = normalizeIdentifier(caller?.id);
+  const callerEmail = normalizeEmail(caller?.email);
+  const organizationId = normalizeIdentifier(caller?.org_id);
+  const callerProfile = getRoleProfile(caller);
+
+  if (!callerId || !callerEmail) {
+    throw new RequestError(
+      403,
+      "Your account is missing a verified email address."
+    );
+  }
+
+  if (
+    !callerProfile ||
+    !["admin", "management", "ce_instructor"].includes(
+      callerProfile.role
+    )
+  ) {
+    throw new RequestError(
+      403,
+      "You are not authorized to update CE student payment options."
+    );
+  }
+
+  if (!organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not assigned to an organization."
+    );
+  }
+
+  const organization =
+    await base44.asServiceRole.entities.Organization.get(
+      organizationId
+    ).catch(() => null);
+
+  if (!organization || !isActiveRecord(organization)) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is invalid or inactive."
+    );
+  }
+
+  return {
+    caller,
+    callerId,
+    callerProfile,
+    organizationId,
+  };
+}
+
+async function resolveOpenCEStudentInvitation(
+  base44: any,
+  pendingInviteId: string,
+  organizationId: string
+) {
+  const invite =
+    await base44.asServiceRole.entities.PendingRoleAssignment.get(
+      pendingInviteId
+    ).catch(() => null);
+
+  if (!invite) {
+    throw new RequestError(
+      404,
+      "The selected CE student invitation was not found."
+    );
+  }
+
+  if (
+    invite?.is_archived === true ||
+    normalizeIdentifier(invite?.org_id) !== organizationId
+  ) {
+    throw new RequestError(
+      404,
+      "The selected CE student invitation is unavailable."
+    );
+  }
+
+  const role = normalizeText(invite?.role).toLowerCase();
+  const accessLevel = normalizeText(
+    invite?.access_level
+  ).toLowerCase();
+  const status = normalizeText(invite?.status).toLowerCase();
+  const cohortId = normalizeIdentifier(invite?.cohort_id);
+  const email = normalizeEmail(invite?.email);
+  const paymentResponsibility =
+    getInvitePaymentResponsibility(invite);
+  const instructorPaymentMode =
+    getInviteInstructorPaymentMode(invite);
+  const cohortRole = normalizeText(
+    invite?.cohort_role
+  ).toLowerCase();
+
+  if (
+    role !== "ce_student" ||
+    accessLevel !== "ce_training_portal" ||
+    !cohortId ||
+    !isValidEmail(email) ||
+    normalizeIdentifier(invite?.client_id) ||
+    !["", "member"].includes(cohortRole)
+  ) {
+    throw new RequestError(
+      409,
+      "The selected CE student invitation is incomplete or does not match the secure CE enrollment requirements."
+    );
+  }
+
+  if (!OPEN_INVITE_STATUSES.has(status)) {
+    throw new RequestError(
+      409,
+      "Only an active, unregistered CE student invitation can have its payment option changed."
+    );
+  }
+
+  if (!PAYMENT_RESPONSIBILITIES.has(paymentResponsibility)) {
+    throw new RequestError(
+      409,
+      "The selected CE student invitation has an invalid payment responsibility."
+    );
+  }
+
+  if (
+    paymentResponsibility === "instructor_paid" &&
+    !INSTRUCTOR_PAYMENT_MODES.has(instructorPaymentMode)
+  ) {
+    throw new RequestError(
+      409,
+      "The selected CE student invitation has an invalid instructor payment method."
+    );
+  }
+
+  return {
+    invite,
+    cohortId,
+    email,
+    paymentResponsibility,
+    instructorPaymentMode,
+  };
+}
+
+async function resolveTrainingCohort(
   base44: any,
   organizationId: string,
   cohortId: string
 ) {
-  if (!cohortId) {
-    throw createHttpError(
-      409,
-      "A Training cohort must be selected before this CE student can be included on a future cohort invoice."
-    );
-  }
+  const cohort =
+    await base44.asServiceRole.entities.CETrainingCohort.get(
+      cohortId
+    ).catch(() => null);
 
-  const cohortRows =
-    await base44.asServiceRole.entities.CETrainingCohort.filter({
-      id: cohortId,
-    });
-
-  const cohort = Array.isArray(cohortRows)
-    ? cohortRows[0]
-    : null;
-
-  if (!cohort) {
-    throw createHttpError(
-      409,
-      "The Training cohort connected to this invitation could not be found."
-    );
-  }
-
-  if (normalizeText(cohort.org_id) !== organizationId) {
-    throw createHttpError(
+  if (
+    !cohort ||
+    normalizeIdentifier(cohort?.org_id) !== organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !==
+      "training" ||
+    normalizeText(cohort?.status).toLowerCase() === "archived" ||
+    cohort?.is_active === false ||
+    cohort?.is_archived === true
+  ) {
+    throw new RequestError(
       403,
-      "The Training cohort connected to this invitation belongs to a different organization."
-    );
-  }
-
-  if (cohort.cohort_type !== "training") {
-    throw createHttpError(
-      409,
-      "Only Training cohorts may be used for CE registration invoice billing."
-    );
-  }
-
-  if (cohort.is_active === false) {
-    throw createHttpError(
-      409,
-      "The selected Training cohort is inactive and cannot receive new invoice-billed CE registrations."
+      "The Training cohort connected to this invitation is unavailable."
     );
   }
 
   return cohort;
 }
 
-async function expireOpenCheckoutForPaymentChange(
-  billingEvent: any
+async function assertCohortAuthority(
+  base44: any,
+  caller: any,
+  callerProfile: { role: string; access_level: string },
+  organizationId: string,
+  cohortId: string
 ) {
-  const checkoutSessionId = normalizeText(
+  if (callerProfile.role === "admin") {
+    return;
+  }
+
+  const memberships =
+    await base44.asServiceRole.entities.CETrainingCohortMember.filter(
+      {
+        cohort_id: cohortId,
+        user_id: caller.id,
+      }
+    );
+
+  const hasActiveManagerMembership = asArray(memberships).some(
+    (membership: any) =>
+      normalizeIdentifier(membership?.org_id) === organizationId &&
+      normalizeText(membership?.cohort_role).toLowerCase() ===
+        "manager" &&
+      membership?.is_active !== false &&
+      membership?.is_archived !== true
+  );
+
+  if (!hasActiveManagerMembership) {
+    throw new RequestError(
+      403,
+      "You must be an active manager of this Training cohort to update this CE student payment option."
+    );
+  }
+}
+
+async function getUsersForEmail(
+  base44: any,
+  email: string
+) {
+  const lookupEmails = [
+    ...new Set(
+      [normalizeText(email), normalizeEmail(email)].filter(Boolean)
+    ),
+  ];
+
+  const resultSets = await Promise.all(
+    lookupEmails.map((lookupEmail) =>
+      base44.asServiceRole.entities.User.filter({
+        email: lookupEmail,
+      })
+    )
+  );
+
+  const byId = new Map<string, any>();
+
+  for (const resultSet of resultSets) {
+    for (const user of asArray(resultSet)) {
+      const userId = normalizeIdentifier(user?.id);
+
+      if (userId) {
+        byId.set(userId, user);
+      }
+    }
+  }
+
+  return [...byId.values()].filter(
+    (user) => normalizeEmail(user?.email) === normalizeEmail(email)
+  );
+}
+
+function assertInvitedEmailAccountIsSafe(
+  users: any[],
+  organizationId: string
+) {
+  if (users.length > 1) {
+    throw new RequestError(
+      409,
+      "This invitation email is connected to more than one account record and requires administrator review."
+    );
+  }
+
+  const existingUser = users[0] || null;
+
+  if (!existingUser) {
+    return;
+  }
+
+  if (!isActiveRecord(existingUser)) {
+    throw new RequestError(
+      409,
+      "This invitation email is connected to an inactive account and requires review before its payment option can be changed."
+    );
+  }
+
+  const profile = getRoleProfile(existingUser);
+
+  if (
+    profile?.role === "ce_student" &&
+    normalizeIdentifier(existingUser?.org_id) === organizationId
+  ) {
+    throw new RequestError(
+      409,
+      "This email is already connected to an active CE student account. Use CE enrollment management instead."
+    );
+  }
+
+  if (!isNeutralExistingAccount(existingUser)) {
+    throw new RequestError(
+      409,
+      "This invitation email is already connected to an account with access or organization details and cannot be repurposed."
+    );
+  }
+}
+
+async function resolveEnrollmentAndBilling(
+  base44: any,
+  invite: any,
+  organizationId: string,
+  cohortId: string,
+  email: string,
+  paymentResponsibility: string,
+  instructorPaymentMode: string
+) {
+  const enrollmentRows =
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+      {
+        pending_role_assignment_id: invite.id,
+      }
+    );
+
+  const enrollments = asArray(enrollmentRows).filter(
+    (enrollment: any) =>
+      normalizeIdentifier(enrollment?.pending_role_assignment_id) ===
+      normalizeIdentifier(invite?.id)
+  );
+
+  if (enrollments.length !== 1) {
+    throw new RequestError(
+      409,
+      "This CE student invitation does not have exactly one durable enrollment record."
+    );
+  }
+
+  const enrollment = enrollments[0];
+  const enrollmentStatus = normalizeText(
+    enrollment?.enrollment_status
+  ).toLowerCase();
+
+  if (
+    enrollment?.is_active === false ||
+    ["withdrawn", "revoked"].includes(enrollmentStatus)
+  ) {
+    throw new RequestError(
+      409,
+      "This CE Training enrollment is no longer active."
+    );
+  }
+
+  const enrollmentPaymentResponsibility = normalizeText(
+    enrollment?.payment_responsibility
+  );
+
+  const enrollmentInstructorPaymentMode =
+    getEnrollmentInstructorPaymentMode(enrollment);
+
+  const enrollmentMatches =
+    normalizeIdentifier(enrollment?.org_id) === organizationId &&
+    normalizeIdentifier(enrollment?.cohort_id) === cohortId &&
+    normalizeEmail(enrollment?.student_email) === email &&
+    enrollmentPaymentResponsibility === paymentResponsibility &&
+    enrollmentInstructorPaymentMode === instructorPaymentMode;
+
+  if (!enrollmentMatches) {
+    throw new RequestError(
+      409,
+      "The CE Training enrollment does not safely match the invitation payment settings."
+    );
+  }
+
+  const billingEventId = normalizeIdentifier(
+    enrollment?.organization_billing_event_id
+  );
+
+  if (!billingEventId) {
+    throw new RequestError(
+      409,
+      "This CE Training enrollment is missing its registration billing record."
+    );
+  }
+
+  const billingEvent =
+    await base44.asServiceRole.entities.OrganizationBillingEvent.get(
+      billingEventId
+    ).catch(() => null);
+
+  if (!billingEvent) {
+    throw new RequestError(
+      409,
+      "The registration billing record connected to this enrollment is unavailable."
+    );
+  }
+
+  const billingMatches =
+    normalizeIdentifier(billingEvent?.organization_id) ===
+      organizationId &&
+    normalizeIdentifier(billingEvent?.cohort_id) === cohortId &&
+    normalizeEmail(billingEvent?.subject_verified_email) === email &&
+    normalizeText(billingEvent?.billing_subject_type) ===
+      "student" &&
+    CE_REGISTRATION_FEE_KINDS.has(
+      normalizeText(billingEvent?.fee_kind)
+    );
+
+  if (!billingMatches) {
+    throw new RequestError(
+      409,
+      "The registration billing record does not safely match this CE student invitation."
+    );
+  }
+
+  return {
+    enrollment,
+    billingEvent,
+  };
+}
+
+function assertBillingChangeAllowed(billingEvent: any) {
+  const billingStatus = normalizeText(
+    billingEvent?.event_status
+  ).toLowerCase();
+
+  if (SETTLED_BILLING_STATUSES.has(billingStatus)) {
+    throw new RequestError(
+      409,
+      "This payment option cannot be changed because the CE registration payment is already settled."
+    );
+  }
+
+  if (billingStatus === "payment_processing") {
+    throw new RequestError(
+      409,
+      "This payment option cannot be changed while CE registration payment processing is underway."
+    );
+  }
+
+  if (!CHANGEABLE_BILLING_STATUSES.has(billingStatus)) {
+    throw new RequestError(
+      409,
+      "This CE registration billing record is not in a state that permits a payment-option change."
+    );
+  }
+}
+
+function checkoutMatchesBillingEvent(
+  checkoutSession: any,
+  billingEvent: any,
+  organizationId: string,
+  email: string
+) {
+  const metadata = checkoutSession?.metadata || {};
+
+  return (
+    checkoutSession?.client_reference_id ===
+      String(billingEvent?.id) &&
+    metadata?.billing_flow === "ce_student_registration" &&
+    metadata?.billing_event_id === String(billingEvent?.id) &&
+    metadata?.organization_id === organizationId &&
+    normalizeEmail(metadata?.subject_verified_email) === email
+  );
+}
+
+async function expireOpenCheckoutForPaymentChange(
+  billingEvent: any,
+  organizationId: string,
+  email: string
+) {
+  const checkoutSessionId = normalizeIdentifier(
     billingEvent?.stripe_checkout_session_id
   );
 
@@ -199,9 +611,9 @@ async function expireOpenCheckoutForPaymentChange(
   }
 
   if (!stripe) {
-    throw createHttpError(
+    throw new RequestError(
       503,
-      "Stripe is not configured, so the current registration checkout cannot be safely cancelled before changing the payment option."
+      "Stripe is not configured, so the existing registration checkout cannot be safely cancelled before changing the payment option."
     );
   }
 
@@ -212,9 +624,23 @@ async function expireOpenCheckoutForPaymentChange(
       checkoutSessionId
     );
   } catch {
-    throw createHttpError(
+    throw new RequestError(
       409,
-      "The current Stripe Checkout session could not be verified. Resolve the payment session before changing this payment option."
+      "The current registration checkout could not be verified. Resolve the payment session before changing the payment option."
+    );
+  }
+
+  if (
+    !checkoutMatchesBillingEvent(
+      checkoutSession,
+      billingEvent,
+      organizationId,
+      email
+    )
+  ) {
+    throw new RequestError(
+      409,
+      "The current registration checkout does not safely match this CE student enrollment."
     );
   }
 
@@ -222,7 +648,7 @@ async function expireOpenCheckoutForPaymentChange(
     checkoutSession.status === "complete" ||
     checkoutSession.payment_status === "paid"
   ) {
-    throw createHttpError(
+    throw new RequestError(
       409,
       "This registration payment has completed or is awaiting reconciliation. The payment option cannot be changed."
     );
@@ -244,283 +670,274 @@ async function expireOpenCheckoutForPaymentChange(
     };
   }
 
-  throw createHttpError(
+  throw new RequestError(
     409,
-    "The current Stripe Checkout session is not in a state that can be safely changed."
+    "The current registration checkout is not in a state that can be safely changed."
   );
 }
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
-
-    if (!caller) {
-      return Response.json(
-        { ok: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    if (!ALLOWED_CALLER_ROLES.has(caller.role)) {
+    if (req.method !== "POST") {
       return Response.json(
         {
           ok: false,
           error:
-            "Only authorized CE organization users may update student invite payment options.",
+            "This CE student payment-option request must use POST.",
         },
-        { status: 403 }
+        { status: 405 }
+      );
+    }
+
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(
+      () => null
+    );
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Please sign in before changing a CE student payment option.",
+        },
+        { status: 401 }
       );
     }
 
     const body = await req.json().catch(() => ({}));
-
-    const pendingInviteId = normalizeText(
+    const pendingInviteId = normalizeIdentifier(
       body?.pending_invite_id
-    );
-
-    const paymentResponsibility = normalizeText(
-      body?.payment_responsibility
-    );
-
-    const instructorPaymentMode = normalizeText(
-      body?.instructor_payment_mode
     );
 
     if (!pendingInviteId) {
       return Response.json(
         {
           ok: false,
-          error: "pending_invite_id is required.",
+          error: "A CE student invitation must be selected.",
         },
         { status: 400 }
       );
     }
 
-    if (!PAYMENT_RESPONSIBILITIES.has(paymentResponsibility)) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            'payment_responsibility must be "student_paid" or "instructor_paid".',
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      paymentResponsibility === "instructor_paid" &&
-      !INSTRUCTOR_PAYMENT_MODES.has(instructorPaymentMode)
-    ) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            'instructor_payment_mode must be "pay_now" or "invoice_with_cohort" when instructor_paid is selected.',
-        },
-        { status: 400 }
-      );
-    }
-
-    const organizationId = await resolveOrganizationId(
-      base44,
-      caller
+    const requestedPaymentResponsibility = normalizeText(
+      body?.payment_responsibility
     );
 
-    if (!organizationId) {
-      return Response.json(
-        {
-          ok: false,
-          error: "Your account is not connected to an organization.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const inviteRows =
-      await base44.asServiceRole.entities.PendingRoleAssignment.filter({
-        id: pendingInviteId,
-      });
-
-    const invite = Array.isArray(inviteRows)
-      ? inviteRows[0]
-      : null;
-
-    if (!invite) {
-      return Response.json(
-        {
-          ok: false,
-          error: "CE student invitation not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    if (
-      invite.role !== "ce_student" ||
-      normalizeText(invite.org_id) !== organizationId
-    ) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "This CE student invitation does not belong to your organization.",
-        },
-        { status: 403 }
-      );
-    }
-
-    if (!OPEN_INVITE_STATUSES.has(invite.status)) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "Only pending CE student invitations may have their payment option changed.",
-        },
-        { status: 409 }
-      );
-    }
-
-    const inviteEmail = normalizeEmail(invite.email);
-
-    const billingEvent = await getMatchingRegistrationBillingEvent(
-      base44,
-      organizationId,
-      inviteEmail
+    const requestedInstructorPaymentMode = normalizeText(
+      body?.instructor_payment_mode
     );
 
-    const currentPaymentResponsibility =
-      normalizeText(invite.payment_responsibility) ||
-      "student_paid";
-
-    const currentInstructorPaymentMode =
-      currentPaymentResponsibility === "instructor_paid"
-        ? normalizeText(invite.instructor_payment_mode) ||
-          "pay_now"
-        : "";
-
-    const paymentChoiceChanged =
-      currentPaymentResponsibility !== paymentResponsibility ||
-      currentInstructorPaymentMode !==
-        (paymentResponsibility === "instructor_paid"
-          ? instructorPaymentMode
-          : "");
-
     if (
-      paymentResponsibility === "instructor_paid" &&
-      instructorPaymentMode === "invoice_with_cohort"
-    ) {
-      await validateInvoiceTrainingCohort(
-        base44,
-        organizationId,
-        normalizeText(invite.cohort_id)
-      );
-    }
-
-    if (
-      billingEvent &&
-      SETTLED_BILLING_STATUSES.has(
-        normalizeText(billingEvent.event_status)
+      !PAYMENT_RESPONSIBILITIES.has(
+        requestedPaymentResponsibility
       )
     ) {
       return Response.json(
         {
           ok: false,
           error:
-            "This payment option cannot be changed because the CE registration payment is already settled.",
-          billing_event_status: billingEvent.event_status,
+            "Choose whether the student or instructor is responsible for the registration payment.",
         },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
     if (
-      billingEvent &&
-      normalizeText(billingEvent.event_status) ===
-        "payment_processing"
+      requestedPaymentResponsibility === "instructor_paid" &&
+      !INSTRUCTOR_PAYMENT_MODES.has(
+        requestedInstructorPaymentMode
+      )
     ) {
       return Response.json(
         {
           ok: false,
           error:
-            "This payment option cannot be changed while CE registration payment processing is underway.",
-          billing_event_status: billingEvent.event_status,
+            "Choose whether the instructor will pay now or include the registration fee on a cohort invoice.",
         },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
-    let checkoutResult = {
-      checkout_expired: false,
-      checkout_state: "not_changed",
-    };
-
-    if (billingEvent && paymentChoiceChanged) {
-      checkoutResult =
-        await expireOpenCheckoutForPaymentChange(billingEvent);
+    if (
+      requestedPaymentResponsibility === "student_paid" &&
+      requestedInstructorPaymentMode
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "An instructor payment method can only be used when the instructor is responsible for the registration fee.",
+        },
+        { status: 400 }
+      );
     }
+
+    const {
+      caller,
+      callerProfile,
+      organizationId,
+    } = await resolveCanonicalCaller(
+      base44,
+      authenticatedUser.id
+    );
+
+    const {
+      invite,
+      cohortId,
+      email,
+      paymentResponsibility: currentPaymentResponsibility,
+      instructorPaymentMode: currentInstructorPaymentMode,
+    } = await resolveOpenCEStudentInvitation(
+      base44,
+      pendingInviteId,
+      organizationId
+    );
+
+    await resolveTrainingCohort(
+      base44,
+      organizationId,
+      cohortId
+    );
+
+    await assertCohortAuthority(
+      base44,
+      caller,
+      callerProfile,
+      organizationId,
+      cohortId
+    );
+
+    const matchingUsers = await getUsersForEmail(base44, email);
+
+    assertInvitedEmailAccountIsSafe(
+      matchingUsers,
+      organizationId
+    );
+
+    const {
+      enrollment,
+      billingEvent,
+    } = await resolveEnrollmentAndBilling(
+      base44,
+      invite,
+      organizationId,
+      cohortId,
+      email,
+      currentPaymentResponsibility,
+      currentInstructorPaymentMode
+    );
+
+    const effectiveInstructorPaymentMode =
+      requestedPaymentResponsibility === "instructor_paid"
+        ? requestedInstructorPaymentMode
+        : "";
+
+    const paymentChoiceChanged =
+      currentPaymentResponsibility !==
+        requestedPaymentResponsibility ||
+      currentInstructorPaymentMode !==
+        effectiveInstructorPaymentMode;
+
+    if (!paymentChoiceChanged) {
+      return Response.json({
+        ok: true,
+        message:
+          "The CE student invitation already uses this payment option.",
+        pending_invite_id: invite.id,
+        email,
+        payment_responsibility:
+          currentPaymentResponsibility,
+        instructor_payment_mode:
+          currentInstructorPaymentMode || null,
+        cohort_id: cohortId,
+        billing_event_id: billingEvent.id,
+        billing_event_status: billingEvent.event_status,
+        checkout_expired: false,
+        checkout_state: "not_changed",
+        access_changed: false,
+      });
+    }
+
+    assertBillingChangeAllowed(billingEvent);
+
+    const checkoutResult =
+      await expireOpenCheckoutForPaymentChange(
+        billingEvent,
+        organizationId,
+        email
+      );
+
+    const now = new Date().toISOString();
+
+    await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+      billingEvent.id,
+      {
+        event_status: "pending",
+        stripe_checkout_session_id: null,
+        notes:
+          "CE student payment option changed before settlement. Any verified open Stripe Checkout session was expired before the billing record was reset.",
+      }
+    );
+
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+      enrollment.id,
+      {
+        payment_responsibility:
+          requestedPaymentResponsibility,
+        instructor_payment_mode:
+          effectiveInstructorPaymentMode || null,
+        enrollment_status: "payment_pending",
+        status_updated_at: now,
+      }
+    );
 
     await base44.asServiceRole.entities.PendingRoleAssignment.update(
       invite.id,
       {
-        payment_responsibility: paymentResponsibility,
+        payment_responsibility:
+          requestedPaymentResponsibility,
         instructor_payment_mode:
-          paymentResponsibility === "instructor_paid"
-            ? instructorPaymentMode
-            : null,
+          effectiveInstructorPaymentMode || null,
       }
     );
 
-    if (billingEvent && paymentChoiceChanged) {
-      await base44.asServiceRole.entities.OrganizationBillingEvent.update(
-        billingEvent.id,
-        {
-          event_status: "pending",
-          notes:
-            "CE registration payment option changed before settlement. Any open Stripe Checkout session was expired before the new payment option was saved.",
-        }
-      );
-    }
-
     return Response.json({
       ok: true,
-      message: paymentChoiceChanged
-        ? "CE student invite payment option updated."
-        : "The CE student invite already uses this payment option.",
+      message: "CE student payment option updated.",
       pending_invite_id: invite.id,
-      email: invite.email,
-      payment_responsibility: paymentResponsibility,
+      email,
+      payment_responsibility:
+        requestedPaymentResponsibility,
       instructor_payment_mode:
-        paymentResponsibility === "instructor_paid"
-          ? instructorPaymentMode
-          : null,
-      cohort_id: normalizeText(invite.cohort_id) || null,
-      billing_event_id: billingEvent?.id || null,
-      billing_event_status: billingEvent
-        ? "pending"
-        : null,
+        effectiveInstructorPaymentMode || null,
+      cohort_id: cohortId,
+      billing_event_id: billingEvent.id,
+      billing_event_status: "pending",
       checkout_expired: checkoutResult.checkout_expired,
       checkout_state: checkoutResult.checkout_state,
       access_changed: false,
     });
-  } catch (error) {
-    console.error(
-      "updateCEStudentInvitePayment error:",
-      error?.message || error
-    );
+  } catch (error: unknown) {
+    const status =
+      error instanceof RequestError ? error.status : 500;
+
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "[updateCEStudentInvitePayment] Unexpected error:",
+        error instanceof Error ? error.message : error
+      );
+    }
 
     return Response.json(
       {
         ok: false,
         error:
-          error?.message ||
-          "Unable to update the CE student invite payment option.",
+          error instanceof RequestError
+            ? error.message
+            : "The CE student payment option could not be updated. Please try again or contact your organization administrator.",
       },
-      {
-        status: Number(
-          (error as Error & { status?: number })?.status
-        ) || 500,
-      }
+      { status }
     );
   }
 });
