@@ -432,7 +432,31 @@ async function ensureCheckout({
 
   const existingSession = await getCheckout(invoice);
 
-  if (
+  const existingSession = await getCheckout(invoice);
+
+if (existingSession) {
+  const metadata = existingSession.metadata || {};
+
+  const sessionMatchesInvoice =
+    text(existingSession.client_reference_id) === text(invoice.id) &&
+    text(metadata.billing_flow) === "ce_training_cohort_invoice" &&
+    text(metadata.cohort_invoice_id) === text(invoice.id) &&
+    text(metadata.invoice_key) === text(invoice.invoice_key) &&
+    text(metadata.organization_id) === organizationId &&
+    text(metadata.cohort_id) === text(cohort.id) &&
+    Number(existingSession.amount_total) === Number(invoice.amount_cents) &&
+    text(existingSession.currency).toLowerCase() ===
+      text(invoice.currency).toLowerCase();
+
+  if (!sessionMatchesInvoice) {
+    throw fail(
+      409,
+      "The saved checkout session does not match this cohort invoice. Please contact support before creating another checkout.",
+    );
+  }
+}
+
+if (
   existingSession?.status === "open" &&
   existingSession?.payment_status === "unpaid" &&
   existingSession.url
