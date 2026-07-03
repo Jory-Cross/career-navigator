@@ -411,6 +411,153 @@ async function resolveStaffEntry(
   };
 }
 
+function isSupportedPreEtsTimeCardStatus(status: string) {
+  return new Set([
+    "submitted_to_staff",
+    "returned_to_student",
+    "submitted_to_manager_payroll",
+    "returned_to_staff",
+    "finalized",
+  ]).has(status);
+}
+
+function getTimeCardPeriod(card: any) {
+  const periodStart = normalizeText(card?.period_start);
+  const periodEnd = normalizeText(card?.period_end);
+
+  if (
+    !isValidIsoDate(periodStart) ||
+    !isValidIsoDate(periodEnd) ||
+    periodStart > periodEnd
+  ) {
+    return null;
+  }
+
+  return {
+    periodStart,
+    periodEnd,
+  };
+}
+
+async function loadClientTimeCards(
+  base44: any,
+  organizationId: string,
+  clientId: string
+) {
+  const cards =
+    await base44.asServiceRole.entities.PreEtsTimeCard.filter({
+      client_id: clientId,
+    });
+
+  const matchingClientCards = asArray(cards).filter(
+    (card: any) =>
+      normalizeText(card?.client_id) === clientId
+  );
+
+  const foreignOrUnscopedCard = matchingClientCards.find(
+    (card: any) =>
+      normalizeText(card?.org_id) !== organizationId
+  );
+
+  if (foreignOrUnscopedCard) {
+    throw new RequestError(
+      409,
+      "Pre-ETS Time Card data cannot be safely scoped to this organization."
+    );
+  }
+
+  const malformedCard = matchingClientCards.find((card: any) => {
+    const status = normalizeText(card?.status).toLowerCase();
+
+    return (
+      !isSupportedPreEtsTimeCardStatus(status) ||
+      !getTimeCardPeriod(card)
+    );
+  });
+
+  if (malformedCard) {
+    throw new RequestError(
+      409,
+      "A Pre-ETS Time Card for this student has invalid workflow or payroll-period data."
+    );
+  }
+
+  return matchingClientCards;
+}
+
+function getTimeCardsCoveringDate(
+  cards: any[],
+  date: string
+) {
+  const normalizedDate = normalizeText(date);
+
+  if (!isValidIsoDate(normalizedDate)) {
+    throw new RequestError(
+      409,
+      "The student time-entry date cannot be safely evaluated against Time Card periods."
+    );
+  }
+
+  const matchingCards = cards.filter((card: any) => {
+    const period = getTimeCardPeriod(card);
+
+    return Boolean(
+      period &&
+        normalizedDate >= period.periodStart &&
+        normalizedDate <= period.periodEnd
+    );
+  });
+
+  if (matchingCards.length > 1) {
+    throw new RequestError(
+      409,
+      "More than one Pre-ETS Time Card covers this student time-entry date."
+    );
+  }
+
+  return matchingCards;
+}
+
+function assertStudentMayMutateTimeCardPeriods(
+  cards: any[],
+  dates: string[]
+) {
+  const uniqueDates = Array.from(
+    new Set(dates.map((date) => normalizeText(date)).filter(Boolean))
+  );
+
+  for (const date of uniqueDates) {
+    const matchingCard = getTimeCardsCoveringDate(cards, date)[0];
+
+    if (
+      matchingCard &&
+      normalizeText(matchingCard?.status).toLowerCase() !==
+        "returned_to_student"
+    ) {
+      throw new RequestError(
+        409,
+        "This payroll period is locked by a submitted, manager-reviewed, or finalized Pre-ETS Time Card."
+      );
+    }
+  }
+}
+
+function assertIndividualEntryReviewAvailable(
+  cards: any[],
+  entryDate: string
+) {
+  const matchingCard = getTimeCardsCoveringDate(
+    cards,
+    entryDate
+  )[0];
+
+  if (matchingCard) {
+    throw new RequestError(
+      409,
+      "Individual Pre-ETS time-entry review is unavailable once a Time Card exists for this payroll period. Use the Pre-ETS Time Card workflow."
+    );
+  }
+}
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
