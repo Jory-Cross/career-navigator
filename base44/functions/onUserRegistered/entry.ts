@@ -495,7 +495,8 @@ Deno.serve(async (req) => {
       applied: updateData,
       ce_registration_billing_event_id:
         ceRegistration?.billingEvent?.id || null,
-      cohort_membership: cohortMembership,
+         cohort_membership: cohortMembership,
+      assigned_employer_client_id: employerClient?.id || null,
     });
   } catch (error) {
     console.error("[onUserRegistered] Error:", error.message);
