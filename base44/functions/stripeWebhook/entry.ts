@@ -1196,10 +1196,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-  _billingRecord: any
-) {
-  return {
-    activated: false,
-    reason: "activation_deferred_to_applyPendingRoleIfNeeded",
-  };
-}
