@@ -41,6 +41,12 @@ const SETTLED_CE_REGISTRATION_STATUSES = new Set([
   "waived",
 ]);
 
+const ACTIVATABLE_CE_ENROLLMENT_STATUSES = new Set([
+  "payment_settled_registration_pending",
+  "active",
+  "training_completed",
+]);
+
 const CE_REGISTRATION_FEE_KINDS = new Set([
   "training_registration",
   "training_reactivation",
