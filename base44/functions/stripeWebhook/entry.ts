@@ -943,6 +943,7 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
     await base44.asServiceRole.entities.OrganizationBillingEvent.filter(
       {
         organization_id: cohortInvoice.organization_id,
+        cohort_id: cohortInvoice.cohort_id,
       }
     );
 
