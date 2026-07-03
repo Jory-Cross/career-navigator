@@ -10,44 +10,68 @@ import { format } from "date-fns";
 import TrainingProgressReportForm from "@/components/pre-ets/TrainingProgressReportForm";
 
 export default function PreEtsEmployerPortal() {
-  const [user, setUser] = useState(null);
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [loading, setLoading] = useState(true);
+   const [selectedClientId, setSelectedClientId] = useState(null);
   const [showProgressForm, setShowProgressForm] = useState(false);
 
-  useEffect(() => {
-    base44.auth.me().then(u => {
-      setUser(u);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
-  // Fetch only clients assigned to this employer
-  const { data: assignedClients = [] } = useQuery({
-    queryKey: ["employer-clients", user?.id],
-    queryFn: async () => {
-      const all = await base44.entities.Client.list();
-      return all.filter(c => c.assigned_employer_id === user.id && c.client_type === "pre_ets");
+  const {
+    data: employerPortalData = {
+      clients: [],
+      selected_client: null,
+      wble_forms: [],
+      progress_reports: [],
     },
-    enabled: !!user
+    isLoading: isLoadingEmployerPortal,
+    error: employerPortalError,
+    refetch: refetchEmployerPortal,
+  } = useQuery({
+    queryKey: [
+      "authorizedPreEtsEmployerPortal",
+      selectedClientId || "student-list",
+    ],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "getAuthorizedPreEtsPortalData",
+        selectedClientId
+          ? { client_id: selectedClientId }
+          : {}
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "The employer portal could not be loaded."
+        );
+      }
+
+      if (data?.portal_mode !== "employer") {
+        throw new Error(
+          "Your account does not have Pre-ETS employer portal access."
+        );
+      }
+
+      return data;
+    },
+    refetchOnMount: "always",
   });
 
-  const activeClient = assignedClients.find(c => c.id === selectedClientId);
+  const assignedClients = Array.isArray(employerPortalData?.clients)
+    ? employerPortalData.clients
+    : [];
 
-  // WBLE forms for selected client
-  const { data: wbleForms = [] } = useQuery({
-    queryKey: ["employer-wble", selectedClientId],
-    queryFn: () => base44.entities.WBLEForm.filter({ client_id: selectedClientId }),
-    enabled: !!selectedClientId
-  });
+  const activeClient =
+    employerPortalData?.selected_client || null;
 
-  // Progress reports for selected client
-  const { data: progressReports = [] } = useQuery({
-    queryKey: ["training-progress-reports", selectedClientId],
-    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: selectedClientId }),
-    enabled: !!selectedClientId
-  });
+  const wbleForms = Array.isArray(employerPortalData?.wble_forms)
+    ? employerPortalData.wble_forms
+    : [];
 
+  const progressReports = Array.isArray(
+    employerPortalData?.progress_reports
+  )
+    ? employerPortalData.progress_reports
+    : [];
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
   }
