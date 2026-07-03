@@ -311,10 +311,85 @@ export default function TimeEntryWithIncrements({
       );
 
       console.error("Failed to save Pre-ETS time entry", error);
-    } finally {
+      } finally {
       setSaving(false);
     }
   };
+
+  const handleResubmitTimeCard = async (timeCard) => {
+    const timeCardId = timeCard?.id || "";
+    const referenceDate =
+      timeCard?.period_start ||
+      timeCard?.entries?.[0]?.date ||
+      "";
+
+    if (!timeCardId || !referenceDate) {
+      toast.error(
+        "This returned Time Card is missing the payroll-period information needed for resubmission."
+      );
+      return;
+    }
+
+    setResubmittingTimeCardId(timeCardId);
+
+    try {
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsTimeCard",
+        {
+          action: "submit_student_time_card",
+          time_card: {
+            reference_date: referenceDate,
+          },
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "Your Pre-ETS Time Card could not be resubmitted."
+        );
+      }
+
+      toast.success(
+        data?.message ||
+          "Your corrected Pre-ETS Time Card was resubmitted to staff."
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["preEtsStudentTimeEntries"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["preEtsStudentTimeCards"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["preEtsTimeCards"],
+        }),
+      ]);
+    } catch (error) {
+      const errorData =
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          error?.message ||
+          "Your Pre-ETS Time Card could not be resubmitted."
+      );
+
+      console.error(
+        "Failed to resubmit Pre-ETS Time Card",
+        error
+      );
+    } finally {
+      setResubmittingTimeCardId(null);
+    }
+  };
+
   return (
     <>
       <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
