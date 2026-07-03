@@ -384,8 +384,9 @@ async function resolveEnrollmentAndInvitation(
     enrollment?.enrollment_status
   ).toLowerCase();
 
-  if (
+    if (
     enrollment?.is_active === false ||
+    enrollment?.is_archived === true ||
     !["invited", "payment_pending"].includes(enrollmentStatus)
   ) {
     throw new RequestError(
