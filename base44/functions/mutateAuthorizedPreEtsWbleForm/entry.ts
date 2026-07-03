@@ -191,6 +191,47 @@ function projectWbleForm(form: any) {
   };
 }
 
+function projectProgressReport(report: any) {
+  return {
+    id: normalizeText(report?.id),
+    client_id: normalizeText(report?.client_id),
+    reporting_period_from: normalizeText(
+      report?.reporting_period_from
+    ),
+    reporting_period_to: normalizeText(
+      report?.reporting_period_to
+    ),
+    supervisor_name: normalizeText(report?.supervisor_name),
+    pdf_url: normalizeText(report?.pdf_url),
+    created_date: normalizeText(report?.created_date),
+  };
+}
+
+async function loadStaffWbleWorkspace(
+  base44: any,
+  clientId: string
+) {
+  const [wbleForms, progressReports] = await Promise.all([
+    base44.asServiceRole.entities.WBLEForm.filter(
+      { client_id: clientId },
+      "-created_date"
+    ),
+    base44.asServiceRole.entities.TrainingProgressReport.filter(
+      { client_id: clientId },
+      "-created_date"
+    ),
+  ]);
+
+  return {
+    wble_forms: asArray(wbleForms)
+      .filter(isActive)
+      .map(projectWbleForm),
+    progress_reports: asArray(progressReports)
+      .filter(isActive)
+      .map(projectProgressReport),
+  };
+}
+
 async function resolveAuthorizedStaffClient(
   base44: any,
   caller: any,
