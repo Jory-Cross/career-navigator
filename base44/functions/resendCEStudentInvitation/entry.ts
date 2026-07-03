@@ -813,7 +813,8 @@ async function createOrReuseStudentCheckout({
       },
     },
     {
-      idempotencyKey: `${billingEvent.id}:resend:${Date.now()}`,
+           idempotencyKey:
+        `${billingEvent.id}:student_paid:retry:${previousStripeSessionId}`,
     }
   );
 
