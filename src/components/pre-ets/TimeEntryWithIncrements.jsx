@@ -307,22 +307,23 @@ export default function TimeEntryWithIncrements({
         <CardContent>
           <div className="space-y-4">
 
-            {rejectedEntries.length > 0 && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <p className="text-sm font-semibold text-red-900">
+                      {correctionEntries.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-900">
                   Time Entries Needing Correction
                 </p>
 
-                <p className="mt-1 text-xs text-red-700">
-                  Please review the rejection reason, correct the time entry,
-                  and resubmit it for staff approval.
+                <p className="mt-1 text-xs text-amber-800">
+                  Staff returned a Time Card or rejected an individual entry.
+                  Select an entry, make the needed correction, and resubmit it
+                  before resubmitting the Time Card.
                 </p>
 
                 <div className="mt-3 space-y-3">
-                  {rejectedEntries.map((entry) => (
+                  {correctionEntries.map((entry) => (
                     <div
                       key={entry.id}
-                      className="rounded-md border border-red-200 bg-white p-3"
+                      className="rounded-md border border-amber-200 bg-white p-3"
                     >
                       <div className="text-xs text-slate-600">
                         <strong>Date:</strong> {entry.date || "—"} |{" "}
@@ -330,9 +331,13 @@ export default function TimeEntryWithIncrements({
                         <strong>Stop:</strong> {entry.end_time || "—"}
                       </div>
 
-                      <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-800">
-                        <strong>Reason:</strong>{" "}
-                        {entry.rejection_reason || "No reason provided"}
+                      <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-900">
+                        <strong>
+                          {entry.correction_type === "time_card_return"
+                            ? "Staff correction note:"
+                            : "Rejection reason:"}
+                        </strong>{" "}
+                        {entry.correction_note}
                       </div>
 
                       <Button
@@ -340,7 +345,7 @@ export default function TimeEntryWithIncrements({
                         size="sm"
                         variant="outline"
                         className="mt-3"
-                        onClick={() => loadRejectedEntryForCorrection(entry)}
+                        onClick={() => loadEntryForCorrection(entry)}
                       >
                         Correct This Entry
                       </Button>
