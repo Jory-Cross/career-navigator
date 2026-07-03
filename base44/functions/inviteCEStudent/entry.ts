@@ -1155,15 +1155,12 @@ async function createOrReuseCheckout({
     };
   }
 
-  if (
-    existingCheckout?.completed &&
-    existingCheckout.session.payment_status === "paid"
-  ) {
-    throw new RequestError(
-      409,
-      "Payment is already awaiting confirmation. Do not create another checkout session."
-    );
-  }
+  if (existingCheckout?.completed) {
+  throw new RequestError(
+    409,
+    "A previous CE registration checkout is still awaiting payment confirmation. Do not create another checkout session."
+  );
+}
 
   const { successUrl, cancelUrl } = buildCheckoutRedirectUrls();
 
