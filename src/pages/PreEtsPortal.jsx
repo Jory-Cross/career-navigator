@@ -147,13 +147,46 @@ export default function PreEtsPortal() {
   const onboardingSteps = Array.isArray(portalShellData?.onboarding_steps)
     ? portalShellData.onboarding_steps
     : [];
-  const completeTask = async (taskId) => {
+   const completeTask = async (taskId) => {
     try {
-      await base44.entities.Task.update(taskId, { status: 'completed' });
-      toast.success("Task marked complete!");
-      queryClient.invalidateQueries({ queryKey: ['pre-ets-tasks'] });
-    } catch {
-      toast.error("Failed to update task");
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsTask",
+        {
+          action: "complete_student_task",
+          task_id: taskId,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "This task could not be marked complete."
+        );
+      }
+
+      toast.success(
+        data?.already_completed
+          ? "This task is already marked complete."
+          : "Task marked complete."
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["authorizedPreEtsPortalData"],
+      });
+    } catch (error) {
+      const errorData =
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          error?.message ||
+          "This task could not be marked complete."
+      );
     }
   };
 
