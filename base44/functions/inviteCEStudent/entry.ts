@@ -46,7 +46,6 @@ const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
 const CHECKOUT_ELIGIBLE_EVENT_STATUSES = new Set([
   "pending",
   "ready_for_checkout",
-  "payment_processing",
   "failed",
 ]);
 
