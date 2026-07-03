@@ -96,6 +96,26 @@ export default function IEPPlanSection({ clientId, isStaff }) {
   const f = (key) => form[key] || "";
   const set = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
+  if (isLoading) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="py-12 text-center text-sm text-slate-500">
+          Loading IEP plan...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="py-12 text-center text-sm text-red-700">
+          {error.message || "The IEP plan could not be loaded."}
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (editing) {
     return (
       <Card className="border-0 shadow-sm">
