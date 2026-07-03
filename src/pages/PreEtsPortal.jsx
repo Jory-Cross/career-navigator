@@ -120,51 +120,33 @@ export default function PreEtsPortal() {
     : [];
     // The server resolves the student's linked client or the staff-selected client.
   const activeClient = portalShellData?.selected_client || null;
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['pre-ets-tasks', activeClient?.id],
-    queryFn: async () => {
-      const allTasks = await base44.entities.Task.list();
-      return allTasks.filter(t => t.client_ids?.includes(activeClient.id));
-    },
-    enabled: !!activeClient
-  });
+   const tasks = Array.isArray(portalShellData?.tasks)
+    ? portalShellData.tasks
+    : [];
 
-  const { data: assessments = [] } = useQuery({
-    queryKey: ['pre-ets-assessments', activeClient?.id],
-    queryFn: () => base44.entities.Assessment.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
+  const assessments = Array.isArray(portalShellData?.assessments)
+    ? portalShellData.assessments
+    : [];
 
-  const { data: wbleForms = [] } = useQuery({
-    queryKey: ['pre-ets-wble', activeClient?.id],
-    queryFn: () => base44.entities.WBLEForm.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
+  const wbleForms = Array.isArray(portalShellData?.wble_forms)
+    ? portalShellData.wble_forms
+    : [];
 
-  const { data: progressReports = [] } = useQuery({
-    queryKey: ['training-progress-reports', activeClient?.id],
-    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
+  const progressReports = Array.isArray(portalShellData?.progress_reports)
+    ? portalShellData.progress_reports
+    : [];
 
-  const { data: documents = [] } = useQuery({
-    queryKey: ['pre-ets-documents', activeClient?.id],
-    queryFn: () => base44.entities.Document.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
+  const documents = Array.isArray(portalShellData?.documents)
+    ? portalShellData.documents
+    : [];
 
-  const { data: meetings = [] } = useQuery({
-    queryKey: ['pre-ets-meetings', activeClient?.id],
-    queryFn: () => base44.entities.Meeting.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
+  const meetings = Array.isArray(portalShellData?.meetings)
+    ? portalShellData.meetings
+    : [];
 
-  const { data: onboardingSteps = [] } = useQuery({
-    queryKey: ['pre-ets-onboarding', activeClient?.id],
-    queryFn: () => base44.entities.OnboardingStep.filter({ client_id: activeClient.id }),
-    enabled: !!activeClient
-  });
-
+  const onboardingSteps = Array.isArray(portalShellData?.onboarding_steps)
+    ? portalShellData.onboarding_steps
+    : [];
   const completeTask = async (taskId) => {
     try {
       await base44.entities.Task.update(taskId, { status: 'completed' });
