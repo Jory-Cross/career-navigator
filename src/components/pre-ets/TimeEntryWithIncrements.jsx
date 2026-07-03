@@ -62,21 +62,33 @@ export default function TimeEntryWithIncrements({
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const { data: rejectedEntries = [] } = useQuery({
-    queryKey: ["preEtsRejectedTimeEntries", clientId],
+   const { data: rejectedEntries = [] } = useQuery({
+    queryKey: ["preEtsStudentTimeEntries"],
     queryFn: async () => {
-      const records = await base44.entities.PreEtsClientTimeEntry.filter({
-        client_id: clientId,
-        status: "rejected",
-      });
+      const response = await base44.functions.invoke(
+        "getAuthorizedPreEtsStudentTimeEntries",
+        {}
+      );
 
-      return Array.isArray(records) ? records : [];
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "Your Pre-ETS time entries could not be loaded."
+        );
+      }
+
+      return Array.isArray(data?.entries)
+        ? data.entries.filter((entry) => entry?.status === "rejected")
+        : [];
     },
-    enabled: !!clientId,
     refetchOnMount: "always",
   });
-  
-  const durationMinutes = useMemo(() => calculateDuration(startTime, endTime), [startTime, endTime]);
+
+  const durationMinutes = useMemo(
+    () => calculateDuration(startTime, endTime),
+    [startTime, endTime]
+  );
 
   const validationError = useMemo(() => {
     if (startTime && endTime && !durationMinutes) {
@@ -91,9 +103,13 @@ export default function TimeEntryWithIncrements({
     return null;
   }, [startTime, endTime, durationMinutes]);
 
-  const canSave = startTime && endTime && durationMinutes && !validationError;
+  const canSave =
+    startTime &&
+    endTime &&
+    durationMinutes &&
+    !validationError;
 
-    const loadRejectedEntryForCorrection = (entry) => {
+  const loadRejectedEntryForCorrection = (entry) => {
     setCorrectionEntryId(entry.id);
     setDate(entry.date || format(new Date(), "yyyy-MM-dd"));
     setStartTime(entry.start_time || "");
@@ -102,7 +118,6 @@ export default function TimeEntryWithIncrements({
     toast.info("Rejected entry loaded. Make corrections and resubmit.");
   };
 
-  
   const handleSave = async () => {
     if (!canSave) {
       toast.error("Please resolve validation errors");
@@ -110,42 +125,72 @@ export default function TimeEntryWithIncrements({
     }
 
     setSaving(true);
-    try {
-            const payload = {
-        client_id: clientId,
-        client_name: clientName || "",
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        duration_minutes: durationMinutes,
-        description: notes || "Work session",
-        source: "client_portal",
-        status: "pending",
-        rejection_reason: null,
-        resubmitted_at: correctionEntryId ? new Date().toISOString() : null,
-      };
 
-      if (correctionEntryId) {
-        await base44.entities.PreEtsClientTimeEntry.update(correctionEntryId, payload);
-      } else {
-        await base44.entities.PreEtsClientTimeEntry.create(payload);
+    try {
+      const action = correctionEntryId
+        ? "resubmit_student_entry"
+        : "create_student_entry";
+
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsTimeEntry",
+        {
+          action,
+          ...(correctionEntryId
+            ? { entry_id: correctionEntryId }
+            : {}),
+          entry: {
+            date,
+            start_time: startTime,
+            end_time: endTime,
+            description: notes.trim() || "Work session",
+          },
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "Your Pre-ETS time entry could not be saved."
+        );
       }
 
-      toast.success(`Time entry saved: ${formatDurationDisplay(durationMinutes)}`);
+      toast.success(
+        correctionEntryId
+          ? `Corrected time entry resubmitted: ${formatDurationDisplay(
+              durationMinutes
+            )}`
+          : `Time entry saved: ${formatDurationDisplay(durationMinutes)}`
+      );
 
-      await queryClient.invalidateQueries({
-        queryKey: ["preEtsRejectedTimeEntries", clientId],
-      });
-      
-      // Reset form
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["preEtsStudentTimeEntries"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["preEtsTimeCards"],
+        }),
+      ]);
+
       setStartTime("");
       setEndTime("");
       setNotes("");
       setCorrectionEntryId(null);
       setShowPreview(false);
     } catch (error) {
-      toast.error("Failed to save time entry");
-      console.error(error);
+      const errorData =
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          error?.message ||
+          "Your Pre-ETS time entry could not be saved."
+      );
+
+      console.error("Failed to save Pre-ETS time entry", error);
     } finally {
       setSaving(false);
     }
