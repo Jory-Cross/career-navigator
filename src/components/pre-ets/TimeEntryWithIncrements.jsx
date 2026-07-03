@@ -62,7 +62,9 @@ export default function TimeEntryWithIncrements({
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-   const { data: rejectedEntries = [] } = useQuery({
+    const {
+    data: studentTimeEntryData = { entries: [] },
+  } = useQuery({
     queryKey: ["preEtsStudentTimeEntries"],
     queryFn: async () => {
       const response = await base44.functions.invoke(
@@ -78,12 +80,107 @@ export default function TimeEntryWithIncrements({
         );
       }
 
-      return Array.isArray(data?.entries)
-        ? data.entries.filter((entry) => entry?.status === "rejected")
-        : [];
+      return {
+        entries: Array.isArray(data?.entries) ? data.entries : [],
+      };
     },
     refetchOnMount: "always",
   });
+
+  const {
+    data: studentTimeCardData = { cards: [] },
+  } = useQuery({
+    queryKey: ["preEtsStudentTimeCards"],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "getAuthorizedPreEtsTimeCards",
+        {
+          include_entries: true,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "Your Pre-ETS Time Cards could not be loaded."
+        );
+      }
+
+      return {
+        cards: Array.isArray(data?.cards) ? data.cards : [],
+      };
+    },
+    refetchOnMount: "always",
+  });
+
+  const studentEntries = Array.isArray(studentTimeEntryData?.entries)
+    ? studentTimeEntryData.entries
+    : [];
+
+  const correctionEntries = useMemo(() => {
+    const entriesById = new Map(
+      studentEntries
+        .filter((entry) => entry?.id)
+        .map((entry) => [entry.id, entry])
+    );
+
+    const correctionEntriesById = new Map();
+
+    for (const entry of studentEntries) {
+      if (entry?.status !== "rejected" || !entry?.id) {
+        continue;
+      }
+
+      correctionEntriesById.set(entry.id, {
+        ...entry,
+        correction_type: "individual_rejection",
+        correction_note:
+          entry?.rejection_reason || "No rejection reason was provided.",
+      });
+    }
+
+    const returnedTimeCards = Array.isArray(studentTimeCardData?.cards)
+      ? studentTimeCardData.cards.filter(
+          (card) => card?.status === "returned_to_student"
+        )
+      : [];
+
+    for (const timeCard of returnedTimeCards) {
+      const snapshotEntries = Array.isArray(timeCard?.entries)
+        ? timeCard.entries
+        : [];
+
+      for (const snapshotEntry of snapshotEntries) {
+        const entryId = snapshotEntry?.id;
+
+        if (!entryId || correctionEntriesById.has(entryId)) {
+          continue;
+        }
+
+        const currentEntry = entriesById.get(entryId);
+
+        if (!currentEntry) {
+          continue;
+        }
+
+        correctionEntriesById.set(entryId, {
+          ...currentEntry,
+          correction_type: "time_card_return",
+          correction_note:
+            timeCard?.return_to_student_note ||
+            "Staff returned this Time Card for correction.",
+        });
+      }
+    }
+
+    return Array.from(correctionEntriesById.values()).sort((left, right) => {
+      const leftKey = `${left?.date || ""}T${left?.start_time || ""}`;
+      const rightKey = `${right?.date || ""}T${right?.start_time || ""}`;
+
+      return rightKey.localeCompare(leftKey);
+    });
+  }, [studentEntries, studentTimeCardData]);
 
   const durationMinutes = useMemo(
     () => calculateDuration(startTime, endTime),
@@ -109,13 +206,13 @@ export default function TimeEntryWithIncrements({
     durationMinutes &&
     !validationError;
 
-  const loadRejectedEntryForCorrection = (entry) => {
+  const loadEntryForCorrection = (entry) => {
     setCorrectionEntryId(entry.id);
     setDate(entry.date || format(new Date(), "yyyy-MM-dd"));
     setStartTime(entry.start_time || "");
     setEndTime(entry.end_time || "");
     setNotes(entry.description || "");
-    toast.info("Rejected entry loaded. Make corrections and resubmit.");
+    toast.info("Time entry loaded. Make corrections and resubmit.");
   };
 
   const handleSave = async () => {
@@ -168,6 +265,9 @@ export default function TimeEntryWithIncrements({
           queryKey: ["preEtsStudentTimeEntries"],
         }),
         queryClient.invalidateQueries({
+          queryKey: ["preEtsStudentTimeCards"],
+        }),
+        queryClient.invalidateQueries({
           queryKey: ["preEtsTimeCards"],
         }),
       ]);
@@ -195,7 +295,6 @@ export default function TimeEntryWithIncrements({
       setSaving(false);
     }
   };
-
   return (
     <>
       <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
