@@ -239,8 +239,16 @@ async function getCheckout(invoice: any) {
 
   try {
     return await stripe.checkout.sessions.retrieve(sessionId);
-  } catch {
-    return null;
+  } catch (error) {
+    console.error(
+      "Unable to retrieve saved Stripe checkout session:",
+      error,
+    );
+
+    throw fail(
+      409,
+      "The saved checkout session could not be verified. Please contact support before creating another checkout.",
+    );
   }
 }
 
