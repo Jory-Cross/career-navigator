@@ -34,58 +34,90 @@ const CHECKLIST_ITEMS = [
 const STAFF_ROLES = ['admin', 'management', 'employee'];
 
 export default function PreEtsPortal() {
-  const [user, setUser] = useState(null);
-  const [client, setClient] = useState(null);
+    const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const queryClient = useQueryClient();
   const { canView } = useFeaturePermissions(user);
-  
+
   useEffect(() => {
-    loadData();
-  }, []);
+    let isMounted = true;
 
-  const loadData = async () => {
-    try {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
+    const loadAuthenticatedUser = async () => {
+      try {
+        const currentUser = await base44.auth.me();
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const clientIdParam = urlParams.get("id");
+        if (!isMounted) {
+          return;
+        }
 
-      const allClients = await base44.entities.Client.list();
+        setUser(currentUser);
 
-      if (currentUser.role === 'pre_ets') {
-        const clientData = allClients.find(c => c.email === currentUser.email);
-        if (clientData) setClient(clientData);
-      } else if (STAFF_ROLES.includes(currentUser.role) && clientIdParam) {
-        const clientData = allClients.find(c => c.id === clientIdParam);
-        if (clientData && clientData.client_type === 'pre_ets') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientIdParam = urlParams.get("id");
+
+        if (
+          STAFF_ROLES.includes(currentUser?.role) &&
+          clientIdParam
+        ) {
           setSelectedClientId(clientIdParam);
         }
+      } catch (error) {
+        console.error("Failed to load authenticated user", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Failed to load data", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  // For staff roles: fetch all pre_ets clients
-  const { data: preEtsClients = [], refetch: refetchPreEts } = useQuery({
-    queryKey: ['pre-ets-clients'],
-    queryFn: () => base44.entities.Client.filter({ client_type: 'pre_ets' }),
-    enabled: !!user && STAFF_ROLES.includes(user.role)
+    loadAuthenticatedUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const {
+    data: portalShellData = {
+      portal_mode: "",
+      clients: [],
+      selected_client: null,
+    },
+    isLoading: portalShellLoading,
+    error: portalShellError,
+  } = useQuery({
+    queryKey: [
+      "authorizedPreEtsPortalData",
+      selectedClientId || "self",
+    ],
+    enabled: !!user,
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "getAuthorizedPreEtsPortalData",
+        selectedClientId
+          ? { client_id: selectedClientId }
+          : {}
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "Unable to load your authorized Pre-ETS portal."
+        );
+      }
+
+      return data;
+    },
+    refetchOnMount: "always",
   });
 
-  const deleteClient = async (e, clientId) => {
-    e.stopPropagation();
-    if (!confirm("Delete this client? This cannot be undone.")) return;
-    await base44.entities.Client.delete(clientId);
-    refetchPreEts();
-  };
-
+  const preEtsClients = Array.isArray(portalShellData?.clients)
+    ? portalShellData.clients
+    : [];
   // For staff: use selected client; for pre_ets user: use their own client
   const activeClient = STAFF_ROLES.includes(user?.role)
     ? preEtsClients.find(c => c.id === selectedClientId)
