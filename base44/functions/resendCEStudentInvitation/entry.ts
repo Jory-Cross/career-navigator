@@ -31,6 +31,11 @@ const CE_REGISTRATION_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
+const RESENDABLE_CE_ENROLLMENT_STATUSES = new Set([
+  "invited",
+  "payment_pending",
+]);
+
 const CHECKOUT_CREATABLE_EVENT_STATUSES = new Set([
   "pending",
   "ready_for_checkout",
