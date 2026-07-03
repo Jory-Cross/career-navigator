@@ -150,14 +150,25 @@ Deno.serve(async (req) => {
       taskId
     ).catch(() => null);
 
+        const assignedClientIds = asArray<string>(task?.client_ids)
+      .map((clientId) => normalizeText(clientId))
+      .filter(Boolean);
+
     if (
       !task ||
       !isActive(task) ||
       normalizeText(task?.org_id) !== organizationId ||
       task?.assigned_to_client !== true ||
-      !asArray(task?.client_ids).includes(linkedClientId)
+      !assignedClientIds.includes(linkedClientId)
     ) {
       throw new RequestError(404, "Assigned student task not found.");
+    }
+
+    if (assignedClientIds.length !== 1) {
+      throw new RequestError(
+        409,
+        "This task is assigned to multiple students and cannot be completed from the student portal until separate per-student completion is supported."
+      );
     }
 
     const currentStatus =
