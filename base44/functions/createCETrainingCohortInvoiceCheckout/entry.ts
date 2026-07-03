@@ -36,8 +36,14 @@ const PAYABLE_EVENT_STATUSES = new Set([
 ]);
 
 function fail(status: number, message: string) {
-  const error = new Error(message) as Error & { status?: number };
+  const error = new Error(message) as Error & {
+    status?: number;
+    is_public?: boolean;
+  };
+
   error.status = status;
+  error.is_public = true;
+
   return error;
 }
 
