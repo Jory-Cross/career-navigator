@@ -144,7 +144,20 @@ export default function SkillsExplorationTab() {
           </CardTitle>
           <p className="text-sm text-slate-500">Select areas that sound interesting to you, and we'll suggest career paths!</p>
         </CardHeader>
-        <CardContent className="space-y-4">
+               <CardContent className="space-y-4">
+          {isLoadingSkillsExploration && (
+            <p className="text-sm text-slate-500">
+              Loading your saved career exploration...
+            </p>
+          )}
+
+          {skillsExplorationError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {skillsExplorationError.message ||
+                "Your saved career exploration could not be loaded."}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {INTEREST_AREAS.map(area => (
               <button
