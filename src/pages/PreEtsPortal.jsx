@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   GraduationCap, ClipboardList, Briefcase, CheckCircle2, Clock,
-  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users, Sparkles, Brain, Trash2, ExternalLink
+  Upload, FileText, Download, Loader2, Star, Target, BookOpen, Users, Sparkles, Brain, ExternalLink
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
