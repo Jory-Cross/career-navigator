@@ -3,6 +3,7 @@ import { jsPDF } from "npm:jspdf@2.5.1";
 
 const STAFF_ROLES = new Set(["admin", "management", "employee"]);
 const SUPPORTED_ACTIONS = new Set([
+  "get_staff_wble_workspace",
   "create_staff_wble_form",
   "delete_staff_wble_form",
 ]);
