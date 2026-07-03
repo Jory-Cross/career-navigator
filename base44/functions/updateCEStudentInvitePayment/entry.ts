@@ -486,6 +486,13 @@ async function resolveEnrollmentAndBilling(
     );
   }
 
+  if (!CHANGEABLE_CE_ENROLLMENT_STATUSES.has(enrollmentStatus)) {
+    throw new RequestError(
+      409,
+      "This CE Training payment option can be changed only before payment settlement is recorded."
+    );
+  }
+
   const enrollmentPaymentResponsibility = normalizeText(
     enrollment?.payment_responsibility
   );
