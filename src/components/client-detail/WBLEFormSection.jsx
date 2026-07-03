@@ -235,9 +235,14 @@ export default function WBLEFormSection({ clientId, client, user }) {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+                {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          </div>
+        ) : workspaceError ? (
+          <div className="py-8 text-center text-sm text-red-700">
+            {workspaceError.message ||
+              "The WBLE workspace could not be loaded."}
           </div>
         ) : wbleForms.length === 0 ? (
           <div className="text-center py-8 text-sm text-slate-400">No WBLE forms yet</div>
