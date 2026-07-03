@@ -626,8 +626,9 @@ async function inspectExistingCheckoutSession(
     );
   }
 
-  if (
+   if (
     checkoutSession.status === "open" &&
+    checkoutSession.payment_status === "unpaid" &&
     normalizeText(checkoutSession?.url)
   ) {
     return {
