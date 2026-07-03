@@ -473,11 +473,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { client } = await resolveAuthorizedStaffClient(
-      base44,
-      authenticatedUser.id,
-      clientId
-    );
+       let client: any = null;
+
+    if (action === "get_plan") {
+      const caller = await base44.asServiceRole.entities.User.get(
+        authenticatedUser.id
+      ).catch(() => null);
+
+      const callerRole = normalizeText(caller?.role).toLowerCase();
+      const callerAccessLevel = normalizeText(
+        caller?.access_level
+      ).toLowerCase();
+
+      if (
+        callerRole === "pre_ets" &&
+        callerAccessLevel === "client_portal"
+      ) {
+        const studentContext = await resolveAuthorizedStudentClient(
+          base44,
+          authenticatedUser.id
+        );
+
+        client = studentContext.client;
+      } else {
+        const staffContext = await resolveAuthorizedStaffClient(
+          base44,
+          authenticatedUser.id,
+          clientId
+        );
+
+        client = staffContext.client;
+      }
+    } else {
+      const staffContext = await resolveAuthorizedStaffClient(
+        base44,
+        authenticatedUser.id,
+        clientId
+      );
+
+      client = staffContext.client;
+    }
 
     const existingPlan = await loadSinglePlan(
       base44,
@@ -503,7 +538,6 @@ Deno.serve(async (req) => {
           client_id: normalizeText(client?.id),
           ...payload,
         });
-
     return Response.json({
       ok: true,
       action,
