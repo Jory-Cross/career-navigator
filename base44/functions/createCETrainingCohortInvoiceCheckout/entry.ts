@@ -815,7 +815,17 @@ Deno.serve(async (req) => {
     const invites = Array.isArray(inviteRows) ? inviteRows : [];
     const events = Array.isArray(eventRows) ? eventRows : [];
     const invoices = Array.isArray(invoiceRows) ? invoiceRows : [];
-    const lines = Array.isArray(lineRows) ? lineRows : [];
+      const lines = Array.isArray(lineRows) ? lineRows : [];
+
+    const enrollmentRows =
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
+        org_id: organizationId,
+        cohort_id: cohortId,
+      });
+
+    const enrollments = Array.isArray(enrollmentRows)
+      ? enrollmentRows
+      : [];
 
     const inviteById = new Map(
       invites.map((invite) => [text(invite.id), invite]),
