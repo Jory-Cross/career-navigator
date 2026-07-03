@@ -731,7 +731,7 @@ async function createCheckoutSession({
         payment_responsibility: paymentResponsibility,
         instructor_payment_mode: instructorPaymentMode,
       },
-      payment_intent_data: {
+            payment_intent_data: {
         metadata: {
           billing_flow: "ce_student_registration",
           billing_event_id: String(billingEvent.id),
@@ -741,6 +741,8 @@ async function createCheckoutSession({
           organization_id: organizationId,
           cohort_id: cohortId,
           subject_verified_email: studentEmail,
+          payment_responsibility: paymentResponsibility,
+          instructor_payment_mode: instructorPaymentMode,
         },
       },
     },
