@@ -439,8 +439,6 @@ async function ensureCheckout({
 
   const existingSession = await getCheckout(invoice);
 
-  const existingSession = await getCheckout(invoice);
-
 if (existingSession) {
   const metadata = existingSession.metadata || {};
 
