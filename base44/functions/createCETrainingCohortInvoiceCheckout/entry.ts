@@ -50,6 +50,19 @@ function email(value: unknown) {
   return text(value).toLowerCase();
 }
 
+function isActiveRecord(record: any) {
+  return (
+    record &&
+    record.is_active !== false &&
+    record.is_archived !== true &&
+    text(record?.status).toLowerCase() !== "archived"
+  );
+}
+
+function isValidEmail(value: unknown) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email(value));
+}
+
 function registrationEventKey(orgId: string, studentEmail: string) {
   return `ce_student_registration:${orgId}:${encodeURIComponent(
     email(studentEmail),
