@@ -44,8 +44,12 @@ const EMPTY_FORM = {
   supervisor_title: "",
 };
 
-export default function TrainingProgressReportForm({ open, onClose, client }) {
-  const queryClient = useQueryClient();
+export default function TrainingProgressReportForm({
+  open,
+  onClose,
+  client,
+  onSubmitted,
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
