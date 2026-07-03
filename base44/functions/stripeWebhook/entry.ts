@@ -849,10 +849,64 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       invoiceLine?.organization_billing_event_id
     );
 
-    if (!billingEventId || billingEventIds.has(billingEventId)) {
+        if (!billingEventId || billingEventIds.has(billingEventId)) {
       throw new Error(
         "A cohort invoice contains duplicate or missing student billing-event references."
       );
+    }
+
+    const enrollmentId = normalizeText(
+      invoiceLine?.ce_training_student_enrollment_id
+    );
+
+    // Older invoice lines predate the durable enrollment link.
+    // New lines must validate the exact linked enrollment before settlement.
+    if (enrollmentId) {
+      const enrollmentRows =
+        await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+          {
+            organization_billing_event_id: billingEventId,
+          }
+        );
+
+      const linkedEnrollments = asArray(enrollmentRows);
+      const enrollment = linkedEnrollments[0] || null;
+      const enrollmentStatus = normalizeText(
+        enrollment?.enrollment_status
+      ).toLowerCase();
+
+      const enrollmentMatches =
+        linkedEnrollments.length === 1 &&
+        normalizeText(enrollment?.id) === enrollmentId &&
+        enrollment?.is_active !== false &&
+        !["withdrawn", "revoked"].includes(enrollmentStatus) &&
+        normalizeText(enrollment?.org_id) ===
+          normalizeText(cohortInvoice?.organization_id) &&
+        normalizeText(enrollment?.cohort_id) ===
+          normalizeText(cohortInvoice?.cohort_id) &&
+        normalizeEmail(enrollment?.student_email) ===
+          normalizeEmail(invoiceLine?.subject_verified_email) &&
+        normalizeText(enrollment?.pending_role_assignment_id) ===
+          normalizeText(invoiceLine?.pending_role_assignment_id) &&
+        normalizeText(enrollment?.organization_billing_event_id) ===
+          billingEventId &&
+        normalizeText(enrollment?.payment_responsibility) ===
+          "instructor_paid" &&
+        normalizeText(enrollment?.instructor_payment_mode) ===
+          "invoice_with_cohort" &&
+        [
+          "invited",
+          "payment_pending",
+          "payment_settled_registration_pending",
+          "active",
+          "training_completed",
+        ].includes(enrollmentStatus);
+
+      if (!enrollmentMatches) {
+        throw new Error(
+          "A cohort invoice line is not safely linked to one eligible CE Training enrollment."
+        );
+      }
     }
 
     billingEventIds.add(billingEventId);
