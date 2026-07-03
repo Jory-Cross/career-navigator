@@ -689,7 +689,9 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
     );
   }
 
-  if (
+   if (
+    normalizeText(session.client_reference_id) !==
+      normalizeText(cohortInvoice?.id) ||
     normalizeText(metadata.organization_id) !==
       normalizeText(cohortInvoice?.organization_id) ||
     normalizeText(metadata.cohort_id) !==
@@ -701,7 +703,6 @@ async function handleCETrainingCohortInvoiceCheckoutCompleted(
       "Stripe checkout metadata does not safely match the cohort invoice."
     );
   }
-
   const checkoutSessionId = normalizeText(session.id);
   const paymentIntentId = getStripeId(session.payment_intent);
   const paymentStatus = normalizeText(session.payment_status);
