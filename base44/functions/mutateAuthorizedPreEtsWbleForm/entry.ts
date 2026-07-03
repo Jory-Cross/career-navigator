@@ -675,6 +675,33 @@ Deno.serve(async (req) => {
       );
     }
 
+       if (action === "get_staff_wble_workspace") {
+      const clientId = normalizeText(requestBody?.client_id);
+
+      if (!clientId) {
+        throw new RequestError(400, "client_id is required.");
+      }
+
+      const client = await resolveAuthorizedStaffClient(
+        base44,
+        caller,
+        organizationId,
+        clientId
+      );
+
+      const workspace = await loadStaffWbleWorkspace(
+        base44,
+        normalizeText(client?.id)
+      );
+
+      return Response.json({
+        ok: true,
+        action,
+        client_id: normalizeText(client?.id),
+        ...workspace,
+      });
+    }
+
     if (action === "create_staff_wble_form") {
       const clientId = normalizeText(requestBody?.client_id);
 
