@@ -199,11 +199,37 @@ export default function PreEtsPortal() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
+  if (loading || (!!user && portalShellLoading)) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400">
+        Loading...
+      </div>
+    );
+  }
 
-  const isStaff = STAFF_ROLES.includes(user?.role);
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-slate-600">Access denied.</p>
+      </div>
+    );
+  }
 
-  if (!user || (!isStaff && user.role !== 'pre_ets')) {
+  if (portalShellError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-slate-600">
+          {portalShellError.message ||
+            "Unable to load your authorized Pre-ETS portal."}
+        </p>
+      </div>
+    );
+  }
+
+  const isStaff = portalShellData?.portal_mode === "staff";
+  const isStudent = portalShellData?.portal_mode === "student";
+
+  if (!isStaff && !isStudent) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <p className="text-slate-600">Access denied.</p>
