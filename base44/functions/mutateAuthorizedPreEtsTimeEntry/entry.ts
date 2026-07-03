@@ -599,10 +599,21 @@ Deno.serve(async (req) => {
         organizationId
       );
 
-      const payload = buildStudentEntryPayload(
+          const payload = buildStudentEntryPayload(
         requestBody?.entry,
         client,
         organizationId
+      );
+
+      const clientTimeCards = await loadClientTimeCards(
+        base44,
+        organizationId,
+        normalizeText(client?.id)
+      );
+
+      assertStudentMayMutateTimeCardPeriods(
+        clientTimeCards,
+        [payload.date]
       );
 
       const created =
