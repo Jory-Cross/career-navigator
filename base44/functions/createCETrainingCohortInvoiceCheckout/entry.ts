@@ -1142,7 +1142,7 @@ Deno.serve(async (req) => {
         eventById,
       }),
     );
-  } catch (error) {
+   } catch (error) {
     console.error(
       "createCETrainingCohortInvoiceCheckout error:",
       error?.message || error,
@@ -1151,9 +1151,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         ok: false,
-        error:
-          error?.message ||
-          "Unable to create the CE Training cohort invoice checkout.",
+        error: publicError(error),
       },
       {
         status:
