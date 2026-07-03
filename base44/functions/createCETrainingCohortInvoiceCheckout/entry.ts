@@ -451,8 +451,49 @@ async function ensureCheckout({
     eventById,
   });
 
-  const existingSession = await getCheckout(invoice);
+  for (const line of lines) {
+    const enrollmentId = text(
+      line.ce_training_student_enrollment_id,
+    );
 
+    // Historical lines predate the durable enrollment link.
+    // They remain protected by the invitation and billing-event checks above.
+    if (!enrollmentId) {
+      continue;
+    }
+
+    const enrollment =
+      await base44.asServiceRole.entities.CETrainingStudentEnrollment.get(
+        enrollmentId,
+      ).catch(() => null);
+
+    const enrollmentMatches =
+      isActiveRecord(enrollment) &&
+      text(enrollment.org_id) === organizationId &&
+      text(enrollment.cohort_id) === text(cohort.id) &&
+      email(enrollment.student_email) ===
+        email(line.subject_verified_email) &&
+      text(enrollment.pending_role_assignment_id) ===
+        text(line.pending_role_assignment_id) &&
+      text(enrollment.organization_billing_event_id) ===
+        text(line.organization_billing_event_id) &&
+      text(enrollment.payment_responsibility).toLowerCase() ===
+        "instructor_paid" &&
+      text(enrollment.instructor_payment_mode).toLowerCase() ===
+        "invoice_with_cohort" &&
+      ["invited", "payment_pending"].includes(
+        text(enrollment.enrollment_status).toLowerCase(),
+      );
+
+    if (!enrollmentMatches) {
+      throw fail(
+        409,
+        "A saved cohort invoice line is no longer connected to an eligible CE Training enrollment.",
+      );
+    }
+  }
+
+  const existingSession = await getCheckout(invoice);
 if (existingSession) {
   const metadata = existingSession.metadata || {};
 
