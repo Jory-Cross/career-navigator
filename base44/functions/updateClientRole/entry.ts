@@ -1,33 +1,18 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
-Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    
-    const { userId, userEmail } = await req.json();
-
-    // Check if there's a Client entity with this email
-    const clients = await base44.asServiceRole.entities.Client.filter({ email: userEmail });
-    
-    if (clients && clients.length > 0) {
-      // Update the user's role to 'client'
-      await base44.asServiceRole.entities.User.update(userId, { role: 'client' });
-      
-      return Response.json({ 
-        success: true,
-        message: 'User role updated to client' 
-      });
-    }
-
-    return Response.json({ 
-      success: true,
-      message: 'No matching client found, no action taken' 
-    });
-  } catch (error) {
-    console.error('Error updating client role:', error);
-    return Response.json({ 
-      error: error.message,
-      success: false 
-    }, { status: 500 });
-  }
+/**
+ * Retired security endpoint.
+ *
+ * Client access is granted only through the authenticated,
+ * tenant-scoped applyPendingRoleIfNeeded activation workflow.
+ * This legacy endpoint previously trusted caller-supplied identifiers
+ * and could change another account's role.
+ */
+Deno.serve(() => {
+  return Response.json(
+    {
+      success: false,
+      error:
+        "This legacy client-role endpoint has been retired. Client access is granted through the secure invitation activation process.",
+    },
+    { status: 410 },
+  );
 });
