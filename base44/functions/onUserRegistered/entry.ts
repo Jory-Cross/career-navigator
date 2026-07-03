@@ -31,11 +31,23 @@ function normalizeEmail(value) {
 }
 
 function isValidAssignment(assignment) {
-  if (!assignment.role || !assignment.access_level || !assignment.org_id) {
+  const role = normalizeText(assignment?.role);
+  const accessLevel = normalizeText(assignment?.access_level);
+  const orgId = normalizeText(assignment?.org_id);
+  const clientId = normalizeText(assignment?.client_id);
+
+  if (!role || !accessLevel || !orgId) {
     return false;
   }
 
-  if (CLIENT_ROLES.includes(assignment.role) && !assignment.client_id) {
+  if (CLIENT_ROLES.includes(role) && !clientId) {
+    return false;
+  }
+
+  if (
+    role === "pre_ets_employer" &&
+    accessLevel !== "pre_ets_employer_portal"
+  ) {
     return false;
   }
 
