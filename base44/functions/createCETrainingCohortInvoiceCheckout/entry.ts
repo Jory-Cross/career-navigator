@@ -69,8 +69,8 @@ function isValidEmail(value: unknown) {
 }
 
 function publicError(error: any) {
-  return Number(error?.status)
-    ? text(error?.message)
+  return error?.is_public === true && text(error?.message)
+    ? text(error.message)
     : "Unable to create the CE Training cohort invoice checkout. Please try again or contact support.";
 }
 
