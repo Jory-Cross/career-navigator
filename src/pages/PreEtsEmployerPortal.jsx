@@ -252,10 +252,11 @@ export default function PreEtsEmployerPortal() {
         </CardContent>
       </Card>
 
-      <TrainingProgressReportForm
+            <TrainingProgressReportForm
         open={showProgressForm}
         onClose={() => setShowProgressForm(false)}
         client={activeClient}
+        onSubmitted={refetchEmployerPortal}
       />
     </div>
   );
