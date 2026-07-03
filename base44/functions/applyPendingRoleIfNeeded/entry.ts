@@ -704,10 +704,11 @@ async function prepareCeStudentActivation(
     );
   }
 
-  const enrollment = enrollments[0];
+   const enrollment = enrollments[0];
   const enrollmentStatus = normalizeText(
     enrollment?.enrollment_status
   ).toLowerCase();
+  const assignmentId = normalizeIdentifier(assignment?.id);
 
   const enrollmentMatches =
     normalizeIdentifier(enrollment?.org_id) === organizationId &&
@@ -722,8 +723,10 @@ async function prepareCeStudentActivation(
   );
 
   if (
+    !assignmentId ||
     !enrollmentMatches ||
-    (pendingAssignmentId && pendingAssignmentId !== assignment.id)
+    !pendingAssignmentId ||
+    pendingAssignmentId !== assignmentId
   ) {
     throw new RequestError(
       409,
@@ -738,6 +741,13 @@ async function prepareCeStudentActivation(
     throw new RequestError(
       409,
       "This CE enrollment is no longer active."
+    );
+  }
+
+  if (!ACTIVATABLE_CE_ENROLLMENT_STATUSES.has(enrollmentStatus)) {
+    throw new RequestError(
+      409,
+      "CE training access remains blocked until payment settlement is fully recorded."
     );
   }
 
