@@ -22,7 +22,7 @@ const INTEREST_AREAS = [
   { id: "transportation", label: "Transportation & Logistics", emoji: "🚗" },
 ];
 
-export default function SkillsExplorationTab({ clientId, isStaff, client }) {
+export default function SkillsExplorationTab() {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
   const [careerSuggestions, setCareerSuggestions] = useState(null);
