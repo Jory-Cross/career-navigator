@@ -375,13 +375,20 @@ async function resolveEnrollmentAndBilling(
     enrollment?.enrollment_status
   ).toLowerCase();
 
-  if (
+   if (
     enrollment?.is_active === false ||
     ["withdrawn", "revoked"].includes(enrollmentStatus)
   ) {
     throw new RequestError(
       409,
       "This CE Training enrollment is no longer active."
+    );
+  }
+
+  if (!REVOCABLE_CE_ENROLLMENT_STATUSES.has(enrollmentStatus)) {
+    throw new RequestError(
+      409,
+      "This CE Training invitation can be revoked only before payment settlement is recorded."
     );
   }
 
