@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import IEPPlanSection from "@/components/pre-ets/IEPPlanSection";
 import SkillsExplorationTab from "@/components/pre-ets/SkillsExplorationTab";
 import ClockInOut from "@/components/pre-ets/ClockInOut";
+import PreEtsTimeCardWorkspace from "@/components/pre-ets/PreEtsTimeCardWorkspace";
 import WBLEFormSection from "@/components/client-detail/WBLEFormSection";
 
 const CHECKLIST_ITEMS = [
