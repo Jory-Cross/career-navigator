@@ -23,85 +23,115 @@ const INTEREST_AREAS = [
 ];
 
 export default function SkillsExplorationTab() {
-  const [selectedInterests, setSelectedInterests] = useState([]);
+   const [selectedInterests, setSelectedInterests] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
   const [careerSuggestions, setCareerSuggestions] = useState(null);
-  const queryClient = useQueryClient();
 
-  const { data: assessments = [] } = useQuery({
-    queryKey: ["pre-ets-assessments", clientId],
-    queryFn: () => base44.entities.Assessment.filter({ client_id: clientId }),
-    enabled: !!clientId,
+  const {
+    data: skillsExplorationData = {
+      assessment_summaries: [],
+      latest_career_assessment: null,
+    },
+    isLoading: isLoadingSkillsExploration,
+    error: skillsExplorationError,
+    refetch: refetchSkillsExploration,
+  } = useQuery({
+    queryKey: ["preEtsStudentSkillsExploration"],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsSkillsExploration",
+        {
+          action: "get_student_skills_exploration",
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "Your saved Skills Exploration results could not be loaded."
+        );
+      }
+
+      return data;
+    },
+    refetchOnMount: "always",
   });
 
-  const skillsAssessment = assessments.find(a => a.assessment_type === "skills_audit");
-  const careerAssessment = assessments.find(a => a.assessment_type === "career_goals");
+  const assessments = Array.isArray(
+    skillsExplorationData?.assessment_summaries
+  )
+    ? skillsExplorationData.assessment_summaries
+    : [];
+
+  const careerAssessment =
+    skillsExplorationData?.latest_career_assessment || null;
 
   const toggleInterest = (id) => {
-    setSelectedInterests(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    setSelectedInterests((current) =>
+      current.includes(id)
+        ? current.filter((interestId) => interestId !== id)
+        : [...current, id]
     );
   };
 
   const generateCareerPaths = async () => {
     if (selectedInterests.length === 0) {
-      toast.error("Please select at least one interest area");
+      toast.error("Please select at least one interest area.");
       return;
     }
+
     setLoadingAI(true);
+
     try {
-      const interestLabels = selectedInterests.map(id => INTEREST_AREAS.find(a => a.id === id)?.label).join(", ");
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `A high school student with disabilities is exploring pre-employment transition services (Pre-ETS). 
-Their interest areas are: ${interestLabels}.
-${client?.target_role ? `They've expressed interest in: ${client.target_role}.` : ""}
-
-Generate 4 entry-level career paths that would be a great fit. For each, include:
-- A clear job title appropriate for someone starting out
-- Why it's a good match for their interests
-- 3 key skills they would develop
-- A realistic first step they can take in high school
-
-Keep the language encouraging and accessible for a high school student.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            careers: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  why_its_a_fit: { type: "string" },
-                  skills_developed: { type: "array", items: { type: "string" } },
-                  first_step: { type: "string" }
-                }
-              }
-            }
-          }
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsSkillsExploration",
+        {
+          action: "generate_student_career_paths",
+          interest_ids: selectedInterests,
         }
-      });
+      );
 
-      // Save as an assessment
-      await base44.entities.Assessment.create({
-        client_id: clientId,
-        assessment_type: "career_goals",
-        responses: { interests: selectedInterests, suggestions: result.careers },
-        completed_by: "AI Skills Exploration",
-        notes: `Interest areas: ${interestLabels}`
-      });
+      const data = response?.data ?? response ?? {};
 
-      setCareerSuggestions(result.careers);
-      queryClient.invalidateQueries({ queryKey: ["pre-ets-assessments", clientId] });
-      toast.success("Career paths generated!");
-    } catch {
-      toast.error("Failed to generate suggestions");
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "Career paths could not be generated."
+        );
+      }
+
+      const generatedSuggestions = Array.isArray(
+        data?.career_assessment?.suggestions
+      )
+        ? data.career_assessment.suggestions
+        : [];
+
+      if (generatedSuggestions.length === 0) {
+        throw new Error("Career paths could not be generated.");
+      }
+
+      setCareerSuggestions(generatedSuggestions);
+      await refetchSkillsExploration();
+      toast.success("Career paths generated.");
+    } catch (error) {
+      const errorData =
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          error?.message ||
+          "Career paths could not be generated."
+      );
     } finally {
       setLoadingAI(false);
     }
   };
 
-  const savedSuggestions = careerAssessment?.responses?.suggestions || null;
+  const savedSuggestions = careerAssessment?.suggestions || null;
   const displaySuggestions = careerSuggestions || savedSuggestions;
 
   return (
