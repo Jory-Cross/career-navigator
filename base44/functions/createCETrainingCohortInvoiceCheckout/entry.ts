@@ -105,63 +105,95 @@ async function invoiceKey(
   )}`;
 }
 
-async function getCallerRecord(base44: any, caller: any) {
-  const rows = await base44.asServiceRole.entities.User.filter({
-    id: caller.id,
-  });
-
-  return Array.isArray(rows) && rows[0] ? rows[0] : caller;
-}
-
-async function resolveOrganizationId(
+async function resolveCanonicalCaller(
   base44: any,
-  caller: any,
-  callerRecord: any,
+  authenticatedUserId: string,
 ) {
-  const directOrgId = text(callerRecord?.org_id || caller?.org_id);
+  const caller =
+    await base44.asServiceRole.entities.User.get(
+      authenticatedUserId,
+    ).catch(() => null);
 
-  if (directOrgId) {
-    return directOrgId;
+  if (!caller || !isActiveRecord(caller)) {
+    throw fail(
+      403,
+      "Your account is unavailable or inactive.",
+    );
   }
 
-  const callerEmail = email(callerRecord?.email || caller?.email);
+  const callerEmail = email(caller.email);
 
-  const rows = callerEmail
-    ? await base44.asServiceRole.entities.Organization.filter({
-        owner_email: callerEmail,
-      })
-    : [];
+  if (!isValidEmail(callerEmail)) {
+    throw fail(
+      403,
+      "Your account needs a valid email address before creating a checkout.",
+    );
+  }
 
-  return text(Array.isArray(rows) ? rows[0]?.id : "");
-}
+  const role = text(caller.role).toLowerCase();
+  const accessLevel = text(caller.access_level).toLowerCase();
 
-async function assertAuthorization(
-  base44: any,
-  caller: any,
-  role: string,
-  cohortId: string,
-) {
-  if (!ALLOWED_ROLES.has(role)) {
+  if (ALLOWED_ACCESS_BY_ROLE.get(role) !== accessLevel) {
     throw fail(
       403,
       "Only authorized CE organization users may create a cohort registration invoice.",
     );
   }
 
+  const organizationId = text(caller.org_id);
+
+  if (!organizationId) {
+    throw fail(
+      403,
+      "Your account is not explicitly connected to an organization.",
+    );
+  }
+
+  const organization =
+    await base44.asServiceRole.entities.Organization.get(
+      organizationId,
+    ).catch(() => null);
+
+  if (!organization || !isActiveRecord(organization)) {
+    throw fail(
+      403,
+      "Your organization is unavailable or inactive.",
+    );
+  }
+
+  return {
+    caller,
+    callerEmail,
+    organizationId,
+    role,
+  };
+}
+
+async function assertCohortAuthority(
+  base44: any,
+  caller: any,
+  role: string,
+  organizationId: string,
+  cohortId: string,
+) {
   if (role !== "ce_instructor") {
     return;
   }
 
   const rows =
     await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+      org_id: organizationId,
       cohort_id: cohortId,
       user_id: caller.id,
     });
 
   const isManager = (Array.isArray(rows) ? rows : []).some(
     (membership) =>
-      membership.cohort_role === "manager" &&
-      membership.is_active !== false,
+      text(membership?.org_id) === organizationId &&
+      text(membership?.cohort_id) === cohortId &&
+      text(membership?.user_id) === text(caller.id) &&
+      text(membership?.cohort_role).toLowerCase() === "manager" &&
+      isActiveRecord(membership),
   );
 
   if (!isManager) {
