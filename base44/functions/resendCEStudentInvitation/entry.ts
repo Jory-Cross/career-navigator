@@ -589,17 +589,32 @@ function isCheckoutScopeValid(
   studentEmail: string
 ) {
   const metadata = session.metadata || {};
+  const billingEventKey = normalizeText(
+    billingEvent?.billing_event_key
+  );
+  const lockedAmountCents = Number(billingEvent?.amount_cents);
+  const lockedCurrency = normalizeText(
+    billingEvent?.currency || "USD"
+  ).toLowerCase();
 
   return (
+    !!billingEventKey &&
+    Number.isInteger(lockedAmountCents) &&
+    lockedAmountCents > 0 &&
+    !!lockedCurrency &&
+    session.mode === "payment" &&
     session.client_reference_id === String(billingEvent.id) &&
     metadata.billing_flow === "ce_student_registration" &&
     metadata.billing_event_id === String(billingEvent.id) &&
+    normalizeText(metadata.billing_event_key) === billingEventKey &&
     metadata.organization_id === organizationId &&
     normalizeEmail(metadata.subject_verified_email) === studentEmail &&
-    metadata.payment_responsibility === "student_paid"
+    metadata.payment_responsibility === "student_paid" &&
+    normalizeText(metadata.instructor_payment_mode) === "" &&
+    Number(session.amount_total) === lockedAmountCents &&
+    normalizeText(session.currency).toLowerCase() === lockedCurrency
   );
 }
-
 async function getExistingCheckoutSession(
   billingEvent: any
 ) {
