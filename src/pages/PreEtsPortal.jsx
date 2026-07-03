@@ -346,13 +346,15 @@ export default function PreEtsPortal() {
           {canViewDocuments && <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>}
         </TabsList>
 
-        {/* Clock In/Out */}
+            {/* Clock In/Out */}
         {canViewClock && (
-          <TabsContent value="clock">
-            <ClockInOut 
-              clientId={activeClient?.id} 
+          <TabsContent value="clock" className="space-y-6">
+            <ClockInOut
+              clientId={activeClient?.id}
               clientName={`${activeClient?.first_name} ${activeClient?.last_name}`}
             />
+
+            {!isStaff && <PreEtsTimeCardWorkspace />}
           </TabsContent>
         )}
 
