@@ -1,7 +1,11 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
-const CLIENT_ROLES = ["client", "pre_ets", "dspd"];
-
+const CLIENT_ROLES = [
+  "client",
+  "pre_ets",
+  "dspd",
+  "pre_ets_employer",
+];
 const OPEN_PENDING_ASSIGNMENT_STATUSES = [
   "pending",
   "invite_email_sent",
