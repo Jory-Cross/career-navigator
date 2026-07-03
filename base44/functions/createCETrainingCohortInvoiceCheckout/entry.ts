@@ -5,7 +5,11 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://ability4hire.com";
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 
-const ALLOWED_ROLES = new Set(["admin", "management", "ce_instructor"]);
+const ALLOWED_ACCESS_BY_ROLE = new Map([
+  ["admin", "admin"],
+  ["management", "staff"],
+  ["ce_instructor", "ce_training_portal"],
+]);
 
 const OPEN_ASSIGNMENT_STATUSES = new Set([
   "pending",
