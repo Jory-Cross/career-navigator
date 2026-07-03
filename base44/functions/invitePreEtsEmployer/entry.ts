@@ -149,7 +149,23 @@ Deno.serve(async (req) => {
     let platformInviteError = null;
 
     try {
-      const inviteRes = await base44.asServiceRole.functions.invoke('platformInviteUser', { email: normalizedEmail });
+      const platformInviteInternalSecret =
+  Deno.env.get("PLATFORM_INVITE_INTERNAL_SECRET") || "";
+
+if (!platformInviteInternalSecret) {
+  throw new Error(
+    "PLATFORM_INVITE_INTERNAL_SECRET is not configured."
+  );
+}
+
+const inviteRes =
+  await base44.asServiceRole.functions.invoke(
+    "platformInviteUser",
+    {
+      email: normalizedEmail,
+      internal_secret: platformInviteInternalSecret,
+    }
+  );
       if (inviteRes?.success === false) {
         throw new Error(inviteRes.error || 'platformInviteUser returned success=false');
       }
