@@ -584,6 +584,13 @@ async function ensureCheckout({
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      throw fail(
+        405,
+        "Use POST to create or resume a CE Training cohort invoice checkout.",
+      );
+    }
+
     if (!stripe) {
       throw fail(
         500,
@@ -592,11 +599,17 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(
+      () => null,
+    );
 
-    if (!caller) {
+    if (!authenticatedUser?.id) {
       return Response.json(
-        { ok: false, error: "Unauthorized" },
+        {
+          ok: false,
+          error:
+            "Please sign in before creating a CE Training cohort invoice checkout.",
+        },
         { status: 401 },
       );
     }
@@ -607,6 +620,10 @@ Deno.serve(async (req) => {
       body?.cohort_invoice_id
     );
 
+    if (!cohortId) {
+      throw fail(400, "cohort_id is required.");
+    }
+
     if (
       requestedCohortInvoiceId &&
       Array.isArray(body?.billing_event_ids) &&
@@ -614,7 +631,7 @@ Deno.serve(async (req) => {
     ) {
       throw fail(
         400,
-        "Provide either cohort_invoice_id to resume one saved invoice or billing_event_ids to create a new invoice, not both."
+        "Provide either cohort_invoice_id to resume one saved invoice or billing_event_ids to create a new invoice, not both.",
       );
     }
 
@@ -622,37 +639,21 @@ Deno.serve(async (req) => {
       ? []
       : selectedIds(body?.billing_event_ids);
 
-    if (!cohortId) {
-      throw fail(400, "cohort_id is required.");
-    }
-    const callerRecord = await getCallerRecord(base44, caller);
-    const callerRole = text(callerRecord?.role || caller.role);
-    const callerEmail = email(callerRecord?.email || caller.email);
-
-    const organizationId = await resolveOrganizationId(
-      base44,
+    const {
       caller,
-      callerRecord,
+      callerEmail,
+      organizationId,
+      role: callerRole,
+    } = await resolveCanonicalCaller(
+      base44,
+      authenticatedUser.id,
     );
 
-    if (!callerEmail) {
-      throw fail(
-        409,
-        "Your account is missing the email address required for Stripe Checkout.",
-      );
-    }
-
-    if (!organizationId) {
-      throw fail(
-        400,
-        "Your account is not connected to an organization.",
-      );
-    }
-
-    await assertAuthorization(
+    await assertCohortAuthority(
       base44,
       caller,
       callerRole,
+      organizationId,
       cohortId,
     );
 
