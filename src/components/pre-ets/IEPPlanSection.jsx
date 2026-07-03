@@ -14,34 +14,80 @@ export default function IEPPlanSection({ clientId, isStaff }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
-  const queryClient = useQueryClient();
 
-  const { data: plans = [] } = useQuery({
-    queryKey: ["iep-plan", clientId],
-    queryFn: () => base44.entities.IEPPlan.filter({ client_id: clientId }),
-    enabled: !!clientId
+  const {
+    data: iepPlanData = { plan: null },
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["authorizedPreEtsIepPlan", clientId],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "manageAuthorizedPreEtsIepPlan",
+        {
+          action: "get_plan",
+          client_id: clientId,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "The IEP plan could not be loaded."
+        );
+      }
+
+      return data;
+    },
+    enabled: !!clientId,
+    refetchOnMount: "always",
   });
 
-  const plan = plans[0] || null;
+  const plan = iepPlanData?.plan || null;
 
   const startEdit = () => {
-    setForm(plan || { client_id: clientId });
+    setForm(plan || {});
     setEditing(true);
   };
 
   const save = async () => {
     setSaving(true);
+
     try {
-      if (plan) {
-        await base44.entities.IEPPlan.update(plan.id, form);
-      } else {
-        await base44.entities.IEPPlan.create({ ...form, client_id: clientId });
+      const response = await base44.functions.invoke(
+        "manageAuthorizedPreEtsIepPlan",
+        {
+          action: "save_plan",
+          client_id: clientId,
+          plan: form,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "The IEP plan could not be saved."
+        );
       }
-      queryClient.invalidateQueries({ queryKey: ["iep-plan", clientId] });
+
+      await refetch();
       setEditing(false);
-      toast.success("IEP plan saved");
-    } catch {
-      toast.error("Failed to save");
+      toast.success(data?.message || "IEP plan saved.");
+    } catch (saveError) {
+      const errorData =
+        saveError?.response?.data?.data ??
+        saveError?.response?.data ??
+        saveError?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          saveError?.message ||
+          "The IEP plan could not be saved."
+      );
     } finally {
       setSaving(false);
     }
