@@ -143,9 +143,16 @@ export default function TrainingProgressReportForm({
         <div className="space-y-5 py-2 text-sm">
           {/* Header info */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+                     <div className="col-span-2">
               <Label>Return Completed Form To</Label>
-              <Input value={form.return_completed_to} onChange={e => set("return_completed_to", e.target.value)} />
+              <Input
+                value="Assigned automatically by the Pre-ETS program"
+                disabled
+                className="bg-slate-50 text-slate-500"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                The program securely routes the completed report.
+              </p>
             </div>
             <div className="col-span-2">
               <Label>Supervisor/Employer Name</Label>
