@@ -355,15 +355,22 @@ function validateSavedInvoice({
       );
     }
 
-    const inviteMatches =
-      text(invite.org_id) === organizationId &&
-      text(invite.cohort_id) === cohortId &&
-      text(invite.role) === "ce_student" &&
-      OPEN_ASSIGNMENT_STATUSES.has(text(invite.status)) &&
-      text(invite.payment_responsibility) === "instructor_paid" &&
-      text(invite.instructor_payment_mode) === "invoice_with_cohort" &&
-      email(invite.email) === lineEmail;
-
+   const inviteMatches =
+  isActiveRecord(invite) &&
+  text(invite.org_id) === organizationId &&
+  text(invite.cohort_id) === cohortId &&
+  text(invite.role).toLowerCase() === "ce_student" &&
+  text(invite.access_level).toLowerCase() === "ce_training_portal" &&
+  !text(invite.client_id) &&
+  text(invite.cohort_role).toLowerCase() === "student" &&
+  OPEN_ASSIGNMENT_STATUSES.has(
+    text(invite.status).toLowerCase(),
+  ) &&
+  text(invite.payment_responsibility).toLowerCase() ===
+    "instructor_paid" &&
+  text(invite.instructor_payment_mode).toLowerCase() ===
+    "invoice_with_cohort" &&
+  email(invite.email) === lineEmail;
     const eventMatches =
       text(event.organization_id) === organizationId &&
       text(event.cohort_id) === cohortId &&
