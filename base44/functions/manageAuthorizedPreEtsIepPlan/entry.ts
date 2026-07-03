@@ -351,8 +351,70 @@ async function resolveAuthorizedStaffClient(
     );
   }
 
-  return {
+   return {
     organizationId,
+    client,
+  };
+}
+
+async function resolveAuthorizedStudentClient(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  if (!caller || !isActive(caller)) {
+    throw new RequestError(
+      403,
+      "Your account could not be verified as active."
+    );
+  }
+
+  if (
+    normalizeText(caller?.role).toLowerCase() !== "pre_ets" ||
+    normalizeText(caller?.access_level).toLowerCase() !==
+      "client_portal"
+  ) {
+    throw new RequestError(
+      403,
+      "Only an authorized Pre-ETS student may view a student IEP plan."
+    );
+  }
+
+  const organizationId = normalizeText(caller?.org_id);
+  const linkedClientId = normalizeText(caller?.linked_client_id);
+
+  if (!organizationId || !linkedClientId) {
+    throw new RequestError(
+      403,
+      "Your Pre-ETS student account is missing its organization or student assignment."
+    );
+  }
+
+  const [organization, client] = await Promise.all([
+    base44.asServiceRole.entities.Organization.get(organizationId)
+      .catch(() => null),
+    base44.asServiceRole.entities.Client.get(linkedClientId)
+      .catch(() => null),
+  ]);
+
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is invalid or inactive."
+    );
+  }
+
+  if (!isPreEtsClientInOrganization(client, organizationId)) {
+    throw new RequestError(
+      403,
+      "Your Pre-ETS student record is unavailable or is not assigned to your organization."
+    );
+  }
+
+  return {
     client,
   };
 }
