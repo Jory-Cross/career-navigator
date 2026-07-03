@@ -178,7 +178,11 @@ export default function SkillsExplorationTab() {
 
           <Button
             onClick={generateCareerPaths}
-            disabled={loadingAI || selectedInterests.length === 0}
+                       disabled={
+              loadingAI ||
+              isLoadingSkillsExploration ||
+              selectedInterests.length === 0
+            }
             className="w-full"
           >
             {loadingAI ? (
