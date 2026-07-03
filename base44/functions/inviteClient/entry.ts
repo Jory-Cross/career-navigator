@@ -468,15 +468,21 @@ Deno.serve(async (req) => {
         email: clientEmail,
       });
 
+       const openAssignmentStatuses = new Set([
+      "pending",
+      "invite_email_sent",
+      "pending_email_failed",
+    ]);
+
     const openAssignments = asArray(
       pendingAssignments
     ).filter(
       (assignment: any) =>
         assignment?.is_archived !== true &&
-        normalizeText(assignment?.status).toLowerCase() ===
-          "pending"
+        openAssignmentStatuses.has(
+          normalizeText(assignment?.status).toLowerCase()
+        )
     );
-
     const conflictingAssignment = openAssignments.find(
       (assignment: any) =>
         normalizeText(assignment?.org_id) !== organizationId ||
