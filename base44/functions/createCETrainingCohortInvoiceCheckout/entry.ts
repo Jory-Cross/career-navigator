@@ -1014,15 +1014,43 @@ Deno.serve(async (req) => {
         amountCents > 0 &&
         !!currency;
 
-      if (valid) {
-        eligibleById.set(text(event.id), {
-          invite,
-          event,
-          studentEmail,
-          amountCents,
-          currency,
-        });
+           if (!valid) {
+        continue;
       }
+
+      const matchingEnrollments = enrollments.filter(
+        (enrollment) =>
+          isActiveRecord(enrollment) &&
+          text(enrollment.org_id) === organizationId &&
+          text(enrollment.cohort_id) === cohortId &&
+          email(enrollment.student_email) === studentEmail &&
+          text(enrollment.pending_role_assignment_id) ===
+            text(invite.id) &&
+          text(enrollment.organization_billing_event_id) ===
+            text(event.id) &&
+          text(enrollment.payment_responsibility).toLowerCase() ===
+            "instructor_paid" &&
+          text(enrollment.instructor_payment_mode).toLowerCase() ===
+            "invoice_with_cohort" &&
+          ["invited", "payment_pending"].includes(
+            text(enrollment.enrollment_status).toLowerCase(),
+          ),
+      );
+
+      if (matchingEnrollments.length !== 1) {
+        continue;
+      }
+
+      const enrollment = matchingEnrollments[0];
+
+      eligibleById.set(text(event.id), {
+        invite,
+        event,
+        enrollment,
+        studentEmail,
+        amountCents,
+        currency,
+      });
     }
 
     const selected = requestedEventIds.map((id) =>
