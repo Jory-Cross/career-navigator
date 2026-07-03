@@ -115,9 +115,28 @@ export default function TimeEntryWithIncrements({
     refetchOnMount: "always",
   });
 
-  const studentEntries = Array.isArray(studentTimeEntryData?.entries)
+    const studentEntries = Array.isArray(studentTimeEntryData?.entries)
     ? studentTimeEntryData.entries
     : [];
+
+  const returnedTimeCardsForResubmission = useMemo(() => {
+    const cards = Array.isArray(studentTimeCardData?.cards)
+      ? studentTimeCardData.cards
+      : [];
+
+    return cards
+      .filter(
+        (timeCard) =>
+          timeCard?.id &&
+          timeCard?.status === "returned_to_student"
+      )
+      .sort((left, right) => {
+        const leftKey = `${left?.period_start || ""}:${left?.id || ""}`;
+        const rightKey = `${right?.period_start || ""}:${right?.id || ""}`;
+
+        return rightKey.localeCompare(leftKey);
+      });
+  }, [studentTimeCardData]);
 
   const correctionEntries = useMemo(() => {
     const entriesById = new Map(
