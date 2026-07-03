@@ -432,7 +432,11 @@ async function ensureCheckout({
 
   const existingSession = await getCheckout(invoice);
 
-  if (existingSession?.status === "open" && existingSession.url) {
+  if (
+  existingSession?.status === "open" &&
+  existingSession?.payment_status === "unpaid" &&
+  existingSession.url
+) {
     return {
       ok: true,
       paid: false,
