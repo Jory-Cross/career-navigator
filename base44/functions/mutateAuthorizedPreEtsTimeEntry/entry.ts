@@ -717,11 +717,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { entry, client } = await resolveStaffEntry(
+        const { entry, client } = await resolveStaffEntry(
       base44,
       caller,
       organizationId,
       entryId
+    );
+
+    const clientTimeCards = await loadClientTimeCards(
+      base44,
+      organizationId,
+      normalizeText(client?.id)
+    );
+
+    assertIndividualEntryReviewAvailable(
+      clientTimeCards,
+      normalizeText(entry?.date)
     );
 
     const currentStatus =
