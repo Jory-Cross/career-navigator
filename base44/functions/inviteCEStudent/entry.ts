@@ -1014,43 +1014,78 @@ async function getExistingCheckoutSessionIfUsable(
     return null;
   }
 
+  let session: Stripe.Checkout.Session;
+
   try {
-    const session = await stripe.checkout.sessions.retrieve(
+    session = await stripe.checkout.sessions.retrieve(
       existingSessionId
     );
-
-    if (session.status === "open" && session.url) {
-      return {
-        reusable: true,
-        session,
-      };
-    }
-
-    if (session.status === "complete") {
-      return {
-        reusable: false,
-        completed: true,
-        session,
-      };
-    }
-
-    return {
-      reusable: false,
-      expired: true,
-      session,
-    };
   } catch (error) {
     console.error(
       "[inviteCEStudent] Existing Stripe checkout lookup failed:",
       error instanceof Error ? error.message : error
     );
 
+    throw new RequestError(
+      409,
+      "The saved CE registration checkout could not be verified. Contact your organization administrator before creating another checkout."
+    );
+  }
+
+  const metadata = session.metadata || {};
+  const expectedAmount = Number(billingEvent?.amount_cents);
+  const expectedCurrency = normalizeText(
+    billingEvent?.currency
+  ).toLowerCase();
+
+  const sessionMatchesBillingEvent =
+    normalizeText(session.client_reference_id) ===
+      normalizeIdentifier(billingEvent?.id) &&
+    normalizeText(metadata.billing_flow) ===
+      "ce_student_registration" &&
+    normalizeText(metadata.billing_event_id) ===
+      normalizeIdentifier(billingEvent?.id) &&
+    normalizeText(metadata.billing_event_key) ===
+      normalizeText(billingEvent?.billing_event_key) &&
+    normalizeText(metadata.organization_id) ===
+      normalizeIdentifier(billingEvent?.organization_id) &&
+    normalizeEmail(metadata.subject_verified_email) ===
+      normalizeEmail(billingEvent?.subject_verified_email) &&
+    Number(session.amount_total) === expectedAmount &&
+    normalizeText(session.currency).toLowerCase() ===
+      expectedCurrency;
+
+  if (!sessionMatchesBillingEvent) {
+    throw new RequestError(
+      409,
+      "The saved CE registration checkout does not match its billing record. Contact your organization administrator before creating another checkout."
+    );
+  }
+
+  if (
+    session.status === "open" &&
+    session.payment_status === "unpaid" &&
+    session.url
+  ) {
     return {
-      reusable: false,
-      expired: true,
-      session: null,
+      reusable: true,
+      session,
     };
   }
+
+  if (session.status === "complete") {
+    return {
+      reusable: false,
+      completed: true,
+      session,
+    };
+  }
+
+  return {
+    reusable: false,
+    expired: true,
+    session,
+  };
 }
 
 async function createOrReuseCheckout({
