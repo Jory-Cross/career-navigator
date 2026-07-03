@@ -502,11 +502,58 @@ if (
     };
   }
 
-  if (invoiceStatus === "payment_processing") {
+   if (invoiceStatus === "payment_processing") {
     throw fail(
       409,
       "This CE Training cohort invoice is already processing payment. Do not create a second checkout session.",
     );
+  }
+
+  const freshEventById = new Map<string, any>();
+
+  for (const line of lines) {
+    const eventId = text(line.organization_billing_event_id);
+    const lineEmail = email(line.subject_verified_email);
+    const lineAmount = Number(line.amount_cents);
+
+    const freshRows =
+      await base44.asServiceRole.entities.OrganizationBillingEvent.filter({
+        id: eventId,
+        organization_id: organizationId,
+        cohort_id: text(cohort.id),
+      });
+
+    const freshEvent = Array.isArray(freshRows)
+      ? freshRows.find((event) => text(event?.id) === eventId)
+      : null;
+
+    const freshEventMatches =
+      freshEvent &&
+      REGISTRATION_FEE_KINDS.has(
+        text(freshEvent.fee_kind).toLowerCase(),
+      ) &&
+      text(freshEvent.billing_subject_type).toLowerCase() ===
+        "student" &&
+      email(freshEvent.subject_verified_email) === lineEmail &&
+      Number(freshEvent.amount_cents) === lineAmount &&
+      text(freshEvent.currency).toLowerCase() ===
+        text(line.currency).toLowerCase() &&
+      PAYABLE_EVENT_STATUSES.has(
+        text(freshEvent.event_status).toLowerCase(),
+      );
+
+    if (!freshEventMatches) {
+      throw fail(
+        409,
+        "A selected CE registration billing event is no longer ready for this cohort checkout. Refresh the invoice and try again.",
+      );
+    }
+
+    freshEventById.set(eventId, freshEvent);
+  }
+
+  for (const [eventId, freshEvent] of freshEventById) {
+    eventById.set(eventId, freshEvent);
   }
 
   const { success_url, cancel_url } = checkoutUrls(text(cohort.id));
