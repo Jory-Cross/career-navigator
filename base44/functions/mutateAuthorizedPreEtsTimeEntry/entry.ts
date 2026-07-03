@@ -666,13 +666,27 @@ Deno.serve(async (req) => {
         );
       }
 
-      const payload = buildStudentEntryPayload(
+            const payload = buildStudentEntryPayload(
         requestBody?.entry,
         client,
         organizationId
       );
 
-           const updated =
+      const clientTimeCards = await loadClientTimeCards(
+        base44,
+        organizationId,
+        normalizeText(client?.id)
+      );
+
+      assertStudentMayMutateTimeCardPeriods(
+        clientTimeCards,
+        [
+          normalizeText(existingEntry?.date),
+          payload.date,
+        ]
+      );
+
+      const updated =
         await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(
           entryId,
           {
@@ -686,7 +700,6 @@ Deno.serve(async (req) => {
             resubmitted_at: new Date().toISOString(),
           }
         );
-
       return Response.json({
         ok: true,
         action,
