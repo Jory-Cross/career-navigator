@@ -336,10 +336,36 @@ Deno.serve(async (req) => {
         )
       );
 
+       const clients = Array.from(selectedClientIds)
+      .map((clientId) => {
+        const client = visibleClientById.get(clientId);
+
+        if (!client) {
+          return null;
+        }
+
+        const name = `${normalizeText(client?.first_name)} ${normalizeText(
+          client?.last_name
+        )}`.trim();
+
+        return {
+          id: normalizeText(client?.id),
+          name: name || "Unnamed student",
+        };
+      })
+      .filter(Boolean)
+      .sort((left: any, right: any) =>
+        normalizeText(left?.name).localeCompare(
+          normalizeText(right?.name)
+        )
+      );
+
     return Response.json({
       ok: true,
       organization_id: organizationId,
       visible_client_ids: Array.from(selectedClientIds),
+      clients,
+      client_count: clients.length,
       entries,
       entry_count: entries.length,
       legacy_entries_excluded_missing_org_id:
