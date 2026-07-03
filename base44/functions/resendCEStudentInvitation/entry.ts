@@ -635,11 +635,18 @@ async function getExistingCheckoutSession(
 
   try {
     return await stripe.checkout.sessions.retrieve(sessionId);
-  } catch {
-    return null;
+  } catch (error: any) {
+    console.error(
+      "[resendCEStudentInvitation] Could not retrieve saved Stripe checkout session:",
+      error?.message || error
+    );
+
+    throw new RequestError(
+      409,
+      "The saved CE registration checkout session could not be verified. Contact your organization administrator before resending this invitation."
+    );
   }
 }
-
 async function createOrReuseStudentCheckout({
   base44,
   billingEvent,
