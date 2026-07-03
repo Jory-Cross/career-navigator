@@ -665,6 +665,12 @@ async function createOrReuseStudentCheckout({
     );
   }
 
+   const eventStatus = normalizeText(
+    billingEvent?.event_status
+  ).toLowerCase();
+  const previousStripeSessionId =
+    normalizeIdentifier(billingEvent?.stripe_checkout_session_id) ||
+    "none";
   const existingSession = await getExistingCheckoutSession(
     billingEvent
   );
@@ -684,28 +690,45 @@ async function createOrReuseStudentCheckout({
       );
     }
 
-    if (existingSession.status === "open" && existingSession.url) {
-      return {
-        checkoutUrl: existingSession.url,
-        checkoutSessionId: existingSession.id,
-        reusedExistingCheckout: true,
-      };
+    if (existingSession.status === "open") {
+      if (eventStatus === "payment_processing") {
+        throw new RequestError(
+          409,
+          "Payment is already processing for this registration. Wait for confirmation before trying again."
+        );
+      }
+
+      if (
+        existingSession.payment_status === "unpaid" &&
+        existingSession.url
+      ) {
+        return {
+          checkoutUrl: existingSession.url,
+          checkoutSessionId: existingSession.id,
+          reusedExistingCheckout: true,
+        };
+      }
+
+      throw new RequestError(
+        409,
+        "The saved CE registration checkout session is not safely reusable. Wait for payment confirmation or contact your organization administrator."
+      );
     }
 
-    if (
-      existingSession.status === "complete" &&
-      existingSession.payment_status === "paid"
-    ) {
+    if (existingSession.status === "complete") {
       throw new RequestError(
         409,
         "Payment is already awaiting confirmation. Do not create another checkout session."
       );
     }
-  }
 
-  const eventStatus = normalizeText(
-    billingEvent?.event_status
-  ).toLowerCase();
+    if (existingSession.status !== "expired") {
+      throw new RequestError(
+        409,
+        "The saved CE registration checkout session is not safely eligible for replacement."
+      );
+    }
+  }
 
   if (eventStatus === "payment_processing") {
     throw new RequestError(
