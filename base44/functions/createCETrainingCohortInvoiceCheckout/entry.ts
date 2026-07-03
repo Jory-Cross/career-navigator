@@ -32,7 +32,6 @@ const OPEN_INVOICE_STATUSES = new Set([
 const PAYABLE_EVENT_STATUSES = new Set([
   "pending",
   "ready_for_checkout",
-  "payment_processing",
   "failed",
 ]);
 
