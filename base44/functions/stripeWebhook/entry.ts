@@ -1,3 +1,6 @@
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.20";
+import Stripe from "npm:stripe@14.21.0";
+
 /**
  * Stripe settlement may update billing and durable enrollment state, but it
  * must never assign a User role, accept a PendingRoleAssignment, or create a
@@ -5,8 +8,14 @@
  * tenant-scoped applyPendingRoleIfNeeded login activation workflow.
  */
 async function activateExistingPaidCEStudentIfEligible(
-  _base44: any,import { createClientFromRequest } from "npm:@base44/sdk@0.8.20";
-import Stripe from "npm:stripe@14.21.0";
+  _base44: any,
+  _billingRecord: any,
+) {
+  return {
+    activated: false,
+    reason: "activation_deferred_to_applyPendingRoleIfNeeded",
+  };
+}
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
