@@ -420,10 +420,19 @@ Deno.serve(async (req) => {
       linked_client_id: assignment.client_id || undefined,
     };
 
-    await base44.asServiceRole.entities.User.update(
+        await base44.asServiceRole.entities.User.update(
       user.id,
       updateData
     );
+
+    if (employerClient) {
+      await base44.asServiceRole.entities.Client.update(
+        employerClient.id,
+        {
+          assigned_employer_id: user.id,
+        }
+      );
+    }
 
     if (
       assignment.role === "ce_student" &&
