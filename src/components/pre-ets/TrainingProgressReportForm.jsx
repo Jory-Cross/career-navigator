@@ -90,57 +90,41 @@ export default function TrainingProgressReportForm({
       return;
     }
 
-    const clientId = client.id;
+       setSubmitting(true);
 
-    setSubmitting(true);
     try {
-      const user = await base44.auth.me();
-
-      const report = await base44.entities.TrainingProgressReport.create({
-        client_id: clientId,
-        client_name: `${client?.first_name || ""} ${client?.last_name || ""}`.trim(),
-        employer_id: user?.id || "",
-        employer_email: user?.email || "",
-        ...form,
-        submitted_by: user?.email || "",
-      });
-
-      // Generate PDF
-      try {
-        const { data: pdfData } = await base44.functions.invoke("generateProgressReportPDF", {
-          report_id: report.id,
-        });
-
-        if (pdfData?.pdf_url) {
-          await base44.entities.TrainingProgressReport.update(report.id, {
-            pdf_url: pdfData.pdf_url,
-          });
-
-          await base44.entities.Document.create({
-            client_id: clientId,
-            title: `Training Progress Report (${form.reporting_period_from} – ${form.reporting_period_to})`,
-            file_url: pdfData.pdf_url,
-            file_name: "Training_Progress_Report.pdf",
-            file_type: "application/pdf",
-            category: "contract",
-            visibility: "staff",
-          });
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsProgressReport",
+        {
+          action: "submit_employer_progress_report",
+          client_id: client.id,
+          report: form,
         }
-      } catch (pdfErr) {
-        console.error("PDF generation failed:", pdfErr);
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "The progress report could not be saved."
+        );
       }
 
-      toast.success("Progress report saved successfully!");
+      toast.success(
+        data?.pdf_generated
+          ? "Progress report saved and PDF generated."
+          : "Progress report saved."
+      );
 
-      queryClient.invalidateQueries({ queryKey: ["training-progress-reports", clientId] });
-      queryClient.invalidateQueries({ queryKey: ["pre-ets-wble", clientId] });
-      queryClient.invalidateQueries({ queryKey: ["wble-forms", clientId] });
-      queryClient.invalidateQueries({ queryKey: ["employer-wble", clientId] });
-
+      await onSubmitted?.(data?.report || null);
       onClose();
       setForm({ ...EMPTY_FORM });
     } catch (err) {
-      toast.error("Failed to save: " + err.message);
+      toast.error(
+        err?.message ||
+          "The progress report could not be saved."
+      );
     } finally {
       setSubmitting(false);
     }
