@@ -434,6 +434,13 @@ async function resolveEnrollmentAndBilling(
     );
   }
 
+  if (!RESENDABLE_CE_ENROLLMENT_STATUSES.has(enrollmentStatus)) {
+    throw new RequestError(
+      409,
+      "This CE Training enrollment is no longer eligible for a payment invitation resend. Use registration instructions or enrollment management instead."
+    );
+  }
+
   const enrollmentMatches =
     normalizeIdentifier(enrollment?.org_id) === organizationId &&
     normalizeIdentifier(enrollment?.cohort_id) === cohortId &&
