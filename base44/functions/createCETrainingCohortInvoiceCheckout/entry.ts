@@ -965,7 +965,9 @@ Deno.serve(async (req) => {
         text(invite.access_level).toLowerCase() !==
           "ce_training_portal" ||
         !!text(invite.client_id) ||
-        text(invite.cohort_role).toLowerCase() !== "student" ||
+       !["member", "student"].includes(
+  text(invite.cohort_role).toLowerCase(),
+) ||
         !OPEN_ASSIGNMENT_STATUSES.has(
           text(invite.status).toLowerCase(),
         ) ||
