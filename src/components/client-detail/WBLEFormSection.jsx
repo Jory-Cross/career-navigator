@@ -31,121 +31,199 @@ export default function WBLEFormSection({ clientId, client, user }) {
     });
     setShowForm(true);
   };
-  const [generatingPdf, setGeneratingPdf] = useState(null);
+   const [generatingPdf, setGeneratingPdf] = useState(null);
   const [deletingForm, setDeletingForm] = useState(null);
   const [deletingReport, setDeletingReport] = useState(null);
+  const queryClient = useQueryClient();
+
+  const {
+    data: wbleWorkspace = {
+      wble_forms: [],
+      progress_reports: [],
+    },
+    isLoading,
+    error: workspaceError,
+  } = useQuery({
+    queryKey: ["authorizedPreEtsWbleWorkspace", clientId],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsWbleForm",
+        {
+          action: "get_staff_wble_workspace",
+          client_id: clientId,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "The WBLE workspace could not be loaded."
+        );
+      }
+
+      return data;
+    },
+    enabled: !!clientId,
+    refetchOnMount: "always",
+  });
+
+  const wbleForms = Array.isArray(wbleWorkspace?.wble_forms)
+    ? wbleWorkspace.wble_forms
+    : [];
+
+  const progressReports = Array.isArray(
+    wbleWorkspace?.progress_reports
+  )
+    ? wbleWorkspace.progress_reports
+    : [];
+
+  const refreshWorkspace = () =>
+    queryClient.invalidateQueries({
+      queryKey: ["authorizedPreEtsWbleWorkspace", clientId],
+    });
 
   const handleDeleteReport = async (reportId) => {
-    if (!confirm("Delete this progress report? This cannot be undone.")) return;
+    if (!confirm("Delete this progress report? This cannot be undone.")) {
+      return;
+    }
+
     setDeletingReport(reportId);
+
     try {
-      await base44.entities.TrainingProgressReport.delete(reportId);
-      queryClient.invalidateQueries({ queryKey: ['training-progress-reports'] });
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsProgressReportManagement",
+        {
+          action: "delete_staff_progress_report",
+          report_id: reportId,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "The progress report could not be deleted."
+        );
+      }
+
+      await refreshWorkspace();
       toast.success("Report deleted.");
     } catch (err) {
-      toast.error("Failed to delete: " + err.message);
+      toast.error(
+        err?.message || "The progress report could not be deleted."
+      );
     } finally {
       setDeletingReport(null);
     }
   };
 
   const handleDeleteForm = async (formId) => {
-    if (!confirm("Delete this WBLE form? This cannot be undone.")) return;
+    if (!confirm("Delete this WBLE form? This cannot be undone.")) {
+      return;
+    }
+
     setDeletingForm(formId);
+
     try {
-      await base44.entities.WBLEForm.delete(formId);
-      queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsWbleForm",
+        {
+          action: "delete_staff_wble_form",
+          form_id: formId,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "The WBLE form could not be deleted."
+        );
+      }
+
+      await refreshWorkspace();
       toast.success("Form deleted.");
     } catch (err) {
-      toast.error("Failed to delete: " + err.message);
+      toast.error(
+        err?.message || "The WBLE form could not be deleted."
+      );
     } finally {
       setDeletingForm(null);
     }
   };
-  const queryClient = useQueryClient();
 
   const handleGenerateReportPDF = async (report) => {
     setGeneratingPdf(report.id);
+
     try {
-      const { data: pdfData } = await base44.functions.invoke('generateProgressReportPDF', {
-        report_id: report.id
-      });
-      if (pdfData?.pdf_url) {
-        await base44.entities.TrainingProgressReport.update(report.id, { pdf_url: pdfData.pdf_url });
-        queryClient.invalidateQueries({ queryKey: ['training-progress-reports'] });
-        toast.success("PDF generated!");
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsProgressReportManagement",
+        {
+          action: "regenerate_staff_progress_report_pdf",
+          report_id: report.id,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "The progress-report PDF could not be generated."
+        );
       }
+
+      await refreshWorkspace();
+      toast.success("PDF generated.");
     } catch (err) {
-      toast.error("PDF generation failed: " + err.message);
+      toast.error(
+        err?.message || "The progress-report PDF could not be generated."
+      );
     } finally {
       setGeneratingPdf(null);
     }
   };
 
-  const { data: wbleForms = [], isLoading } = useQuery({
-    queryKey: ['wble-forms', clientId],
-    queryFn: () => base44.entities.WBLEForm.filter({ client_id: clientId })
-  });
-
-  const { data: progressReports = [] } = useQuery({
-    queryKey: ['training-progress-reports', clientId],
-    queryFn: () => base44.entities.TrainingProgressReport.filter({ client_id: clientId })
-  });
-
   const handleSubmit = async () => {
     setSubmitting(true);
-    try {
-      const user = await base44.auth.me();
-      
-      // Save form first
-      const wbleForm = await base44.entities.WBLEForm.create({
-        client_id: clientId,
-        ...formData,
-        status: 'completed'
-      });
 
-      // Refresh list immediately after save
-      queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
+    try {
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsWbleForm",
+        {
+          action: "create_staff_wble_form",
+          client_id: clientId,
+          form: formData,
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || "The WBLE form could not be saved."
+        );
+      }
+
+      await refreshWorkspace();
       setShowForm(false);
       setFormData({});
-      toast.success("WBLE form saved! Generating PDF...");
 
-      // Generate PDF (best-effort — don't block on failure)
-      try {
-        const { data: pdfData } = await base44.functions.invoke('generateWBLEPDF', {
-          form_id: wbleForm.id
-        });
-
-        if (pdfData?.pdf_url) {
-          await base44.entities.WBLEForm.update(wbleForm.id, { pdf_url: pdfData.pdf_url });
-          await base44.entities.Document.create({
-            client_id: clientId,
-            title: 'WBLE Agreement Form',
-            file_url: pdfData.pdf_url,
-            file_name: 'WBLE_Agreement.pdf',
-            file_type: 'application/pdf',
-            category: 'contract'
-          });
-          await base44.entities.Activity.create({
-            client_id: clientId,
-            activity_type: 'document_uploaded',
-            title: 'WBLE form completed',
-            description: `Work Based Learning Experience form completed by ${user.full_name || user.email}`
-          });
-          queryClient.invalidateQueries({ queryKey: ['wble-forms'] });
-          toast.success("PDF generated successfully!");
-        }
-      } catch (pdfError) {
-        console.error("PDF generation failed:", pdfError);
-        toast.error("Form saved but PDF generation failed.");
-      }
+      toast.success(
+        data?.pdf_generated
+          ? "WBLE form saved and PDF generated."
+          : "WBLE form saved."
+      );
     } catch (error) {
-      toast.error("Failed to save: " + error.message);
+      toast.error(
+        error?.message || "The WBLE form could not be saved."
+      );
     } finally {
       setSubmitting(false);
     }
   };
-
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
