@@ -59,9 +59,10 @@ export default function TimeEntryWithIncrements({
   const [endTime, setEndTime] = useState("");
   const [notes, setNotes] = useState("");
   const [correctionEntryId, setCorrectionEntryId] = useState(null);
-  const [saving, setSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-
+  const [resubmittingTimeCardId, setResubmittingTimeCardId] =
+    useState(null);
     const {
     data: studentTimeEntryData = { entries: [] },
   } = useQuery({
