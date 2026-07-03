@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import {
+  Clock,
+  FileText,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import {
   format,
   startOfWeek,
@@ -21,7 +26,7 @@ import {
   startOfMonth,
   endOfMonth,
 } from "date-fns";
-import { toast } from "sonner";
+import PreEtsTimeCardWorkspace from "@/components/pre-ets/PreEtsTimeCardWorkspace";
 
 function getFunctionData(response) {
   return response?.data ?? response ?? {};
@@ -52,12 +57,9 @@ function parseDateOnly(value) {
 function safeDate(value) {
   const parsed = parseDateOnly(value);
 
-  if (!parsed) {
-    return value || "—";
-  }
-
-  return format(parsed, "MMM d, yyyy");
+  return parsed ? format(parsed, "MMM d, yyyy") : value || "—";
 }
+
 function formatMinutes(minutes) {
   const value = Number(minutes || 0);
   const hours = Math.floor(value / 60);
@@ -68,27 +70,41 @@ function formatMinutes(minutes) {
   return `${mins}m`;
 }
 
+function getStatusClassName(status) {
+  if (status === "approved") {
+    return "bg-green-100 text-green-700";
+  }
+
+  if (status === "rejected") {
+    return "bg-red-100 text-red-700";
+  }
+
+  return "bg-amber-100 text-amber-700";
+}
+
 export default function PreEtsTimeEntries() {
-    const queryClient = useQueryClient();
-  const [periodFilter, setPeriodFilter] = useState(() => {
-    return new Date().getDate() <= 15 ? "payroll1" : "payroll2";
-  });
+  const [activeView, setActiveView] = useState("time_cards");
+  const [periodFilter, setPeriodFilter] = useState(() =>
+    new Date().getDate() <= 15 ? "payroll1" : "payroll2"
+  );
   const [selectedMonth, setSelectedMonth] = useState(() =>
     format(new Date(), "yyyy-MM")
   );
   const [studentFilter, setStudentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [rejectingEntryId, setRejectingEntryId] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [submittingReject, setSubmittingReject] = useState(false);
 
   const {
-    data: entries = [],
+    data: timeEntryData = {
+      entries: [],
+      clients: [],
+    },
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["preEtsClientTimeEntries"],
+    enabled: activeView === "entry_history",
     queryFn: async () => {
       const response = await base44.functions.invoke(
         "getAuthorizedPreEtsTimeEntries",
@@ -103,13 +119,19 @@ export default function PreEtsTimeEntries() {
         );
       }
 
-      return Array.isArray(data.entries) ? data.entries : [];
+      return {
+        entries: Array.isArray(data.entries) ? data.entries : [],
+        clients: Array.isArray(data.clients) ? data.clients : [],
+      };
     },
     staleTime: 30 * 1000,
     refetchOnMount: "always",
   });
 
-   const payrollRanges = useMemo(() => {
+  const entries = timeEntryData.entries || [];
+  const authorizedClients = timeEntryData.clients || [];
+
+  const payrollRanges = useMemo(() => {
     const [selectedYearRaw, selectedMonthRaw] = selectedMonth.split("-");
     const selectedYear = Number(selectedYearRaw);
     const selectedMonthIndex = Number(selectedMonthRaw) - 1;
@@ -159,6 +181,19 @@ export default function PreEtsTimeEntries() {
   const students = useMemo(() => {
     const studentById = new Map();
 
+    for (const client of authorizedClients) {
+      const clientId = client?.id;
+
+      if (!clientId) {
+        continue;
+      }
+
+      studentById.set(clientId, {
+        id: clientId,
+        name: client?.name || client?.client_name || "Unnamed student",
+      });
+    }
+
     for (const entry of entries) {
       const clientId = entry?.client_id;
 
@@ -168,21 +203,21 @@ export default function PreEtsTimeEntries() {
 
       studentById.set(clientId, {
         id: clientId,
-        name: entry?.client_name || "Unknown student",
+        name: entry?.client_name || "Unnamed student",
       });
     }
 
-    return Array.from(studentById.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+    return Array.from(studentById.values()).sort((left, right) =>
+      left.name.localeCompare(right.name)
     );
-  }, [entries]);
+  }, [authorizedClients, entries]);
 
   const filteredEntries = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
     return entries.filter((entry) => {
       const status = entry.status || "pending";
-      const name = `${entry.client_name || ""}`.toLowerCase();
+      const studentName = `${entry.client_name || ""}`.toLowerCase();
 
       if (
         studentFilter !== "all" &&
@@ -195,7 +230,7 @@ export default function PreEtsTimeEntries() {
         return false;
       }
 
-      if (searchText && !name.includes(searchText)) {
+      if (searchText && !studentName.includes(searchText)) {
         return false;
       }
 
@@ -248,400 +283,316 @@ export default function PreEtsTimeEntries() {
     studentFilter,
   ]);
 
-  const totalMinutes = useMemo(() => {
-    return filteredEntries.reduce(
-      (sum, entry) => sum + Number(entry.duration_minutes || 0),
-      0
-    );
-  }, [filteredEntries]);
+  const totalMinutes = useMemo(
+    () =>
+      filteredEntries.reduce(
+        (total, entry) => total + Number(entry.duration_minutes || 0),
+        0
+      ),
+    [filteredEntries]
+  );
 
-  const pendingCount = useMemo(() => {
-    return entries.filter(
-      (entry) => (entry.status || "pending") === "pending"
-    ).length;
-  }, [entries]);
+  const pendingCount = useMemo(
+    () =>
+      entries.filter(
+        (entry) => (entry.status || "pending") === "pending"
+      ).length,
+    [entries]
+  );
 
   const refreshEntries = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["preEtsClientTimeEntries"],
-    });
-  };
-
-  const startReject = (entry) => {
-    setRejectingEntryId(entry.id);
-    setRejectionReason(entry.rejection_reason || "");
-  };
-
-  const cancelReject = () => {
-    setRejectingEntryId(null);
-    setRejectionReason("");
-    setSubmittingReject(false);
-  };
-
-  const approveEntry = async (entry) => {
-    try {
-      const response = await base44.functions.invoke(
-        "mutateAuthorizedPreEtsTimeEntry",
-        {
-          action: "review_entry",
-          entry_id: entry.id,
-          decision: "approve",
-        }
-      );
-
-      const data = getFunctionData(response);
-
-      if (!data?.ok) {
-        throw new Error(data?.error || "Unable to approve this entry.");
-      }
-
-      toast.success("Entry approved");
-      await refreshEntries();
-    } catch (error) {
-      console.error("Failed to approve Pre-ETS time entry", error);
-      toast.error(error?.message || "Failed to approve entry");
-    }
-  };
-
-  const submitReject = async (entry) => {
-    const reason = rejectionReason.trim();
-
-    if (!reason) {
-      toast.error("Please enter a rejection reason.");
-      return;
-    }
-
-    try {
-      setSubmittingReject(true);
-
-      const response = await base44.functions.invoke(
-        "mutateAuthorizedPreEtsTimeEntry",
-        {
-          action: "review_entry",
-          entry_id: entry.id,
-          decision: "reject",
-          rejection_reason: reason,
-        }
-      );
-
-      const data = getFunctionData(response);
-
-      if (!data?.ok) {
-        throw new Error(data?.error || "Unable to reject this entry.");
-      }
-
-      toast.success("Entry rejected");
-      cancelReject();
-      await refreshEntries();
-    } catch (error) {
-      console.error("Failed to reject Pre-ETS time entry", error);
-      toast.error(error?.message || "Failed to reject entry");
-      setSubmittingReject(false);
-    }
+    await refetch();
   };
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Pre-ETS Time Entries
-        </h1>
-        <p className="text-sm text-slate-500">
-          Review Pre-ETS student clock in/out hours.
-        </p>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Pre-ETS Time Management
+          </h1>
+          <p className="text-sm text-slate-500">
+            Submit and review payroll-period Time Cards. Entry history is
+            available for reference only.
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-slate-500">Entries shown</p>
-            <p className="text-2xl font-bold">{filteredEntries.length}</p>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-2 border-b pb-4">
+        <Button
+          type="button"
+          variant={activeView === "time_cards" ? "default" : "outline"}
+          className="gap-2"
+          onClick={() => setActiveView("time_cards")}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Time Cards
+        </Button>
 
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-slate-500">Total hours</p>
-            <p className="text-2xl font-bold">
-              {formatMinutes(totalMinutes)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-slate-500">Pending</p>
-            <p className="text-2xl font-bold">{pendingCount}</p>
-          </CardContent>
-        </Card>
+        <Button
+          type="button"
+          variant={activeView === "entry_history" ? "default" : "outline"}
+          className="gap-2"
+          onClick={() => setActiveView("entry_history")}
+        >
+          <FileText className="h-4 w-4" />
+          Entry History
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="h-4 w-4 text-blue-600" />
-            Submitted Student Hours
-          </CardTitle>
-        </CardHeader>
+      {activeView === "time_cards" ? (
+        <PreEtsTimeCardWorkspace />
+      ) : null}
 
-        <CardContent className="space-y-4">
-                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">Month</label>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(event) => setSelectedMonth(event.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
+      {activeView === "entry_history" ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-slate-500">Entries shown</p>
+                <p className="text-2xl font-bold">
+                  {filteredEntries.length}
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">Period</label>
-              <Select
-                value={periodFilter}
-                onValueChange={setPeriodFilter}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-72 overflow-y-auto">
-                  <SelectItem value="payroll1">1st–15th</SelectItem>
-                  <SelectItem value="payroll2">
-                    16th–End of Month
-                  </SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="all">All Time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-slate-500">Total hours</p>
+                <p className="text-2xl font-bold">
+                  {formatMinutes(totalMinutes)}
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">Student</label>
-              <Select
-                value={studentFilter}
-                onValueChange={setStudentFilter}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-72 overflow-y-auto">
-                  <SelectItem value="all">All Students</SelectItem>
-                  {students.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">
-                Search Student
-              </label>
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search student name"
-              />
-            </div>
-
-            <div className="flex flex-col justify-end gap-1">
-              <span className="min-h-5 text-xs text-slate-500">
-                {periodFilter === "payroll1"
-                  ? `Viewing: ${format(
-                      payrollRanges.payroll1Start,
-                      "MMM d"
-                    )}–${format(payrollRanges.payroll1End, "MMM d, yyyy")}`
-                  : periodFilter === "payroll2"
-                  ? `Viewing: ${format(
-                      payrollRanges.payroll2Start,
-                      "MMM d"
-                    )}–${format(payrollRanges.payroll2End, "MMM d, yyyy")}`
-                  : periodFilter === "week"
-                  ? `Viewing: ${format(
-                      payrollRanges.weekStart,
-                      "MMM d"
-                    )}–${format(payrollRanges.weekEnd, "MMM d, yyyy")}`
-                  : periodFilter === "month"
-                  ? `Viewing: ${format(
-                      payrollRanges.monthStart,
-                      "MMM d"
-                    )}–${format(payrollRanges.monthEnd, "MMM d, yyyy")}`
-                  : "Viewing: All Time"}
-              </span>
-
-              <Button
-                variant="outline"
-                onClick={refreshEntries}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-slate-500">Pending entries</p>
+                <p className="text-2xl font-bold">{pendingCount}</p>
+              </CardContent>
+            </Card>
           </div>
 
-          {isLoading ? (
-            <div className="py-10 text-center text-sm text-slate-500">
-              Loading time entries...
-            </div>
-          ) : error ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error.message || "Unable to load Pre-ETS time entries."}
-            </div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
-              No authorized Pre-ETS time entries found.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-500">
-                  <tr>
-                    <th className="p-3">Student</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Start</th>
-                    <th className="p-3">Stop</th>
-                    <th className="p-3">Duration</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Description</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-blue-600" />
+                Pre-ETS Entry History
+              </CardTitle>
+            </CardHeader>
 
-                <tbody>
-                  {filteredEntries.map((entry) => {
-                    const status = entry.status || "pending";
-                    const canReview = status === "pending";
+            <CardContent className="space-y-4">
+              <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+                Individual entry approval is no longer the payroll review
+                workflow. Use the <strong>Time Cards</strong> tab to return,
+                forward, or finalize a payroll period.
+              </div>
 
-                    return (
-                      <React.Fragment key={entry.id}>
-                        <tr className="border-t">
-                          <td className="p-3 font-medium">
-                            {entry.client_name || "Unknown student"}
-                          </td>
-                          <td className="p-3">{safeDate(entry.date)}</td>
-                          <td className="p-3">{entry.start_time || "—"}</td>
-                          <td className="p-3">{entry.end_time || "—"}</td>
-                          <td className="p-3">
-                            {formatMinutes(entry.duration_minutes)}
-                          </td>
-                          <td className="p-3">
-                            <Badge
-                              className={
-                                status === "approved"
-                                  ? "bg-green-100 text-green-700"
-                                  : status === "rejected"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }
-                            >
-                              {status}
-                            </Badge>
-                          </td>
-                          <td className="max-w-xs p-3 text-slate-600">
-                            {entry.description || "—"}
-                          </td>
-                          <td className="p-3">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => approveEntry(entry)}
-                                disabled={!canReview}
-                                className="gap-1"
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Month</label>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(event) =>
+                      setSelectedMonth(event.target.value)
+                    }
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Period</label>
+                  <Select
+                    value={periodFilter}
+                    onValueChange={setPeriodFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 overflow-y-auto">
+                      <SelectItem value="payroll1">1st–15th</SelectItem>
+                      <SelectItem value="payroll2">
+                        16th–End of Month
+                      </SelectItem>
+                      <SelectItem value="week">This Week</SelectItem>
+                      <SelectItem value="month">This Month</SelectItem>
+                      <SelectItem value="all">All Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Student</label>
+                  <Select
+                    value={studentFilter}
+                    onValueChange={setStudentFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 overflow-y-auto">
+                      <SelectItem value="all">All Students</SelectItem>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Status</label>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={setStatusFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">
+                    Search Student
+                  </label>
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search student name"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end gap-1">
+                  <span className="min-h-5 text-xs text-slate-500">
+                    {periodFilter === "payroll1"
+                      ? `Viewing: ${format(
+                          payrollRanges.payroll1Start,
+                          "MMM d"
+                        )}–${format(
+                          payrollRanges.payroll1End,
+                          "MMM d, yyyy"
+                        )}`
+                      : periodFilter === "payroll2"
+                      ? `Viewing: ${format(
+                          payrollRanges.payroll2Start,
+                          "MMM d"
+                        )}–${format(
+                          payrollRanges.payroll2End,
+                          "MMM d, yyyy"
+                        )}`
+                      : periodFilter === "week"
+                      ? `Viewing: ${format(
+                          payrollRanges.weekStart,
+                          "MMM d"
+                        )}–${format(
+                          payrollRanges.weekEnd,
+                          "MMM d, yyyy"
+                        )}`
+                      : periodFilter === "month"
+                      ? `Viewing: ${format(
+                          payrollRanges.monthStart,
+                          "MMM d"
+                        )}–${format(
+                          payrollRanges.monthEnd,
+                          "MMM d, yyyy"
+                        )}`
+                      : "Viewing: All Time"}
+                  </span>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={refreshEntries}
+                    disabled={isLoading}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="py-10 text-center text-sm text-slate-500">
+                  Loading time-entry history...
+                </div>
+              ) : error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {error.message ||
+                    "Unable to load Pre-ETS time-entry history."}
+                </div>
+              ) : filteredEntries.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
+                  No authorized Pre-ETS time entries match these filters.
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 text-left text-slate-500">
+                      <tr>
+                        <th className="p-3">Student</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Start</th>
+                        <th className="p-3">Stop</th>
+                        <th className="p-3">Duration</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Description</th>
+                        <th className="p-3">Review workflow</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {filteredEntries.map((entry) => {
+                        const status = entry.status || "pending";
+
+                        return (
+                          <tr key={entry.id} className="border-t">
+                            <td className="p-3 font-medium">
+                              {entry.client_name || "Unnamed student"}
+                            </td>
+                            <td className="p-3">{safeDate(entry.date)}</td>
+                            <td className="p-3">
+                              {entry.start_time || "—"}
+                            </td>
+                            <td className="p-3">
+                              {entry.end_time || "—"}
+                            </td>
+                            <td className="p-3">
+                              {formatMinutes(entry.duration_minutes)}
+                            </td>
+                            <td className="p-3">
+                              <Badge
+                                className={getStatusClassName(status)}
                               >
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Approve
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => startReject(entry)}
-                                disabled={!canReview || submittingReject}
-                                className="gap-1 text-red-700"
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                                Reject
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-
-                        {rejectingEntryId === entry.id && (
-                          <tr className="border-t bg-red-50">
-                            <td colSpan={8} className="p-4">
-                              <div className="space-y-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-red-900">
-                                    Rejection Reason Required
-                                  </p>
-                                  <p className="text-xs text-red-700">
-                                    Explain what needs to be corrected before
-                                    the student resubmits this time entry.
-                                  </p>
-                                </div>
-
-                                <textarea
-                                  value={rejectionReason}
-                                  onChange={(event) =>
-                                    setRejectionReason(event.target.value)
-                                  }
-                                  placeholder="Enter rejection reason..."
-                                  className="min-h-[100px] w-full rounded-md border border-red-200 bg-white p-3 text-sm"
-                                />
-
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={cancelReject}
-                                    disabled={submittingReject}
-                                  >
-                                    Cancel
-                                  </Button>
-
-                                  <Button
-                                    variant="destructive"
-                                    onClick={() => submitReject(entry)}
-                                    disabled={submittingReject}
-                                  >
-                                    {submittingReject
-                                      ? "Rejecting..."
-                                      : "Reject Entry"}
-                                  </Button>
-                                </div>
-                              </div>
+                                {status}
+                              </Badge>
+                            </td>
+                            <td className="max-w-xs p-3 text-slate-600">
+                              {entry.description || "—"}
+                            </td>
+                            <td className="p-3 text-slate-500">
+                              Review through Time Card
                             </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
     </div>
   );
 }
