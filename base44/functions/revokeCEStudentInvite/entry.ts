@@ -24,6 +24,11 @@ const REVOCABLE_BILLING_STATUSES = new Set([
   "failed",
 ]);
 
+const REVOCABLE_CE_ENROLLMENT_STATUSES = new Set([
+  "invited",
+  "payment_pending",
+]);
+
 const ROLE_ACCESS_LEVELS: Record<string, string> = {
   admin: "admin",
   management: "staff",
