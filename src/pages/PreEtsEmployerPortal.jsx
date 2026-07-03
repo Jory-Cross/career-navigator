@@ -72,14 +72,20 @@ export default function PreEtsEmployerPortal() {
   )
     ? employerPortalData.progress_reports
     : [];
-  if (loading) {
-    return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
+    if (isLoadingEmployerPortal) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400">
+        Loading...
+      </div>
+    );
   }
 
-  if (!user || user.role !== "pre_ets_employer") {
+  if (employerPortalError) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-slate-600">Access denied.</p>
+        <p className="text-slate-600">
+          {employerPortalError.message || "Access denied."}
+        </p>
       </div>
     );
   }
