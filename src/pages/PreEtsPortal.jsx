@@ -118,11 +118,8 @@ export default function PreEtsPortal() {
   const preEtsClients = Array.isArray(portalShellData?.clients)
     ? portalShellData.clients
     : [];
-  // For staff: use selected client; for pre_ets user: use their own client
-  const activeClient = STAFF_ROLES.includes(user?.role)
-    ? preEtsClients.find(c => c.id === selectedClientId)
-    : client;
-
+    // The server resolves the student's linked client or the staff-selected client.
+  const activeClient = portalShellData?.selected_client || null;
   const { data: tasks = [] } = useQuery({
     queryKey: ['pre-ets-tasks', activeClient?.id],
     queryFn: async () => {
