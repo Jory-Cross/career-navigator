@@ -1172,8 +1172,10 @@ Deno.serve(async (req) => {
             cohort_id: cohortId,
             cohort_invoice_id: invoiceId,
             invoice_line_key: `ce_training_cohort_invoice_line:${invoiceId}:${candidate.event.id}`,
-            organization_billing_event_id: candidate.event.id,
+                        organization_billing_event_id: candidate.event.id,
             pending_role_assignment_id: candidate.invite.id,
+            ce_training_student_enrollment_id:
+              candidate.enrollment.id,
             subject_verified_email: candidate.studentEmail,
             amount_cents: candidate.amountCents,
             currency: candidate.currency.toUpperCase(),
