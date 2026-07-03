@@ -190,27 +190,63 @@ export default function PreEtsPortal() {
     }
   };
 
-  const handleFileUpload = async (e) => {
+    const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      return;
+    }
+
     setUploading(true);
+
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      await base44.entities.Document.create({
-        client_id: activeClient.id,
-        title: file.name,
-        file_url,
-        file_name: file.name,
-        file_size: file.size,
-        file_type: file.type,
-        category: 'other'
+      const { file_url } =
+        await base44.integrations.Core.UploadFile({ file });
+
+      const response = await base44.functions.invoke(
+        "mutateAuthorizedPreEtsDocument",
+        {
+          action: "create_student_document",
+          document: {
+            title: file.name,
+            file_url,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            category: "other",
+          },
+        }
+      );
+
+      const data = response?.data ?? response ?? {};
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error ||
+            "Your document could not be saved."
+        );
+      }
+
+      toast.success("Document uploaded.");
+
+      await queryClient.invalidateQueries({
+        queryKey: ["authorizedPreEtsPortalData"],
       });
-      toast.success("Document uploaded!");
-      queryClient.invalidateQueries({ queryKey: ['pre-ets-documents'] });
-    } catch {
-      toast.error("Upload failed");
+    } catch (error) {
+      const errorData =
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.data ??
+        {};
+
+      toast.error(
+        errorData?.error ||
+          error?.message ||
+          "Your document could not be uploaded."
+      );
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
