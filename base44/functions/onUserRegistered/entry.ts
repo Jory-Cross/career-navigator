@@ -335,8 +335,56 @@ Deno.serve(async (req) => {
 
     const assignment = getMostRecentAssignment(validPending);
 
-    let ceRegistration = null;
+       let ceRegistration = null;
     let cohortMembership = null;
+    let employerClient = null;
+
+    if (assignment.role === "pre_ets_employer") {
+      const employerClientId = normalizeText(
+        assignment.client_id
+      );
+
+      employerClient =
+        await base44.asServiceRole.entities.Client.get(
+          employerClientId
+        ).catch(() => null);
+
+      if (
+        !employerClient ||
+        employerClient.is_active === false ||
+        employerClient.is_archived === true ||
+        normalizeText(employerClient.org_id) !==
+          normalizeText(assignment.org_id) ||
+        normalizeText(employerClient.client_type) !==
+          "pre_ets"
+      ) {
+        return Response.json({
+          skipped: true,
+          reason: "invalid_pre_ets_employer_client_assignment",
+          email,
+          user_id: user.id,
+          pending_assignment_id: assignment.id,
+        });
+      }
+
+      const alreadyAssignedEmployerId = normalizeText(
+        employerClient.assigned_employer_id
+      );
+
+      if (
+        alreadyAssignedEmployerId &&
+        alreadyAssignedEmployerId !== normalizeText(user.id)
+      ) {
+        return Response.json({
+          skipped: true,
+          reason:
+            "pre_ets_client_is_already_assigned_to_a_different_employer",
+          email,
+          user_id: user.id,
+          pending_assignment_id: assignment.id,
+        });
+      }
+    }
 
     if (assignment.role === "ce_student") {
       ceRegistration = await getSettledCeStudentRegistration({
