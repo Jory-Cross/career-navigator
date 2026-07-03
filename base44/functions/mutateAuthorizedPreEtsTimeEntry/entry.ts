@@ -656,17 +656,7 @@ Deno.serve(async (req) => {
         throw new RequestError(404, "Pre-ETS time entry not found.");
       }
 
-      if (
-        (normalizeText(existingEntry?.status) || "pending").toLowerCase() !==
-        "rejected"
-      ) {
-        throw new RequestError(
-          409,
-          "Only rejected Pre-ETS time entries may be corrected and resubmitted."
-        );
-      }
-
-            const payload = buildStudentEntryPayload(
+           const payload = buildStudentEntryPayload(
         requestBody?.entry,
         client,
         organizationId
@@ -678,13 +668,37 @@ Deno.serve(async (req) => {
         normalizeText(client?.id)
       );
 
+      const existingEntryDate = normalizeText(existingEntry?.date);
+
       assertStudentMayMutateTimeCardPeriods(
         clientTimeCards,
         [
-          normalizeText(existingEntry?.date),
+          existingEntryDate,
           payload.date,
         ]
       );
+
+      const existingEntryCard = getTimeCardsCoveringDate(
+        clientTimeCards,
+        existingEntryDate
+      )[0];
+
+      const existingEntryStatus =
+        (normalizeText(existingEntry?.status) || "pending").toLowerCase();
+
+      const mayCorrectReturnedTimeCardEntry =
+        normalizeText(existingEntryCard?.status).toLowerCase() ===
+        "returned_to_student";
+
+      if (
+        existingEntryStatus !== "rejected" &&
+        !mayCorrectReturnedTimeCardEntry
+      ) {
+        throw new RequestError(
+          409,
+          "This entry can be corrected only after staff rejects the entry or returns its Pre-ETS Time Card to you for correction."
+        );
+      }
 
       const updated =
         await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(
