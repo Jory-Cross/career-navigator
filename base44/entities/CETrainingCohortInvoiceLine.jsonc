@@ -22,9 +22,13 @@
       "type": "string",
       "description": "Existing OrganizationBillingEvent for this individual student's locked registration fee."
     },
-    "pending_role_assignment_id": {
+       "pending_role_assignment_id": {
       "type": "string",
       "description": "PendingRoleAssignment representing the invited, not-yet-registered CE student."
+    },
+    "ce_training_student_enrollment_id": {
+      "type": "string",
+      "description": "Durable CETrainingStudentEnrollment record that must match this invoice line's organization, cohort, invitation, billing event, and student email."
     },
     "subject_verified_email": {
       "type": "string",
