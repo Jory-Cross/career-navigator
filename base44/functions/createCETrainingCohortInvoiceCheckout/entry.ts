@@ -62,6 +62,12 @@ function isValidEmail(value: unknown) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email(value));
 }
 
+function publicError(error: any) {
+  return Number(error?.status)
+    ? text(error?.message)
+    : "Unable to create the CE Training cohort invoice checkout. Please try again or contact support.";
+}
+
 function registrationEventKey(orgId: string, studentEmail: string) {
   return `ce_student_registration:${orgId}:${encodeURIComponent(
     email(studentEmail),
