@@ -760,15 +760,13 @@ async function prepareCeStudentActivation(
     );
   }
 
-  const membershipRows =
+    const membershipRows =
     await base44.asServiceRole.entities.CETrainingCohortMember.filter(
       {
         cohort_id: cohortId,
         user_id: user.id,
-        cohort_role: "member",
       }
     );
-
   const memberships = asArray(membershipRows);
 
   const invalidMembership = memberships.find(
@@ -783,16 +781,81 @@ async function prepareCeStudentActivation(
     );
   }
 
-  let cohortMembership = memberships.find(
+  const activeNonStudentMembership = memberships.find(
+    (membership: any) =>
+      normalizeText(membership?.cohort_role).toLowerCase() !== "member" &&
+      membership?.is_active !== false &&
+      membership?.is_archived !== true
+  );
+
+  if (activeNonStudentMembership) {
+    throw new RequestError(
+      409,
+      "This account already has a conflicting active role in the Training cohort."
+    );
+  }
+
+  const memberMemberships = memberships.filter(
+    (membership: any) =>
+      normalizeText(membership?.cohort_role).toLowerCase() === "member"
+  );
+
+  const archivedMemberMembership = memberMemberships.find(
+    (membership: any) => membership?.is_archived === true
+  );
+
+  if (archivedMemberMembership) {
+    throw new RequestError(
+      409,
+      "A prior CE cohort membership requires review before access can be restored."
+    );
+  }
+
+  if (memberMemberships.length > 1) {
+    throw new RequestError(
+      409,
+      "More than one CE student membership was found. This enrollment requires review before access can be activated."
+    );
+  }
+
+  const existingCohortMemberId = normalizeIdentifier(
+    enrollment?.cohort_member_id
+  );
+  const linkedMemberMembership = existingCohortMemberId
+    ? memberMemberships.find(
+        (membership: any) =>
+          normalizeIdentifier(membership?.id) === existingCohortMemberId
+      )
+    : null;
+
+  if (existingCohortMemberId && !linkedMemberMembership) {
+    throw new RequestError(
+      409,
+      "This CE enrollment is linked to a different cohort membership."
+    );
+  }
+
+  let cohortMembership = memberMemberships.find(
     (membership: any) =>
       membership?.is_active !== false &&
       membership?.is_archived !== true
   );
 
+  if (
+    existingCohortMemberId &&
+    cohortMembership &&
+    normalizeIdentifier(cohortMembership?.id) !== existingCohortMemberId
+  ) {
+    throw new RequestError(
+      409,
+      "This CE enrollment is already connected to a different cohort membership."
+    );
+  }
+
   const now = new Date().toISOString();
 
-  if (!cohortMembership && memberships.length > 0) {
-    const inactiveMembership = memberships[0];
+  if (!cohortMembership && memberMemberships.length === 1) {
+    const inactiveMembership = memberMemberships[0];
 
     await base44.asServiceRole.entities.CETrainingCohortMember.update(
       inactiveMembership.id,
@@ -823,20 +886,6 @@ async function prepareCeStudentActivation(
           added_by: assignment.invited_by_id,
         }
       );
-  }
-
-  const existingCohortMemberId = normalizeIdentifier(
-    enrollment?.cohort_member_id
-  );
-
-  if (
-    existingCohortMemberId &&
-    existingCohortMemberId !== cohortMembership.id
-  ) {
-    throw new RequestError(
-      409,
-      "This CE enrollment is already connected to a different cohort membership."
-    );
   }
 
   if (!billedUserId) {
