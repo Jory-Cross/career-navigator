@@ -684,7 +684,14 @@ async function expireOpenCheckoutForPaymentChange(
     );
   }
 
-  if (checkoutSession.status === "open") {
+   if (checkoutSession.status === "open") {
+    if (checkoutSession.payment_status !== "unpaid") {
+      throw new RequestError(
+        409,
+        "The current registration checkout is not safely eligible for a payment-option change."
+      );
+    }
+
     await stripe.checkout.sessions.expire(checkoutSessionId);
 
     return {
