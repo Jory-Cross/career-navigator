@@ -534,8 +534,20 @@ function checkoutMatchesBillingEvent(
   instructorPaymentMode: string
 ) {
   const metadata = checkoutSession?.metadata || {};
+  const billingEventKey = normalizeText(
+    billingEvent?.billing_event_key
+  );
+  const lockedAmountCents = Number(billingEvent?.amount_cents);
+  const lockedCurrency = normalizeText(
+    billingEvent?.currency || "USD"
+  ).toLowerCase();
 
   return (
+    !!billingEventKey &&
+    Number.isInteger(lockedAmountCents) &&
+    lockedAmountCents > 0 &&
+    !!lockedCurrency &&
+    checkoutSession?.mode === "payment" &&
     normalizeText(checkoutSession?.client_reference_id) ===
       normalizeIdentifier(billingEvent?.id) &&
     normalizeText(metadata?.billing_flow) ===
@@ -543,7 +555,7 @@ function checkoutMatchesBillingEvent(
     normalizeText(metadata?.billing_event_id) ===
       normalizeIdentifier(billingEvent?.id) &&
     normalizeText(metadata?.billing_event_key) ===
-      normalizeText(billingEvent?.billing_event_key) &&
+      billingEventKey &&
     normalizeText(metadata?.organization_id) === organizationId &&
     normalizeText(metadata?.cohort_id) === cohortId &&
     normalizeEmail(metadata?.subject_verified_email) ===
@@ -551,7 +563,10 @@ function checkoutMatchesBillingEvent(
     normalizeText(metadata?.payment_responsibility) ===
       paymentResponsibility &&
     normalizeText(metadata?.instructor_payment_mode) ===
-      instructorPaymentMode
+      instructorPaymentMode &&
+    Number(checkoutSession?.amount_total) === lockedAmountCents &&
+    normalizeText(checkoutSession?.currency).toLowerCase() ===
+      lockedCurrency
   );
 }
 
