@@ -331,8 +331,8 @@ export default function PortalAccessPanel({ client, onRefresh }) {
             </Button>
           )}
 
-          {/* Active → Delete portal user */}
-          {(status === 'active' || status === 'stale') && portalUser && (
+                  {/* Active portal account → remove access */}
+          {status === 'active' && portalUser && (
             <Button
               size="sm"
               variant="outline"
