@@ -1252,10 +1252,9 @@ export default function CohortDetail() {
               <h2 className="text-sm font-semibold text-slate-900">
                 Cohort Administration
               </h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Cohort details, staffing, existing student assignment, and
-                registration invoice tools.
-              </p>
+                             <p className="mt-0.5 text-xs text-slate-500">
+                  Cohort details, staffing, and registration invoice tools.
+                </p>
             </div>
           </div>
 
