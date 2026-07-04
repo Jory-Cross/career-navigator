@@ -1,9 +1,17 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const STAFF_ROLES = new Set(["admin", "management", "employee"]);
+const INTERNAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
 }
 
 function asArray<T = any>(value: unknown): T[] {
@@ -14,6 +22,28 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function getCanonicalInternalRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+
+  return INTERNAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isPreEtsStudent(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets" &&
+    normalizeText(user?.access_level).toLowerCase() === "client_portal"
+  );
+}
+
+function isPreEtsEmployer(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets_employer" &&
+    normalizeText(user?.access_level).toLowerCase() ===
+      "pre_ets_employer_portal"
+  );
+}
+
 function isPreEtsClientInOrganization(client: any, organizationId: string) {
   return (
     isActive(client) &&
@@ -22,55 +52,18 @@ function isPreEtsClientInOrganization(client: any, organizationId: string) {
   );
 }
 
-function hasClientMembershipEvidence(
+function clientMatchesVisibleStaff(
   client: any,
-  userIds: Set<string>,
-  userEmails: Set<string>
+  visibleUserIds: Set<string>,
+  visibleEmails: Set<string>
 ) {
-  const candidates = [
-    normalizeText(client?.assigned_employee_id),
-    normalizeText(client?.created_by),
-  ];
+  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
+  const createdBy = normalizeEmail(client?.created_by);
 
-  return candidates.some(
-    (value) => userIds.has(value) || userEmails.has(value)
+  return (
+    visibleUserIds.has(assignedEmployeeId) ||
+    (createdBy && visibleEmails.has(createdBy))
   );
-}
-
-function getDescendantUserIds(rootUserId: string, organizationUsers: any[]) {
-  const childrenByManagerId = new Map<string, string[]>();
-
-  for (const user of organizationUsers) {
-    const managerId = normalizeText(user?.manager_id);
-    const userId = normalizeText(user?.id);
-
-    if (!managerId || !userId) {
-      continue;
-    }
-
-    const existing = childrenByManagerId.get(managerId) || [];
-    existing.push(userId);
-    childrenByManagerId.set(managerId, existing);
-  }
-
-  const descendantIds = new Set<string>();
-  const queue = [rootUserId];
-
-  while (queue.length > 0) {
-    const currentUserId = queue.shift() || "";
-    const directReportIds = childrenByManagerId.get(currentUserId) || [];
-
-    for (const directReportId of directReportIds) {
-      if (descendantIds.has(directReportId)) {
-        continue;
-      }
-
-      descendantIds.add(directReportId);
-      queue.push(directReportId);
-    }
-  }
-
-  return descendantIds;
 }
 
 function projectClient(client: any) {
@@ -221,7 +214,7 @@ async function loadAuthorizedClientData(
   const emptyData = createEmptyPortalData();
 
   const [
-    allTasks,
+    organizationTasks,
     assessments,
     wbleForms,
     progressReports,
@@ -230,7 +223,10 @@ async function loadAuthorizedClientData(
     onboardingSteps,
     timeEntries,
   ] = await Promise.all([
-    base44.asServiceRole.entities.Task.list("-created_date"),
+    base44.asServiceRole.entities.Task.filter(
+      { org_id: organizationId },
+      "-created_date"
+    ),
     base44.asServiceRole.entities.Assessment.filter(
       { client_id: clientId },
       "-created_date"
@@ -251,16 +247,16 @@ async function loadAuthorizedClientData(
       { client_id: clientId },
       "-start_datetime"
     ),
-    base44.asServiceRole.entities.OnboardingStep.filter(
-      { client_id: clientId }
-    ),
+    base44.asServiceRole.entities.OnboardingStep.filter({
+      client_id: clientId,
+    }),
     base44.asServiceRole.entities.PreEtsClientTimeEntry.filter(
       { client_id: clientId },
       "-created_date"
     ),
   ]);
 
-  const visibleTasks = asArray(allTasks)
+  const visibleTasks = asArray(organizationTasks)
     .filter(
       (task: any) =>
         isActive(task) &&
@@ -279,14 +275,21 @@ async function loadAuthorizedClientData(
     .map(projectAssessment);
 
   const visibleWbleForms = asArray(wbleForms)
-    .filter(isActive)
+    .filter(
+      (form: any) =>
+        isActive(form) && normalizeText(form?.org_id) === organizationId
+    )
     .map(projectWbleForm);
 
   const visibleProgressReports =
     portalMode === "student"
       ? []
       : asArray(progressReports)
-          .filter(isActive)
+          .filter(
+            (report: any) =>
+              isActive(report) &&
+              normalizeText(report?.org_id) === organizationId
+          )
           .map(projectTrainingProgressReport);
 
   const visibleDocuments =
@@ -303,7 +306,6 @@ async function loadAuthorizedClientData(
 
             if (portalMode === "student") {
               const visibility = normalizeText(document?.visibility).toLowerCase();
-
               return visibility === "client" || visibility === "both";
             }
 
@@ -326,7 +328,11 @@ async function loadAuthorizedClientData(
     portalMode === "employer"
       ? []
       : asArray(onboardingSteps)
-          .filter(isActive)
+          .filter(
+            (step: any) =>
+              isActive(step) &&
+              normalizeText(step?.org_id) === organizationId
+          )
           .map((step: any) =>
             projectOnboardingStep(step, portalMode === "staff")
           );
@@ -359,23 +365,23 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { error: "This route accepts POST requests only." },
         { status: 405 }
       );
     }
+
+    const requestBody: any = await req.json().catch(() => ({}));
+    const requestedClientId = normalizeText(requestBody?.client_id);
 
     const base44 = createClientFromRequest(req);
     const authenticatedUser = await base44.auth.me();
 
     if (!authenticatedUser?.id) {
       return Response.json(
-        { error: "Unauthorized." },
+        { error: "You must be signed in to access the Pre-ETS portal." },
         { status: 401 }
       );
     }
-
-    const requestBody = await req.json().catch(() => ({}));
-    const requestedClientId = normalizeText(requestBody?.client_id);
 
     const caller = await base44.asServiceRole.entities.User.get(
       authenticatedUser.id
@@ -383,25 +389,17 @@ Deno.serve(async (req) => {
 
     if (!caller || !isActive(caller)) {
       return Response.json(
-        {
-          error:
-            "Authenticated user record was not found or is inactive.",
-        },
+        { error: "Your account is inactive or unavailable." },
         { status: 403 }
       );
     }
 
     const callerId = normalizeText(caller.id);
-    const callerRole = normalizeText(caller.role).toLowerCase();
-    const callerAccessLevel = normalizeText(caller.access_level).toLowerCase();
     const organizationId = normalizeText(caller.org_id);
 
     if (!callerId || !organizationId) {
       return Response.json(
-        {
-          error:
-            "Your account is not assigned to an organization.",
-        },
+        { error: "Your account is not assigned to an organization." },
         { status: 403 }
       );
     }
@@ -412,18 +410,13 @@ Deno.serve(async (req) => {
 
     if (!organization || !isActive(organization)) {
       return Response.json(
-        {
-          error:
-            "Your organization assignment is invalid or inactive.",
-        },
+        { error: "Your organization is inactive or unavailable." },
         { status: 403 }
       );
     }
 
     const [organizationUsers, organizationClients] = await Promise.all([
-      base44.asServiceRole.entities.User.filter({
-        org_id: organizationId,
-      }),
+      base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
       base44.asServiceRole.entities.Client.filter(
         { org_id: organizationId },
         "-created_date"
@@ -432,22 +425,16 @@ Deno.serve(async (req) => {
 
     const activeOrganizationUsers = asArray(organizationUsers).filter(
       (user: any) =>
-        isActive(user) &&
-        normalizeText(user?.org_id) === organizationId
+        isActive(user) && normalizeText(user?.org_id) === organizationId
     );
 
-    const activeOrganizationUserIds = new Set(
-      activeOrganizationUsers
-        .map((user: any) => normalizeText(user?.id))
-        .filter(Boolean)
-    );
-
-    if (!activeOrganizationUserIds.has(callerId)) {
+    if (
+      !activeOrganizationUsers.some(
+        (user: any) => normalizeText(user?.id) === callerId
+      )
+    ) {
       return Response.json(
-        {
-          error:
-            "Your account is not validly scoped to this organization.",
-        },
+        { error: "Your account is not validly scoped to this organization." },
         { status: 403 }
       );
     }
@@ -460,22 +447,12 @@ Deno.serve(async (req) => {
     let visibleClients: any[] = [];
     let selectedClient: any = null;
 
-    if (callerRole === "pre_ets") {
-      if (callerAccessLevel !== "client_portal") {
-        return Response.json(
-          {
-            error:
-              "Your account does not have Pre-ETS student portal access.",
-          },
-          { status: 403 }
-        );
-      }
-
+    if (isPreEtsStudent(caller)) {
       const linkedClientId = normalizeText(caller.linked_client_id);
-
-      selectedClient = preEtsClients.find(
-        (client: any) => normalizeText(client?.id) === linkedClientId
-      ) || null;
+      selectedClient =
+        preEtsClients.find(
+          (client: any) => normalizeText(client?.id) === linkedClientId
+        ) || null;
 
       if (!selectedClient) {
         return Response.json(
@@ -489,97 +466,80 @@ Deno.serve(async (req) => {
 
       portalMode = "student";
       visibleClients = [selectedClient];
-    } else if (STAFF_ROLES.has(callerRole)) {
-      portalMode = "staff";
+    } else {
+      const internalRole = getCanonicalInternalRole(caller);
 
-      if (callerRole === "admin") {
-        visibleClients = preEtsClients;
-      } else if (callerRole === "management") {
-        const visibleUserIds = new Set<string>([
-          callerId,
-          ...getDescendantUserIds(callerId, activeOrganizationUsers),
-        ]);
+      if (internalRole) {
+        portalMode = "staff";
 
-        const visibleUserEmails = new Set(
-          activeOrganizationUsers
-            .filter((user: any) =>
-              visibleUserIds.has(normalizeText(user?.id))
-            )
-            .map((user: any) => normalizeText(user?.email))
-            .filter(Boolean)
-        );
+        if (internalRole === "admin") {
+          visibleClients = preEtsClients;
+        } else {
+          const visibleUserIds = new Set<string>([callerId]);
+          const visibleEmails = new Set<string>(
+            [normalizeEmail(caller.email)].filter(Boolean)
+          );
 
-        visibleClients = preEtsClients.filter((client: any) =>
-          hasClientMembershipEvidence(
-            client,
-            visibleUserIds,
-            visibleUserEmails
-          )
-        );
-      } else {
-        const ownUserIds = new Set([callerId]);
-        const ownUserEmails = new Set(
-          [normalizeText(caller.email)].filter(Boolean)
-        );
+          if (internalRole === "management") {
+            const assignments =
+              await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+                manager_user_id: callerId,
+              });
+            const activeInternalUsersById = new Map(
+              activeOrganizationUsers
+                .filter((user: any) => Boolean(getCanonicalInternalRole(user)))
+                .map((user: any) => [normalizeText(user?.id), user])
+            );
 
-        visibleClients = preEtsClients.filter((client: any) =>
-          hasClientMembershipEvidence(
-            client,
-            ownUserIds,
-            ownUserEmails
-          )
-        );
-      }
+            for (const assignment of asArray(assignments)) {
+              const employeeId = normalizeText(assignment?.employee_user_id);
+              const employee = activeInternalUsersById.get(employeeId);
 
-      if (requestedClientId) {
-        selectedClient = visibleClients.find(
-          (client: any) => normalizeText(client?.id) === requestedClientId
-        ) || null;
+              if (
+                assignment?.is_active === true &&
+                assignment?.is_archived !== true &&
+                normalizeText(assignment?.org_id) === organizationId &&
+                employee
+              ) {
+                visibleUserIds.add(employeeId);
+                const employeeEmail = normalizeEmail(employee.email);
+                if (employeeEmail) {
+                  visibleEmails.add(employeeEmail);
+                }
+              }
+            }
+          }
 
-        if (!selectedClient) {
-          return Response.json(
-            { error: "Pre-ETS client not found." },
-            { status: 404 }
+          visibleClients = preEtsClients.filter((client: any) =>
+            clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
           );
         }
-      }
-    } else if (callerRole === "pre_ets_employer") {
-      if (callerAccessLevel !== "pre_ets_employer_portal") {
+      } else if (isPreEtsEmployer(caller)) {
+        portalMode = "employer";
+        visibleClients = preEtsClients.filter(
+          (client: any) =>
+            normalizeText(client?.assigned_employer_id) === callerId
+        );
+      } else {
         return Response.json(
-          {
-            error:
-              "Your account does not have Pre-ETS employer portal access.",
-          },
+          { error: "You are not authorized to access the Pre-ETS portal." },
           { status: 403 }
         );
       }
 
-      portalMode = "employer";
-      visibleClients = preEtsClients.filter(
-        (client: any) =>
-          normalizeText(client?.assigned_employer_id) === callerId
-      );
-
       if (requestedClientId) {
-        selectedClient = visibleClients.find(
-          (client: any) => normalizeText(client?.id) === requestedClientId
-        ) || null;
+        selectedClient =
+          visibleClients.find(
+            (client: any) => normalizeText(client?.id) === requestedClientId
+          ) || null;
 
         if (!selectedClient) {
           return Response.json(
-            { error: "Pre-ETS client not found." },
+            { error: "The requested Pre-ETS client is unavailable to your account." },
             { status: 404 }
           );
         }
       }
-    } else {
-      return Response.json(
-        {
-          error:
-            "You are not authorized to access the Pre-ETS portal.",
-        },
-        { status: 403 }
-      );
     }
 
     const portalData = selectedClient
@@ -595,9 +555,7 @@ Deno.serve(async (req) => {
       ok: true,
       portal_mode: portalMode,
       clients: visibleClients.map(projectClient),
-      selected_client: selectedClient
-        ? projectClient(selectedClient)
-        : null,
+      selected_client: selectedClient ? projectClient(selectedClient) : null,
       ...portalData,
     });
   } catch (error: any) {
@@ -607,10 +565,7 @@ Deno.serve(async (req) => {
     );
 
     return Response.json(
-      {
-        error:
-          "Unable to load authorized Pre-ETS portal data.",
-      },
+      { error: "Unable to load your authorized Pre-ETS portal." },
       { status: 500 }
     );
   }
