@@ -529,44 +529,11 @@ Deno.serve(async (req) => {
       ].filter(Boolean)
     );
 
-         const rosterUserIdsToLoad = Array.from(rosterUserIds);
-
-    const organizationUsers = (
-      Array.isArray(organizationUserRows)
-        ? organizationUserRows
-        : []
-    ).filter((candidate) =>
-      rosterUserIds.has(candidate?.id)
+           const users = asArray(organizationUserRows).filter(
+      (candidate: any) =>
+        rosterUserIds.has(candidate?.id) &&
+        normalizeText(candidate?.org_id) === organizationId
     );
-
-    const organizationUsersById = new Map(
-      organizationUsers.map((candidate) => [
-        candidate.id,
-        candidate,
-      ])
-    );
-
-    const missingUserIds = rosterUserIdsToLoad.filter(
-      (userId) => !organizationUsersById.has(userId)
-    );
-
-    const fallbackUserRows = await Promise.all(
-      missingUserIds.map(async (userId) => {
-        const userRows =
-          await base44.asServiceRole.entities.User.filter({
-            id: userId,
-          });
-
-        return Array.isArray(userRows)
-          ? userRows[0] || null
-          : null;
-      })
-    );
-
-    const users = [
-      ...organizationUsers,
-      ...fallbackUserRows.filter(Boolean),
-    ];
 
     const usersById = new Map(
       users.map((candidate) => [candidate.id, candidate])
