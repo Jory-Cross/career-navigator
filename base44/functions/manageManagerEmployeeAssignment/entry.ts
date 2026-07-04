@@ -71,7 +71,7 @@ function projectAssignment(assignment: any) {
   };
 }
 
-async function resolveCanonicalAdmin(
+async function resolveCanonicalAssignmentCaller(
   base44: any,
   authenticatedUserId: string
 ) {
@@ -94,11 +94,11 @@ async function resolveCanonicalAdmin(
     !callerId ||
     !organizationId ||
     !profile ||
-    profile.role !== "admin"
+    !["admin", "management"].includes(profile.role)
   ) {
     throw new RequestError(
       403,
-      "Only organization administrators may manage manager assignments."
+      "You are not authorized to review manager assignments."
     );
   }
 
@@ -125,7 +125,7 @@ async function resolveCanonicalAdmin(
       isActiveRecord(user) &&
       normalizeText(user?.id) === callerId &&
       normalizeText(user?.org_id) === organizationId &&
-      getCanonicalStaffProfile(user)?.role === "admin"
+      getCanonicalStaffProfile(user)?.role === profile.role
   );
 
   if (!callerIsActiveOrganizationMember) {
@@ -137,6 +137,7 @@ async function resolveCanonicalAdmin(
 
   return {
     callerId,
+    callerRole: profile.role,
     organizationId,
   };
 }
