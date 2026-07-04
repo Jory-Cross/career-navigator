@@ -1,156 +1,182 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-/**
- * Recursively collect all descendant user IDs under a given user
- * by traversing the manager_id tree.
- */
-function getAllDescendantIds(userId, allUsers) {
-  const directReports = allUsers.filter((user) => user.manager_id === userId);
+const CANONICAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
-  if (directReports.length === 0) {
-    return [];
-  }
-
-  const ids = directReports.map((user) => user.id);
-
-  for (const report of directReports) {
-    ids.push(...getAllDescendantIds(report.id, allUsers));
-  }
-
-  return ids;
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
-/**
- * Legacy client records may not yet have org_id.
- * They are only considered safe to return when their assignment or creator
- * is tied to a known user in the authenticated organization.
- */
-function hasClientMembershipEvidence(client, userIds, userEmails) {
-  const values = [
-    client.assigned_employee_id,
-    client.created_by,
-  ];
-
-  return values.some((value) => (
-    typeof value === 'string' &&
-    (userIds.has(value) || userEmails.has(value))
-  ));
+function normalizeEmail(value) {
+  return normalizeText(value).toLowerCase();
 }
 
-async function resolveAuthenticatedOrgId(base44, user, allUsers) {
-  const currentUserRecord = allUsers.find((member) => member.id === user.id);
-  const candidateOrgId = currentUserRecord?.org_id || user.org_id;
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
 
-  if (candidateOrgId) {
-    const matchingOrgs = await base44.asServiceRole.entities.Organization.filter({
-      id: candidateOrgId,
-    });
+function isActive(record) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
 
-    if (matchingOrgs?.[0]?.id) {
-      return matchingOrgs[0].id;
-    }
-  }
+function getCanonicalRole(record) {
+  const role = normalizeText(record?.role).toLowerCase();
+  const accessLevel = normalizeText(record?.access_level).toLowerCase();
 
-  const ownedOrgs = await base44.asServiceRole.entities.Organization.filter({
-    owner_email: user.email,
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function sortNewest(records) {
+  return [...records].sort((left, right) => {
+    const leftTime = new Date(
+      left?.updated_date || left?.created_date || 0
+    ).getTime();
+    const rightTime = new Date(
+      right?.updated_date || right?.created_date || 0
+    ).getTime();
+
+    return rightTime - leftTime;
   });
+}
 
-  return ownedOrgs?.[0]?.id || null;
+function clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails) {
+  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
+  const createdBy = normalizeEmail(client?.created_by);
+
+  return (
+    visibleUserIds.has(assignedEmployeeId) ||
+    (createdBy && visibleEmails.has(createdBy))
+  );
 }
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (req.method !== "POST") {
+      return Response.json(
+        { error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
     }
 
-    // Consume the request body without using browser-provided organization data
-    // as an authorization boundary.
+    // This route does not accept browser-defined authorization scope.
     await req.json().catch(() => ({}));
 
-    const allUsers = await base44.asServiceRole.entities.User.list();
-    const resolvedOrgId = await resolveAuthenticatedOrgId(base44, user, allUsers);
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me();
 
-    const organizationUsers = resolvedOrgId
-      ? allUsers.filter((member) => member.org_id === resolvedOrgId)
-      : [];
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { error: "You must be signed in to view clients." },
+        { status: 401 }
+      );
+    }
 
-    const organizationUserIds = new Set([
-      user.id,
-      ...organizationUsers.map((member) => member.id),
+    const caller = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
+
+    if (!caller || !isActive(caller)) {
+      return Response.json(
+        { error: "Your account is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    const callerRole = getCanonicalRole(caller);
+
+    if (!callerRole) {
+      return Response.json(
+        { error: "Your account is not authorized to view organization clients." },
+        { status: 403 }
+      );
+    }
+
+    const organizationId = normalizeText(caller.org_id);
+
+    if (!organizationId) {
+      return Response.json(
+        { error: "Your account is not assigned to an organization." },
+        { status: 403 }
+      );
+    }
+
+    const organization = await base44.asServiceRole.entities.Organization.get(
+      organizationId
+    ).catch(() => null);
+
+    if (!organization || !isActive(organization)) {
+      return Response.json(
+        { error: "Your organization is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    const [organizationUsers, organizationClients] = await Promise.all([
+      base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
+      base44.asServiceRole.entities.Client.filter({ org_id: organizationId }),
     ]);
 
-    const organizationUserEmails = new Set([
-      user.email,
-      ...organizationUsers
-        .map((member) => member.email)
-        .filter(Boolean),
-    ]);
+    const activeCanonicalUsers = asArray(organizationUsers).filter(
+      (member) =>
+        isActive(member) &&
+        normalizeText(member?.org_id) === organizationId &&
+        Boolean(getCanonicalRole(member))
+    );
 
-    const allClients = await base44.asServiceRole.entities.Client.list("-created_date");
+    const scopedClients = sortNewest(
+      asArray(organizationClients).filter(
+        (client) => normalizeText(client?.org_id) === organizationId
+      )
+    );
 
-    // A tagged client must belong to the authenticated organization.
-    // An older untagged client must have assignment/creator evidence connecting
-    // it to a user in this organization.
-    const organizationClients = allClients.filter((client) => {
-      if (resolvedOrgId && client.org_id === resolvedOrgId) {
-        return true;
+    if (callerRole === "admin") {
+      return Response.json({ clients: scopedClients });
+    }
+
+    const visibleUserIds = new Set([caller.id]);
+    const visibleEmails = new Set([normalizeEmail(caller.email)].filter(Boolean));
+
+    if (callerRole === "management") {
+      const assignments = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+        manager_user_id: caller.id,
+      });
+      const activeUsersById = new Map(
+        activeCanonicalUsers.map((member) => [member.id, member])
+      );
+
+      for (const assignment of asArray(assignments)) {
+        const employeeId = normalizeText(assignment?.employee_user_id);
+        const employee = activeUsersById.get(employeeId);
+
+        if (
+          assignment?.is_active === true &&
+          assignment?.is_archived !== true &&
+          normalizeText(assignment?.org_id) === organizationId &&
+          employee
+        ) {
+          visibleUserIds.add(employeeId);
+          const employeeEmail = normalizeEmail(employee.email);
+          if (employeeEmail) {
+            visibleEmails.add(employeeEmail);
+          }
+        }
       }
-
-      if (client.org_id) {
-        return false;
-      }
-
-      return hasClientMembershipEvidence(
-        client,
-        organizationUserIds,
-        organizationUserEmails
-      );
-    });
-
-    if (user.role === "admin") {
-      return Response.json({ clients: organizationClients });
     }
 
-    if (user.role === "management") {
-      const hierarchyUsers = resolvedOrgId
-        ? organizationUsers
-        : allUsers.filter((member) => member.id === user.id);
+    const clients = scopedClients.filter((client) =>
+      clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
+    );
 
-      const descendantIds = getAllDescendantIds(user.id, hierarchyUsers);
-      const visibleUserIds = new Set([user.id, ...descendantIds]);
-
-      const visibleUserEmails = new Set(
-        hierarchyUsers
-          .filter((member) => visibleUserIds.has(member.id))
-          .map((member) => member.email)
-          .filter(Boolean)
-      );
-
-      const clients = organizationClients.filter((client) =>
-        hasClientMembershipEvidence(client, visibleUserIds, visibleUserEmails)
-      );
-
-      return Response.json({ clients });
-    }
-
-    if (user.role === "employee") {
-      const ownUserIds = new Set([user.id]);
-      const ownEmails = new Set([user.email].filter(Boolean));
-
-      const clients = organizationClients.filter((client) =>
-        hasClientMembershipEvidence(client, ownUserIds, ownEmails)
-      );
-
-      return Response.json({ clients });
-    }
-
-    return Response.json({ clients: [] });
+    return Response.json({ clients });
   } catch (error) {
-    console.error("getClientsForUser error:", error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("getClientsForUser error:", error?.message || error);
+
+    return Response.json(
+      { error: "Unable to load clients for your account." },
+      { status: 500 }
+    );
   }
 });

@@ -166,5 +166,11 @@
     "first_student_submitted_at",
     "last_student_submitted_at",
     "student_submitted_by_user_id"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

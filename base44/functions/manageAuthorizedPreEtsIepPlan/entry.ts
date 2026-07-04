@@ -1,15 +1,12 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
-const STAFF_ROLES = new Set([
-  "admin",
-  "management",
-  "employee",
-]);
+const CANONICAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
-const SUPPORTED_ACTIONS = new Set([
-  "get_plan",
-  "save_plan",
-]);
+const SUPPORTED_ACTIONS = new Set(["get_plan", "save_plan"]);
 
 const EDITABLE_FIELDS = [
   "school_name",
@@ -39,6 +36,10 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
 function limitText(value: unknown, maximumLength: number) {
   return normalizeText(value).slice(0, maximumLength);
 }
@@ -49,6 +50,20 @@ function asArray<T = any>(value: unknown): T[] {
 
 function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isStudentPortalUser(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets" &&
+    normalizeText(user?.access_level).toLowerCase() === "client_portal"
+  );
 }
 
 function isValidDateOnly(value: string) {
@@ -70,10 +85,7 @@ function isValidDateOnly(value: string) {
   );
 }
 
-function isPreEtsClientInOrganization(
-  client: any,
-  organizationId: string
-) {
+function isPreEtsClientInOrganization(client: any, organizationId: string) {
   return (
     isActive(client) &&
     normalizeText(client?.org_id) === organizationId &&
@@ -81,58 +93,18 @@ function isPreEtsClientInOrganization(
   );
 }
 
-function hasClientMembershipEvidence(
+function clientMatchesVisibleStaff(
   client: any,
-  userIds: Set<string>,
-  userEmails: Set<string>
+  visibleUserIds: Set<string>,
+  visibleEmails: Set<string>
 ) {
-  const candidates = [
-    normalizeText(client?.assigned_employee_id),
-    normalizeText(client?.created_by),
-  ];
+  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
+  const createdBy = normalizeEmail(client?.created_by);
 
-  return candidates.some(
-    (value) => userIds.has(value) || userEmails.has(value)
+  return (
+    visibleUserIds.has(assignedEmployeeId) ||
+    (createdBy && visibleEmails.has(createdBy))
   );
-}
-
-function getDescendantUserIds(
-  rootUserId: string,
-  organizationUsers: any[]
-) {
-  const childrenByManagerId = new Map<string, string[]>();
-
-  for (const user of organizationUsers) {
-    const managerId = normalizeText(user?.manager_id);
-    const userId = normalizeText(user?.id);
-
-    if (!managerId || !userId) {
-      continue;
-    }
-
-    const existing = childrenByManagerId.get(managerId) || [];
-    existing.push(userId);
-    childrenByManagerId.set(managerId, existing);
-  }
-
-  const descendantIds = new Set<string>();
-  const queue = [rootUserId];
-
-  while (queue.length > 0) {
-    const currentUserId = queue.shift() || "";
-    const directReportIds = childrenByManagerId.get(currentUserId) || [];
-
-    for (const directReportId of directReportIds) {
-      if (descendantIds.has(directReportId)) {
-        continue;
-      }
-
-      descendantIds.add(directReportId);
-      queue.push(directReportId);
-    }
-  }
-
-  return descendantIds;
 }
 
 function projectPlan(plan: any) {
@@ -179,10 +151,7 @@ function buildPlanPayload(rawPlan: any) {
   }
 
   if (!isValidDateOnly(payload.iep_date)) {
-    throw new RequestError(
-      400,
-      "IEP Date must be a valid calendar date."
-    );
+    throw new RequestError(400, "IEP Date must be a valid calendar date.");
   }
 
   if (!isValidDateOnly(payload.next_review_date)) {
@@ -205,27 +174,26 @@ function buildPlanPayload(rawPlan: any) {
   return payload;
 }
 
-async function resolveAuthorizedStaffClient(
-  base44: any,
-  authenticatedUserId: string,
-  requestedClientId: string
-) {
-  const caller = await base44.asServiceRole.entities.User.get(
-    authenticatedUserId
+async function assertActiveOrganization(base44: any, organizationId: string) {
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
   ).catch(() => null);
 
-  if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Your account could not be verified as active."
-    );
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
   }
+}
 
+async function resolveAuthorizedStaffClient(
+  base44: any,
+  caller: any,
+  requestedClientId: string
+) {
   const callerId = normalizeText(caller?.id);
-  const callerRole = normalizeText(caller?.role).toLowerCase();
+  const callerRole = getCanonicalStaffRole(caller);
   const organizationId = normalizeText(caller?.org_id);
 
-  if (!STAFF_ROLES.has(callerRole)) {
+  if (!callerRole) {
     throw new RequestError(
       403,
       "Only authorized staff may access Pre-ETS IEP plans."
@@ -246,36 +214,26 @@ async function resolveAuthorizedStaffClient(
     );
   }
 
-  const [organization, organizationUsers, client] = await Promise.all([
-    base44.asServiceRole.entities.Organization.get(organizationId)
-      .catch(() => null),
-    base44.asServiceRole.entities.User.filter({
-      org_id: organizationId,
-    }),
-    base44.asServiceRole.entities.Client.get(requestedClientId)
-      .catch(() => null),
-  ]);
+  const [organizationUsers, client] = await Promise.all([
+    base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
+    base44.asServiceRole.entities.Client.get(requestedClientId).catch(
+      () => null
+    ),
+    assertActiveOrganization(base44, organizationId),
+  ]).then(([users, resolvedClient]) => [users, resolvedClient]);
 
-  if (!organization || !isActive(organization)) {
-    throw new RequestError(
-      403,
-      "Your organization assignment is invalid or inactive."
-    );
-  }
-
-  const activeOrganizationUsers = asArray(organizationUsers).filter(
+  const activeCanonicalUsers = asArray(organizationUsers).filter(
     (user: any) =>
       isActive(user) &&
-      normalizeText(user?.org_id) === organizationId
+      normalizeText(user?.org_id) === organizationId &&
+      Boolean(getCanonicalStaffRole(user))
   );
 
-  const activeOrganizationUserIds = new Set(
-    activeOrganizationUsers
-      .map((user: any) => normalizeText(user?.id))
-      .filter(Boolean)
-  );
-
-  if (!activeOrganizationUserIds.has(callerId)) {
+  if (
+    !activeCanonicalUsers.some(
+      (user: any) => normalizeText(user?.id) === callerId
+    )
+  ) {
     throw new RequestError(
       403,
       "Your account is not validly scoped to this organization."
@@ -290,93 +248,58 @@ async function resolveAuthorizedStaffClient(
   }
 
   if (callerRole === "admin") {
-    return {
-      organizationId,
-      client,
-    };
+    return { organizationId, client };
   }
 
-  if (callerRole === "management") {
-    const visibleUserIds = new Set<string>([
-      callerId,
-      ...getDescendantUserIds(
-        callerId,
-        activeOrganizationUsers
-      ),
-    ]);
-
-    const visibleUserEmails = new Set(
-      activeOrganizationUsers
-        .filter((user: any) =>
-          visibleUserIds.has(normalizeText(user?.id))
-        )
-        .map((user: any) => normalizeText(user?.email))
-        .filter(Boolean)
-    );
-
-    if (
-      !hasClientMembershipEvidence(
-        client,
-        visibleUserIds,
-        visibleUserEmails
-      )
-    ) {
-      throw new RequestError(
-        403,
-        "You are not assigned to manage this Pre-ETS student."
-      );
-    }
-
-    return {
-      organizationId,
-      client,
-    };
-  }
-
-  const ownUserIds = new Set([callerId]);
-  const ownUserEmails = new Set(
-    [normalizeText(caller?.email)].filter(Boolean)
+  const visibleUserIds = new Set<string>([callerId]);
+  const visibleEmails = new Set<string>(
+    [normalizeEmail(caller?.email)].filter(Boolean)
   );
 
-  if (
-    !hasClientMembershipEvidence(
-      client,
-      ownUserIds,
-      ownUserEmails
-    )
-  ) {
+  if (callerRole === "management") {
+    const assignments =
+      await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+        manager_user_id: callerId,
+      });
+    const activeUsersById = new Map(
+      activeCanonicalUsers.map((user: any) => [normalizeText(user?.id), user])
+    );
+
+    for (const assignment of asArray(assignments)) {
+      const employeeId = normalizeText(assignment?.employee_user_id);
+      const employee = activeUsersById.get(employeeId);
+
+      if (
+        assignment?.is_active === true &&
+        assignment?.is_archived !== true &&
+        normalizeText(assignment?.org_id) === organizationId &&
+        employee
+      ) {
+        visibleUserIds.add(employeeId);
+        const employeeEmail = normalizeEmail(employee.email);
+        if (employeeEmail) {
+          visibleEmails.add(employeeEmail);
+        }
+      }
+    }
+  }
+
+  if (!clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)) {
     throw new RequestError(
       403,
       "You are not assigned to this Pre-ETS student."
     );
   }
 
-   return {
-    organizationId,
-    client,
-  };
+  return { organizationId, client };
 }
 
-async function resolveAuthorizedStudentClient(
-  base44: any,
-  authenticatedUserId: string
-) {
-  const caller = await base44.asServiceRole.entities.User.get(
-    authenticatedUserId
-  ).catch(() => null);
-
+async function resolveAuthorizedStudentClient(base44: any, caller: any) {
   if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Your account could not be verified as active."
-    );
+    throw new RequestError(403, "Your account could not be verified as active.");
   }
 
-  if (
-    normalizeText(caller?.role).toLowerCase() !== "pre_ets" ||
-    normalizeText(caller?.access_level).toLowerCase() !==
-      "client_portal"
-  ) {
+  if (!isStudentPortalUser(caller)) {
     throw new RequestError(
       403,
       "Only an authorized Pre-ETS student may view a student IEP plan."
@@ -393,19 +316,12 @@ async function resolveAuthorizedStudentClient(
     );
   }
 
-  const [organization, client] = await Promise.all([
-    base44.asServiceRole.entities.Organization.get(organizationId)
-      .catch(() => null),
-    base44.asServiceRole.entities.Client.get(linkedClientId)
-      .catch(() => null),
+  const [, client] = await Promise.all([
+    assertActiveOrganization(base44, organizationId),
+    base44.asServiceRole.entities.Client.get(linkedClientId).catch(
+      () => null
+    ),
   ]);
-
-  if (!organization || !isActive(organization)) {
-    throw new RequestError(
-      403,
-      "Your organization assignment is invalid or inactive."
-    );
-  }
 
   if (!isPreEtsClientInOrganization(client, organizationId)) {
     throw new RequestError(
@@ -414,9 +330,7 @@ async function resolveAuthorizedStudentClient(
     );
   }
 
-  return {
-    client,
-  };
+  return { organizationId, client };
 }
 
 async function loadSinglePlan(base44: any, clientId: string) {
@@ -424,8 +338,9 @@ async function loadSinglePlan(base44: any, clientId: string) {
     { client_id: clientId },
     "-created_date"
   );
-
-  const activePlans = asArray(plans).filter(isActive);
+  const activePlans = asArray(plans).filter(
+    (plan: any) => isActive(plan) && normalizeText(plan?.client_id) === clientId
+  );
 
   if (activePlans.length > 1) {
     throw new RequestError(
@@ -441,11 +356,19 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        {
-          ok: false,
-          error: "This request must use POST.",
-        },
+        { ok: false, error: "This request must use POST." },
         { status: 405 }
+      );
+    }
+
+    const requestBody: any = await req.json().catch(() => ({}));
+    const action = normalizeText(requestBody?.action).toLowerCase();
+    const requestedClientId = normalizeText(requestBody?.client_id);
+
+    if (!SUPPORTED_ACTIONS.has(action)) {
+      throw new RequestError(
+        400,
+        'Choose either "get_plan" or "save_plan".'
       );
     }
 
@@ -462,56 +385,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    const requestBody = await req.json().catch(() => ({}));
-    const action = normalizeText(requestBody?.action);
-    const clientId = normalizeText(requestBody?.client_id);
+    const caller = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
 
-    if (!SUPPORTED_ACTIONS.has(action)) {
-      throw new RequestError(
-        400,
-        'Choose either "get_plan" or "save_plan".'
-      );
+    if (!caller || !isActive(caller)) {
+      throw new RequestError(403, "Your account could not be verified as active.");
     }
 
-       let client: any = null;
+    let client: any;
 
-    if (action === "get_plan") {
-      const caller = await base44.asServiceRole.entities.User.get(
-        authenticatedUser.id
-      ).catch(() => null);
-
-      const callerRole = normalizeText(caller?.role).toLowerCase();
-      const callerAccessLevel = normalizeText(
-        caller?.access_level
-      ).toLowerCase();
-
-      if (
-        callerRole === "pre_ets" &&
-        callerAccessLevel === "client_portal"
-      ) {
-        const studentContext = await resolveAuthorizedStudentClient(
-          base44,
-          authenticatedUser.id
-        );
-
-        client = studentContext.client;
-      } else {
-        const staffContext = await resolveAuthorizedStaffClient(
-          base44,
-          authenticatedUser.id,
-          clientId
-        );
-
-        client = staffContext.client;
-      }
+    if (action === "get_plan" && isStudentPortalUser(caller)) {
+      client = (await resolveAuthorizedStudentClient(base44, caller)).client;
     } else {
-      const staffContext = await resolveAuthorizedStaffClient(
-        base44,
-        authenticatedUser.id,
-        clientId
-      );
-
-      client = staffContext.client;
+      client = (
+        await resolveAuthorizedStaffClient(base44, caller, requestedClientId)
+      ).client;
     }
 
     const existingPlan = await loadSinglePlan(
@@ -520,15 +409,10 @@ Deno.serve(async (req) => {
     );
 
     if (action === "get_plan") {
-      return Response.json({
-        ok: true,
-        action,
-        plan: projectPlan(existingPlan),
-      });
+      return Response.json({ ok: true, action, plan: projectPlan(existingPlan) });
     }
 
     const payload = buildPlanPayload(requestBody?.plan);
-
     const savedPlan = existingPlan
       ? await base44.asServiceRole.entities.IEPPlan.update(
           normalizeText(existingPlan?.id),
@@ -538,23 +422,19 @@ Deno.serve(async (req) => {
           client_id: normalizeText(client?.id),
           ...payload,
         });
+
     return Response.json({
       ok: true,
       action,
       plan: projectPlan(savedPlan),
-      message: existingPlan
-        ? "IEP plan updated."
-        : "IEP plan created.",
+      message: existingPlan ? "IEP plan updated." : "IEP plan created.",
     });
   } catch (error: any) {
-    const status =
-      error instanceof RequestError ? error.status : 500;
-
+    const status = error instanceof RequestError ? error.status : 500;
     const message =
       error instanceof RequestError
         ? error.message
-        : error?.message ||
-          "The Pre-ETS IEP plan could not be saved.";
+        : "The Pre-ETS IEP plan could not be saved.";
 
     if (!(error instanceof RequestError)) {
       console.error(
@@ -563,12 +443,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    return Response.json(
-      {
-        ok: false,
-        error: message,
-      },
-      { status }
-    );
+    return Response.json({ ok: false, error: message }, { status });
   }
 });

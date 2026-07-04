@@ -128,5 +128,11 @@
     "client_id",
     "reporting_period_from",
     "reporting_period_to"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

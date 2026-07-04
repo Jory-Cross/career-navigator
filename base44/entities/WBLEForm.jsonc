@@ -85,5 +85,11 @@
   },
   "required": [
     "client_id"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

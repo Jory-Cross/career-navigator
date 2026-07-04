@@ -127,5 +127,11 @@
     "included_answer_record_ids",
     "generated_file_url",
     "generated_at"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

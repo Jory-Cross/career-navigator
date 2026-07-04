@@ -29,7 +29,7 @@
     "answers": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Map of field_key \u2192 answer value. These values populate PDF row fields."
+      "description": "Map of field_key → answer value. These values populate PDF row fields."
     },
     "required_fields_complete": {
       "type": "boolean",
@@ -66,5 +66,11 @@
     "entry_type_id",
     "entry_type_code",
     "answers"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

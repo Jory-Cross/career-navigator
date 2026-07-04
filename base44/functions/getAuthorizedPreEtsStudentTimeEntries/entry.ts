@@ -53,10 +53,7 @@ async function resolveStudentContext(
   ).catch(() => null);
 
   if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Your account could not be verified as active."
-    );
+    throw new RequestError(403, "Your account could not be verified as active.");
   }
 
   if (!isStudentPortalUser(caller)) {
@@ -66,8 +63,8 @@ async function resolveStudentContext(
     );
   }
 
-  const clientId = normalizeText(caller?.linked_client_id);
-  const organizationId = normalizeText(caller?.org_id);
+  const clientId = normalizeText(caller.linked_client_id);
+  const organizationId = normalizeText(caller.org_id);
 
   if (!clientId || !organizationId) {
     throw new RequestError(
@@ -76,15 +73,22 @@ async function resolveStudentContext(
     );
   }
 
-  const client = await base44.asServiceRole.entities.Client.get(
-    clientId
-  ).catch(() => null);
+  const [organization, client] = await Promise.all([
+    base44.asServiceRole.entities.Organization.get(organizationId).catch(
+      () => null
+    ),
+    base44.asServiceRole.entities.Client.get(clientId).catch(() => null),
+  ]);
+
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
+  }
 
   if (
     !client ||
     !isActive(client) ||
-    normalizeText(client?.org_id) !== organizationId ||
-    normalizeText(client?.client_type).toLowerCase() !== "pre_ets"
+    normalizeText(client.org_id) !== organizationId ||
+    normalizeText(client.client_type).toLowerCase() !== "pre_ets"
   ) {
     throw new RequestError(
       403,
@@ -92,24 +96,20 @@ async function resolveStudentContext(
     );
   }
 
-  return {
-    client,
-    clientId,
-    organizationId,
-  };
+  return { client, clientId, organizationId };
 }
 
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        {
-          ok: false,
-          error: "This request must use POST.",
-        },
+        { ok: false, error: "This request must use POST." },
         { status: 405 }
       );
     }
+
+    // This route does not accept browser-defined client or organization scope.
+    await req.json().catch(() => ({}));
 
     const base44 = createClientFromRequest(req);
     const authenticatedUser = await base44.auth.me();
@@ -124,45 +124,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    const {
-      client,
-      clientId,
-      organizationId,
-    } = await resolveStudentContext(
+    const { client, clientId, organizationId } = await resolveStudentContext(
       base44,
       authenticatedUser.id
     );
 
     const records =
-      await base44.asServiceRole.entities.PreEtsClientTimeEntry.filter({
-        client_id: clientId,
-      });
-
-    let excludedEntriesMissingOrWrongOrgId = 0;
+      await base44.asServiceRole.entities.PreEtsClientTimeEntry.filter(
+        { client_id: clientId, org_id: organizationId },
+        "-created_date"
+      );
 
     const entries = asArray(records)
-      .filter((entry: any) => {
-        if (!isActive(entry)) {
-          return false;
-        }
-
-        if (normalizeText(entry?.org_id) !== organizationId) {
-          excludedEntriesMissingOrWrongOrgId += 1;
-          return false;
-        }
-
-        return true;
-      })
+      .filter(
+        (entry: any) =>
+          isActive(entry) &&
+          normalizeText(entry?.client_id) === clientId &&
+          normalizeText(entry?.org_id) === organizationId
+      )
       .map(projectEntry)
       .sort((left: any, right: any) => {
         const leftKey = `${left.date}T${left.start_time}`;
         const rightKey = `${right.date}T${right.start_time}`;
-
         return rightKey.localeCompare(leftKey);
       });
 
-    const clientName = `${normalizeText(client?.first_name)} ${normalizeText(
-      client?.last_name
+    const clientName = `${normalizeText(client.first_name)} ${normalizeText(
+      client.last_name
     )}`.trim();
 
     return Response.json({
@@ -174,18 +162,13 @@ Deno.serve(async (req) => {
       },
       entries,
       entry_count: entries.length,
-      excluded_entries_missing_or_wrong_org_id:
-        excludedEntriesMissingOrWrongOrgId,
     });
   } catch (error: any) {
-    const status =
-      error instanceof RequestError ? error.status : 500;
-
+    const status = error instanceof RequestError ? error.status : 500;
     const message =
       error instanceof RequestError
         ? error.message
-        : error?.message ||
-          "Your Pre-ETS time entries could not be loaded.";
+        : "Your Pre-ETS time entries could not be loaded.";
 
     if (!(error instanceof RequestError)) {
       console.error(
@@ -194,12 +177,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    return Response.json(
-      {
-        ok: false,
-        error: message,
-      },
-      { status }
-    );
+    return Response.json({ ok: false, error: message }, { status });
   }
 });
