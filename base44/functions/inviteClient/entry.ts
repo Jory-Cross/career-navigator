@@ -411,6 +411,16 @@ Deno.serve(async (req) => {
       });
     }
 
+        const body = await req.json().catch(() => ({}));
+    const clientId = normalizeText(body?.clientId);
+
+    if (!clientId) {
+      return Response.json({
+        success: false,
+        message: "A client must be selected before sending a portal invitation.",
+      });
+    }
+
     const base44 = createClientFromRequest(req);
     const authenticatedUser = await base44.auth.me();
 
@@ -418,16 +428,6 @@ Deno.serve(async (req) => {
       return Response.json({
         success: false,
         message: "Please sign in before sending a portal invitation.",
-      });
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const clientId = normalizeText(body?.clientId);
-
-    if (!clientId) {
-      return Response.json({
-        success: false,
-        message: "A client must be selected before sending a portal invitation.",
       });
     }
 
