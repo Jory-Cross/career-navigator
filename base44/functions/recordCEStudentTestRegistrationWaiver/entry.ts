@@ -7,11 +7,6 @@ const TRAINING_REGISTRATION_FEE_KINDS = new Set([
   "training_reactivation",
 ]);
 
-const WAIVABLE_ENROLLMENT_STATUSES = new Set([
-  "active",
-  "training_completed",
-]);
-
 const TEST_WAIVER_AMOUNT_CENTS = 4900;
 
 class RequestError extends Error {
@@ -75,6 +70,19 @@ function getStudentDisplayName(student: any) {
     normalizeEmail(student?.email) ||
     "CE student"
   );
+}
+
+function buildEnrollmentKey(
+  organizationId: string,
+  cohortId: string,
+  studentEmail: string
+) {
+  return [
+    "ce_training_enrollment",
+    organizationId,
+    cohortId,
+    studentEmail,
+  ].join(":");
 }
 
 async function resolveCanonicalPlatformOwner(
@@ -251,192 +259,183 @@ async function resolveStudentMembership(
   return membership;
 }
 
-async function resolveExactEnrollment(
+async function findExistingEnrollment(
   base44: any,
   organizationId: string,
   cohortId: string,
   studentUserId: string,
-  studentEmail: string,
-  membershipId: string
+  studentEmail: string
 ) {
-  const enrollmentRows =
-    await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+  const [byUserRows, byEmailRows] = await Promise.all([
+    base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
       {
         org_id: organizationId,
         cohort_id: cohortId,
         user_id: studentUserId,
       }
-    );
+    ),
+    base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+      {
+        org_id: organizationId,
+        cohort_id: cohortId,
+        student_email: studentEmail,
+      }
+    ),
+  ]);
 
-  const enrollments = asArray(enrollmentRows).filter(
+  const byId = new Map<string, any>();
+
+  for (const enrollment of [
+    ...asArray(byUserRows),
+    ...asArray(byEmailRows),
+  ]) {
+    const enrollmentId = normalizeIdentifier(enrollment?.id);
+
+    if (enrollmentId) {
+      byId.set(enrollmentId, enrollment);
+    }
+  }
+
+  const enrollments = [...byId.values()].filter(
     (enrollment: any) =>
       normalizeIdentifier(enrollment?.org_id) === organizationId &&
-      normalizeIdentifier(enrollment?.cohort_id) === cohortId &&
-      normalizeIdentifier(enrollment?.user_id) === studentUserId
+      normalizeIdentifier(enrollment?.cohort_id) === cohortId
   );
 
-  if (enrollments.length !== 1) {
+  if (enrollments.length > 1) {
     throw new RequestError(
       409,
-      "This CE student account does not have exactly one durable enrollment for the selected Training cohort."
+      "More than one durable CE enrollment exists for this student and Training cohort. Review is required before recording a test waiver."
     );
   }
 
-  const enrollment = enrollments[0];
+  return enrollments[0] || null;
+}
+
+function validateExistingEnrollmentForTestWaiver(
+  enrollment: any,
+  studentUserId: string,
+  studentEmail: string,
+  membershipId: string
+) {
+  if (!enrollment) {
+    return;
+  }
+
   const enrollmentStatus = normalizeText(
     enrollment?.enrollment_status
   ).toLowerCase();
 
-  const enrollmentMatches =
+  const validStatus = ["active", "training_completed"].includes(
+    enrollmentStatus
+  );
+
+  const exactIdentity =
     isActiveRecord(enrollment) &&
+    normalizeIdentifier(enrollment?.user_id) === studentUserId &&
     normalizeEmail(enrollment?.student_email) === studentEmail &&
     normalizeIdentifier(enrollment?.cohort_member_id) ===
       membershipId &&
-    !!normalizeIdentifier(enrollment?.pending_role_assignment_id) &&
-    !!normalizeText(enrollment?.registered_at) &&
-    WAIVABLE_ENROLLMENT_STATUSES.has(enrollmentStatus);
+    validStatus;
 
-  if (!enrollmentMatches) {
+  if (!exactIdentity) {
     throw new RequestError(
       409,
-      "The durable CE enrollment is incomplete, inactive, or is not safely linked to this active student membership."
+      "The existing durable CE enrollment is incomplete or does not safely match this active test student membership."
     );
   }
 
   if (
     normalizeIdentifier(
       enrollment?.organization_billing_event_id
-    )
+    ) ||
+    normalizeText(enrollment?.payment_settled_at)
   ) {
     throw new RequestError(
       409,
-      "This durable CE enrollment is already linked to a billing record and cannot receive a new test registration waiver."
+      "This durable CE enrollment already has payment or billing history and cannot receive a new test registration waiver."
     );
   }
-
-  if (normalizeText(enrollment?.payment_settled_at)) {
-    throw new RequestError(
-      409,
-      "This durable CE enrollment already has a recorded payment-settlement time and requires billing review rather than a test waiver."
-    );
-  }
-
-  return enrollment;
 }
 
-async function resolveAcceptedInvitation(
+async function getRegistrationBillingEvents(
   base44: any,
-  enrollment: any,
   organizationId: string,
   cohortId: string,
+  studentUserId: string,
   studentEmail: string
 ) {
-  const invitationId = normalizeIdentifier(
-    enrollment?.pending_role_assignment_id
-  );
-
-  const invitation =
-    await base44.asServiceRole.entities.PendingRoleAssignment.get(
-      invitationId
-    ).catch(() => null);
-
-  const paymentResponsibility = normalizeText(
-    enrollment?.payment_responsibility
-  );
-  const instructorPaymentMode =
-    paymentResponsibility === "instructor_paid"
-      ? normalizeText(enrollment?.instructor_payment_mode)
-      : "";
-
-  const invitationPaymentResponsibility = normalizeText(
-    invitation?.payment_responsibility
-  );
-  const invitationInstructorPaymentMode =
-    invitationPaymentResponsibility === "instructor_paid"
-      ? normalizeText(invitation?.instructor_payment_mode)
-      : "";
-
-  const invitationCohortRole = normalizeText(
-    invitation?.cohort_role
-  ).toLowerCase();
-
-  const paymentPlanIsValid =
-    ["student_paid", "instructor_paid"].includes(
-      paymentResponsibility
-    ) &&
-    (
-      paymentResponsibility === "student_paid"
-        ? !instructorPaymentMode
-        : ["pay_now", "invoice_with_cohort"].includes(
-            instructorPaymentMode
-          )
-    );
-
-  const invitationMatches =
-    invitation &&
-    invitation?.is_archived !== true &&
-    normalizeText(invitation?.status).toLowerCase() ===
-      "accepted" &&
-    normalizeText(invitation?.role).toLowerCase() ===
-      "ce_student" &&
-    normalizeText(invitation?.access_level).toLowerCase() ===
-      "ce_training_portal" &&
-    normalizeIdentifier(invitation?.org_id) === organizationId &&
-    normalizeIdentifier(invitation?.cohort_id) === cohortId &&
-    normalizeEmail(invitation?.email) === studentEmail &&
-    !normalizeIdentifier(invitation?.client_id) &&
-    ["", "member"].includes(invitationCohortRole) &&
-    paymentPlanIsValid &&
-    invitationPaymentResponsibility === paymentResponsibility &&
-    invitationInstructorPaymentMode === instructorPaymentMode;
-
-  if (!invitationMatches) {
-    throw new RequestError(
-      409,
-      "The CE student invitation does not safely match the durable enrollment and payment settings."
-    );
-  }
-
-  return {
-    invitation,
-    paymentResponsibility,
-    instructorPaymentMode,
-  };
-}
-
-async function assertNoExistingRegistrationBilling(
-  base44: any,
-  organizationId: string,
-  cohortId: string,
-  studentUserId: string
-) {
-  const billingRows =
-    await base44.asServiceRole.entities.OrganizationBillingEvent.filter(
+  const [byUserRows, byEmailRows] = await Promise.all([
+    base44.asServiceRole.entities.OrganizationBillingEvent.filter(
       {
         organization_id: organizationId,
         cohort_id: cohortId,
         subject_user_id: studentUserId,
       }
-    );
+    ),
+    base44.asServiceRole.entities.OrganizationBillingEvent.filter(
+      {
+        organization_id: organizationId,
+        cohort_id: cohortId,
+        subject_verified_email: studentEmail,
+      }
+    ),
+  ]);
 
-  const registrationEvents = asArray(billingRows).filter(
+  const byId = new Map<string, any>();
+
+  for (const billingEvent of [
+    ...asArray(byUserRows),
+    ...asArray(byEmailRows),
+  ]) {
+    const billingEventId = normalizeIdentifier(billingEvent?.id);
+
+    if (billingEventId) {
+      byId.set(billingEventId, billingEvent);
+    }
+  }
+
+  return [...byId.values()].filter(
     (billingEvent: any) =>
       normalizeIdentifier(billingEvent?.organization_id) ===
         organizationId &&
       normalizeIdentifier(billingEvent?.cohort_id) === cohortId &&
-      normalizeIdentifier(billingEvent?.subject_user_id) ===
-        studentUserId &&
       normalizeText(billingEvent?.billing_subject_type) ===
         "student" &&
       TRAINING_REGISTRATION_FEE_KINDS.has(
         normalizeText(billingEvent?.fee_kind)
+      ) &&
+      (
+        normalizeIdentifier(billingEvent?.subject_user_id) ===
+          studentUserId ||
+        normalizeEmail(billingEvent?.subject_verified_email) ===
+          studentEmail
       )
   );
+}
 
-  if (registrationEvents.length > 0) {
-    throw new RequestError(
-      409,
-      "A CE registration billing record already exists for this student and Training cohort. This test waiver cannot create or overwrite billing history."
+async function cancelWaiverBillingEvent(
+  base44: any,
+  billingEvent: any,
+  reason: string
+) {
+  try {
+    await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+      billingEvent.id,
+      {
+        event_status: "cancelled",
+        notes: appendAuditNote(
+          billingEvent?.notes,
+          reason
+        ),
+      }
+    );
+  } catch (rollbackError) {
+    console.error(
+      "[recordCEStudentTestRegistrationWaiver] Waiver rollback failed:",
+      rollbackError instanceof Error
+        ? rollbackError.message
+        : rollbackError
     );
   }
 }
@@ -452,7 +451,7 @@ async function writeAuditLog(
       platform_admin_user_id: actorUserId,
       event_key: "ce_student_test_registration_waived",
       event_summary:
-        "A CE student test registration waiver was recorded for a complete durable enrollment.",
+        "A Platform Owner recorded an internal CE student test registration waiver.",
       actor_type: "platform_admin",
       target_entity: "OrganizationBillingEvent",
       target_record_id: billingEventId,
@@ -553,37 +552,103 @@ Deno.serve(async (req) => {
       studentUserId
     );
 
-    const enrollment = await resolveExactEnrollment(
+    const existingEnrollment = await findExistingEnrollment(
       base44,
       organizationId,
       cohortId,
+      studentUserId,
+      studentEmail
+    );
+
+    validateExistingEnrollmentForTestWaiver(
+      existingEnrollment,
       studentUserId,
       studentEmail,
       normalizeIdentifier(membership?.id)
     );
 
-    const {
-      paymentResponsibility,
-      instructorPaymentMode,
-    } = await resolveAcceptedInvitation(
-      base44,
-      enrollment,
-      organizationId,
-      cohortId,
-      studentEmail
-    );
-
-    await assertNoExistingRegistrationBilling(
-      base44,
-      organizationId,
-      cohortId,
-      studentUserId
-    );
-
-    const now = new Date().toISOString();
     const billingEventKey =
       `test_waived_training_registration:` +
-      `${organizationId}:${cohortId}:${enrollment.id}`;
+      `${organizationId}:${cohortId}:${studentUserId}`;
+
+    const registrationBillingEvents =
+      await getRegistrationBillingEvents(
+        base44,
+        organizationId,
+        cohortId,
+        studentUserId,
+        studentEmail
+      );
+
+    if (registrationBillingEvents.length > 1) {
+      throw new RequestError(
+        409,
+        "More than one CE registration billing record exists for this student and Training cohort. Review is required before any test-waiver action."
+      );
+    }
+
+    if (registrationBillingEvents.length === 1) {
+      const existingBillingEvent = registrationBillingEvents[0];
+      const matchingExistingWaiver =
+        normalizeText(existingBillingEvent?.billing_event_key) ===
+          billingEventKey &&
+        normalizeText(existingBillingEvent?.event_status) ===
+          "waived" &&
+        normalizeIdentifier(existingBillingEvent?.subject_user_id) ===
+          studentUserId &&
+        normalizeEmail(
+          existingBillingEvent?.subject_verified_email
+        ) === studentEmail;
+
+      const linkedExistingEnrollment =
+        existingEnrollment &&
+        normalizeIdentifier(
+          existingEnrollment?.organization_billing_event_id
+        ) === normalizeIdentifier(existingBillingEvent?.id) &&
+        !!normalizeText(existingEnrollment?.payment_settled_at);
+
+      if (
+        matchingExistingWaiver &&
+        linkedExistingEnrollment
+      ) {
+        return Response.json({
+          ok: true,
+          action: "record_test_waiver",
+          already_settled: true,
+          message:
+            "This CE student already has the authorized internal test registration waiver for this Training cohort.",
+          billing_event: {
+            id: existingBillingEvent.id,
+            billing_event_key:
+              existingBillingEvent.billing_event_key,
+            event_status: existingBillingEvent.event_status,
+            cohort_id: existingBillingEvent.cohort_id,
+            subject_user_id:
+              existingBillingEvent.subject_user_id,
+          },
+          enrollment: {
+            id: existingEnrollment.id,
+            payment_settled_at:
+              existingEnrollment.payment_settled_at,
+          },
+        });
+      }
+
+      throw new RequestError(
+        409,
+        "A CE registration billing record already exists for this student and Training cohort. This test waiver cannot create or overwrite billing history."
+      );
+    }
+
+    const now = new Date().toISOString();
+    const membershipTrainingStatus = normalizeText(
+      membership?.training_status
+    ).toLowerCase();
+
+    const targetEnrollmentStatus =
+      membershipTrainingStatus === "completed"
+        ? "training_completed"
+        : "active";
 
     const createdBillingEvent =
       await base44.asServiceRole.entities.OrganizationBillingEvent.create(
@@ -610,50 +675,90 @@ Deno.serve(async (req) => {
         }
       );
 
-    try {
-      await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
-        enrollment.id,
-        {
-          organization_billing_event_id: createdBillingEvent.id,
-          payment_settled_at: now,
-          status_updated_at: now,
-          notes: appendAuditNote(
-            enrollment?.notes,
-            `Internal test registration waiver recorded on ${now}. Billing event: ${createdBillingEvent.id}.`
-          ),
-        }
-      );
-    } catch (enrollmentUpdateError) {
-      console.error(
-        "[recordCEStudentTestRegistrationWaiver] Enrollment update failed after waiver creation:",
-        enrollmentUpdateError instanceof Error
-          ? enrollmentUpdateError.message
-          : enrollmentUpdateError
-      );
+    let enrollment = existingEnrollment;
+    let enrollmentCreated = false;
 
-      try {
-        await base44.asServiceRole.entities.OrganizationBillingEvent.update(
-          createdBillingEvent.id,
+    try {
+      if (enrollment) {
+        await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+          enrollment.id,
           {
-            event_status: "cancelled",
+            organization_billing_event_id:
+              createdBillingEvent.id,
+            payment_settled_at: now,
+            registered_at:
+              enrollment.registered_at ||
+              membership.joined_at ||
+              now,
+            status_updated_at: now,
             notes: appendAuditNote(
-              createdBillingEvent?.notes,
-              "Automatically cancelled because the durable enrollment could not be safely linked to this test waiver."
+              enrollment?.notes,
+              `Internal test registration waiver recorded on ${now}. Billing event: ${createdBillingEvent.id}.`
             ),
           }
         );
-      } catch (rollbackError) {
-        console.error(
-          "[recordCEStudentTestRegistrationWaiver] Waiver rollback failed:",
-          rollbackError instanceof Error
-            ? rollbackError.message
-            : rollbackError
-        );
+
+        enrollment = {
+          ...enrollment,
+          organization_billing_event_id:
+            createdBillingEvent.id,
+          payment_settled_at: now,
+        };
+      } else {
+        enrollment =
+          await base44.asServiceRole.entities.CETrainingStudentEnrollment.create(
+            {
+              org_id: organizationId,
+              enrollment_key: buildEnrollmentKey(
+                organizationId,
+                cohortId,
+                studentEmail
+              ),
+              cohort_id: cohortId,
+              student_email: studentEmail,
+              user_id: studentUserId,
+              cohort_member_id: membership.id,
+              organization_billing_event_id:
+                createdBillingEvent.id,
+              payment_responsibility: "student_paid",
+              enrollment_status: targetEnrollmentStatus,
+              is_active: true,
+              invited_at: membership.joined_at || now,
+              payment_settled_at: now,
+              registered_at: membership.joined_at || now,
+              ...(targetEnrollmentStatus === "training_completed" &&
+              membership.training_completed_at
+                ? {
+                    training_completed_at:
+                      membership.training_completed_at,
+                  }
+                : {}),
+              created_by_user_id: callerId,
+              status_updated_at: now,
+              notes:
+                "Created by the controlled Platform Owner test-registration-waiver path for a legacy CE test student. No student payment was collected.",
+            }
+          );
+
+        enrollmentCreated = true;
       }
+    } catch (enrollmentError) {
+      console.error(
+        "[recordCEStudentTestRegistrationWaiver] Enrollment link failed after waiver creation:",
+        enrollmentError instanceof Error
+          ? enrollmentError.message
+          : enrollmentError
+      );
+
+      await cancelWaiverBillingEvent(
+        base44,
+        createdBillingEvent,
+        "Automatically cancelled because the durable enrollment could not be created or linked to this test waiver."
+      );
 
       throw new RequestError(
         500,
-        "The test registration waiver could not be linked to the durable enrollment. The waiver was cancelled and requires review before any further action."
+        "The test registration waiver could not be linked to a durable CE enrollment. The waiver was cancelled and requires review before any further action."
       );
     }
 
@@ -662,28 +767,29 @@ Deno.serve(async (req) => {
       callerId,
       createdBillingEvent.id,
       {
+        exception_type:
+          "platform_owner_controlled_test_registration_waiver",
         organization_id: organizationId,
+        organization_name:
+          normalizeText(organization?.name) || null,
         cohort_id: cohortId,
         cohort_name: normalizeText(cohort?.name) || null,
         enrollment_id: enrollment.id,
+        durable_enrollment_created: enrollmentCreated,
         cohort_member_id: membership.id,
-        pending_role_assignment_id:
-          enrollment.pending_role_assignment_id,
         student_user_id: studentUserId,
         student_name: getStudentDisplayName(student),
         student_email: studentEmail,
         billing_event_key: billingEventKey,
-        payment_responsibility: paymentResponsibility,
-        instructor_payment_mode: instructorPaymentMode || null,
         waiver_reason: waiverReason,
         amount_cents: TEST_WAIVER_AMOUNT_CENTS,
-        organization_name: normalizeText(organization?.name) || null,
       }
     );
 
     return Response.json({
       ok: true,
       action: "record_test_waiver",
+      already_settled: false,
       message:
         `${getStudentDisplayName(student)} now has an authorized internal test registration waiver linked to the durable CE enrollment.`,
       billing_event: {
@@ -701,6 +807,7 @@ Deno.serve(async (req) => {
       enrollment: {
         id: enrollment.id,
         payment_settled_at: now,
+        created_for_legacy_test_student: enrollmentCreated,
       },
     });
   } catch (error: unknown) {
