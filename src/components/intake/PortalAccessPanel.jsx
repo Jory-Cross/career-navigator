@@ -196,21 +196,7 @@ export default function PortalAccessPanel({ client, onRefresh }) {
     }
   };
 
-  const handleRepair = async () => {
-    setBusy('repair');
-    try {
-      const res = await base44.functions.invoke('repairStalePortalAccess', { dry_run: false });
-      if (res?.data?.success === false) throw new Error(res.data.error || 'Repair failed');
-      const fixed = (res?.data?.users_repaired?.length || 0) + (res?.data?.pending_revoked?.length || 0);
-      toast.success(`Repair complete — ${fixed} stale record(s) cleaned`);
-      await load();
-      onRefresh?.();
-    } catch (err) {
-      toast.error('Repair failed: ' + err.message);
-    } finally {
-      setBusy(null);
-    }
-  };
+   // Secure stale-access repair is unavailable during security remediation.
 
   const handleDeletePortalUser = async () => {
     setConfirmDelete(false);
