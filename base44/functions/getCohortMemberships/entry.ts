@@ -373,7 +373,8 @@ Deno.serve(async (req) => {
       durableEnrollmentRows,
       organizationUserRows,
     ] = await Promise.all([
-      base44.asServiceRole.entities.CETrainingCohortMember.filter({
+            base44.asServiceRole.entities.CETrainingCohortMember.filter({
+        org_id: organizationId,
         cohort_id: cohortId,
       }),
       base44.asServiceRole.entities.PendingRoleAssignment.filter({
