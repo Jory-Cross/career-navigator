@@ -2,58 +2,13 @@
   "name": "Activity",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "client_id": {
-      "type": "string"
-    },
-    "activity_type": {
-      "type": "string",
-      "enum": [
-        "email_sent",
-        "task_created",
-        "task_updated",
-        "task_completed",
-        "application_created",
-        "application_updated",
-        "document_uploaded",
-        "meeting_scheduled",
-        "time_logged",
-        "client_login",
-        "note_added",
-        "status_changed",
-        "onboarding_step"
-      ]
-    },
-    "title": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "metadata": {
-      "type": "object",
-      "properties": {
-        "related_entity_id": {
-          "type": "string"
-        },
-        "related_entity_type": {
-          "type": "string"
-        },
-        "old_value": {
-          "type": "string"
-        },
-        "new_value": {
-          "type": "string"
-        }
-      }
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_id": { "type": "string" },
+    "activity_type": { "type": "string", "enum": ["email_sent", "task_created", "task_updated", "task_completed", "application_created", "application_updated", "document_uploaded", "meeting_scheduled", "time_logged", "client_login", "note_added", "status_changed", "onboarding_step"] },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "metadata": { "type": "object", "properties": { "related_entity_id": { "type": "string" }, "related_entity_type": { "type": "string" }, "old_value": { "type": "string" }, "new_value": { "type": "string" } } }
   },
-  "required": [
-    "client_id",
-    "activity_type",
-    "title"
-  ]
+  "required": ["client_id", "activity_type", "title"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
