@@ -115,27 +115,47 @@ async function requireCohortAccess(
   const cohort =
     await base44.asServiceRole.entities.CETrainingCohort.get(
       cohortId
-    );
+    ).catch(() => null);
 
-  if (!cohort) {
-    throw new RequestError(404, "Training cohort not found.");
-  }
+  const callerRole = normalizeText(caller?.role).toLowerCase();
+  const callerAccessLevel = normalizeText(
+    caller?.access_level
+  ).toLowerCase();
+
+  const isOrganizationAdmin =
+    callerRole === "admin" &&
+    callerAccessLevel === "admin";
+
+  const isOrganizationManager =
+    callerRole === "management" &&
+    callerAccessLevel === "staff";
+
+  const isCEInstructor =
+    callerRole === "ce_instructor" &&
+    callerAccessLevel === "ce_training_portal";
 
   if (
-    normalizeText(cohort.org_id) !== organizationId ||
-    normalizeText(cohort.cohort_type) !== "training"
+    !cohort ||
+    normalizeText(cohort?.org_id) !== organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !==
+      "training" ||
+    !["active", "completed"].includes(
+      normalizeText(cohort?.status).toLowerCase()
+    ) ||
+    cohort?.is_active === false ||
+    cohort?.is_archived === true
   ) {
     throw new RequestError(
       403,
-      "This Training cohort does not belong to your organization."
+      "The selected Training cohort is unavailable."
     );
   }
 
-  if (["admin", "management"].includes(caller.role)) {
+  if (isOrganizationAdmin || isOrganizationManager) {
     return cohort;
   }
 
-  if (caller.role !== "ce_instructor") {
+  if (!isCEInstructor) {
     throw new RequestError(
       403,
       "Only authorized CE organization users may view student details."
@@ -152,7 +172,21 @@ async function requireCohortAccess(
       }
     );
 
-  if (!Array.isArray(managerRows) || managerRows.length === 0) {
+  const hasActiveManagerMembership =
+    Array.isArray(managerRows) &&
+    managerRows.some(
+      (membership) =>
+        normalizeText(membership?.org_id) === organizationId &&
+        normalizeText(membership?.cohort_id) === cohortId &&
+        normalizeText(membership?.user_id) ===
+          normalizeText(caller?.id) &&
+        normalizeText(membership?.cohort_role).toLowerCase() ===
+          "manager" &&
+        membership?.is_active !== false &&
+        membership?.is_archived !== true
+    );
+
+  if (!hasActiveManagerMembership) {
     throw new RequestError(
       403,
       "Only active cohort managers may view this student's details."
