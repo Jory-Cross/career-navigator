@@ -308,11 +308,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (portalUser) {
+          if (portalUser) {
         await base44.asServiceRole.entities.User.update(portalUser.id, {
           linked_client_id: null,
           access_level: null,
           role: "user",
+          org_id: null,
         });
       }
     } catch (error) {
