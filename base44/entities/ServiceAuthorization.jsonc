@@ -18,7 +18,7 @@
     },
     "authorization_number": {
       "type": "string",
-      "description": "Official USOR authorization number \u2014 appears on PDF header"
+      "description": "Official USOR authorization number — appears on PDF header"
     },
     "vr_counselor_name": {
       "type": "string"
@@ -31,11 +31,11 @@
     },
     "job_goal": {
       "type": "string",
-      "description": "Client's stated job goal \u2014 appears on PDF header"
+      "description": "Client's stated job goal — appears on PDF header"
     },
     "employer_name": {
       "type": "string",
-      "description": "Current or target employer \u2014 used for job coaching reports"
+      "description": "Current or target employer — used for job coaching reports"
     },
     "service_start_date": {
       "type": "string",
@@ -52,12 +52,12 @@
     "used_hours": {
       "type": "number",
       "default": 0,
-      "description": "Computed from approved TimeEntry records"
+      "description": "Computed only from TimeEntry records that satisfy the server-enforced forward-only authorization-usage rule."
     },
     "remaining_hours": {
       "type": "number",
       "default": 0,
-      "description": "Computed: total_authorized_hours - used_hours"
+      "description": "Computed as total_authorized_hours minus server-approved counted usage."
     },
     "status": {
       "type": "string",
@@ -78,5 +78,11 @@
     "client_id",
     "entry_type_code",
     "authorization_number"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
