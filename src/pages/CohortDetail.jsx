@@ -1118,11 +1118,12 @@ export default function CohortDetail() {
         onSubmit={handleAddTrainer}
       />
 
-      <AddMemberDialog
+           <AddMemberDialog
         open={showAddMemberDialog}
         onOpenChange={setShowAddMemberDialog}
         title="Assign Existing CE Student"
         cohortRole="member"
+        cohortId={cohort_id}
         allowedRoles={["ce_student"]}
         existingMemberUserIds={existingMemberUserIds}
         onSubmit={handleAddMember}
