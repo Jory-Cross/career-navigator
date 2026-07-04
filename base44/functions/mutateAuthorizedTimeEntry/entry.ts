@@ -1,33 +1,22 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const TIME_ENTRY_STATUSES = new Set([
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
+const VALID_ACTIONS = new Set(["validate", "create", "update", "delete"]);
+const VALID_STATUSES = new Set([
   "draft",
   "submitted",
   "approved",
   "locked",
   "void",
 ]);
+const TIME_CARD_LOCKED_STATUSES = new Set(["submitted", "approved"]);
 
-const AUTHORIZATION_COUNTED_STATUSES = new Set([
-  "approved",
-  "locked",
-]);
-
-const TIME_CARD_LOCKED_STATUSES = new Set([
-  "submitted",
-  "approved",
-]);
-
-const INTERNAL_TIME_ENTRY_ROLES = new Set([
-  "admin",
-  "management",
-  "employee",
-]);
-
-const LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE: Record<
-  string,
-  Set<string>
-> = {
+const LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE: Record<string, Set<string>> = {
   dspd: new Set([
     "job_coaching",
     "individual_support",
@@ -63,250 +52,141 @@ const LEGACY_FORM_FIELD_KEY_ALIASES_BY_ENTRY_TYPE: Record<
   },
 };
 
-function getLegacyStaticFormFields(entryTypeCode: unknown) {
-  return (
-    LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE[
-      normalizeText(entryTypeCode).toLowerCase()
-    ] || new Set<string>()
-  );
-}
-function httpError(status: number, message: string) {
-  const error: any = new Error(message);
-  error.status = status;
-  return error;
+class RequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
 function normalizeDate(value: unknown) {
   const date = normalizeText(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
 
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === date
+    ? date
+    : "";
 }
 
 function asNumber(value: unknown, fallback = 0) {
-  const numberValue = Number(value);
-
-  return Number.isFinite(numberValue) ? numberValue : fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function asObject(value: unknown) {
-  return value &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-    ? value
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function asObject(value: unknown): Record<string, any> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, any>)
     : {};
-}
-
-function asArray(value: unknown) {
-  return Array.isArray(value) ? value : [];
 }
 
 function hasOwn(record: any, key: string) {
   return Object.prototype.hasOwnProperty.call(record || {}, key);
 }
 
-function normalizeLegacyFormDataKeys(
-  formData: unknown,
-  entryTypeCode: unknown
-) {
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function isFilled(value: unknown) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function getLegacyStaticFormFields(entryTypeCode: string) {
+  return (
+    LEGACY_STATIC_FORM_FIELDS_BY_ENTRY_TYPE[
+      normalizeText(entryTypeCode).toLowerCase()
+    ] || new Set<string>()
+  );
+}
+
+function normalizeLegacyFormDataKeys(formData: unknown, entryTypeCode: string) {
   const source = asObject(formData);
   const aliases =
     LEGACY_FORM_FIELD_KEY_ALIASES_BY_ENTRY_TYPE[
       normalizeText(entryTypeCode).toLowerCase()
     ] || {};
-
   const normalized = { ...source };
 
-  for (const [legacyKey, canonicalKey] of Object.entries(
-    aliases
-  )) {
-    if (
-      hasOwn(source, legacyKey) &&
-      !hasOwn(source, canonicalKey)
-    ) {
+  for (const [legacyKey, canonicalKey] of Object.entries(aliases)) {
+    if (hasOwn(source, legacyKey) && !hasOwn(source, canonicalKey)) {
       normalized[canonicalKey] = source[legacyKey];
     }
-
     delete normalized[legacyKey];
   }
 
   return normalized;
 }
 
-function isActive(record: any) {
-  return record?.is_active !== false && record?.is_archived !== true;
-}
-
 function isAuthorizationCounted(entry: any) {
-  return AUTHORIZATION_COUNTED_STATUSES.has(
-    normalizeText(entry?.status).toLowerCase()
-  );
+  const status = normalizeText(entry?.status).toLowerCase();
+
+  if (status === "approved" || status === "locked") {
+    return true;
+  }
+
+  return status === "submitted" && entry?.authorization_usage_eligible === true;
 }
 
-function isFilled(value: unknown) {
-  if (value === undefined || value === null) {
-    return false;
-  }
-
-  if (typeof value === "string") {
-    return value.trim().length > 0;
-  }
-
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-
-  return true;
-}
-
-/**
- * Temporary capability bridge.
- *
- * Tenant isolation is permanent and server-enforced.
- * Organization-defined feature permissions will later replace this bridge.
- *
- * Current allowed internal roles:
- * - admin: organization-wide TimeEntry authority
- * - management: own + active same-org direct reports
- * - employee: own entries only
- *
- * CE, client, Pre-ETS, DSPD, employer, and student roles are denied.
- * access_level is intentionally not used to expand TimeEntry authority.
- */
-function getCurrentTimeEntryCapabilities(caller: any) {
-  const role = normalizeText(caller?.role).toLowerCase();
-
-  if (!INTERNAL_TIME_ENTRY_ROLES.has(role)) {
-    throw httpError(
-      403,
-      "You are not authorized to create, edit, or delete Time Entries."
-    );
-  }
-
-  return {
-    role,
-    isOrganizationAdmin: role === "admin",
-    isManagement: role === "management",
-    mayApproveOrVoid: role === "admin" || role === "management",
-    mayManageDirectReports: role === "admin" || role === "management",
-  };
-}
-
-function resolveRequestedTimeEntry(body: any) {
-  const candidate = body?.time_entry ?? body?.timeEntry ?? {};
-
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-    throw httpError(400, "time_entry must be an object.");
-  }
-
-  return candidate;
-}
-
-function getRequestedAuthorizationId(
-  body: any,
-  timeEntry: any,
-  existingEntry: any = null
-) {
-  if (hasOwn(timeEntry, "service_authorization_id")) {
-    return normalizeText(timeEntry.service_authorization_id);
-  }
-
-  if (hasOwn(body, "service_authorization_id")) {
-    return normalizeText(body.service_authorization_id);
-  }
-
-  return normalizeText(existingEntry?.service_authorization_id);
-}
-
-function getRequestedFormData(timeEntry: any) {
-  const hasFormData = hasOwn(timeEntry, "form_data");
-  const hasFieldAnswers = hasOwn(timeEntry, "field_answers");
-
-  if (hasFormData && hasFieldAnswers) {
-    throw httpError(
-      400,
-      "Provide either form_data or field_answers, not both."
-    );
-  }
-
-  if (!hasFormData && !hasFieldAnswers) {
-    return null;
-  }
-
-  const value = hasFormData
-    ? timeEntry.form_data
-    : timeEntry.field_answers;
-
-  if (
-    !value ||
-    typeof value !== "object" ||
-    Array.isArray(value)
-  ) {
-    throw httpError(
-      400,
-      "form_data or field_answers must be an object."
-    );
-  }
-
-  return value;
-}
-
-function calculateReportingPeriodKey(
-  date: string,
-  reportMode: string
-) {
+function calculateReportingPeriodKey(date: string, reportMode: string) {
   const [year, monthValue] = date.split("-");
   const month = Number(monthValue);
 
-  if (
-    !year ||
-    !Number.isInteger(month) ||
-    month < 1 ||
-    month > 12
-  ) {
-    throw httpError(
+  if (!year || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new RequestError(
       400,
       "Unable to determine the reporting period from the TimeEntry date."
     );
   }
 
-  if (reportMode === "usor148_service_period") {
-    return `${year}-Q${Math.ceil(month / 3)}`;
-  }
-
-  return `${year}-${String(month).padStart(2, "0")}`;
+  return reportMode === "usor148_service_period"
+    ? `${year}-Q${Math.ceil(month / 3)}`
+    : `${year}-${String(month).padStart(2, "0")}`;
 }
 
-function resolveStatus(
-  requestedStatus: unknown,
-  fallbackStatus: unknown,
-  capabilities: any
-) {
+function resolveStatus(requestedStatus: unknown, fallbackStatus: unknown, role: string) {
   const status =
     normalizeText(requestedStatus).toLowerCase() ||
     normalizeText(fallbackStatus).toLowerCase() ||
     "submitted";
 
-  if (!TIME_ENTRY_STATUSES.has(status)) {
-    throw httpError(400, "Invalid TimeEntry status.");
+  if (!VALID_STATUSES.has(status)) {
+    throw new RequestError(400, "Choose a valid TimeEntry status.");
   }
 
   if (status === "locked") {
-    throw httpError(
+    throw new RequestError(
       403,
       "Locked Time Entries can only be created by the report-finalization workflow."
     );
   }
 
-  if (
-    !capabilities.mayApproveOrVoid &&
-    status !== "draft" &&
-    status !== "submitted"
-  ) {
-    throw httpError(
+  if (role === "employee" && !["draft", "submitted"].includes(status)) {
+    throw new RequestError(
       403,
       "Only management or organization administrators may approve or void Time Entries."
     );
@@ -315,568 +195,424 @@ function resolveStatus(
   return status;
 }
 
-async function getCaller(
-  base44: any,
-  authenticatedUser: any
-) {
+function projectEntry(entry: any) {
+  return entry;
+}
+
+async function resolveCallerContext(base44: any, authenticatedUserId: string) {
   const caller = await base44.asServiceRole.entities.User.get(
-    authenticatedUser.id
+    authenticatedUserId
   ).catch(() => null);
 
   if (!caller || !isActive(caller)) {
-    throw httpError(
-      403,
-      "Authenticated user record was not found or is inactive."
-    );
+    throw new RequestError(403, "Your account is inactive or unavailable.");
   }
 
+  const role = getCanonicalStaffRole(caller);
   const organizationId = normalizeText(caller.org_id);
 
-  if (!organizationId) {
-    throw httpError(
+  if (!role || !organizationId) {
+    throw new RequestError(
       403,
-      "Your account is not assigned to an organization."
+      "Your account is not authorized to manage Time Entries."
     );
   }
 
-  const organization =
-    await base44.asServiceRole.entities.Organization.get(
-      organizationId
-    ).catch(() => null);
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
 
   if (!organization || !isActive(organization)) {
-    throw httpError(
-      403,
-      "Your organization assignment is invalid or inactive."
-    );
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
   }
 
   return {
     caller,
+    role,
     organizationId,
-    capabilities: getCurrentTimeEntryCapabilities(caller),
+    isAdmin: role === "admin",
+    isManagement: role === "management",
   };
 }
 
-async function assertTargetEmployeeAccess(
+async function assertEmployeeAuthority(
   base44: any,
-  caller: any,
-  organizationId: string,
-  capabilities: any,
-  targetEmployeeId: string
+  context: any,
+  employeeId: string
 ) {
-  const targetEmployee =
-    await base44.asServiceRole.entities.User.get(
-      targetEmployeeId
-    ).catch(() => null);
+  const target = await base44.asServiceRole.entities.User.get(employeeId).catch(
+    () => null
+  );
 
   if (
-    !targetEmployee ||
-    !isActive(targetEmployee) ||
-    normalizeText(targetEmployee.org_id) !== organizationId
+    !target ||
+    !isActive(target) ||
+    normalizeText(target.org_id) !== context.organizationId ||
+    !getCanonicalStaffRole(target)
   ) {
-    throw httpError(
+    throw new RequestError(
       403,
-      "The requested employee is not active in your organization."
+      "The selected employee is not active in your organization."
     );
   }
 
-  const targetRole = normalizeText(targetEmployee.role).toLowerCase();
-
-  if (!INTERNAL_TIME_ENTRY_ROLES.has(targetRole)) {
-    throw httpError(
-      403,
-      "The requested employee is not eligible for TimeEntry ownership."
-    );
+  if (employeeId === context.caller.id || context.isAdmin) {
+    return target;
   }
 
-  if (targetEmployeeId === caller.id) {
-    return targetEmployee;
-  }
-
-  if (capabilities.isOrganizationAdmin) {
-    return targetEmployee;
-  }
-
-  if (!capabilities.isManagement) {
-    throw httpError(
-      403,
-      "You may only create or modify your own Time Entries."
-    );
+  if (!context.isManagement) {
+    throw new RequestError(403, "You may only manage your own Time Entries.");
   }
 
   const assignments =
     await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
-      manager_user_id: caller.id,
-      employee_user_id: targetEmployeeId,
+      manager_user_id: context.caller.id,
+      employee_user_id: employeeId,
     });
 
-  const isActiveSameOrgDirectReport = asArray(assignments).some(
+  const isDirectReport = asArray(assignments).some(
     (assignment: any) =>
       assignment?.is_active === true &&
       assignment?.is_archived !== true &&
-      normalizeText(assignment?.org_id) === organizationId
+      normalizeText(assignment?.org_id) === context.organizationId
   );
 
-  if (!isActiveSameOrgDirectReport) {
-    throw httpError(
+  if (!isDirectReport) {
+    throw new RequestError(
       403,
-      "Management may only modify their own or active direct-report Time Entries."
+      "Management may only manage their own or active direct-report Time Entries."
     );
   }
 
-  return targetEmployee;
+  return target;
 }
 
-async function loadScopedClient(
-  base44: any,
-  organizationId: string,
-  clientId: string
-) {
-  const client =
-    await base44.asServiceRole.entities.Client.get(clientId)
-      .catch(() => null);
-
-  if (!client) {
-    throw httpError(404, "Client record was not found.");
-  }
+async function loadScopedClient(base44: any, context: any, clientId: string) {
+  const client = await base44.asServiceRole.entities.Client.get(clientId).catch(
+    () => null
+  );
 
   if (
+    !client ||
     client?.is_archived === true ||
-    normalizeText(client.org_id) !== organizationId
+    normalizeText(client?.org_id) !== context.organizationId
   ) {
-    throw httpError(
+    throw new RequestError(404, "The selected client is unavailable to your account.");
+  }
+
+  if (context.isAdmin) return client;
+
+  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
+  const createdBy = normalizeEmail(client?.created_by);
+  const callerEmail = normalizeEmail(context.caller?.email);
+
+  if (assignedEmployeeId === context.caller.id || (callerEmail && createdBy === callerEmail)) {
+    return client;
+  }
+
+  if (!context.isManagement) {
+    throw new RequestError(
       403,
-      "The requested client is not available in your organization."
+      "You may only manage Time Entries for clients assigned to you."
     );
   }
 
+  if (!assignedEmployeeId) {
+    throw new RequestError(
+      403,
+      "This client does not have an authorized staff assignment."
+    );
+  }
+
+  await assertEmployeeAuthority(base44, context, assignedEmployeeId);
   return client;
-}
-
-function assertClientAccess(
-  caller: any,
-  capabilities: any,
-  client: any
-) {
-  if (!client || capabilities.isOrganizationAdmin || capabilities.isManagement) {
-    return;
-  }
-
-  if (normalizeText(client.assigned_employee_id) !== caller.id) {
-    throw httpError(
-      403,
-      "You may only create or modify Time Entries for clients assigned to you."
-    );
-  }
 }
 
 async function loadEntryType(
   base44: any,
   organizationId: string,
-  requestedEntryTypeId: string,
-  requestedEntryTypeCode: string
+  requestedId: string,
+  requestedCode: string
 ) {
   let entryType: any = null;
 
-  if (requestedEntryTypeId) {
-    entryType =
-      await base44.asServiceRole.entities.EntryType.get(
-        requestedEntryTypeId
-      ).catch(() => null);
+  if (requestedId) {
+    entryType = await base44.asServiceRole.entities.EntryType.get(requestedId).catch(
+      () => null
+    );
 
-    if (!entryType || entryType.is_active === false) {
-      throw httpError(
-        404,
-        "The requested EntryType was not found or is inactive."
-      );
+    if (!entryType || entryType?.is_active === false) {
+      throw new RequestError(404, "The selected service type is unavailable.");
     }
 
-    const entryTypeOrganizationId = normalizeText(entryType.org_id);
-
-    if (
-      entryTypeOrganizationId &&
-      entryTypeOrganizationId !== organizationId
-    ) {
-      throw httpError(
-        403,
-        "The requested EntryType belongs to a different organization."
-      );
+    const entryTypeOrgId = normalizeText(entryType?.org_id);
+    if (entryTypeOrgId && entryTypeOrgId !== organizationId) {
+      throw new RequestError(403, "The selected service type belongs to another organization.");
     }
   } else {
-    if (!requestedEntryTypeCode) {
-      throw httpError(
-        400,
-        "entry_type_id or entry_type_code is required."
-      );
+    if (!requestedCode) {
+      throw new RequestError(400, "Choose a service type before saving a TimeEntry.");
     }
 
-    const matchingEntryTypes =
+    const candidates = asArray(
       await base44.asServiceRole.entities.EntryType.filter({
-        code: requestedEntryTypeCode,
+        code: requestedCode,
         is_active: true,
-      });
-
-    const allowedMatches = asArray(matchingEntryTypes).filter(
-      (candidate: any) => {
-        const candidateOrganizationId = normalizeText(
-          candidate?.org_id
-        );
-
-        return (
-          candidate?.is_active !== false &&
-          (
-            !candidateOrganizationId ||
-            candidateOrganizationId === organizationId
-          )
-        );
-      }
-    );
-
-    if (allowedMatches.length === 0) {
-      throw httpError(
-        404,
-        "The requested EntryType was not found or is inactive."
+      })
+    ).filter((candidate: any) => {
+      const candidateOrgId = normalizeText(candidate?.org_id);
+      return (
+        candidate?.is_active !== false &&
+        (!candidateOrgId || candidateOrgId === organizationId)
       );
-    }
+    });
 
-    if (allowedMatches.length > 1) {
-      throw httpError(
+    const ownOrganizationCandidate = candidates.find(
+      (candidate: any) => normalizeText(candidate?.org_id) === organizationId
+    );
+    entryType = ownOrganizationCandidate || candidates[0] || null;
+
+    if (!entryType || candidates.length > 1 && !ownOrganizationCandidate) {
+      throw new RequestError(
         409,
-        "Multiple active EntryTypes match this code. entry_type_id is required."
+        "The selected service type is ambiguous. Choose the service type again."
       );
     }
-
-    entryType = allowedMatches[0];
   }
 
-  const canonicalEntryTypeCode = normalizeText(entryType.code);
-
-  if (!canonicalEntryTypeCode) {
-    throw httpError(
-      409,
-      "The requested EntryType has no valid code."
-    );
+  const canonicalCode = normalizeText(entryType?.code);
+  if (!canonicalCode) {
+    throw new RequestError(409, "The selected service type has an invalid code.");
   }
 
-  if (
-    requestedEntryTypeCode &&
-    requestedEntryTypeCode !== canonicalEntryTypeCode
-  ) {
-    throw httpError(
+  if (requestedCode && requestedCode !== canonicalCode) {
+    throw new RequestError(
       400,
-      "entry_type_code does not match the requested EntryType."
+      "The selected service type does not match the submitted service code."
     );
   }
 
   return entryType;
 }
-async function loadActiveTemplates(
-  base44: any,
-  organizationId: string,
-  entryType: any
-) {
-  const templates =
+
+async function loadTemplates(base44: any, organizationId: string, entryType: any) {
+  const templates = asArray(
     await base44.asServiceRole.entities.ReportFieldTemplate.filter({
       entry_type_id: entryType.id,
       is_active: true,
-    });
+    })
+  );
 
-  return asArray(templates)
-    .filter(
-      (template: any) =>
-        template?.is_active !== false &&
-        normalizeText(template.entry_type_id) === entryType.id &&
-        normalizeText(template.entry_type_code) ===
-          normalizeText(entryType.code)
-    )
+  return templates
     .filter((template: any) => {
-      const templateOrganizationId = normalizeText(template.org_id);
-
+      const templateOrgId = normalizeText(template?.org_id);
       return (
-        !templateOrganizationId ||
-        templateOrganizationId === organizationId
+        template?.is_active !== false &&
+        normalizeText(template?.entry_type_id) === normalizeText(entryType?.id) &&
+        normalizeText(template?.entry_type_code) === normalizeText(entryType?.code) &&
+        (!templateOrgId || templateOrgId === organizationId)
       );
-    });
+    })
+    .sort((left: any, right: any) => Number(left?.order || 0) - Number(right?.order || 0));
 }
 
-function assertAndMergeFormData(
-  incomingFormData: any,
-  existingFormData: any,
-  activeTemplates: any[],
+function mergeFormData(
+  requestedFormData: unknown,
+  existingFormData: unknown,
   entryTypeCode: string,
+  templates: any[],
   isUpdate: boolean
 ) {
-  const incoming = normalizeLegacyFormDataKeys(
-    incomingFormData,
-    entryTypeCode
-  );
-
-  const existing = normalizeLegacyFormDataKeys(
-    existingFormData,
-    entryTypeCode
-  );
-
-  const allowedNewKeys = new Set(
-    activeTemplates
-      .map((template: any) => normalizeText(template.field_key))
+  const incoming = normalizeLegacyFormDataKeys(requestedFormData, entryTypeCode);
+  const existing = normalizeLegacyFormDataKeys(existingFormData, entryTypeCode);
+  const allowedKeys = new Set(
+    templates
+      .map((template: any) => normalizeText(template?.field_key))
       .filter(Boolean)
   );
 
-  for (const fieldKey of getLegacyStaticFormFields(entryTypeCode)) {
-    allowedNewKeys.add(fieldKey);
+  for (const key of getLegacyStaticFormFields(entryTypeCode)) {
+    allowedKeys.add(key);
   }
 
-  const existingKeys = new Set(Object.keys(existing));
-
-  const invalidIncomingKeys = Object.keys(incoming).filter(
-    (key) =>
-      !allowedNewKeys.has(key) &&
-      !(isUpdate && existingKeys.has(key))
+  const invalidKeys = Object.keys(incoming).filter(
+    (key) => !allowedKeys.has(key) && !(isUpdate && hasOwn(existing, key))
   );
 
-  if (invalidIncomingKeys.length > 0) {
-    throw httpError(
+  if (invalidKeys.length > 0) {
+    throw new RequestError(
       400,
-      `form_data contains fields that are not active for this EntryType: ${invalidIncomingKeys.join(
+      `The submitted form contains fields that are not active for this service type: ${invalidKeys.join(
         ", "
       )}.`
     );
   }
 
-  return isUpdate
-    ? { ...existing, ...incoming }
-    : { ...incoming };
+  return isUpdate ? { ...existing, ...incoming } : incoming;
 }
 
-function getFieldValidation(
+function validateFieldAnswers(
   templates: any[],
-  formData: any,
+  formData: Record<string, any>,
   status: string,
   requiresFieldAnswers: boolean,
   entryTypeCode: string
 ) {
-  const legacyStaticFields = getLegacyStaticFormFields(entryTypeCode);
-
   if (
     requiresFieldAnswers &&
     templates.length === 0 &&
-    legacyStaticFields.size === 0
+    getLegacyStaticFormFields(entryTypeCode).size === 0
   ) {
-    throw httpError(
+    throw new RequestError(
       409,
-      "This EntryType requires field answers but has no active field templates."
+      "This service type requires field answers but has no active field configuration."
     );
   }
 
   const requiredOnEntry = templates.filter(
-    (template: any) => template.required_on_entry === true
+    (template: any) => template?.required_on_entry === true
   );
-
   const requiredForReport = templates.filter(
-    (template: any) => template.required_for_report === true
+    (template: any) => template?.required_for_report === true
   );
+  const allRequired = new Map<string, any>();
+  for (const template of [...requiredOnEntry, ...requiredForReport]) {
+    allRequired.set(normalizeText(template?.id), template);
+  }
 
-  const allRequired = [
-    ...new Map(
-      [...requiredOnEntry, ...requiredForReport].map(
-        (template: any) => [template.id, template]
-      )
-    ).values(),
-  ];
-
-  const missingRequiredOnEntry = requiredOnEntry
-    .filter(
-      (template: any) => !isFilled(formData[template.field_key])
-    )
+  const missingOnEntry = requiredOnEntry
+    .filter((template: any) => !isFilled(formData[template?.field_key]))
+    .map((template: any) => template.field_key);
+  const missingForReport = requiredForReport
+    .filter((template: any) => !isFilled(formData[template?.field_key]))
     .map((template: any) => template.field_key);
 
-  const missingRequiredForReport = requiredForReport
-    .filter(
-      (template: any) => !isFilled(formData[template.field_key])
-    )
-    .map((template: any) => template.field_key);
-
-  if (
-    status !== "draft" &&
-    status !== "void" &&
-    missingRequiredOnEntry.length > 0
-  ) {
-    throw httpError(
+  if (status !== "draft" && status !== "void" && missingOnEntry.length > 0) {
+    throw new RequestError(
       400,
-      `Required entry fields are missing: ${missingRequiredOnEntry.join(
-        ", "
-      )}.`
+      `Required entry fields are missing: ${missingOnEntry.join(", ")}.`
     );
   }
 
-  const completedRequiredCount = allRequired.filter(
-    (template: any) => isFilled(formData[template.field_key])
+  const completedRequired = Array.from(allRequired.values()).filter(
+    (template: any) => isFilled(formData[template?.field_key])
   ).length;
-
   const completionPercent =
-    allRequired.length > 0
-      ? Math.round(
-          (completedRequiredCount / allRequired.length) * 100
-        )
+    allRequired.size > 0
+      ? Math.round((completedRequired / allRequired.size) * 100)
       : 0;
-
   const validationErrors = Array.from(
-    new Set([
-      ...missingRequiredOnEntry,
-      ...missingRequiredForReport,
-    ])
+    new Set([...missingOnEntry, ...missingForReport])
   );
 
   return {
     required_fields_complete: validationErrors.length === 0,
     report_ready:
-      status !== "draft" &&
-      status !== "void" &&
-      missingRequiredForReport.length === 0,
+      status !== "draft" && status !== "void" && missingForReport.length === 0,
     validation_errors: validationErrors,
     completion_percent: completionPercent,
-    missing_required_on_entry: missingRequiredOnEntry,
-    missing_required_for_report: missingRequiredForReport,
+    missing_required_on_entry: missingOnEntry,
+    missing_required_for_report: missingForReport,
   };
 }
 
-function buildFieldSchemaSnapshot(templates: any[]) {
+function buildSchemaSnapshot(templates: any[]) {
   const snapshot: Record<string, any> = {};
 
   for (const template of templates) {
-    const fieldKey = normalizeText(template.field_key);
+    const key = normalizeText(template?.field_key);
+    if (!key) continue;
 
-    if (!fieldKey) {
-      continue;
-    }
-
-    snapshot[fieldKey] = {
-      label: template.label || "",
-      field_type: template.field_type || "text",
-      is_required: template.is_required === true,
-      required_on_entry: template.required_on_entry === true,
-      required_for_report: template.required_for_report === true,
-      is_reportable: template.is_reportable !== false,
-      is_internal_only: template.is_internal_only === true,
-      order: template.order ?? null,
-      section: template.section ?? null,
-      field_group: template.field_group ?? null,
-      options: Array.isArray(template.options)
-        ? template.options
-        : [],
-      schema_version: Number.isFinite(
-        Number(template.schema_version)
-      )
-        ? Number(template.schema_version)
-        : 1,
+    snapshot[key] = {
+      label: normalizeText(template?.label),
+      field_type: normalizeText(template?.field_type) || "text",
+      is_required: template?.is_required === true,
+      required_on_entry: template?.required_on_entry === true,
+      required_for_report: template?.required_for_report === true,
+      is_reportable: template?.is_reportable !== false,
+      is_internal_only: template?.is_internal_only === true,
+      order: Number(template?.order) || 0,
+      section: normalizeText(template?.section) || null,
+      field_group: normalizeText(template?.field_group) || null,
+      options: Array.isArray(template?.options) ? template.options : [],
+      schema_version: Number(template?.schema_version) || 1,
     };
   }
 
   return snapshot;
 }
 
-function getFieldSchemaVersion(templates: any[]) {
-  const versions = templates
-    .map((template: any) => Number(template.schema_version))
-    .filter((version: number) => Number.isFinite(version));
+function buildFieldAnswerPayload(
+  organizationId: string,
+  timeEntryId: string,
+  entryType: any,
+  templates: any[],
+  formData: any,
+  validation: any,
+  isCreate: boolean
+) {
+  const payload: Record<string, any> = {
+    org_id: organizationId,
+    time_entry_id: timeEntryId,
+    entry_type_id: entryType.id,
+    entry_type_code: normalizeText(entryType.code),
+    field_schema_version: Math.max(
+      1,
+      ...templates.map((template: any) => Number(template?.schema_version) || 1)
+    ),
+    field_schema_snapshot: buildSchemaSnapshot(templates),
+    answers: formData,
+    required_fields_complete: validation.required_fields_complete,
+    report_ready: validation.report_ready,
+    submitted_at: new Date().toISOString(),
+    validation_errors: validation.validation_errors,
+    completion_percent: validation.completion_percent,
+  };
 
-  return versions.length > 0 ? Math.max(...versions) : 1;
+  if (isCreate) payload.locked_in_report_id = null;
+  return payload;
 }
 
-async function loadSingleReportFieldAnswer(
-  base44: any,
-  organizationId: string,
-  timeEntryId: string
-) {
-  const answers =
+async function loadSingleFieldAnswer(base44: any, organizationId: string, entryId: string) {
+  const answers = asArray(
     await base44.asServiceRole.entities.ReportFieldAnswer.filter({
-      time_entry_id: timeEntryId,
-    });
+      time_entry_id: entryId,
+    })
+  );
 
-  const matchingAnswers = asArray(answers);
-
-  if (matchingAnswers.length > 1) {
-    throw httpError(
+  if (answers.length > 1) {
+    throw new RequestError(
       409,
-      "Multiple ReportFieldAnswer records exist for this TimeEntry and must be repaired before mutation."
+      "Multiple structured-answer records exist for this TimeEntry and must be repaired before it can be changed."
     );
   }
 
-  const answer = matchingAnswers[0] || null;
-
-  if (
-    answer &&
-    normalizeText(answer.org_id) &&
-    normalizeText(answer.org_id) !== organizationId
-  ) {
-    throw httpError(
-      403,
-      "The ReportFieldAnswer belongs to a different organization."
-    );
+  const answer = answers[0] || null;
+  if (answer && normalizeText(answer?.org_id) !== organizationId) {
+    throw new RequestError(403, "The structured-answer record is outside your organization.");
   }
 
   return answer;
 }
 
-function assertMutable(
-  timeEntry: any,
-  reportFieldAnswer: any
-) {
+function assertMutable(entry: any, fieldAnswer: any) {
   if (
-    normalizeText(timeEntry?.status).toLowerCase() === "locked" ||
-    normalizeText(timeEntry?.locked_in_report_id)
+    normalizeText(entry?.status).toLowerCase() === "locked" ||
+    normalizeText(entry?.locked_in_report_id) ||
+    normalizeText(fieldAnswer?.locked_in_report_id)
   ) {
-    throw httpError(
+    throw new RequestError(
       409,
-      "A locked or reported TimeEntry cannot be changed."
-    );
-  }
-
-  if (normalizeText(reportFieldAnswer?.locked_in_report_id)) {
-    throw httpError(
-      409,
-      "The ReportFieldAnswer is locked in a finalized report and cannot be changed."
+      "This TimeEntry is part of a finalized report and cannot be changed."
     );
   }
 }
 
-function isDateWithinInclusivePeriod(
-  date: string,
-  periodStart: string,
-  periodEnd: string
-) {
-  return (
-    Boolean(date) &&
-    Boolean(periodStart) &&
-    Boolean(periodEnd) &&
-    periodStart <= date &&
-    date <= periodEnd
-  );
+function dateWithinPeriod(date: string, start: string, end: string) {
+  return Boolean(date && start && end && date >= start && date <= end);
 }
 
-function getTimeCardPeriodLabel(timeCard: any) {
-  const savedLabel = normalizeText(
-    timeCard?.pay_period_label
-  );
-
-  if (savedLabel) {
-    return savedLabel;
-  }
-
-  const periodStart = normalizeDate(
-    timeCard?.period_start
-  );
-  const periodEnd = normalizeDate(
-    timeCard?.period_end
-  );
-
-  return periodStart && periodEnd
-    ? `${periodStart} through ${periodEnd}`
-    : "an invalid payroll period";
-}
-
-async function assertTimeCardPeriodsAreOpen(
+async function assertTimeCardOpen(
   base44: any,
   organizationId: string,
   employeeId: string,
@@ -884,173 +620,54 @@ async function assertTimeCardPeriodsAreOpen(
   actionLabel: string
 ) {
   const normalizedDates = Array.from(
-    new Set(
-      dates.map(normalizeDate).filter(Boolean)
-    )
+    new Set(dates.map(normalizeDate).filter(Boolean))
+  );
+  if (normalizedDates.length === 0) return;
+
+  const cards = asArray(
+    await base44.asServiceRole.entities.TimeCard.filter({ employee_id: employeeId })
+  ).filter(
+    (card: any) =>
+      normalizeText(card?.org_id) === organizationId &&
+      normalizeText(card?.employee_id) === employeeId &&
+      TIME_CARD_LOCKED_STATUSES.has(normalizeText(card?.status).toLowerCase())
   );
 
-  if (normalizedDates.length === 0) {
-    return;
-  }
-
-  const timeCards =
-    await base44.asServiceRole.entities.TimeCard.filter({
-      employee_id: employeeId,
-    });
-
-  const scopedLockedCards = asArray(timeCards).filter(
-    (timeCard: any) =>
-      normalizeText(timeCard?.org_id) === organizationId &&
-      normalizeText(timeCard?.employee_id) === employeeId &&
-      TIME_CARD_LOCKED_STATUSES.has(
-        normalizeText(timeCard?.status).toLowerCase()
-      )
-  );
-
-  for (const timeCard of scopedLockedCards) {
-    const periodStart = normalizeDate(
-      timeCard?.period_start
-    );
-    const periodEnd = normalizeDate(
-      timeCard?.period_end
-    );
-
-    if (!periodStart || !periodEnd || periodStart > periodEnd) {
-      throw httpError(
+  for (const card of cards) {
+    const start = normalizeDate(card?.period_start);
+    const end = normalizeDate(card?.period_end);
+    if (!start || !end || start > end) {
+      throw new RequestError(
         409,
         "A submitted or approved Time Card has invalid payroll-period dates and must be repaired before Time Entries can be changed."
       );
     }
 
-    const locksRequestedDate = normalizedDates.some(
-      (date) =>
-        isDateWithinInclusivePeriod(
-          date,
-          periodStart,
-          periodEnd
-        )
-    );
-
-    if (locksRequestedDate) {
-      throw httpError(
+    if (normalizedDates.some((date) => dateWithinPeriod(date, start, end))) {
+      throw new RequestError(
         409,
-        `A ${normalizeText(
-          timeCard.status
-        )} Time Card locks this employee's entries for ${getTimeCardPeriodLabel(
-          timeCard
-        )}. A manager must return the Time Card for correction before this entry can be ${actionLabel}.`
+        `A ${normalizeText(card?.status)} Time Card locks this employee's entries for ${start} through ${end}. A manager must return the Time Card for correction before this entry can be ${actionLabel}.`
       );
     }
   }
 }
 
-function buildBaseEntryValues(
-  input: any,
-  existingEntry: any,
-  entryType: any,
-  capabilities: any
-) {
-  const isUpdate = Boolean(existingEntry?.id);
-
-  const date = hasOwn(input, "date")
-    ? normalizeDate(input.date)
-    : normalizeDate(existingEntry?.date);
-
-  const durationMinutes = hasOwn(input, "duration_minutes")
-    ? asNumber(input.duration_minutes, NaN)
-    : asNumber(existingEntry?.duration_minutes, NaN);
-
-  if (!date) {
-    throw httpError(
-      400,
-      "A valid TimeEntry date in YYYY-MM-DD format is required."
-    );
-  }
-
-  if (
-    !Number.isFinite(durationMinutes) ||
-    durationMinutes < 0
-  ) {
-    throw httpError(
-      400,
-      "duration_minutes must be a number that is zero or greater."
-    );
-  }
-
-  const status = resolveStatus(
-    hasOwn(input, "status") ? input.status : undefined,
-    existingEntry?.status || "submitted",
-    capabilities
-  );
-
-  const employerName = hasOwn(input, "employer_name")
-    ? normalizeText(input.employer_name) || null
-    : normalizeText(existingEntry?.employer_name) || null;
-
-  return {
-    date,
-    start_time: hasOwn(input, "start_time")
-      ? normalizeText(input.start_time) || null
-      : existingEntry?.start_time ?? null,
-    end_time: hasOwn(input, "end_time")
-      ? normalizeText(input.end_time) || null
-      : existingEntry?.end_time ?? null,
-    duration_minutes: durationMinutes,
-    reporting_period_key: calculateReportingPeriodKey(
-      date,
-      normalizeText(entryType.report_mode)
-    ),
-    location: hasOwn(input, "location")
-      ? normalizeText(input.location) || null
-      : existingEntry?.location ?? null,
-    description: hasOwn(input, "description")
-      ? normalizeText(input.description) || null
-      : existingEntry?.description ?? null,
-    entry_type_id: entryType.id,
-    entry_type_code: normalizeText(entryType.code),
-    is_billable: entryType.is_billable === true,
-    is_payroll_eligible:
-      entryType.is_payroll_eligible !== false,
-    is_reportable:
-      normalizeText(entryType.report_mode) !== "none",
-    status,
-    legacy_category: normalizeText(entryType.code) || null,
-    employer_name: employerName,
-    service_authorization_id: null,
-    report_ready: false,
-    form_data: {},
-    is_update: isUpdate,
-  };
-}
-
 async function validateAuthorization(
   base44: any,
   organizationId: string,
-  entryType: any,
   client: any,
+  entryType: any,
   preparedEntry: any,
   authorizationId: string,
-  excludeEntryId: string | null = null
+  excludeEntryId = ""
 ) {
-  const requiresAuthorization =
-    entryType.requires_authorization === true;
-
-  if (requiresAuthorization && !authorizationId) {
-    throw httpError(
-      400,
-      `Authorization is required for ${entryType.name}.`
-    );
+  if (entryType?.requires_authorization === true && !authorizationId) {
+    throw new RequestError(400, `Authorization is required for ${entryType.name}.`);
   }
 
   if (!authorizationId) {
-    if (
-      entryType.requires_employer === true &&
-      !normalizeText(preparedEntry.employer_name)
-    ) {
-      throw httpError(
-        400,
-        `employer_name is required for ${entryType.name}.`
-      );
+    if (entryType?.requires_employer === true && !normalizeText(preparedEntry.employer_name)) {
+      throw new RequestError(400, `Employer is required for ${entryType.name}.`);
     }
 
     return {
@@ -1064,151 +681,91 @@ async function validateAuthorization(
   }
 
   if (!client) {
-    throw httpError(
+    throw new RequestError(
       400,
       "A client-linked TimeEntry is required when using a ServiceAuthorization."
     );
   }
 
-  const authorization =
-    await base44.asServiceRole.entities.ServiceAuthorization.get(
-      authorizationId
-    ).catch(() => null);
-
-  if (!authorization) {
-    throw httpError(404, "ServiceAuthorization was not found.");
-  }
-
-  if (normalizeText(authorization.org_id) !== organizationId) {
-    throw httpError(
-      403,
-      "The ServiceAuthorization does not have a valid organization scope for this TimeEntry."
-    );
-  }
-
-  if (normalizeText(authorization.client_id) !== client.id) {
-    throw httpError(
-      403,
-      "The ServiceAuthorization does not belong to this client."
-    );
-  }
+  const authorization = await base44.asServiceRole.entities.ServiceAuthorization.get(
+    authorizationId
+  ).catch(() => null);
 
   if (
-    normalizeText(authorization.entry_type_code) !==
-    normalizeText(entryType.code)
+    !authorization ||
+    normalizeText(authorization?.org_id) !== organizationId ||
+    normalizeText(authorization?.client_id) !== normalizeText(client?.id) ||
+    normalizeText(authorization?.entry_type_code) !== normalizeText(entryType?.code)
   ) {
-    throw httpError(
-      400,
-      "The ServiceAuthorization does not match this TimeEntry type."
+    throw new RequestError(
+      403,
+      "The selected ServiceAuthorization is unavailable for this TimeEntry."
     );
   }
 
-  if (normalizeText(authorization.status) !== "active") {
-    throw httpError(
-      409,
-      "The selected ServiceAuthorization is not active."
-    );
+  if (normalizeText(authorization?.status).toLowerCase() !== "active") {
+    throw new RequestError(409, "The selected ServiceAuthorization is not active.");
   }
 
-  if (
-    normalizeText(authorization.service_start_date) &&
-    preparedEntry.date < authorization.service_start_date
-  ) {
-    throw httpError(
+  const startDate = normalizeDate(authorization?.service_start_date);
+  const endDate = normalizeDate(authorization?.service_end_date);
+  if (startDate && preparedEntry.date < startDate) {
+    throw new RequestError(
       400,
       "The TimeEntry date is before the ServiceAuthorization start date."
     );
   }
-
-  if (
-    normalizeText(authorization.service_end_date) &&
-    preparedEntry.date > authorization.service_end_date
-  ) {
-    throw httpError(
+  if (endDate && preparedEntry.date > endDate) {
+    throw new RequestError(
       400,
       "The TimeEntry date is after the ServiceAuthorization end date."
     );
   }
 
-  const authorizationEmployerName = normalizeText(
-    authorization.employer_name
-  );
-
-  if (
-    entryType.requires_employer === true &&
-    !authorizationEmployerName
-  ) {
-    throw httpError(
+  const authorizationEmployer = normalizeText(authorization?.employer_name);
+  if (entryType?.requires_employer === true && !authorizationEmployer) {
+    throw new RequestError(
       400,
-      "This EntryType requires an employer_name on the selected ServiceAuthorization."
+      "This service type requires an employer on the selected ServiceAuthorization."
     );
   }
-
-  if (
-    !preparedEntry.employer_name &&
-    authorizationEmployerName
-  ) {
-    preparedEntry.employer_name = authorizationEmployerName;
+  if (!normalizeText(preparedEntry.employer_name) && authorizationEmployer) {
+    preparedEntry.employer_name = authorizationEmployer;
   }
 
-  const authorizationEntries =
+  const relatedEntries = asArray(
     await base44.asServiceRole.entities.TimeEntry.filter({
       service_authorization_id: authorization.id,
-    });
-
-  const usedMinutes = asArray(authorizationEntries)
+    })
+  );
+  const usedMinutes = relatedEntries
     .filter((entry: any) => entry?.id !== excludeEntryId)
     .filter(
       (entry: any) =>
         normalizeText(entry?.org_id) === organizationId &&
-        normalizeText(entry?.client_id) === client.id &&
+        normalizeText(entry?.client_id) === normalizeText(client?.id) &&
         isAuthorizationCounted(entry)
     )
-    .reduce(
-      (total: number, entry: any) =>
-        total + asNumber(entry?.duration_minutes, 0),
-      0
-    );
+    .reduce((total: number, entry: any) => total + asNumber(entry?.duration_minutes), 0);
 
-  const usedHours = usedMinutes / 60;
-  const totalAuthorizedHours = asNumber(
-    authorization.total_authorized_hours,
-    0
-  );
-
-  const remainingHours = Math.max(
-    0,
-    totalAuthorizedHours - usedHours
-  );
-
+  const totalHours = asNumber(authorization?.total_authorized_hours);
+  const remainingHours = Math.max(0, totalHours - usedMinutes / 60);
   const proposedHours = isAuthorizationCounted(preparedEntry)
-    ? asNumber(preparedEntry.duration_minutes, 0) / 60
+    ? asNumber(preparedEntry.duration_minutes) / 60
     : 0;
 
   if (proposedHours > remainingHours + 0.0001) {
-    throw httpError(
+    throw new RequestError(
       409,
-      `This TimeEntry exceeds the remaining authorized hours (${remainingHours.toFixed(
-        2
-      )}).`
+      `This TimeEntry exceeds the remaining authorized hours (${remainingHours.toFixed(2)}).`
     );
   }
 
-  const resultingRemainingHours =
-    remainingHours - proposedHours;
-
-  const warnings: string[] = [];
-
-  if (
-    resultingRemainingHours > 0 &&
-    resultingRemainingHours < 5
-  ) {
-    warnings.push(
-      `Only ${resultingRemainingHours.toFixed(
-        2
-      )} authorized hours will remain.`
-    );
-  }
+  const resultingRemainingHours = remainingHours - proposedHours;
+  const warnings =
+    resultingRemainingHours > 0 && resultingRemainingHours < 5
+      ? [`Only ${resultingRemainingHours.toFixed(2)} authorized hours will remain.`]
+      : [];
 
   return {
     authorization,
@@ -1218,844 +775,524 @@ async function validateAuthorization(
       warnings,
       authorization: {
         id: authorization.id,
-        authorization_number:
-          authorization.authorization_number || null,
-        total_authorized_hours: totalAuthorizedHours,
-        used_hours: usedHours,
+        authorization_number: authorization.authorization_number || null,
+        total_authorized_hours: totalHours,
+        used_hours: usedMinutes / 60,
         remaining_hours: resultingRemainingHours,
       },
     },
   };
 }
 
-async function recalculateAuthorizationTotals(
-  base44: any,
-  organizationId: string,
-  authorizationId: string
-) {
-  if (!authorizationId) {
-    return;
-  }
+async function recalculateAuthorization(base44: any, organizationId: string, authorizationId: string) {
+  if (!authorizationId) return;
 
-  const authorization =
-    await base44.asServiceRole.entities.ServiceAuthorization.get(
-      authorizationId
-    ).catch(() => null);
+  const authorization = await base44.asServiceRole.entities.ServiceAuthorization.get(
+    authorizationId
+  ).catch(() => null);
+  if (!authorization || normalizeText(authorization?.org_id) !== organizationId) return;
 
-  if (
-    !authorization ||
-    normalizeText(authorization.org_id) !== organizationId
-  ) {
-    return;
-  }
-
-  const authorizationEntries =
+  const entries = asArray(
     await base44.asServiceRole.entities.TimeEntry.filter({
       service_authorization_id: authorizationId,
-    });
-
-  const usedMinutes = asArray(authorizationEntries)
+    })
+  );
+  const usedMinutes = entries
     .filter(
       (entry: any) =>
         normalizeText(entry?.org_id) === organizationId &&
-        normalizeText(entry?.client_id) ===
-          normalizeText(authorization.client_id) &&
+        normalizeText(entry?.client_id) === normalizeText(authorization?.client_id) &&
         isAuthorizationCounted(entry)
     )
-    .reduce(
-      (total: number, entry: any) =>
-        total + asNumber(entry?.duration_minutes, 0),
-      0
-    );
+    .reduce((total: number, entry: any) => total + asNumber(entry?.duration_minutes), 0);
+  const totalHours = asNumber(authorization?.total_authorized_hours);
 
-  const usedHours = usedMinutes / 60;
-  const totalAuthorizedHours = asNumber(
-    authorization.total_authorized_hours,
-    0
-  );
-
-  await base44.asServiceRole.entities.ServiceAuthorization.update(
-    authorizationId,
-    {
-      used_hours: Number(usedHours.toFixed(2)),
-      remaining_hours: Number(
-        Math.max(0, totalAuthorizedHours - usedHours).toFixed(2)
-      ),
-    }
-  );
+  await base44.asServiceRole.entities.ServiceAuthorization.update(authorizationId, {
+    used_hours: Number((usedMinutes / 60).toFixed(2)),
+    remaining_hours: Number(Math.max(0, totalHours - usedMinutes / 60).toFixed(2)),
+  });
 }
 
-function buildReportFieldAnswerPayload(
-  organizationId: string,
-  timeEntryId: string,
-  entryType: any,
-  activeTemplates: any[],
-  formData: any,
-  fieldValidation: any,
-  isCreate: boolean
-) {
-  const payload: any = {
-    org_id: organizationId,
-    time_entry_id: timeEntryId,
+function buildPreparedEntry(input: any, existing: any, entryType: any, role: string) {
+  const date = hasOwn(input, "date") ? normalizeDate(input.date) : normalizeDate(existing?.date);
+  const durationMinutes = hasOwn(input, "duration_minutes")
+    ? asNumber(input.duration_minutes, NaN)
+    : asNumber(existing?.duration_minutes, NaN);
+
+  if (!date) {
+    throw new RequestError(400, "A valid TimeEntry date is required.");
+  }
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 0) {
+    throw new RequestError(400, "Duration must be zero or greater.");
+  }
+
+  const status = resolveStatus(
+    hasOwn(input, "status") ? input.status : undefined,
+    existing?.status || "submitted",
+    role
+  );
+
+  return {
     entry_type_id: entryType.id,
     entry_type_code: normalizeText(entryType.code),
-    field_schema_version: getFieldSchemaVersion(activeTemplates),
-    field_schema_snapshot: buildFieldSchemaSnapshot(
-      activeTemplates
+    date,
+    start_time: hasOwn(input, "start_time")
+      ? normalizeText(input.start_time) || null
+      : existing?.start_time ?? null,
+    end_time: hasOwn(input, "end_time")
+      ? normalizeText(input.end_time) || null
+      : existing?.end_time ?? null,
+    duration_minutes: durationMinutes,
+    reporting_period_key: calculateReportingPeriodKey(
+      date,
+      normalizeText(entryType?.report_mode)
     ),
-    answers: formData,
-    required_fields_complete:
-      fieldValidation.required_fields_complete,
-    report_ready: fieldValidation.report_ready,
-    submitted_at: new Date().toISOString(),
-    validation_errors: fieldValidation.validation_errors,
-    completion_percent: fieldValidation.completion_percent,
+    location: hasOwn(input, "location")
+      ? normalizeText(input.location) || null
+      : existing?.location ?? null,
+    description: hasOwn(input, "description")
+      ? normalizeText(input.description) || null
+      : existing?.description ?? null,
+    employer_name: hasOwn(input, "employer_name")
+      ? normalizeText(input.employer_name) || null
+      : existing?.employer_name ?? null,
+    is_billable: entryType?.is_billable === true,
+    is_payroll_eligible: entryType?.is_payroll_eligible !== false,
+    is_reportable: normalizeText(entryType?.report_mode) !== "none",
+    legacy_category: normalizeText(entryType?.code) || null,
+    status,
   };
-
-  if (isCreate) {
-    payload.locked_in_report_id = null;
-  }
-
-  return payload;
 }
 
-function buildEntryRollbackPayload(entry: any) {
+function buildEntryRollback(existing: any) {
   return {
-    entry_type_id: entry.entry_type_id ?? null,
-    entry_type_code: entry.entry_type_code ?? null,
-    date: entry.date,
-    start_time: entry.start_time ?? null,
-    end_time: entry.end_time ?? null,
-    duration_minutes: entry.duration_minutes,
-    reporting_period_key: entry.reporting_period_key ?? null,
-    location: entry.location ?? null,
-    description: entry.description ?? null,
-    form_data: asObject(entry.form_data),
-    is_billable: entry.is_billable === true,
-    is_payroll_eligible:
-      entry.is_payroll_eligible !== false,
-    is_reportable: entry.is_reportable !== false,
-    status: entry.status,
-    legacy_category: entry.legacy_category ?? null,
-    employer_name: entry.employer_name ?? null,
-    report_ready: entry.report_ready === true,
-    service_authorization_id:
-      entry.service_authorization_id ?? null,
+    entry_type_id: existing?.entry_type_id ?? null,
+    entry_type_code: existing?.entry_type_code ?? null,
+    date: existing?.date,
+    start_time: existing?.start_time ?? null,
+    end_time: existing?.end_time ?? null,
+    duration_minutes: existing?.duration_minutes,
+    reporting_period_key: existing?.reporting_period_key ?? null,
+    location: existing?.location ?? null,
+    description: existing?.description ?? null,
+    form_data: asObject(existing?.form_data),
+    is_billable: existing?.is_billable === true,
+    is_payroll_eligible: existing?.is_payroll_eligible !== false,
+    is_reportable: existing?.is_reportable !== false,
+    status: existing?.status,
+    legacy_category: existing?.legacy_category ?? null,
+    employer_name: existing?.employer_name ?? null,
+    report_ready: existing?.report_ready === true,
+    service_authorization_id: existing?.service_authorization_id ?? null,
+    authorization_usage_eligible: existing?.authorization_usage_eligible === true,
+    authorization_usage_eligible_at: existing?.authorization_usage_eligible_at ?? null,
   };
 }
 
-async function recalculateChangedAuthorizations(
+async function saveFieldAnswer(
   base44: any,
-  organizationId: string,
-  authorizationIds: string[]
+  existingFieldAnswer: any,
+  payload: any
 ) {
-  const uniqueAuthorizationIds = Array.from(
-    new Set(
-      authorizationIds
-        .map((authorizationId) =>
-          normalizeText(authorizationId)
-        )
-        .filter(Boolean)
-    )
-  );
-
-  const failedAuthorizationIds: string[] = [];
-
-  for (const authorizationId of uniqueAuthorizationIds) {
-    try {
-      await recalculateAuthorizationTotals(
-        base44,
-        organizationId,
-        authorizationId
-      );
-    } catch (error) {
-      console.error(
-        "Authorization total recalculation failed:",
-        authorizationId,
-        error?.message || error
-      );
-
-      failedAuthorizationIds.push(authorizationId);
-    }
+  if (existingFieldAnswer?.id) {
+    await base44.asServiceRole.entities.ReportFieldAnswer.update(
+      existingFieldAnswer.id,
+      payload
+    );
+  } else {
+    await base44.asServiceRole.entities.ReportFieldAnswer.create(payload);
   }
-
-  return failedAuthorizationIds;
 }
 
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { ok: false, error: "This route accepts POST requests only." },
         { status: 405 }
       );
     }
 
+    const body: any = await req.json().catch(() => ({}));
+    const action = normalizeText(body?.action).toLowerCase();
+    if (!VALID_ACTIONS.has(action)) {
+      throw new RequestError(400, "Choose a valid TimeEntry action.");
+    }
+
+    const timeEntryInput =
+      body?.time_entry && typeof body.time_entry === "object" && !Array.isArray(body.time_entry)
+        ? body.time_entry
+        : body?.timeEntry && typeof body.timeEntry === "object" && !Array.isArray(body.timeEntry)
+        ? body.timeEntry
+        : {};
+
     const base44 = createClientFromRequest(req);
     const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser) {
-      return Response.json(
-        { error: "Unauthorized." },
-        { status: 401 }
-      );
+    if (!authenticatedUser?.id) {
+      throw new RequestError(401, "You must be signed in to manage Time Entries.");
     }
 
-    const body: any = await req.json().catch(() => ({}));
-    const action = normalizeText(body.action).toLowerCase();
-
-    if (!["validate", "create", "update", "delete"].includes(action)) {
-      throw httpError(
-        400,
-        "action must be validate, create, update, or delete."
-      );
-    }
-
-    const {
-      caller,
-      organizationId,
-      capabilities,
-    } = await getCaller(base44, authenticatedUser);
-
-    const timeEntryInput = resolveRequestedTimeEntry(body);
+    const context = await resolveCallerContext(base44, authenticatedUser.id);
 
     if (action === "validate" || action === "create") {
-      const requestedEmployeeId =
-        normalizeText(timeEntryInput.employee_id) || caller.id;
-
-      await assertTargetEmployeeAccess(
-        base44,
-        caller,
-        organizationId,
-        capabilities,
-        requestedEmployeeId
-      );
-
-      const requestedEntryTypeId = normalizeText(
-        timeEntryInput.entry_type_id
-      );
+      const employeeId = normalizeText(timeEntryInput?.employee_id) || context.caller.id;
+      await assertEmployeeAuthority(base44, context, employeeId);
 
       const entryType = await loadEntryType(
         base44,
-        organizationId,
-        requestedEntryTypeId,
-        normalizeText(timeEntryInput.entry_type_code)
+        context.organizationId,
+        normalizeText(timeEntryInput?.entry_type_id),
+        normalizeText(timeEntryInput?.entry_type_code)
       );
-
-      const requestedClientId = normalizeText(
-        timeEntryInput.client_id
-      );
-
-      const requiresClient = entryType.requires_client !== false;
-
-      if (requiresClient && !requestedClientId) {
-        throw httpError(
-          400,
-          `A client is required for ${entryType.name}.`
-        );
+      const clientId = normalizeText(timeEntryInput?.client_id);
+      const requiresClient = entryType?.requires_client !== false;
+      if (requiresClient && !clientId) {
+        throw new RequestError(400, `A client is required for ${entryType.name}.`);
       }
+      const client = clientId ? await loadScopedClient(base44, context, clientId) : null;
+      const prepared = buildPreparedEntry(timeEntryInput, null, entryType, context.role);
 
-      const client = requestedClientId
-        ? await loadScopedClient(
-            base44,
-            organizationId,
-            requestedClientId
-          )
-        : null;
-
-      if (client) {
-        assertClientAccess(caller, capabilities, client);
-      }
-
-           const preparedEntry = buildBaseEntryValues(
-        timeEntryInput,
-        null,
-        entryType,
-        capabilities
-      );
-
-      await assertTimeCardPeriodsAreOpen(
+      await assertTimeCardOpen(
         base44,
-        organizationId,
-        requestedEmployeeId,
-        [preparedEntry.date],
+        context.organizationId,
+        employeeId,
+        [prepared.date],
         "created"
       );
 
-      const activeTemplates = await loadActiveTemplates(
-        base44,
-        organizationId,
-        entryType
-      );
-
-            const formData = assertAndMergeFormData(
-        getRequestedFormData(timeEntryInput),
+      const templates = await loadTemplates(base44, context.organizationId, entryType);
+      const requestedFormData = hasOwn(timeEntryInput, "form_data")
+        ? timeEntryInput.form_data
+        : hasOwn(timeEntryInput, "field_answers")
+        ? timeEntryInput.field_answers
+        : {};
+      const formData = mergeFormData(
+        requestedFormData,
         {},
-        activeTemplates,
-        entryType.code,
+        prepared.entry_type_code,
+        templates,
         false
       );
-
-      const fieldValidation = getFieldValidation(
-        activeTemplates,
+      const fieldValidation = validateFieldAnswers(
+        templates,
         formData,
-        preparedEntry.status,
-        entryType.requires_field_answers === true,
-        entryType.code
+        prepared.status,
+        entryType?.requires_field_answers === true,
+        prepared.entry_type_code
       );
+      prepared.form_data = formData;
+      prepared.report_ready = fieldValidation.report_ready;
 
-      preparedEntry.form_data = formData;
-      preparedEntry.report_ready =
-        fieldValidation.report_ready;
+      const authorizationId = normalizeText(
+        timeEntryInput?.service_authorization_id ?? body?.service_authorization_id
+      );
+      prepared.service_authorization_id = authorizationId || null;
+      prepared.authorization_usage_eligible =
+        Boolean(authorizationId) && ["submitted", "approved"].includes(prepared.status);
+      prepared.authorization_usage_eligible_at = prepared.authorization_usage_eligible
+        ? new Date().toISOString()
+        : null;
 
-      const requestedAuthorizationId =
-        getRequestedAuthorizationId(body, timeEntryInput);
-
-      const authorizationResult =
-        await validateAuthorization(
-          base44,
-          organizationId,
-          entryType,
-          client,
-          preparedEntry,
-          requestedAuthorizationId
-        );
-
-      preparedEntry.service_authorization_id =
-        authorizationResult.authorization?.id || null;
+      const authorizationResult = await validateAuthorization(
+        base44,
+        context.organizationId,
+        client,
+        entryType,
+        prepared,
+        authorizationId
+      );
+      prepared.service_authorization_id = authorizationResult.authorization?.id || null;
 
       if (action === "validate") {
         return Response.json({
           ok: true,
           action,
-          organization_id: organizationId,
-          employee_id: requestedEmployeeId,
-          entry_type: {
-            id: entryType.id,
-            code: entryType.code,
-          },
+          organization_id: context.organizationId,
+          employee_id: employeeId,
+          entry_type: { id: entryType.id, code: entryType.code },
           validation: {
             ...authorizationResult.validation,
             field_answers: {
-              missing_required_on_entry:
-                fieldValidation.missing_required_on_entry,
-              missing_required_for_report:
-                fieldValidation.missing_required_for_report,
-              completion_percent:
-                fieldValidation.completion_percent,
+              missing_required_on_entry: fieldValidation.missing_required_on_entry,
+              missing_required_for_report: fieldValidation.missing_required_for_report,
+              completion_percent: fieldValidation.completion_percent,
               report_ready: fieldValidation.report_ready,
             },
           },
         });
       }
 
-      const createPayload = {
-        org_id: organizationId,
+      const created = await base44.asServiceRole.entities.TimeEntry.create({
+        org_id: context.organizationId,
         client_id: client?.id || null,
-        employee_id: requestedEmployeeId,
-        entry_type_id: preparedEntry.entry_type_id,
-        entry_type_code: preparedEntry.entry_type_code,
-        date: preparedEntry.date,
-        start_time: preparedEntry.start_time,
-        end_time: preparedEntry.end_time,
-        duration_minutes: preparedEntry.duration_minutes,
-        reporting_period_key:
-          preparedEntry.reporting_period_key,
-        location: preparedEntry.location,
-        description: preparedEntry.description,
-        form_data: preparedEntry.form_data,
-        is_billable: preparedEntry.is_billable,
-        is_payroll_eligible:
-          preparedEntry.is_payroll_eligible,
-        is_reportable: preparedEntry.is_reportable,
-        status: preparedEntry.status,
-        legacy_category: preparedEntry.legacy_category,
-        employer_name: preparedEntry.employer_name,
-        report_ready: preparedEntry.report_ready,
+        employee_id: employeeId,
+        ...prepared,
         locked_in_report_id: null,
-        service_authorization_id:
-          preparedEntry.service_authorization_id,
-      };
-
-           const created =
-        await base44.asServiceRole.entities.TimeEntry.create(
-          createPayload
-        );
-
-      let createdReportFieldAnswer: any = null;
+      });
 
       try {
-        const reportFieldAnswerPayload =
-          buildReportFieldAnswerPayload(
-            organizationId,
+        await saveFieldAnswer(
+          base44,
+          null,
+          buildFieldAnswerPayload(
+            context.organizationId,
             created.id,
             entryType,
-            activeTemplates,
+            templates,
             formData,
             fieldValidation,
             true
-          );
-
-        createdReportFieldAnswer =
-          await base44.asServiceRole.entities.ReportFieldAnswer.create(
-            reportFieldAnswerPayload
-          );
-      } catch (error) {
-        await base44.asServiceRole.entities.TimeEntry.delete(
-          created.id
-        ).catch(() => null);
-
-        throw httpError(
-          500,
-          "TimeEntry creation could not be completed safely."
+          )
         );
+      } catch (error) {
+        await base44.asServiceRole.entities.TimeEntry.delete(created.id).catch(() => null);
+        throw new RequestError(500, "TimeEntry creation could not be completed safely.");
       }
 
-      const authorizationRecalculationFailures =
-        await recalculateChangedAuthorizations(
-          base44,
-          organizationId,
-          [
-            authorizationResult.authorization?.id || "",
-          ]
-        );
+      await recalculateAuthorization(
+        base44,
+        context.organizationId,
+        normalizeText(created.service_authorization_id)
+      );
 
       return Response.json({
         ok: true,
         success: true,
         action,
-        entry: created,
+        entry: projectEntry(created),
         time_entry_id: created.id,
-        field_answer_id: createdReportFieldAnswer.id,
         report_ready: fieldValidation.report_ready,
         completion_percent: fieldValidation.completion_percent,
         validation: authorizationResult.validation,
-        authorization_recalculation_failures:
-          authorizationRecalculationFailures,
       });
     }
 
-    const entryId = normalizeText(
-      body.entry_id || body.time_entry_id || body.id
-    );
-
+    const entryId = normalizeText(body?.entry_id || body?.time_entry_id || body?.id);
     if (!entryId) {
-      throw httpError(
-        400,
-        "A TimeEntry ID is required for update or delete."
-      );
+      throw new RequestError(400, "Choose a TimeEntry before continuing.");
     }
 
-    const existingEntry =
-      await base44.asServiceRole.entities.TimeEntry.get(
-        entryId
-      ).catch(() => null);
-
-    if (!existingEntry) {
-      throw httpError(404, "TimeEntry was not found.");
-    }
-
+    const existingEntry = await base44.asServiceRole.entities.TimeEntry.get(entryId).catch(
+      () => null
+    );
     if (
-      normalizeText(existingEntry.org_id) !== organizationId
+      !existingEntry ||
+      normalizeText(existingEntry?.org_id) !== context.organizationId
     ) {
-      throw httpError(
-        403,
-        "The requested TimeEntry belongs to a different organization."
-      );
+      throw new RequestError(404, "The requested TimeEntry is unavailable to your account.");
     }
 
-    const existingReportFieldAnswer =
-      await loadSingleReportFieldAnswer(
+    const existingFieldAnswer = await loadSingleFieldAnswer(
+      base44,
+      context.organizationId,
+      entryId
+    );
+    assertMutable(existingEntry, existingFieldAnswer);
+
+    const employeeId = normalizeText(existingEntry?.employee_id);
+    if (!employeeId) {
+      throw new RequestError(409, "This TimeEntry has no employee owner.");
+    }
+    await assertEmployeeAuthority(base44, context, employeeId);
+
+    const clientId = normalizeText(existingEntry?.client_id);
+    const client = clientId ? await loadScopedClient(base44, context, clientId) : null;
+
+    if (hasOwn(timeEntryInput, "client_id") && normalizeText(timeEntryInput.client_id) !== clientId) {
+      throw new RequestError(400, "A TimeEntry client cannot be changed after creation.");
+    }
+    if (hasOwn(timeEntryInput, "employee_id") && normalizeText(timeEntryInput.employee_id) !== employeeId) {
+      throw new RequestError(400, "A TimeEntry employee cannot be changed after creation.");
+    }
+
+    if (action === "delete") {
+      await assertTimeCardOpen(
         base44,
-        organizationId,
-        entryId
+        context.organizationId,
+        employeeId,
+        [normalizeDate(existingEntry?.date)],
+        "deleted"
       );
 
-    assertMutable(existingEntry, existingReportFieldAnswer);
+      const answerBackup = existingFieldAnswer
+        ? {
+            org_id: context.organizationId,
+            time_entry_id: entryId,
+            entry_type_id: existingFieldAnswer.entry_type_id,
+            entry_type_code: existingFieldAnswer.entry_type_code,
+            field_schema_version: existingFieldAnswer.field_schema_version,
+            field_schema_snapshot: asObject(existingFieldAnswer.field_schema_snapshot),
+            answers: asObject(existingFieldAnswer.answers),
+            required_fields_complete: existingFieldAnswer.required_fields_complete === true,
+            report_ready: existingFieldAnswer.report_ready === true,
+            submitted_at: existingFieldAnswer.submitted_at || new Date().toISOString(),
+            validation_errors: asArray(existingFieldAnswer.validation_errors),
+            completion_percent: asNumber(existingFieldAnswer.completion_percent),
+            locked_in_report_id: null,
+          }
+        : null;
 
-    const existingEmployeeId = normalizeText(
-      existingEntry.employee_id
-    );
-
-    if (!existingEmployeeId) {
-      throw httpError(
-        409,
-        "The existing TimeEntry has no employee owner."
-      );
-    }
-
-    await assertTargetEmployeeAccess(
-      base44,
-      caller,
-      organizationId,
-      capabilities,
-      existingEmployeeId
-    );
-
-    const existingClientId = normalizeText(
-      existingEntry.client_id
-    );
-
-    const existingClient = existingClientId
-      ? await loadScopedClient(
-          base44,
-          organizationId,
-          existingClientId
-        )
-      : null;
-
-       if (existingClient) {
-      assertClientAccess(caller, capabilities, existingClient);
-    }
-
-    await assertTimeCardPeriodsAreOpen(
-      base44,
-      organizationId,
-      existingEmployeeId,
-      [normalizeDate(existingEntry.date)],
-      action === "delete" ? "deleted" : "changed"
-    );
-
-    if (
-      hasOwn(timeEntryInput, "client_id") &&
-      normalizeText(timeEntryInput.client_id) !==
-        existingClientId
-    ) {
-      throw httpError(
-        400,
-        "client_id cannot be changed after a TimeEntry is created."
-      );
-    }
-
-    if (
-      hasOwn(timeEntryInput, "employee_id") &&
-      normalizeText(timeEntryInput.employee_id) !==
-        existingEmployeeId
-    ) {
-      throw httpError(
-        400,
-        "employee_id cannot be changed after a TimeEntry is created."
-      );
-    }
-
-        if (action === "delete") {
-      const reportFieldAnswerRestorePayload =
-        existingReportFieldAnswer?.id
-          ? {
-              org_id: organizationId,
-              time_entry_id: entryId,
-              entry_type_id:
-                normalizeText(
-                  existingReportFieldAnswer.entry_type_id
-                ) || normalizeText(existingEntry.entry_type_id),
-              entry_type_code:
-                normalizeText(
-                  existingReportFieldAnswer.entry_type_code
-                ) || normalizeText(existingEntry.entry_type_code),
-              field_schema_version: Number.isFinite(
-                Number(existingReportFieldAnswer.field_schema_version)
-              )
-                ? Number(existingReportFieldAnswer.field_schema_version)
-                : 1,
-              field_schema_snapshot: asObject(
-                existingReportFieldAnswer.field_schema_snapshot
-              ),
-              answers: asObject(existingReportFieldAnswer.answers),
-              required_fields_complete:
-                existingReportFieldAnswer.required_fields_complete ===
-                true,
-              report_ready:
-                existingReportFieldAnswer.report_ready === true,
-              submitted_at:
-                normalizeText(existingReportFieldAnswer.submitted_at) ||
-                new Date().toISOString(),
-              validation_errors: asArray(
-                existingReportFieldAnswer.validation_errors
-              ),
-              completion_percent: asNumber(
-                existingReportFieldAnswer.completion_percent,
-                0
-              ),
-            }
-          : null;
-
-      if (existingReportFieldAnswer?.id) {
-        try {
-          await base44.asServiceRole.entities.ReportFieldAnswer.delete(
-            existingReportFieldAnswer.id
-          );
-        } catch (error: any) {
-          console.error(
-            "ReportFieldAnswer deletion failed before TimeEntry deletion:",
-            error?.message || error
-          );
-
-          throw httpError(
-            500,
-            "TimeEntry deletion was not started because its linked ReportFieldAnswer could not be deleted."
-          );
-        }
+      if (existingFieldAnswer?.id) {
+        await base44.asServiceRole.entities.ReportFieldAnswer.delete(existingFieldAnswer.id);
       }
 
       try {
-        await base44.asServiceRole.entities.TimeEntry.delete(
-          entryId
-        );
-      } catch (error: any) {
-        console.error(
-          "TimeEntry deletion failed:",
-          error?.message || error
-        );
-
-        if (reportFieldAnswerRestorePayload) {
-          try {
-            await base44.asServiceRole.entities.ReportFieldAnswer.create(
-              reportFieldAnswerRestorePayload
-            );
-          } catch (restoreError: any) {
-            console.error(
-              "ReportFieldAnswer restoration failed after TimeEntry deletion failure:",
-              restoreError?.message || restoreError
-            );
-
-            throw httpError(
-              500,
-              "TimeEntry deletion failed and the linked ReportFieldAnswer could not be restored."
-            );
-          }
+        await base44.asServiceRole.entities.TimeEntry.delete(entryId);
+      } catch (error) {
+        if (answerBackup) {
+          await base44.asServiceRole.entities.ReportFieldAnswer.create(answerBackup).catch(() => null);
         }
-
-        throw httpError(
+        throw new RequestError(
           500,
-          "TimeEntry deletion failed. Its linked ReportFieldAnswer was restored."
+          "TimeEntry deletion failed. Its structured answers were restored."
         );
       }
 
-      const authorizationRecalculationFailures =
-        await recalculateChangedAuthorizations(
-          base44,
-          organizationId,
-          [
-            normalizeText(
-              existingEntry.service_authorization_id
-            ),
-          ]
-        );
+      await recalculateAuthorization(
+        base44,
+        context.organizationId,
+        normalizeText(existingEntry?.service_authorization_id)
+      );
 
-      return Response.json({
-        ok: true,
-        action,
-        deleted_time_entry_id: entryId,
-        authorization_recalculation_failures:
-          authorizationRecalculationFailures,
-      });
+      return Response.json({ ok: true, action, deleted_time_entry_id: entryId });
     }
-    const requestedEntryTypeId = hasOwn(
-      timeEntryInput,
-      "entry_type_id"
-    )
-      ? normalizeText(timeEntryInput.entry_type_id)
-      : normalizeText(existingEntry.entry_type_id);
-
-    const requestedEntryTypeCode = hasOwn(
-      timeEntryInput,
-      "entry_type_code"
-    )
-      ? normalizeText(timeEntryInput.entry_type_code)
-      : normalizeText(existingEntry.entry_type_code);
 
     const entryType = await loadEntryType(
       base44,
-      organizationId,
-      requestedEntryTypeId,
-      requestedEntryTypeCode
+      context.organizationId,
+      hasOwn(timeEntryInput, "entry_type_id")
+        ? normalizeText(timeEntryInput.entry_type_id)
+        : normalizeText(existingEntry.entry_type_id),
+      hasOwn(timeEntryInput, "entry_type_code")
+        ? normalizeText(timeEntryInput.entry_type_code)
+        : normalizeText(existingEntry.entry_type_code)
     );
-
-    const requiresClient = entryType.requires_client !== false;
-
-    if (requiresClient && !existingClient) {
-      throw httpError(
-        400,
-        `A client is required for ${entryType.name}.`
-      );
+    if (entryType?.requires_client !== false && !client) {
+      throw new RequestError(400, `A client is required for ${entryType.name}.`);
     }
 
-       const preparedEntry = buildBaseEntryValues(
-      timeEntryInput,
-      existingEntry,
-      entryType,
-      capabilities
-    );
-
-    await assertTimeCardPeriodsAreOpen(
+    const prepared = buildPreparedEntry(timeEntryInput, existingEntry, entryType, context.role);
+    await assertTimeCardOpen(
       base44,
-      organizationId,
-      existingEmployeeId,
-      [preparedEntry.date],
+      context.organizationId,
+      employeeId,
+      [normalizeDate(existingEntry?.date), prepared.date],
       "changed"
     );
 
-    const activeTemplates = await loadActiveTemplates(
-      base44,
-      organizationId,
-      entryType
-    );
-
-        const formData = assertAndMergeFormData(
-      getRequestedFormData(timeEntryInput),
+    const templates = await loadTemplates(base44, context.organizationId, entryType);
+    const requestedFormData = hasOwn(timeEntryInput, "form_data")
+      ? timeEntryInput.form_data
+      : hasOwn(timeEntryInput, "field_answers")
+      ? timeEntryInput.field_answers
+      : {};
+    const formData = mergeFormData(
+      requestedFormData,
       existingEntry.form_data,
-      activeTemplates,
-      entryType.code,
+      prepared.entry_type_code,
+      templates,
       true
     );
-
-    const fieldValidation = getFieldValidation(
-      activeTemplates,
+    const fieldValidation = validateFieldAnswers(
+      templates,
       formData,
-      preparedEntry.status,
-      entryType.requires_field_answers === true,
-      entryType.code
+      prepared.status,
+      entryType?.requires_field_answers === true,
+      prepared.entry_type_code
     );
+    prepared.form_data = formData;
+    prepared.report_ready = fieldValidation.report_ready;
 
-    preparedEntry.form_data = formData;
-    preparedEntry.report_ready =
-      fieldValidation.report_ready;
-
-    const requestedAuthorizationId =
-      getRequestedAuthorizationId(
-        body,
-        timeEntryInput,
-        existingEntry
-      );
-
-    const existingAuthorizationId = normalizeText(
-      existingEntry.service_authorization_id
-    );
-
-    if (
-      requestedAuthorizationId !== existingAuthorizationId &&
-      !capabilities.mayApproveOrVoid
-    ) {
-      throw httpError(
+    const existingAuthorizationId = normalizeText(existingEntry?.service_authorization_id);
+    const requestedAuthorizationId = hasOwn(timeEntryInput, "service_authorization_id")
+      ? normalizeText(timeEntryInput.service_authorization_id)
+      : existingAuthorizationId;
+    if (requestedAuthorizationId !== existingAuthorizationId && context.role === "employee") {
+      throw new RequestError(
         403,
         "Only management or organization administrators may change a TimeEntry ServiceAuthorization."
       );
     }
 
-    const authorizationResult =
-      await validateAuthorization(
-        base44,
-        organizationId,
-        entryType,
-        existingClient,
-        preparedEntry,
-        requestedAuthorizationId,
-        entryId
-      );
+    // Forward-only rule: preserve a historical marker exactly as stored. An
+    // update must never retroactively stamp a legacy submitted entry.
+    prepared.authorization_usage_eligible =
+      existingEntry?.authorization_usage_eligible === true;
+    prepared.authorization_usage_eligible_at =
+      existingEntry?.authorization_usage_eligible_at ?? null;
+    prepared.service_authorization_id = requestedAuthorizationId || null;
 
-    preparedEntry.service_authorization_id =
-      authorizationResult.authorization?.id || null;
+    const authorizationResult = await validateAuthorization(
+      base44,
+      context.organizationId,
+      client,
+      entryType,
+      prepared,
+      requestedAuthorizationId,
+      entryId
+    );
+    prepared.service_authorization_id = authorizationResult.authorization?.id || null;
 
-    const updatePayload = {
-      entry_type_id: preparedEntry.entry_type_id,
-      entry_type_code: preparedEntry.entry_type_code,
-      date: preparedEntry.date,
-      start_time: preparedEntry.start_time,
-      end_time: preparedEntry.end_time,
-      duration_minutes: preparedEntry.duration_minutes,
-      reporting_period_key:
-        preparedEntry.reporting_period_key,
-      location: preparedEntry.location,
-      description: preparedEntry.description,
-      form_data: preparedEntry.form_data,
-      is_billable: preparedEntry.is_billable,
-      is_payroll_eligible:
-        preparedEntry.is_payroll_eligible,
-      is_reportable: preparedEntry.is_reportable,
-      status: preparedEntry.status,
-      legacy_category: preparedEntry.legacy_category,
-      employer_name: preparedEntry.employer_name,
-      report_ready: preparedEntry.report_ready,
-      service_authorization_id:
-        preparedEntry.service_authorization_id,
-    };
-
-    const updated =
-      await base44.asServiceRole.entities.TimeEntry.update(
-        entryId,
-        updatePayload
-      );
+    const updated = await base44.asServiceRole.entities.TimeEntry.update(entryId, prepared);
 
     try {
-      const reportFieldAnswerPayload =
-        buildReportFieldAnswerPayload(
-          organizationId,
+      await saveFieldAnswer(
+        base44,
+        existingFieldAnswer,
+        buildFieldAnswerPayload(
+          context.organizationId,
           entryId,
           entryType,
-          activeTemplates,
+          templates,
           formData,
           fieldValidation,
-          !existingReportFieldAnswer
-        );
-
-      if (existingReportFieldAnswer?.id) {
-        await base44.asServiceRole.entities.ReportFieldAnswer.update(
-          existingReportFieldAnswer.id,
-          reportFieldAnswerPayload
-        );
-      } else {
-        await base44.asServiceRole.entities.ReportFieldAnswer.create(
-          reportFieldAnswerPayload
-        );
-      }
+          !existingFieldAnswer
+        )
+      );
     } catch (error) {
       await base44.asServiceRole.entities.TimeEntry.update(
         entryId,
-        buildEntryRollbackPayload(existingEntry)
+        buildEntryRollback(existingEntry)
       ).catch(() => null);
+      throw new RequestError(500, "TimeEntry update could not be completed safely.");
+    }
 
-      throw httpError(
-        500,
-        "TimeEntry update could not be completed safely."
+    await recalculateAuthorization(
+      base44,
+      context.organizationId,
+      existingAuthorizationId
+    );
+    if (requestedAuthorizationId !== existingAuthorizationId) {
+      await recalculateAuthorization(
+        base44,
+        context.organizationId,
+        requestedAuthorizationId
       );
     }
 
-    const authorizationRecalculationFailures =
-      await recalculateChangedAuthorizations(
-        base44,
-        organizationId,
-        [
-          existingAuthorizationId,
-          authorizationResult.authorization?.id || "",
-        ]
-      );
-
     return Response.json({
       ok: true,
+      success: true,
       action,
-      entry: updated,
+      entry: projectEntry(updated),
+      report_ready: fieldValidation.report_ready,
+      completion_percent: fieldValidation.completion_percent,
       validation: authorizationResult.validation,
-      authorization_recalculation_failures:
-        authorizationRecalculationFailures,
     });
   } catch (error: any) {
-    console.error(
-      "mutateAuthorizedTimeEntry error:",
-      error?.message || error
-    );
+    const status = error instanceof RequestError ? error.status : 500;
+    const message =
+      error instanceof RequestError
+        ? error.message
+        : "Unable to process the TimeEntry request.";
 
-    return Response.json(
-      {
-        error:
-          error?.message ||
-          "Unable to process the TimeEntry request.",
-      },
-      {
-        status:
-          typeof error?.status === "number"
-            ? error.status
-            : 500,
-      }
-    );
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "mutateAuthorizedTimeEntry error:",
+        error?.message || error
+      );
+    }
+
+    return Response.json({ ok: false, error: message }, { status });
   }
 });
