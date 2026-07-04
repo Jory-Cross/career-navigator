@@ -40,7 +40,7 @@ function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
 
 async function invokeSecureTimeEntryMutation(request) {
   const response = await base44.functions.invoke(
-    "mutateAuthorizedTimeEntryV2",
+    "mutateAuthorizedTimeEntry",
     request
   );
   const data = response?.data || response || {};
