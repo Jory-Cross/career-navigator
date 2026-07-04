@@ -360,12 +360,12 @@ export default function PortalAccessPanel({ client, onRefresh }) {
           )}
         </div>
 
-        {/* Stale details */}
+               {/* Stale details */}
         {status === 'stale' && portalUser && (
           <div className="text-xs text-orange-700 bg-orange-100 rounded p-2 border border-orange-200">
             User <strong>{portalUser.email}</strong> is linked to client ID{' '}
             <code className="font-mono">{portalUser.linked_client_id}</code> (not this record).
-            Use "Repair Stale Access" to fix.
+            Secure stale-access repair is temporarily unavailable during security remediation.
           </div>
         )}
       </div>
