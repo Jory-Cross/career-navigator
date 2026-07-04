@@ -1,107 +1,476 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
+
+const STAFF_ROLE_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
+const REACTIVATABLE_ROLES = new Set(["management", "employee"]);
+const ASSIGNABLE_MANAGER_ROLES = new Set(["admin", "management"]);
+
+class RequestError extends Error {
+  constructor(
+    public status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeIdentifier(value: unknown) {
+  return normalizeText(value);
+}
+
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function isActiveRecord(record: any) {
+  return (
+    record &&
+    record.is_active !== false &&
+    record.is_archived !== true
+  );
+}
+
+function failure(error: string, status = 400) {
+  return Response.json(
+    {
+      success: false,
+      error,
+    },
+    { status }
+  );
+}
+
+function getCanonicalStaffProfile(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(
+    user?.access_level
+  ).toLowerCase();
+
+  if (STAFF_ROLE_ACCESS[role] !== accessLevel) {
+    return null;
+  }
+
+  return {
+    role,
+    accessLevel,
+  };
+}
+
+function getTargetRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+
+  return REACTIVATABLE_ROLES.has(role) ? role : "";
+}
+
+function getDisplayName(user: any) {
+  return (
+    normalizeText(user?.full_name) ||
+    normalizeText(user?.email) ||
+    "the selected employee"
+  );
+}
+
+async function resolveCanonicalCaller(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  if (!caller || !isActiveRecord(caller)) {
+    throw new RequestError(
+      403,
+      "Your account is unavailable or inactive."
+    );
+  }
+
+  const callerId = normalizeIdentifier(caller?.id);
+  const organizationId = normalizeIdentifier(caller?.org_id);
+  const profile = getCanonicalStaffProfile(caller);
+
+  if (
+    !callerId ||
+    !profile ||
+    !["admin", "management"].includes(profile.role)
+  ) {
+    throw new RequestError(
+      403,
+      "You are not authorized to reactivate employees."
+    );
+  }
+
+  if (!organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not assigned to an organization."
+    );
+  }
+
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
+
+  if (!organization || !isActiveRecord(organization)) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is invalid or inactive."
+    );
+  }
+
+  return {
+    caller,
+    callerId,
+    callerRole: profile.role,
+    organizationId,
+  };
+}
+
+async function resolveReactivationTarget(
+  base44: any,
+  employeeId: string,
+  organizationId: string,
+  callerId: string
+) {
+  const employee = await base44.asServiceRole.entities.User.get(
+    employeeId
+  ).catch(() => null);
+
+  if (
+    !employee ||
+    employee?.is_archived === true ||
+    normalizeIdentifier(employee?.org_id) !== organizationId
+  ) {
+    throw new RequestError(
+      404,
+      "The selected employee was not found in your organization."
+    );
+  }
+
+  const canonicalEmployeeId = normalizeIdentifier(employee?.id);
+  const employeeRole = getTargetRole(employee);
+
+  if (!employeeRole) {
+    throw new RequestError(
+      403,
+      "Only inactive employees or managers can be reactivated through this workflow."
+    );
+  }
+
+  if (canonicalEmployeeId === callerId) {
+    throw new RequestError(
+      403,
+      "You cannot reactivate your own account through this workflow."
+    );
+  }
+
+  const expectedAccessLevel = STAFF_ROLE_ACCESS[employeeRole];
+  const alreadyActive =
+    employee?.is_active !== false &&
+    normalizeText(employee?.access_level).toLowerCase() ===
+      expectedAccessLevel;
+
+  if (alreadyActive) {
+    throw new RequestError(
+      400,
+      "This employee account is already active."
+    );
+  }
+
+  return {
+    employee,
+    employeeId: canonicalEmployeeId,
+    employeeRole,
+    expectedAccessLevel,
+  };
+}
+
+async function getHistoricalManagerAssignments(
+  base44: any,
+  organizationId: string,
+  employeeId: string,
+  managerId?: string
+) {
+  const filters: Record<string, string> = {
+    org_id: organizationId,
+    employee_user_id: employeeId,
+  };
+
+  if (managerId) {
+    filters.manager_user_id = managerId;
+  }
+
+  const assignments =
+    await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter(
+      filters
+    );
+
+  return asArray(assignments).filter(
+    (assignment: any) =>
+      assignment?.is_archived !== true &&
+      normalizeIdentifier(assignment?.org_id) === organizationId &&
+      normalizeIdentifier(assignment?.employee_user_id) === employeeId &&
+      (!managerId ||
+        normalizeIdentifier(assignment?.manager_user_id) === managerId)
+  );
+}
+
+async function resolveAssignmentRecipient(
+  base44: any,
+  caller: any,
+  callerId: string,
+  callerRole: string,
+  organizationId: string,
+  employeeId: string,
+  employeeRole: string,
+  managerId: string
+) {
+  if (!managerId) {
+    return null;
+  }
+
+  if (employeeRole !== "employee") {
+    throw new RequestError(
+      400,
+      "Manager assignment can only be changed when reactivating an employee."
+    );
+  }
+
+  if (callerRole === "management" && managerId !== callerId) {
+    throw new RequestError(
+      403,
+      "Managers may only assign reactivated employees to themselves."
+    );
+  }
+
+  const recipient =
+    managerId === callerId
+      ? caller
+      : await base44.asServiceRole.entities.User.get(managerId)
+          .catch(() => null);
+
+  const profile = getCanonicalStaffProfile(recipient);
+
+  if (
+    !isActiveRecord(recipient) ||
+    normalizeIdentifier(recipient?.id) === employeeId ||
+    normalizeIdentifier(recipient?.org_id) !== organizationId ||
+    !profile ||
+    !ASSIGNABLE_MANAGER_ROLES.has(profile.role)
+  ) {
+    throw new RequestError(
+      403,
+      "Choose an active manager or administrator from this organization."
+    );
+  }
+
+  if (callerRole === "management") {
+    const historicalAssignments =
+      await getHistoricalManagerAssignments(
+        base44,
+        organizationId,
+        employeeId,
+        callerId
+      );
+
+    if (!historicalAssignments.length) {
+      throw new RequestError(
+        403,
+        "You may only reactivate employees who were previously assigned to you."
+      );
+    }
+  }
+
+  return recipient;
+}
 
 Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return failure(
+      "This employee reactivation request must use POST.",
+      405
+    );
+  }
+
   try {
+    const body = await req.json().catch(() => ({}));
+    const employeeId = normalizeIdentifier(body?.employee_id);
+    const managerId = normalizeIdentifier(body?.manager_id);
+
+    if (!employeeId) {
+      return failure(
+        "An employee must be selected before reactivation can begin."
+      );
+    }
+
+    if (managerId && managerId === employeeId) {
+      return failure(
+        "The employee being reactivated cannot be selected as their own manager."
+      );
+    }
+
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(
+      () => null
+    );
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!authenticatedUser?.id) {
+      return failure(
+        "Please sign in before reactivating an employee.",
+        401
+      );
     }
 
-    // Only admin or management can reactivate
-    if (!['admin', 'management'].includes(user.role)) {
-      return Response.json({ error: 'Forbidden: Admin/Management access required' }, { status: 403 });
-    }
+    const {
+      caller,
+      callerId,
+      callerRole,
+      organizationId,
+    } = await resolveCanonicalCaller(
+      base44,
+      authenticatedUser.id
+    );
 
-    const { employee_id, manager_id } = await req.json();
+    const {
+      employee,
+      employeeId: canonicalEmployeeId,
+      employeeRole,
+      expectedAccessLevel,
+    } = await resolveReactivationTarget(
+      base44,
+      employeeId,
+      organizationId,
+      callerId
+    );
 
-    if (!employee_id) {
-      return Response.json({ error: 'employee_id required' }, { status: 400 });
-    }
+    const recipient = await resolveAssignmentRecipient(
+      base44,
+      caller,
+      callerId,
+      callerRole,
+      organizationId,
+      canonicalEmployeeId,
+      employeeRole,
+      managerId
+    );
 
-    // Fetch the employee
-    const employees = await base44.asServiceRole.entities.User.filter({ id: employee_id });
-    if (employees.length === 0) {
-      return Response.json({ error: 'Employee not found' }, { status: 404 });
-    }
+    let assignmentRollback:
+      | {
+          type: "created";
+          id: string;
+        }
+      | {
+          type: "updated";
+          id: string;
+          wasActive: boolean;
+        }
+      | null = null;
 
-    const employee = employees[0];
-    const employeeData = employee.data || {};
-
-    // Reactivate: set is_active=true, access_level=staff
-    const updatePayload = {
-      data: {
-        ...employeeData,
-        is_active: true,
-        access_level: 'staff'
-      }
-    };
-
-    await base44.asServiceRole.entities.User.update(employee_id, updatePayload);
-
-    // Create/reactivate manager assignment if manager_id provided
-    let managerAssignmentCreated = false;
-    if (manager_id) {
-      // Check if assignment already exists and is inactive
-      const existingAssignments = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
-        manager_user_id: manager_id,
-        employee_user_id: employee_id
-      });
-
-      if (existingAssignments.length > 0) {
-        // Reactivate existing
-        await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(existingAssignments[0].id, {
-          is_active: true
-        });
-      } else {
-        // Create new assignment
-        await base44.asServiceRole.entities.ManagerEmployeeAssignment.create({
-          manager_user_id: manager_id,
-          employee_user_id: employee_id,
-          is_active: true,
-          org_id: employeeData.org_id
-        });
-      }
-      managerAssignmentCreated = true;
-    }
-
-    // Create Activity log if available
     try {
-      const clients = await base44.asServiceRole.entities.Client.filter({
-        assigned_employee_id: employee_id
-      });
+      if (recipient) {
+        const matchingAssignments =
+          await getHistoricalManagerAssignments(
+            base44,
+            organizationId,
+            canonicalEmployeeId,
+            normalizeIdentifier(recipient.id)
+          );
 
-      for (const client of clients) {
-        await base44.asServiceRole.entities.Activity.create({
-          org_id: employeeData.org_id,
-          client_id: client.id,
-          activity_type: 'status_changed',
-          title: 'Employee Reactivated',
-          description: `Employee ${employee.full_name} (${employee.email}) was reactivated${manager_id ? ' and assigned to a manager' : ''}.`,
-          metadata: {
-            related_entity_id: employee_id,
-            related_entity_type: 'User',
-            old_value: 'deactivated',
-            new_value: 'active'
-          }
-        });
+        if (matchingAssignments.length > 1) {
+          throw new RequestError(
+            400,
+            "More than one manager assignment exists for this employee. Administrator review is required before reactivation."
+          );
+        }
+
+        if (matchingAssignments.length === 1) {
+          const assignment = matchingAssignments[0];
+
+          await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(
+            assignment.id,
+            {
+              is_active: true,
+            }
+          );
+
+          assignmentRollback = {
+            type: "updated",
+            id: assignment.id,
+            wasActive: assignment?.is_active === true,
+          };
+        } else {
+          const assignment =
+            await base44.asServiceRole.entities.ManagerEmployeeAssignment.create(
+              {
+                org_id: organizationId,
+                manager_user_id: recipient.id,
+                employee_user_id: canonicalEmployeeId,
+                is_active: true,
+              }
+            );
+
+          assignmentRollback = {
+            type: "created",
+            id: assignment.id,
+          };
+        }
       }
-    } catch (e) {
-      // Activity logging failed, but reactivation succeeded
-      console.warn('Activity log creation failed:', e.message);
+
+      await base44.asServiceRole.entities.User.update(
+        canonicalEmployeeId,
+        {
+          is_active: true,
+          access_level: expectedAccessLevel,
+        }
+      );
+    } catch (writeError) {
+      if (assignmentRollback?.type === "created") {
+        await base44.asServiceRole.entities.ManagerEmployeeAssignment.delete(
+          assignmentRollback.id
+        ).catch(() => null);
+      }
+
+      if (assignmentRollback?.type === "updated") {
+        await base44.asServiceRole.entities.ManagerEmployeeAssignment.update(
+          assignmentRollback.id,
+          {
+            is_active: assignmentRollback.wasActive,
+          }
+        ).catch(() => null);
+      }
+
+      throw writeError;
     }
 
     return Response.json({
       success: true,
-      employee_id,
-      employee_name: employee.full_name,
-      email: employee.email,
-      manager_assigned: managerAssignmentCreated,
-      manager_id: manager_id || null
+      message: "Employee reactivation was completed.",
+      employee_id: canonicalEmployeeId,
+      employee_name: getDisplayName(employee),
+      manager_assigned: Boolean(recipient),
+      manager_id: recipient?.id || null,
     });
   } catch (error) {
-    console.error('Reactivation error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "[reactivateEmployee] Unexpected error:",
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    return failure(
+      error instanceof RequestError
+        ? error.message
+        : "The employee could not be reactivated. Please try again or contact your organization administrator.",
+      error instanceof RequestError ? error.status : 500
+    );
   }
 });
