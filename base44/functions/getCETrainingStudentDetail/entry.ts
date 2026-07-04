@@ -780,12 +780,17 @@ Deno.serve(async (req) => {
         billingIntegrityStatus = "linked_billing_event_not_found";
       }
     } else {
-      const candidateBillingEvents = registrationBillingEvents.filter(
+            const candidateBillingEvents = registrationBillingEvents.filter(
         (billingRecord) =>
           normalizeText(billingRecord?.cohort_id) === cohortId &&
           normalizeEmail(
             billingRecord?.subject_verified_email
-          ) === studentEmail
+          ) === studentEmail &&
+          (
+            !studentUserId ||
+            normalizeText(billingRecord?.subject_user_id) ===
+              studentUserId
+          )
       );
 
       if (candidateBillingEvents.length === 1) {
