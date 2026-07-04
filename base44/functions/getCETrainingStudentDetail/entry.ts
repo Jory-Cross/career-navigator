@@ -54,29 +54,58 @@ async function getOneById(entity: any, id: string) {
 }
 
 async function resolveOrganizationId(base44: any, caller: any) {
-  let organizationId = normalizeText(caller?.org_id);
+  const callerId = normalizeText(caller?.id);
 
-  if (organizationId) {
-    return organizationId;
-  }
+  const canonicalCaller = callerId
+    ? await base44.asServiceRole.entities.User.get(callerId).catch(
+        () => null
+      )
+    : null;
 
-  const organizations =
-    await base44.asServiceRole.entities.Organization.filter({
-      owner_email: caller?.email,
-    });
+  const canonicalEmail = normalizeEmail(canonicalCaller?.email);
+  const organizationId = normalizeText(canonicalCaller?.org_id);
 
-  organizationId = normalizeText(organizations?.[0]?.id);
-
-  if (!organizationId) {
+  if (
+    !canonicalCaller ||
+    canonicalCaller?.is_active === false ||
+    canonicalCaller?.is_archived === true ||
+    !canonicalEmail ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(canonicalEmail)
+  ) {
     throw new RequestError(
-      400,
-      "Your account is not connected to an organization."
+      403,
+      "Your account is unavailable or does not have a verified email address."
     );
   }
 
-  return organizationId;
-}
+  if (!organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not assigned to an organization."
+    );
+  }
 
+  const organization =
+    await base44.asServiceRole.entities.Organization.get(
+      organizationId
+    ).catch(() => null);
+
+  if (
+    !organization ||
+    organization?.is_active === false ||
+    organization?.is_archived === true
+  ) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is unavailable or inactive."
+    );
+  }
+
+  return {
+    caller: canonicalCaller,
+    organizationId,
+  };
+}
 async function requireCohortAccess(
   base44: any,
   caller: any,
