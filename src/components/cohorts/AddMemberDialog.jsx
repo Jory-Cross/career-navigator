@@ -28,8 +28,9 @@ import { toast } from "sonner";
 export default function AddMemberDialog({
   open,
   onOpenChange,
-  title = "Add Member",
+   title = "Add Member",
   cohortRole = "member",
+  cohortId = "",
   allowedRoles = [],
   existingMemberUserIds = [],
   onSubmit,
