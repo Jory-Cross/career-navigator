@@ -1,10 +1,10 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const INTERNAL_STAFF_ROLES = new Set([
-  "admin",
-  "management",
-  "employee",
-]);
+const CANONICAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 const PRE_ETS_TIME_CARD_STATUSES = new Set([
   "submitted_to_staff",
@@ -53,16 +53,13 @@ function asArray<T = any>(value: unknown): T[] {
 }
 
 function asObject(value: unknown): Record<string, any> {
-  return value &&
-    typeof value === "object" &&
-    !Array.isArray(value)
+  return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, any>)
     : {};
 }
 
 function asNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
-
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
@@ -70,16 +67,21 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
-function isInternalStaff(user: any) {
-  return INTERNAL_STAFF_ROLES.has(
-    normalizeText(user?.role).toLowerCase()
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isStudentPortalUser(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets" &&
+    normalizeText(user?.access_level).toLowerCase() === "client_portal"
   );
 }
 
-function isPreEtsClientInOrganization(
-  client: any,
-  organizationId: string
-) {
+function isPreEtsClientInOrganization(client: any, organizationId: string) {
   return (
     isActive(client) &&
     normalizeText(client?.org_id) === organizationId &&
@@ -101,25 +103,17 @@ function getClientDisplayName(client: any) {
 
 function getUserDisplayName(user: any) {
   const fullName = normalizeText(user?.full_name);
-
-  if (fullName) {
-    return fullName;
-  }
+  if (fullName) return fullName;
 
   const name = `${normalizeText(user?.first_name)} ${normalizeText(
     user?.last_name
   )}`.trim();
 
-  if (name) {
-    return name;
-  }
-
-  return normalizeText(user?.name) || "Unavailable staff member";
+  return name || normalizeText(user?.name) || "Unavailable staff member";
 }
 
 function projectSnapshotEntry(entry: any) {
-  const status =
-    normalizeText(entry?.status).toLowerCase() || "pending";
+  const status = normalizeText(entry?.status).toLowerCase() || "pending";
 
   return {
     id: normalizeText(entry?.id),
@@ -129,9 +123,7 @@ function projectSnapshotEntry(entry: any) {
     duration_minutes: asNumber(entry?.duration_minutes, 0),
     description: normalizeText(entry?.description),
     source: normalizeText(entry?.source) || "client_portal",
-    status: PRE_ETS_ENTRY_STATUSES.has(status)
-      ? status
-      : "pending",
+    status: PRE_ETS_ENTRY_STATUSES.has(status) ? status : "pending",
   };
 }
 
@@ -162,29 +154,17 @@ function projectCard(
       .map((entryId) => normalizeText(entryId))
       .filter(Boolean).length,
     total_minutes: asNumber(card?.total_minutes, 0),
-    student_submission_revision: asNumber(
-      card?.student_submission_revision,
-      1
-    ),
-    staff_submission_revision: asNumber(
-      card?.staff_submission_revision,
-      0
-    ),
-    first_student_submitted_at:
-      card?.first_student_submitted_at ?? null,
-    last_student_submitted_at:
-      card?.last_student_submitted_at ?? null,
-    returned_to_student_at:
-      card?.returned_to_student_at ?? null,
-    return_to_student_note:
-      normalizeText(card?.return_to_student_note) || null,
+    student_submission_revision: asNumber(card?.student_submission_revision, 1),
+    staff_submission_revision: asNumber(card?.staff_submission_revision, 0),
+    first_student_submitted_at: card?.first_student_submitted_at ?? null,
+    last_student_submitted_at: card?.last_student_submitted_at ?? null,
+    returned_to_student_at: card?.returned_to_student_at ?? null,
+    return_to_student_note: normalizeText(card?.return_to_student_note) || null,
     staff_submitted_at: card?.staff_submitted_at ?? null,
     returned_to_staff_at: card?.returned_to_staff_at ?? null,
-    return_to_staff_note:
-      normalizeText(card?.return_to_staff_note) || null,
+    return_to_staff_note: normalizeText(card?.return_to_staff_note) || null,
     finalized_at: card?.finalized_at ?? null,
-    finalization_note:
-      normalizeText(card?.finalization_note) || null,
+    finalization_note: normalizeText(card?.finalization_note) || null,
     archived_at: card?.archived_at ?? null,
   };
 
@@ -195,23 +175,33 @@ function projectCard(
   return response;
 }
 
-async function resolveCaller(
-  base44: any,
-  authenticatedUserId: string
-) {
+function sortCards(cards: any[]) {
+  return [...cards].sort((left, right) => {
+    const leftKey = [
+      normalizeDate(left?.period_end),
+      normalizeDate(left?.period_start),
+      normalizeText(left?.id),
+    ].join("|");
+    const rightKey = [
+      normalizeDate(right?.period_end),
+      normalizeDate(right?.period_start),
+      normalizeText(right?.id),
+    ].join("|");
+
+    return rightKey.localeCompare(leftKey);
+  });
+}
+
+async function resolveCaller(base44: any, authenticatedUserId: string) {
   const caller = await base44.asServiceRole.entities.User.get(
     authenticatedUserId
   ).catch(() => null);
 
   if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Authenticated user record was not found or is inactive."
-    );
+    throw new RequestError(403, "Your account is inactive or unavailable.");
   }
 
   const organizationId = normalizeText(caller?.org_id);
-
   if (!organizationId) {
     throw new RequestError(
       403,
@@ -219,26 +209,19 @@ async function resolveCaller(
     );
   }
 
-  const organization =
-    await base44.asServiceRole.entities.Organization.get(
-      organizationId
-    ).catch(() => null);
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
 
   if (!organization || !isActive(organization)) {
-    throw new RequestError(
-      403,
-      "Your organization assignment is invalid or inactive."
-    );
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
   }
 
   return {
     caller,
     organizationId,
     callerId: normalizeText(caller?.id),
-    callerRole: normalizeText(caller?.role).toLowerCase(),
-    callerAccessLevel: normalizeText(
-      caller?.access_level
-    ).toLowerCase(),
+    callerRole: getCanonicalStaffRole(caller),
   };
 }
 
@@ -247,21 +230,11 @@ async function resolveStudentClient(
   caller: any,
   organizationId: string
 ) {
-  const linkedClientId = normalizeText(
-    caller?.linked_client_id
-  );
-
-  if (
-    normalizeText(caller?.role).toLowerCase() !== "pre_ets" ||
-    normalizeText(caller?.access_level).toLowerCase() !==
-      "client_portal"
-  ) {
-    throw new RequestError(
-      403,
-      "You are not authorized to view Pre-ETS Time Cards."
-    );
+  if (!isStudentPortalUser(caller)) {
+    throw new RequestError(403, "You are not authorized to view Pre-ETS Time Cards.");
   }
 
+  const linkedClientId = normalizeText(caller?.linked_client_id);
   if (!linkedClientId) {
     throw new RequestError(
       403,
@@ -283,17 +256,10 @@ async function resolveStudentClient(
   return client;
 }
 
-async function loadOrganizationData(
-  base44: any,
-  organizationId: string
-) {
+async function loadOrganizationData(base44: any, organizationId: string) {
   const [clients, users, cards, assignments] = await Promise.all([
-    base44.asServiceRole.entities.Client.filter({
-      org_id: organizationId,
-    }),
-    base44.asServiceRole.entities.User.filter({
-      org_id: organizationId,
-    }),
+    base44.asServiceRole.entities.Client.filter({ org_id: organizationId }),
+    base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
     base44.asServiceRole.entities.PreEtsTimeCard.filter({
       org_id: organizationId,
     }),
@@ -305,21 +271,18 @@ async function loadOrganizationData(
   const preEtsClients = asArray(clients).filter((client: any) =>
     isPreEtsClientInOrganization(client, organizationId)
   );
-
-  const activeInternalUsers = asArray(users).filter(
+  const activeCanonicalUsers = asArray(users).filter(
     (user: any) =>
       isActive(user) &&
       normalizeText(user?.org_id) === organizationId &&
-      isInternalStaff(user)
+      Boolean(getCanonicalStaffRole(user))
   );
-
   const validCards = asArray(cards).filter(
     (card: any) =>
       isActive(card) &&
       normalizeText(card?.org_id) === organizationId &&
       PRE_ETS_TIME_CARD_STATUSES.has(getCardStatus(card))
   );
-
   const activeAssignments = asArray(assignments).filter(
     (assignment: any) =>
       assignment?.is_active === true &&
@@ -329,102 +292,22 @@ async function loadOrganizationData(
       normalizeText(assignment?.employee_user_id)
   );
 
-  return {
-    preEtsClients,
-    activeInternalUsers,
-    validCards,
-    activeAssignments,
-  };
-}
-
-function getManagedStaffUserIds(
-  managerUserId: string,
-  assignments: any[]
-) {
-  const childrenByManagerId = new Map<string, string[]>();
-
-  for (const assignment of assignments) {
-    const managerId = normalizeText(assignment?.manager_user_id);
-    const employeeId = normalizeText(assignment?.employee_user_id);
-
-    if (!managerId || !employeeId) {
-      continue;
-    }
-
-    const employeeIds = childrenByManagerId.get(managerId) || [];
-    employeeIds.push(employeeId);
-    childrenByManagerId.set(managerId, employeeIds);
-  }
-
-  const managedStaffUserIds = new Set<string>([managerUserId]);
-  const visitedManagerIds = new Set<string>([managerUserId]);
-  const queue = [managerUserId];
-
-  while (queue.length > 0) {
-    const currentManagerId = queue.shift() || "";
-    const directEmployeeIds =
-      childrenByManagerId.get(currentManagerId) || [];
-
-    for (const employeeId of directEmployeeIds) {
-      managedStaffUserIds.add(employeeId);
-
-      if (!visitedManagerIds.has(employeeId)) {
-        visitedManagerIds.add(employeeId);
-        queue.push(employeeId);
-      }
-    }
-  }
-
-  return managedStaffUserIds;
-}
-
-function sortCards(cards: any[]) {
-  return [...cards].sort((left, right) => {
-    const leftKey = [
-      normalizeDate(left?.period_end),
-      normalizeDate(left?.period_start),
-      normalizeText(left?.id),
-    ].join("|");
-
-    const rightKey = [
-      normalizeDate(right?.period_end),
-      normalizeDate(right?.period_start),
-      normalizeText(right?.id),
-    ].join("|");
-
-    return rightKey.localeCompare(leftKey);
-  });
+  return { preEtsClients, activeCanonicalUsers, validCards, activeAssignments };
 }
 
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { error: "This route accepts POST requests only." },
         { status: 405 }
       );
     }
 
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser?.id) {
-      return Response.json(
-        { error: "Unauthorized." },
-        { status: 401 }
-      );
-    }
-
-    const requestBody = await req.json().catch(() => ({}));
-    const requestedTimeCardId = normalizeText(
-      requestBody?.time_card_id
-    );
-    const requestedClientId = normalizeText(
-      requestBody?.client_id
-    );
-    const requestedStatus = normalizeText(
-      requestBody?.status
-    ).toLowerCase();
+    const requestBody: any = await req.json().catch(() => ({}));
+    const requestedTimeCardId = normalizeText(requestBody?.time_card_id);
+    const requestedClientId = normalizeText(requestBody?.client_id);
+    const requestedStatus = normalizeText(requestBody?.status).toLowerCase();
     const includeEntries = requestBody?.include_entries === true;
 
     if (
@@ -433,73 +316,70 @@ Deno.serve(async (req) => {
       !PRE_ETS_TIME_CARD_STATUSES.has(requestedStatus)
     ) {
       return Response.json(
-        { error: "Invalid Pre-ETS Time Card status filter." },
+        { error: "Choose a valid Pre-ETS Time Card status filter." },
         { status: 400 }
       );
     }
 
-    const {
-      caller,
-      organizationId,
-      callerId,
-      callerRole,
-    } = await resolveCaller(base44, authenticatedUser.id);
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me();
 
-    const {
-      preEtsClients,
-      activeInternalUsers,
-      validCards,
-      activeAssignments,
-    } = await loadOrganizationData(base44, organizationId);
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { error: "You must be signed in to view Pre-ETS Time Cards." },
+        { status: 401 }
+      );
+    }
+
+    const { caller, organizationId, callerId, callerRole } =
+      await resolveCaller(base44, authenticatedUser.id);
+    const { preEtsClients, activeCanonicalUsers, validCards, activeAssignments } =
+      await loadOrganizationData(base44, organizationId);
 
     const clientById = new Map(
-      preEtsClients.map((client: any) => [
-        normalizeText(client?.id),
-        client,
-      ])
+      preEtsClients.map((client: any) => [normalizeText(client?.id), client])
     );
-
     const internalUserById = new Map(
-      activeInternalUsers.map((user: any) => [
-        normalizeText(user?.id),
-        user,
-      ])
+      activeCanonicalUsers.map((user: any) => [normalizeText(user?.id), user])
     );
 
-    let visibleCards: any[] = [];
-    let viewerScope = "";
+    let visibleCards: any[];
+    let viewerScope: string;
 
-    if (
-      callerRole === "pre_ets" &&
-      normalizeText(caller?.access_level).toLowerCase() ===
-        "client_portal"
-    ) {
+    if (isStudentPortalUser(caller)) {
       const studentClient = await resolveStudentClient(
         base44,
         caller,
         organizationId
       );
       const studentClientId = normalizeText(studentClient?.id);
-
       viewerScope = "student";
       visibleCards = validCards.filter(
-        (card: any) =>
-          normalizeText(card?.client_id) === studentClientId
+        (card: any) => normalizeText(card?.client_id) === studentClientId
       );
     } else if (callerRole === "admin") {
       viewerScope = "administrator";
       visibleCards = validCards;
     } else if (callerRole === "management") {
-      const managedStaffUserIds = getManagedStaffUserIds(
-        callerId,
-        activeAssignments
+      const activeUsersById = new Map(
+        activeCanonicalUsers.map((user: any) => [normalizeText(user?.id), user])
       );
+      const directReportIds = new Set<string>([callerId]);
+
+      for (const assignment of activeAssignments) {
+        const employeeId = normalizeText(assignment?.employee_user_id);
+
+        if (
+          normalizeText(assignment?.manager_user_id) === callerId &&
+          activeUsersById.has(employeeId)
+        ) {
+          directReportIds.add(employeeId);
+        }
+      }
 
       viewerScope = "management";
       visibleCards = validCards.filter((card: any) =>
-        managedStaffUserIds.has(
-          normalizeText(card?.assigned_staff_user_id)
-        )
+        directReportIds.has(normalizeText(card?.assigned_staff_user_id))
       );
     } else if (callerRole === "employee") {
       viewerScope = "assigned_staff";
@@ -520,22 +400,17 @@ Deno.serve(async (req) => {
 
     if (requestedTimeCardId) {
       visibleCards = visibleCards.filter(
-        (card: any) =>
-          normalizeText(card?.id) === requestedTimeCardId
+        (card: any) => normalizeText(card?.id) === requestedTimeCardId
       );
 
       if (visibleCards.length === 0) {
-        throw new RequestError(
-          404,
-          "Pre-ETS Time Card not found."
-        );
+        throw new RequestError(404, "Pre-ETS Time Card not found.");
       }
     }
 
     if (requestedClientId) {
       visibleCards = visibleCards.filter(
-        (card: any) =>
-          normalizeText(card?.client_id) === requestedClientId
+        (card: any) => normalizeText(card?.client_id) === requestedClientId
       );
     }
 
@@ -546,19 +421,11 @@ Deno.serve(async (req) => {
     }
 
     const cards = sortCards(visibleCards).map((card: any) => {
-      const client = clientById.get(
-        normalizeText(card?.client_id)
-      );
+      const client = clientById.get(normalizeText(card?.client_id));
       const assignedStaff = internalUserById.get(
         normalizeText(card?.assigned_staff_user_id)
       );
-
-      return projectCard(
-        card,
-        client,
-        assignedStaff,
-        includeEntries
-      );
+      return projectCard(card, client, assignedStaff, includeEntries);
     });
 
     return Response.json({
@@ -568,30 +435,20 @@ Deno.serve(async (req) => {
       cards,
       card_count: cards.length,
       time_card:
-        requestedTimeCardId && cards.length === 1
-          ? cards[0]
-          : null,
+        requestedTimeCardId && cards.length === 1 ? cards[0] : null,
     });
   } catch (error: any) {
-    const status =
-      error instanceof RequestError ? error.status : 500;
-
+    const status = error instanceof RequestError ? error.status : 500;
     const message =
       error instanceof RequestError
         ? error.message
-        : error?.message ||
-          "Unable to load authorized Pre-ETS Time Cards.";
+        : "Unable to load authorized Pre-ETS Time Cards.";
 
     if (!(error instanceof RequestError)) {
       console.error(
-        "getAuthorizedPreEtsTimeCards error:",
-        error?.message || error
-      );
+        "getAuthorizedPreEtsTimeCards error:", error?.message || error);
     }
 
-    return Response.json(
-      { error: message },
-      { status }
-    );
+    return Response.json({ error: message }, { status });
   }
 });
