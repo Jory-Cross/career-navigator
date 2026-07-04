@@ -68,5 +68,11 @@
     "short_description",
     "full_description",
     "display_label"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
