@@ -96,13 +96,33 @@ export function useCohorts(user) {
       toast.error(err?.message || "Failed to create cohort"),
   });
 
-  const updateCohort = useMutation({
-    mutationFn: async ({ id, patch }) => base44.entities.CETrainingCohort.update(id, patch),
+    const updateCohort = useMutation({
+    mutationFn: async ({ id, patch }) => {
+      const res = await base44.functions.invoke(
+        "manageCETrainingCohort",
+        {
+          action: "update",
+          cohort_id: id,
+          cohort: patch,
+        }
+      );
+
+      const response = res?.data || res;
+
+      if (!response?.ok) {
+        throw new Error(
+          response?.error || "Unable to update the CE cohort."
+        );
+      }
+
+      return response.cohort;
+    },
     onSuccess: () => {
       toast.success("Cohort updated");
       invalidateAll();
     },
-    onError: (err) => toast.error(err?.message || "Failed to update cohort"),
+    onError: (err) =>
+      toast.error(err?.message || "Failed to update cohort"),
   });
 
   const addMember = useMutation({
