@@ -80,5 +80,11 @@
     "client_id",
     "date",
     "duration_minutes"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
