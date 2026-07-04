@@ -15,6 +15,13 @@ const ALLOWED_COHORT_STATUSES = new Set([
   "completed",
 ]);
 
+const PLATFORM_OWNER_ROLE = "platform_owner";
+
+const CONTROLLED_TEST_WAIVER_BILLING_EVENT_PREFIX =
+  "test_waived_training_registration";
+
+const CONTROLLED_TEST_WAIVER_AMOUNT_CENTS = 4900;
+
 const ROLE_ACCESS_LEVELS: Record<string, string> = {
   admin: "admin",
   management: "staff",
