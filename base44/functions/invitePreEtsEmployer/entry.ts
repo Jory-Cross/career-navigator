@@ -371,20 +371,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser?.id) {
-      return Response.json(
-        {
-          success: false,
-          error: "Please sign in before inviting an employer.",
-        },
-        { status: 401 }
-      );
-    }
-
-    const requestBody = await req.json().catch(() => ({}));
+        const requestBody = await req.json().catch(() => ({}));
     const email = normalizeEmail(requestBody?.email);
     const clientId = normalizeText(requestBody?.clientId);
 
@@ -402,6 +389,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me();
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        {
+          success: false,
+          error: "Please sign in before inviting an employer.",
+        },
+        { status: 401 }
+      );
+    }
+
     const {
       caller,
       client,
@@ -411,7 +411,6 @@ Deno.serve(async (req) => {
       authenticatedUser.id,
       clientId
     );
-
     const assignedEmployerId = normalizeText(
       client?.assigned_employer_id
     );
