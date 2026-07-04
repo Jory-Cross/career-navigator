@@ -40,36 +40,31 @@
     },
     "manager_id": {
       "type": "string",
-      "description": "ID of the manager/admin who invited this user"
+      "description": "Legacy compatibility/display field. Never use for security authorization; use ManagerEmployeeAssignment."
     },
     "linked_client_id": {
       "type": "string",
       "description": "Client record ID linked to this user (for client portal users)"
     },
-    "phone": {
-      "type": "string"
-    },
-    "title": {
-      "type": "string"
-    },
-    "avatar_url": {
-      "type": "string"
-    },
-    "timezone": {
-      "type": "string"
-    },
+    "phone": { "type": "string" },
+    "title": { "type": "string" },
+    "avatar_url": { "type": "string" },
+    "timezone": { "type": "string" },
     "cohort_id": {
       "type": "string",
       "description": "CE Training cohort ID (for ce_instructor and ce_student roles)"
     },
     "cohort_role": {
       "type": "string",
-      "enum": [
-        "instructor",
-        "student"
-      ],
+      "enum": ["instructor", "student"],
       "description": "Role within the CE Training cohort (instructor manages, student participates)"
     }
   },
-  "required": []
+  "required": [],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
