@@ -17,10 +17,30 @@ export default function ManagerAssignments({ allUsers }) {
   const managers = allUsers.filter((u) => !u.is_archived && u.role === "management");
   const employees = allUsers.filter((u) => !u.is_archived && u.role === "employee");
 
-  const { data: assignments = [], isLoading } = useQuery({
+   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ["managerAssignments"],
-    queryFn: () => base44.entities.ManagerEmployeeAssignment.filter({ is_active: true }),
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "manageManagerEmployeeAssignment",
+        {
+          action: "list",
+        }
+      );
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Manager assignments could not be loaded."
+        );
+      }
+
+      return Array.isArray(data.assignments)
+        ? data.assignments
+        : [];
+    },
     staleTime: 30 * 1000,
+    retry: false,
   });
 
   // Build a set of already-assigned pairs for dedup check
