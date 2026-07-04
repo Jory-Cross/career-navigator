@@ -276,45 +276,40 @@ function choosePrimaryEnrollment(enrollments: any[], certification: any) {
  */
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json(
-        { ok: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const platformAdminRows =
-      await base44.asServiceRole.entities.PlatformAdmin.filter({
-        user_id: user.id,
-        is_active: true,
-      });
-
-    const platformRoles = Array.from(
-      new Set(
-        (Array.isArray(platformAdminRows) ? platformAdminRows : [])
-          .filter((row) => row?.is_active !== false)
-          .map((row) => row?.platform_role)
-          .filter(Boolean)
-      )
-    );
-
-    const canViewCertificationManager = platformRoles.some((role) =>
-      ALLOWED_PLATFORM_ROLES.has(role)
-    );
-
-    if (!canViewCertificationManager) {
+    if (req.method !== "POST") {
       return Response.json(
         {
           ok: false,
           error:
-            "Only an active Platform Owner may view CE practitioner certification administration.",
+            "This CE practitioner certification-manager request must use POST.",
         },
-        { status: 403 }
+        { status: 405 }
       );
     }
+
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(
+      () => null
+    );
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Please sign in before viewing CE practitioner certification administration.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const {
+      caller: user,
+      platformRoles,
+    } = await resolveCanonicalPlatformOwner(
+      base44,
+      authenticatedUser.id
+    );
 
     const [
       userRows,
