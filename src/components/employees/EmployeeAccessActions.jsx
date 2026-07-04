@@ -16,10 +16,34 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
   // Determine if employee is inactive/offboarded
   const isInactive = employee.is_active === false || !employee.access_level || employee.access_level === '';
 
-   // Pending invitation records are no longer read directly in the browser.
-  // Authorized administrators and managers can still resend the secured staff invitation.
-  const hasPendingInvite = false;
+   const { data: employeeAccessStatus } = useQuery({
+    queryKey: ["employee-access-status", employee?.id],
+    queryFn: async () => {
+      const response = await base44.functions.invoke(
+        "getEmployeeAccessStatus",
+        {
+          employee_id: employee.id,
+        }
+      );
 
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Employee invitation status could not be reviewed."
+        );
+      }
+
+      return {
+        hasPendingInvite: data.has_pending_invite === true,
+      };
+    },
+    enabled: canManage && !!employee?.id && !isInactive,
+    retry: false,
+  });
+
+  const hasPendingInvite =
+    employeeAccessStatus?.hasPendingInvite === true;
   // Determine registration status from presence of full_name
   const isRegistered = !!employee.full_name && employee.full_name.trim().length > 0;
 
