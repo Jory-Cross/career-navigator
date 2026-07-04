@@ -2,115 +2,25 @@
   "name": "Task",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "client_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Associated client IDs"
-    },
-    "title": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "in_progress",
-        "completed",
-        "cancelled"
-      ],
-      "default": "pending"
-    },
-    "is_archived": {
-      "type": "boolean",
-      "default": false,
-      "description": "True when task should be hidden but preserved"
-    },
-    "priority": {
-      "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high",
-        "urgent"
-      ],
-      "default": "medium"
-    },
-    "due_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "category": {
-      "type": "string",
-      "enum": [
-        "follow_up",
-        "resume",
-        "application",
-        "interview_prep",
-        "networking",
-        "admin",
-        "other"
-      ],
-      "default": "follow_up"
-    },
-    "notes": {
-      "type": "string",
-      "description": "General/internal staff notes"
-    },
-    "staff_notes": {
-      "type": "string",
-      "description": "Notes entered by staff"
-    },
-    "client_notes": {
-      "type": "string",
-      "description": "Notes entered by the client when completing or updating the task"
-    },
-    "checklist": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string"
-          },
-          "completed": {
-            "type": "boolean",
-            "default": false
-          }
-        }
-      }
-    },
-    "recommendation_id": {
-      "type": "string",
-      "description": "Optional linked recommendation/job field ID"
-    },
-    "assigned_to_client": {
-      "type": "boolean",
-      "default": false,
-      "description": "True when task should appear in the client portal"
-    },
-    "assigned_by": {
-      "type": "string",
-      "description": "Staff user/email who assigned the task"
-    },
-    "completed_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "client_completed_at": {
-      "type": "string",
-      "format": "date-time"
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_ids": { "type": "array", "items": { "type": "string" }, "description": "Associated client IDs" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "cancelled"], "default": "pending" },
+    "is_archived": { "type": "boolean", "default": false, "description": "True when task should be hidden but preserved" },
+    "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"], "default": "medium" },
+    "due_date": { "type": "string", "format": "date" },
+    "category": { "type": "string", "enum": ["follow_up", "resume", "application", "interview_prep", "networking", "admin", "other"], "default": "follow_up" },
+    "notes": { "type": "string", "description": "General/internal staff notes" },
+    "staff_notes": { "type": "string", "description": "Notes entered by staff" },
+    "client_notes": { "type": "string", "description": "Notes entered by the client when completing or updating the task" },
+    "checklist": { "type": "array", "items": { "type": "object", "properties": { "text": { "type": "string" }, "completed": { "type": "boolean", "default": false } } } },
+    "recommendation_id": { "type": "string", "description": "Optional linked recommendation/job field ID" },
+    "assigned_to_client": { "type": "boolean", "default": false, "description": "True when task should appear in the client portal" },
+    "assigned_by": { "type": "string", "description": "Staff user/email who assigned the task" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "client_completed_at": { "type": "string", "format": "date-time" }
   },
-  "required": [
-    "title"
-  ]
+  "required": ["title"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
