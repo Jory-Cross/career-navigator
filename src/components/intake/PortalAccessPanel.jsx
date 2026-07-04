@@ -101,49 +101,45 @@ export default function PortalAccessPanel({ client, onRefresh }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [emailFailedNote, setEmailFailedNote] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!client?.email || !client?.id) return;
-    setLoading(true);
-    try {
-      // Query PRAs by email, Users by linked_client_id (primary) AND by email (fallback)
-      const [pras, usersByClientId, usersByEmail] = await Promise.all([
-        base44.entities.PendingRoleAssignment.filter({ email: client.email.toLowerCase().trim() }),
-        base44.entities.User.filter({ linked_client_id: client.id }).catch(() => []),
-        base44.entities.User.filter({ email: client.email.toLowerCase().trim() }).catch(() => []),
-      ]);
+   const load = useCallback(async () => {
+    if (!client?.id) {
+      setPra(null);
+      setAllPras([]);
+      setPortalUser(null);
+      setLoading(false);
+      return;
+    }
 
-      // Merge user results: prefer linked_client_id match, dedupe by id
-      const allUsers = [...(usersByClientId || [])];
-      for (const u of (usersByEmail || [])) {
-        if (!allUsers.find(x => x.id === u.id)) allUsers.push(u);
+    setLoading(true);
+
+    try {
+      const response = await base44.functions.invoke(
+        "getClientPortalAccessStatus",
+        {
+          clientId: client.id,
+        }
+      );
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Client portal access could not be reviewed."
+        );
       }
 
-      const clientPras = (pras || []).filter(p =>
-        p.client_id === client.id || p.access_level === 'client_portal'
-      ).sort((a, b) => new Date(b.invited_at || b.created_date) - new Date(a.invited_at || a.created_date));
-
-      setAllPras(clientPras);
-      // Pick the most meaningful PRA: accepted > pending > others
-      const best = clientPras.find(p => p.status === 'accepted')
-        || clientPras.find(p => p.status === 'pending')
-        || clientPras[0]
-        || null;
-      setPra(best);
-
-      // Find active portal user: must have client_portal access_level and correct role
-      // Primary: linked_client_id match. Secondary: email match with client_portal access.
-      const pUser =
-        allUsers.find(u => u.linked_client_id === client.id && u.access_level === 'client_portal' && u.role === 'client') ||
-        allUsers.find(u => u.linked_client_id === client.id && u.access_level === 'client_portal') ||
-        allUsers.find(u => u.email?.toLowerCase() === client.email?.toLowerCase() && u.access_level === 'client_portal') ||
-        null;
-      setPortalUser(pUser);
+      setPra(data.invitation || null);
+      setAllPras(Array.isArray(data.invitations) ? data.invitations : []);
+      setPortalUser(data.portal_user || null);
     } catch (err) {
-      console.error('[PortalAccessPanel] load failed:', err);
+      console.error("[PortalAccessPanel] load failed:", err);
+      setPra(null);
+      setAllPras([]);
+      setPortalUser(null);
     } finally {
       setLoading(false);
     }
-  }, [client?.email, client?.id]);
+  }, [client?.id]);
 
   useEffect(() => { load(); }, [load]);
 
