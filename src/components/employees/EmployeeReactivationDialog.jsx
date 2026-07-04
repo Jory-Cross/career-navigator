@@ -12,24 +12,76 @@ export default function EmployeeReactivationDialog({ open, onOpenChange, employe
   const [loading, setLoading] = useState(false);
   const [managers, setManagers] = useState([]);
 
-  useEffect(() => {
-    if (open && currentUser?.role === 'admin') {
-      // Load list of managers for admin to assign
-      base44.entities.User.filter({}, "-created_date", 100)
-        .then(users => {
-          const mgrs = users.filter(u => u.role === 'management' && u.data?.is_active !== false);
-          setManagers(mgrs);
-          // Pre-select current manager if exists
-          if (employee.manager_id) {
-            setSelectedManagerId(employee.manager_id);
+    useEffect(() => {
+    let cancelled = false;
+
+    const loadManagers = async () => {
+      if (!open) {
+        return;
+      }
+
+      if (currentUser?.role === "admin") {
+        try {
+          const response = await base44.functions.invoke(
+            "getOrgUsers",
+            {}
+          );
+
+          const data = response?.data || {};
+
+          if (data.ok === false) {
+            throw new Error(
+              data.error ||
+                "Organization managers could not be loaded."
+            );
           }
-        })
-        .catch(() => {});
-    } else if (open && currentUser?.role === 'management') {
-      // Management can only assign to themselves
-      setSelectedManagerId(currentUser.id);
-    }
-  }, [open, currentUser, employee]);
+
+          const managerUsers = (
+            Array.isArray(data.users) ? data.users : []
+          ).filter(
+            (user) =>
+              user?.id !== employee?.id &&
+              user?.is_active !== false &&
+              user?.is_archived !== true &&
+              user?.role === "management" &&
+              user?.access_level === "staff"
+          );
+
+          if (!cancelled) {
+            setManagers(managerUsers);
+            setSelectedManagerId(employee?.manager_id || "");
+          }
+        } catch (error) {
+          if (!cancelled) {
+            setManagers([]);
+            toast.error(
+              error?.message ||
+                "Organization managers could not be loaded."
+            );
+          }
+        }
+
+        return;
+      }
+
+      if (!cancelled && currentUser?.role === "management") {
+        setManagers([]);
+        setSelectedManagerId(currentUser.id || "");
+      }
+    };
+
+    loadManagers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    currentUser?.id,
+    currentUser?.role,
+    employee?.id,
+    employee?.manager_id,
+  ]);
 
   const handleReactivate = async () => {
     setLoading(true);
