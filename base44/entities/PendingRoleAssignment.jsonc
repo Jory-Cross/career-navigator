@@ -96,8 +96,14 @@
       "description": "Current invitation status. Payment settlement remains authoritative in OrganizationBillingEvent."
     }
   },
-  "required": [
+   "required": [
     "email",
     "role"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
