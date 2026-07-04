@@ -297,13 +297,34 @@ export default function CohortDetail() {
         return null;
       }
 
-      return base44.entities.CETrainingCohort.get(cohort_id);
+      const res = await base44.functions.invoke(
+        "getAuthorizedCohorts",
+        {}
+      );
+
+      const payload = res?.data || res;
+
+      if (!payload?.ok) {
+        throw new Error(
+          payload?.error || "Unable to load this authorized cohort."
+        );
+      }
+
+      const authorizedCohorts = Array.isArray(payload.cohorts)
+        ? payload.cohorts
+        : [];
+
+      return (
+        authorizedCohorts.find(
+          (candidate) =>
+            String(candidate?.id || "").trim() === cohort_id
+        ) || null
+      );
     },
     enabled: !!cohort_id && !!user,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
-
   const {
     data: cohortRoster = {
       memberships: [],
