@@ -242,18 +242,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { organizationId } = await resolveCanonicalAdmin(
+        const {
+      callerId,
+      callerRole,
+      organizationId,
+    } = await resolveCanonicalAssignmentCaller(
       base44,
       authenticatedUser.id
     );
 
+    if (action !== "list" && callerRole !== "admin") {
+      throw new RequestError(
+        403,
+        "Only organization administrators may change manager assignments."
+      );
+    }
+
     if (action === "list") {
+      const assignmentFilters: Record<string, string | boolean> = {
+        org_id: organizationId,
+        is_active: true,
+      };
+
+      if (callerRole === "management") {
+        assignmentFilters.manager_user_id = callerId;
+      }
+
       const assignmentRows =
         await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter(
-          {
-            org_id: organizationId,
-            is_active: true,
-          }
+          assignmentFilters
         );
 
       const assignments = asArray(assignmentRows)
@@ -263,7 +280,11 @@ Deno.serve(async (req) => {
             assignment?.is_archived !== true &&
             normalizeText(assignment?.org_id) === organizationId &&
             normalizeText(assignment?.manager_user_id) &&
-            normalizeText(assignment?.employee_user_id)
+            normalizeText(assignment?.employee_user_id) &&
+            (
+              callerRole === "admin" ||
+              normalizeText(assignment?.manager_user_id) === callerId
+            )
         )
         .map(projectAssignment);
 
