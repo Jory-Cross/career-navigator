@@ -3,13 +3,10 @@ import { base44 } from "@/api/base44Client";
 /**
  * Transitional compatibility helper.
  *
- * All TimeEntry creation now goes through the secure server-side
- * mutateAuthorizedTimeEntry function. The function derives tenant,
- * employee ownership, EntryType flags, authorization enforcement,
- * field-answer validation, and ReportFieldAnswer persistence.
- *
- * The response shape remains compatible with existing callers:
- * { success, time_entry_id, field_answer_id, report_ready, completion_percent }
+ * All TimeEntry creation goes through the authorized server-side
+ * mutateAuthorizedTimeEntry route. The server derives tenant scope, employee
+ * authority, EntryType flags, authorization enforcement, field-answer
+ * validation, and ReportFieldAnswer persistence.
  */
 export async function submitTimeEntryWithDualWrite({
   clientId,
@@ -34,79 +31,54 @@ export async function submitTimeEntryWithDualWrite({
       ? fieldAnswers
       : {};
 
-  const response = await base44.functions.invoke(
-    "mutateAuthorizedTimeEntry",
-    {
-      action: "create",
-      time_entry: {
-        client_id: clientId || null,
-        ...(employeeId ? { employee_id: employeeId } : {}),
-        entry_type_id: entryTypeId,
-        entry_type_code: entryTypeCode,
-        date,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        duration_minutes: durationMinutes,
-        location: location || null,
-        description: description || null,
-        employer_name: employerName || null,
-        service_authorization_id: serviceAuthorizationId || null,
-        field_answers: safeFieldAnswers,
-        status: asDraft ? "draft" : "submitted",
-      },
-    }
-  );
+  const response = await base44.functions.invoke("mutateAuthorizedTimeEntry", {
+    action: "create",
+    time_entry: {
+      client_id: clientId || null,
+      ...(employeeId ? { employee_id: employeeId } : {}),
+      entry_type_id: entryTypeId,
+      entry_type_code: entryTypeCode,
+      date,
+      start_time: startTime || null,
+      end_time: endTime || null,
+      duration_minutes: durationMinutes,
+      location: location || null,
+      description: description || null,
+      employer_name: employerName || null,
+      service_authorization_id: serviceAuthorizationId || null,
+      field_answers: safeFieldAnswers,
+      status: asDraft ? "draft" : "submitted",
+    },
+  });
 
-  const data = response?.data || {};
+  const data = response?.data || response || {};
 
   if (!data.success) {
-    throw new Error(
-      data.error || "Failed to submit TimeEntry securely."
-    );
+    throw new Error(data.error || "Failed to submit TimeEntry securely.");
   }
 
   return data;
 }
 
 /**
- * Transitional read helper.
+ * Deprecated compatibility export.
  *
- * Do not use this helper as permission authority. Secure TimeEntry reads
- * must use getAuthorizedTimeEntries until this compatibility helper is retired.
+ * TimeEntry records are server-only during remediation. Call
+ * getAuthorizedTimeEntries for scoped reads instead.
  */
-export async function validateTimeEntryDualWrite(timeEntryId) {
-  const entry = await base44.entities.TimeEntry.read(timeEntryId);
-
-  return {
-    entry_type_id: entry.entry_type_id,
-    entry_type_code: entry.entry_type_code,
-    reporting_period_key: entry.reporting_period_key,
-    report_ready: entry.report_ready,
-    legacy_category: entry.legacy_category,
-    uses_new_structure:
-      !!entry.entry_type_id && !!entry.entry_type_code,
-    is_legacy:
-      !!entry.legacy_category && !entry.entry_type_id,
-  };
+export async function validateTimeEntryDualWrite() {
+  throw new Error(
+    "This legacy TimeEntry read helper is unavailable during security remediation."
+  );
 }
 
 /**
- * Transitional read helper.
+ * Deprecated compatibility export.
  *
- * Do not use this helper as permission authority. It remains only for
- * compatibility while ReportFieldAnswer read paths are migrated.
+ * ReportFieldAnswer records are server-only during remediation.
  */
-export async function getFieldAnswerWithSnapshot(fieldAnswerId) {
-  const answer = await base44.entities.ReportFieldAnswer.read(
-    fieldAnswerId
+export async function getFieldAnswerWithSnapshot() {
+  throw new Error(
+    "This legacy field-answer read helper is unavailable during security remediation."
   );
-
-  return {
-    answers: answer.answers,
-    schema_snapshot: answer.field_schema_snapshot,
-    schema_version: answer.field_schema_version,
-    submitted_at: answer.submitted_at,
-    completion_percent: answer.completion_percent,
-    validation_errors: answer.validation_errors || [],
-  };
 }
