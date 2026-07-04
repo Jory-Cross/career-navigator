@@ -431,7 +431,9 @@ async function resolveEnrollmentAndSettlement(
   studentMembership: any,
   studentEmail: string
 ) {
-  const studentUserId = normalizeIdentifier(studentMembership?.user_id);
+  const studentUserId = normalizeIdentifier(
+    studentMembership?.user_id
+  );
 
   const enrollmentRows =
     await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
@@ -464,19 +466,18 @@ async function resolveEnrollmentAndSettlement(
     enrollment?.organization_billing_event_id
   );
 
-  const enrollmentMatches =
+  const enrollmentHasCoreLinks =
     enrollment?.is_active !== false &&
     enrollment?.is_archived !== true &&
     normalizeEmail(enrollment?.student_email) === studentEmail &&
     normalizeIdentifier(enrollment?.cohort_member_id) ===
       normalizeIdentifier(studentMembership?.id) &&
-    !!normalizeIdentifier(enrollment?.pending_role_assignment_id) &&
     !!normalizeText(enrollment?.payment_settled_at) &&
     !!normalizeText(enrollment?.registered_at) &&
     !!billingEventId &&
     ["active", "training_completed"].includes(enrollmentStatus);
 
-  if (!enrollmentMatches) {
+  if (!enrollmentHasCoreLinks) {
     throw new RequestError(
       409,
       "The durable CE enrollment is incomplete or is not safely linked to this active student membership."
@@ -513,12 +514,45 @@ async function resolveEnrollmentAndSettlement(
     );
   }
 
+  const pendingRoleAssignmentId = normalizeIdentifier(
+    enrollment?.pending_role_assignment_id
+  );
+
+  const hasAcceptedInvitation = pendingRoleAssignmentId
+    ? await hasAcceptedCEStudentInvitation(
+        base44,
+        pendingRoleAssignmentId,
+        organizationId,
+        cohortId,
+        studentEmail,
+        enrollment
+      )
+    : false;
+
+  const isControlledTestWaiver = !pendingRoleAssignmentId
+    ? await isControlledTestWaiverBillingEvent(
+        base44,
+        billingEvent,
+        organizationId,
+        cohortId,
+        studentUserId,
+        studentEmail
+      )
+    : false;
+
+  if (!hasAcceptedInvitation && !isControlledTestWaiver) {
+    throw new RequestError(
+      409,
+      "This CE enrollment is not linked to an accepted invitation or a verified Platform Owner test-waiver record."
+    );
+  }
+
   return {
     enrollment,
     enrollmentStatus,
+    isControlledTestWaiver,
   };
 }
-
 async function assertNoCertificationReviewStarted(
   base44: any,
   studentUserId: string
