@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const {
+        const {
       callerId,
       organizationId,
       roleProfile,
@@ -271,6 +271,16 @@ Deno.serve(async (req) => {
       base44,
       authenticatedUser.id
     );
+
+    if (
+      !hasCohortContext &&
+      roleProfile.role === "ce_instructor"
+    ) {
+      throw new RequestError(
+        403,
+        "CE instructors may review roster candidates only for a cohort where they are an active manager."
+      );
+    }
 
     if (hasCohortContext) {
       await requireCohortRosterAuthority(
@@ -281,7 +291,6 @@ Deno.serve(async (req) => {
         cohortId
       );
     }
-
     const organizationUserRows =
       await base44.asServiceRole.entities.User.filter({
         org_id: organizationId,
