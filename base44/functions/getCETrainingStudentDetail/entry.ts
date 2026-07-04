@@ -209,15 +209,16 @@ function isValidEnrollmentForCohort(
 
 function isValidMemberForCohort(
   membership: any,
-  _organizationId: string,
+  organizationId: string,
   cohortId: string
 ) {
   return (
+    normalizeText(membership?.org_id) === organizationId &&
     normalizeText(membership?.cohort_id) === cohortId &&
-    normalizeText(membership?.cohort_role) === "member"
+    normalizeText(membership?.cohort_role).toLowerCase() ===
+      "member"
   );
 }
-
 function isValidInviteForCohort(
   invite: any,
   organizationId: string,
