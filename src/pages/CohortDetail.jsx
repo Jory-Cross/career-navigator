@@ -1096,12 +1096,12 @@ export default function CohortDetail() {
 
   return (
     <div className="space-y-6">
-      <AddMemberDialog
-        open={showAddManagerDialog}
-        onOpenChange={setShowAddManagerDialog}
-        title="Add Manager"
-        cohortRole="manager"
-        allowedRoles={["management", "ce_instructor"]}
+           <AddMemberDialog
+        open={showAddTrainerDialog}
+        onOpenChange={setShowAddTrainerDialog}
+        title="Add Trainer"
+        cohortRole="trainer"
+        allowedRoles={["ce_instructor"]}
         existingMemberUserIds={existingManagerUserIds}
         onSubmit={handleAddManager}
       />
