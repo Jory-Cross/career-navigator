@@ -233,14 +233,12 @@ export default function CohortDetail() {
 
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
+    const [showAddManagerDialog, setShowAddManagerDialog] = useState(false);
   const [showAddTrainerDialog, setShowAddTrainerDialog] = useState(false);
-  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [showInviteStudentDialog, setShowInviteStudentDialog] =
     useState(false);
   const [addingManager, setAddingManager] = useState(false);
   const [addingTrainer, setAddingTrainer] = useState(false);
-  const [addingMember, setAddingMember] = useState(false);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const [invoicePreviewRequestKey, setInvoicePreviewRequestKey] =
