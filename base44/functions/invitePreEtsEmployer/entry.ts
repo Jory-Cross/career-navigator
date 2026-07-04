@@ -266,17 +266,25 @@ async function resolveAuthorizedInvitationContext(
     );
   }
 
-  const callerId = normalizeText(caller?.id);
+   const callerId = normalizeText(caller?.id);
   const callerRole = normalizeText(caller?.role).toLowerCase();
+  const callerAccessLevel = normalizeText(
+    caller?.access_level
+  ).toLowerCase();
   const organizationId = normalizeText(caller?.org_id);
 
-  if (!STAFF_ROLES.has(callerRole)) {
+  const expectedAccessLevel =
+    callerRole === "admin" ? "admin" : "staff";
+
+  if (
+    !STAFF_ROLES.has(callerRole) ||
+    callerAccessLevel !== expectedAccessLevel
+  ) {
     throw new RequestError(
       403,
       "Only authorized staff may invite a Pre-ETS employer."
     );
   }
-
   if (!callerId || !organizationId) {
     throw new RequestError(
       403,
