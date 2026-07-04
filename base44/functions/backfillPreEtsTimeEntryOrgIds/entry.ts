@@ -1,7 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const APPLY_CONFIRMATION = "BACKFILL_PRE_ETS_TIME_ENTRY_ORG_IDS";
-
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -12,6 +10,13 @@ function asArray<T = any>(value: unknown): T[] {
 
 function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function isCanonicalAdministrator(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "admin" &&
+    normalizeText(user?.access_level).toLowerCase() === "admin"
+  );
 }
 
 function isPreEtsClientInOrganization(client: any, organizationId: string) {
@@ -39,8 +44,21 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { error: "This route accepts POST requests only." },
         { status: 405 }
+      );
+    }
+
+    const requestBody: any = await req.json().catch(() => ({}));
+    const mode = normalizeText(requestBody?.mode) || "dry_run";
+
+    if (mode !== "dry_run") {
+      return Response.json(
+        {
+          error:
+            "This backfill route is limited to a dry-run audit during security remediation. No records can be changed from this route.",
+        },
+        { status: 403 }
       );
     }
 
@@ -49,29 +67,8 @@ Deno.serve(async (req) => {
 
     if (!authenticatedUser?.id) {
       return Response.json(
-        { error: "Unauthorized." },
+        { error: "You must be signed in to run this audit." },
         { status: 401 }
-      );
-    }
-
-    const requestBody = await req.json().catch(() => ({}));
-    const mode = normalizeText(requestBody?.mode) || "dry_run";
-    const confirmation = normalizeText(requestBody?.confirmation);
-
-    if (mode !== "dry_run" && mode !== "apply") {
-      return Response.json(
-        { error: 'mode must be either "dry_run" or "apply".' },
-        { status: 400 }
-      );
-    }
-
-    if (mode === "apply" && confirmation !== APPLY_CONFIRMATION) {
-      return Response.json(
-        {
-          error:
-            "Explicit backfill confirmation is required before records can be changed.",
-        },
-        { status: 400 }
       );
     }
 
@@ -79,35 +76,21 @@ Deno.serve(async (req) => {
       authenticatedUser.id
     ).catch(() => null);
 
-    if (!caller || !isActive(caller)) {
+    if (!caller || !isActive(caller) || !isCanonicalAdministrator(caller)) {
       return Response.json(
         {
           error:
-            "Authenticated user record was not found or is inactive.",
+            "Only an active organization administrator may review Pre-ETS time-entry repair candidates.",
         },
         { status: 403 }
       );
     }
 
-    const callerRole = normalizeText(caller?.role).toLowerCase();
     const organizationId = normalizeText(caller?.org_id);
-
-    if (callerRole !== "admin") {
-      return Response.json(
-        {
-          error:
-            "Only an active administrator may backfill Pre-ETS time-entry organization IDs.",
-        },
-        { status: 403 }
-      );
-    }
 
     if (!organizationId) {
       return Response.json(
-        {
-          error:
-            "Your administrator account is not assigned to an organization.",
-        },
+        { error: "Your administrator account is not assigned to an organization." },
         { status: 403 }
       );
     }
@@ -118,10 +101,7 @@ Deno.serve(async (req) => {
 
     if (!organization || !isActive(organization)) {
       return Response.json(
-        {
-          error:
-            "Your organization assignment is invalid or inactive.",
-        },
+        { error: "Your organization is inactive or unavailable." },
         { status: 403 }
       );
     }
@@ -176,57 +156,20 @@ Deno.serve(async (req) => {
       candidates.push({ entry, client });
     }
 
-    if (mode === "dry_run") {
-      return Response.json({
-        ok: true,
-        mode: "dry_run",
-        organization_id: organizationId,
-        candidate_count: candidates.length,
-        candidates: candidates.map(({ entry, client }) =>
-          projectCandidate(entry, client)
-        ),
-        already_tagged_for_this_organization:
-          alreadyTaggedForThisOrganization,
-        excluded_foreign_organization: excludedForeignOrganization,
-        excluded_without_authorized_pre_ets_client:
-          excludedWithoutAuthorizedPreEtsClient,
-      });
-    }
-
-    const updatedEntryIds: string[] = [];
-    const updateFailures: Array<{ id: string; error: string }> = [];
-
-    for (const { entry } of candidates) {
-      const entryId = normalizeText(entry?.id);
-
-      try {
-        await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(
-          entryId,
-          { org_id: organizationId }
-        );
-
-        updatedEntryIds.push(entryId);
-      } catch (error: any) {
-        updateFailures.push({
-          id: entryId,
-          error: error?.message || "Unable to update this entry.",
-        });
-      }
-    }
-
     return Response.json({
       ok: true,
-      mode: "apply",
+      mode: "dry_run",
       organization_id: organizationId,
       candidate_count: candidates.length,
-      updated_count: updatedEntryIds.length,
-      updated_entry_ids: updatedEntryIds,
-      update_failures: updateFailures,
+      candidates: candidates.map(({ entry, client }) =>
+        projectCandidate(entry, client)
+      ),
       already_tagged_for_this_organization:
         alreadyTaggedForThisOrganization,
       excluded_foreign_organization: excludedForeignOrganization,
       excluded_without_authorized_pre_ets_client:
         excludedWithoutAuthorizedPreEtsClient,
+      apply_disabled: true,
     });
   } catch (error: any) {
     console.error(
@@ -235,11 +178,7 @@ Deno.serve(async (req) => {
     );
 
     return Response.json(
-      {
-        error:
-          error?.message ||
-          "Unable to backfill Pre-ETS time-entry organization IDs.",
-      },
+      { error: "Unable to audit Pre-ETS time-entry repair candidates." },
       { status: 500 }
     );
   }
