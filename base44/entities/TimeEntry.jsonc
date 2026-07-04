@@ -44,7 +44,7 @@
     },
     "description": {
       "type": "string",
-      "description": "Internal staff note only \u2014 not used for PDF reporting"
+      "description": "Internal staff note only — not used for PDF reporting"
     },
     "form_data": {
       "type": "object",
@@ -74,6 +74,16 @@
       ],
       "default": "submitted"
     },
+    "authorization_usage_eligible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Server-set forward-only flag for authorization accounting. Historical entries without this flag do not consume authorization hours."
+    },
+    "authorization_usage_eligible_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp recorded only by the authorized TimeEntry mutation route when it marks a new submitted entry eligible."
+    },
     "legacy_category": {
       "type": "string",
       "description": "Backward-compat field for pre-EntryType category enum. Do not use for new entries."
@@ -92,7 +102,7 @@
       "description": "ID of GeneratedReport that locked this entry. Null if not yet in a final report."
     }
   },
-   "required": [
+  "required": [
     "org_id",
     "employee_id",
     "date",
