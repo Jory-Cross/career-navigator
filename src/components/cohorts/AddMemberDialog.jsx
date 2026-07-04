@@ -61,11 +61,15 @@ export default function AddMemberDialog({
     data: assignedStudentIds = [],
     isLoading: assignedStudentsLoading,
   } = useQuery({
-    queryKey: ["ceTraining", "assignedStudentIds"],
+       queryKey: [
+      "ceTraining",
+      "assignedStudentIds",
+      cohortId || "unscoped",
+    ],
     queryFn: async () => {
       const res = await base44.functions.invoke(
         "getAssignedCEStudentIds",
-        {}
+        cohortId ? { cohort_id: cohortId } : {}
       );
 
       if (!res.data?.ok) {
