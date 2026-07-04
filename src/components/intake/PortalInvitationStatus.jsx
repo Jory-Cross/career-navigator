@@ -40,24 +40,39 @@ export default function PortalInvitationStatus({ client }) {
   const [sending, setSending] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!client?.email) return;
+    const load = useCallback(async () => {
+    if (!client?.id) {
+      setInvitation(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const results = await base44.entities.PendingRoleAssignment.filter({
-        email: client.email,
-      });
-      // Find the most recent client portal invite
-      const inv = results
-        .filter((r) => r.client_id === client.id || r.access_level === "client_portal")
-        .sort((a, b) => new Date(b.invited_at || b.created_date) - new Date(a.invited_at || a.created_date))[0] || null;
-      setInvitation(inv);
+      const response = await base44.functions.invoke(
+        "getClientPortalAccessStatus",
+        {
+          clientId: client.id,
+        }
+      );
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Client portal access could not be reviewed."
+        );
+      }
+
+      setInvitation(data.invitation || null);
     } catch (err) {
       console.error("Failed to load invitation:", err);
+      setInvitation(null);
     } finally {
       setLoading(false);
     }
-  }, [client?.email, client?.id]);
+  }, [client?.id]);
 
   useEffect(() => {
     load();
