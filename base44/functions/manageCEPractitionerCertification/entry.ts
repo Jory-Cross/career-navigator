@@ -15,6 +15,11 @@ const SETTLED_TRAINING_REGISTRATION_STATUSES = new Set([
 const TRAINING_COHORT_TYPE = "training";
 const STUDENT_COHORT_ROLE = "member";
 
+const CONTROLLED_TEST_WAIVER_BILLING_EVENT_PREFIX =
+  "test_waived_training_registration";
+
+const CONTROLLED_TEST_WAIVER_AMOUNT_CENTS = 4900;
+
 class RequestError extends Error {
   status: number;
 
