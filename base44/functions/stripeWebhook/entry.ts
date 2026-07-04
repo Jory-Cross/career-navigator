@@ -527,6 +527,20 @@ function validateCeStudentCheckoutMetadata(
   const metadata = session.metadata || {};
   const billingEventId = normalizeText(billingRecord?.id);
 
+  if (session.mode !== "payment") {
+    throw new Error(
+      "Stripe checkout is not a payment-mode CE registration session."
+    );
+  }
+
+  if (
+    normalizeText(session.client_reference_id) !== billingEventId
+  ) {
+    throw new Error(
+      "Stripe checkout does not match the CE registration billing reference."
+    );
+  }
+
   if (metadata.billing_flow !== "ce_student_registration") {
     throw new Error(
       "Stripe checkout does not identify the CE student registration billing flow."
@@ -564,8 +578,10 @@ function validateCeStudentCheckoutMetadata(
   const checkoutAmount = Number(session.amount_total);
 
   if (
-    Number.isFinite(expectedAmount) &&
-    Number.isFinite(checkoutAmount) &&
+    !Number.isInteger(expectedAmount) ||
+    expectedAmount <= 0 ||
+    !Number.isInteger(checkoutAmount) ||
+    checkoutAmount <= 0 ||
     expectedAmount !== checkoutAmount
   ) {
     throw new Error(
@@ -582,8 +598,8 @@ function validateCeStudentCheckoutMetadata(
   ).toLowerCase();
 
   if (
-    expectedCurrency &&
-    checkoutCurrency &&
+    !expectedCurrency ||
+    !checkoutCurrency ||
     expectedCurrency !== checkoutCurrency
   ) {
     throw new Error(
