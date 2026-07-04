@@ -786,18 +786,30 @@ Deno.serve(async (req) => {
 
     mark("permission_source_reads_complete");
 
-    const activeCallerMemberships = Array.isArray(
+      const activeCallerMemberships = Array.isArray(
       activeCallerMembershipRows
     )
-      ? activeCallerMembershipRows
+      ? activeCallerMembershipRows.filter(
+          (membership) =>
+            normalizeText(membership?.org_id) === organizationId &&
+            normalizeText(membership?.cohort_id) === cohortId &&
+            normalizeText(membership?.user_id) ===
+              normalizeText(caller?.id) &&
+            membership?.is_active !== false &&
+            membership?.is_archived !== true
+        )
       : [];
 
     const callerIsCohortManager = activeCallerMemberships.some(
-      (row) => row?.cohort_role === "manager"
+      (membership) =>
+        normalizeText(membership?.cohort_role).toLowerCase() ===
+          "manager"
     );
 
     const callerIsCohortTrainer = activeCallerMemberships.some(
-      (row) => row?.cohort_role === "trainer"
+      (membership) =>
+        normalizeText(membership?.cohort_role).toLowerCase() ===
+          "trainer"
     );
 
     const callerIsPlatformOwner = (
