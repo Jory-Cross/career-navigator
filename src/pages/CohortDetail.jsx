@@ -1414,33 +1414,19 @@ export default function CohortDetail() {
             </div>
           </section>
 
-          {cohort.cohort_type === "training" ? (
+                  {cohort.cohort_type === "training" ? (
             <section className="rounded-lg border border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Existing CE Student Assignment
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Use only for an already registered CE student. Normal
-                    enrollment begins with Invite Student and payment
-                    settlement.
-                  </p>
-                </div>
-
-                {canManageCohortRoster ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={addingMember}
-                    onClick={() => setShowAddMemberDialog(true)}
-                    className="gap-1.5"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Assign Existing CE Student
-                  </Button>
-                ) : null}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  CE Student Enrollment
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  CE student access and cohort membership are created only
+                  through the verified invitation, payment settlement,
+                  registration, and durable enrollment workflow. Existing
+                  student reassignment is unavailable during security
+                  remediation.
+                </p>
               </div>
             </section>
           ) : null}
