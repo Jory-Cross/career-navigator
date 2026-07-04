@@ -574,20 +574,26 @@ Deno.serve(async (req) => {
         ).length,
       },
     });
-  } catch (error) {
-    console.error(
-      "getCEPractitionerCertificationManagerData error:",
-      error?.message || error
-    );
+   } catch (error: unknown) {
+    const status =
+      error instanceof RequestError ? error.status : 500;
+
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "getCEPractitionerCertificationManagerData error:",
+        error instanceof Error ? error.message : error
+      );
+    }
 
     return Response.json(
       {
         ok: false,
         error:
-          error?.message ||
-          "Unable to load CE practitioner certification administration data.",
+          error instanceof RequestError
+            ? error.message
+            : "Unable to load CE practitioner certification administration data. Please try again or contact a Platform Owner.",
       },
-      { status: 500 }
+      { status }
     );
   }
 });
