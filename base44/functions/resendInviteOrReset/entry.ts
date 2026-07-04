@@ -1,123 +1,390 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') || '';
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || '';
-const FREE_DOMAINS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com'];
-const fromDomain = RESEND_FROM_EMAIL.split('@')[1] || '';
-const RESEND_FROM = RESEND_FROM_EMAIL && !FREE_DOMAINS.includes(fromDomain)
-  ? RESEND_FROM_EMAIL
-  : 'onboarding@resend.dev';
-const APP_URL = Deno.env.get('APP_URL') || 'https://app.base44.com';
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
+const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
 
-// Resend an invite/instruction email to an existing or pending employee.
-// The app is PUBLIC — no Base44 platform inviteUser call needed.
-// Access is controlled app-side via PendingRoleAssignment + applyPendingRoleIfNeeded.
-//
-// action = "resend_invite" → re-sends the invitation instruction email
-// action = "send_reset"    → sends a sign-in/access recovery email
+const FREE_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "icloud.com",
+  "resend.dev",
+]);
 
-Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+const ROLE_ACCESS_LEVELS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (user.role !== 'admin' && user.role !== 'management') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
+class RequestError extends Error {
+  constructor(
+    public status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
-    const { employee_id, action } = await req.json();
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
 
-    if (!employee_id || !action) {
-      return Response.json({ error: 'employee_id and action are required' }, { status: 400 });
-    }
-    if (!['resend_invite', 'send_reset'].includes(action)) {
-      return Response.json({ error: 'Invalid action' }, { status: 400 });
-    }
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
 
-    // Fetch the target employee
-    let target = null;
-    try {
-      const targets = await base44.asServiceRole.entities.User.filter({ id: employee_id });
-      target = targets?.[0];
-    } catch (_e) {}
-    if (!target) {
-      return Response.json({ error: 'Employee not found' }, { status: 404 });
-    }
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
 
-    // Security: managers can only act on employees they manage or invited
-    if (user.role === 'management') {
-      const inviterUsers = await base44.asServiceRole.entities.User.filter({ email: user.email });
-      const inviterId = inviterUsers?.[0]?.id;
-      const isOwned = target.manager_id === inviterId;
-      if (!isOwned) {
-        const assignments = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
-          manager_user_id: inviterId,
-          employee_user_id: employee_id,
-        });
-        if (!assignments || assignments.length === 0) {
-          return Response.json({ error: 'Forbidden: not your employee' }, { status: 403 });
-        }
-      }
-    }
+function getRoleProfile(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
 
-    const normalizedEmail = target.email.toLowerCase().trim();
+  if (ROLE_ACCESS_LEVELS[role] !== accessLevel) {
+    return null;
+  }
 
-    // ── Send instruction email via Resend ──────────────────────────────────
-    let emailSent = false;
-    if (RESEND_API_KEY) {
-      const subject = action === 'resend_invite'
-        ? `You've been invited to join the team`
-        : `Access your account`;
-      const html = `
+  return {
+    role,
+    access_level: accessLevel,
+  };
+}
+
+function getSenderAddress() {
+  const domain = (
+    RESEND_FROM_EMAIL.split("@")[1] || ""
+  ).toLowerCase();
+
+  if (RESEND_FROM_EMAIL && !FREE_DOMAINS.has(domain)) {
+    return RESEND_FROM_EMAIL;
+  }
+
+  return "onboarding@resend.dev";
+}
+
+function getSafeAppUrl() {
+  return APP_URL.replace(/\/+$/, "");
+}
+
+function getDisplayName(user: any) {
+  return (
+    normalizeText(user?.full_name) ||
+    normalizeEmail(user?.email) ||
+    "Your organization"
+  );
+}
+
+async function resolveCanonicalCaller(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  if (!caller || !isActive(caller)) {
+    throw new RequestError(
+      403,
+      "Your account is unavailable or inactive."
+    );
+  }
+
+  const callerId = normalizeText(caller.id);
+  const organizationId = normalizeText(caller.org_id);
+  const profile = getRoleProfile(caller);
+
+  if (
+    !callerId ||
+    !profile ||
+    !["admin", "management"].includes(profile.role)
+  ) {
+    throw new RequestError(
+      403,
+      "You are not authorized to send staff access emails."
+    );
+  }
+
+  if (!organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not assigned to an organization."
+    );
+  }
+
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
+
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is invalid or inactive."
+    );
+  }
+
+  return {
+    caller,
+    callerId,
+    organizationId,
+    profile,
+  };
+}
+
+async function resolveAuthorizedEmployee(
+  base44: any,
+  callerId: string,
+  callerRole: string,
+  organizationId: string,
+  employeeId: string
+) {
+  const employee = await base44.asServiceRole.entities.User.get(
+    employeeId
+  ).catch(() => null);
+
+  if (
+    !employee ||
+    !isActive(employee) ||
+    normalizeText(employee.org_id) !== organizationId
+  ) {
+    throw new RequestError(
+      404,
+      "The selected employee was not found in your organization."
+    );
+  }
+
+  const employeeProfile = getRoleProfile(employee);
+
+  if (!employeeProfile) {
+    throw new RequestError(
+      400,
+      "The selected employee does not have a valid staff access profile."
+    );
+  }
+
+  if (callerRole === "admin") {
+    return employee;
+  }
+
+  if (employeeProfile.role !== "employee") {
+    throw new RequestError(
+      403,
+      "Management users may send access emails only to their employee direct reports."
+    );
+  }
+
+  const assignments =
+    await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+      org_id: organizationId,
+      manager_user_id: callerId,
+      employee_user_id: employeeId,
+    });
+
+  const isDirectReport = Array.isArray(assignments) &&
+    assignments.some(
+      (assignment: any) =>
+        assignment?.is_active === true &&
+        assignment?.is_archived !== true &&
+        normalizeText(assignment.org_id) === organizationId &&
+        normalizeText(assignment.manager_user_id) === callerId &&
+        normalizeText(assignment.employee_user_id) === employeeId
+    );
+
+  if (!isDirectReport) {
+    throw new RequestError(
+      403,
+      "You may send access emails only to employees assigned to you."
+    );
+  }
+
+  return employee;
+}
+
+async function sendAccessEmail({
+  action,
+  employee,
+  caller,
+}: {
+  action: string;
+  employee: any;
+  caller: any;
+}) {
+  if (!RESEND_API_KEY) {
+    throw new RequestError(
+      400,
+      "The access email could not be sent because email delivery is not configured."
+    );
+  }
+
+  if (!RESEND_FROM_EMAIL) {
+    throw new RequestError(
+      400,
+      "The access email could not be sent because the sender email is not configured."
+    );
+  }
+
+  const email = normalizeEmail(employee.email);
+
+  if (!email) {
+    throw new RequestError(
+      400,
+      "The selected employee does not have a valid email address."
+    );
+  }
+
+  const isInvite = action === "resend_invite";
+  const subject = isInvite
+    ? "You are invited to join Career Navigator"
+    : "Access your Career Navigator account";
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Career Navigator <${getSenderAddress()}>`,
+      to: [email],
+      subject,
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
-          <h2 style="color: #2563eb;">${action === 'resend_invite' ? "You're invited!" : "Access Your Account"}</h2>
+          <h2 style="color: #2563eb;">
+            ${isInvite ? "You are invited!" : "Access Your Account"}
+          </h2>
           <p style="font-size: 16px; margin-bottom: 16px;">
-            <strong>${user.full_name || user.email}</strong> has ${action === 'resend_invite' ? 'invited you to create an account' : 'sent you an access link'}.
+            <strong>${getDisplayName(caller)}</strong> has ${
+              isInvite
+                ? "sent you an invitation to join Career Navigator."
+                : "sent you an account-access email."
+            }
           </p>
-          <p style="margin-bottom: 8px;">To get started, click below and sign in (or register) with <strong>${normalizedEmail}</strong>:</p>
-          <a href="${APP_URL}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
-            Open App →
+          <p style="margin-bottom: 8px;">
+            Open Career Navigator and sign in or register with
+            <strong>${email}</strong>.
+          </p>
+          <a
+            href="${getSafeAppUrl()}"
+            style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;"
+          >
+            Open Career Navigator
           </a>
           <p style="color: #64748b; font-size: 13px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-            Important: You must use <strong>${normalizedEmail}</strong> to sign in.
+            Use the same email address shown above when signing in.
           </p>
         </div>
-      `;
-      try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ from: `Workforce App <${RESEND_FROM}>`, to: [normalizedEmail], subject, html }),
-        });
-        if (res.ok) {
-          emailSent = true;
-          console.log(`[resendInviteOrReset] Email sent to ${normalizedEmail}`);
-        } else {
-          const err = await res.text();
-          console.error(`[resendInviteOrReset] Resend error: ${err}`);
-        }
-      } catch (emailErr) {
-        console.error(`[resendInviteOrReset] Email send failed:`, emailErr.message);
-      }
-    } else {
-      console.warn('[resendInviteOrReset] RESEND_API_KEY not set — skipping email');
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(
+      "[resendInviteOrReset] Resend delivery failed:",
+      await response.text()
+    );
+
+    throw new RequestError(
+      400,
+      "The access email could not be delivered. Confirm the sender domain is configured, then try again."
+    );
+  }
+
+  return email;
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return Response.json(
+      {
+        success: false,
+        error: "This staff access-email request must use POST.",
+      },
+      { status: 405 }
+    );
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const employeeId = normalizeText(body?.employee_id);
+    const action = normalizeText(body?.action);
+
+    if (!employeeId) {
+      throw new RequestError(
+        400,
+        "An employee must be selected before an access email can be sent."
+      );
     }
 
-    console.log(`[resendInviteOrReset] action=${action} for ${normalizedEmail} by ${user.email} | emailSent=${emailSent}`);
+    if (!["resend_invite", "send_reset"].includes(action)) {
+      throw new RequestError(
+        400,
+        "Choose either resend invitation or send password reset."
+      );
+    }
 
-    const message = action === 'resend_invite'
-      ? `Invitation email ${emailSent ? 'sent' : 'queued (no email key)'} to ${normalizedEmail}`
-      : `Access email ${emailSent ? 'sent' : 'queued (no email key)'} to ${normalizedEmail}`;
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
-    return Response.json({ success: true, message, email_sent: emailSent });
+    if (!authenticatedUser?.id) {
+      throw new RequestError(
+        401,
+        "Please sign in before sending a staff access email."
+      );
+    }
+
+    const {
+      caller,
+      callerId,
+      organizationId,
+      profile,
+    } = await resolveCanonicalCaller(base44, authenticatedUser.id);
+
+    const employee = await resolveAuthorizedEmployee(
+      base44,
+      callerId,
+      profile.role,
+      organizationId,
+      employeeId
+    );
+
+    const email = await sendAccessEmail({
+      action,
+      employee,
+      caller,
+    });
+
+    return Response.json({
+      success: true,
+      email_sent: true,
+      message:
+        action === "resend_invite"
+          ? `A staff invitation was sent to ${email}.`
+          : `An account-access email was sent to ${email}.`,
+    });
   } catch (error) {
-    console.error('[resendInviteOrReset] Error:', error);
-    return Response.json({ error: error.message, success: false }, { status: 500 });
+    const message = error instanceof RequestError
+      ? error.message
+      : "The staff access email could not be sent. Please try again or contact your organization administrator.";
+
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "[resendInviteOrReset] Unexpected error:",
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    return Response.json(
+      {
+        success: false,
+        error: message,
+      },
+      {
+        status: error instanceof RequestError ? error.status : 500,
+      }
+    );
   }
 });
