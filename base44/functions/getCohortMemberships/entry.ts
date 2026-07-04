@@ -19,10 +19,172 @@ function normalizeEmail(value: unknown) {
   return normalizeText(value).toLowerCase();
 }
 
-function isActive(record: any) {
-  return record?.is_active !== false;
+const ROLE_ACCESS_LEVELS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  ce_instructor: "ce_training_portal",
+};
+
+class RequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isActive(record: any) {
+  return Boolean(
+    record &&
+      record?.is_active !== false &&
+      record?.is_archived !== true
+  );
+}
+
+function getCanonicalRoleProfile(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(
+    user?.access_level
+  ).toLowerCase();
+
+  if (ROLE_ACCESS_LEVELS[role] !== accessLevel) {
+    return null;
+  }
+
+  return {
+    role,
+    access_level: accessLevel,
+  };
+}
+
+async function resolveCanonicalCaller(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  const callerId = normalizeText(caller?.id);
+  const callerEmail = normalizeEmail(caller?.email);
+  const organizationId = normalizeText(caller?.org_id);
+  const roleProfile = getCanonicalRoleProfile(caller);
+
+  if (
+    !caller ||
+    !isActive(caller) ||
+    !callerId ||
+    !isValidEmail(callerEmail)
+  ) {
+    throw new RequestError(
+      403,
+      "Your account is unavailable or does not have a verified email address."
+    );
+  }
+
+  if (!organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not assigned to an organization."
+    );
+  }
+
+  if (!roleProfile) {
+    throw new RequestError(
+      403,
+      "Your current role does not allow CE cohort roster access."
+    );
+  }
+
+  const organization =
+    await base44.asServiceRole.entities.Organization.get(
+      organizationId
+    ).catch(() => null);
+
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(
+      403,
+      "Your organization assignment is unavailable or inactive."
+    );
+  }
+
+  return {
+    caller,
+    callerId,
+    organizationId,
+    roleProfile,
+  };
+}
+
+async function requireCohortAccess(
+  base44: any,
+  callerId: string,
+  organizationId: string,
+  roleProfile: {
+    role: string;
+    access_level: string;
+  },
+  cohort: any,
+  cohortId: string
+) {
+  if (
+    !cohort ||
+    normalizeText(cohort?.org_id) !== organizationId ||
+    !isActive(cohort) ||
+    normalizeText(cohort?.status).toLowerCase() === "archived"
+  ) {
+    throw new RequestError(
+      403,
+      "The selected cohort is unavailable."
+    );
+  }
+
+  if (
+    roleProfile.role === "admin" ||
+    roleProfile.role === "management"
+  ) {
+    return;
+  }
+
+  const instructorMemberships =
+    await base44.asServiceRole.entities.CETrainingCohortMember.filter(
+      {
+        org_id: organizationId,
+        cohort_id: cohortId,
+        user_id: callerId,
+        is_active: true,
+      }
+    );
+
+  const isAuthorizedInstructor = asArray(
+    instructorMemberships
+  ).some(
+    (membership: any) =>
+      normalizeText(membership?.org_id) === organizationId &&
+      normalizeText(membership?.cohort_id) === cohortId &&
+      normalizeText(membership?.user_id) === callerId &&
+      ["manager", "trainer"].includes(
+        normalizeText(membership?.cohort_role).toLowerCase()
+      ) &&
+      isActive(membership)
+  );
+
+  if (!isAuthorizedInstructor) {
+    throw new RequestError(
+      403,
+      "Only an active cohort manager or trainer may view this cohort roster."
+    );
+  }
+}
 function buildRegistrationBillingEventKey(
   organizationId: string,
   email: string
