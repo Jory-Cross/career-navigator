@@ -1,15 +1,20 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+Deno.serve((req) => {
+  if (req.method !== "POST") {
+    return Response.json(
+      {
+        success: false,
+        error: "This legacy access-request route must use POST.",
+      },
+      { status: 405 }
+    );
+  }
 
-/**
- * submitAccessRequest — DISABLED
- *
- * This app uses invite-only access. Self-service access requests are not permitted.
- * The only valid approval path is a PendingRoleAssignment created by an admin/manager invite.
- */
-Deno.serve(async (req) => {
-  console.log('[submitAccessRequest] Blocked — invite-only access is enforced. No self-service requests allowed.');
   return Response.json(
-    { error: 'Access requests are not accepted. Please contact your manager or administrator for an invitation.' },
-    { status: 403 }
+    {
+      success: false,
+      error:
+        "Access requests are disabled during security remediation. Staff access must be granted through the verified invitation workflow.",
+    },
+    { status: 410 }
   );
 });
