@@ -53,28 +53,55 @@ export default function ManagerAssignments({ allUsers }) {
     (a) => a.manager_user_id === selectedManagerId
   );
 
-  const handleAdd = async () => {
+    const handleAdd = async () => {
     if (!selectedManagerId || !selectedEmployeeId) {
       toast.error("Select both a manager and an employee.");
       return;
     }
+
     const pairKey = `${selectedManagerId}__${selectedEmployeeId}`;
+
     if (assignedPairs.has(pairKey)) {
       toast.error("This employee is already assigned to that manager.");
       return;
     }
+
     setSaving(true);
+
     try {
-      await base44.entities.ManagerEmployeeAssignment.create({
-        manager_user_id: selectedManagerId,
-        employee_user_id: selectedEmployeeId,
-        is_active: true,
-      });
-      toast.success("Assignment created.");
+      const response = await base44.functions.invoke(
+        "manageManagerEmployeeAssignment",
+        {
+          action: "assign",
+          manager_user_id: selectedManagerId,
+          employee_user_id: selectedEmployeeId,
+        }
+      );
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Manager assignment could not be saved."
+        );
+      }
+
+      toast.success(
+        data.reactivated
+          ? "Manager assignment reactivated."
+          : data.created
+            ? "Manager assignment created."
+            : "Manager assignment is already active."
+      );
+
       setSelectedEmployeeId("");
-      queryClient.invalidateQueries({ queryKey: ["managerAssignments"] });
-    } catch {
-      toast.error("Failed to create assignment.");
+      queryClient.invalidateQueries({
+        queryKey: ["managerAssignments"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message || "Manager assignment could not be saved."
+      );
     } finally {
       setSaving(false);
     }
