@@ -802,19 +802,26 @@ Deno.serve(async (req) => {
         total: Math.round(performance.now() - startedAt),
       },
     });
-  } catch (error) {
-    console.error(
-      "getCohortMemberships error:",
-      error?.message || error
-    );
+   } catch (error: unknown) {
+    const status =
+      error instanceof RequestError ? error.status : 500;
+
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "getCohortMemberships error:",
+        error instanceof Error ? error.message : error
+      );
+    }
 
     return Response.json(
       {
+        ok: false,
         error:
-          error?.message ||
-          "Unable to load cohort memberships.",
+          error instanceof RequestError
+            ? error.message
+            : "The CE cohort roster could not be loaded. Please try again or contact an organization administrator.",
       },
-      { status: 500 }
+      { status }
     );
   }
 });
