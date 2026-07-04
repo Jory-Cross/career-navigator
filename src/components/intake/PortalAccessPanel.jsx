@@ -359,17 +359,17 @@ export default function PortalAccessPanel({ client, onRefresh }) {
             </Button>
           )}
 
-          {/* Stale → Repair */}
+                  {/* Stale access repair is unavailable until the secured workflow exists. */}
           {status === 'stale' && (
             <Button
               size="sm"
               variant="outline"
-              onClick={handleRepair}
-              disabled={isBusy}
-              className="bg-white/70 hover:bg-orange-50 text-orange-700 border-orange-200"
+              disabled
+              className="bg-white/50 text-orange-700 border-orange-200 cursor-not-allowed"
+              title="Secure stale-access repair is not yet available."
             >
-              {busy === 'repair' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wrench className="mr-1.5 h-3.5 w-3.5" />}
-              Repair Stale Access
+              <Wrench className="mr-1.5 h-3.5 w-3.5" />
+              Repair Unavailable
             </Button>
           )}
         </div>
