@@ -67,6 +67,138 @@ function getRequiredString(value: unknown, message: string) {
   return normalized;
 }
 
+function buildControlledTestWaiverBillingEventKey(
+  organizationId: string,
+  cohortId: string,
+  studentUserId: string
+) {
+  return [
+    CONTROLLED_TEST_WAIVER_BILLING_EVENT_PREFIX,
+    organizationId,
+    cohortId,
+    studentUserId,
+  ].join(":");
+}
+
+async function hasAcceptedCEStudentInvitation(
+  base44: any,
+  pendingRoleAssignmentId: string,
+  organizationId: string,
+  cohortId: string,
+  studentEmail: string,
+  enrollment: any
+) {
+  const invitation =
+    await base44.asServiceRole.entities.PendingRoleAssignment.get(
+      pendingRoleAssignmentId
+    ).catch(() => null);
+
+  const enrollmentPaymentResponsibility =
+    normalizeText(enrollment?.payment_responsibility) ||
+    "student_paid";
+  const invitationPaymentResponsibility =
+    normalizeText(invitation?.payment_responsibility) ||
+    "student_paid";
+
+  const enrollmentInstructorPaymentMode =
+    enrollmentPaymentResponsibility === "instructor_paid"
+      ? normalizeText(enrollment?.instructor_payment_mode)
+      : "";
+
+  const invitationInstructorPaymentMode =
+    invitationPaymentResponsibility === "instructor_paid"
+      ? normalizeText(invitation?.instructor_payment_mode)
+      : "";
+
+  const invitationCohortRole = normalizeText(
+    invitation?.cohort_role
+  ).toLowerCase();
+
+  return Boolean(
+    invitation &&
+      invitation?.is_archived !== true &&
+      normalizeText(invitation?.status).toLowerCase() ===
+        "accepted" &&
+      normalizeText(invitation?.role).toLowerCase() ===
+        "ce_student" &&
+      normalizeText(invitation?.access_level).toLowerCase() ===
+        "ce_training_portal" &&
+      normalizeIdentifier(invitation?.org_id) === organizationId &&
+      normalizeIdentifier(invitation?.cohort_id) === cohortId &&
+      normalizeEmail(invitation?.email) === studentEmail &&
+      !normalizeIdentifier(invitation?.client_id) &&
+      ["", "member"].includes(invitationCohortRole) &&
+      invitationPaymentResponsibility ===
+        enrollmentPaymentResponsibility &&
+      invitationInstructorPaymentMode ===
+        enrollmentInstructorPaymentMode
+  );
+}
+
+async function isControlledTestWaiverBillingEvent(
+  base44: any,
+  billingEvent: any,
+  organizationId: string,
+  cohortId: string,
+  studentUserId: string,
+  studentEmail: string
+) {
+  const waivedByUserId = normalizeIdentifier(
+    billingEvent?.waived_by_user_id
+  );
+
+  const eventMatches =
+    !!waivedByUserId &&
+    normalizeText(billingEvent?.billing_event_key) ===
+      buildControlledTestWaiverBillingEventKey(
+        organizationId,
+        cohortId,
+        studentUserId
+      ) &&
+    normalizeText(billingEvent?.event_status).toLowerCase() ===
+      "waived" &&
+    normalizeText(billingEvent?.fee_kind) ===
+      "training_registration" &&
+    normalizeText(billingEvent?.billing_subject_type) ===
+      "student" &&
+    normalizeIdentifier(billingEvent?.organization_id) ===
+      organizationId &&
+    normalizeIdentifier(billingEvent?.cohort_id) === cohortId &&
+    normalizeIdentifier(billingEvent?.subject_user_id) ===
+      studentUserId &&
+    normalizeEmail(billingEvent?.subject_verified_email) ===
+      studentEmail &&
+    Number(billingEvent?.unit_amount_cents) ===
+      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
+    Number(billingEvent?.amount_cents) ===
+      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
+    normalizeText(billingEvent?.currency).toUpperCase() === "USD" &&
+    !!normalizeText(billingEvent?.waived_at) &&
+    !!normalizeText(billingEvent?.waiver_reason) &&
+    !normalizeIdentifier(billingEvent?.stripe_checkout_session_id) &&
+    !normalizeIdentifier(billingEvent?.stripe_payment_intent_id) &&
+    !normalizeIdentifier(billingEvent?.stripe_invoice_id);
+
+  if (!eventMatches) {
+    return false;
+  }
+
+  const platformOwnerRows =
+    await base44.asServiceRole.entities.PlatformAdmin.filter({
+      user_id: waivedByUserId,
+      platform_role: PLATFORM_OWNER_ROLE,
+      is_active: true,
+    });
+
+  return asArray(platformOwnerRows).some(
+    (record: any) =>
+      normalizeIdentifier(record?.user_id) === waivedByUserId &&
+      normalizeText(record?.platform_role) ===
+        PLATFORM_OWNER_ROLE &&
+      record?.is_active !== false
+  );
+}
+
 function getOptionalString(value: unknown) {
   const normalized = normalizeText(value);
   return normalized || null;
