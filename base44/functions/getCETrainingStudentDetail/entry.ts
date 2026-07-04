@@ -312,6 +312,17 @@ async function getReceiptDetails(
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "This CE student-detail request must use POST.",
+        },
+        { status: 405 }
+      );
+    }
+
     const startedAt = performance.now();
     const timing: Record<string, number> = {};
 
