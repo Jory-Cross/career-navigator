@@ -70,29 +70,30 @@ export function useCohorts(user) {
 
   const createCohort = useMutation({
     mutationFn: async (payload) => {
-      if (!orgId) {
-        throw new Error("Missing org_id — cannot create cohort without an organization context.");
+      const res = await base44.functions.invoke(
+        "manageCETrainingCohort",
+        {
+          action: "create",
+          cohort: payload,
+        }
+      );
+
+      const response = res?.data || res;
+
+      if (!response?.ok) {
+        throw new Error(
+          response?.error || "Unable to create the CE cohort."
+        );
       }
-      return base44.entities.CETrainingCohort.create({
-        org_id: orgId,
-        name: payload.name,
-        code: payload.code || "",
-        description: payload.description || "",
-        course_name: payload.course_name || "",
-        course_version: payload.course_version || "",
-        instructor_notes: payload.instructor_notes || "",
-        cohort_type: payload.cohort_type || "testing",
-        status: payload.status || "planned",
-        start_date: payload.start_date || "",
-        end_date: payload.end_date || "",
-        created_by: user.id,
-      });
+
+      return response.cohort;
     },
     onSuccess: () => {
       toast.success("Cohort created");
       invalidateAll();
     },
-    onError: (err) => toast.error(err?.message || "Failed to create cohort"),
+    onError: (err) =>
+      toast.error(err?.message || "Failed to create cohort"),
   });
 
   const updateCohort = useMutation({
