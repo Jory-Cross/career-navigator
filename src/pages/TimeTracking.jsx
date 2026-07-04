@@ -180,14 +180,34 @@ const cohortMemberUsers = useMemo(() => {
 // distinguish "platform-visible" from "cohort-only" in canMutate.
 const platformUsers = allUsers;
 
-// Load active assignments for the current manager (or all, for admin)
+// Load secured active assignments for the current manager or administrator.
 const { data: managerAssignments = [] } = useQuery({
   queryKey: ["managerAssignments"],
-  queryFn: () => base44.entities.ManagerEmployeeAssignment.filter({ is_active: true }),
+  queryFn: async () => {
+    const response = await base44.functions.invoke(
+      "manageManagerEmployeeAssignment",
+      {
+        action: "list",
+      }
+    );
+
+    const data = response?.data || {};
+
+    if (data.success !== true) {
+      throw new Error(
+        data.error || "Manager assignments could not be loaded."
+      );
+    }
+
+    return Array.isArray(data.assignments)
+      ? data.assignments
+      : [];
+  },
   enabled: !!user && (user.role === "admin" || user.role === "management"),
   staleTime: 60 * 1000,
   gcTime: 15 * 60 * 1000,
   refetchOnWindowFocus: false,
+  retry: false,
 });
 
   // Additive union: platform users + cohort member users (deduped by id).
