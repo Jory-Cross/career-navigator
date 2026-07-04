@@ -3,10 +3,10 @@ import { base44 } from "@/api/base44Client";
 /**
  * Transitional compatibility helper.
  *
- * All TimeEntry creation goes through the authorized server-side
- * mutateAuthorizedTimeEntry route. The server derives tenant scope, employee
- * authority, EntryType flags, authorization enforcement, field-answer
- * validation, and ReportFieldAnswer persistence.
+ * All TimeEntry creation goes through the authorized server-side V2 route. The
+ * server derives tenant scope, employee authority, EntryType flags,
+ * authorization enforcement, field-answer validation, and ReportFieldAnswer
+ * persistence.
  */
 export async function submitTimeEntryWithDualWrite({
   clientId,
@@ -31,25 +31,28 @@ export async function submitTimeEntryWithDualWrite({
       ? fieldAnswers
       : {};
 
-  const response = await base44.functions.invoke("mutateAuthorizedTimeEntry", {
-    action: "create",
-    time_entry: {
-      client_id: clientId || null,
-      ...(employeeId ? { employee_id: employeeId } : {}),
-      entry_type_id: entryTypeId,
-      entry_type_code: entryTypeCode,
-      date,
-      start_time: startTime || null,
-      end_time: endTime || null,
-      duration_minutes: durationMinutes,
-      location: location || null,
-      description: description || null,
-      employer_name: employerName || null,
-      service_authorization_id: serviceAuthorizationId || null,
-      field_answers: safeFieldAnswers,
-      status: asDraft ? "draft" : "submitted",
-    },
-  });
+  const response = await base44.functions.invoke(
+    "mutateAuthorizedTimeEntryV2",
+    {
+      action: "create",
+      time_entry: {
+        client_id: clientId || null,
+        ...(employeeId ? { employee_id: employeeId } : {}),
+        entry_type_id: entryTypeId,
+        entry_type_code: entryTypeCode,
+        date,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        duration_minutes: durationMinutes,
+        location: location || null,
+        description: description || null,
+        employer_name: employerName || null,
+        service_authorization_id: serviceAuthorizationId || null,
+        field_answers: safeFieldAnswers,
+        status: asDraft ? "draft" : "submitted",
+      },
+    }
+  );
 
   const data = response?.data || response || {};
 
