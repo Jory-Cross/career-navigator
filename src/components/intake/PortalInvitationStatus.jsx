@@ -80,22 +80,42 @@ export default function PortalInvitationStatus({ client }) {
     }
   };
 
-  const handleRevoke = async () => {
-    if (!invitation?.id) return;
+   const handleRevoke = async () => {
+    if (!client?.id || !client?.email) {
+      toast.error(
+        "Portal access could not be revoked because this client record is incomplete."
+      );
+      return;
+    }
+
     setRevoking(true);
+
     try {
-      await base44.entities.PendingRoleAssignment.update(invitation.id, {
-        status: "revoked",
+      const response = await base44.functions.invoke("revokePortalUser", {
+        clientId: client.id,
+        email: client.email,
       });
-      toast.success("Access revoked");
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Portal access could not be revoked."
+        );
+      }
+
+      toast.success(data.message || "Portal access revoked.");
       await load();
     } catch (err) {
-      toast.error("Failed to revoke access");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Portal access could not be revoked. Please try again."
+      );
     } finally {
       setRevoking(false);
     }
   };
-
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
