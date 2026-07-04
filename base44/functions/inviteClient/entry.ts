@@ -234,10 +234,19 @@ async function resolveCanonicalCaller(
     );
   }
 
-  const callerRole = normalizeText(caller?.role).toLowerCase();
+   const callerRole = normalizeText(caller?.role).toLowerCase();
+  const callerAccessLevel = normalizeText(
+    caller?.access_level
+  ).toLowerCase();
   const organizationId = normalizeText(caller?.org_id);
 
-  if (!STAFF_ROLES.has(callerRole)) {
+  const expectedAccessLevel =
+    callerRole === "admin" ? "admin" : "staff";
+
+  if (
+    !STAFF_ROLES.has(callerRole) ||
+    callerAccessLevel !== expectedAccessLevel
+  ) {
     throw new RequestError(
       "You are not authorized to send client portal invitations."
     );
