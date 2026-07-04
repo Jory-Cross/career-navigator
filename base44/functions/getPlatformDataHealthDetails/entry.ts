@@ -2,34 +2,65 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
 const PLATFORM_OWNER_ROLE = "platform_owner";
 
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
 function isStaffUser(user: any) {
-  return ["admin", "management", "employee"].includes(user?.role);
+  return ["admin", "management", "employee"].includes(
+    normalizeText(user?.role).toLowerCase()
+  );
 }
 
 function getClientName(client: any) {
   return (
-    `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
-    "Unnamed client"
+    `${normalizeText(client?.first_name)} ${normalizeText(
+      client?.last_name
+    )}`.trim() || "Unnamed client"
   );
 }
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const currentUser = await base44.auth.me();
-
-    if (!currentUser) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (req.method !== "POST") {
+      return Response.json(
+        { error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
     }
 
-    const platformAdminRecords =
-      await base44.asServiceRole.entities.PlatformAdmin.list();
+    await req.json().catch(() => ({}));
 
-    const platformOwnerRecord = platformAdminRecords.find(
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me();
+
+    if (!authenticatedUser?.id) {
+      return Response.json({ error: "You must be signed in." }, { status: 401 });
+    }
+
+    const caller = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
+
+    if (!caller || !isActive(caller)) {
+      return Response.json(
+        { error: "Your account is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    const platformOwnerRecords =
+      await base44.asServiceRole.entities.PlatformAdmin.filter({
+        user_id: caller.id,
+      });
+    const platformOwnerRecord = platformOwnerRecords.find(
       (record: any) =>
-        record.user_id === currentUser.id &&
-        record.platform_role === PLATFORM_OWNER_ROLE &&
-        record.is_active !== false
+        record?.platform_role === PLATFORM_OWNER_ROLE &&
+        isActive(record)
     );
 
     if (!platformOwnerRecord) {
@@ -49,15 +80,14 @@ Deno.serve(async (req) => {
     ]);
 
     const validOrganizationIds = new Set(
-      organizations.map((organization: any) => organization.id)
+      organizations
+        .filter((organization: any) => isActive(organization))
+        .map((organization: any) => organization.id)
     );
-
-    const usersById = new Map(
-      users.map((user: any) => [user.id, user])
-    );
+    const usersById = new Map(users.map((user: any) => [user.id, user]));
 
     const unscopedClients = clients
-      .filter((client: any) => !client.org_id)
+      .filter((client: any) => !normalizeText(client?.org_id))
       .map((client: any) => {
         const assignedEmployee = usersById.get(client.assigned_employee_id);
 
@@ -76,7 +106,7 @@ Deno.serve(async (req) => {
     const clientsWithInvalidOrganization = clients
       .filter(
         (client: any) =>
-          client.org_id &&
+          normalizeText(client?.org_id) &&
           !validOrganizationIds.has(client.org_id)
       )
       .map((client: any) => {
@@ -95,7 +125,7 @@ Deno.serve(async (req) => {
       });
 
     const unscopedStaffUsers = users
-      .filter((user: any) => isStaffUser(user) && !user.org_id)
+      .filter((user: any) => isStaffUser(user) && !normalizeText(user?.org_id))
       .map((user: any) => ({
         id: user.id,
         email: user.email || null,
@@ -108,8 +138,7 @@ Deno.serve(async (req) => {
     const usersWithInvalidOrganization = users
       .filter(
         (user: any) =>
-          user.org_id &&
-          !validOrganizationIds.has(user.org_id)
+          normalizeText(user?.org_id) && !validOrganizationIds.has(user.org_id)
       )
       .map((user: any) => ({
         id: user.id,
@@ -133,15 +162,14 @@ Deno.serve(async (req) => {
       unscoped_staff_users: unscopedStaffUsers,
       users_with_invalid_org_id: usersWithInvalidOrganization,
     });
-  } catch (error) {
-    console.error("getPlatformDataHealthDetails error:", error.message);
+  } catch (error: any) {
+    console.error(
+      "getPlatformDataHealthDetails error:",
+      error?.message || error
+    );
 
     return Response.json(
-      {
-        error:
-          error.message ||
-          "Unable to load platform data-health details.",
-      },
+      { error: "Unable to load platform data-health details." },
       { status: 500 }
     );
   }
