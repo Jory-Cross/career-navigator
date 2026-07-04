@@ -67,6 +67,11 @@ function getRequiredString(value: unknown, message: string) {
   return normalized;
 }
 
+function getOptionalString(value: unknown) {
+  const normalized = normalizeText(value);
+  return normalized || null;
+}
+
 function buildControlledTestWaiverBillingEventKey(
   organizationId: string,
   cohortId: string,
@@ -78,130 +83,6 @@ function buildControlledTestWaiverBillingEventKey(
     cohortId,
     studentUserId,
   ].join(":");
-}
-
-async function hasAcceptedCEStudentInvitation(
-  base44: any,
-  pendingRoleAssignmentId: string,
-  organizationId: string,
-  cohortId: string,
-  studentEmail: string,
-  enrollment: any
-) {
-  const invitation =
-    await base44.asServiceRole.entities.PendingRoleAssignment.get(
-      pendingRoleAssignmentId
-    ).catch(() => null);
-
-  const enrollmentPaymentResponsibility =
-    normalizeText(enrollment?.payment_responsibility) ||
-    "student_paid";
-  const invitationPaymentResponsibility =
-    normalizeText(invitation?.payment_responsibility) ||
-    "student_paid";
-
-  const enrollmentInstructorPaymentMode =
-    enrollmentPaymentResponsibility === "instructor_paid"
-      ? normalizeText(enrollment?.instructor_payment_mode)
-      : "";
-
-  const invitationInstructorPaymentMode =
-    invitationPaymentResponsibility === "instructor_paid"
-      ? normalizeText(invitation?.instructor_payment_mode)
-      : "";
-
-  const invitationCohortRole = normalizeText(
-    invitation?.cohort_role
-  ).toLowerCase();
-
-  return Boolean(
-    invitation &&
-      invitation?.is_archived !== true &&
-      normalizeText(invitation?.status).toLowerCase() ===
-        "accepted" &&
-      normalizeText(invitation?.role).toLowerCase() ===
-        "ce_student" &&
-      normalizeText(invitation?.access_level).toLowerCase() ===
-        "ce_training_portal" &&
-      normalizeIdentifier(invitation?.org_id) === organizationId &&
-      normalizeIdentifier(invitation?.cohort_id) === cohortId &&
-      normalizeEmail(invitation?.email) === studentEmail &&
-      !normalizeIdentifier(invitation?.client_id) &&
-      ["", "member"].includes(invitationCohortRole) &&
-      invitationPaymentResponsibility ===
-        enrollmentPaymentResponsibility &&
-      invitationInstructorPaymentMode ===
-        enrollmentInstructorPaymentMode
-  );
-}
-
-async function isControlledTestWaiverBillingEvent(
-  base44: any,
-  billingEvent: any,
-  organizationId: string,
-  cohortId: string,
-  studentUserId: string,
-  studentEmail: string
-) {
-  const waivedByUserId = normalizeIdentifier(
-    billingEvent?.waived_by_user_id
-  );
-
-  const eventMatches =
-    !!waivedByUserId &&
-    normalizeText(billingEvent?.billing_event_key) ===
-      buildControlledTestWaiverBillingEventKey(
-        organizationId,
-        cohortId,
-        studentUserId
-      ) &&
-    normalizeText(billingEvent?.event_status).toLowerCase() ===
-      "waived" &&
-    normalizeText(billingEvent?.fee_kind) ===
-      "training_registration" &&
-    normalizeText(billingEvent?.billing_subject_type) ===
-      "student" &&
-    normalizeIdentifier(billingEvent?.organization_id) ===
-      organizationId &&
-    normalizeIdentifier(billingEvent?.cohort_id) === cohortId &&
-    normalizeIdentifier(billingEvent?.subject_user_id) ===
-      studentUserId &&
-    normalizeEmail(billingEvent?.subject_verified_email) ===
-      studentEmail &&
-    Number(billingEvent?.unit_amount_cents) ===
-      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
-    Number(billingEvent?.amount_cents) ===
-      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
-    normalizeText(billingEvent?.currency).toUpperCase() === "USD" &&
-    !!normalizeText(billingEvent?.waived_at) &&
-    !!normalizeText(billingEvent?.waiver_reason) &&
-    !normalizeIdentifier(billingEvent?.stripe_checkout_session_id) &&
-    !normalizeIdentifier(billingEvent?.stripe_payment_intent_id) &&
-    !normalizeIdentifier(billingEvent?.stripe_invoice_id);
-
-  if (!eventMatches) {
-    return false;
-  }
-
-  const platformOwnerRows =
-    await base44.asServiceRole.entities.PlatformAdmin.filter({
-      user_id: waivedByUserId,
-      platform_role: PLATFORM_OWNER_ROLE,
-      is_active: true,
-    });
-
-  return asArray(platformOwnerRows).some(
-    (record: any) =>
-      normalizeIdentifier(record?.user_id) === waivedByUserId &&
-      normalizeText(record?.platform_role) ===
-        PLATFORM_OWNER_ROLE &&
-      record?.is_active !== false
-  );
-}
-
-function getOptionalString(value: unknown) {
-  const normalized = normalizeText(value);
-  return normalized || null;
 }
 
 async function resolveCanonicalPlatformOwner(
@@ -314,6 +195,126 @@ async function getSingleCertificationForUser(
   return certifications[0] || null;
 }
 
+async function hasAcceptedCEStudentInvitation(
+  base44: any,
+  pendingRoleAssignmentId: string,
+  organizationId: string,
+  cohortId: string,
+  studentEmail: string,
+  enrollment: any
+) {
+  const invitation =
+    await base44.asServiceRole.entities.PendingRoleAssignment.get(
+      pendingRoleAssignmentId
+    ).catch(() => null);
+
+  const enrollmentPaymentResponsibility =
+    normalizeText(enrollment?.payment_responsibility) ||
+    "student_paid";
+
+  const invitationPaymentResponsibility =
+    normalizeText(invitation?.payment_responsibility) ||
+    "student_paid";
+
+  const enrollmentInstructorPaymentMode =
+    enrollmentPaymentResponsibility === "instructor_paid"
+      ? normalizeText(enrollment?.instructor_payment_mode)
+      : "";
+
+  const invitationInstructorPaymentMode =
+    invitationPaymentResponsibility === "instructor_paid"
+      ? normalizeText(invitation?.instructor_payment_mode)
+      : "";
+
+  const invitationCohortRole = normalizeText(
+    invitation?.cohort_role
+  ).toLowerCase();
+
+  return Boolean(
+    invitation &&
+      invitation?.is_archived !== true &&
+      normalizeText(invitation?.status).toLowerCase() ===
+        "accepted" &&
+      normalizeText(invitation?.role).toLowerCase() ===
+        "ce_student" &&
+      normalizeText(invitation?.access_level).toLowerCase() ===
+        "ce_training_portal" &&
+      normalizeIdentifier(invitation?.org_id) === organizationId &&
+      normalizeIdentifier(invitation?.cohort_id) === cohortId &&
+      normalizeEmail(invitation?.email) === studentEmail &&
+      !normalizeIdentifier(invitation?.client_id) &&
+      ["", "member"].includes(invitationCohortRole) &&
+      invitationPaymentResponsibility ===
+        enrollmentPaymentResponsibility &&
+      invitationInstructorPaymentMode ===
+        enrollmentInstructorPaymentMode
+  );
+}
+
+async function isControlledTestWaiverBillingEvent(
+  base44: any,
+  billingEvent: any,
+  organizationId: string,
+  cohortId: string,
+  studentUserId: string,
+  studentEmail: string
+) {
+  const waivedByUserId = normalizeIdentifier(
+    billingEvent?.waived_by_user_id
+  );
+
+  const eventMatches =
+    !!waivedByUserId &&
+    normalizeText(billingEvent?.billing_event_key) ===
+      buildControlledTestWaiverBillingEventKey(
+        organizationId,
+        cohortId,
+        studentUserId
+      ) &&
+    normalizeText(billingEvent?.event_status).toLowerCase() ===
+      "waived" &&
+    normalizeText(billingEvent?.fee_kind).toLowerCase() ===
+      "training_registration" &&
+    normalizeText(billingEvent?.billing_subject_type).toLowerCase() ===
+      "student" &&
+    normalizeIdentifier(billingEvent?.organization_id) ===
+      organizationId &&
+    normalizeIdentifier(billingEvent?.cohort_id) === cohortId &&
+    normalizeIdentifier(billingEvent?.subject_user_id) ===
+      studentUserId &&
+    normalizeEmail(billingEvent?.subject_verified_email) ===
+      studentEmail &&
+    Number(billingEvent?.unit_amount_cents) ===
+      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
+    Number(billingEvent?.amount_cents) ===
+      CONTROLLED_TEST_WAIVER_AMOUNT_CENTS &&
+    normalizeText(billingEvent?.currency).toUpperCase() === "USD" &&
+    !!normalizeText(billingEvent?.waived_at) &&
+    !!normalizeText(billingEvent?.waiver_reason) &&
+    !normalizeIdentifier(billingEvent?.stripe_checkout_session_id) &&
+    !normalizeIdentifier(billingEvent?.stripe_payment_intent_id) &&
+    !normalizeIdentifier(billingEvent?.stripe_invoice_id);
+
+  if (!eventMatches) {
+    return false;
+  }
+
+  const platformOwnerRows =
+    await base44.asServiceRole.entities.PlatformAdmin.filter({
+      user_id: waivedByUserId,
+      platform_role: PLATFORM_OWNER_ROLE,
+      is_active: true,
+    });
+
+  return asArray(platformOwnerRows).some(
+    (record: any) =>
+      normalizeIdentifier(record?.user_id) === waivedByUserId &&
+      normalizeText(record?.platform_role) ===
+        PLATFORM_OWNER_ROLE &&
+      record?.is_active !== false
+  );
+}
+
 async function resolveCompletedTrainingEnrollment(
   base44: any,
   subject: {
@@ -358,22 +359,22 @@ async function resolveCompletedTrainingEnrollment(
     const billingEventId = normalizeIdentifier(
       enrollment?.organization_billing_event_id
     );
+    const pendingRoleAssignmentId = normalizeIdentifier(
+      enrollment?.pending_role_assignment_id
+    );
 
-    const enrollmentHasRequiredLinks =
+    const enrollmentHasRequiredCoreLinks =
       !!organizationId &&
       !!cohortId &&
       !!membershipId &&
       !!billingEventId &&
-      !!normalizeIdentifier(
-        enrollment?.pending_role_assignment_id
-      ) &&
       !!normalizeText(enrollment?.payment_settled_at) &&
       !!normalizeText(enrollment?.registered_at) &&
       !!normalizeText(enrollment?.training_completed_at) &&
       normalizeEmail(enrollment?.student_email) ===
         subject.email;
 
-    if (!enrollmentHasRequiredLinks) {
+    if (!enrollmentHasRequiredCoreLinks) {
       continue;
     }
 
@@ -424,10 +425,10 @@ async function resolveCompletedTrainingEnrollment(
         subject.userId &&
       normalizeEmail(billingEvent?.subject_verified_email) ===
         subject.email &&
-      normalizeText(billingEvent?.billing_subject_type) ===
+      normalizeText(billingEvent?.billing_subject_type).toLowerCase() ===
         "student" &&
       PAID_TRAINING_FEE_KINDS.has(
-        normalizeText(billingEvent?.fee_kind)
+        normalizeText(billingEvent?.fee_kind).toLowerCase()
       ) &&
       SETTLED_TRAINING_REGISTRATION_STATUSES.has(
         normalizeText(billingEvent?.event_status).toLowerCase()
@@ -437,11 +438,38 @@ async function resolveCompletedTrainingEnrollment(
       continue;
     }
 
+    const hasAcceptedInvitation = pendingRoleAssignmentId
+      ? await hasAcceptedCEStudentInvitation(
+          base44,
+          pendingRoleAssignmentId,
+          organizationId,
+          cohortId,
+          subject.email,
+          enrollment
+        )
+      : false;
+
+    const isControlledTestWaiver = !pendingRoleAssignmentId
+      ? await isControlledTestWaiverBillingEvent(
+          base44,
+          billingEvent,
+          organizationId,
+          cohortId,
+          subject.userId,
+          subject.email
+        )
+      : false;
+
+    if (!hasAcceptedInvitation && !isControlledTestWaiver) {
+      continue;
+    }
+
     validCandidates.push({
       enrollment,
       cohort,
       membership,
       billingEvent,
+      isControlledTestWaiver,
     });
   }
 
@@ -476,6 +504,7 @@ async function resolveCompletedTrainingEnrollment(
 async function writeAuditLog(
   base44: any,
   actorUserId: string,
+  organizationId: string,
   eventKey: string,
   eventSummary: string,
   certificationRecordId: string,
@@ -483,6 +512,7 @@ async function writeAuditLog(
 ) {
   try {
     await base44.asServiceRole.entities.PlatformAuditLog.create({
+      organization_id: organizationId,
       platform_admin_user_id: actorUserId,
       event_key: eventKey,
       event_summary: eventSummary,
@@ -664,6 +694,7 @@ Deno.serve(async (req) => {
       await writeAuditLog(
         base44,
         callerId,
+        completedTraining.cohort.org_id,
         "ce_practitioner_certification_pending_created",
         "A settled CE Training student entered Pending Certification.",
         createdCertification.id,
@@ -675,6 +706,8 @@ Deno.serve(async (req) => {
           billing_event_id: completedTraining.billingEvent.id,
           training_completed_at:
             completedTraining.enrollment.training_completed_at,
+          controlled_test_waiver:
+            completedTraining.isControlledTestWaiver === true,
         }
       );
 
@@ -742,6 +775,7 @@ Deno.serve(async (req) => {
       await writeAuditLog(
         base44,
         callerId,
+        completedTraining.cohort.org_id,
         "ce_practitioner_certification_verified",
         "A Pending Certification record was verified.",
         existingCertification.id,
@@ -753,6 +787,8 @@ Deno.serve(async (req) => {
           billing_event_id: completedTraining.billingEvent.id,
           training_completed_at:
             completedTraining.enrollment.training_completed_at,
+          controlled_test_waiver:
+            completedTraining.isControlledTestWaiver === true,
         }
       );
 
@@ -809,6 +845,7 @@ Deno.serve(async (req) => {
       await writeAuditLog(
         base44,
         callerId,
+        "",
         "ce_practitioner_certification_revoked",
         "A Certified CE practitioner record was revoked.",
         existingCertification.id,
