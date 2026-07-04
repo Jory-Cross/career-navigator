@@ -47,16 +47,36 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
   // Determine registration status from presence of full_name
   const isRegistered = !!employee.full_name && employee.full_name.trim().length > 0;
 
-  const handleResendInvite = async () => {
+   const handleResendInvite = async () => {
     setResendLoading(true);
+
     try {
-      await base44.functions.invoke('resendInviteOrReset', {
-        employee_id: employee.id,
-        action: 'resend_invite',
-      });
-      toast.success(`Invitation resent to ${employee.email}`);
+      const response = await base44.functions.invoke(
+        "resendInviteOrReset",
+        {
+          employee_id: employee.id,
+          action: "resend_invite",
+        }
+      );
+
+      const result = response?.data || {};
+
+      if (result.success !== true) {
+        throw new Error(
+          result.error ||
+            "The invitation email could not be sent. Please try again."
+        );
+      }
+
+      toast.success(
+        result.message || `Invitation resent to ${employee.email}`
+      );
     } catch (err) {
-      toast.error("Failed to resend invite: " + (err.response?.data?.error || err.message));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "The invitation email could not be resent. Please try again."
+      );
     } finally {
       setResendLoading(false);
     }
@@ -64,19 +84,38 @@ export default function EmployeeAccessActions({ employee, currentUser }) {
 
   const handleSendReset = async () => {
     setResetLoading(true);
+
     try {
-      await base44.functions.invoke('resendInviteOrReset', {
-        employee_id: employee.id,
-        action: 'send_reset',
-      });
-      toast.success(`Password reset email sent to ${employee.email}`);
+      const response = await base44.functions.invoke(
+        "resendInviteOrReset",
+        {
+          employee_id: employee.id,
+          action: "send_reset",
+        }
+      );
+
+      const result = response?.data || {};
+
+      if (result.success !== true) {
+        throw new Error(
+          result.error ||
+            "The password-reset email could not be sent. Please try again."
+        );
+      }
+
+      toast.success(
+        result.message || `Password reset email sent to ${employee.email}`
+      );
     } catch (err) {
-      toast.error("Failed to send reset: " + (err.response?.data?.error || err.message));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "The password-reset email could not be sent. Please try again."
+      );
     } finally {
       setResetLoading(false);
     }
   };
-
   if (!canManage) return null;
 
   // Inactive/offboarded: show access removed state, no action buttons
