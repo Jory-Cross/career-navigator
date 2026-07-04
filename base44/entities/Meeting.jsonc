@@ -2,81 +2,22 @@
   "name": "Meeting",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "client_id": {
-      "type": "string"
-    },
-    "title": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "meeting_type": {
-      "type": "string",
-      "enum": [
-        "consultation",
-        "interview_prep",
-        "resume_review",
-        "follow_up",
-        "strategy",
-        "job_coaching",
-        "life_skills",
-        "cbh",
-        "other"
-      ],
-      "default": "consultation"
-    },
-    "start_datetime": {
-      "type": "string"
-    },
-    "end_datetime": {
-      "type": "string"
-    },
-    "location": {
-      "type": "string"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "scheduled",
-        "tentative",
-        "confirmed",
-        "completed",
-        "cancelled",
-        "no_show",
-        "not_selected"
-      ],
-      "default": "scheduled"
-    },
-    "notes": {
-      "type": "string"
-    },
-    "reminder_sent": {
-      "type": "boolean",
-      "default": false
-    },
-    "series_id": {
-      "type": "string"
-    },
-    "outlook_event_id": {
-      "type": "string"
-    },
-    "is_converted_to_time_entry": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this meeting has been converted into an official Time Entry"
-    },
-    "linked_time_entry_id": {
-      "type": "string",
-      "description": "ID of the Time Entry created from this meeting"
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_id": { "type": "string" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "meeting_type": { "type": "string", "enum": ["consultation", "interview_prep", "resume_review", "follow_up", "strategy", "job_coaching", "life_skills", "cbh", "other"], "default": "consultation" },
+    "start_datetime": { "type": "string" },
+    "end_datetime": { "type": "string" },
+    "location": { "type": "string" },
+    "status": { "type": "string", "enum": ["scheduled", "tentative", "confirmed", "completed", "cancelled", "no_show", "not_selected"], "default": "scheduled" },
+    "notes": { "type": "string" },
+    "reminder_sent": { "type": "boolean", "default": false },
+    "series_id": { "type": "string" },
+    "outlook_event_id": { "type": "string" },
+    "is_converted_to_time_entry": { "type": "boolean", "default": false, "description": "Whether this meeting has been converted into an official Time Entry" },
+    "linked_time_entry_id": { "type": "string", "description": "ID of the Time Entry created from this meeting" }
   },
-  "required": [
-    "title",
-    "start_datetime"
-  ]
+  "required": ["title", "start_datetime"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
