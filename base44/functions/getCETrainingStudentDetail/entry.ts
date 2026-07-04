@@ -319,20 +319,37 @@ Deno.serve(async (req) => {
       timing[stage] = Math.round(performance.now() - startedAt);
     };
 
-    const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
+       const base44 = createClientFromRequest(req);
+    const authenticatedCaller = await base44.auth.me();
 
     mark("auth_complete");
 
-    if (!caller) {
-      throw new RequestError(401, "Unauthorized.");
+    if (!authenticatedCaller?.id) {
+      throw new RequestError(401, "Please sign in to view CE student details.");
     }
 
-    if (
-      !["admin", "management", "ce_instructor"].includes(
-        caller.role
-      )
-    ) {
+    const {
+      caller,
+      organizationId,
+    } = await resolveOrganizationId(
+      base44,
+      authenticatedCaller
+    );
+
+    const callerRole = normalizeText(caller?.role).toLowerCase();
+    const callerAccessLevel = normalizeText(
+      caller?.access_level
+    ).toLowerCase();
+
+    const isAuthorizedOrganizationUser =
+      (callerRole === "admin" &&
+        callerAccessLevel === "admin") ||
+      (callerRole === "management" &&
+        callerAccessLevel === "staff") ||
+      (callerRole === "ce_instructor" &&
+        callerAccessLevel === "ce_training_portal");
+
+    if (!isAuthorizedOrganizationUser) {
       throw new RequestError(
         403,
         "Only authorized CE organization users may view student details."
@@ -365,18 +382,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organizationId = await resolveOrganizationId(
-      base44,
-      caller
-    );
-
-        const cohort = await requireCohortAccess(
+    const cohort = await requireCohortAccess(
       base44,
       caller,
       organizationId,
       cohortId
     );
-
     mark("cohort_access_verified");
 
     let enrollment = null;
