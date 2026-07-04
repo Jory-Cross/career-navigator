@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2,
   AlertCircle,
   Clock,
   DollarSign,
+  Loader2,
   Lock,
-  ChevronDown,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -19,25 +16,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+const PROGRAM_LABELS = {
+  vr: "VR Services",
+  pre_ets: "Pre-ETS Services",
+  dspd: "DSPD Services",
+  internal: "Internal",
+  other: "Other",
+};
+
+const REPORTING_MODE_HINTS = {
+  none: "Internal use only",
+  usor95_monthly: "Monthly VR report (USOR-95)",
+  usor96_monthly: "Monthly tracker (USOR-96)",
+  usor148_service_period: "Service period report (USOR-148)",
+  custom: "Custom report format",
+};
+
+function choosePreferredEntryTypes(types) {
+  const byCode = new Map();
+
+  for (const type of types) {
+    const code = String(type?.code || "");
+    const current = byCode.get(code);
+
+    if (!current || (!current.org_id && type?.org_id)) {
+      byCode.set(code, type);
+    }
+  }
+
+  return Array.from(byCode.values()).sort((left, right) =>
+    String(left?.name || "").localeCompare(String(right?.name || ""))
+  );
+}
 
 /**
- * EntryTypePicker - Reusable entry type selection UI
+ * Server-scoped EntryType selection UI.
  *
- * Features:
- * - Dynamic loading from EntryType entity
- * - Groups by program_type (VR, Pre-ETS, DSPD, Internal, Other)
- * - Visual indicators: billable, payroll-eligible, authorization-required
- * - Shows descriptions and reporting mode hints
- * - Compact, grid, or select display modes
- *
- * Props:
- *   value                 - selected entry_type_id or code
- *   onChange(type)        - called with full EntryType object
- *   onSelectionChange()   - alternative callback with just the object
- *   mode                  - "grid" (default) | "compact" | "select"
- *   disabled              - boolean
- *   showDescriptions      - show descriptions (default true)
- *   groupByProgram        - group by program_type (default true)
+ * EntryType discovery is intentionally loaded from getAuthorizedTimeEntryConfig
+ * rather than directly from the browser entity client.
  */
 export default function EntryTypePicker({
   value,
@@ -51,61 +69,87 @@ export default function EntryTypePicker({
 }) {
   const [entryTypes, setEntryTypes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
 
-    base44.entities.EntryType.filter({ is_active: true })
-      .then((types) => {
-        const uniqueEntryTypes = Array.from(
-          new Map(types.map((t) => [t.code, t])).values()
-        ).sort((a, b) => a.name.localeCompare(b.name));
+    async function loadEntryTypes() {
+      setLoading(true);
+      setError("");
 
-        setEntryTypes(uniqueEntryTypes);
-      })
-      .catch((err) => {
-        console.error("Failed to load entry types:", err);
-        setError("Failed to load entry types");
-        toast.error("Failed to load entry types");
-      })
-      .finally(() => setLoading(false));
+      try {
+        const response = await base44.functions.invoke(
+          "getAuthorizedTimeEntryConfig",
+          { action: "list_entry_types" }
+        );
+        const payload = response?.data ?? response ?? {};
+
+        if (!payload?.ok || !Array.isArray(payload?.entry_types)) {
+          throw new Error(
+            payload?.error || "Unable to load authorized service types."
+          );
+        }
+
+        if (!cancelled) {
+          setEntryTypes(choosePreferredEntryTypes(payload.entry_types));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError?.message || "Unable to load authorized service types."
+          );
+          setEntryTypes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadEntryTypes();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleSelect = (type) => {
-    if (onChange) onChange(type);
-    if (onSelectionChange) onSelectionChange(type);
-  };
+  const selectedType = useMemo(
+    () =>
+      entryTypes.find(
+        (type) => String(value) === String(type.id) || value === type.code
+      ) || null,
+    [entryTypes, value]
+  );
 
-  const selectedType = useMemo(() => {
-    return entryTypes.find(
-      (type) => String(value) === String(type.id) || value === type.code
-    ) || null;
-  }, [entryTypes, value]);
+  const groupedEntryTypes = useMemo(() => {
+    if (!groupByProgram) {
+      return { all: entryTypes };
+    }
 
-  const grouped = groupByProgram
-    ? entryTypes.reduce((acc, type) => {
-        const prog = type.program_type || "other";
-        if (!acc[prog]) acc[prog] = [];
-        acc[prog].push(type);
-        return acc;
-      }, {})
-    : { all: entryTypes };
+    return entryTypes.reduce((groups, type) => {
+      const program = type?.program_type || "other";
+      groups[program] = groups[program] || [];
+      groups[program].push(type);
+      return groups;
+    }, {});
+  }, [entryTypes, groupByProgram]);
 
-  const programLabels = {
-    vr: "VR Services",
-    pre_ets: "Pre-ETS Services",
-    dspd: "DSPD Services",
-    internal: "Internal",
-    other: "Other",
+  const selectEntryType = (entryType) => {
+    if (disabled) {
+      return;
+    }
+
+    onChange?.(entryType);
+    onSelectionChange?.(entryType);
   };
 
   if (loading) {
     return (
       <div className={cn("flex items-center justify-center py-8", className)}>
-        <Loader2 className="w-4 h-4 animate-spin text-slate-400 mr-2" />
-        <span className="text-sm text-slate-400">Loading entry types...</span>
+        <Loader2 className="mr-2 h-4 w-4 animate-spin text-slate-400" />
+        <span className="text-sm text-slate-400">Loading service types…</span>
       </div>
     );
   }
@@ -114,152 +158,86 @@ export default function EntryTypePicker({
     return (
       <div
         className={cn(
-          "p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3",
+          "flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4",
           className
         )}
       >
-        <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-red-700">{error}</div>
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+        <p className="text-sm text-red-700">{error}</p>
       </div>
     );
   }
 
-  // ── Select mode (real dropdown) ──
   if (mode === "select") {
     return (
       <div className={cn("space-y-2", className)}>
         <Select
           value={selectedType ? String(selectedType.id) : ""}
           onValueChange={(selectedValue) => {
-            const type = entryTypes.find(
-              (entryType) => String(entryType.id) === String(selectedValue)
+            const entryType = entryTypes.find(
+              (type) => String(type.id) === String(selectedValue)
             );
-            if (type) handleSelect(type);
+            if (entryType) {
+              selectEntryType(entryType);
+            }
           }}
           disabled={disabled}
         >
           <SelectTrigger className="border-slate-200 text-sm">
-            <SelectValue placeholder="Select service type..." />
+            <SelectValue placeholder="Select service type…" />
           </SelectTrigger>
           <SelectContent>
-            {groupByProgram
-              ? Object.entries(grouped).map(([prog, types]) => (
-                  <div key={prog}>
-                    <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {programLabels[prog] || prog}
-                    </div>
-                    {types.map((type) => (
-                      <SelectItem key={type.id} value={String(type.id)}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
+            {Object.entries(groupedEntryTypes).map(([program, types]) => (
+              <div key={program}>
+                {groupByProgram && (
+                  <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {PROGRAM_LABELS[program] || program}
                   </div>
-                ))
-              : entryTypes.map((type) => (
+                )}
+                {types.map((type) => (
                   <SelectItem key={type.id} value={String(type.id)}>
                     {type.name}
                   </SelectItem>
                 ))}
+              </div>
+            ))}
           </SelectContent>
         </Select>
 
         {showDescriptions && selectedType && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-slate-900">
-                {selectedType.name}
-              </span>
-              {selectedType.color && (
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: selectedType.color }}
-                />
-              )}
-            </div>
-
-            {selectedType.description && (
-              <p className="text-xs text-slate-600 mb-2">
-                {selectedType.description}
-              </p>
-            )}
-
-            <div className="flex flex-wrap gap-1.5 text-xs">
-              {selectedType.is_billable && (
-                <Badge className="bg-blue-100 text-blue-700 border-0 text-xs flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" />
-                  Billable
-                </Badge>
-              )}
-              {selectedType.is_payroll_eligible && (
-                <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">
-                  Payroll
-                </Badge>
-              )}
-              {selectedType.requires_authorization && (
-                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  Auth Required
-                </Badge>
-              )}
-            </div>
-          </div>
+          <EntryTypeSummary entryType={selectedType} />
         )}
       </div>
     );
   }
 
-  // ── Grid mode (default) ──
-  if (mode === "grid") {
-    return (
-      <div className={cn("space-y-6 overflow-y-auto max-h-[60vh] pr-1", className)}>
-        {Object.entries(grouped).map(([prog, types]) => (
-          <div key={prog} className="space-y-3">
-            {groupByProgram && (
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {programLabels[prog] || prog}
-              </h3>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {types.map((type) => (
-                <EntryTypeCard
-                  key={type.id}
-                  type={type}
-                  selected={value === type.id || value === type.code}
-                  onSelect={handleSelect}
-                  showDescription={showDescriptions}
-                  disabled={disabled}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // ── Compact mode (inline cards, smaller) ──
   if (mode === "compact") {
     return (
       <div
-        className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2", className)}
+        className={cn(
+          "grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4",
+          className
+        )}
       >
         {entryTypes.map((type) => (
           <button
             key={type.id}
-            onClick={() => !disabled && handleSelect(type)}
+            type="button"
+            onClick={() => selectEntryType(type)}
             disabled={disabled}
             className={cn(
-              "p-2 rounded-lg border transition-all text-left text-xs font-medium",
+              "rounded-lg border p-2 text-left text-xs font-medium transition-all",
               value === type.id || value === type.code
                 ? "border-blue-500 bg-blue-50 text-blue-900"
-                : "border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-slate-700"
+                : "border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50",
+              disabled && "cursor-not-allowed opacity-50"
             )}
-            title={type.description}
+            title={type.description || type.name}
           >
             <div className="truncate">{type.name}</div>
             {type.color && (
               <div
-                className="w-1.5 h-1.5 rounded-full mt-1"
+                className="mt-1 h-1.5 w-1.5 rounded-full"
                 style={{ backgroundColor: type.color }}
               />
             )}
@@ -269,101 +247,136 @@ export default function EntryTypePicker({
     );
   }
 
-  return null;
+  return (
+    <div className={cn("max-h-[60vh] space-y-6 overflow-y-auto pr-1", className)}>
+      {Object.entries(groupedEntryTypes).map(([program, types]) => (
+        <section key={program} className="space-y-3">
+          {groupByProgram && (
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {PROGRAM_LABELS[program] || program}
+            </h3>
+          )}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {types.map((type) => (
+              <EntryTypeCard
+                key={type.id}
+                entryType={type}
+                selected={value === type.id || value === type.code}
+                disabled={disabled}
+                showDescription={showDescriptions}
+                onSelect={selectEntryType}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
 }
 
-/**
- * EntryTypeCard - Visual card for a single entry type
- */
-function EntryTypeCard({
-  type,
-  selected,
-  onSelect,
-  showDescription,
-  disabled,
-}) {
-  const reportingModeHints = {
-    none: "Internal use only",
-    usor95_monthly: "Monthly VR report (USOR-95)",
-    usor96_monthly: "Monthly tracker (USOR-96)",
-    usor148_service_period: "Service period report (USOR-148)",
-    custom: "Custom report format",
-  };
-
+function EntryTypeSummary({ entryType }) {
   return (
-    <button
-      onClick={() => !disabled && onSelect(type)}
-      disabled={disabled}
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="text-sm font-medium text-slate-900">{entryType.name}</span>
+        {entryType.color && (
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entryType.color }}
+          />
+        )}
+      </div>
+      {entryType.description && (
+        <p className="mb-2 text-xs text-slate-600">{entryType.description}</p>
+      )}
+      <EntryTypeBadges entryType={entryType} />
+    </div>
+  );
+}
+
+function EntryTypeBadges({ entryType }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 text-xs">
+      {entryType.is_billable && (
+        <Badge className="flex items-center gap-1 border-0 bg-blue-100 text-xs text-blue-700">
+          <DollarSign className="h-3 w-3" />
+          Billable
+        </Badge>
+      )}
+      {entryType.is_payroll_eligible && (
+        <Badge className="border-0 bg-emerald-100 text-xs text-emerald-700">
+          Payroll
+        </Badge>
+      )}
+      {entryType.requires_authorization && (
+        <Badge className="flex items-center gap-1 border-0 bg-amber-100 text-xs text-amber-700">
+          <Lock className="h-3 w-3" />
+          Authorization required
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function EntryTypeCard({
+  entryType,
+  selected,
+  disabled,
+  showDescription,
+  onSelect,
+}) {
+  return (
+    <Card
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      onClick={() => !disabled && onSelect(entryType)}
+      onKeyDown={(event) => {
+        if (!disabled && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onSelect(entryType);
+        }
+      }}
       className={cn(
-        "p-4 rounded-lg border-2 transition-all text-left",
-        "hover:shadow-md active:scale-[0.99]",
+        "cursor-pointer rounded-lg border-2 p-4 text-left transition-all hover:shadow-md",
         selected
           ? "border-blue-500 bg-blue-50 shadow-md"
           : "border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50",
-        disabled && "opacity-50 cursor-not-allowed"
+        disabled && "cursor-not-allowed opacity-50"
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div>
           <p className={cn("font-semibold", selected ? "text-blue-900" : "text-slate-900")}>
-            {type.name}
+            {entryType.name}
           </p>
-          {type.color && (
+          {entryType.color && (
             <div
-              className="w-2.5 h-2.5 rounded-full mt-1"
-              style={{ backgroundColor: type.color }}
+              className="mt-1 h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: entryType.color }}
             />
           )}
         </div>
         {selected && (
-          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0 mt-0.5">
-            <svg
-              className="w-3 h-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+            ✓
           </div>
         )}
       </div>
 
-      {showDescription && type.description && (
-        <p className="text-xs text-slate-600 mb-2 line-clamp-2">
-          {type.description}
+      {showDescription && entryType.description && (
+        <p className="mb-2 line-clamp-2 text-xs text-slate-600">
+          {entryType.description}
         </p>
       )}
 
-      {type.report_mode !== "none" && (
-        <p className="text-xs text-slate-500 mb-2 flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {reportingModeHints[type.report_mode] || "Report-eligible"}
+      {entryType.report_mode !== "none" && (
+        <p className="mb-2 flex items-center gap-1 text-xs text-slate-500">
+          <Clock className="h-3 w-3" />
+          {REPORTING_MODE_HINTS[entryType.report_mode] || "Report-eligible"}
         </p>
       )}
 
-      <div className="flex flex-wrap gap-1.5 text-xs">
-        {type.is_billable && (
-          <Badge className="bg-blue-100 text-blue-700 border-0 text-xs flex items-center gap-1">
-            <DollarSign className="w-3 h-3" /> Billable
-          </Badge>
-        )}
-        {type.is_payroll_eligible && (
-          <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">
-            Payroll
-          </Badge>
-        )}
-        {type.requires_authorization && (
-          <Badge className="bg-amber-100 text-amber-700 border-0 text-xs flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Auth Required
-          </Badge>
-        )}
-      </div>
-    </button>
+      <EntryTypeBadges entryType={entryType} />
+    </Card>
   );
 }
