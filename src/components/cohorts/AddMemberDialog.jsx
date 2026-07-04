@@ -43,14 +43,33 @@ export default function AddMemberDialog({
   const {
     data: orgUsers = [],
     isLoading: orgUsersLoading,
-  } = useQuery({
-    queryKey: ["orgUsers", "addMember"],
+   } = useQuery({
+    queryKey: [
+      "orgUsers",
+      "addMember",
+      cohortId || "unscoped",
+      cohortRole,
+    ],
     queryFn: async () => {
-      const res = await base44.functions.invoke("getOrgUsers", {});
+      const res = await base44.functions.invoke("getOrgUsers", {
+        cohort_id: cohortId,
+        cohort_role: cohortRole,
+      });
+
       const payload = res.data || {};
+
+      if (!payload.ok) {
+        throw new Error(
+          payload.error || "Unable to load eligible cohort roster users."
+        );
+      }
+
       return Array.isArray(payload.users) ? payload.users : [];
     },
-    enabled: open,
+    enabled:
+      open &&
+      Boolean(cohortId) &&
+      ["manager", "trainer"].includes(cohortRole),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
