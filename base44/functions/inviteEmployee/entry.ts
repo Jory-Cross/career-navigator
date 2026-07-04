@@ -429,22 +429,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me().catch(
-      () => null
-    );
-
-    if (!authenticatedUser?.id) {
-      return Response.json(
-        {
-          success: false,
-          message: "Please sign in before sending a staff invitation.",
-        },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
+        const body = await req.json().catch(() => ({}));
     const rawEmail = normalizeText(body?.email);
     const email = normalizeEmail(rawEmail);
     const inviteRole =
@@ -482,6 +467,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(
+      () => null
+    );
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Please sign in before sending a staff invitation.",
+        },
+        { status: 401 }
+      );
+    }
     const {
       caller,
       callerId,
