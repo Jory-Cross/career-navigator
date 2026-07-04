@@ -1,37 +1,18 @@
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Briefcase } from "lucide-react";
-import Usor96TimeEntryForm from "./Usor96TimeEntryForm";
+import React from "react";
 
-export default function Usor96Launcher({ clientId, onSuccess }) {
-  const [open, setOpen] = useState(false);
-
+/**
+ * Legacy USOR96 launcher disabled during the security remediation freeze.
+ */
+export default function Usor96Launcher() {
   return (
-    <>
-      <Button
-        onClick={() => setOpen(true)}
-        className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
-      >
-        <Briefcase className="w-4 h-4 mr-2" />
-        Add USOR96 Entry
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New USOR96 Entry</DialogTitle>
-          </DialogHeader>
-          <Usor96TimeEntryForm
-            clientId={clientId}
-            onSuccess={(result) => {
-              if (onSuccess) onSuccess(result);
-              setOpen(false);
-            }}
-            onCancel={() => setOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
+    <div
+      className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+      role="status"
+    >
+      <p className="font-semibold">USOR96 time entry is temporarily unavailable.</p>
+      <p className="mt-1">
+        This legacy workflow is disabled while security remediation is in progress.
+      </p>
+    </div>
   );
 }
