@@ -1,236 +1,47 @@
 {
   "name": "Document",
   "type": "object",
-  "description": "Stored file attached to a client, including uploaded docs and generated reports.",
+  "description": "Stored file attached to a client, including uploaded documents and generated reports. Access is server-authorized and organization-scoped.",
   "properties": {
-    "org_id": {
-      "type": "string"
-    },
-    "client_id": {
-      "type": "string"
-    },
-    "title": {
-      "type": "string"
-    },
-    "file_url": {
-      "type": "string"
-    },
-    "file_name": {
-      "type": "string"
-    },
-    "file_size": {
-      "type": "number"
-    },
-    "file_type": {
-      "type": "string"
-    },
-    "category": {
-      "type": "string",
-      "enum": [
-        "resume",
-        "cover_letter",
-        "assessment",
-        "generated_report",
-        "authorization",
-        "notes",
-        "reference",
-        "certification",
-        "portfolio",
-        "other"
-      ],
-      "default": "other"
-    },
-    "document_subtype": {
-      "type": "string",
-      "description": "e.g. 'usor95', 'usor96', 'usor148' for generated reports; 'signed', 'draft' for other docs"
-    },
-    "source_type": {
-      "type": "string",
-      "description": "Entity type that produced this document (e.g. 'ReportBatch', 'GeneratedReport')"
-    },
-    "source_id": {
-      "type": "string",
-      "description": "ID of the source entity record"
-    },
-    "generated_from_template_id": {
-      "type": "string",
-      "description": "FK to PDFTemplate used to generate this document"
-    },
-    "report_batch_id": {
-      "type": "string",
-      "description": "FK to ReportBatch if produced by a bulk run"
-    },
-    "report_version": {
-      "type": "number",
-      "description": "Version number of the report at time of generation"
-    },
-    "reporting_period_start": {
-      "type": "string",
-      "format": "date"
-    },
-    "reporting_period_end": {
-      "type": "string",
-      "format": "date"
-    },
-    "version": {
-      "type": "number",
-      "default": 1
-    },
-    "parent_document_id": {
-      "type": "string",
-      "description": "If this is a re-generated version, ID of the document it supersedes"
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "notes": {
-      "type": "string"
-    },
-    "is_generated": {
-      "type": "boolean",
-      "default": false,
-      "description": "True for system-generated PDFs; false for staff-uploaded files"
-    },
-    "is_archived": {
-      "type": "boolean",
-      "default": false
-    },
-    "visibility": {
-      "type": "string",
-      "enum": [
-        "staff",
-        "client",
-        "both"
-      ],
-      "default": "staff"
-    },
-    "generated_report_id": {
-      "type": "string",
-      "description": "FK to GeneratedReport record this file belongs to"
-    },
-    "entry_type_code": {
-      "type": "string",
-      "description": "Entry type this report document covers (for filtering)"
-    },
-    "ai_summary": {
-      "type": "string"
-    },
-    "ai_tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "ai_insights": {
-      "type": "string"
-    },
-    "ai_last_processed": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "extracted_text": {
-      "type": "string",
-      "description": "Store raw extracted resume/document text from PDF/DOCX/TXT processing."
-    },
-    "extracted_text_length": {
-      "type": "number",
-      "default": 0,
-      "description": "Store character length of extracted text for validation/debugging."
-    },
-    "extraction_status": {
-      "type": "string",
-      "default": "pending",
-      "description": "Track extraction state: pending, success, failed."
-    },
-    "extraction_error": {
-      "type": "string",
-      "description": "Store extraction/parsing error details when document processing fails."
-    },
-    "job_titles": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Job titles extracted from the document."
-    },
-    "resume_skills": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Skills extracted from the resume/document."
-    },
-    "work_history": {
-      "type": "array",
-      "description": "Work history entries extracted from the document.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "employer": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "start_date": {
-            "type": "string"
-          },
-          "end_date": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "education_history": {
-      "type": "array",
-      "description": "Education history entries extracted from the document.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "institution": {
-            "type": "string"
-          },
-          "degree": {
-            "type": "string"
-          },
-          "field": {
-            "type": "string"
-          },
-          "graduation_year": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "certifications": {
-      "type": "array",
-      "description": "Certifications extracted from the document.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "issuer": {
-            "type": "string"
-          },
-          "year": {
-            "type": "string"
-          }
-        }
-      }
-    }
+    "org_id": { "type": "string" },
+    "client_id": { "type": "string" },
+    "title": { "type": "string" },
+    "file_url": { "type": "string" },
+    "file_name": { "type": "string" },
+    "file_size": { "type": "number" },
+    "file_type": { "type": "string" },
+    "category": { "type": "string", "enum": ["resume", "cover_letter", "assessment", "generated_report", "authorization", "notes", "reference", "certification", "portfolio", "other"], "default": "other" },
+    "document_subtype": { "type": "string", "description": "Generated report or document subtype" },
+    "source_type": { "type": "string" },
+    "source_id": { "type": "string" },
+    "generated_from_template_id": { "type": "string" },
+    "report_batch_id": { "type": "string" },
+    "report_version": { "type": "number" },
+    "reporting_period_start": { "type": "string", "format": "date" },
+    "reporting_period_end": { "type": "string", "format": "date" },
+    "version": { "type": "number", "default": 1 },
+    "parent_document_id": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" },
+    "is_generated": { "type": "boolean", "default": false },
+    "is_archived": { "type": "boolean", "default": false },
+    "visibility": { "type": "string", "enum": ["staff", "client", "both"], "default": "staff" },
+    "generated_report_id": { "type": "string" },
+    "entry_type_code": { "type": "string" },
+    "ai_summary": { "type": "string" },
+    "ai_tags": { "type": "array", "items": { "type": "string" } },
+    "ai_insights": { "type": "string" },
+    "ai_last_processed": { "type": "string", "format": "date-time" },
+    "extracted_text": { "type": "string", "description": "Raw extracted document text; never browser-readable without server authorization." },
+    "extracted_text_length": { "type": "number", "default": 0 },
+    "extraction_status": { "type": "string", "default": "pending" },
+    "extraction_error": { "type": "string" },
+    "job_titles": { "type": "array", "items": { "type": "string" } },
+    "resume_skills": { "type": "array", "items": { "type": "string" } },
+    "work_history": { "type": "array", "items": { "type": "object", "properties": { "employer": { "type": "string" }, "title": { "type": "string" }, "start_date": { "type": "string" }, "end_date": { "type": "string" }, "description": { "type": "string" } } } },
+    "education_history": { "type": "array", "items": { "type": "object", "properties": { "institution": { "type": "string" }, "degree": { "type": "string" }, "field": { "type": "string" }, "graduation_year": { "type": "string" } } } },
+    "certifications": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "issuer": { "type": "string" }, "year": { "type": "string" } } } }
   },
-  "required": [
-    "client_id",
-    "title",
-    "file_url"
-  ],
-  "rls": {}
+  "required": ["client_id", "title", "file_url"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
