@@ -1,237 +1,192 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { useViewAs } from "@/lib/ViewAsContext";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Archive } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Archive, Search } from "lucide-react";
 import ClientCard from "@/components/clients/ClientCard";
-import NewClientDialog from "@/components/clients/NewClientDialog";
-import { useOrg } from "@/lib/useOrg";
 import OrgGate from "@/lib/OrgGate";
 
-// Recursively get all user IDs under a given user in the hierarchy
-function getAllDescendantIds(userId, allUsers) {
-  const directReports = allUsers.filter(u => u.manager_id === userId);
-  if (directReports.length === 0) return [];
-  const ids = directReports.map(u => u.id);
-  for (const report of directReports) {
-    ids.push(...getAllDescendantIds(report.id, allUsers));
-  }
-  return ids;
-}
+const VALID_CLIENT_TYPES = new Set([
+  "job_seeker",
+  "pre_ets",
+  "dspd",
+  "employed",
+  "customized_employment",
+]);
 
+/**
+ * Client list constrained during the security remediation freeze.
+ *
+ * Client records are loaded exclusively through getClientsForUser, which
+ * derives organization and assignment scope from the authenticated caller.
+ * New-client creation is unavailable until it has a server-authorized route.
+ */
 export default function Clients() {
   const location = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-   const [typeFilter, setTypeFilter] = useState(() => new URLSearchParams(location.search).get("type") || "all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [employeeFilter, setEmployeeFilter] = useState("all");
-  const { viewAsUser } = useViewAs();
-   const { orgId, loading: orgLoading } = useOrg();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
 
   useEffect(() => {
-    // Sync type filter with URL parameter whenever location changes
-    const urlParams = new URLSearchParams(location.search);
-    const typeParam = urlParams.get("type");
-    setTypeFilter(typeParam || "all");
+    const typeParam = new URLSearchParams(location.search).get("type") || "all";
+    setTypeFilter(VALID_CLIENT_TYPES.has(typeParam) ? typeParam : "all");
   }, [location.search]);
 
- const allUsers = [];
-
-  // Resolve effective perspective: viewAsUser from context (set globally by admin)
-  const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
-
-  const { data: clients = [], refetch } = useQuery({
-       queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId, typeFilter],
+  const {
+    data: clients = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["authorized-clients", user?.id],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
-      if (!user) return [];
+      const response = await base44.functions.invoke("getClientsForUser", {});
+      const payload = response?.data ?? response ?? {};
 
-      // Admin viewing as someone else — use backend hierarchy enforcement for that user
-      // Admin with no viewAs — fetch all directly for speed
-           if (user.role === 'admin' && !viewAsUser) {
-        const validClientTypes = ["job_seeker", "pre_ets", "dspd", "employed", "customized_employment"];
-        const shouldFilterByType = validClientTypes.includes(typeFilter);
-
-        if (orgId || shouldFilterByType) {
-          return await base44.entities.Client.filter(
-            {
-              ...(orgId ? { org_id: orgId } : {}),
-              ...(shouldFilterByType ? { client_type: typeFilter } : {})
-            },
-            "-created_date"
-          );
-        }
-
-        return await base44.entities.Client.list("-created_date");
+      if (!Array.isArray(payload.clients)) {
+        throw new Error(payload.error || "Unable to load your authorized clients.");
       }
 
-      // For all other cases (management, employee, admin-viewing-as),
-      // delegate to the backend which enforces hierarchy server-side.
-      // For viewAs we pass the effective user's role/id via query context
-      // but since backend uses the token user (admin), we handle viewAs client-side
-      // only for the admin's UI perspective — actual data access is still admin-level.
-      if (user.role === 'admin' && viewAsUser) {
-        const allClients = orgId
-          ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
-          : await base44.entities.Client.list("-created_date");
-        // Simulate viewAs user's perspective using recursive hierarchy
-        const effRole = viewAsUser.role;
-        const effId = viewAsUser.id;
-        if (effRole === 'management') {
-          const descendantIds = getAllDescendantIds(effId, allUsers);
-          const visibleIds = new Set([effId, ...descendantIds]);
-          return allClients.filter(c => visibleIds.has(c.assigned_employee_id));
-        }
-        if (effRole === 'employee') {
-          return allClients.filter(c => c.assigned_employee_id === effId);
-        }
-        return allClients;
+      if (user?.role === "admin") {
+        return payload.clients;
       }
 
-      // management / employee — backend enforces hierarchy
-      const res = await base44.functions.invoke('getClientsForUser', { org_id: orgId || null });
-      const platformClients = res.data?.clients || [];
-
-      // Additive: union with cohort-visible clients (never reduces existing platform visibility).
-      // getCohortVisibleClients resolves the caller's cohort memberships server-side and returns
-      // clients across all cohorts the caller manages/is a member of, scoped by the caller's org.
-      let unionClients = platformClients;
       try {
-        const cohortRes = await base44.functions.invoke('getCohortVisibleClients', { user_id: user.id });
-        const cohortClients = cohortRes.data?.clients || [];
-        if (cohortClients.length > 0) {
-          const seenIds = new Set(platformClients.map(c => c.id));
-          unionClients = [
-            ...platformClients,
-            ...cohortClients.filter(c => !seenIds.has(c.id))
-          ];
-        }
+        const cohortResponse = await base44.functions.invoke(
+          "getCohortVisibleClients",
+          { user_id: user.id }
+        );
+        const cohortPayload = cohortResponse?.data ?? cohortResponse ?? {};
+        const cohortClients = Array.isArray(cohortPayload.clients)
+          ? cohortPayload.clients
+          : [];
+        const seenIds = new Set(payload.clients.map((client) => client.id));
+
+        return [
+          ...payload.clients,
+          ...cohortClients.filter((client) => client?.id && !seenIds.has(client.id)),
+        ].sort(
+          (left, right) =>
+            new Date(right?.created_date || 0).getTime() -
+            new Date(left?.created_date || 0).getTime()
+        );
       } catch {
-        // Cohort engine unavailable — keep platform visibility unchanged.
+        return payload.clients;
       }
-
-      return unionClients.sort((a, b) =>
-        new Date(b.created_date) - new Date(a.created_date)
-      );
     },
-       enabled: !!user && !orgLoading && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
   });
 
-  const activeClientsCount = clients.filter(c => !c.is_archived).length;
+  const filteredClients = clients.filter((client) => {
+    const searchable = [client?.first_name, client?.last_name, client?.email]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const clientType = client?.client_type || "job_seeker";
 
-  const filtered = clients.filter(c => {
-    const matchSearch = `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    const matchType = typeFilter === "all" || (c.client_type || "job_seeker") === typeFilter;
-    const matchArchived = showArchived ? c.is_archived : !c.is_archived;
-    const matchEmployee = employeeFilter === "all" || c.assigned_employee_id === employeeFilter;
-    return matchSearch && matchStatus && matchType && matchArchived && matchEmployee;
+    return (
+      searchable.includes(search.trim().toLowerCase()) &&
+      (statusFilter === "all" || client?.status === statusFilter) &&
+      (typeFilter === "all" || clientType === typeFilter) &&
+      (showArchived ? client?.is_archived === true : client?.is_archived !== true)
+    );
   });
+
+  const activeClientCount = clients.filter((client) => client?.is_archived !== true).length;
 
   return (
     <OrgGate>
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-          <p className="text-sm text-slate-500 mt-1">{activeClientsCount} active clients</p>
-        </div>
-        <Button onClick={() => setShowNew(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
-          <Plus className="w-4 h-4 mr-2" /> New Client
-        </Button>
-      </div>
+      <main className="space-y-6">
+        <section className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {isLoading ? "Loading authorized clients…" : `${activeClientCount} active clients`}
+            </p>
+          </div>
+          <p className="text-sm text-amber-800">
+            New-client creation is temporarily unavailable during security remediation.
+          </p>
+        </section>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search clients..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-10 border-slate-200"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 border-slate-200">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40 border-slate-200">
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-           <SelectItem value="job_seeker">Job Seeker</SelectItem>
-<SelectItem value="pre_ets">Pre-ETS</SelectItem>
-<SelectItem value="dspd">DSPD</SelectItem>
-<SelectItem value="employed">Employed</SelectItem>
-<SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
-          </SelectContent>
-        </Select>
-        {(effectiveUser?.role === 'admin' || effectiveUser?.role === 'management') && (() => {
-          const visibleEmployees = effectiveUser.role === 'admin'
-            ? allUsers.filter(u => u.role === 'employee')
-            : allUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
-          return visibleEmployees.length > 0 ? (
-            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-              <SelectTrigger className="w-44 border-slate-200">
-                <SelectValue placeholder="All Employees" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Employees</SelectItem>
-                {visibleEmployees.map(e => (
-                  <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null;
-        })()}
-        <Button
-          variant={showArchived ? "default" : "outline"}
-          onClick={() => setShowArchived(!showArchived)}
-          className="gap-2"
-        >
-          <Archive className="w-4 h-4" />
-          {showArchived ? "Hide Archived" : "Show Archived"}
-        </Button>
-      </div>
+        <section className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search clients..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="border-slate-200 pl-10"
+            />
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map(client => (
-          <ClientCard
-  key={client.id}
-  client={client}
-  onArchiveToggle={refetch}
-  canAssign={user?.role === 'admin' || user?.role === 'management'}
-/>
-        ))}
-      </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full border-slate-200 sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-slate-400 text-sm">No clients found</p>
-        </div>
-      )}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full border-slate-200 sm:w-48">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="job_seeker">Job Seeker</SelectItem>
+              <SelectItem value="pre_ets">Pre-ETS</SelectItem>
+              <SelectItem value="dspd">DSPD</SelectItem>
+              <SelectItem value="employed">Employed</SelectItem>
+              <SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
+            </SelectContent>
+          </Select>
 
-      <NewClientDialog open={showNew} onOpenChange={setShowNew} onCreated={refetch} />
-    </div>
+          <button
+            type="button"
+            onClick={() => setShowArchived((current) => !current)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            <Archive className="h-4 w-4" />
+            {showArchived ? "Hide Archived" : "Show Archived"}
+          </button>
+        </section>
+
+        {isError ? (
+          <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Clients could not be loaded through the authorized access route. Try refreshing the page.
+          </section>
+        ) : (
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredClients.map((client) => (
+              <ClientCard key={client.id} client={client} />
+            ))}
+          </section>
+        )}
+
+        {!isLoading && !isError && filteredClients.length === 0 && (
+          <section className="py-16 text-center text-sm text-slate-400">
+            No clients match the selected filters.
+          </section>
+        )}
+      </main>
     </OrgGate>
   );
 }
