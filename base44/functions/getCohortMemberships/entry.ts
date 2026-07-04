@@ -396,9 +396,12 @@ Deno.serve(async (req) => {
     ]);
 
     mark("roster_source_reads_complete");
-    const activeMemberships = (
-      Array.isArray(allMemberships) ? allMemberships : []
-    ).filter((membership) => membership.is_active !== false);
+       const activeMemberships = asArray(allMemberships).filter(
+      (membership: any) =>
+        normalizeText(membership?.org_id) === organizationId &&
+        normalizeText(membership?.cohort_id) === cohortId &&
+        isActive(membership)
+    );
 
     const registrationBillingEvents = (
       Array.isArray(organizationBillingEvents)
