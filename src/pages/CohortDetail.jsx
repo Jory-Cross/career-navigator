@@ -656,41 +656,6 @@ export default function CohortDetail() {
     }
   };
 
-  const handleAddMember = async (selectedUser) => {
-    setAddingMember(true);
-
-    try {
-      const res = await base44.functions.invoke(
-        "assignCEStudentToCohort",
-        {
-          cohort_id,
-          user_id: selectedUser.id,
-        }
-      );
-
-      if (!res.data?.ok) {
-        throw new Error(
-          res.data?.error || "Unable to assign student to cohort."
-        );
-      }
-
-      toast.success(
-        res.data?.message || "Existing CE student assigned to cohort."
-      );
-
-      await queryClient.refetchQueries({
-        queryKey: ["cohorts", "memberships", cohort_id],
-      });
-
-      return res.data;
-    } catch (error) {
-      console.error("Cohort student assignment failed:", error);
-      toast.error(error?.message || "Failed to assign CE student.");
-      throw error;
-    } finally {
-      setAddingMember(false);
-    }
-  };
 
   const handleRemoveManager = async (membership) => {
     if (managers.length <= 1) {
