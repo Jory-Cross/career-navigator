@@ -235,10 +235,11 @@ function isValidInviteForCohort(
   );
 }
 
-async function getReceiptDetails(
-  checkoutSessionId: string,
-  billingStatus: string
-) {
+async function getReceiptDetails(billingEvent: any) {
+  const billingStatus = normalizeText(
+    billingEvent?.event_status
+  ).toLowerCase();
+
   if (billingStatus === "waived") {
     return {
       status: "not_applicable_waived",
@@ -252,6 +253,10 @@ async function getReceiptDetails(
       receipt_url: null,
     };
   }
+
+  const checkoutSessionId = normalizeText(
+    billingEvent?.stripe_checkout_session_id
+  );
 
   if (!checkoutSessionId) {
     return {
@@ -267,6 +272,36 @@ async function getReceiptDetails(
     };
   }
 
+  const billingEventId = normalizeText(billingEvent?.id);
+  const billingEventKey = normalizeText(
+    billingEvent?.billing_event_key
+  );
+  const organizationId = normalizeText(
+    billingEvent?.organization_id
+  );
+  const studentEmail = normalizeEmail(
+    billingEvent?.subject_verified_email
+  );
+  const expectedAmount = Number(billingEvent?.amount_cents);
+  const expectedCurrency = normalizeText(
+    billingEvent?.currency
+  ).toLowerCase();
+
+  if (
+    !billingEventId ||
+    !billingEventKey ||
+    !organizationId ||
+    !studentEmail ||
+    !Number.isInteger(expectedAmount) ||
+    expectedAmount <= 0 ||
+    !expectedCurrency
+  ) {
+    return {
+      status: "billing_record_incomplete",
+      receipt_url: null,
+    };
+  }
+
   try {
     const checkoutSession: any =
       await stripe.checkout.sessions.retrieve(
@@ -276,7 +311,37 @@ async function getReceiptDetails(
         }
       );
 
-    let paymentIntent: any = checkoutSession?.payment_intent || null;
+    const metadata = checkoutSession?.metadata || {};
+
+    const sessionMatchesBillingEvent =
+      checkoutSession?.mode === "payment" &&
+      checkoutSession?.status === "complete" &&
+      checkoutSession?.payment_status === "paid" &&
+      normalizeText(checkoutSession?.client_reference_id) ===
+        billingEventId &&
+      normalizeText(metadata?.billing_flow) ===
+        "ce_student_registration" &&
+      normalizeText(metadata?.billing_event_id) ===
+        billingEventId &&
+      normalizeText(metadata?.billing_event_key) ===
+        billingEventKey &&
+      normalizeText(metadata?.organization_id) ===
+        organizationId &&
+      normalizeEmail(metadata?.subject_verified_email) ===
+        studentEmail &&
+      Number(checkoutSession?.amount_total) === expectedAmount &&
+      normalizeText(checkoutSession?.currency).toLowerCase() ===
+        expectedCurrency;
+
+    if (!sessionMatchesBillingEvent) {
+      return {
+        status: "checkout_integrity_mismatch",
+        receipt_url: null,
+      };
+    }
+
+    let paymentIntent: any =
+      checkoutSession?.payment_intent || null;
 
     if (typeof paymentIntent === "string") {
       paymentIntent = await stripe.paymentIntents.retrieve(
