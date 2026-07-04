@@ -107,13 +107,33 @@ export default function ManagerAssignments({ allUsers }) {
     }
   };
 
-  const handleRemove = async (assignment) => {
+    const handleRemove = async (assignment) => {
     try {
-      await base44.entities.ManagerEmployeeAssignment.update(assignment.id, { is_active: false });
-      toast.success("Assignment removed.");
-      queryClient.invalidateQueries({ queryKey: ["managerAssignments"] });
-    } catch {
-      toast.error("Failed to remove assignment.");
+      const response = await base44.functions.invoke(
+        "manageManagerEmployeeAssignment",
+        {
+          action: "remove",
+          assignment_id: assignment.id,
+        }
+      );
+
+      const data = response?.data || {};
+
+      if (data.success === false) {
+        throw new Error(
+          data.error || "Manager assignment could not be removed."
+        );
+      }
+
+      toast.success("Manager assignment removed.");
+
+      queryClient.invalidateQueries({
+        queryKey: ["managerAssignments"],
+      });
+    } catch (error) {
+      toast.error(
+        error?.message || "Manager assignment could not be removed."
+      );
     }
   };
 
