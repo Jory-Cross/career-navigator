@@ -76,22 +76,10 @@
     "currency",
     "line_status"
   ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }
