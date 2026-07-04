@@ -2,232 +2,91 @@
   "name": "Client",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "first_name": {
-      "type": "string",
-      "description": "Client's first name"
-    },
-    "last_name": {
-      "type": "string",
-      "description": "Client's last name"
-    },
-    "email": {
-      "type": "string",
-      "description": "Client's email address"
-    },
-    "phone": {
-      "type": "string",
-      "description": "Client's phone number"
-    },
-    "address": {
-      "type": "string",
-      "description": "Client's home address"
-    },
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "first_name": { "type": "string", "description": "Client's first name" },
+    "last_name": { "type": "string", "description": "Client's last name" },
+    "email": { "type": "string", "description": "Client's email address" },
+    "phone": { "type": "string", "description": "Client's phone number" },
+    "address": { "type": "string", "description": "Client's home address" },
     "client_type": {
       "type": "string",
-      "enum": [
-        "job_seeker",
-        "pre_ets",
-        "dspd",
-        "employed",
-        "ce_training"
-      ],
+      "enum": ["job_seeker", "pre_ets", "dspd", "employed", "ce_training"],
       "default": "job_seeker",
       "description": "Type of client program. ce_training = training client created by CE student"
     },
     "status": {
       "type": "string",
-      "enum": [
-        "active",
-        "inactive",
-        "completed"
-      ],
+      "enum": ["active", "inactive", "completed"],
       "default": "active",
       "description": "Client engagement status"
     },
-    "industry": {
-      "type": "string"
-    },
-    "target_role": {
-      "type": "string"
-    },
-    "notes": {
-      "type": "string"
-    },
-    "avatar_url": {
-      "type": "string"
-    },
-    "linkedin_url": {
-      "type": "string"
-    },
-    "location": {
-      "type": "string"
-    },
-    "school": {
-      "type": "string",
-      "description": "School name (Pre-ETS clients)"
-    },
-    "graduation_year": {
-      "type": "string",
-      "description": "Graduation year (Pre-ETS clients)"
-    },
-    "access_token": {
-      "type": "string"
-    },
-    "resume_file_url": {
-      "type": "string"
-    },
-    "resume_file_name": {
-      "type": "string"
-    },
-    "cover_letter_file_url": {
-      "type": "string"
-    },
-    "cover_letter_file_name": {
-      "type": "string"
-    },
+    "industry": { "type": "string" },
+    "target_role": { "type": "string" },
+    "notes": { "type": "string" },
+    "avatar_url": { "type": "string" },
+    "linkedin_url": { "type": "string" },
+    "location": { "type": "string" },
+    "school": { "type": "string", "description": "School name (Pre-ETS clients)" },
+    "graduation_year": { "type": "string", "description": "Graduation year (Pre-ETS clients)" },
+    "access_token": { "type": "string" },
+    "resume_file_url": { "type": "string" },
+    "resume_file_name": { "type": "string" },
+    "cover_letter_file_url": { "type": "string" },
+    "cover_letter_file_name": { "type": "string" },
     "onboarding_status": {
       "type": "string",
-      "enum": [
-        "not_started",
-        "in_progress",
-        "completed"
-      ],
+      "enum": ["not_started", "in_progress", "completed"],
       "default": "not_started"
     },
-    "onboarding_started_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "onboarding_completed_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "is_archived": {
-      "type": "boolean",
-      "default": false
-    },
-    "assigned_employee_id": {
-      "type": "string"
-    },
-    "assigned_employer_id": {
-      "type": "string"
-    },
+    "onboarding_started_date": { "type": "string", "format": "date" },
+    "onboarding_completed_date": { "type": "string", "format": "date" },
+    "is_archived": { "type": "boolean", "default": false },
+    "assigned_employee_id": { "type": "string" },
+    "assigned_employer_id": { "type": "string" },
     "contacts": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          }
+          "type": { "type": "string" },
+          "label": { "type": "string" },
+          "name": { "type": "string" },
+          "phone": { "type": "string" },
+          "email": { "type": "string" },
+          "notes": { "type": "string" }
         }
       }
     },
-    "guardian_name": {
-      "type": "string"
-    },
-    "guardian_phone": {
-      "type": "string"
-    },
-    "guardian_email": {
-      "type": "string"
-    },
-    "support_staff_name": {
-      "type": "string"
-    },
-    "support_staff_phone": {
-      "type": "string"
-    },
-    "support_staff_email": {
-      "type": "string"
-    },
-    "workplace_name": {
-      "type": "string"
-    },
-    "workplace_address": {
-      "type": "string"
-    },
-    "supervisor_name": {
-      "type": "string"
-    },
-    "supervisor_phone": {
-      "type": "string"
-    },
-    "supervisor_email": {
-      "type": "string"
-    },
-    "employment_start_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "employer_name": {
-      "type": "string",
-      "description": "Employer / worksite name"
-    },
-    "employer_contact_name": {
-      "type": "string",
-      "description": "Employer contact / supervisor name"
-    },
-    "employer_address": {
-      "type": "string",
-      "description": "Employer / worksite address"
-    },
-    "employer_phone": {
-      "type": "string",
-      "description": "Employer / worksite phone"
-    },
+    "guardian_name": { "type": "string" },
+    "guardian_phone": { "type": "string" },
+    "guardian_email": { "type": "string" },
+    "support_staff_name": { "type": "string" },
+    "support_staff_phone": { "type": "string" },
+    "support_staff_email": { "type": "string" },
+    "workplace_name": { "type": "string" },
+    "workplace_address": { "type": "string" },
+    "supervisor_name": { "type": "string" },
+    "supervisor_phone": { "type": "string" },
+    "supervisor_email": { "type": "string" },
+    "employment_start_date": { "type": "string", "format": "date" },
+    "employer_name": { "type": "string", "description": "Employer / worksite name" },
+    "employer_contact_name": { "type": "string", "description": "Employer contact / supervisor name" },
+    "employer_address": { "type": "string", "description": "Employer / worksite address" },
+    "employer_phone": { "type": "string", "description": "Employer / worksite phone" },
     "vocational_facts_profile": {
       "type": "object",
       "description": "Structured employment facts extracted from assessments and documents by AI preprocessing",
       "additionalProperties": true
     },
-    "vocational_facts_extracted_at": {
-      "type": "string"
-    },
-    "vocational_facts_extracted_by": {
-      "type": "string"
-    },
-    "vocational_facts_document_count": {
-      "type": "number"
-    },
-    "vocational_facts_assessment_count": {
-      "type": "number"
-    },
-    "case_number": {
-      "type": "string"
-    },
-    "primary_vr_counselor_name": {
-      "type": "string"
-    },
-    "primary_vr_counselor_email": {
-      "type": "string"
-    },
-    "primary_vr_counselor_phone": {
-      "type": "string"
-    },
-    "authorization_summary": {
-      "type": "object",
-      "additionalProperties": true
-    },
+    "vocational_facts_extracted_at": { "type": "string" },
+    "vocational_facts_extracted_by": { "type": "string" },
+    "vocational_facts_document_count": { "type": "number" },
+    "vocational_facts_assessment_count": { "type": "number" },
+    "case_number": { "type": "string" },
+    "primary_vr_counselor_name": { "type": "string" },
+    "primary_vr_counselor_email": { "type": "string" },
+    "primary_vr_counselor_phone": { "type": "string" },
+    "authorization_summary": { "type": "object", "additionalProperties": true },
     "job_coaching_auth_number": {
       "type": "string",
       "description": "Authorization number for primary Job Coaching authorization"
@@ -236,35 +95,19 @@
       "type": "number",
       "description": "Total authorized hours for primary Job Coaching authorization"
     },
-    "job_coaching_auth_start_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "job_coaching_auth_end_date": {
-      "type": "string",
-      "format": "date"
-    },
+    "job_coaching_auth_start_date": { "type": "string", "format": "date" },
+    "job_coaching_auth_end_date": { "type": "string", "format": "date" },
     "job_coaching_additional_auths": {
       "type": "array",
       "description": "Additional Job Coaching authorizations (e.g. renewals or supplements)",
       "items": {
         "type": "object",
         "properties": {
-          "auth_number": {
-            "type": "string"
-          },
-          "authorized_hours": {
-            "type": "number"
-          },
-          "start_date": {
-            "type": "string"
-          },
-          "end_date": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          }
+          "auth_number": { "type": "string" },
+          "authorized_hours": { "type": "number" },
+          "start_date": { "type": "string" },
+          "end_date": { "type": "string" },
+          "notes": { "type": "string" }
         }
       }
     },
@@ -272,26 +115,14 @@
       "type": "number",
       "description": "Monthly authorized hours for DSPD services"
     },
-    "dspd_auth_number": {
-      "type": "string",
-      "description": "Authorization number for DSPD services"
-    },
-    "life_skills_auth_number": {
-      "type": "string",
-      "description": "Authorization number for Life Skills"
-    },
+    "dspd_auth_number": { "type": "string", "description": "Authorization number for DSPD services" },
+    "life_skills_auth_number": { "type": "string", "description": "Authorization number for Life Skills" },
     "life_skills_authorized_hours_total": {
       "type": "number",
       "description": "Total authorized hours for Life Skills (carries forward month to month)"
     },
-    "life_skills_auth_start_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "life_skills_auth_end_date": {
-      "type": "string",
-      "format": "date"
-    },
+    "life_skills_auth_start_date": { "type": "string", "format": "date" },
+    "life_skills_auth_end_date": { "type": "string", "format": "date" },
     "created_by_student_id": {
       "type": "string",
       "description": "CE Student user ID who created this training client (populated for ce_training client_type)"
@@ -310,10 +141,11 @@
       "description": "True if this is a CE Training client (distinct from operational clients)"
     }
   },
-  "required": [
-    "first_name",
-    "last_name",
-    "email"
-  ],
-  "rls": {}
+  "required": ["first_name", "last_name", "email"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
