@@ -301,11 +301,75 @@ async function sendCEStudentSettlementEmail(
     ) &&
     billingRecord?.billing_subject_type === "student";
 
-  if (!billingEventId || !studentEmail || !isEligibleRegistration) {
+   if (!billingEventId || !studentEmail || !isEligibleRegistration) {
     return {
       sent: false,
       skipped: true,
       reason: "not_an_eligible_ce_student_registration",
+    };
+  }
+
+  const billingStatus = normalizeText(
+    billingRecord?.event_status
+  ).toLowerCase();
+  const organizationId = normalizeText(
+    billingRecord?.organization_id
+  );
+  const cohortId = normalizeText(billingRecord?.cohort_id);
+
+  if (
+    !["paid", "waived"].includes(billingStatus) ||
+    !organizationId ||
+    !cohortId
+  ) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "billing_record_is_not_ready_for_registration_instructions",
+    };
+  }
+
+  const enrollmentRows =
+    await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter(
+      {
+        organization_billing_event_id: billingEventId,
+      }
+    );
+
+  const enrollments = asArray(enrollmentRows).filter(
+    (enrollment: any) =>
+      normalizeText(enrollment?.organization_billing_event_id) ===
+      billingEventId
+  );
+
+  if (enrollments.length !== 1) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "durable_enrollment_is_not_unique",
+    };
+  }
+
+  const enrollment = enrollments[0];
+  const enrollmentStatus = normalizeText(
+    enrollment?.enrollment_status
+  ).toLowerCase();
+
+  const enrollmentIsSafeForInstructions =
+    normalizeText(enrollment?.org_id) === organizationId &&
+    normalizeText(enrollment?.cohort_id) === cohortId &&
+    normalizeEmail(enrollment?.student_email) === studentEmail &&
+    enrollment?.is_active !== false &&
+    enrollment?.is_archived !== true &&
+    enrollmentStatus === "payment_settled_registration_pending" &&
+    !!normalizeText(enrollment?.payment_settled_at) &&
+    !!normalizeText(enrollment?.pending_role_assignment_id);
+
+  if (!enrollmentIsSafeForInstructions) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "durable_enrollment_is_not_ready_for_registration_instructions",
     };
   }
 
