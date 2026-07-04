@@ -22,6 +22,95 @@ const PIPELINE_STATUS_ORDER: Record<string, number> = {
   revoked: 4,
 };
 
+class RequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function normalizeText(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
+function isActiveRecord(record: any) {
+  return (
+    record &&
+    record.is_active !== false &&
+    record.is_archived !== true
+  );
+}
+
+async function resolveCanonicalPlatformOwner(
+  base44: any,
+  authenticatedUserId: string
+) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  const callerId = normalizeText(caller?.id);
+  const callerEmail = normalizeEmail(caller?.email);
+
+  if (
+    !caller ||
+    !isActiveRecord(caller) ||
+    !callerId ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(callerEmail)
+  ) {
+    throw new RequestError(
+      403,
+      "Your platform account is unavailable or does not have a verified email address."
+    );
+  }
+
+  const platformAdminRows =
+    await base44.asServiceRole.entities.PlatformAdmin.filter({
+      user_id: callerId,
+      is_active: true,
+    });
+
+  const platformRoles = Array.from(
+    new Set(
+      asArray(platformAdminRows)
+        .filter(
+          (record: any) =>
+            normalizeText(record?.user_id) === callerId &&
+            record?.is_active !== false
+        )
+        .map((record: any) =>
+          normalizeText(record?.platform_role)
+        )
+        .filter(Boolean)
+    )
+  );
+
+  const isPlatformOwner = platformRoles.some((role) =>
+    ALLOWED_PLATFORM_ROLES.has(role)
+  );
+
+  if (!isPlatformOwner) {
+    throw new RequestError(
+      403,
+      "Only an active Platform Owner may view CE practitioner certification administration."
+    );
+  }
+
+  return {
+    caller,
+    platformRoles,
+  };
+}
 function getDisplayName(user: any) {
   const fullName = String(user?.full_name || "").trim();
   const email = String(user?.email || "").trim();
