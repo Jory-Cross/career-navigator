@@ -43,11 +43,21 @@ async function resolveCanonicalCaller(base44: any, authenticatedUserId: string) 
     throw new RequestError("Your account is unavailable or inactive.");
   }
 
-  const callerId = normalizeText(caller.id);
+    const callerId = normalizeText(caller.id);
   const callerRole = normalizeText(caller.role).toLowerCase();
+  const callerAccessLevel = normalizeText(
+    caller.access_level
+  ).toLowerCase();
   const organizationId = normalizeText(caller.org_id);
 
-  if (!callerId || !STAFF_ROLES.has(callerRole)) {
+  const expectedAccessLevel =
+    callerRole === "admin" ? "admin" : "staff";
+
+  if (
+    !callerId ||
+    !STAFF_ROLES.has(callerRole) ||
+    callerAccessLevel !== expectedAccessLevel
+  ) {
     throw new RequestError(
       "You are not authorized to revoke client portal access."
     );
