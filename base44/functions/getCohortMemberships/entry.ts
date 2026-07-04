@@ -298,6 +298,17 @@ function getPendingEnrollmentBillingDetails(
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "This CE cohort-roster request must use POST.",
+        },
+        { status: 405 }
+      );
+    }
+
     const startedAt = performance.now();
     const timing: Record<string, number> = {};
 
@@ -305,15 +316,17 @@ Deno.serve(async (req) => {
       timing[stage] = Math.round(performance.now() - startedAt);
     };
 
-        const base44 = createClientFromRequest(req);
-    const authenticatedCaller = await base44.auth.me();
+    const base44 = createClientFromRequest(req);
+    const authenticatedCaller = await base44.auth.me().catch(
+      () => null
+    );
 
     mark("auth_complete");
 
-    if (!authenticatedCaller) {
-      return Response.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+    if (!authenticatedCaller?.id) {
+      throw new RequestError(
+        401,
+        "Please sign in before viewing a CE cohort roster."
       );
     }
 
@@ -321,129 +334,37 @@ Deno.serve(async (req) => {
     const cohortId = normalizeText(body?.cohort_id);
 
     if (!cohortId) {
-      return Response.json(
-        { error: "cohort_id is required" },
-        { status: 400 }
+      throw new RequestError(
+        400,
+        "A cohort must be selected."
       );
     }
 
-    const [allUsers, allOrganizations, cohort] = await Promise.all([
-      base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.Organization.list(),
-      base44.asServiceRole.entities.CETrainingCohort.get(
+    const {
+      caller,
+      callerId,
+      organizationId,
+      roleProfile,
+    } = await resolveCanonicalCaller(
+      base44,
+      authenticatedCaller.id
+    );
+
+    const cohort =
+      await base44.asServiceRole.entities.CETrainingCohort.get(
         cohortId
-      ),
-    ]);
+      ).catch(() => null);
 
-    const caller = (
-      Array.isArray(allUsers) ? allUsers : []
-    ).find(
-      (record: any) => record.id === authenticatedCaller.id
+    await requireCohortAccess(
+      base44,
+      callerId,
+      organizationId,
+      roleProfile,
+      cohort,
+      cohortId
     );
-
-    if (!caller) {
-      return Response.json(
-        { error: "Authenticated user record was not found." },
-        { status: 403 }
-      );
-    }
-
-    if (
-      !["admin", "management", "ce_instructor"].includes(
-        caller.role
-      )
-    ) {
-      return Response.json(
-        { error: "Forbidden" },
-        { status: 403 }
-      );
-    }
-
-    const organizationId = normalizeText(caller.org_id);
-
-    if (!organizationId) {
-      return Response.json(
-        {
-          error:
-            "Your account is not assigned to an organization.",
-        },
-        { status: 403 }
-      );
-    }
-
-    const organization = (
-      Array.isArray(allOrganizations)
-        ? allOrganizations
-        : []
-    ).find(
-      (record: any) => record.id === organizationId
-    );
-
-    if (!organization) {
-      return Response.json(
-        {
-          error:
-            "Your account has an invalid organization assignment.",
-        },
-        { status: 403 }
-      );
-    }
 
     mark("organization_and_cohort_resolved");
-
-    if (!cohort) {
-      return Response.json(
-        { error: "Cohort not found" },
-        { status: 404 }
-      );
-    }
-
-    if (
-      normalizeText(cohort.org_id) !== organizationId
-    ) {
-      return Response.json(
-        {
-          error:
-            "Cohort does not belong to caller organization.",
-        },
-        { status: 403 }
-      );
-    }
-
-    let authorized = ["admin", "management"].includes(
-      caller.role
-    );
-
-    if (!authorized && caller.role === "ce_instructor") {
-      const instructorMemberships =
-        await base44.asServiceRole.entities.CETrainingCohortMember.filter(
-          {
-            org_id: organizationId,
-            cohort_id: cohortId,
-            user_id: caller.id,
-            is_active: true,
-          }
-        );
-
-      authorized =
-        Array.isArray(instructorMemberships) &&
-        instructorMemberships.some((membership: any) =>
-          ["manager", "trainer"].includes(
-            normalizeText(membership.cohort_role)
-          )
-        );
-    }
-
-    if (!authorized) {
-      return Response.json(
-        {
-          error:
-            "Only authorized cohort managers or trainers may view this cohort roster.",
-        },
-        { status: 403 }
-      );
-    }
-
     mark("cohort_access_verified");
     const [
       allMemberships,
