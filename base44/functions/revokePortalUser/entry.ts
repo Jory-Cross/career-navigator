@@ -254,10 +254,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    const allAssignments =
-      await base44.asServiceRole.entities.PendingRoleAssignment.filter({
-        email,
-      });
+       const clientType = normalizeText(client?.client_type).toLowerCase();
+
+    const expectedPortalRole =
+      clientType === "pre_ets"
+        ? "pre_ets"
+        : clientType === "dspd"
+          ? "dspd"
+          : "client";
+
+    const [allAssignments, linkedUsers] = await Promise.all([
+      base44.asServiceRole.entities.PendingRoleAssignment.filter({
+        client_id: clientId,
+      }),
+      base44.asServiceRole.entities.User.filter({
+        linked_client_id: clientId,
+      }),
+    ]);
 
     const assignmentsToRevoke = asArray(allAssignments).filter(
       (assignment: any) =>
@@ -265,28 +278,30 @@ Deno.serve(async (req) => {
         normalizeText(assignment.org_id) === organizationId &&
         normalizeText(assignment.client_id) === clientId &&
         normalizeEmail(assignment.email) === email &&
-        normalizeText(assignment.access_level) === "client_portal" &&
-        CLIENT_PORTAL_ROLES.has(
-          normalizeText(assignment.role).toLowerCase()
-        ) &&
+        normalizeText(assignment.role).toLowerCase() ===
+          expectedPortalRole &&
+        normalizeText(assignment.access_level).toLowerCase() ===
+          "client_portal" &&
         normalizeText(assignment.status).toLowerCase() !== "revoked"
     );
 
-    const organizationUsers =
-      await base44.asServiceRole.entities.User.filter({
-        org_id: organizationId,
-        email,
-      });
-
-    const portalUser = asArray(organizationUsers).find(
+    const portalUsers = asArray(linkedUsers).filter(
       (user: any) =>
         normalizeText(user.org_id) === organizationId &&
         normalizeEmail(user.email) === email &&
         normalizeText(user.linked_client_id) === clientId &&
-        normalizeText(user.access_level) === "client_portal" &&
-        CLIENT_PORTAL_ROLES.has(normalizeText(user.role).toLowerCase())
+        normalizeText(user.role).toLowerCase() === expectedPortalRole &&
+        normalizeText(user.access_level).toLowerCase() ===
+          "client_portal"
     );
 
+    if (portalUsers.length > 1) {
+      return failure(
+        "More than one active portal account is linked to this client. Portal access requires administrator review before it can be changed."
+      );
+    }
+
+    const portalUser = portalUsers[0] || null;
     if (!assignmentsToRevoke.length && !portalUser) {
       return failure(
         "No active client portal invitation or portal account was found for this client."
