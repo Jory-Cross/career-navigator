@@ -1,10 +1,23 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const STAFF_ROLES = new Set(["admin", "management", "employee"]);
+const CANONICAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
 const SUPPORTED_ACTIONS = new Set([
   "create_student_entry",
   "resubmit_student_entry",
   "review_entry",
+]);
+
+const PRE_ETS_TIME_CARD_STATUSES = new Set([
+  "submitted_to_staff",
+  "returned_to_student",
+  "submitted_to_manager_payroll",
+  "returned_to_staff",
+  "finalized",
 ]);
 
 class RequestError extends Error {
@@ -20,12 +33,30 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeEmail(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
 function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
 function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isStudentPortalUser(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets" &&
+    normalizeText(user?.access_level).toLowerCase() === "client_portal"
+  );
 }
 
 function isPreEtsClientInOrganization(client: any, organizationId: string) {
@@ -36,55 +67,18 @@ function isPreEtsClientInOrganization(client: any, organizationId: string) {
   );
 }
 
-function hasClientMembershipEvidence(
+function clientMatchesVisibleStaff(
   client: any,
-  userIds: Set<string>,
-  userEmails: Set<string>
+  visibleUserIds: Set<string>,
+  visibleEmails: Set<string>
 ) {
-  const candidates = [
-    normalizeText(client?.assigned_employee_id),
-    normalizeText(client?.created_by),
-  ];
+  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
+  const createdBy = normalizeEmail(client?.created_by);
 
-  return candidates.some(
-    (value) => userIds.has(value) || userEmails.has(value)
+  return (
+    visibleUserIds.has(assignedEmployeeId) ||
+    (createdBy && visibleEmails.has(createdBy))
   );
-}
-
-function getDescendantUserIds(rootUserId: string, organizationUsers: any[]) {
-  const childrenByManagerId = new Map<string, string[]>();
-
-  for (const user of organizationUsers) {
-    const managerId = normalizeText(user?.manager_id);
-    const userId = normalizeText(user?.id);
-
-    if (!managerId || !userId) {
-      continue;
-    }
-
-    const childIds = childrenByManagerId.get(managerId) || [];
-    childIds.push(userId);
-    childrenByManagerId.set(managerId, childIds);
-  }
-
-  const descendantIds = new Set<string>();
-  const queue = [rootUserId];
-
-  while (queue.length > 0) {
-    const currentUserId = queue.shift() || "";
-    const directReportIds = childrenByManagerId.get(currentUserId) || [];
-
-    for (const directReportId of directReportIds) {
-      if (descendantIds.has(directReportId)) {
-        continue;
-      }
-
-      descendantIds.add(directReportId);
-      queue.push(directReportId);
-    }
-  }
-
-  return descendantIds;
 }
 
 function isValidIsoDate(value: string) {
@@ -110,11 +104,7 @@ function parseQuarterHour(value: string) {
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
 
-  if (minutes % 15 !== 0) {
-    return null;
-  }
-
-  return hours * 60 + minutes;
+  return minutes % 15 === 0 ? hours * 60 + minutes : null;
 }
 
 function buildStudentEntryPayload(
@@ -128,10 +118,7 @@ function buildStudentEntryPayload(
   const description = normalizeText(rawEntry?.description);
 
   if (!isValidIsoDate(date)) {
-    throw new RequestError(
-      400,
-      "A valid service date is required."
-    );
+    throw new RequestError(400, "A valid service date is required.");
   }
 
   const startMinutes = parseQuarterHour(startTime);
@@ -145,10 +132,7 @@ function buildStudentEntryPayload(
   }
 
   if (endMinutes <= startMinutes) {
-    throw new RequestError(
-      400,
-      "End time must be later than start time."
-    );
+    throw new RequestError(400, "End time must be later than start time.");
   }
 
   return {
@@ -174,7 +158,8 @@ function projectEntry(entry: any, client: any) {
       normalizeText(entry?.client_name) ||
       `${normalizeText(client?.first_name)} ${normalizeText(
         client?.last_name
-      )}`.trim(),
+      )}`.trim() ||
+      "Pre-ETS student",
     date: normalizeText(entry?.date),
     start_time: normalizeText(entry?.start_time),
     end_time: normalizeText(entry?.end_time),
@@ -204,11 +189,11 @@ async function resolveCallerContext(
   if (!caller || !isActive(caller)) {
     throw new RequestError(
       403,
-      "Authenticated user record was not found or is inactive."
+      "Your account could not be verified as active."
     );
   }
 
-  const organizationId = normalizeText(caller?.org_id);
+  const organizationId = normalizeText(caller.org_id);
 
   if (!organizationId) {
     throw new RequestError(
@@ -222,16 +207,10 @@ async function resolveCallerContext(
   ).catch(() => null);
 
   if (!organization || !isActive(organization)) {
-    throw new RequestError(
-      403,
-      "Your organization assignment is invalid or inactive."
-    );
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
   }
 
-  return {
-    caller,
-    organizationId,
-  };
+  return { caller, organizationId };
 }
 
 async function resolveStudentClient(
@@ -239,21 +218,14 @@ async function resolveStudentClient(
   caller: any,
   organizationId: string
 ) {
-  const callerRole = normalizeText(caller?.role).toLowerCase();
-  const callerAccessLevel = normalizeText(
-    caller?.access_level
-  ).toLowerCase();
-  const linkedClientId = normalizeText(caller?.linked_client_id);
-
-  if (
-    callerRole !== "pre_ets" ||
-    callerAccessLevel !== "client_portal"
-  ) {
+  if (!isStudentPortalUser(caller)) {
     throw new RequestError(
       403,
       "You are not authorized to submit Pre-ETS student time entries."
     );
   }
+
+  const linkedClientId = normalizeText(caller?.linked_client_id);
 
   if (!linkedClientId) {
     throw new RequestError(
@@ -283,18 +255,18 @@ async function resolveStaffClient(
   clientId: string
 ) {
   const callerId = normalizeText(caller?.id);
-  const callerRole = normalizeText(caller?.role).toLowerCase();
+  const callerRole = getCanonicalStaffRole(caller);
 
-  if (!STAFF_ROLES.has(callerRole)) {
+  if (!callerRole) {
     throw new RequestError(
       403,
       "You are not authorized to review Pre-ETS student time entries."
     );
   }
 
-  const client = await base44.asServiceRole.entities.Client.get(
-    clientId
-  ).catch(() => null);
+  const client = await base44.asServiceRole.entities.Client.get(clientId).catch(
+    () => null
+  );
 
   if (!isPreEtsClientInOrganization(client, organizationId)) {
     throw new RequestError(404, "Pre-ETS client not found.");
@@ -307,66 +279,62 @@ async function resolveStaffClient(
   const organizationUsers = await base44.asServiceRole.entities.User.filter({
     org_id: organizationId,
   });
-
-  const activeOrganizationUsers = asArray(organizationUsers).filter(
+  const activeCanonicalUsers = asArray(organizationUsers).filter(
     (user: any) =>
       isActive(user) &&
-      normalizeText(user?.org_id) === organizationId
+      normalizeText(user?.org_id) === organizationId &&
+      Boolean(getCanonicalStaffRole(user))
   );
 
-  const callerIsValidlyScoped = activeOrganizationUsers.some(
-    (user: any) => normalizeText(user?.id) === callerId
-  );
-
-  if (!callerIsValidlyScoped) {
+  if (
+    !activeCanonicalUsers.some(
+      (user: any) => normalizeText(user?.id) === callerId
+    )
+  ) {
     throw new RequestError(
       403,
       "Your account is not validly scoped to this organization."
     );
   }
 
+  const visibleUserIds = new Set<string>([callerId]);
+  const visibleEmails = new Set<string>(
+    [normalizeEmail(caller?.email)].filter(Boolean)
+  );
+
   if (callerRole === "management") {
-    const visibleUserIds = new Set<string>([
-      callerId,
-      ...getDescendantUserIds(callerId, activeOrganizationUsers),
-    ]);
-
-    const visibleUserEmails = new Set(
-      activeOrganizationUsers
-        .filter((user: any) =>
-          visibleUserIds.has(normalizeText(user?.id))
-        )
-        .map((user: any) => normalizeText(user?.email))
-        .filter(Boolean)
+    const assignments =
+      await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+        manager_user_id: callerId,
+      });
+    const activeUsersById = new Map(
+      activeCanonicalUsers.map((user: any) => [normalizeText(user?.id), user])
     );
 
-    if (
-      hasClientMembershipEvidence(
-        client,
-        visibleUserIds,
-        visibleUserEmails
-      )
-    ) {
-      return client;
-    }
-  } else {
-    const ownUserIds = new Set([callerId]);
-    const ownUserEmails = new Set(
-      [normalizeText(caller?.email)].filter(Boolean)
-    );
+    for (const assignment of asArray(assignments)) {
+      const employeeId = normalizeText(assignment?.employee_user_id);
+      const employee = activeUsersById.get(employeeId);
 
-    if (
-      hasClientMembershipEvidence(
-        client,
-        ownUserIds,
-        ownUserEmails
-      )
-    ) {
-      return client;
+      if (
+        assignment?.is_active === true &&
+        assignment?.is_archived !== true &&
+        normalizeText(assignment?.org_id) === organizationId &&
+        employee
+      ) {
+        visibleUserIds.add(employeeId);
+        const employeeEmail = normalizeEmail(employee.email);
+        if (employeeEmail) {
+          visibleEmails.add(employeeEmail);
+        }
+      }
     }
   }
 
-  throw new RequestError(404, "Pre-ETS client not found.");
+  if (!clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)) {
+    throw new RequestError(404, "Pre-ETS client not found.");
+  }
+
+  return client;
 }
 
 async function resolveStaffEntry(
@@ -376,13 +344,13 @@ async function resolveStaffEntry(
   entryId: string
 ) {
   if (!entryId) {
-    throw new RequestError(400, "entry_id is required.");
+    throw new RequestError(400, "Choose a Pre-ETS time entry to review.");
   }
 
   const entry =
-    await base44.asServiceRole.entities.PreEtsClientTimeEntry.get(
-      entryId
-    ).catch(() => null);
+    await base44.asServiceRole.entities.PreEtsClientTimeEntry.get(entryId).catch(
+      () => null
+    );
 
   if (
     !entry ||
@@ -405,20 +373,7 @@ async function resolveStaffEntry(
     clientId
   );
 
-  return {
-    entry,
-    client,
-  };
-}
-
-function isSupportedPreEtsTimeCardStatus(status: string) {
-  return new Set([
-    "submitted_to_staff",
-    "returned_to_student",
-    "submitted_to_manager_payroll",
-    "returned_to_staff",
-    "finalized",
-  ]).has(status);
+  return { entry, client };
 }
 
 function getTimeCardPeriod(card: any) {
@@ -433,10 +388,7 @@ function getTimeCardPeriod(card: any) {
     return null;
   }
 
-  return {
-    periodStart,
-    periodEnd,
-  };
+  return { periodStart, periodEnd };
 }
 
 async function loadClientTimeCards(
@@ -444,22 +396,18 @@ async function loadClientTimeCards(
   organizationId: string,
   clientId: string
 ) {
-  const cards =
-    await base44.asServiceRole.entities.PreEtsTimeCard.filter({
-      client_id: clientId,
-    });
-
+  const cards = await base44.asServiceRole.entities.PreEtsTimeCard.filter({
+    client_id: clientId,
+  });
   const matchingClientCards = asArray(cards).filter(
-    (card: any) =>
-      normalizeText(card?.client_id) === clientId
+    (card: any) => normalizeText(card?.client_id) === clientId
   );
 
-  const foreignOrUnscopedCard = matchingClientCards.find(
-    (card: any) =>
-      normalizeText(card?.org_id) !== organizationId
-  );
-
-  if (foreignOrUnscopedCard) {
+  if (
+    matchingClientCards.some(
+      (card: any) => normalizeText(card?.org_id) !== organizationId
+    )
+  ) {
     throw new RequestError(
       409,
       "Pre-ETS Time Card data cannot be safely scoped to this organization."
@@ -468,11 +416,7 @@ async function loadClientTimeCards(
 
   const malformedCard = matchingClientCards.find((card: any) => {
     const status = normalizeText(card?.status).toLowerCase();
-
-    return (
-      !isSupportedPreEtsTimeCardStatus(status) ||
-      !getTimeCardPeriod(card)
-    );
+    return !PRE_ETS_TIME_CARD_STATUSES.has(status) || !getTimeCardPeriod(card);
   });
 
   if (malformedCard) {
@@ -485,10 +429,7 @@ async function loadClientTimeCards(
   return matchingClientCards;
 }
 
-function getTimeCardsCoveringDate(
-  cards: any[],
-  date: string
-) {
+function getTimeCardsCoveringDate(cards: any[], date: string) {
   const normalizedDate = normalizeText(date);
 
   if (!isValidIsoDate(normalizedDate)) {
@@ -500,7 +441,6 @@ function getTimeCardsCoveringDate(
 
   const matchingCards = cards.filter((card: any) => {
     const period = getTimeCardPeriod(card);
-
     return Boolean(
       period &&
         normalizedDate >= period.periodStart &&
@@ -518,10 +458,7 @@ function getTimeCardsCoveringDate(
   return matchingCards;
 }
 
-function assertStudentMayMutateTimeCardPeriods(
-  cards: any[],
-  dates: string[]
-) {
+function assertStudentMayMutateTimeCardPeriods(cards: any[], dates: string[]) {
   const uniqueDates = Array.from(
     new Set(dates.map((date) => normalizeText(date)).filter(Boolean))
   );
@@ -542,14 +479,8 @@ function assertStudentMayMutateTimeCardPeriods(
   }
 }
 
-function assertIndividualEntryReviewAvailable(
-  cards: any[],
-  entryDate: string
-) {
-  const matchingCard = getTimeCardsCoveringDate(
-    cards,
-    entryDate
-  )[0];
+function assertIndividualEntryReviewAvailable(cards: any[], entryDate: string) {
+  const matchingCard = getTimeCardsCoveringDate(cards, entryDate)[0];
 
   if (matchingCard) {
     throw new RequestError(
@@ -558,12 +489,23 @@ function assertIndividualEntryReviewAvailable(
     );
   }
 }
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { error: "This route accepts POST requests only." },
         { status: 405 }
+      );
+    }
+
+    const requestBody: any = await req.json().catch(() => ({}));
+    const action = normalizeText(requestBody?.action).toLowerCase();
+
+    if (!SUPPORTED_ACTIONS.has(action)) {
+      return Response.json(
+        { error: "Choose a valid Pre-ETS time-entry action." },
+        { status: 400 }
       );
     }
 
@@ -572,18 +514,8 @@ Deno.serve(async (req) => {
 
     if (!authenticatedUser?.id) {
       return Response.json(
-        { error: "Unauthorized." },
+        { error: "You must be signed in to manage Pre-ETS time entries." },
         { status: 401 }
-      );
-    }
-
-    const requestBody = await req.json().catch(() => ({}));
-    const action = normalizeText(requestBody?.action);
-
-    if (!SUPPORTED_ACTIONS.has(action)) {
-      return Response.json(
-        { error: "Unsupported action." },
-        { status: 400 }
       );
     }
 
@@ -593,28 +525,19 @@ Deno.serve(async (req) => {
     );
 
     if (action === "create_student_entry") {
-      const client = await resolveStudentClient(
-        base44,
-        caller,
-        organizationId
-      );
-
-          const payload = buildStudentEntryPayload(
+      const client = await resolveStudentClient(base44, caller, organizationId);
+      const payload = buildStudentEntryPayload(
         requestBody?.entry,
         client,
         organizationId
       );
-
       const clientTimeCards = await loadClientTimeCards(
         base44,
         organizationId,
         normalizeText(client?.id)
       );
 
-      assertStudentMayMutateTimeCardPeriods(
-        clientTimeCards,
-        [payload.date]
-      );
+      assertStudentMayMutateTimeCardPeriods(clientTimeCards, [payload.date]);
 
       const created =
         await base44.asServiceRole.entities.PreEtsClientTimeEntry.create({
@@ -630,62 +553,50 @@ Deno.serve(async (req) => {
     }
 
     if (action === "resubmit_student_entry") {
-      const client = await resolveStudentClient(
-        base44,
-        caller,
-        organizationId
-      );
+      const client = await resolveStudentClient(base44, caller, organizationId);
       const entryId = normalizeText(requestBody?.entry_id);
 
       if (!entryId) {
-        throw new RequestError(400, "entry_id is required.");
+        throw new RequestError(400, "Choose a Pre-ETS time entry to correct.");
       }
 
       const existingEntry =
-        await base44.asServiceRole.entities.PreEtsClientTimeEntry.get(
-          entryId
-        ).catch(() => null);
+        await base44.asServiceRole.entities.PreEtsClientTimeEntry.get(entryId).catch(
+          () => null
+        );
 
       if (
         !existingEntry ||
         !isActive(existingEntry) ||
         normalizeText(existingEntry?.org_id) !== organizationId ||
-        normalizeText(existingEntry?.client_id) !==
-          normalizeText(client?.id)
+        normalizeText(existingEntry?.client_id) !== normalizeText(client?.id)
       ) {
         throw new RequestError(404, "Pre-ETS time entry not found.");
       }
 
-           const payload = buildStudentEntryPayload(
+      const payload = buildStudentEntryPayload(
         requestBody?.entry,
         client,
         organizationId
       );
-
       const clientTimeCards = await loadClientTimeCards(
         base44,
         organizationId,
         normalizeText(client?.id)
       );
-
       const existingEntryDate = normalizeText(existingEntry?.date);
 
-      assertStudentMayMutateTimeCardPeriods(
-        clientTimeCards,
-        [
-          existingEntryDate,
-          payload.date,
-        ]
-      );
+      assertStudentMayMutateTimeCardPeriods(clientTimeCards, [
+        existingEntryDate,
+        payload.date,
+      ]);
 
       const existingEntryCard = getTimeCardsCoveringDate(
         clientTimeCards,
         existingEntryDate
       )[0];
-
       const existingEntryStatus =
         (normalizeText(existingEntry?.status) || "pending").toLowerCase();
-
       const mayCorrectReturnedTimeCardEntry =
         normalizeText(existingEntryCard?.status).toLowerCase() ===
         "returned_to_student";
@@ -714,6 +625,7 @@ Deno.serve(async (req) => {
             resubmitted_at: new Date().toISOString(),
           }
         );
+
       return Response.json({
         ok: true,
         action,
@@ -727,17 +639,16 @@ Deno.serve(async (req) => {
     if (decision !== "approve" && decision !== "reject") {
       throw new RequestError(
         400,
-        'decision must be either "approve" or "reject".'
+        'Choose either "approve" or "reject" for the entry review.'
       );
     }
 
-        const { entry, client } = await resolveStaffEntry(
+    const { entry, client } = await resolveStaffEntry(
       base44,
       caller,
       organizationId,
       entryId
     );
-
     const clientTimeCards = await loadClientTimeCards(
       base44,
       organizationId,
@@ -789,22 +700,19 @@ Deno.serve(async (req) => {
     if (!rejectionReason) {
       throw new RequestError(
         400,
-        "A rejection reason is required."
+        "Explain what the student needs to correct before rejecting this entry."
       );
     }
 
     const updated =
-      await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(
-        entryId,
-        {
-          status: "rejected",
-          approved_by: "",
-          approved_at: null,
-          rejected_by: callerId,
-          rejected_at: now,
-          rejection_reason: rejectionReason.slice(0, 4000),
-        }
-      );
+      await base44.asServiceRole.entities.PreEtsClientTimeEntry.update(entryId, {
+        status: "rejected",
+        approved_by: "",
+        approved_at: null,
+        rejected_by: callerId,
+        rejected_at: now,
+        rejection_reason: rejectionReason.slice(0, 4000),
+      });
 
     return Response.json({
       ok: true,
@@ -813,13 +721,11 @@ Deno.serve(async (req) => {
       entry: projectEntry(updated, client),
     });
   } catch (error: any) {
-    const status =
-      error instanceof RequestError ? error.status : 500;
+    const status = error instanceof RequestError ? error.status : 500;
     const message =
       error instanceof RequestError
         ? error.message
-        : error?.message ||
-          "Unable to process the Pre-ETS time-entry request.";
+        : "Unable to process the Pre-ETS time-entry request.";
 
     if (!(error instanceof RequestError)) {
       console.error(
@@ -828,9 +734,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    return Response.json(
-      { error: message },
-      { status }
-    );
+    return Response.json({ error: message }, { status });
   }
 });
