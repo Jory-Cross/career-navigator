@@ -40,7 +40,11 @@ function getRecordTimestamp(record: any) {
 }
 
 function isActive(record: any) {
-  return record?.is_active !== false;
+  return Boolean(
+    record &&
+      record?.is_active !== false &&
+      record?.is_archived !== true
+  );
 }
 
 async function getOneById(entity: any, id: string) {
