@@ -758,14 +758,18 @@ Deno.serve(async (req) => {
       if (exactMatches.length === 1) {
         const candidate = exactMatches[0];
 
-        const identityMatches =
+               const identityMatches =
           normalizeText(candidate?.organization_id) ===
             organizationId &&
           normalizeText(candidate?.cohort_id) === cohortId &&
           normalizeEmail(
             candidate?.subject_verified_email
-          ) === studentEmail;
-
+          ) === studentEmail &&
+          (
+            !studentUserId ||
+            normalizeText(candidate?.subject_user_id) ===
+              studentUserId
+          );
         if (identityMatches) {
           billingEvent = candidate;
           billingIntegrityStatus = "valid";
