@@ -129,56 +129,9 @@
     "created_by_user_id"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "management"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "ce_instructor"
-          }
-        }
-      ],
-      "data.org_id": "{{user.org_id}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "data.org_id": "{{user.org_id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "management"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "ce_instructor"
-          }
-        }
-      ],
-      "data.org_id": "{{user.org_id}}"
-    },
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }
