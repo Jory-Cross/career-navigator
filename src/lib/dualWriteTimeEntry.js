@@ -3,8 +3,8 @@ import { base44 } from "@/api/base44Client";
 /**
  * Transitional compatibility helper.
  *
- * All TimeEntry creation goes through the authorized server-side V2 route. The
- * server derives tenant scope, employee authority, EntryType flags,
+ * All TimeEntry creation goes through the canonical authorized server route.
+ * The server derives tenant scope, employee authority, EntryType flags,
  * authorization enforcement, field-answer validation, and ReportFieldAnswer
  * persistence.
  */
@@ -32,7 +32,7 @@ export async function submitTimeEntryWithDualWrite({
       : {};
 
   const response = await base44.functions.invoke(
-    "mutateAuthorizedTimeEntryV2",
+    "mutateAuthorizedTimeEntry",
     {
       action: "create",
       time_entry: {
