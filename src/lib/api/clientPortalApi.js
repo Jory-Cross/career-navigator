@@ -520,9 +520,11 @@ export async function getAllClients() {
   return asArray(rows).map(mapClient).filter(Boolean);
 }
 async function getAuthorizedTimeEntryRows() {
-  const response = await base44.functions.invoke(
+    const response = await base44.functions.invoke(
     "getAuthorizedTimeEntries",
-    {}
+    {
+      action: "list",
+    }
   );
 
   const payload = response?.data ?? response ?? {};
