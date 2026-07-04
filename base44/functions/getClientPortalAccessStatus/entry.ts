@@ -288,11 +288,10 @@ Deno.serve(async (req) => {
         CLIENT_PORTAL_ROLES.has(normalizeText(user.role).toLowerCase())
     );
 
-    const portalUser =
+       const portalUser =
       portalCandidates.find(
         (user: any) => normalizeText(user.linked_client_id) === clientId
       ) ||
-      portalCandidates[0] ||
       null;
 
     return Response.json({
