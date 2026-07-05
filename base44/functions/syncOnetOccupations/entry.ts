@@ -1,6 +1,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
 const ONET_BASE_URL = "https://api-v2.onetcenter.org";
+const PLATFORM_OWNER_ROLE = "platform_owner";
 
 const JOB_ZONE_TITLES = {
   1: "Little or No Preparation Needed",
@@ -10,29 +11,108 @@ const JOB_ZONE_TITLES = {
   5: "Extensive Preparation Needed",
 };
 
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function isCanonicalPlatformAdmin(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "admin" &&
+    normalizeText(user?.access_level).toLowerCase() === "admin"
+  );
+}
+
+async function requirePlatformOwner(base44: any, authenticatedUserId: string) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
+
+  if (!caller || !isActive(caller) || !isCanonicalPlatformAdmin(caller)) {
+    throw new Error(
+      "Active Platform Owner access is required to synchronize the O*NET catalog."
+    );
+  }
+
+  const platformAdminRecords =
+    await base44.asServiceRole.entities.PlatformAdmin.filter({
+      user_id: caller.id,
+    });
+
+  const isPlatformOwner = (Array.isArray(platformAdminRecords)
+    ? platformAdminRecords
+    : []
+  ).some(
+    (record: any) =>
+      isActive(record) &&
+      normalizeText(record?.user_id) === normalizeText(caller.id) &&
+      normalizeText(record?.platform_role).toLowerCase() ===
+        PLATFORM_OWNER_ROLE
+  );
+
+  if (!isPlatformOwner) {
+    throw new Error(
+      "Active Platform Owner access is required to synchronize the O*NET catalog."
+    );
+  }
+
+  return caller;
+}
+
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
+    if (req.method !== "POST") {
       return Response.json(
-        { success: false, error: "Unauthorized" },
+        { success: false, error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
+    }
+
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { success: false, error: "Please sign in before synchronizing the O*NET catalog." },
         { status: 401 }
       );
     }
 
-    if (user.role !== "admin") {
+    await requirePlatformOwner(base44, authenticatedUser.id);
+
+    const body = await req.json().catch(() => ({}));
+    const action = normalizeText(body?.action).toLowerCase() || "diagnose";
+    const start = Number(body?.start ?? 1);
+    const requestedLimit = Number(body?.limit ?? 25);
+
+    if (!["diagnose", "preview", "execute"].includes(action)) {
       return Response.json(
-        { success: false, error: "Admin access required" },
-        { status: 403 }
+        {
+          success: false,
+          error: "Choose diagnose, preview, or execute for the O*NET catalog sync.",
+        },
+        { status: 400 }
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const action = body.action || "diagnose";
-    const start = Number(body.start || 1);
-    const limit = Math.min(Number(body.limit || 25), 100);
+    if (!Number.isInteger(start) || start < 1) {
+      return Response.json(
+        { success: false, error: "The O*NET catalog start position must be a positive whole number." },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1) {
+      return Response.json(
+        { success: false, error: "The O*NET catalog sync limit must be a positive whole number." },
+        { status: 400 }
+      );
+    }
+
+    const limit = Math.min(requestedLimit, 100);
     const end = start + limit - 1;
 
     const apiKey =
@@ -41,18 +121,8 @@ Deno.serve(async (req) => {
 
     if (!apiKey) {
       return Response.json(
-        { success: false, error: "Missing O*NET API key" },
+        { success: false, error: "The O*NET catalog key is not configured." },
         { status: 500 }
-      );
-    }
-
-    if (!["diagnose", "preview", "execute"].includes(action)) {
-      return Response.json(
-        {
-          success: false,
-          error: "Invalid action. Use diagnose, preview, or execute.",
-        },
-        { status: 400 }
       );
     }
 
@@ -80,7 +150,7 @@ Deno.serve(async (req) => {
           title: occupation.title,
           raw_keys: Object.keys(occupation || {}),
         })),
-        note: "Diagnose only. No records written and no detail/job-zone endpoints called.",
+        note: "Diagnose only. No records were written and no detail or job-zone endpoints were called.",
       });
     }
 
@@ -167,12 +237,12 @@ Deno.serve(async (req) => {
           await base44.asServiceRole.entities.OnetOccupation.create(payload);
           summary.created++;
         }
-      } catch (error) {
+      } catch (_error) {
         summary.failed++;
         summary.failures.push({
           onet_code,
           title,
-          error: error?.message || String(error),
+          error: "The O*NET catalog details could not be synchronized for this occupation.",
         });
       }
     }
@@ -182,14 +252,17 @@ Deno.serve(async (req) => {
       summary,
       note:
         action === "preview"
-          ? "Preview only. No records written."
-          : "Execute complete.",
+          ? "Preview only. No records were written."
+          : "Catalog synchronization completed.",
     });
   } catch (error) {
     return Response.json(
       {
         success: false,
-        error: error?.message || "Unexpected error",
+        error:
+          error instanceof Error && error.message
+            ? error.message
+            : "The O*NET catalog synchronization could not be completed.",
       },
       { status: 500 }
     );
@@ -217,15 +290,13 @@ async function onetFetch(apiKey, path, params = {}) {
   const text = await response.text();
 
   if (!response.ok) {
-    throw new Error(
-      `O*NET request failed ${response.status}: ${text || response.statusText}`
-    );
+    throw new Error("The O*NET catalog service could not be reached.");
   }
 
   try {
     return text ? JSON.parse(text) : null;
   } catch (_error) {
-    return text;
+    throw new Error("The O*NET catalog service returned unusable data.");
   }
 }
 
