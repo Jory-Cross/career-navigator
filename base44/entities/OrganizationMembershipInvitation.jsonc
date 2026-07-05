@@ -1,98 +1,23 @@
 {
   "name": "OrganizationMembershipInvitation",
   "type": "object",
+  "description": "Organization membership invitation. Invitation creation, role assignment, acceptance, and revocation are server-authorized and auditable.",
   "properties": {
-    "organization_id": {
-      "type": "string",
-      "description": "Organization tenant inviting this person."
-    },
-    "email": {
-      "type": "string",
-      "description": "Email address receiving the organization invitation."
-    },
-    "email_normalized": {
-      "type": "string",
-      "description": "Lowercase, trimmed copy of the invited email used for reliable matching when the person registers or accepts."
-    },
-    "target_user_id": {
-      "type": "string",
-      "description": "Registered User ID once the invitation is matched to an existing or newly registered user."
-    },
-    "organization_role_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "default": [],
-      "description": "OrganizationRole IDs to assign when the invitation is accepted. These roles determine organization-scoped permissions."
-    },
-    "invitation_context": {
-      "type": "string",
-      "enum": [
-        "organization_membership",
-        "ce_training_enrollment",
-        "ce_practitioner_onboarding",
-        "migration"
-      ],
-      "default": "organization_membership",
-      "description": "Workflow context only. It does not grant access by itself. CE training invitations use ce_training_enrollment."
-    },
-    "invitation_status": {
-      "type": "string",
-      "enum": [
-        "draft",
-        "pending",
-        "invite_email_sent",
-        "pending_email_failed",
-        "accepted",
-        "expired",
-        "revoked"
-      ],
-      "default": "pending",
-      "description": "Current lifecycle state of the organization invitation."
-    },
-    "invited_by_user_id": {
-      "type": "string",
-      "description": "User ID of the person who created the invitation."
-    },
-    "invited_by_membership_id": {
-      "type": "string",
-      "description": "OrganizationMembership ID for the inviter within this organization, when applicable."
-    },
-    "invited_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO timestamp when the invitation was created."
-    },
-    "expires_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO timestamp when the invitation expires."
-    },
-    "accepted_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO timestamp when the invitation was accepted."
-    },
-    "accepted_membership_id": {
-      "type": "string",
-      "description": "OrganizationMembership ID created or activated when this invitation is accepted."
-    },
-    "message": {
-      "type": "string",
-      "description": "Optional invitation message shown to the recipient."
-    },
-    "source": {
-      "type": "string",
-      "enum": [
-        "organization_admin",
-        "platform_admin",
-        "self_service",
-        "migration"
-      ],
-      "default": "organization_admin",
-      "description": "How the invitation was created."
-    }
+    "organization_id": { "type": "string", "description": "Organization tenant inviting this person." },
+    "email": { "type": "string", "description": "Email address receiving the organization invitation." },
+    "email_normalized": { "type": "string", "description": "Lowercase, trimmed copy of the invited email." },
+    "target_user_id": { "type": "string", "description": "Registered User ID once invitation is matched." },
+    "organization_role_ids": { "type": "array", "items": { "type": "string" }, "default": [], "description": "OrganizationRole IDs assigned only through authorized acceptance." },
+    "invitation_context": { "type": "string", "enum": ["organization_membership", "ce_training_enrollment", "ce_practitioner_onboarding", "migration"], "default": "organization_membership" },
+    "invitation_status": { "type": "string", "enum": ["draft", "pending", "invite_email_sent", "pending_email_failed", "accepted", "expired", "revoked"], "default": "pending" },
+    "invited_by_user_id": { "type": "string" },
+    "invited_by_membership_id": { "type": "string" },
+    "invited_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "accepted_at": { "type": "string", "format": "date-time" },
+    "accepted_membership_id": { "type": "string" },
+    "message": { "type": "string" },
+    "source": { "type": "string", "enum": ["organization_admin", "platform_admin", "self_service", "migration"], "default": "organization_admin" }
   },
   "required": [
     "organization_id",
@@ -106,25 +31,9 @@
     "source"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }
