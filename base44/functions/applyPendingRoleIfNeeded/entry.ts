@@ -134,6 +134,10 @@ function isClearlyAssignedAccount(user: any) {
 }
 
 function normalizeAssignment(record: any) {
+  if (record?.is_archived === true) {
+    return null;
+  }
+
   const role = normalizeText(record?.role).toLowerCase();
   const accessLevel = normalizeText(record?.access_level).toLowerCase();
   const organizationId = normalizeIdentifier(record?.org_id);
@@ -268,6 +272,7 @@ async function getOpenAssignmentsForEmail(
 
   return [...recordsById.values()].filter(
     (assignment) =>
+      assignment?.is_archived !== true &&
       normalizeEmail(assignment?.email) === normalizedEmail &&
       OPEN_PENDING_ASSIGNMENT_STATUSES.has(
         normalizeText(assignment?.status).toLowerCase()
