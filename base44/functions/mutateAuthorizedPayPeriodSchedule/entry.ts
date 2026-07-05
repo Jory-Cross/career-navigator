@@ -51,6 +51,13 @@ function hasOwn(record: any, key: string) {
   return Object.prototype.hasOwnProperty.call(record || {}, key);
 }
 
+function isCanonicalOrganizationAdmin(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "admin" &&
+    normalizeText(user?.access_level).toLowerCase() === "admin"
+  );
+}
+
 function parseUtcDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
@@ -519,7 +526,7 @@ async function getCaller(
     );
   }
 
-  if (normalizeText(caller.role).toLowerCase() !== "admin") {
+  if (!isCanonicalOrganizationAdmin(caller)) {
     throw httpError(
       403,
       "Only organization administrators may configure payroll schedules."
@@ -643,7 +650,7 @@ Deno.serve(async (req) => {
     const body: any = await req.json().catch(() => ({}));
     const action = normalizeText(body.action).toLowerCase();
 
-        if (
+    if (
       ![
         "list",
         "preview",
@@ -668,7 +675,7 @@ Deno.serve(async (req) => {
       organizationId
     );
 
-        if (action === "list") {
+    if (action === "list") {
       return Response.json({
         ok: true,
         action,
