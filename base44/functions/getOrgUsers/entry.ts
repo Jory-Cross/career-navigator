@@ -56,6 +56,20 @@ function isCanonicalStaffUser(user: any) {
   );
 }
 
+function projectRosterUser(user: any) {
+  return {
+    id: normalizeText(user?.id),
+    full_name: normalizeText(user?.full_name),
+    email: normalizeEmail(user?.email),
+    avatar_url: normalizeText(user?.avatar_url) || null,
+    role: normalizeText(user?.role).toLowerCase(),
+    access_level: normalizeText(user?.access_level).toLowerCase(),
+    org_id: normalizeText(user?.org_id),
+    is_active: user?.is_active !== false,
+    is_archived: user?.is_archived === true,
+  };
+}
+
 function isEligibleRosterCandidate(user: any, cohortRole: string) {
   const roleProfile = getCanonicalRoleProfile(user);
 
@@ -308,7 +322,7 @@ Deno.serve(async (req) => {
         organization_id: organizationId,
         cohort_id: cohortId,
         cohort_role: cohortRole,
-        users: eligibleUsers,
+        users: eligibleUsers.map(projectRosterUser),
         inactive_users: [],
       });
     }
@@ -339,8 +353,8 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: true,
       organization_id: organizationId,
-      users,
-      inactive_users: inactiveUsers,
+      users: users.map(projectRosterUser),
+      inactive_users: inactiveUsers.map(projectRosterUser),
     });
   } catch (error: unknown) {
     const status = error instanceof RequestError ? error.status : 500;
