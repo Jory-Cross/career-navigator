@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
         if (
           assignment?.is_active === true &&
           assignment?.is_archived !== true &&
+          normalizeText(assignment?.manager_user_id) === normalizeText(caller?.id) &&
           normalizeText(assignment?.org_id) === organizationId &&
           employee
         ) {
