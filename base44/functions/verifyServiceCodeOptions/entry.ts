@@ -1,48 +1,26 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-
+/**
+ * Disabled during the security remediation freeze.
+ *
+ * This legacy diagnostic exposed shared ReportFieldTemplate service-code
+ * configuration through a browser-session role check and did not require POST.
+ */
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
-    // Get entry type
-    const entryTypes = await base44.asServiceRole.entities.EntryType.filter({
-      code: "job_coaching",
-      is_active: true
-    });
-
-    const entryType = entryTypes[0];
-
-    // Get primary service code field directly
-    const allFields = await base44.asServiceRole.entities.ReportFieldTemplate.filter({
-      entry_type_id: entryType.id
-    });
-
-    const primaryField = allFields.find(f => f.field_key === "primary_service_code");
-    const secondaryField = allFields.find(f => f.field_key === "secondary_service_code");
-
-    return Response.json({
-      status: 'success',
-      primary_field: {
-        id: primaryField?.id,
-        field_key: primaryField?.field_key,
-        label: primaryField?.label,
-        options_count: primaryField?.options?.length || 0,
-        options: primaryField?.options || []
+  if (req.method !== "POST") {
+    return Response.json(
+      {
+        ok: false,
+        error: "This route accepts POST requests only.",
       },
-      secondary_field: {
-        id: secondaryField?.id,
-        field_key: secondaryField?.field_key,
-        label: secondaryField?.label,
-        options_count: secondaryField?.options?.length || 0,
-        options: secondaryField?.options || []
-      }
-    });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+      { status: 405 }
+    );
   }
+
+  return Response.json(
+    {
+      ok: false,
+      error:
+        "Service-code diagnostics are temporarily unavailable while security remediation is in progress.",
+    },
+    { status: 503 }
+  );
 });
