@@ -1,7 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 
 const STAFF_ROLES = new Set(["admin", "management", "employee"]);
-const CLIENT_PORTAL_ROLES = new Set(["client", "pre_ets", "dspd"]);
 
 class RequestError extends Error {
   constructor(message: string) {
@@ -43,7 +42,7 @@ async function resolveCanonicalCaller(base44: any, authenticatedUserId: string) 
     throw new RequestError("Your account is unavailable or inactive.");
   }
 
-    const callerId = normalizeText(caller.id);
+  const callerId = normalizeText(caller.id);
   const callerRole = normalizeText(caller.role).toLowerCase();
   const callerAccessLevel = normalizeText(
     caller.access_level
@@ -111,34 +110,33 @@ async function resolveAuthorizedClient(
     return client;
   }
 
-  const assignmentValue = normalizeText(client.assigned_employee_id);
+  const assignedStaffId = normalizeText(client.assigned_employee_id);
 
-  if (!assignmentValue) {
+  if (!assignedStaffId) {
     throw new RequestError(
       "This client must be assigned to a staff member before portal access can be changed."
     );
   }
 
-  const organizationUsers = await base44.asServiceRole.entities.User.filter({
-    org_id: organizationId,
-  });
+  const assignedStaff = await base44.asServiceRole.entities.User.get(
+    assignedStaffId
+  ).catch(() => null);
 
-  const assignedStaff = asArray(organizationUsers).find(
-    (user: any) =>
-      isActive(user) &&
-      (
-        normalizeText(user.id) === assignmentValue ||
-        normalizeEmail(user.email) === normalizeEmail(assignmentValue)
-      )
-  );
-
-  if (!assignedStaff?.id) {
+  if (
+    !assignedStaff ||
+    !isActive(assignedStaff) ||
+    normalizeText(assignedStaff.id) !== assignedStaffId ||
+    normalizeText(assignedStaff.org_id) !== organizationId ||
+    !STAFF_ROLES.has(normalizeText(assignedStaff.role).toLowerCase()) ||
+    normalizeText(assignedStaff.access_level).toLowerCase() !==
+      (normalizeText(assignedStaff.role).toLowerCase() === "admin"
+        ? "admin"
+        : "staff")
+  ) {
     throw new RequestError(
       "The client is assigned to a staff member who is no longer active in this organization."
     );
   }
-
-  const assignedStaffId = normalizeText(assignedStaff.id);
 
   if (callerId === assignedStaffId) {
     return client;
@@ -254,7 +252,7 @@ Deno.serve(async (req) => {
       );
     }
 
-       const clientType = normalizeText(client?.client_type).toLowerCase();
+    const clientType = normalizeText(client?.client_type).toLowerCase();
 
     const expectedPortalRole =
       clientType === "pre_ets"
@@ -323,7 +321,7 @@ Deno.serve(async (req) => {
         });
       }
 
-          if (portalUser) {
+      if (portalUser) {
         await base44.asServiceRole.entities.User.update(portalUser.id, {
           linked_client_id: null,
           access_level: null,
