@@ -60,5 +60,10 @@
     "certification_status",
     "certification_source"
   ],
- base44/entities/CEPractitionerCertification.json
+ "rls": {
+  "create": false,
+  "read": false,
+  "update": false,
+  "delete": false
+}
 }
