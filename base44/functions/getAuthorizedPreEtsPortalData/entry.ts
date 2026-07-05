@@ -221,13 +221,18 @@ async function loadAuthorizedClientData(
     )
     .map(projectTask);
 
-  const visibleAssessments = asArray(assessments)
-    .filter(
-      (assessment: any) =>
-        isActive(assessment) &&
-        normalizeText(assessment?.org_id) === organizationId
-    )
-    .map(projectAssessment);
+  // Assessment records do not yet have an explicit staff-controlled client-visibility field.
+  // Fail closed for students so staff-only assessment metadata and PDFs cannot be exposed.
+  const visibleAssessments =
+    portalMode === "student"
+      ? []
+      : asArray(assessments)
+          .filter(
+            (assessment: any) =>
+              isActive(assessment) &&
+              normalizeText(assessment?.org_id) === organizationId
+          )
+          .map(projectAssessment);
 
   const visibleWbleForms = asArray(wbleForms)
     .filter(
@@ -305,7 +310,7 @@ async function loadAuthorizedClientData(
   return {
     ...emptyData,
     tasks: portalMode === "employer" ? [] : visibleTasks,
-    assessments: portalMode === "employer" ? [] : visibleAssessments,
+    assessments: visibleAssessments,
     wble_forms: visibleWbleForms,
     progress_reports: visibleProgressReports,
     documents: visibleDocuments,
