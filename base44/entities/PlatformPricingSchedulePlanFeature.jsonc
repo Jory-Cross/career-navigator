@@ -1,72 +1,23 @@
 {
   "name": "PlatformPricingSchedulePlanFeature",
   "type": "object",
+  "description": "Locked pricing-schedule plan-feature definition. Access is server-authorized and governed by the pricing lifecycle.",
   "properties": {
-    "pricing_schedule_id": {
-      "type": "string",
-      "description": "PlatformPricingSchedule record that owns this locked plan-feature definition."
-    },
-    "platform_plan_id": {
-      "type": "string",
-      "description": "PlatformPlan record this locked feature definition applies to."
-    },
-    "platform_feature_id": {
-      "type": "string",
-      "description": "PlatformFeature record represented by this locked schedule feature definition."
-    },
-    "platform_plan_feature_id": {
-      "type": "string",
-      "description": "Optional source PlatformPlanFeature template record used when this schedule feature definition was first created."
-    },
-    "pricing_schedule_plan_feature_key": {
-      "type": "string",
-      "description": "Stable unique key for this locked plan-feature definition, formatted as pricing_schedule_key:plan_key:feature_key."
-    },
-    "plan_key_snapshot": {
-      "type": "string",
-      "description": "Copied PlatformPlan plan_key retained for readable legacy-pricing history."
-    },
-    "feature_key": {
-      "type": "string",
-      "description": "Copied PlatformFeature feature_key retained for entitlement resolution and pricing history."
-    },
-    "feature_name_snapshot": {
-      "type": "string",
-      "description": "Copied human-readable feature name retained for historical display."
-    },
-    "is_included": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this feature is included in the specified plan under this pricing schedule."
-    },
-    "is_add_on_available": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this feature may be purchased separately by organizations on this plan and pricing schedule."
-    },
-    "default_limit_value": {
-      "type": "number",
-      "description": "Locked included capacity for this feature under this pricing schedule, such as active cohorts, students, practitioners, employees, or CE clients. Leave blank when the feature has no numeric capacity limit."
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true,
-      "description": "Controls whether this schedule-specific plan feature definition is active."
-    },
-    "effective_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When this feature definition becomes active within the pricing schedule."
-    },
-    "ends_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When this feature definition ends within a draft pricing schedule, if replaced."
-    },
-    "notes": {
-      "type": "string",
-      "description": "Internal notes for grandfathered limits, contracted capacity, or pricing-schedule exceptions."
-    }
+    "pricing_schedule_id": { "type": "string" },
+    "platform_plan_id": { "type": "string" },
+    "platform_feature_id": { "type": "string" },
+    "platform_plan_feature_id": { "type": "string" },
+    "pricing_schedule_plan_feature_key": { "type": "string" },
+    "plan_key_snapshot": { "type": "string" },
+    "feature_key": { "type": "string" },
+    "feature_name_snapshot": { "type": "string" },
+    "is_included": { "type": "boolean", "default": false },
+    "is_add_on_available": { "type": "boolean", "default": false },
+    "default_limit_value": { "type": "number" },
+    "is_active": { "type": "boolean", "default": true },
+    "effective_at": { "type": "string", "format": "date-time" },
+    "ends_at": { "type": "string", "format": "date-time" },
+    "notes": { "type": "string" }
   },
   "required": [
     "pricing_schedule_id",
@@ -81,21 +32,9 @@
     "effective_at"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }
