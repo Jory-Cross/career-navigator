@@ -44,7 +44,12 @@ function mapClient(raw) {
 function mapTimeEntry(raw) {
   if (!raw) return null;
 
-  const { created_by: _legacyCreatedBy, ...safeRaw } = raw;
+  const {
+    created_by: _legacyCreatedBy,
+    employee_email: _legacyEmployeeEmail,
+    staff_email: _legacyStaffEmail,
+    ...safeRaw
+  } = raw;
 
   return {
     ...safeRaw,
@@ -86,9 +91,9 @@ async function invokeAuthorizedRoute(functionName, payload) {
  * workflow. Legacy client-workspace helpers were removed because they directly
  * read and mutated browser entities without tenant authority.
  *
- * Creator identity is deliberately not projected. Browser callers must use
- * canonical server-authorized employee and assignment relationships instead of
- * legacy creator fields for visibility or mutability decisions.
+ * Creator and ownership email aliases are deliberately not projected. Browser
+ * callers must use canonical server-authorized employee and assignment IDs for
+ * visibility or mutability decisions.
  */
 export async function getCurrentUser() {
   return base44.auth.me();
