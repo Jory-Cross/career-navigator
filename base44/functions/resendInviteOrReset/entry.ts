@@ -55,6 +55,20 @@ function getRoleProfile(user: any) {
   };
 }
 
+function escapeHtml(value: unknown) {
+  return normalizeText(value).replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character] || character
+  );
+}
+
 function getSenderAddress() {
   const domain = (
     RESEND_FROM_EMAIL.split("@")[1] || ""
@@ -68,7 +82,16 @@ function getSenderAddress() {
 }
 
 function getSafeAppUrl() {
-  return APP_URL.replace(/\/+$/, "");
+  const candidate = APP_URL.replace(/\/+$/, "");
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "https:"
+      ? parsed.toString().replace(/\/+$/, "")
+      : "https://app.base44.com";
+  } catch {
+    return "https://app.base44.com";
+  }
 }
 
 function getDisplayName(user: any) {
@@ -240,6 +263,9 @@ async function sendAccessEmail({
   const subject = isInvite
     ? "You are invited to join Career Navigator"
     : "Access your Career Navigator account";
+  const callerDisplayName = escapeHtml(getDisplayName(caller));
+  const employeeEmail = escapeHtml(email);
+  const appUrl = getSafeAppUrl();
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -257,7 +283,7 @@ async function sendAccessEmail({
             ${isInvite ? "You are invited!" : "Access Your Account"}
           </h2>
           <p style="font-size: 16px; margin-bottom: 16px;">
-            <strong>${getDisplayName(caller)}</strong> has ${
+            <strong>${callerDisplayName}</strong> has ${
               isInvite
                 ? "sent you an invitation to join Career Navigator."
                 : "sent you an account-access email."
@@ -265,10 +291,10 @@ async function sendAccessEmail({
           </p>
           <p style="margin-bottom: 8px;">
             Open Career Navigator and sign in or register with
-            <strong>${email}</strong>.
+            <strong>${employeeEmail}</strong>.
           </p>
           <a
-            href="${getSafeAppUrl()}"
+            href="${appUrl}"
             style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;"
           >
             Open Career Navigator
