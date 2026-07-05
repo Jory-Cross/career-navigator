@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@14.21.0";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://ability4hire.com";
+const SAFE_APP_URL_FALLBACK = "https://ability4hire.com";
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 
 const ALLOWED_ACCESS_BY_ROLE = new Map([
@@ -80,8 +81,29 @@ function registrationEventKey(orgId: string, studentEmail: string) {
   )}`;
 }
 
+function getSafeAppUrl() {
+  const configuredUrl = text(APP_URL);
+
+  try {
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // Use the safe fallback below when APP_URL is malformed.
+  }
+
+  return SAFE_APP_URL_FALLBACK;
+}
+
 function checkoutUrls(cohortId: string) {
-  const appUrl = APP_URL.replace(/\/+$/, "");
+  const appUrl = getSafeAppUrl();
   const encodedCohortId = encodeURIComponent(cohortId);
 
   return {
@@ -367,24 +389,24 @@ function validateSavedInvoice({
       );
     }
 
-   const inviteMatches =
-  isActiveRecord(invite) &&
-  text(invite.org_id) === organizationId &&
-  text(invite.cohort_id) === cohortId &&
-  text(invite.role).toLowerCase() === "ce_student" &&
-  text(invite.access_level).toLowerCase() === "ce_training_portal" &&
-  !text(invite.client_id) &&
-["member", "student"].includes(
-  text(invite.cohort_role).toLowerCase(),
-) &&
-  OPEN_ASSIGNMENT_STATUSES.has(
-    text(invite.status).toLowerCase(),
-  ) &&
-  text(invite.payment_responsibility).toLowerCase() ===
-    "instructor_paid" &&
-  text(invite.instructor_payment_mode).toLowerCase() ===
-    "invoice_with_cohort" &&
-  email(invite.email) === lineEmail;
+    const inviteMatches =
+      isActiveRecord(invite) &&
+      text(invite.org_id) === organizationId &&
+      text(invite.cohort_id) === cohortId &&
+      text(invite.role).toLowerCase() === "ce_student" &&
+      text(invite.access_level).toLowerCase() === "ce_training_portal" &&
+      !text(invite.client_id) &&
+      ["member", "student"].includes(
+        text(invite.cohort_role).toLowerCase(),
+      ) &&
+      OPEN_ASSIGNMENT_STATUSES.has(
+        text(invite.status).toLowerCase(),
+      ) &&
+      text(invite.payment_responsibility).toLowerCase() ===
+        "instructor_paid" &&
+      text(invite.instructor_payment_mode).toLowerCase() ===
+        "invoice_with_cohort" &&
+      email(invite.email) === lineEmail;
     const eventMatches =
       text(event.organization_id) === organizationId &&
       text(event.cohort_id) === cohortId &&
@@ -494,33 +516,33 @@ async function ensureCheckout({
   }
 
   const existingSession = await getCheckout(invoice);
-if (existingSession) {
-  const metadata = existingSession.metadata || {};
 
-  const sessionMatchesInvoice =
-    text(existingSession.client_reference_id) === text(invoice.id) &&
-    text(metadata.billing_flow) === "ce_training_cohort_invoice" &&
-    text(metadata.cohort_invoice_id) === text(invoice.id) &&
-    text(metadata.invoice_key) === text(invoice.invoice_key) &&
-    text(metadata.organization_id) === organizationId &&
-    text(metadata.cohort_id) === text(cohort.id) &&
-    Number(existingSession.amount_total) === Number(invoice.amount_cents) &&
-    text(existingSession.currency).toLowerCase() ===
-      text(invoice.currency).toLowerCase();
+  if (existingSession) {
+    const metadata = existingSession.metadata || {};
+    const sessionMatchesInvoice =
+      text(existingSession.client_reference_id) === text(invoice.id) &&
+      text(metadata.billing_flow) === "ce_training_cohort_invoice" &&
+      text(metadata.cohort_invoice_id) === text(invoice.id) &&
+      text(metadata.invoice_key) === text(invoice.invoice_key) &&
+      text(metadata.organization_id) === organizationId &&
+      text(metadata.cohort_id) === text(cohort.id) &&
+      Number(existingSession.amount_total) === Number(invoice.amount_cents) &&
+      text(existingSession.currency).toLowerCase() ===
+        text(invoice.currency).toLowerCase();
 
-  if (!sessionMatchesInvoice) {
-    throw fail(
-      409,
-      "The saved checkout session does not match this cohort invoice. Please contact support before creating another checkout.",
-    );
+    if (!sessionMatchesInvoice) {
+      throw fail(
+        409,
+        "The saved checkout session does not match this cohort invoice. Please contact support before creating another checkout.",
+      );
+    }
   }
-}
 
-if (
-  existingSession?.status === "open" &&
-  existingSession?.payment_status === "unpaid" &&
-  existingSession.url
-) {
+  if (
+    existingSession?.status === "open" &&
+    existingSession?.payment_status === "unpaid" &&
+    existingSession.url
+  ) {
     return {
       ok: true,
       paid: false,
@@ -557,7 +579,7 @@ if (
     };
   }
 
-   if (invoiceStatus === "payment_processing") {
+  if (invoiceStatus === "payment_processing") {
     throw fail(
       409,
       "This CE Training cohort invoice is already processing payment. Do not create a second checkout session.",
@@ -759,7 +781,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const cohortId = text(body?.cohort_id);
     const requestedCohortInvoiceId = text(
-      body?.cohort_invoice_id
+      body?.cohort_invoice_id,
     );
 
     if (!cohortId) {
@@ -810,9 +832,9 @@ Deno.serve(async (req) => {
           cohort_id: cohortId,
         }),
         base44.asServiceRole.entities.OrganizationBillingEvent.filter({
-  organization_id: organizationId,
-  cohort_id: cohortId,
-}),
+          organization_id: organizationId,
+          cohort_id: cohortId,
+        }),
         base44.asServiceRole.entities.CETrainingCohortInvoice.filter({
           organization_id: organizationId,
           cohort_id: cohortId,
@@ -856,7 +878,7 @@ Deno.serve(async (req) => {
     const invites = Array.isArray(inviteRows) ? inviteRows : [];
     const events = Array.isArray(eventRows) ? eventRows : [];
     const invoices = Array.isArray(invoiceRows) ? invoiceRows : [];
-      const lines = Array.isArray(lineRows) ? lineRows : [];
+    const lines = Array.isArray(lineRows) ? lineRows : [];
 
     const enrollmentRows =
       await base44.asServiceRole.entities.CETrainingStudentEnrollment.filter({
@@ -876,31 +898,31 @@ Deno.serve(async (req) => {
       events.map((event) => [text(event.id), event]),
     );
 
-      const invoiceById = new Map(
+    const invoiceById = new Map(
       invoices.map((invoice) => [text(invoice.id), invoice]),
     );
 
     if (requestedCohortInvoiceId) {
       const requestedInvoice = invoiceById.get(
-        requestedCohortInvoiceId
+        requestedCohortInvoiceId,
       );
 
       if (!requestedInvoice) {
         throw fail(
           404,
-          "The requested CE Training cohort invoice was not found for this organization and cohort."
+          "The requested CE Training cohort invoice was not found for this organization and cohort.",
         );
       }
 
       const requestedInvoiceLines = linesForInvoice(
         lines,
-        requestedCohortInvoiceId
+        requestedCohortInvoiceId,
       );
 
       if (!requestedInvoiceLines.length) {
         throw fail(
           409,
-          "The requested CE Training cohort invoice has no saved student lines and cannot be resumed."
+          "The requested CE Training cohort invoice has no saved student lines and cannot be resumed.",
         );
       }
 
@@ -914,7 +936,7 @@ Deno.serve(async (req) => {
           callerEmail,
           inviteById,
           eventById,
-        })
+        }),
       );
     }
 
@@ -1007,7 +1029,7 @@ Deno.serve(async (req) => {
 
     const eligibleById = new Map<string, any>();
 
-      for (const invite of invites) {
+    for (const invite of invites) {
       if (
         !isActiveRecord(invite) ||
         text(invite.org_id) !== organizationId ||
@@ -1016,9 +1038,9 @@ Deno.serve(async (req) => {
         text(invite.access_level).toLowerCase() !==
           "ce_training_portal" ||
         !!text(invite.client_id) ||
-       !["member", "student"].includes(
-  text(invite.cohort_role).toLowerCase(),
-) ||
+        !["member", "student"].includes(
+          text(invite.cohort_role).toLowerCase(),
+        ) ||
         !OPEN_ASSIGNMENT_STATUSES.has(
           text(invite.status).toLowerCase(),
         ) ||
@@ -1029,8 +1051,8 @@ Deno.serve(async (req) => {
       ) {
         continue;
       }
-      const studentEmail = email(invite.email);
 
+      const studentEmail = email(invite.email);
       const matches =
         eventsByKey.get(
           registrationEventKey(organizationId, studentEmail),
@@ -1055,7 +1077,7 @@ Deno.serve(async (req) => {
         amountCents > 0 &&
         !!currency;
 
-           if (!valid) {
+      if (!valid) {
         continue;
       }
 
@@ -1213,7 +1235,7 @@ Deno.serve(async (req) => {
             cohort_id: cohortId,
             cohort_invoice_id: invoiceId,
             invoice_line_key: `ce_training_cohort_invoice_line:${invoiceId}:${candidate.event.id}`,
-                        organization_billing_event_id: candidate.event.id,
+            organization_billing_event_id: candidate.event.id,
             pending_role_assignment_id: candidate.invite.id,
             ce_training_student_enrollment_id:
               candidate.enrollment.id,
@@ -1243,7 +1265,7 @@ Deno.serve(async (req) => {
         eventById,
       }),
     );
-   } catch (error) {
+  } catch (error) {
     console.error(
       "createCETrainingCohortInvoiceCheckout error:",
       error?.message || error,
