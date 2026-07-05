@@ -271,7 +271,6 @@ Deno.serve(async (req) => {
       entries,
       entry_count: entries.length,
       visible_employee_ids: Array.from(allowedEmployeeIds),
-      legacy_entries_pending_org_backfill: 0,
     });
   } catch (error) {
     console.error(
