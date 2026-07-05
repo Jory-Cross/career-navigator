@@ -42,21 +42,11 @@ function resolveEntryOwnerId(
   entry: any,
   allowedEmployeeIds: Set<string>
 ) {
-  const candidates = [
-    entry?.employee_id,
-    entry?.staff_id,
-    entry?.user_id,
-  ];
+  const employeeId = normalizeText(entry?.employee_id);
 
-  for (const candidate of candidates) {
-    const employeeId = normalizeText(candidate);
-
-    if (employeeId && allowedEmployeeIds.has(employeeId)) {
-      return employeeId;
-    }
-  }
-
-  return "";
+  return employeeId && allowedEmployeeIds.has(employeeId)
+    ? employeeId
+    : "";
 }
 
 function failure(error: string, status = 400) {
