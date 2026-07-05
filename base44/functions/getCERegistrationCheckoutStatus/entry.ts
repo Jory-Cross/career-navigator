@@ -271,6 +271,13 @@ function getStatusMessage(
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      return Response.json(
+        { ok: false, error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
+    }
+
     if (!stripe) {
       throw createHttpError(
         500,
