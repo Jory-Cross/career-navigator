@@ -1,6 +1,11 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
 const PLATFORM_OWNER_ROLE = "platform_owner";
+const CANONICAL_STAFF_ACCESS = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -10,10 +15,14 @@ function isActive(record) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function getCanonicalStaffRole(user) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
 function isStaffUser(user) {
-  return ["admin", "management", "employee"].includes(
-    normalizeText(user?.role).toLowerCase()
-  );
+  return Boolean(getCanonicalStaffRole(user));
 }
 
 function getOrganizationName(organization) {
@@ -77,6 +86,16 @@ Deno.serve(async (req) => {
     if (!caller || !isActive(caller)) {
       return Response.json(
         { error: "Your account is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    if (getCanonicalStaffRole(caller) !== "admin") {
+      return Response.json(
+        {
+          error:
+            "Canonical administrator access is required to view the organization directory.",
+        },
         { status: 403 }
       );
     }
