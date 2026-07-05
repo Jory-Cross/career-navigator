@@ -36,7 +36,12 @@ function isActive(record: any) {
 function isSafeUploadedFileUrl(value: string) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "https:";
+    return (
+      parsed.protocol === "https:" &&
+      Boolean(parsed.hostname) &&
+      !parsed.username &&
+      !parsed.password
+    );
   } catch {
     return false;
   }
