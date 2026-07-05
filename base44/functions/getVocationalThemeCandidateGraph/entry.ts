@@ -1,36 +1,25 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-
+/**
+ * Disabled during the security remediation freeze.
+ *
+ * The prior route accepted browser-provided client and theme identifiers and
+ * returned persisted discovery evidence without canonical tenant or client
+ * authorization. It must remain unavailable until a scoped graph-read workflow
+ * is reviewed.
+ */
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { client_id, candidate_theme_name } = await req.json();
-    if (!client_id || !candidate_theme_name) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // Retrieve the graph record
-    const graphs = await base44.entities.VocationalThemeCandidateGraph.filter({
-      client_id,
-      candidate_theme_name,
-      is_active: true
-    });
-
-    if (graphs.length === 0) {
-      return Response.json({
-        ok: true,
-        graph: null,
-        message: 'Graph not found. Call rebuildVocationalThemeCandidateGraph to create it.'
-      });
-    }
-
-    return Response.json({
-      ok: true,
-      graph: graphs[0]
-    });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (req.method !== "POST") {
+    return Response.json(
+      { ok: false, error: "This route accepts POST requests only." },
+      { status: 405 }
+    );
   }
+
+  return Response.json(
+    {
+      ok: false,
+      error:
+        "Vocational evidence graphs are temporarily unavailable while security remediation is in progress.",
+    },
+    { status: 503 }
+  );
 });
