@@ -11,7 +11,6 @@ const OPEN_INVITE_STATUSES = new Set([
   "invite_email_sent",
   "pending_email_failed",
 ]);
-
 const INVOICE_ELIGIBLE_EVENT_STATUSES = new Set(["pending"]);
 const SETTLED_EVENT_STATUSES = new Set(["paid", "waived"]);
 const CE_REGISTRATION_FEE_KINDS = new Set([
@@ -109,7 +108,6 @@ async function resolveCanonicalCaller(
   }
 
   return {
-    caller,
     callerId,
     callerRole,
     organizationId,
@@ -118,7 +116,11 @@ async function resolveCanonicalCaller(
 
 async function resolveAuthorizedTrainingCohort(
   base44: any,
-  context: any,
+  context: {
+    callerId: string;
+    callerRole: string;
+    organizationId: string;
+  },
   cohortId: string
 ) {
   const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(
@@ -167,7 +169,7 @@ async function resolveAuthorizedTrainingCohort(
   return cohort;
 }
 
-function isOpenInvoiceBilledInvite(
+function isOpenCohortInvite(
   invite: any,
   organizationId: string,
   cohortId: string
@@ -179,7 +181,12 @@ function isOpenInvoiceBilledInvite(
     normalizeText(invite?.role).toLowerCase() === "ce_student" &&
     normalizeText(invite?.access_level).toLowerCase() ===
       "ce_training_portal" &&
-    OPEN_INVITE_STATUSES.has(normalizeText(invite?.status).toLowerCase()) &&
+    OPEN_INVITE_STATUSES.has(normalizeText(invite?.status).toLowerCase())
+  );
+}
+
+function isInvoiceBilledInvite(invite: any) {
+  return (
     normalizeText(invite?.payment_responsibility).toLowerCase() ===
       "instructor_paid" &&
     normalizeText(invite?.instructor_payment_mode).toLowerCase() ===
@@ -235,9 +242,10 @@ Deno.serve(async (req) => {
       }),
     ]);
 
-    const invoiceBilledInvites = asArray(inviteRows).filter((invite: any) =>
-      isOpenInvoiceBilledInvite(invite, context.organizationId, cohortId)
+    const cohortInvites = asArray(inviteRows).filter((invite: any) =>
+      isOpenCohortInvite(invite, context.organizationId, cohortId)
     );
+    const invoiceBilledInvites = cohortInvites.filter(isInvoiceBilledInvite);
 
     const billingEventsByKey = new Map<string, any[]>();
     for (const billingEvent of asArray(billingEventRows)) {
@@ -419,7 +427,7 @@ Deno.serve(async (req) => {
         code: normalizeText(cohort?.code),
       },
       summary: {
-        pending_cohort_invitation_count: invoiceBilledInvites.length,
+        pending_cohort_invitation_count: cohortInvites.length,
         invoice_billed_invitation_count: invoiceBilledInvites.length,
         eligible_student_count: eligibleStudents.length,
         blocked_student_count: blockedStudents.length,
