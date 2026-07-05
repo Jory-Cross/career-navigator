@@ -256,8 +256,27 @@ async function assertCallerMayAccessClient(
 
   const cohortId = normalizeText(client?.cohort_id);
   const assignedInstructorId = normalizeText(client?.assigned_instructor_id);
+  const isTrainingClient =
+    normalizeText(client?.client_type).toLowerCase() === "ce_training" &&
+    client?.is_training_client === true;
 
-  if (!cohortId) {
+  if (!cohortId || !isTrainingClient) {
+    throw new RequestError(
+      403,
+      "This CE training client is not connected to an active cohort."
+    );
+  }
+
+  const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(
+    cohortId
+  ).catch(() => null);
+
+  if (
+    !cohort ||
+    !isActive(cohort) ||
+    normalizeText(cohort?.org_id) !== context.organizationId ||
+    normalizeText(cohort?.status).toLowerCase() === "archived"
+  ) {
     throw new RequestError(
       403,
       "This CE training client is not connected to an active cohort."
