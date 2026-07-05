@@ -4,6 +4,7 @@ import Stripe from "npm:stripe@14.21.0";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL =
   Deno.env.get("APP_URL") || "https://ability4hire.com";
+const SAFE_APP_URL_FALLBACK = "https://ability4hire.com";
 
 const stripe = STRIPE_SECRET_KEY
   ? new Stripe(STRIPE_SECRET_KEY)
@@ -109,7 +110,24 @@ function isAuthorizedCEStaff(profile: {
 }
 
 function getAppUrl() {
-  return APP_URL.replace(/\/+$/, "");
+  const configuredUrl = normalizeText(APP_URL);
+
+  try {
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // Use the safe fallback below when APP_URL is malformed.
+  }
+
+  return SAFE_APP_URL_FALLBACK;
 }
 
 function buildRedirectUrls() {
@@ -384,7 +402,7 @@ async function resolveEnrollmentAndInvitation(
     enrollment?.enrollment_status
   ).toLowerCase();
 
-    if (
+  if (
     enrollment?.is_active === false ||
     enrollment?.is_archived === true ||
     !["invited", "payment_pending"].includes(enrollmentStatus)
@@ -626,7 +644,7 @@ async function inspectExistingCheckoutSession(
     );
   }
 
-   if (
+  if (
     checkoutSession.status === "open" &&
     checkoutSession.payment_status === "unpaid" &&
     normalizeText(checkoutSession?.url)
@@ -731,7 +749,7 @@ async function createCheckoutSession({
         payment_responsibility: paymentResponsibility,
         instructor_payment_mode: instructorPaymentMode,
       },
-            payment_intent_data: {
+      payment_intent_data: {
         metadata: {
           billing_flow: "ce_student_registration",
           billing_event_id: String(billingEvent.id),
