@@ -10,45 +10,28 @@
       "type": "string",
       "description": "Customer-facing name for this paid plan."
     },
- "account_model": {
-  "type": "string",
-  "enum": [
-    "trainer_business",
-    "business_platform",
-    "business_ce",
-    "individual_ce"
-  ],
-  "description": "Customer account model this plan creates. business_platform is the full Career Navigator business product and may later purchase CE modules as add-ons. business_ce is the standalone CE-focused business product. trainer_business runs CE training cohorts. individual_ce supports one independent CE practitioner."
-},
-"plan_tier": {
-  "type": "string",
-  "enum": [
-    "starter",
-    "growth",
-    "enterprise",
-    "pro"
-  ],
-  "description": "Named service tier within the account model. Trainer Business and Business CE use starter, growth, and enterprise. Individual CE uses starter and pro."
-},
-"navigation_scope": {
-  "type": "string",
-  "enum": [
-    "full_platform",
-    "ce_only",
-    "ce_training_only"
-  ],
-  "description": "Controls the app surface shown to organizations on this plan. full_platform shows general Career Navigator pages, with CE pages added only when CE entitlements are active. ce_only shows CE practitioner and CE client pages only. ce_training_only shows CE Training Portal, cohorts, trainers, students, and cohort-scoped CE client work only."
-},
-"description": {
+    "account_model": {
+      "type": "string",
+      "enum": ["trainer_business", "business_platform", "business_ce", "individual_ce"],
+      "description": "Customer account model this plan creates."
+    },
+    "plan_tier": {
+      "type": "string",
+      "enum": ["starter", "growth", "enterprise", "pro"],
+      "description": "Named service tier within the account model."
+    },
+    "navigation_scope": {
+      "type": "string",
+      "enum": ["full_platform", "ce_only", "ce_training_only"],
+      "description": "Controls the app surface shown to organizations on this plan."
+    },
+    "description": {
       "type": "string",
       "description": "Customer-facing explanation of the plan."
     },
     "billing_interval": {
       "type": "string",
-      "enum": [
-        "monthly",
-        "annual"
-      ],
+      "enum": ["monthly", "annual"],
       "description": "Default billing frequency for this plan."
     },
     "currency": {
@@ -88,34 +71,11 @@
       "description": "Internal platform notes about grandfathering, migration, or plan setup."
     }
   },
-  "required": [
-    "plan_key",
-    "plan_name",
-    "account_model",
-    "billing_interval",
-    "is_active",
-    "is_publicly_available"
-  ],
+  "required": ["plan_key", "plan_name", "account_model", "billing_interval", "is_active", "is_publicly_available"],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }
