@@ -1,7 +1,7 @@
 {
   "name": "ClientOccupationInterest",
   "type": "object",
-  "description": "Stores O*NET occupations that a client or staff member marks as Interested from the O*NET Occupation Explorer.",
+  "description": "Stores O*NET occupations that a client or staff member marks as Interested from the O*NET Occupation Explorer. Access is server-authorized and organization-scoped through the linked client.",
   "properties": {
     "client_id": {
       "type": "string",
@@ -46,5 +46,11 @@
     "client_id",
     "onet_code",
     "occupation_title"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
