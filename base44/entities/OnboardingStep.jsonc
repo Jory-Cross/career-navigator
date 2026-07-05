@@ -2,54 +2,15 @@
   "name": "OnboardingStep",
   "type": "object",
   "properties": {
-    "client_id": {
-      "type": "string",
-      "description": "Associated client ID"
-    },
-    "step_name": {
-      "type": "string",
-      "description": "Name of the onboarding step"
-    },
-    "step_type": {
-      "type": "string",
-      "enum": [
-        "collect_resume",
-        "setup_profile",
-        "discuss_goals",
-        "upload_documents",
-        "initial_consultation",
-        "custom"
-      ],
-      "default": "custom",
-      "description": "Type of onboarding step"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "in_progress",
-        "completed",
-        "skipped"
-      ],
-      "default": "pending",
-      "description": "Step completion status"
-    },
-    "completed_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Date when step was completed"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Additional notes about the step"
-    },
-    "order": {
-      "type": "number",
-      "description": "Order of the step in the checklist"
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_id": { "type": "string", "description": "Associated client ID" },
+    "step_name": { "type": "string", "description": "Name of the onboarding step" },
+    "step_type": { "type": "string", "enum": ["collect_resume", "setup_profile", "discuss_goals", "upload_documents", "initial_consultation", "custom"], "default": "custom", "description": "Type of onboarding step" },
+    "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "skipped"], "default": "pending", "description": "Step completion status" },
+    "completed_date": { "type": "string", "format": "date", "description": "Date when step was completed" },
+    "notes": { "type": "string", "description": "Additional notes about the step" },
+    "order": { "type": "number", "description": "Order of the step in the checklist" }
   },
-  "required": [
-    "client_id",
-    "step_name"
-  ]
+  "required": ["client_id", "step_name"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }

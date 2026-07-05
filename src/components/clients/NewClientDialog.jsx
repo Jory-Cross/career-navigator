@@ -1,161 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { base44 } from "@/api/base44Client";
-import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useOrg } from "@/lib/useOrg";
+import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export default function NewClientDialog({ open, onOpenChange, onCreated }) {
-  const { orgId } = useOrg();
-  const [currentUserOrgId, setCurrentUserOrgId] = useState(null);
-  const [form, setForm] = useState({
-    first_name: "", last_name: "", email: "", phone: "",
-    target_role: "", industry: "", location: "", notes: "",
-    client_type: "job_seeker"
-  });
-  const [saving, setSaving] = useState(false);
-  const [sendInvite, setSendInvite] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
-  }, []);
-
-  const handleSave = async () => {
-    if (!form.first_name || !form.last_name || !form.email) {
-      toast.error("First name, last name, and email are required");
-      return;
-    }
-    setSaving(true);
-    try {
-      const token = Math.random().toString(36).substring(2, 15);
-      const client = await base44.entities.Client.create({ 
-        ...form, 
-        status: "active", 
-        access_token: token,
-        assigned_employee_id: currentUser?.id || null,
-        ...(orgId ? { org_id: orgId } : {})
-      });
-      
-      // Log activity
-      await base44.entities.Activity.create({
-        client_id: client.id,
-        activity_type: 'status_changed',
-        title: 'Client created',
-        description: `New client ${form.first_name} ${form.last_name} added to the system`
-      });
-      
-      if (sendInvite) {
-        try {
-          const inviteRes = await base44.functions.invoke('inviteClient', { 
-            email: form.email, 
-            firstName: form.first_name,
-            clientId: client.id,
-            clientType: form.client_type,
-            org_id: orgId || null,
-          });
-          const inviteData = inviteRes?.data || {};
-          if (inviteData.success === false) {
-            throw new Error(inviteData.error || 'Invite failed');
-          }
-
-          if (inviteData.email_sent) {
-            toast.success("Client created and invitation sent to " + form.email);
-          } else {
-            toast.warning(`Client created. Portal access prepared for ${form.email}, but the invitation email could not be delivered. Use "Resend Invite" from the client record.`);
-          }
-        } catch (emailError) {
-          console.error("Failed to send invitation:", emailError);
-          toast.warning("Client created, but invitation email failed: " + emailError.message);
-        }
-      } else {
-        toast.success("Client created successfully");
-      }
-      
-      setSaving(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", target_role: "", industry: "", location: "", notes: "", client_type: "job_seeker" });
-      onOpenChange(false);
-      if (onCreated) onCreated();
-    } catch (error) {
-      setSaving(false);
-      toast.error("Failed to create client: " + error.message);
-    }
-  };
-
-  const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
-
+/**
+ * Client creation disabled during the security remediation freeze.
+ *
+ * The legacy dialog directly created Client and Activity records in the
+ * browser with browser-defined organization and assignment values. Re-enable
+ * only after a server-authorized client-creation route is implemented.
+ */
+export default function NewClientDialog({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">New Client</DialogTitle>
+          <DialogTitle>New client creation is temporarily unavailable</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4 overflow-y-auto pr-2 flex-1">
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs text-slate-500">Client Type *</Label>
-            <Select value={form.client_type} onValueChange={v => update("client_type", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="job_seeker">Job Seeker</SelectItem>
-                <SelectItem value="pre_ets">Pre-ETS Student</SelectItem>
-                <SelectItem value="dspd">DSPD</SelectItem>
-                <SelectItem value="employed">Employed</SelectItem>
-                <SelectItem value="customized_employment">Customized Employment / CE</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">First Name *</Label>
-            <Input value={form.first_name} onChange={e => update("first_name", e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Last Name *</Label>
-            <Input value={form.last_name} onChange={e => update("last_name", e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Email *</Label>
-            <Input type="email" value={form.email} onChange={e => update("email", e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Phone</Label>
-            <Input value={form.phone} onChange={e => update("phone", e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Target Role</Label>
-            <Input value={form.target_role} onChange={e => update("target_role", e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Industry</Label>
-            <Input value={form.industry} onChange={e => update("industry", e.target.value)} />
-          </div>
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs text-slate-500">Location</Label>
-            <Input value={form.location} onChange={e => update("location", e.target.value)} />
-          </div>
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs text-slate-500">Notes</Label>
-            <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} rows={3} />
-          </div>
-          <div className="col-span-2 flex items-center gap-2 pt-1">
-            <Checkbox id="send-invite" checked={sendInvite} onCheckedChange={setSendInvite} />
-            <label htmlFor="send-invite" className="text-sm text-slate-600 cursor-pointer">
-              Send invitation email asking client to join the portal
-            </label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-white">
-            {saving ? "Creating..." : "Create Client"}
-          </Button>
-        </DialogFooter>
+        <p className="text-sm text-amber-900">
+          Client creation is disabled while security remediation is in progress.
+        </p>
       </DialogContent>
     </Dialog>
   );

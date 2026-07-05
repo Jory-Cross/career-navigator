@@ -1,7 +1,7 @@
 {
   "name": "VocationalThemeCandidateFeedback",
   "type": "object",
-  "description": "Feedback on vocational theme candidates from staff/students and cohort managers. Supports CE certification testing and discovery planning.",
+  "description": "Feedback on vocational theme candidates from staff and cohort managers. Server-authorized workflows enforce tenant, client, cohort, and reviewer scope.",
   "properties": {
     "org_id": {
       "type": "string",
@@ -9,7 +9,7 @@
     },
     "feedback_key": {
       "type": "string",
-      "description": "Deterministic composite key: ${client_id}::${normalized_candidate_theme_name}::${reviewer_user_id}. Enforces uniqueness per composite key."
+      "description": "Deterministic composite key: ${client_id}::${normalized_candidate_theme_name}::${reviewer_user_id}."
     },
     "client_id": {
       "type": "string",
@@ -17,23 +17,23 @@
     },
     "candidate_theme_name": {
       "type": "string",
-      "description": "Exact name of the vocational theme candidate (e.g. 'Retail Customer Service')"
+      "description": "Exact name of the vocational theme candidate."
     },
     "category_label": {
       "type": "string",
-      "description": "Category this candidate was synthesized from (e.g. 'Emerging Interests', 'Vocational Themes Evidence'). Enables drilling back to source evidence."
+      "description": "Category this candidate was synthesized from."
     },
     "reviewer_user_id": {
       "type": "string",
-      "description": "User ID of the staff/student providing feedback"
+      "description": "User ID of the staff member providing feedback."
     },
     "reviewer_role": {
       "type": "string",
-      "description": "Platform role of reviewer (admin, management, employee) at time of feedback"
+      "description": "Canonical platform role of reviewer at time of feedback."
     },
     "cohort_id": {
       "type": "string",
-      "description": "Optional FK to CETrainingCohort if feedback is cohort-scoped. Null = non-cohort feedback."
+      "description": "Optional FK to CETrainingCohort if feedback is cohort-scoped."
     },
     "staff_validation": {
       "type": "string",
@@ -59,16 +59,16 @@
         "yes",
         "no"
       ],
-      "description": "Should this candidate be carried forward for further discovery?"
+      "description": "Whether this candidate should be carried forward for further discovery."
     },
     "notes": {
       "type": "string",
-      "description": "Free-text feedback, reasoning, observations"
+      "description": "Free-text feedback, reasoning, and observations."
     },
     "is_active": {
       "type": "boolean",
       "default": true,
-      "description": "Soft-delete: false = archived/withdrawn feedback"
+      "description": "Soft-delete: false = archived or withdrawn feedback."
     },
     "feedback_date": {
       "type": "string",
@@ -84,5 +84,10 @@
     "reviewer_user_id",
     "feedback_key"
   ],
-  "rls": {}
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

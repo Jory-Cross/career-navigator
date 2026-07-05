@@ -2,6 +2,10 @@
   "name": "TrainingProgressReport",
   "type": "object",
   "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope. Required for every training progress report."
+    },
     "client_id": {
       "type": "string",
       "description": "Associated client ID"
@@ -125,6 +129,7 @@
     }
   },
   "required": [
+    "org_id",
     "client_id",
     "reporting_period_from",
     "reporting_period_to"

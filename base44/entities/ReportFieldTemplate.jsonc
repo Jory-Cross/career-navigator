@@ -143,5 +143,11 @@
     "entry_type_code",
     "field_key",
     "label"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

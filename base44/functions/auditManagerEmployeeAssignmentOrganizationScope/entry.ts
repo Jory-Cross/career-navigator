@@ -1,5 +1,12 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
+const PLATFORM_OWNER_ROLE = "platform_owner";
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -8,61 +15,85 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (req.method !== "POST") {
+      return Response.json(
+        { ok: false, error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
     }
 
-    const [
-      allUsers,
-      allPlatformAdmins,
-      allAssignments,
-    ] = await Promise.all([
-      base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.PlatformAdmin.list(),
-      base44.asServiceRole.entities.ManagerEmployeeAssignment.list(),
-    ]);
+    await req.json().catch(() => ({}));
 
-    const users = Array.isArray(allUsers) ? allUsers : [];
-    const platformAdmins = Array.isArray(allPlatformAdmins)
-      ? allPlatformAdmins
-      : [];
-    const assignments = Array.isArray(allAssignments)
-      ? allAssignments
-      : [];
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
-    const caller = users.find(
-      (user: any) => normalizeText(user?.id) === authenticatedUser.id
-    );
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { ok: false, error: "You must be signed in to audit manager assignments." },
+        { status: 401 }
+      );
+    }
+
+    const caller = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
 
     if (!caller || !isActive(caller)) {
       return Response.json(
-        { error: "Authenticated user record was not found or is inactive." },
+        { ok: false, error: "Your account is inactive or unavailable." },
         { status: 403 }
       );
     }
 
-    const isPlatformOwner = platformAdmins.some(
-      (record: any) =>
-        normalizeText(record?.user_id) === authenticatedUser.id &&
-        normalizeText(record?.platform_role).toLowerCase() ===
-          "platform_owner" &&
-        isActive(record)
-    );
-
-    if (!isPlatformOwner) {
+    if (getCanonicalStaffRole(caller) !== "admin") {
       return Response.json(
         {
+          ok: false,
           error:
-            "Only an active platform owner may audit manager assignments.",
+            "Canonical administrator access is required to audit manager assignments.",
         },
         { status: 403 }
       );
     }
+
+    const platformAdminRecords =
+      await base44.asServiceRole.entities.PlatformAdmin.filter({
+        user_id: caller.id,
+      });
+    const platformOwnerRecord = platformAdminRecords.find(
+      (record: any) =>
+        normalizeText(record?.platform_role).toLowerCase() ===
+          PLATFORM_OWNER_ROLE && isActive(record)
+    );
+
+    if (!platformOwnerRecord) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Only an active Platform Owner may audit manager assignments.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const [allUsers, allAssignments] = await Promise.all([
+      base44.asServiceRole.entities.User.list(),
+      base44.asServiceRole.entities.ManagerEmployeeAssignment.list(),
+    ]);
+
+    const users = Array.isArray(allUsers) ? allUsers : [];
+    const assignments = Array.isArray(allAssignments)
+      ? allAssignments
+      : [];
 
     const usersById = new Map(
       users
@@ -188,9 +219,8 @@ Deno.serve(async (req) => {
 
     return Response.json(
       {
-        error:
-          error?.message ||
-          "Unable to audit manager assignment organization scope.",
+        ok: false,
+        error: "Unable to audit manager assignment organization scope.",
       },
       { status: 500 }
     );

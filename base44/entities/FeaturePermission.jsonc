@@ -1,11 +1,11 @@
 {
   "name": "FeaturePermission",
   "type": "object",
-  "description": "Controls which features/pages are visible and interactive per staff role, client portal role, or CE Training role.",
+  "description": "Organization-scoped feature visibility and interaction settings. Read and changed only through the authorized feature-permission route.",
   "properties": {
     "org_id": {
       "type": "string",
-      "description": "Tenant org ID"
+      "description": "Canonical Organization.id scope. Required for every feature-permission record."
     },
     "role": {
       "type": "string",
@@ -19,33 +19,40 @@
         "ce_instructor",
         "ce_student"
       ],
-      "description": "Staff role (admin/management/employee), client portal role (client/pre_ets/dspd), or CE Training role (ce_instructor/ce_student)"
+      "description": "Staff, client portal, or CE Training role governed by this setting."
     },
     "feature_key": {
       "type": "string",
-      "description": "Unique key for the feature (e.g. time_tracking, clients, ce_training_portal)"
+      "description": "Server-validated feature key."
     },
     "label": {
       "type": "string",
-      "description": "Human-readable label for the feature"
+      "description": "Server-derived human-readable feature label."
     },
     "category": {
       "type": "string",
-      "description": "Grouping category (e.g. core, clinical, admin, client_portal, ce_training)"
+      "description": "Server-derived feature category."
     },
     "visible": {
       "type": "boolean",
       "default": true,
-      "description": "Whether this feature is visible to users with this role"
+      "description": "Whether users with this role may view the feature."
     },
     "can_interact": {
       "type": "boolean",
       "default": true,
-      "description": "Whether users with this role can interact (edit/create) \u2014 not yet used in V1"
+      "description": "Whether users with this role may interact with the feature."
     }
   },
   "required": [
+    "org_id",
     "role",
     "feature_key"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

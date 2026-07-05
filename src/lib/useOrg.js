@@ -1,122 +1,93 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { setOrgId } from "@/lib/orgContext";
-let _cachedOrg = null;
-let _cachedOrgId = null;
-let _orgLoadPromise = null;
-let _orgResolved = false;
-let _invalidOrgIds = new Set();
 
-function looksLikeRealOrgId(value) {
-  return typeof value === "string" && value.length >= 20;
-}
-// Cache org per session to avoid repeated fetches
-
+let cachedOrg = null;
+let cachedOrgId = null;
+let orgLoadPromise = null;
+let orgResolved = false;
 
 /**
- * Hook that returns the current user's org and org_id.
- * Also provides a helper to inject org_id into entity create calls.
+ * Returns the signed-in user's organization context.
+ *
+ * Organization resolution is derived on the server from the authenticated
+ * user's canonical org_id. The browser never filters Organization by ID or
+ * owner email.
  */
 export function useOrg() {
-  const [org, setOrg] = useState(_cachedOrg);
-  const [orgId, setOrgIdState] = useState(_cachedOrgId);
-  const [loading, setLoading] = useState(!_cachedOrg);
+  const [org, setOrg] = useState(cachedOrg);
+  const [orgId, setOrgIdState] = useState(cachedOrgId);
+  const [loading, setLoading] = useState(!orgResolved);
 
- useEffect(() => {
-  let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
-  async function loadOrg() {
-    if (_orgResolved) {
-      setOrg(_cachedOrg);
-      setOrgIdState(_cachedOrgId);
-      setLoading(false);
-      return;
-    }
+    async function loadOrg() {
+      if (orgResolved) {
+        if (mounted) {
+          setOrg(cachedOrg);
+          setOrgIdState(cachedOrgId);
+          setLoading(false);
+        }
+        return;
+      }
 
-    if (_orgLoadPromise) {
-      const result = await _orgLoadPromise;
+      if (!orgLoadPromise) {
+        orgLoadPromise = (async () => {
+          try {
+            const response = await base44.functions.invoke(
+              "getAuthorizedOrganizationContext",
+              {}
+            );
+            const payload = response?.data ?? response ?? {};
+
+            if (!payload?.ok) {
+              throw new Error(payload?.error || "Organization context is unavailable.");
+            }
+
+            cachedOrg = payload.organization || null;
+            cachedOrgId = cachedOrg?.id || null;
+            setOrgId(cachedOrgId);
+          } catch (error) {
+            console.warn(
+              "[useOrg] Organization context could not be loaded:",
+              error?.message || error
+            );
+            cachedOrg = null;
+            cachedOrgId = null;
+            setOrgId(null);
+          } finally {
+            orgResolved = true;
+            orgLoadPromise = null;
+          }
+
+          return { org: cachedOrg, orgId: cachedOrgId };
+        })();
+      }
+
+      const result = await orgLoadPromise;
+
       if (!mounted) return;
       setOrg(result.org);
-     setOrgIdState(result.orgId);
+      setOrgIdState(result.orgId);
       setLoading(false);
-      return;
     }
 
-    _orgLoadPromise = (async () => {
-      const user = await base44.auth.me();
-      if (!user) {
-        _orgResolved = true;
-        return { org: null, orgId: null };
-      }
+    loadOrg();
 
-      if (
-        user.org_id &&
-        looksLikeRealOrgId(user.org_id) &&
-        !_invalidOrgIds.has(user.org_id)
-      ) {
-        try {
-          const orgs = await base44.entities.Organization.filter({
-            id: user.org_id,
-          });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-          if (orgs?.[0]) {
-            _cachedOrg = orgs[0];
-            _cachedOrgId = orgs[0].id;
-            setOrgId(_cachedOrgId);
-            _orgResolved = true;
-            return { org: _cachedOrg, orgId: _cachedOrgId };
-          }
-        } catch (err) {
-          console.warn("Invalid user.org_id:", user.org_id);
-          _invalidOrgIds.add(user.org_id);
-        }
-      } else if (user.org_id) {
-        _invalidOrgIds.add(user.org_id);
-      }
-
-      try {
-        const orgs = await base44.entities.Organization.filter({
-          owner_email: user.email,
-        });
-
-        if (orgs?.[0]) {
-          _cachedOrg = orgs[0];
-          _cachedOrgId = orgs[0].id;
-            setOrgId(_cachedOrgId);
-        }
-      } catch (err) {
-        console.warn("owner_email fallback failed");
-      }
-
-      _orgResolved = true;
-      return { org: _cachedOrg, orgId: _cachedOrgId };
-    })();
-
-    const result = await _orgLoadPromise;
-
-    if (!mounted) return;
-
-    setOrg(result.org);
-    setOrgIdState(result.orgId);
-    setLoading(false);
-
-    _orgLoadPromise = null;
-  }
-
-  loadOrg();
-
-  return () => {
-    mounted = false;
-  };
-}, []);
-
-  /** Call this to clear cache (e.g. after org update) */
   const invalidateOrg = () => {
-    _cachedOrg = null;
-    _cachedOrgId = null;
+    cachedOrg = null;
+    cachedOrgId = null;
+    orgResolved = false;
+    orgLoadPromise = null;
+    setOrgId(null);
   };
 
-  /** Wrap entity filter calls to automatically scope by org_id */
   const scopedFilter = (filters = {}) => {
     if (!orgId) return filters;
     return { ...filters, org_id: orgId };

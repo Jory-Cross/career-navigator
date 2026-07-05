@@ -10,10 +10,6 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value: unknown) {
-  return normalizeText(value).toLowerCase();
-}
-
 function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -25,7 +21,6 @@ function isActive(record: any) {
 function getCanonicalInternalRole(user: any) {
   const role = normalizeText(user?.role).toLowerCase();
   const accessLevel = normalizeText(user?.access_level).toLowerCase();
-
   return INTERNAL_STAFF_ACCESS[role] === accessLevel ? role : "";
 }
 
@@ -49,20 +44,6 @@ function isPreEtsClientInOrganization(client: any, organizationId: string) {
     isActive(client) &&
     normalizeText(client?.org_id) === organizationId &&
     normalizeText(client?.client_type).toLowerCase() === "pre_ets"
-  );
-}
-
-function clientMatchesVisibleStaff(
-  client: any,
-  visibleUserIds: Set<string>,
-  visibleEmails: Set<string>
-) {
-  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-
-  return (
-    visibleUserIds.has(assignedEmployeeId) ||
-    (createdBy && visibleEmails.has(createdBy))
   );
 }
 
@@ -170,10 +151,7 @@ function projectOnboardingStep(step: any, includeNotes: boolean) {
     order: Number(step?.order) || 0,
   };
 
-  if (includeNotes) {
-    projected.notes = normalizeText(step?.notes);
-  }
-
+  if (includeNotes) projected.notes = normalizeText(step?.notes);
   return projected;
 }
 
@@ -223,37 +201,14 @@ async function loadAuthorizedClientData(
     onboardingSteps,
     timeEntries,
   ] = await Promise.all([
-    base44.asServiceRole.entities.Task.filter(
-      { org_id: organizationId },
-      "-created_date"
-    ),
-    base44.asServiceRole.entities.Assessment.filter(
-      { client_id: clientId },
-      "-created_date"
-    ),
-    base44.asServiceRole.entities.WBLEForm.filter(
-      { client_id: clientId },
-      "-created_date"
-    ),
-    base44.asServiceRole.entities.TrainingProgressReport.filter(
-      { client_id: clientId },
-      "-created_date"
-    ),
-    base44.asServiceRole.entities.Document.filter(
-      { client_id: clientId },
-      "-created_date"
-    ),
-    base44.asServiceRole.entities.Meeting.filter(
-      { client_id: clientId },
-      "-start_datetime"
-    ),
-    base44.asServiceRole.entities.OnboardingStep.filter({
-      client_id: clientId,
-    }),
-    base44.asServiceRole.entities.PreEtsClientTimeEntry.filter(
-      { client_id: clientId },
-      "-created_date"
-    ),
+    base44.asServiceRole.entities.Task.filter({ org_id: organizationId }, "-created_date"),
+    base44.asServiceRole.entities.Assessment.filter({ client_id: clientId }, "-created_date"),
+    base44.asServiceRole.entities.WBLEForm.filter({ client_id: clientId }, "-created_date"),
+    base44.asServiceRole.entities.TrainingProgressReport.filter({ client_id: clientId }, "-created_date"),
+    base44.asServiceRole.entities.Document.filter({ client_id: clientId }, "-created_date"),
+    base44.asServiceRole.entities.Meeting.filter({ client_id: clientId }, "-start_datetime"),
+    base44.asServiceRole.entities.OnboardingStep.filter({ client_id: clientId }),
+    base44.asServiceRole.entities.PreEtsClientTimeEntry.filter({ client_id: clientId }, "-created_date"),
   ]);
 
   const visibleTasks = asArray(organizationTasks)
@@ -330,8 +285,7 @@ async function loadAuthorizedClientData(
       : asArray(onboardingSteps)
           .filter(
             (step: any) =>
-              isActive(step) &&
-              normalizeText(step?.org_id) === organizationId
+              isActive(step) && normalizeText(step?.org_id) === organizationId
           )
           .map((step: any) =>
             projectOnboardingStep(step, portalMode === "staff")
@@ -374,7 +328,7 @@ Deno.serve(async (req) => {
     const requestedClientId = normalizeText(requestBody?.client_id);
 
     const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
     if (!authenticatedUser?.id) {
       return Response.json(
@@ -404,9 +358,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const organization = await base44.asServiceRole.entities.Organization.get(
-      organizationId
-    ).catch(() => null);
+    const [organization, organizationUsers, organizationClients] = await Promise.all([
+      base44.asServiceRole.entities.Organization.get(organizationId).catch(() => null),
+      base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
+      base44.asServiceRole.entities.Client.filter({ org_id: organizationId }, "-created_date"),
+    ]);
 
     if (!organization || !isActive(organization)) {
       return Response.json(
@@ -414,14 +370,6 @@ Deno.serve(async (req) => {
         { status: 403 }
       );
     }
-
-    const [organizationUsers, organizationClients] = await Promise.all([
-      base44.asServiceRole.entities.User.filter({ org_id: organizationId }),
-      base44.asServiceRole.entities.Client.filter(
-        { org_id: organizationId },
-        "-created_date"
-      ),
-    ]);
 
     const activeOrganizationUsers = asArray(organizationUsers).filter(
       (user: any) =>
@@ -476,42 +424,36 @@ Deno.serve(async (req) => {
           visibleClients = preEtsClients;
         } else {
           const visibleUserIds = new Set<string>([callerId]);
-          const visibleEmails = new Set<string>(
-            [normalizeEmail(caller.email)].filter(Boolean)
-          );
 
           if (internalRole === "management") {
             const assignments =
               await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+                org_id: organizationId,
                 manager_user_id: callerId,
               });
-            const activeInternalUsersById = new Map(
+            const activeInternalUserIds = new Set(
               activeOrganizationUsers
                 .filter((user: any) => Boolean(getCanonicalInternalRole(user)))
-                .map((user: any) => [normalizeText(user?.id), user])
+                .map((user: any) => normalizeText(user?.id))
+                .filter(Boolean)
             );
 
             for (const assignment of asArray(assignments)) {
               const employeeId = normalizeText(assignment?.employee_user_id);
-              const employee = activeInternalUsersById.get(employeeId);
-
               if (
                 assignment?.is_active === true &&
                 assignment?.is_archived !== true &&
                 normalizeText(assignment?.org_id) === organizationId &&
-                employee
+                normalizeText(assignment?.manager_user_id) === callerId &&
+                activeInternalUserIds.has(employeeId)
               ) {
                 visibleUserIds.add(employeeId);
-                const employeeEmail = normalizeEmail(employee.email);
-                if (employeeEmail) {
-                  visibleEmails.add(employeeEmail);
-                }
               }
             }
           }
 
           visibleClients = preEtsClients.filter((client: any) =>
-            clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
+            visibleUserIds.has(normalizeText(client?.assigned_employee_id))
           );
         }
       } else if (isPreEtsEmployer(caller)) {

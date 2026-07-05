@@ -1,14 +1,3 @@
-/**
- * StructuredAssessmentWorkspacePanel
- *
- * Follows the same save lifecycle as IntakeSectionForm:
- * - Local state for responses while editing
- * - Refs track latest responses + dirty flag (never stale on async save)
- * - doSave() is the single save function used by manual save, unmount, and cancel
- * - On unmount (card switch / clicking away): saves if dirty, no debounce
- * - No key/remount tricks — stable component, no flashing
- */
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,51 +21,58 @@ export default function StructuredAssessmentWorkspacePanel({
   onClose,
 }) {
   const { sections, meta } = assessment;
-
-  // Seed from existingRecord, then overlay any initialResponses (e.g. pre-selected purpose)
   const baseResponses = existingRecord?.responses || {};
-  const seedResponses = initialResponses ? { ...baseResponses, ...initialResponses } : baseResponses;
+  const seedResponses = initialResponses
+    ? { ...baseResponses, ...initialResponses }
+    : baseResponses;
 
-  // Local state — mirrors IntakeSectionForm pattern
   const [responses, setResponses] = useState(seedResponses);
   const [isDirty, setIsDirty] = useState(!!initialResponses);
   const [saving, setSaving] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
-  const [recordStatus, setRecordStatus] = useState(existingRecord?.status || null);
+  const [recordStatus, setRecordStatus] = useState(
+    existingRecord?.status || null
+  );
 
-  // Always-current refs so async save reads latest values (never stale)
   const responsesRef = useRef(responses);
-  useEffect(() => { responsesRef.current = responses; }, [responses]);
-
   const isDirtyRef = useRef(isDirty);
-  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
-
-  // Track the DB record id so we update rather than create a duplicate
   const recordIdRef = useRef(existingRecord?.id || null);
+  const recordStatusRef = useRef(recordStatus);
 
-  // Reset when switching to a different assessment (existingRecord changes)
- useEffect(() => {
-  const baseResponses = existingRecord?.responses || {};
-  const nextResponses = initialResponses
-    ? { ...baseResponses, ...initialResponses }
-    : baseResponses;
+  useEffect(() => {
+    responsesRef.current = responses;
+  }, [responses]);
 
-  setIsDirty(!!initialResponses);
-  recordIdRef.current = existingRecord?.id || null;
-  setResponses(nextResponses);
-  setRecordStatus(existingRecord?.status || null);
-}, [existingRecord?.id, initialResponses]);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
 
-  // Field change handler — mark dirty, update state, and immediately update refs
+  useEffect(() => {
+    recordStatusRef.current = recordStatus;
+  }, [recordStatus]);
+
+  useEffect(() => {
+    const nextBaseResponses = existingRecord?.responses || {};
+    const nextResponses = initialResponses
+      ? { ...nextBaseResponses, ...initialResponses }
+      : nextBaseResponses;
+
+    recordIdRef.current = existingRecord?.id || null;
+    setResponses(nextResponses);
+    responsesRef.current = nextResponses;
+    setIsDirty(!!initialResponses);
+    isDirtyRef.current = !!initialResponses;
+    setRecordStatus(existingRecord?.status || null);
+    recordStatusRef.current = existingRecord?.status || null;
+  }, [existingRecord?.id, initialResponses]);
+
   const handleChange = useCallback((id, value) => {
     setIsDirty(true);
     isDirtyRef.current = true;
 
-    setResponses((prev) => {
-      const next = { ...prev, [id]: value };
+    setResponses((previous) => {
+      const next = { ...previous, [id]: value };
 
-      // Barriers to Employment: if sensory/environmental barriers are marked "No",
-      // clear hidden follow-up answers so stale data does not continue feeding FACTS.
       if (id === "sensory_barrier_present" && value === "no") {
         delete next.sensory_barrier_types;
         delete next.sensory_barrier_severity;
@@ -85,7 +81,6 @@ export default function StructuredAssessmentWorkspacePanel({
         delete next.sensory_accommodation_outcome;
       }
 
-      // If accommodations were not tried, clear the hidden accommodation outcome.
       if (id === "sensory_accommodation_tried" && value === "no") {
         delete next.sensory_accommodation_outcome;
       }
@@ -95,180 +90,207 @@ export default function StructuredAssessmentWorkspacePanel({
     });
   }, []);
 
-  // ── Core save (mirrors doSave in IntakeSectionForm) ───────────────────────
-  const doSave = useCallback(async (latestResponses, showToast = false) => {
-    const hasAny = Object.values(latestResponses).some(
-      (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
-    );
-    if (!hasAny) return;
+  const buildAuthorizedPayload = useCallback(
+    async (latestResponses, status) => {
+      const user = await base44.auth.me();
+      const completedAt = new Date().toISOString();
+      let structuredEvidence = [];
+      let sourceMetadata = {};
+      let staffReviewFlags = [];
 
-    const user = await base44.auth.me();
-    const completedAt = new Date().toISOString();
+      try {
+        structuredEvidence = extractEvidenceFromResponses(
+          sections,
+          latestResponses,
+          {
+            completedBy: user?.email,
+            completedAt,
+            source: "staff_observed",
+          }
+        );
+      } catch (error) {
+        console.warn(
+          "StructuredAssessmentWorkspacePanel: evidence extraction failed",
+          error
+        );
+      }
 
-    let structured_evidence = [];
-    let source_metadata = {};
-    let staff_review_flags = [];
+      try {
+        sourceMetadata = buildSourceMetadata({
+          assessmentType: meta.assessment_type,
+          completedBy: user?.email,
+          completedAt,
+          source: "staff_observed",
+          clientId,
+        });
+      } catch (error) {
+        console.warn(
+          "StructuredAssessmentWorkspacePanel: source metadata failed",
+          error
+        );
+      }
 
-    try {
-      structured_evidence = extractEvidenceFromResponses(sections, latestResponses, {
-        completedBy: user?.email,
-        completedAt,
-        source: "staff_observed",
-      });
-    } catch (e) {
-      console.warn("StructuredWorkspacePanel: extractEvidence failed (non-fatal)", e);
-    }
+      try {
+        staffReviewFlags = extractStaffReviewFlags(sections, latestResponses);
+      } catch (error) {
+        console.warn(
+          "StructuredAssessmentWorkspacePanel: review-flag extraction failed",
+          error
+        );
+      }
 
-    try {
-      source_metadata = buildSourceMetadata({
-        assessmentType: meta.assessment_type,
-        completedBy: user?.email,
-        completedAt,
-        source: "staff_observed",
-        clientId,
-      });
-    } catch (e) {
-      console.warn("StructuredWorkspacePanel: buildSourceMetadata failed (non-fatal)", e);
-    }
+      return {
+        action: "upsert",
+        assessment_id: recordIdRef.current || "",
+        client_id: clientId,
+        assessment_type: meta.assessment_type,
+        status,
+        responses: latestResponses,
+        structured_evidence: structuredEvidence,
+        source_metadata: sourceMetadata,
+        staff_review_flags: staffReviewFlags,
+      };
+    },
+    [clientId, meta.assessment_type, sections]
+  );
 
-    try {
-      staff_review_flags = extractStaffReviewFlags(sections, latestResponses);
-    } catch (e) {
-      console.warn("StructuredWorkspacePanel: extractStaffReviewFlags failed (non-fatal)", e);
-    }
+  const persistAssessment = useCallback(
+    async (latestResponses, status) => {
+      const request = await buildAuthorizedPayload(latestResponses, status);
+      const response = await base44.functions.invoke(
+        "manageAuthorizedAssessment",
+        request
+      );
+      const data = response?.data || {};
 
-    const payload = {
-      client_id: clientId,
-      assessment_type: meta.assessment_type,
-      // Never downgrade a completed assessment via auto-save
-      status: recordIdRef.current && recordStatus === "completed" ? "completed" : "in_progress",
-      responses: latestResponses,
-      completed_by: user?.email || "",
-      structured_evidence,
-      source_metadata,
-      staff_review_flags,
-    };
+      if (!data.ok || !data.assessment?.id) {
+        throw new Error(data.error || "Assessment progress could not be saved.");
+      }
 
-    if (recordIdRef.current) {
-      await base44.entities.Assessment.update(recordIdRef.current, payload);
-    } else {
-      const result = await base44.entities.Assessment.create(payload);
-      recordIdRef.current = result?.id || null;
-    }
+      recordIdRef.current = data.assessment.id;
+      setRecordStatus(data.assessment.status || status);
+      recordStatusRef.current = data.assessment.status || status;
+      return data.assessment;
+    },
+    [buildAuthorizedPayload]
+  );
 
-    if (showToast) toast.success("Progress saved");
-    if (onSaved) await onSaved();
-  }, [clientId, meta.assessment_type, sections, onSaved]);
+  const doSave = useCallback(
+    async (latestResponses, showToast = false) => {
+      const hasAnyResponse = Object.values(latestResponses).some(
+        (value) =>
+          value !== null &&
+          value !== undefined &&
+          value !== "" &&
+          !(Array.isArray(value) && value.length === 0)
+      );
 
-  // Keep a stable ref to doSave so the unmount effect is never stale
+      if (!hasAnyResponse) return;
+
+      const status =
+        recordIdRef.current && recordStatusRef.current === "completed"
+          ? "completed"
+          : "in_progress";
+
+      await persistAssessment(latestResponses, status);
+
+      if (showToast) toast.success("Progress saved");
+      await onSaved?.();
+    },
+    [onSaved, persistAssessment]
+  );
+
   const doSaveRef = useRef(doSave);
-  useEffect(() => { doSaveRef.current = doSave; }, [doSave]);
 
-  // ── beforeunload: show native browser warning when there are unsaved changes
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
+    doSaveRef.current = doSave;
+  }, [doSave]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
       if (!isDirtyRef.current) return;
-      e.preventDefault();
-      e.returnValue = "";
+      event.preventDefault();
+      event.returnValue = "";
     };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      // React unmount (card switch within the SPA): async doSave is fine here
       if (isDirtyRef.current) {
         doSaveRef.current(responsesRef.current).catch(() => {});
       }
     };
   }, []);
 
-  // ── Manual "Save Progress" button handler
   const handleSave = useCallback(async () => {
     setSaving(true);
+
     try {
       await doSave(responsesRef.current, true);
       setIsDirty(false);
       isDirtyRef.current = false;
-    } catch (err) {
-      console.error("STRUCTURED SAVE ERROR", err);
-      toast.error("Failed to save: " + (err?.message || "Unknown error"));
+    } catch (error) {
+      console.error("Structured assessment save error", error);
+      toast.error(
+        `Failed to save: ${error?.message || "Unable to save assessment progress."}`
+      );
     } finally {
       setSaving(false);
     }
   }, [doSave]);
-  // ── "Mark Assessment Complete" — staff-controlled status change
+
   const handleMarkComplete = useCallback(async () => {
     setMarkingComplete(true);
+
     try {
-      const user = await base44.auth.me();
-      const completedAt = new Date().toISOString();
-      const latestResponses = responsesRef.current;
-
-      let structured_evidence = [];
-      let source_metadata = {};
-      let staff_review_flags = [];
-
-      try {
-        structured_evidence = extractEvidenceFromResponses(sections, latestResponses, {
-          completedBy: user?.email, completedAt, source: "staff_observed",
-        });
-      } catch (e) { /* non-fatal */ }
-
-      try {
-        source_metadata = buildSourceMetadata({
-          assessmentType: meta.assessment_type, completedBy: user?.email,
-          completedAt, source: "staff_observed", clientId,
-        });
-      } catch (e) { /* non-fatal */ }
-
-      try {
-        staff_review_flags = extractStaffReviewFlags(sections, latestResponses);
-      } catch (e) { /* non-fatal */ }
-
-      const payload = {
-        client_id: clientId,
-        assessment_type: meta.assessment_type,
-        status: "completed",
-        responses: latestResponses,
-        completed_by: user?.email || "",
-        completed_at: completedAt,
-        structured_evidence,
-        source_metadata,
-        staff_review_flags,
-      };
-
-      if (recordIdRef.current) {
-        await base44.entities.Assessment.update(recordIdRef.current, payload);
-      } else {
-        const result = await base44.entities.Assessment.create(payload);
-        recordIdRef.current = result?.id || null;
-      }
-
-           setRecordStatus("completed");
+      await persistAssessment(responsesRef.current, "completed");
+      setRecordStatus("completed");
+      recordStatusRef.current = "completed";
       setIsDirty(false);
       isDirtyRef.current = false;
       toast.success("Assessment marked as complete");
-      if (onSaved) onSaved();
-    } catch (err) {
-      toast.error("Failed to mark complete: " + (err?.message || "Unknown error"));
+      await onSaved?.();
+    } catch (error) {
+      toast.error(
+        `Failed to mark complete: ${error?.message || "Unable to complete assessment."}`
+      );
     } finally {
       setMarkingComplete(false);
     }
-  }, [clientId, meta.assessment_type, sections, onSaved]);
+  }, [onSaved, persistAssessment]);
 
-  // ── "Save & Close" button (cancel) — save then notify parent
-     const handleCancel = useCallback(async () => {
+  const handleReopen = useCallback(async () => {
+    try {
+      await persistAssessment(responsesRef.current, "in_progress");
+      setRecordStatus("in_progress");
+      recordStatusRef.current = "in_progress";
+      toast.success("Assessment reopened");
+      await onSaved?.();
+    } catch (error) {
+      toast.error(
+        `Failed to reopen: ${error?.message || "Unable to reopen assessment."}`
+      );
+    }
+  }, [onSaved, persistAssessment]);
+
+  const handleCancel = useCallback(async () => {
     if (isDirtyRef.current) {
       await doSave(responsesRef.current, false).catch(() => {});
       setIsDirty(false);
       isDirtyRef.current = false;
     }
+
     await onSaved?.();
     onClose?.();
-  }, [doSave, onSaved, onClose]);
+  }, [doSave, onClose, onSaved]);
 
-  const status = recordStatus === "completed" ? "completed"
-    : (existingRecord || recordIdRef.current) ? "in_progress"
-    : "draft";
+  const status =
+    recordStatus === "completed"
+      ? "completed"
+      : existingRecord || recordIdRef.current
+        ? "in_progress"
+        : "draft";
 
   const statusBadge = {
     draft: (
@@ -292,23 +314,23 @@ export default function StructuredAssessmentWorkspacePanel({
     <Card className="border border-slate-200 shadow-sm h-full flex flex-col">
       <CardHeader className="pb-3 border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-         <div>
-  <h3 className="text-base font-semibold text-slate-900">
-    {meta.label}
-  </h3>
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              {meta.label}
+            </h3>
 
-  {responses?.interview_type && (
-    <p className="text-sm font-medium text-indigo-700 mt-1">
-      {responses.interview_type}
-    </p>
-  )}
+            {responses?.interview_type && (
+              <p className="text-sm font-medium text-indigo-700 mt-1">
+                {responses.interview_type}
+              </p>
+            )}
 
-  {meta.description && (
-    <p className="text-xs text-slate-500 mt-0.5">
-      {meta.description}
-    </p>
-  )}
-</div>
+            {meta.description && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                {meta.description}
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {statusBadge}
             {status !== "completed" && (
@@ -328,14 +350,7 @@ export default function StructuredAssessmentWorkspacePanel({
                 size="sm"
                 variant="ghost"
                 className="text-slate-500 text-xs"
-                onClick={() => {
-                  setRecordStatus("in_progress");
-                  // Persist the reopen
-                  if (recordIdRef.current) {
-                    base44.entities.Assessment.update(recordIdRef.current, { status: "in_progress" })
-                      .then(() => onSaved?.()).catch(() => {});
-                  }
-                }}
+                onClick={handleReopen}
               >
                 Reopen
               </Button>

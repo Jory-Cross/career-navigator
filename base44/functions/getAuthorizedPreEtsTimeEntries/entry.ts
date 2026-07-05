@@ -16,10 +16,6 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value: unknown) {
-  return normalizeText(value).toLowerCase();
-}
-
 function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -31,7 +27,6 @@ function isActive(record: any) {
 function getCanonicalStaffRole(user: any) {
   const role = normalizeText(user?.role).toLowerCase();
   const accessLevel = normalizeText(user?.access_level).toLowerCase();
-
   return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
 }
 
@@ -40,20 +35,6 @@ function isPreEtsClientInOrganization(client: any, organizationId: string) {
     isActive(client) &&
     normalizeText(client?.org_id) === organizationId &&
     normalizeText(client?.client_type).toLowerCase() === "pre_ets"
-  );
-}
-
-function clientMatchesVisibleStaff(
-  client: any,
-  visibleUserIds: Set<string>,
-  visibleEmails: Set<string>
-) {
-  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-
-  return (
-    visibleUserIds.has(assignedEmployeeId) ||
-    (createdBy && visibleEmails.has(createdBy))
   );
 }
 
@@ -119,7 +100,7 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
     if (!authenticatedUser?.id) {
       return Response.json(
@@ -143,19 +124,12 @@ Deno.serve(async (req) => {
     const callerId = normalizeText(caller.id);
     const organizationId = normalizeText(caller.org_id);
 
-    if (!callerRole) {
+    if (!callerRole || !callerId || !organizationId) {
       return Response.json(
         {
           error:
             "Your account is not authorized to review Pre-ETS student time entries.",
         },
-        { status: 403 }
-      );
-    }
-
-    if (!callerId || !organizationId) {
-      return Response.json(
-        { error: "Your account is not assigned to an organization." },
         { status: 403 }
       );
     }
@@ -191,11 +165,11 @@ Deno.serve(async (req) => {
         Boolean(getCanonicalStaffRole(user))
     );
 
-    const callerIsInOrganization = activeCanonicalUsers.some(
-      (user: any) => normalizeText(user?.id) === callerId
-    );
-
-    if (!callerIsInOrganization) {
+    if (
+      !activeCanonicalUsers.some(
+        (user: any) => normalizeText(user?.id) === callerId
+      )
+    ) {
       return Response.json(
         { error: "Your account is not validly scoped to this organization." },
         { status: 403 }
@@ -212,43 +186,35 @@ Deno.serve(async (req) => {
       visibleClients = preEtsClients;
     } else {
       const visibleUserIds = new Set<string>([callerId]);
-      const visibleEmails = new Set<string>(
-        [normalizeEmail(caller.email)].filter(Boolean)
-      );
 
       if (callerRole === "management") {
         const assignments =
           await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+            org_id: organizationId,
             manager_user_id: callerId,
           });
-        const activeUsersById = new Map(
-          activeCanonicalUsers.map((user: any) => [
-            normalizeText(user?.id),
-            user,
-          ])
+        const activeStaffUserIds = new Set(
+          activeCanonicalUsers
+            .map((user: any) => normalizeText(user?.id))
+            .filter(Boolean)
         );
 
         for (const assignment of asArray(assignments)) {
           const employeeId = normalizeText(assignment?.employee_user_id);
-          const employee = activeUsersById.get(employeeId);
-
           if (
             assignment?.is_active === true &&
             assignment?.is_archived !== true &&
             normalizeText(assignment?.org_id) === organizationId &&
-            employee
+            normalizeText(assignment?.manager_user_id) === callerId &&
+            activeStaffUserIds.has(employeeId)
           ) {
             visibleUserIds.add(employeeId);
-            const employeeEmail = normalizeEmail(employee.email);
-            if (employeeEmail) {
-              visibleEmails.add(employeeEmail);
-            }
           }
         }
       }
 
       visibleClients = preEtsClients.filter((client: any) =>
-        clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
+        visibleUserIds.has(normalizeText(client?.assigned_employee_id))
       );
     }
 
@@ -280,10 +246,7 @@ Deno.serve(async (req) => {
         const entryStatus =
           normalizeText(entry?.status).toLowerCase() || "pending";
 
-        if (!selectedClientIds.has(clientId)) {
-          return false;
-        }
-
+        if (!selectedClientIds.has(clientId)) return false;
         if (
           requestedStatus &&
           requestedStatus !== "all" &&

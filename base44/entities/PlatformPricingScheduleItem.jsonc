@@ -8,7 +8,7 @@
     },
     "pricing_item_key": {
       "type": "string",
-      "description": "Stable unique item key within the pricing schedule, such as launch_2026:trainer_business_growth_monthly:plan_monthly."
+      "description": "Stable unique item key within the pricing schedule."
     },
     "pricing_item_type": {
       "type": "string",
@@ -24,19 +24,19 @@
     },
     "platform_plan_id": {
       "type": "string",
-      "description": "PlatformPlan record this price applies to, when the item is plan-related."
+      "description": "PlatformPlan record this price applies to, when plan-related."
     },
     "plan_key_snapshot": {
       "type": "string",
-      "description": "Copied PlatformPlan plan_key retained for readable pricing history."
+      "description": "Copied PlatformPlan key retained for readable pricing history."
     },
     "platform_billing_rate_id": {
       "type": "string",
-      "description": "PlatformBillingRate record this price is based on, when the item is a registration, reactivation, overage, or other billing rate."
+      "description": "PlatformBillingRate record this price is based on, when applicable."
     },
     "billing_rate_key_snapshot": {
       "type": "string",
-      "description": "Copied PlatformBillingRate rate_key retained for readable pricing history."
+      "description": "Copied billing-rate key retained for readable pricing history."
     },
     "feature_key": {
       "type": "string",
@@ -74,7 +74,7 @@
     "ends_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When this item stops being available, if replaced within the same draft schedule."
+      "description": "When this item stops being available."
     },
     "notes": {
       "type": "string",
@@ -92,21 +92,9 @@
     "effective_at"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }

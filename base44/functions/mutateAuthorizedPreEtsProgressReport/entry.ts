@@ -4,7 +4,12 @@ import { PDFDocument, StandardFonts } from "npm:pdf-lib@1.17.1";
 const TEMPLATE_URL =
   "https://jobs.utah.gov/usor/vr/employer/info/usor72.pdf";
 
-const STAFF_ROLES = new Set(["admin", "management", "employee"]);
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
 const RATING_VALUES = new Set([
   "",
   "Excellent",
@@ -26,19 +31,28 @@ function isActive(record: any) {
 }
 
 function isValidDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
   const parsed = new Date(`${value}T00:00:00.000Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
 
-  return !Number.isNaN(parsed.getTime());
+function isCanonicalStaffUser(user: any, organizationId: string) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+
+  return (
+    isActive(user) &&
+    normalizeText(user?.org_id) === organizationId &&
+    CANONICAL_STAFF_ACCESS[role] === accessLevel
+  );
 }
 
 function formatDate(value: string) {
-  if (!value) {
-    return "";
-  }
+  if (!value) return "";
 
   try {
     return new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-US");
@@ -79,8 +93,7 @@ function buildReportPayload(
 
   if (reportingPeriodFrom > reportingPeriodTo) {
     return {
-      error:
-        "The reporting-period start date cannot be after the end date.",
+      error: "The reporting-period start date cannot be after the end date.",
       value: null,
     };
   }
@@ -106,7 +119,7 @@ function buildReportPayload(
 
     if (!RATING_VALUES.has(rating)) {
       return {
-        error: `Invalid rating supplied for ${key}.`,
+        error: "One or more performance ratings are invalid.",
         value: null,
       };
     }
@@ -141,10 +154,7 @@ function buildReportPayload(
         rawReport?.additional_hours_needed,
         3000
       ),
-      supervisor_signature: limitText(
-        rawReport?.supervisor_signature,
-        300
-      ),
+      supervisor_signature: limitText(rawReport?.supervisor_signature, 300),
       signature_date: signatureDate,
       supervisor_title: limitText(rawReport?.supervisor_title, 300),
       submitted_by: submittedBy,
@@ -154,30 +164,23 @@ function buildReportPayload(
 
 async function resolveReturnCompletedTo(
   base44: any,
-  caller: any,
-  organizationId: string
+  client: any,
+  organizationId: string,
+  fallbackEmail: string
 ) {
-  const fallbackEmail = normalizeText(caller?.email);
-  const managerId = normalizeText(caller?.manager_id);
+  const assignedStaffId = normalizeText(client?.assigned_employee_id);
 
-  if (!managerId) {
-    return fallbackEmail;
-  }
+  if (!assignedStaffId) return fallbackEmail;
 
-  const manager = await base44.asServiceRole.entities.User.get(
-    managerId
+  const assignedStaff = await base44.asServiceRole.entities.User.get(
+    assignedStaffId
   ).catch(() => null);
 
-  const managerRole = normalizeText(manager?.role).toLowerCase();
-
   if (
-    manager &&
-    isActive(manager) &&
-    normalizeText(manager?.org_id) === organizationId &&
-    STAFF_ROLES.has(managerRole) &&
-    normalizeText(manager?.email)
+    isCanonicalStaffUser(assignedStaff, organizationId) &&
+    normalizeText(assignedStaff?.email)
   ) {
-    return normalizeText(manager.email);
+    return normalizeText(assignedStaff.email);
   }
 
   return fallbackEmail;
@@ -191,9 +194,7 @@ async function generateProgressReportPdf(
   const templateResponse = await fetch(TEMPLATE_URL);
 
   if (!templateResponse.ok) {
-    throw new Error(
-      `Unable to load the official progress-report template (${templateResponse.status}).`
-    );
+    throw new Error("The official progress-report template could not be loaded.");
   }
 
   const templateBytes = await templateResponse.arrayBuffer();
@@ -204,8 +205,8 @@ async function generateProgressReportPdf(
     try {
       form.getTextField(fieldName).setText(normalizeText(value));
     } catch {
-      // The official PDF may change field names. Missing fields must not
-      // prevent an otherwise authorized report from being stored.
+      // The official PDF may evolve; an unavailable field does not invalidate
+      // an otherwise authorized report submission.
     }
   };
 
@@ -213,7 +214,7 @@ async function generateProgressReportPdf(
     try {
       form.getRadioGroup(fieldName).select(normalizeText(value));
     } catch {
-      // See note in setText above.
+      // See the note above for unavailable official-template fields.
     }
   };
 
@@ -221,7 +222,6 @@ async function generateProgressReportPdf(
     normalizeText(report?.supervisor_name) ||
     normalizeText(client?.employer_contact_name) ||
     normalizeText(client?.employer_name);
-
   const supervisorAddress =
     normalizeText(report?.supervisor_address) ||
     normalizeText(client?.employer_address);
@@ -239,23 +239,19 @@ async function generateProgressReportPdf(
   setText("To", formatDate(normalizeText(report?.reporting_period_to)));
   setText("Date", formatDate(normalizeText(report?.signature_date)));
   setText("EmployerSupervisor Title", report?.supervisor_title);
-
   setRadio("Late?", report?.was_late ? "Late - Yes" : "Late - No");
   setText("Late? If yes how often", report?.late_how_often);
-
   setRadio(
     "Unexcused?",
     report?.had_absences ? "Unexcused - Yes" : "Unexcused - No"
   );
   setText("Unexcused? If yes how often", report?.absences_how_often);
-
   setRadio("Quality of Work", report?.quality_of_work);
   setRadio("Rate of Progress", report?.rate_of_progress);
   setRadio("Get Along", report?.ability_get_along);
   setRadio("Appearance", report?.personal_appearance);
   setRadio("Task Completion", report?.rate_of_task_completion);
   setRadio("Attitude", report?.attitude);
-
   setText("Comments", report?.comments);
   setRadio(
     "Changes to training scedule?",
@@ -270,11 +266,9 @@ async function generateProgressReportPdf(
   form.flatten();
 
   const signature = normalizeText(report?.supervisor_signature);
-
   if (signature) {
     const [firstPage] = pdfDocument.getPages();
     const font = await pdfDocument.embedFont(StandardFonts.Helvetica);
-
     firstPage.drawText(signature, {
       x: 345,
       y: 109,
@@ -285,21 +279,12 @@ async function generateProgressReportPdf(
   }
 
   const pdfBytes = await pdfDocument.save();
-  const pdfBlob = new Blob([pdfBytes], {
+  const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+  const pdfFile = new File([pdfBlob], "Training_Progress_Report.pdf", {
     type: "application/pdf",
   });
-  const pdfFile = new File(
-    [pdfBlob],
-    "Training_Progress_Report.pdf",
-    {
-      type: "application/pdf",
-    }
-  );
-
   const { file_url } =
-    await base44.asServiceRole.integrations.Core.UploadFile({
-      file: pdfFile,
-    });
+    await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfFile });
 
   return normalizeText(file_url);
 }
@@ -308,35 +293,35 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { error: "This route accepts POST requests only." },
         { status: 405 }
       );
     }
 
     const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
     if (!authenticatedUser?.id) {
       return Response.json(
-        { error: "Unauthorized." },
+        { error: "You must be signed in to submit an employer progress report." },
         { status: 401 }
       );
     }
 
     const requestBody = await req.json().catch(() => ({}));
-    const action = normalizeText(requestBody?.action);
+    const action = normalizeText(requestBody?.action).toLowerCase();
     const clientId = normalizeText(requestBody?.client_id);
 
     if (action !== "submit_employer_progress_report") {
       return Response.json(
-        { error: "Unsupported action." },
+        { error: "This progress-report action is unavailable." },
         { status: 400 }
       );
     }
 
     if (!clientId) {
       return Response.json(
-        { error: "client_id is required." },
+        { error: "Choose a Pre-ETS student before submitting a report." },
         { status: 400 }
       );
     }
@@ -347,10 +332,7 @@ Deno.serve(async (req) => {
 
     if (!caller || !isActive(caller)) {
       return Response.json(
-        {
-          error:
-            "Authenticated user record was not found or is inactive.",
-        },
+        { error: "Your account is inactive or unavailable." },
         { status: 403 }
       );
     }
@@ -358,6 +340,7 @@ Deno.serve(async (req) => {
     const callerId = normalizeText(caller.id);
     const callerRole = normalizeText(caller.role).toLowerCase();
     const callerAccessLevel = normalizeText(caller.access_level).toLowerCase();
+    const callerEmail = normalizeText(caller.email);
     const organizationId = normalizeText(caller.org_id);
 
     if (
@@ -375,10 +358,7 @@ Deno.serve(async (req) => {
 
     if (!organizationId) {
       return Response.json(
-        {
-          error:
-            "Your account is not assigned to an organization.",
-        },
+        { error: "Your account is not assigned to an organization." },
         { status: 403 }
       );
     }
@@ -389,10 +369,7 @@ Deno.serve(async (req) => {
 
     if (!organization || !isActive(organization)) {
       return Response.json(
-        {
-          error:
-            "Your organization assignment is invalid or inactive.",
-        },
+        { error: "Your organization is inactive or unavailable." },
         { status: 403 }
       );
     }
@@ -419,25 +396,26 @@ Deno.serve(async (req) => {
 
     const returnCompletedTo = await resolveReturnCompletedTo(
       base44,
-      caller,
-      organizationId
+      client,
+      organizationId,
+      callerEmail
     );
-
     const payloadResult = buildReportPayload(
       requestBody?.report,
       returnCompletedTo,
-      normalizeText(caller.email)
+      callerEmail
     );
 
     if (!payloadResult.value) {
       return Response.json(
-        { error: payloadResult.error || "Invalid report data." },
+        { error: payloadResult.error || "Report details are incomplete or invalid." },
         { status: 400 }
       );
     }
 
     const report = await base44.asServiceRole.entities.TrainingProgressReport.create(
       {
+        org_id: organizationId,
         client_id: normalizeText(client.id),
         ...payloadResult.value,
       }
@@ -455,21 +433,20 @@ Deno.serve(async (req) => {
           { pdf_url: pdfUrl }
         );
 
-        const document =
-          await base44.asServiceRole.entities.Document.create({
-            org_id: organizationId,
-            client_id: normalizeText(client.id),
-            title: `Training Progress Report (${payloadResult.value.reporting_period_from} – ${payloadResult.value.reporting_period_to})`,
-            file_url: pdfUrl,
-            file_name: "Training_Progress_Report.pdf",
-            file_type: "application/pdf",
-            category: "generated_report",
-            document_subtype: "usor72",
-            source_type: "TrainingProgressReport",
-            source_id: normalizeText(report.id),
-            is_generated: true,
-            visibility: "staff",
-          });
+        const document = await base44.asServiceRole.entities.Document.create({
+          org_id: organizationId,
+          client_id: normalizeText(client.id),
+          title: `Training Progress Report (${payloadResult.value.reporting_period_from} – ${payloadResult.value.reporting_period_to})`,
+          file_url: pdfUrl,
+          file_name: "Training_Progress_Report.pdf",
+          file_type: "application/pdf",
+          category: "generated_report",
+          document_subtype: "usor72",
+          source_type: "TrainingProgressReport",
+          source_id: normalizeText(report.id),
+          is_generated: true,
+          visibility: "staff",
+        });
 
         documentCreated = Boolean(document?.id);
 
@@ -493,12 +470,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const updatedReport = pdfUrl
-      ? {
-          ...report,
-          pdf_url: pdfUrl,
-        }
-      : report;
+    const updatedReport = pdfUrl ? { ...report, pdf_url: pdfUrl } : report;
 
     return Response.json({
       ok: true,
@@ -515,8 +487,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         error:
-          error?.message ||
-          "Unable to submit the employer training progress report.",
+          "Unable to submit the employer training progress report. Please try again.",
       },
       { status: 500 }
     );

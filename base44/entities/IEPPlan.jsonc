@@ -2,6 +2,10 @@
   "name": "IEPPlan",
   "type": "object",
   "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope. Required for every Pre-ETS IEP plan."
+    },
     "client_id": {
       "type": "string",
       "description": "Associated client ID"
@@ -58,6 +62,7 @@
     }
   },
   "required": [
+    "org_id",
     "client_id"
   ],
   "rls": {

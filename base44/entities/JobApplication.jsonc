@@ -2,123 +2,32 @@
   "name": "JobApplication",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "client_id": {
-      "type": "string"
-    },
-    "company": {
-      "type": "string"
-    },
-    "position": {
-      "type": "string"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "saved",
-        "applied",
-        "phone_screen",
-        "interview",
-        "final_round",
-        "offer",
-        "rejected",
-        "accepted",
-        "withdrawn"
-      ],
-      "default": "saved"
-    },
-    "applied_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "follow_up_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "job_url": {
-      "type": "string"
-    },
-    "salary_range": {
-      "type": "string"
-    },
-    "contact_name": {
-      "type": "string"
-    },
-    "contact_title": {
-      "type": "string"
-    },
-    "contact_email": {
-      "type": "string"
-    },
-    "contact_phone": {
-      "type": "string"
-    },
-    "notes": {
-      "type": "string"
-    },
-    "note_entries": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string"
-          },
-          "created_by": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "next_step": {
-      "type": "string"
-    },
-    "next_step_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "location": {
-      "type": "string"
-    },
-    "work_type": {
-      "type": "string",
-      "enum": [
-        "remote",
-        "hybrid",
-        "onsite"
-      ]
-    },
-    "ai_fit_score": {
-      "type": "number"
-    },
-    "ai_fit_analysis": {
-      "type": "string"
-    },
-    "follow_up_cadence_days": {
-      "type": "number"
-    },
-    "last_follow_up_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "follow_up_count": {
-      "type": "number",
-      "default": 0
-    },
-    "follow_up_enabled": {
-      "type": "boolean",
-      "default": true
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_id": { "type": "string" },
+    "company": { "type": "string" },
+    "position": { "type": "string" },
+    "status": { "type": "string", "enum": ["saved", "applied", "phone_screen", "interview", "final_round", "offer", "rejected", "accepted", "withdrawn"], "default": "saved" },
+    "applied_date": { "type": "string", "format": "date" },
+    "follow_up_date": { "type": "string", "format": "date" },
+    "job_url": { "type": "string" },
+    "salary_range": { "type": "string" },
+    "contact_name": { "type": "string" },
+    "contact_title": { "type": "string" },
+    "contact_email": { "type": "string" },
+    "contact_phone": { "type": "string" },
+    "notes": { "type": "string" },
+    "note_entries": { "type": "array", "items": { "type": "object", "properties": { "text": { "type": "string" }, "created_at": { "type": "string" }, "created_by": { "type": "string" } } } },
+    "next_step": { "type": "string" },
+    "next_step_date": { "type": "string", "format": "date" },
+    "location": { "type": "string" },
+    "work_type": { "type": "string", "enum": ["remote", "hybrid", "onsite"] },
+    "ai_fit_score": { "type": "number" },
+    "ai_fit_analysis": { "type": "string" },
+    "follow_up_cadence_days": { "type": "number" },
+    "last_follow_up_date": { "type": "string", "format": "date" },
+    "follow_up_count": { "type": "number", "default": 0 },
+    "follow_up_enabled": { "type": "boolean", "default": true }
   },
-  "required": [
-    "client_id",
-    "company",
-    "position"
-  ]
+  "required": ["client_id", "company", "position"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }

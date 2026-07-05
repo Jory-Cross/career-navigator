@@ -1,6 +1,7 @@
 {
   "name": "EmailTemplate",
   "type": "object",
+  "description": "Reusable outbound-email template. Access is server-authorized and organization-scoped.",
   "properties": {
     "name": {
       "type": "string",
@@ -38,5 +39,11 @@
     "name",
     "subject",
     "body"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

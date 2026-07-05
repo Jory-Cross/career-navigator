@@ -1,189 +1,236 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
 
-/**
- * resolveOrganizationAccess
- *
- * Read-only authorization resolver for the new multi-tenant architecture.
- *
- * This function does NOT replace legacy User.role / User.access_level yet.
- * It allows the app to safely inspect the new tenant model while all current
- * staff, client portal, Pre-ETS, and CE Training Portal access continues
- * operating through the existing compatibility bridge.
- *
- * Optional request body:
- * {
- *   organization_id?: string
- * }
- */
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isActiveMembership(record: any) {
+  return (
+    record?.membership_status === "active" &&
+    record?.is_active !== false &&
+    record?.is_archived !== true &&
+    Boolean(normalizeText(record?.organization_id))
+  );
+}
+
+function isActivePlatformAdmin(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
+    if (req.method !== "POST") {
       return Response.json(
-        { ok: false, error: "Unauthorized" },
+        { ok: false, error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
+    }
+
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { ok: false, error: "You must be signed in." },
         { status: 401 }
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const requestedOrganizationId =
-      typeof body?.organization_id === "string" &&
-      body.organization_id.trim()
-        ? body.organization_id.trim()
-        : null;
+    const canonicalUser = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
 
+    if (!canonicalUser || !isActive(canonicalUser)) {
+      return Response.json(
+        { ok: false, error: "Your account is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const requestedOrganizationId = normalizeText(body?.organization_id);
     const now = Date.now();
 
-    const [
-      platformAdminRows,
-      membershipRows,
-    ] = await Promise.all([
+    const [platformAdminRows, membershipRows] = await Promise.all([
       base44.asServiceRole.entities.PlatformAdmin.filter({
-        user_id: user.id,
-        is_active: true,
+        user_id: canonicalUser.id,
       }),
       base44.asServiceRole.entities.OrganizationMembership.filter({
-        user_id: user.id,
+        user_id: canonicalUser.id,
         membership_status: "active",
       }),
     ]);
 
-    const activePlatformAdmins = Array.isArray(platformAdminRows)
-      ? platformAdminRows.filter((row) => row?.is_active !== false)
-      : [];
-
-    const activeMemberships = Array.isArray(membershipRows)
-      ? membershipRows.filter(
-          (row) =>
-            row?.membership_status === "active" &&
-            Boolean(row?.organization_id)
-        )
-      : [];
-
-    const membershipOrganizationIds = Array.from(
-      new Set(activeMemberships.map((row) => row.organization_id))
+    const activePlatformAdmins = asArray(platformAdminRows).filter(
+      isActivePlatformAdmin
     );
+    const activeMemberships = asArray(membershipRows).filter(
+      isActiveMembership
+    );
+    const membershipByOrganizationId = new Map(
+      activeMemberships.map((membership: any) => [
+        normalizeText(membership.organization_id),
+        membership,
+      ])
+    );
+    const membershipOrganizationIds = [...membershipByOrganizationId.keys()]
+      .filter(Boolean)
+      .sort();
 
-    let resolvedOrganizationId = requestedOrganizationId;
+    let resolvedOrganizationId = "";
+    let membershipForResolvedOrganization: any = null;
+    let activeSupportSession: any = null;
 
-    if (!resolvedOrganizationId && user.org_id) {
-      const legacyOrganizationMembership = activeMemberships.find(
-        (row) => row.organization_id === user.org_id
-      );
+    const canonicalLegacyOrganizationId = normalizeText(canonicalUser.org_id);
 
-      if (legacyOrganizationMembership) {
-        resolvedOrganizationId = user.org_id;
+    if (requestedOrganizationId) {
+      membershipForResolvedOrganization =
+        membershipByOrganizationId.get(requestedOrganizationId) || null;
+
+      if (membershipForResolvedOrganization) {
+        resolvedOrganizationId = requestedOrganizationId;
+      } else {
+        const mayUseSupport =
+          getCanonicalStaffRole(canonicalUser) === "admin" &&
+          activePlatformAdmins.some(
+            (record: any) => record?.support_access_enabled === true
+          );
+
+        if (mayUseSupport) {
+          const supportSessions =
+            await base44.asServiceRole.entities.SupportAccessSession.filter({
+              organization_id: requestedOrganizationId,
+              platform_admin_user_id: canonicalUser.id,
+              status: "active",
+            });
+
+          activeSupportSession = asArray(supportSessions).find(
+            (session: any) => {
+              const expiresAt = new Date(session?.expires_at || 0).getTime();
+              return (
+                session?.status === "active" &&
+                session?.is_archived !== true &&
+                Number.isFinite(expiresAt) &&
+                expiresAt > now
+              );
+            }
+          ) || null;
+
+          if (activeSupportSession) {
+            resolvedOrganizationId = requestedOrganizationId;
+          }
+        }
       }
-    }
-
-    if (!resolvedOrganizationId && membershipOrganizationIds.length === 1) {
-      resolvedOrganizationId = membershipOrganizationIds[0];
-    }
-
-    const activePlatformRoles = activePlatformAdmins
-      .map((row) => row.platform_role)
-      .filter(Boolean);
-
-    const supportEnabled = activePlatformAdmins.some(
-      (row) => row.support_access_enabled === true
-    );
-
-    const membershipForResolvedOrganization = resolvedOrganizationId
-      ? activeMemberships.find(
-          (row) => row.organization_id === resolvedOrganizationId
-        ) || null
-      : null;
-
-    let activeSupportSession = null;
-
-    if (
-      resolvedOrganizationId &&
-      activePlatformAdmins.length > 0 &&
-      supportEnabled
+    } else if (
+      canonicalLegacyOrganizationId &&
+      membershipByOrganizationId.has(canonicalLegacyOrganizationId)
     ) {
-      const supportSessions =
-        await base44.asServiceRole.entities.SupportAccessSession.filter({
-          organization_id: resolvedOrganizationId,
-          platform_admin_user_id: user.id,
-          status: "active",
-        });
-
-      activeSupportSession = (Array.isArray(supportSessions)
-        ? supportSessions
-        : []
-      ).find((session) => {
-        const expiresAt = new Date(session?.expires_at || 0).getTime();
-        return Number.isFinite(expiresAt) && expiresAt > now;
-      }) || null;
+      resolvedOrganizationId = canonicalLegacyOrganizationId;
+      membershipForResolvedOrganization =
+        membershipByOrganizationId.get(canonicalLegacyOrganizationId) || null;
+    } else if (membershipOrganizationIds.length === 1) {
+      resolvedOrganizationId = membershipOrganizationIds[0];
+      membershipForResolvedOrganization =
+        membershipByOrganizationId.get(resolvedOrganizationId) || null;
     }
 
-    let organization = null;
-    let roleAssignments = [];
-    let roles = [];
-    let permissionKeys = [];
-    let entitlements = [];
-    let subscription = null;
+    if (requestedOrganizationId && !resolvedOrganizationId) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "You do not have active access to the requested organization.",
+        },
+        { status: 403 }
+      );
+    }
+
+    let organization: any = null;
+    let roles: any[] = [];
+    let permissionKeys: string[] = [];
+    let entitlements: any[] = [];
+    let subscription: any = null;
 
     if (resolvedOrganizationId) {
-      const [
-        organizationRows,
-        roleAssignmentRows,
-        roleRows,
-        entitlementRows,
-        subscriptionRows,
-      ] = await Promise.all([
-        base44.asServiceRole.entities.Organization.filter({
-          id: resolvedOrganizationId,
-        }),
-        membershipForResolvedOrganization
-          ? base44.asServiceRole.entities.OrganizationRoleAssignment.filter({
-              organization_id: resolvedOrganizationId,
-              organization_membership_id:
-                membershipForResolvedOrganization.id,
-              is_active: true,
-            })
-          : Promise.resolve([]),
-        base44.asServiceRole.entities.OrganizationRole.filter({
-          organization_id: resolvedOrganizationId,
-          is_active: true,
-        }),
-        base44.asServiceRole.entities.OrganizationFeatureEntitlement.filter({
-          organization_id: resolvedOrganizationId,
-          is_enabled: true,
-        }),
-        base44.asServiceRole.entities.OrganizationPlanSubscription.filter({
-          organization_id: resolvedOrganizationId,
-          is_current: true,
-        }),
-      ]);
+      const organizationRecord =
+        await base44.asServiceRole.entities.Organization.get(
+          resolvedOrganizationId
+        ).catch(() => null);
 
-      organization = Array.isArray(organizationRows)
-        ? organizationRows[0] || null
-        : null;
+      if (!organizationRecord || !isActive(organizationRecord)) {
+        return Response.json(
+          {
+            ok: false,
+            error: "The requested organization is inactive or unavailable.",
+          },
+          { status: 403 }
+        );
+      }
 
-      roleAssignments = Array.isArray(roleAssignmentRows)
-        ? roleAssignmentRows.filter((row) => row?.is_active !== false)
-        : [];
+      organization = organizationRecord;
 
-      const activeRoles = Array.isArray(roleRows)
-        ? roleRows.filter(
-            (row) =>
-              row?.is_active !== false &&
-              Boolean(row?.id)
-          )
-        : [];
+      const [roleAssignmentRows, roleRows, entitlementRows, subscriptionRows] =
+        await Promise.all([
+          membershipForResolvedOrganization
+            ? base44.asServiceRole.entities.OrganizationRoleAssignment.filter({
+                organization_id: resolvedOrganizationId,
+                organization_membership_id: membershipForResolvedOrganization.id,
+                is_active: true,
+              })
+            : Promise.resolve([]),
+          base44.asServiceRole.entities.OrganizationRole.filter({
+            organization_id: resolvedOrganizationId,
+            is_active: true,
+          }),
+          base44.asServiceRole.entities.OrganizationFeatureEntitlement.filter({
+            organization_id: resolvedOrganizationId,
+            is_enabled: true,
+          }),
+          base44.asServiceRole.entities.OrganizationPlanSubscription.filter({
+            organization_id: resolvedOrganizationId,
+            is_current: true,
+          }),
+        ]);
 
+      const activeRoleAssignments = asArray(roleAssignmentRows).filter(
+        (assignment: any) =>
+          assignment?.is_active !== false &&
+          assignment?.is_archived !== true
+      );
       const assignedRoleIds = new Set(
-        roleAssignments
-          .map((row) => row.organization_role_id)
+        activeRoleAssignments
+          .map((assignment: any) => normalizeText(assignment?.organization_role_id))
           .filter(Boolean)
       );
 
-      roles = activeRoles
-        .filter((role) => assignedRoleIds.has(role.id))
-        .map((role) => ({
+      roles = asArray(roleRows)
+        .filter(
+          (role: any) =>
+            role?.is_active !== false &&
+            role?.is_archived !== true &&
+            assignedRoleIds.has(normalizeText(role?.id))
+        )
+        .map((role: any) => ({
           id: role.id,
           role_key: role.role_key,
           role_name: role.role_name,
@@ -197,48 +244,56 @@ Deno.serve(async (req) => {
       permissionKeys = Array.from(
         new Set(
           roles.flatMap((role) =>
-            Array.isArray(role.permission_keys)
-              ? role.permission_keys
-              : []
+            Array.isArray(role.permission_keys) ? role.permission_keys : []
           )
         )
       ).sort();
 
-      entitlements = (Array.isArray(entitlementRows)
-        ? entitlementRows
-        : []
-      )
-        .filter((row) => row?.is_enabled === true)
-        .map((row) => ({
-          feature_key: row.feature_key,
-          is_enabled: row.is_enabled === true,
-          limit_value: row.limit_value ?? null,
-          entitlement_source: row.entitlement_source,
-          starts_at: row.starts_at || null,
-          ends_at: row.ends_at || null,
+      entitlements = asArray(entitlementRows)
+        .filter(
+          (entitlement: any) =>
+            entitlement?.is_enabled === true &&
+            entitlement?.is_archived !== true
+        )
+        .map((entitlement: any) => ({
+          feature_key: entitlement.feature_key,
+          is_enabled: true,
+          limit_value: entitlement.limit_value ?? null,
+          entitlement_source: entitlement.entitlement_source,
+          starts_at: entitlement.starts_at || null,
+          ends_at: entitlement.ends_at || null,
         }));
 
-      const currentSubscriptions = Array.isArray(subscriptionRows)
-        ? subscriptionRows.filter((row) => row?.is_current === true)
-        : [];
-
+      const currentSubscriptions = asArray(subscriptionRows).filter(
+        (row: any) => row?.is_current === true && row?.is_archived !== true
+      );
       subscription =
-        currentSubscriptions.find((row) => row.subscription_status === "active") ||
-        currentSubscriptions.find((row) => row.subscription_status === "trialing") ||
+        currentSubscriptions.find(
+          (row: any) => row.subscription_status === "active"
+        ) ||
+        currentSubscriptions.find(
+          (row: any) => row.subscription_status === "trialing"
+        ) ||
         currentSubscriptions[0] ||
         null;
     }
 
+    const activePlatformRoles = activePlatformAdmins
+      .map((record: any) => normalizeText(record?.platform_role))
+      .filter(Boolean);
+    const supportEnabled = activePlatformAdmins.some(
+      (record: any) => record?.support_access_enabled === true
+    );
     const hasMembershipAccess = Boolean(membershipForResolvedOrganization);
     const hasSupportAccess = Boolean(activeSupportSession);
 
     return Response.json({
       ok: true,
       legacy_access: {
-        role: user.role || null,
-        access_level: user.access_level || null,
-        org_id: user.org_id || null,
-        is_active: user.is_active !== false,
+        role: canonicalUser.role || null,
+        access_level: canonicalUser.access_level || null,
+        org_id: canonicalUser.org_id || null,
+        is_active: canonicalUser.is_active !== false,
       },
       platform_access: {
         is_platform_admin: activePlatformAdmins.length > 0,
@@ -246,8 +301,8 @@ Deno.serve(async (req) => {
         support_access_enabled: supportEnabled,
       },
       organization_selector: {
-        requested_organization_id: requestedOrganizationId,
-        resolved_organization_id: resolvedOrganizationId,
+        requested_organization_id: requestedOrganizationId || null,
+        resolved_organization_id: resolvedOrganizationId || null,
         available_organization_ids: membershipOrganizationIds,
       },
       organization_access: {
@@ -267,8 +322,7 @@ Deno.serve(async (req) => {
         membership: membershipForResolvedOrganization
           ? {
               id: membershipForResolvedOrganization.id,
-              membership_status:
-                membershipForResolvedOrganization.membership_status,
+              membership_status: membershipForResolvedOrganization.membership_status,
               is_organization_owner:
                 membershipForResolvedOrganization.is_organization_owner === true,
             }
@@ -297,7 +351,7 @@ Deno.serve(async (req) => {
           : null,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "resolveOrganizationAccess error:",
       error?.message || error
@@ -306,9 +360,7 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         ok: false,
-        error:
-          error?.message ||
-          "Unable to resolve organization access.",
+        error: "Unable to resolve organization access.",
       },
       { status: 500 }
     );

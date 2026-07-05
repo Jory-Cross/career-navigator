@@ -2,54 +2,16 @@
   "name": "SupportNote",
   "type": "object",
   "properties": {
-    "org_id": {
-      "type": "string",
-      "description": "Tenant organization ID"
-    },
-    "client_id": {
-      "type": "string"
-    },
-    "note_type": {
-      "type": "string",
-      "enum": [
-        "support",
-        "incident",
-        "observation",
-        "progress_update"
-      ],
-      "default": "support"
-    },
-    "title": {
-      "type": "string"
-    },
-    "content": {
-      "type": "string"
-    },
-    "date": {
-      "type": "string",
-      "format": "date"
-    },
-    "severity": {
-      "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ],
-      "default": "low"
-    },
-    "follow_up_required": {
-      "type": "boolean",
-      "default": false
-    },
-    "follow_up_notes": {
-      "type": "string"
-    }
+    "org_id": { "type": "string", "description": "Tenant organization ID" },
+    "client_id": { "type": "string" },
+    "note_type": { "type": "string", "enum": ["support", "incident", "observation", "progress_update"], "default": "support" },
+    "title": { "type": "string" },
+    "content": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "severity": { "type": "string", "enum": ["low", "medium", "high"], "default": "low" },
+    "follow_up_required": { "type": "boolean", "default": false },
+    "follow_up_notes": { "type": "string" }
   },
-  "required": [
-    "client_id",
-    "note_type",
-    "content",
-    "date"
-  ]
+  "required": ["client_id", "note_type", "content", "date"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }

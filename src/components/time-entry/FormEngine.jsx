@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import DynamicEntryForm from "./DynamicEntryForm";
 import { AlertCircle, Loader2 } from "lucide-react";
+import DynamicEntryForm from "./DynamicEntryForm";
 import {
   getEntryTypeConfig,
   normalizeEntryTypeCode,
 } from "@/lib/entryTypeRegistry";
 import { getSchemaForEntryType } from "@/lib/formHelpers";
-import { loadVocRehabSchema } from "@/lib/formSchemas";
+import { loadAuthorizedVocRehabSchema } from "@/lib/authorizedTimeEntrySchema";
 
 const schemaCache = new Map();
-// Increment this version when the schema loading logic changes, to bust stale caches
-const SCHEMA_CACHE_VERSION = 3;
+const SCHEMA_CACHE_VERSION = 4;
 
 async function resolveSchema(entryTypeCode) {
   const normalizedCode = normalizeEntryTypeCode(entryTypeCode);
@@ -18,7 +17,7 @@ async function resolveSchema(entryTypeCode) {
 
   if (!config) {
     throw new Error(
-      `Could not resolve entry type. Code "${entryTypeCode}" not found in registry`
+      `Could not resolve entry type. Code "${entryTypeCode}" not found in registry.`
     );
   }
 
@@ -28,17 +27,13 @@ async function resolveSchema(entryTypeCode) {
     return schemaCache.get(cacheKey);
   }
 
-  let resolvedSchema = [];
-
-  if (config.schemaKey === "voc_rehab") {
-    resolvedSchema = await loadVocRehabSchema(normalizedCode);
-  } else {
-    resolvedSchema = getSchemaForEntryType(normalizedCode);
-  }
-
+  const resolvedSchema =
+    config.schemaKey === "voc_rehab"
+      ? await loadAuthorizedVocRehabSchema(normalizedCode)
+      : getSchemaForEntryType(normalizedCode);
   const normalizedSchema = Array.isArray(resolvedSchema) ? resolvedSchema : [];
-  schemaCache.set(cacheKey, normalizedSchema);
 
+  schemaCache.set(cacheKey, normalizedSchema);
   return normalizedSchema;
 }
 
@@ -57,22 +52,18 @@ export default function FormEngine({
   onCancel,
 }) {
   const loadRunIdRef = useRef(0);
-
   const normalizedEntryTypeCode = useMemo(
     () => normalizeEntryTypeCode(entryTypeCode),
     [entryTypeCode]
   );
-
   const config = useMemo(
     () => getEntryTypeConfig(normalizedEntryTypeCode),
     [normalizedEntryTypeCode]
   );
-
-  const effectiveMode = useMemo(() => {
-    if (mode) return mode;
-    return entry?.id ? "edit" : "create";
-  }, [mode, entry?.id]);
-
+  const effectiveMode = useMemo(
+    () => mode || (entry?.id ? "edit" : "create"),
+    [mode, entry?.id]
+  );
   const [schema, setSchema] = useState(() => {
     if (!normalizedEntryTypeCode || !config) return [];
     const cacheKey = `v${SCHEMA_CACHE_VERSION}::${normalizedEntryTypeCode}::${config.schemaKey || "default"}`;
@@ -99,7 +90,7 @@ export default function FormEngine({
       if (!config) {
         setSchema([]);
         setError(
-          `Could not resolve entry type. Code "${normalizedEntryTypeCode}" not found in registry`
+          `Could not resolve entry type. Code "${normalizedEntryTypeCode}" not found in registry.`
         );
         setLoading(false);
         return;
@@ -110,20 +101,16 @@ export default function FormEngine({
 
       if (cachedSchema) {
         setSchema(cachedSchema);
-        setError("");
-
-        if (!cachedSchema.length) {
-          setError(
-            `No schema configured for entry type: ${config.label || normalizedEntryTypeCode}`
-          );
-        }
-
+        setError(
+          cachedSchema.length
+            ? ""
+            : `No schema configured for entry type: ${config.label || normalizedEntryTypeCode}`
+        );
         setLoading(false);
         return;
       }
 
       const runId = ++loadRunIdRef.current;
-
       setLoading(true);
       setError("");
       setSchema([]);
@@ -142,13 +129,16 @@ export default function FormEngine({
         }
 
         setSchema(resolvedSchema);
-      } catch (err) {
-        console.error("[FormEngine] Failed to load schema:", err);
+      } catch (loadError) {
+        console.error("[FormEngine] Failed to load schema:", loadError);
 
         if (!active || loadRunIdRef.current !== runId) return;
 
         setSchema([]);
-        setError(err?.message || `Failed to load schema for ${normalizedEntryTypeCode}`);
+        setError(
+          loadError?.message ||
+            `Failed to load schema for ${normalizedEntryTypeCode}.`
+        );
       } finally {
         if (active && loadRunIdRef.current === runId) {
           setLoading(false);
@@ -182,7 +172,7 @@ export default function FormEngine({
         </div>
         <div className="text-sm">
           {normalizedEntryTypeCode
-            ? `Code "${normalizedEntryTypeCode}" not found in registry`
+            ? `Code "${normalizedEntryTypeCode}" not found in registry.`
             : "No entry type selected."}
         </div>
       </div>
@@ -194,7 +184,7 @@ export default function FormEngine({
       <div className="flex min-h-[160px] items-center justify-center rounded-lg border border-dashed">
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading form...
+          Loading form…
         </div>
       </div>
     );
@@ -228,15 +218,15 @@ export default function FormEngine({
       </div>
 
       <DynamicEntryForm
-  entryTypeCode={normalizedEntryTypeCode}
-  schema={schema}
-  entry={entry}
-  clientId={clientId}
-  clientTargetRole={clientTargetRole}
-  mode={effectiveMode}
-  onSave={handleSaved}
-  onCancel={onCancel}
-/>
+        entryTypeCode={normalizedEntryTypeCode}
+        schema={schema}
+        entry={entry}
+        clientId={clientId}
+        clientTargetRole={clientTargetRole}
+        mode={effectiveMode}
+        onSave={handleSaved}
+        onCancel={onCancel}
+      />
     </div>
   );
 }

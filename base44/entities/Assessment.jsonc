@@ -125,5 +125,11 @@
     "client_id",
     "assessment_type",
     "responses"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }

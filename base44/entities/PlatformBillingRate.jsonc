@@ -4,7 +4,7 @@
   "properties": {
     "rate_key": {
       "type": "string",
-      "description": "Stable unique billing-rate key, such as ce_trainer_registration, ce_student_reactivation, or ce_cohort_monthly_overage."
+      "description": "Stable unique billing-rate key."
     },
     "rate_name": {
       "type": "string",
@@ -39,11 +39,11 @@
     },
     "feature_key": {
       "type": "string",
-      "description": "Optional related PlatformFeature key, such as ce_cohorts."
+      "description": "Optional related PlatformFeature key."
     },
     "amount_cents": {
       "type": "number",
-      "description": "Current unit price in cents. For example, 4900 represents $49."
+      "description": "Current unit price in cents."
     },
     "currency": {
       "type": "string",
@@ -85,21 +85,9 @@
     "is_active"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }

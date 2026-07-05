@@ -69,16 +69,8 @@
     "occurred_at"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": false,
+    "read": false,
     "update": false,
     "delete": false
   }

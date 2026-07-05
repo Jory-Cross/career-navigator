@@ -4,7 +4,7 @@
   "properties": {
     "pricing_schedule_key": {
       "type": "string",
-      "description": "Stable unique identifier for this complete pricing version, such as launch_2026, standard_2027, or legacy_comop_2026."
+      "description": "Stable unique identifier for this complete pricing version."
     },
     "pricing_schedule_name": {
       "type": "string",
@@ -22,12 +22,12 @@
         "retired"
       ],
       "default": "draft",
-      "description": "Draft schedules cannot be assigned to new accounts. Active schedules may be assigned. Retired schedules remain available for legacy accounts but cannot be assigned to new accounts."
+      "description": "Lifecycle of this pricing version."
     },
     "is_default_for_new_accounts": {
       "type": "boolean",
       "default": false,
-      "description": "True only for the pricing schedule assigned to newly created subscriptions and newly registered accounts."
+      "description": "True only for the pricing schedule assigned to new subscriptions and new registered accounts."
     },
     "currency": {
       "type": "string",
@@ -42,16 +42,16 @@
     "retired_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When this schedule stopped being assignable to new accounts. Existing accounts remain pinned to it."
+      "description": "When this schedule stopped being assignable to new accounts."
     },
     "supersedes_pricing_schedule_id": {
       "type": "string",
-      "description": "Optional prior PlatformPricingSchedule record replaced by this schedule."
+      "description": "Optional prior pricing schedule record replaced by this schedule."
     },
     "locked_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Timestamp when this schedule was locked for use. Future pricing changes should create a new schedule instead of altering a locked one."
+      "description": "Timestamp when this schedule was locked for use."
     },
     "locked_by_user_id": {
       "type": "string",
@@ -71,21 +71,9 @@
     "effective_at"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
+    "create": false,
+    "read": false,
+    "update": false,
     "delete": false
   }
 }

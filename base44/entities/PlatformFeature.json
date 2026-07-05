@@ -2,86 +2,16 @@
   "name": "PlatformFeature",
   "type": "object",
   "properties": {
-    "feature_key": {
-      "type": "string",
-      "description": "Stable unique machine-readable feature identifier, such as ce_training_portal, ce_cohorts, ce_practitioner_workspace, time_tracking, client_portal, assessments, ai_tools, advanced_reporting, or custom_roles."
-    },
-    "feature_name": {
-      "type": "string",
-      "description": "Human-readable feature name shown in future plan and account administration screens."
-    },
-    "description": {
-      "type": "string",
-      "description": "Plain-language explanation of what this platform feature enables."
-    },
-    "feature_category": {
-      "type": "string",
-      "enum": [
-        "core_platform",
-        "ce_training",
-        "ce_practice",
-        "client_management",
-        "workforce_management",
-        "assessments",
-        "ai_tools",
-        "reporting",
-        "administration",
-        "billing"
-      ],
-      "description": "Platform area this feature belongs to."
-    },
-    "supports_limit": {
-      "type": "boolean",
-      "default": false,
-      "description": "True when this feature may have an organization-specific numeric limit, such as seats, clients, cohorts, storage, or AI usage."
-    },
-    "limit_label": {
-      "type": "string",
-      "description": "Human-readable label for the limit when supports_limit is true, such as Employee Seats, Client Records, CE Cohorts, or Trainer Seats."
-    },
-    "is_billable_add_on": {
-      "type": "boolean",
-      "default": false,
-      "description": "True when this feature may be sold separately from a base plan."
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true,
-      "description": "Controls whether this feature may be included in new plans or organization entitlements."
-    },
-    "sort_order": {
-      "type": "integer",
-      "default": 100,
-      "description": "Display order for future platform plan and feature administration screens."
-    }
+    "feature_key": { "type": "string", "description": "Stable unique machine-readable feature identifier." },
+    "feature_name": { "type": "string", "description": "Human-readable feature name." },
+    "description": { "type": "string", "description": "Plain-language explanation of what this platform feature enables." },
+    "feature_category": { "type": "string", "enum": ["core_platform", "ce_training", "ce_practice", "client_management", "workforce_management", "assessments", "ai_tools", "reporting", "administration", "billing"], "description": "Platform area this feature belongs to." },
+    "supports_limit": { "type": "boolean", "default": false, "description": "True when this feature may have an organization-specific numeric limit." },
+    "limit_label": { "type": "string", "description": "Human-readable label for the limit when supports_limit is true." },
+    "is_billable_add_on": { "type": "boolean", "default": false, "description": "True when this feature may be sold separately from a base plan." },
+    "is_active": { "type": "boolean", "default": true, "description": "Controls whether this feature may be included in new plans or organization entitlements." },
+    "sort_order": { "type": "integer", "default": 100, "description": "Display order for platform plan and feature administration screens." }
   },
-  "required": [
-    "feature_key",
-    "feature_name",
-    "feature_category",
-    "supports_limit",
-    "is_active"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  "required": ["feature_key", "feature_name", "feature_category", "supports_limit", "is_active"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }

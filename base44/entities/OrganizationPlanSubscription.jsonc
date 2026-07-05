@@ -78,7 +78,7 @@
     "is_current": {
       "type": "boolean",
       "default": true,
-      "description": "True only for the organization\u2019s current active subscription record. Prior plan records remain for billing history."
+      "description": "True only for the organization’s current active subscription record. Prior plan records remain for billing history."
     },
     "subscription_source": {
       "type": "string",
@@ -107,25 +107,9 @@
     "subscription_source"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }

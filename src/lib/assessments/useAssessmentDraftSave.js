@@ -1,22 +1,9 @@
 /**
- * useAssessmentDraftSave — Shared draft-save hook for all structured assessments.
+ * useAssessmentDraftSave — Shared draft-save hook for structured assessments.
  *
- * Handles:
- * - Deduplication via recordIdRef (never creates two drafts for the same assessment)
- * - Concurrency guard via savingRef
- * - in_progress draft save (silent, no toast)
- * - completed final save (with toast)
- * - Skips save if no responses entered
- * - Exposes saveDraft for dialog-close / exit triggers
- *
- * Usage:
- *   const { saveDraft, handleSave, recordIdRef } = useAssessmentDraftSave({
- *     clientId,
- *     assessmentType,
- *     existingAssessment,
- *     buildExtraPayload,   // optional async (responses, status) => { structured_evidence, ... }
- *     onSaved,
- *   });
+ * Uses the authorized assessment route so client, organization, and caller
+ * scope are resolved server-side before any assessment record is created or
+ * updated.
  */
 
 import { useRef, useCallback } from "react";
@@ -30,109 +17,83 @@ export function useAssessmentDraftSave({
   buildExtraPayload = null,
   onSaved,
 }) {
-  // Track live record ID — prevents duplicate creates
   const recordIdRef = useRef(existingAssessment?.id || null);
-  // Keep recordIdRef current if existingAssessment arrives after initial mount
+
   if (existingAssessment?.id && !recordIdRef.current) {
     recordIdRef.current = existingAssessment.id;
   }
-  // Concurrency guard
-  const savingRef = useRef(false);
 
-  console.log("STRUCTURED INITIAL RESPONSES", {
-    assessmentType,
-    clientId,
-    existingId: existingAssessment?.id || null,
-    recordIdRefCurrent: recordIdRef.current,
-    responseCount: Object.keys(existingAssessment?.responses || {}).length,
-  });
+  const savingRef = useRef(false);
 
   const hasAnyResponse = (responses) =>
     Object.values(responses).some(
-      (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
+      (value) =>
+        value !== null &&
+        value !== undefined &&
+        value !== "" &&
+        !(Array.isArray(value) && value.length === 0)
     );
 
-  // ── Draft Save (in_progress, silent) ──────────────────────────────────────
+  const saveAuthorizedAssessment = useCallback(
+    async (responses, status) => {
+      const extra = buildExtraPayload
+        ? await buildExtraPayload(responses, status)
+        : {};
 
-  const saveDraft = useCallback(async (responses) => {
-    if (savingRef.current) {
-      console.log("STRUCTURED DRAFT SAVE START: skipped — already saving");
-      return;
-    }
-    if (!hasAnyResponse(responses)) {
-      console.log("STRUCTURED DRAFT SAVE START: skipped — no responses");
-      return;
-    }
+      const response = await base44.functions.invoke(
+        "manageAuthorizedAssessment",
+        {
+          action: "upsert",
+          assessment_id: recordIdRef.current || "",
+          client_id: clientId,
+          assessment_type: assessmentType,
+          status,
+          responses,
+          structured_evidence: extra?.structured_evidence || [],
+          source_metadata: extra?.source_metadata || {},
+          staff_review_flags: extra?.staff_review_flags || [],
+        }
+      );
 
-    savingRef.current = true;
-    console.log("STRUCTURED DRAFT SAVE START", {
-      assessmentType,
-      clientId,
-      recordId: recordIdRef.current,
-      responseCount: Object.keys(responses).length,
-    });
+      const data = response?.data || {};
 
-    try {
-      const user = await base44.auth.me();
-      const extra = buildExtraPayload ? await buildExtraPayload(responses, "in_progress") : {};
-
-      const payload = {
-        client_id: clientId,
-        assessment_type: assessmentType,
-        status: "in_progress",
-        responses,
-        completed_by: user?.email || "",
-        ...extra,
-      };
-
-      console.log("STRUCTURED DRAFT PAYLOAD", { ...payload, responses: `{${Object.keys(responses).length} keys}` });
-      console.log("STRUCTURED DRAFT SAVED RESPONSES", responses);
-
-      let result;
-      if (recordIdRef.current) {
-        result = await base44.entities.Assessment.update(recordIdRef.current, payload);
-      } else {
-        result = await base44.entities.Assessment.create(payload);
-        recordIdRef.current = result?.id || null;
+      if (!data.ok || !data.assessment?.id) {
+        throw new Error(
+          data.error || "Assessment progress could not be saved."
+        );
       }
 
-      console.log("STRUCTURED DRAFT SAVE RESULT", { id: recordIdRef.current, status: "in_progress" });
-    } catch (err) {
-      console.error("STRUCTURED DRAFT SAVE ERROR", err);
-      // Don't show toast for background draft saves — only throw so callers can handle
-      throw err;
-    } finally {
-      savingRef.current = false;
-    }
-  }, [clientId, assessmentType, buildExtraPayload]);
+      recordIdRef.current = data.assessment.id;
+      return data.assessment;
+    },
+    [assessmentType, buildExtraPayload, clientId]
+  );
 
-  // ── Final Save (in_progress — saving never auto-completes) ────────────────
+  const saveDraft = useCallback(
+    async (responses) => {
+      if (savingRef.current) return;
+      if (!hasAnyResponse(responses)) return;
 
-  const handleSave = useCallback(async (responses, meta = {}) => {
-    const user = await base44.auth.me();
-    const extra = buildExtraPayload ? await buildExtraPayload(responses, "in_progress") : {};
+      savingRef.current = true;
 
-    const payload = {
-      client_id: clientId,
-      assessment_type: assessmentType,
-      status: "in_progress",
-      responses,
-      completed_by: user?.email || "",
-      ...extra,
-    };
+      try {
+        await saveAuthorizedAssessment(responses, "in_progress");
+      } finally {
+        savingRef.current = false;
+      }
+    },
+    [saveAuthorizedAssessment]
+  );
 
-    let result;
-    if (recordIdRef.current) {
-      result = await base44.entities.Assessment.update(recordIdRef.current, payload);
-    } else {
-      result = await base44.entities.Assessment.create(payload);
-      recordIdRef.current = result?.id || null;
-    }
-
-    toast.success(`Progress saved`);
-    onSaved?.();
-    return result;
-  }, [clientId, assessmentType, buildExtraPayload, onSaved]);
+  const handleSave = useCallback(
+    async (responses) => {
+      const result = await saveAuthorizedAssessment(responses, "in_progress");
+      toast.success("Progress saved");
+      await onSaved?.();
+      return result;
+    },
+    [onSaved, saveAuthorizedAssessment]
+  );
 
   return { saveDraft, handleSave, recordIdRef };
 }

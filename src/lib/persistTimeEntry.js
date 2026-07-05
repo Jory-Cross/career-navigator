@@ -1,11 +1,7 @@
 import { base44 } from "@/api/base44Client";
 
 function isPlainObject(value) {
-  return (
-    value &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-  );
+  return value && typeof value === "object" && !Array.isArray(value);
 }
 
 function hasOwn(record, key) {
@@ -14,7 +10,6 @@ function hasOwn(record, key) {
 
 function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
   const source = isPlainObject(payload) ? payload : {};
-
   const timeEntry = {
     entry_type_id: source.entry_type_id,
     entry_type_code: source.entry_type_code,
@@ -25,11 +20,8 @@ function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
     location: source.location ?? null,
     description: source.description ?? null,
     employer_name: source.employer_name ?? null,
-    service_authorization_id:
-      source.service_authorization_id ?? null,
-    form_data: isPlainObject(source.form_data)
-      ? source.form_data
-      : {},
+    service_authorization_id: source.service_authorization_id ?? null,
+    form_data: isPlainObject(source.form_data) ? source.form_data : {},
   };
 
   if (hasOwn(source, "status")) {
@@ -37,9 +29,7 @@ function buildSecureTimeEntryInput(payload, clientId, isUpdate) {
   }
 
   if (!isUpdate) {
-    timeEntry.client_id =
-      clientId ?? source.client_id ?? null;
-
+    timeEntry.client_id = clientId ?? source.client_id ?? null;
     if (source.employee_id) {
       timeEntry.employee_id = source.employee_id;
     }
@@ -53,13 +43,11 @@ async function invokeSecureTimeEntryMutation(request) {
     "mutateAuthorizedTimeEntry",
     request
   );
-
   const data = response?.data || response || {};
 
   if (!data.ok || !data.entry?.id) {
     throw new Error(
-      data.error ||
-        "Secure TimeEntry mutation did not return a saved entry."
+      data.error || "Secure TimeEntry mutation did not return a saved entry."
     );
   }
 
@@ -69,45 +57,26 @@ async function invokeSecureTimeEntryMutation(request) {
 /**
  * Secure persistence gateway for FormEngine TimeEntry workflows.
  *
- * Browser code submits only the requested fields. The server derives and
- * enforces tenant scope, employee authority, EntryType configuration,
- * authorization rules, reporting fields, and ReportFieldAnswer persistence.
- *
- * @param {Object} payload - Final payload from buildTimeEntryPayload
- * @param {string|null} existingEntryId - Existing TimeEntry ID for updates
- * @param {string|null} clientId - Client ID used only on new entries
- * @returns {Promise<Object>} Saved TimeEntry record
+ * Browser code submits only requested fields. The server derives and enforces
+ * tenant scope, employee authority, EntryType configuration, authorization
+ * rules, reporting fields, and ReportFieldAnswer persistence.
  */
-export async function persistTimeEntry(
-  payload,
-  existingEntryId,
-  clientId
-) {
+export async function persistTimeEntry(payload, existingEntryId, clientId) {
   if (!isPlainObject(payload)) {
-    throw new Error(
-      "Cannot persist entry: payload is missing or invalid."
-    );
+    throw new Error("Cannot persist entry: payload is missing or invalid.");
   }
 
   if (existingEntryId) {
-    return await invokeSecureTimeEntryMutation({
+    return invokeSecureTimeEntryMutation({
       action: "update",
       entry_id: existingEntryId,
-      time_entry: buildSecureTimeEntryInput(
-        payload,
-        null,
-        true
-      ),
+      time_entry: buildSecureTimeEntryInput(payload, null, true),
     });
   }
 
-  return await invokeSecureTimeEntryMutation({
+  return invokeSecureTimeEntryMutation({
     action: "create",
-    time_entry: buildSecureTimeEntryInput(
-      payload,
-      clientId,
-      false
-    ),
+    time_entry: buildSecureTimeEntryInput(payload, clientId, false),
   });
 }
 

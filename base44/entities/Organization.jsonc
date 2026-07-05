@@ -2,82 +2,21 @@
   "name": "Organization",
   "type": "object",
   "properties": {
-  "name": {
-  "type": "string",
-  "description": "Business/organization name"
-},
-"tenant_key": {
-  "type": "string",
-  "description": "Stable tenant identifier used by the app and legacy org_id fields, such as COMOP. This is not the Base44 Organization record ID."
-},
-"industry": {
-      "type": "string",
-      "description": "Business industry"
-    },
-    "website": {
-      "type": "string",
-      "description": "Business website URL"
-    },
-    "logo_url": {
-      "type": "string",
-      "description": "Logo image URL"
-    },
-    "owner_email": {
-      "type": "string",
-      "description": "Email of the admin who created the org"
-    },
-    "subscription_tier": {
-      "type": "string",
-      "enum": [
-        "trial",
-        "starter",
-        "professional",
-        "enterprise"
-      ],
-      "default": "trial",
-      "description": "Subscription plan"
-    },
-    "subscription_status": {
-      "type": "string",
-      "enum": [
-        "trialing",
-        "active",
-        "past_due",
-        "cancelled",
-        "incomplete"
-      ],
-      "default": "trialing",
-      "description": "Stripe subscription status"
-    },
-    "trial_ends_at": {
-      "type": "string",
-      "description": "ISO date when trial expires"
-    },
-    "stripe_customer_id": {
-      "type": "string",
-      "description": "Stripe customer ID"
-    },
-    "stripe_subscription_id": {
-      "type": "string",
-      "description": "Stripe subscription ID"
-    },
-    "max_employees": {
-      "type": "number",
-      "default": 3,
-      "description": "Max employee seats"
-    },
-    "max_clients": {
-      "type": "number",
-      "default": 25,
-      "description": "Max client records"
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true
-    }
+    "name": { "type": "string", "description": "Business/organization name" },
+    "tenant_key": { "type": "string", "description": "Stable tenant identifier used by legacy org_id fields. This is not the Organization record ID." },
+    "industry": { "type": "string", "description": "Business industry" },
+    "website": { "type": "string", "description": "Business website URL" },
+    "logo_url": { "type": "string", "description": "Logo image URL" },
+    "owner_email": { "type": "string", "description": "Initial organization owner email; never used as a browser authorization fallback." },
+    "subscription_tier": { "type": "string", "enum": ["trial", "starter", "professional", "enterprise"], "default": "trial", "description": "Subscription plan" },
+    "subscription_status": { "type": "string", "enum": ["trialing", "active", "past_due", "cancelled", "incomplete"], "default": "trialing", "description": "Stripe subscription status" },
+    "trial_ends_at": { "type": "string", "description": "ISO date when trial expires" },
+    "stripe_customer_id": { "type": "string", "description": "Stripe customer ID" },
+    "stripe_subscription_id": { "type": "string", "description": "Stripe subscription ID" },
+    "max_employees": { "type": "number", "default": 3, "description": "Max employee seats" },
+    "max_clients": { "type": "number", "default": 25, "description": "Max client records" },
+    "is_active": { "type": "boolean", "default": true }
   },
-  "required": [
-    "name",
-    "owner_email"
-  ]
+  "required": ["name", "owner_email"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }

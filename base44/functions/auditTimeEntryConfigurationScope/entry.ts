@@ -1,11 +1,24 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
+const PLATFORM_OWNER_ROLE = "platform_owner";
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
+
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
 }
 
 function classifyOrganizationScope(
@@ -38,31 +51,75 @@ function classifyOrganizationScope(
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (req.method !== "POST") {
+      return Response.json(
+        { ok: false, error: "This route accepts POST requests only." },
+        { status: 405 }
+      );
     }
 
-    const [
-      allUsers,
-      allPlatformAdmins,
-      allOrganizations,
-      allEntryTypes,
-      allReportFieldTemplates,
-    ] = await Promise.all([
-      base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.PlatformAdmin.list(),
-      base44.asServiceRole.entities.Organization.list(),
-      base44.asServiceRole.entities.EntryType.list(),
-      base44.asServiceRole.entities.ReportFieldTemplate.list(),
-    ]);
+    await req.json().catch(() => ({}));
 
-    const users = Array.isArray(allUsers) ? allUsers : [];
-    const platformAdmins = Array.isArray(allPlatformAdmins)
-      ? allPlatformAdmins
-      : [];
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
+
+    if (!authenticatedUser?.id) {
+      return Response.json(
+        { ok: false, error: "You must be signed in to audit TimeEntry configuration scope." },
+        { status: 401 }
+      );
+    }
+
+    const caller = await base44.asServiceRole.entities.User.get(
+      authenticatedUser.id
+    ).catch(() => null);
+
+    if (!caller || !isActive(caller)) {
+      return Response.json(
+        { ok: false, error: "Your account is inactive or unavailable." },
+        { status: 403 }
+      );
+    }
+
+    if (getCanonicalStaffRole(caller) !== "admin") {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Canonical administrator access is required to audit TimeEntry configuration scope.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const platformAdminRecords =
+      await base44.asServiceRole.entities.PlatformAdmin.filter({
+        user_id: caller.id,
+      });
+    const platformOwnerRecord = platformAdminRecords.find(
+      (record: any) =>
+        normalizeText(record?.platform_role).toLowerCase() ===
+          PLATFORM_OWNER_ROLE && isActive(record)
+    );
+
+    if (!platformOwnerRecord) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "Only an active Platform Owner may audit TimeEntry configuration scope.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const [allOrganizations, allEntryTypes, allReportFieldTemplates] =
+      await Promise.all([
+        base44.asServiceRole.entities.Organization.list(),
+        base44.asServiceRole.entities.EntryType.list(),
+        base44.asServiceRole.entities.ReportFieldTemplate.list(),
+      ]);
+
     const organizations = Array.isArray(allOrganizations)
       ? allOrganizations
       : [];
@@ -70,37 +127,6 @@ Deno.serve(async (req) => {
     const reportFieldTemplates = Array.isArray(allReportFieldTemplates)
       ? allReportFieldTemplates
       : [];
-
-    const callerId = normalizeText(authenticatedUser.id);
-
-    const caller = users.find(
-      (user: any) => normalizeText(user?.id) === callerId
-    );
-
-    if (!caller || !isActive(caller)) {
-      return Response.json(
-        { error: "Authenticated user record was not found or is inactive." },
-        { status: 403 }
-      );
-    }
-
-    const isPlatformOwner = platformAdmins.some(
-      (record: any) =>
-        normalizeText(record?.user_id) === callerId &&
-        normalizeText(record?.platform_role).toLowerCase() ===
-          "platform_owner" &&
-        isActive(record)
-    );
-
-    if (!isPlatformOwner) {
-      return Response.json(
-        {
-          error:
-            "Only an active platform owner may audit TimeEntry configuration scope.",
-        },
-        { status: 403 }
-      );
-    }
 
     const organizationsById = new Map(
       organizations
@@ -264,9 +290,8 @@ Deno.serve(async (req) => {
 
     return Response.json(
       {
-        error:
-          error?.message ||
-          "Unable to audit TimeEntry configuration scope.",
+        ok: false,
+        error: "Unable to audit TimeEntry configuration scope.",
       },
       { status: 500 }
     );

@@ -16,7 +16,7 @@
     },
     "feature_key": {
       "type": "string",
-      "description": "Copied PlatformFeature feature_key used for fast entitlement resolution."
+      "description": "Copied PlatformFeature feature_key used for entitlement resolution."
     },
     "is_included": {
       "type": "boolean",
@@ -25,16 +25,16 @@
     },
     "default_limit_value": {
       "type": "number",
-      "description": "Default numeric limit provided by this plan, such as employee seats, client records, cohorts, trainer seats, or practitioner seats. Leave blank when no numeric limit applies."
+      "description": "Default numeric limit provided by this plan."
     },
     "is_add_on_available": {
       "type": "boolean",
       "default": false,
-      "description": "True when this feature or an increased limit can be purchased separately as an add-on."
+      "description": "True when this feature or an increased limit can be purchased separately."
     },
     "add_on_price_cents": {
       "type": "number",
-      "description": "Optional base price in cents for the add-on. Stripe remains the payment source of truth once billing is connected."
+      "description": "Optional base price in cents for the add-on."
     },
     "stripe_add_on_price_id": {
       "type": "string",
@@ -61,25 +61,9 @@
     "is_active"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }

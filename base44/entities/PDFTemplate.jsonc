@@ -1,68 +1,23 @@
 {
   "name": "PDFTemplate",
   "type": "object",
-  "description": "Uploaded fillable PDF template used for report generation.",
+  "description": "Uploaded fillable PDF template used for report generation. Access is server-authorized and organization-scoped.",
   "properties": {
-    "org_id": {
-      "type": "string"
-    },
-    "entry_type_id": {
-      "type": "string"
-    },
-    "entry_type_code": {
-      "type": "string"
-    },
-    "name": {
-      "type": "string"
-    },
-    "template_code": {
-      "type": "string"
-    },
-    "report_mode": {
-      "type": "string",
-      "enum": [
-        "usor95_monthly",
-        "usor96_monthly",
-        "usor148_service_period",
-        "custom"
-      ]
-    },
-    "pdf_file_url": {
-      "type": "string"
-    },
-    "template_version": {
-      "type": "string"
-    },
-    "field_names": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true
-    },
-    "notes": {
-      "type": "string"
-    },
-    "max_rows": {
-      "type": "number",
-      "description": "Maximum number of repeating row slots in this PDF template. Used by row mapper to know how many entries can fit."
-    },
-    "row_field_prefix": {
-      "type": "string",
-      "description": "Common prefix for row PDF field names (e.g. 'Row' \u2192 'Row1_Date', 'Row2_Date'). Helps auto-discover row fields."
-    },
-    "superseded_by_template_id": {
-      "type": "string",
-      "description": "If this template version was replaced, points to the newer PDFTemplate ID."
-    }
+    "org_id": { "type": "string" },
+    "entry_type_id": { "type": "string" },
+    "entry_type_code": { "type": "string" },
+    "name": { "type": "string" },
+    "template_code": { "type": "string" },
+    "report_mode": { "type": "string", "enum": ["usor95_monthly", "usor96_monthly", "usor148_service_period", "custom"] },
+    "pdf_file_url": { "type": "string" },
+    "template_version": { "type": "string" },
+    "field_names": { "type": "array", "items": { "type": "string" } },
+    "is_active": { "type": "boolean", "default": true },
+    "notes": { "type": "string" },
+    "max_rows": { "type": "number", "description": "Maximum number of repeating row slots in this PDF template. Used by row mapper to know how many entries can fit." },
+    "row_field_prefix": { "type": "string", "description": "Common prefix for row PDF field names (e.g. 'Row' → 'Row1_Date', 'Row2_Date'). Helps auto-discover row fields." },
+    "superseded_by_template_id": { "type": "string", "description": "If this template version was replaced, points to the newer PDFTemplate ID." }
   },
-  "required": [
-    "name",
-    "entry_type_code",
-    "pdf_file_url",
-    "template_version"
-  ]
+  "required": ["name", "entry_type_code", "pdf_file_url", "template_version"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
