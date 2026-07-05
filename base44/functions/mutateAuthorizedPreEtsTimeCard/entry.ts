@@ -1,10 +1,10 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
-const INTERNAL_STAFF_ROLES = new Set([
-  "admin",
-  "management",
-  "employee",
-]);
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 const PRE_ETS_TIME_CARD_STATUSES = new Set([
   "submitted_to_staff",
@@ -25,7 +25,6 @@ const SUPPORTED_ACTIONS = new Set([
 
 class RequestError extends Error {
   status: number;
-
   constructor(status: number, message: string) {
     super(message);
     this.status = status;
@@ -38,7 +37,6 @@ function normalizeText(value: unknown) {
 
 function normalizeDate(value: unknown) {
   const date = normalizeText(value);
-
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
 }
 
@@ -46,17 +44,14 @@ function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-function asObject(value: unknown) {
-  return value &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-    ? value
+function asObject(value: unknown): Record<string, any> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, any>)
     : {};
 }
 
 function asNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
-
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
@@ -64,16 +59,20 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
-function isInternalStaff(user: any) {
-  return INTERNAL_STAFF_ROLES.has(
-    normalizeText(user?.role).toLowerCase()
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
+function isCanonicalPreEtsStudent(user: any) {
+  return (
+    normalizeText(user?.role).toLowerCase() === "pre_ets" &&
+    normalizeText(user?.access_level).toLowerCase() === "client_portal"
   );
 }
 
-function isPreEtsClientInOrganization(
-  client: any,
-  organizationId: string
-) {
+function isPreEtsClientInOrganization(client: any, organizationId: string) {
   return (
     isActive(client) &&
     normalizeText(client?.org_id) === organizationId &&
@@ -88,7 +87,6 @@ function getCardStatus(card: any) {
 function parseUtcDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
-
   if (
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
@@ -97,12 +95,8 @@ function parseUtcDate(date: string) {
     parsed.getUTCMonth() !== month - 1 ||
     parsed.getUTCDate() !== day
   ) {
-    throw new RequestError(
-      400,
-      "A valid calendar date is required."
-    );
+    throw new RequestError(400, "Choose a valid calendar date.");
   }
-
   return parsed;
 }
 
@@ -117,42 +111,27 @@ function formatUtcDate(date: Date) {
 function addDays(date: string, days: number) {
   const parsed = parseUtcDate(date);
   parsed.setUTCDate(parsed.getUTCDate() + days);
-
   return formatUtcDate(parsed);
 }
 
 function daysBetween(startDate: string, endDate: string) {
-  const start = parseUtcDate(startDate).getTime();
-  const end = parseUtcDate(endDate).getTime();
-
-  return Math.round((end - start) / 86400000);
+  return Math.round(
+    (parseUtcDate(endDate).getTime() - parseUtcDate(startDate).getTime()) /
+      86400000
+  );
 }
 
 function getMonthStart(date: string) {
   const parsed = parseUtcDate(date);
-
   return formatUtcDate(
-    new Date(
-      Date.UTC(
-        parsed.getUTCFullYear(),
-        parsed.getUTCMonth(),
-        1
-      )
-    )
+    new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), 1))
   );
 }
 
 function getMonthEnd(date: string) {
   const parsed = parseUtcDate(date);
-
   return formatUtcDate(
-    new Date(
-      Date.UTC(
-        parsed.getUTCFullYear(),
-        parsed.getUTCMonth() + 1,
-        0
-      )
-    )
+    new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, 0))
   );
 }
 
@@ -167,36 +146,22 @@ function getSchedulePeriodKey(
 
 function getScheduleVersion(schedule: any) {
   const version = asNumber(schedule?.version, 0);
-
   if (!Number.isInteger(version) || version < 1) {
-    throw new RequestError(
-      409,
-      "The active payroll schedule has an invalid version."
-    );
+    throw new RequestError(409, "The active payroll schedule has an invalid version.");
   }
-
   return version;
 }
 
 function validateScheduleTimeZone(schedule: any) {
   const timeZone = normalizeText(schedule?.time_zone);
-
   if (!timeZone) {
-    throw new RequestError(
-      409,
-      "The active payroll schedule has no time zone."
-    );
+    throw new RequestError(409, "The active payroll schedule has no time zone.");
   }
-
   try {
     new Intl.DateTimeFormat("en-US", { timeZone });
   } catch {
-    throw new RequestError(
-      409,
-      "The active payroll schedule has an invalid time zone."
-    );
+    throw new RequestError(409, "The active payroll schedule has an invalid time zone.");
   }
-
   return timeZone;
 }
 
@@ -205,13 +170,8 @@ function assertResolvedPeriodFitsSchedule(
   periodStart: string,
   periodEnd: string
 ) {
-  const effectiveStart = normalizeDate(
-    schedule?.effective_start_date
-  );
-  const effectiveEnd = normalizeDate(
-    schedule?.effective_end_date
-  );
-
+  const effectiveStart = normalizeDate(schedule?.effective_start_date);
+  const effectiveEnd = normalizeDate(schedule?.effective_end_date);
   if (
     (effectiveStart && periodStart < effectiveStart) ||
     (effectiveEnd && periodEnd > effectiveEnd)
@@ -228,21 +188,14 @@ function buildDefaultPayPeriodLabel(
   periodStart: string,
   periodEnd: string
 ) {
-  const scheduleName =
-    normalizeText(schedule?.name) || "Payroll Period";
-
-  return `${scheduleName}: ${periodStart} through ${periodEnd}`;
+  return `${normalizeText(schedule?.name) || "Payroll Period"}: ${periodStart} through ${periodEnd}`;
 }
 
-function resolveSemiMonthlyPeriod(
-  schedule: any,
-  referenceDate: string
-) {
+function resolveSemiMonthlyPeriod(schedule: any, referenceDate: string) {
   const firstPeriodEndDay = asNumber(
     schedule?.semi_monthly_first_period_end_day,
     15
   );
-
   if (
     !Number.isInteger(firstPeriodEndDay) ||
     firstPeriodEndDay < 1 ||
@@ -255,10 +208,8 @@ function resolveSemiMonthlyPeriod(
   }
 
   const parsedReferenceDate = parseUtcDate(referenceDate);
-  const referenceDay = parsedReferenceDate.getUTCDate();
   const monthStart = getMonthStart(referenceDate);
   const monthEnd = getMonthEnd(referenceDate);
-
   const firstPeriodEnd = formatUtcDate(
     new Date(
       Date.UTC(
@@ -269,23 +220,12 @@ function resolveSemiMonthlyPeriod(
     )
   );
 
-  if (referenceDay <= firstPeriodEndDay) {
-    return {
-      period_start: monthStart,
-      period_end: firstPeriodEnd,
-    };
-  }
-
-  return {
-    period_start: addDays(firstPeriodEnd, 1),
-    period_end: monthEnd,
-  };
+  return parsedReferenceDate.getUTCDate() <= firstPeriodEndDay
+    ? { period_start: monthStart, period_end: firstPeriodEnd }
+    : { period_start: addDays(firstPeriodEnd, 1), period_end: monthEnd };
 }
 
-function resolveWeeklyPeriod(
-  schedule: any,
-  referenceDate: string
-) {
+function resolveWeeklyPeriod(schedule: any, referenceDate: string) {
   const dayIndexByName: Record<string, number> = {
     sunday: 0,
     monday: 1,
@@ -295,11 +235,9 @@ function resolveWeeklyPeriod(
     friday: 5,
     saturday: 6,
   };
-
   const startDayName = normalizeText(
     schedule?.weekly_period_start_day
   ).toLowerCase();
-
   if (!Object.prototype.hasOwnProperty.call(dayIndexByName, startDayName)) {
     throw new RequestError(
       409,
@@ -307,28 +245,19 @@ function resolveWeeklyPeriod(
     );
   }
 
-  const referenceDayOfWeek =
-    parseUtcDate(referenceDate).getUTCDay();
-
   const offset =
-    (referenceDayOfWeek - dayIndexByName[startDayName] + 7) % 7;
-
+    (parseUtcDate(referenceDate).getUTCDay() -
+      dayIndexByName[startDayName] +
+      7) %
+    7;
   const periodStart = addDays(referenceDate, -offset);
-
-  return {
-    period_start: periodStart,
-    period_end: addDays(periodStart, 6),
-  };
+  return { period_start: periodStart, period_end: addDays(periodStart, 6) };
 }
 
-function resolveBiweeklyPeriod(
-  schedule: any,
-  referenceDate: string
-) {
+function resolveBiweeklyPeriod(schedule: any, referenceDate: string) {
   const anchorPeriodStart = normalizeDate(
     schedule?.biweekly_anchor_period_start
   );
-
   if (!anchorPeriodStart) {
     throw new RequestError(
       409,
@@ -336,21 +265,11 @@ function resolveBiweeklyPeriod(
     );
   }
 
-  const offsetDays = daysBetween(
-    anchorPeriodStart,
-    referenceDate
-  );
-
-  const wholePeriodsFromAnchor = Math.floor(offsetDays / 14);
   const periodStart = addDays(
     anchorPeriodStart,
-    wholePeriodsFromAnchor * 14
+    Math.floor(daysBetween(anchorPeriodStart, referenceDate) / 14) * 14
   );
-
-  return {
-    period_start: periodStart,
-    period_end: addDays(periodStart, 13),
-  };
+  return { period_start: periodStart, period_end: addDays(periodStart, 13) };
 }
 
 async function resolveOrganizationPayPeriod(
@@ -360,61 +279,43 @@ async function resolveOrganizationPayPeriod(
 ) {
   parseUtcDate(referenceDate);
 
-  const schedules =
-    await base44.asServiceRole.entities.PayPeriodSchedule.filter({
-      org_id: organizationId,
-    });
+  const schedules = await base44.asServiceRole.entities.PayPeriodSchedule.filter({
+    org_id: organizationId,
+  });
+  const matches = asArray(schedules).filter((schedule: any) => {
+    const effectiveStart = normalizeDate(schedule?.effective_start_date);
+    const effectiveEnd = normalizeDate(schedule?.effective_end_date);
+    return (
+      normalizeText(schedule?.org_id) === organizationId &&
+      schedule?.is_active !== false &&
+      Boolean(effectiveStart) &&
+      effectiveStart <= referenceDate &&
+      (!effectiveEnd || effectiveEnd >= referenceDate)
+    );
+  });
 
-  const matchingSchedules = asArray(schedules).filter(
-    (schedule: any) => {
-      const effectiveStart = normalizeDate(
-        schedule?.effective_start_date
-      );
-      const effectiveEnd = normalizeDate(
-        schedule?.effective_end_date
-      );
-
-      return (
-        normalizeText(schedule?.org_id) === organizationId &&
-        schedule?.is_active !== false &&
-        Boolean(effectiveStart) &&
-        effectiveStart <= referenceDate &&
-        (!effectiveEnd || effectiveEnd >= referenceDate)
-      );
-    }
-  );
-
-  if (matchingSchedules.length === 0) {
+  if (matches.length === 0) {
     throw new RequestError(
       409,
       "No active payroll schedule applies to this date for your organization."
     );
   }
-
-  if (matchingSchedules.length > 1) {
+  if (matches.length > 1) {
     throw new RequestError(
       409,
       "Multiple active payroll schedules apply to this date. An organization administrator must resolve the schedule overlap."
     );
   }
 
-  const schedule = matchingSchedules[0];
+  const schedule = matches[0];
   const scheduleId = normalizeText(schedule?.id);
-
   if (!scheduleId) {
-    throw new RequestError(
-      409,
-      "The active payroll schedule has no valid ID."
-    );
+    throw new RequestError(409, "The active payroll schedule has no valid ID.");
   }
 
   const scheduleVersion = getScheduleVersion(schedule);
-  const scheduleType = normalizeText(
-    schedule?.schedule_type
-  ).toLowerCase();
-
+  const scheduleType = normalizeText(schedule?.schedule_type).toLowerCase();
   const timeZone = validateScheduleTimeZone(schedule);
-
   let resolvedPeriod: {
     period_start: string;
     period_end: string;
@@ -424,66 +325,42 @@ async function resolveOrganizationPayPeriod(
   };
 
   if (scheduleType === "semi_monthly") {
-    resolvedPeriod = resolveSemiMonthlyPeriod(
-      schedule,
-      referenceDate
-    );
+    resolvedPeriod = resolveSemiMonthlyPeriod(schedule, referenceDate);
   } else if (scheduleType === "weekly") {
-    resolvedPeriod = resolveWeeklyPeriod(
-      schedule,
-      referenceDate
-    );
+    resolvedPeriod = resolveWeeklyPeriod(schedule, referenceDate);
   } else if (scheduleType === "biweekly") {
-    resolvedPeriod = resolveBiweeklyPeriod(
-      schedule,
-      referenceDate
-    );
+    resolvedPeriod = resolveBiweeklyPeriod(schedule, referenceDate);
   } else if (scheduleType === "custom_calendar") {
-    const calendarPeriods =
+    const periods =
       await base44.asServiceRole.entities.PayPeriodCalendarPeriod.filter({
         pay_period_schedule_id: scheduleId,
       });
-
-    const matchingCalendarPeriods = asArray(
-      calendarPeriods
-    ).filter(
-      (calendarPeriod: any) =>
-        normalizeText(calendarPeriod?.org_id) ===
-          organizationId &&
-        normalizeText(
-          calendarPeriod?.pay_period_schedule_id
-        ) === scheduleId &&
-        asNumber(calendarPeriod?.schedule_version, 0) ===
-          scheduleVersion &&
-        calendarPeriod?.is_active !== false &&
-        normalizeDate(calendarPeriod?.period_start) <=
-          referenceDate &&
-        normalizeDate(calendarPeriod?.period_end) >=
-          referenceDate
+    const periodMatches = asArray(periods).filter(
+      (period: any) =>
+        normalizeText(period?.org_id) === organizationId &&
+        normalizeText(period?.pay_period_schedule_id) === scheduleId &&
+        asNumber(period?.schedule_version, 0) === scheduleVersion &&
+        period?.is_active !== false &&
+        normalizeDate(period?.period_start) <= referenceDate &&
+        normalizeDate(period?.period_end) >= referenceDate
     );
 
-    if (matchingCalendarPeriods.length === 0) {
+    if (periodMatches.length === 0) {
       throw new RequestError(
         409,
         "No active custom payroll period contains the selected date."
       );
     }
-
-    if (matchingCalendarPeriods.length > 1) {
+    if (periodMatches.length > 1) {
       throw new RequestError(
         409,
         "Multiple custom payroll periods contain the selected date. An organization administrator must resolve the overlap."
       );
     }
 
-    const calendarPeriod = matchingCalendarPeriods[0];
-    const periodStart = normalizeDate(
-      calendarPeriod?.period_start
-    );
-    const periodEnd = normalizeDate(
-      calendarPeriod?.period_end
-    );
-
+    const period = periodMatches[0];
+    const periodStart = normalizeDate(period?.period_start);
+    const periodEnd = normalizeDate(period?.period_end);
     if (!periodStart || !periodEnd || periodStart > periodEnd) {
       throw new RequestError(
         409,
@@ -495,7 +372,7 @@ async function resolveOrganizationPayPeriod(
       period_start: periodStart,
       period_end: periodEnd,
       period_key:
-        normalizeText(calendarPeriod?.period_key) ||
+        normalizeText(period?.period_key) ||
         getSchedulePeriodKey(
           scheduleId,
           scheduleVersion,
@@ -503,14 +380,9 @@ async function resolveOrganizationPayPeriod(
           periodEnd
         ),
       label:
-        normalizeText(calendarPeriod?.label) ||
-        buildDefaultPayPeriodLabel(
-          schedule,
-          periodStart,
-          periodEnd
-        ),
-      pay_date:
-        normalizeDate(calendarPeriod?.pay_date) || null,
+        normalizeText(period?.label) ||
+        buildDefaultPayPeriodLabel(schedule, periodStart, periodEnd),
+      pay_date: normalizeDate(period?.pay_date) || null,
     };
   } else {
     throw new RequestError(
@@ -519,25 +391,15 @@ async function resolveOrganizationPayPeriod(
     );
   }
 
-  const periodStart = normalizeDate(
-    resolvedPeriod.period_start
-  );
-  const periodEnd = normalizeDate(
-    resolvedPeriod.period_end
-  );
-
+  const periodStart = normalizeDate(resolvedPeriod.period_start);
+  const periodEnd = normalizeDate(resolvedPeriod.period_end);
   if (!periodStart || !periodEnd || periodStart > periodEnd) {
     throw new RequestError(
       409,
       "The payroll schedule resolved an invalid payroll period."
     );
   }
-
-  assertResolvedPeriodFitsSchedule(
-    schedule,
-    periodStart,
-    periodEnd
-  );
+  assertResolvedPeriodFitsSchedule(schedule, periodStart, periodEnd);
 
   return {
     schedule_id: scheduleId,
@@ -549,21 +411,26 @@ async function resolveOrganizationPayPeriod(
     period_end: periodEnd,
     period_key:
       normalizeText(resolvedPeriod.period_key) ||
-      getSchedulePeriodKey(
-        scheduleId,
-        scheduleVersion,
-        periodStart,
-        periodEnd
-      ),
+      getSchedulePeriodKey(scheduleId, scheduleVersion, periodStart, periodEnd),
     label:
       normalizeText(resolvedPeriod.label) ||
-      buildDefaultPayPeriodLabel(
-        schedule,
-        periodStart,
-        periodEnd
-      ),
-    pay_date:
-      normalizeDate(resolvedPeriod.pay_date) || null,
+      buildDefaultPayPeriodLabel(schedule, periodStart, periodEnd),
+    pay_date: normalizeDate(resolvedPeriod.pay_date) || null,
+  };
+}
+
+function projectPayPeriod(payPeriod: any) {
+  return {
+    schedule_id: payPeriod.schedule_id,
+    schedule_version: payPeriod.schedule_version,
+    schedule_name: payPeriod.schedule_name,
+    schedule_type: payPeriod.schedule_type,
+    time_zone: payPeriod.time_zone,
+    period_start: payPeriod.period_start,
+    period_end: payPeriod.period_end,
+    period_key: payPeriod.period_key,
+    label: payPeriod.label,
+    pay_date: payPeriod.pay_date,
   };
 }
 
@@ -577,10 +444,7 @@ function periodsOverlap(
 }
 
 function normalizeStableValue(value: any): any {
-  if (Array.isArray(value)) {
-    return value.map(normalizeStableValue);
-  }
-
+  if (Array.isArray(value)) return value.map(normalizeStableValue);
   if (value && typeof value === "object") {
     return Object.keys(value)
       .sort()
@@ -589,7 +453,6 @@ function normalizeStableValue(value: any): any {
         return result;
       }, {});
   }
-
   return value;
 }
 
@@ -599,36 +462,25 @@ function stableStringify(value: any) {
 
 function getTimeCardInput(body: any) {
   const candidate = body?.time_card ?? body?.timeCard ?? {};
-
   if (
     !candidate ||
     typeof candidate !== "object" ||
     Array.isArray(candidate)
   ) {
-    throw new RequestError(
-      400,
-      "time_card must be an object."
-    );
+    throw new RequestError(400, "Time Card details must be an object.");
   }
-
   return candidate;
 }
 
-function getReferenceDate(body: any) {
-  const timeCard = getTimeCardInput(body);
-  const referenceDate = normalizeDate(
-    timeCard?.reference_date
-  );
-
+function getReferenceDate(timeCardInput: any) {
+  const referenceDate = normalizeDate(timeCardInput?.reference_date);
   if (!referenceDate) {
     throw new RequestError(
       400,
-      "time_card.reference_date is required."
+      "Choose a reference date in YYYY-MM-DD format."
     );
   }
-
   parseUtcDate(referenceDate);
-
   return referenceDate;
 }
 
@@ -655,13 +507,11 @@ function sortEntries(entries: any[]) {
       normalizeText(left?.start_time),
       normalizeText(left?.id),
     ].join("|");
-
     const rightKey = [
       normalizeDate(right?.date),
       normalizeText(right?.start_time),
       normalizeText(right?.id),
     ].join("|");
-
     return leftKey.localeCompare(rightKey);
   });
 }
@@ -681,23 +531,16 @@ function getSnapshotEntries(card: any) {
 }
 
 function projectCard(card: any, includeEntries = false) {
-  const response: Record<string, unknown> = {
+  const response: Record<string, any> = {
     id: normalizeText(card?.id),
     org_id: normalizeText(card?.org_id),
     client_id: normalizeText(card?.client_id),
-    assigned_staff_user_id: normalizeText(
-      card?.assigned_staff_user_id
-    ),
+    assigned_staff_user_id: normalizeText(card?.assigned_staff_user_id),
     period_start: normalizeDate(card?.period_start),
     period_end: normalizeDate(card?.period_end),
     period_key: normalizeText(card?.period_key),
-    pay_period_schedule_id: normalizeText(
-      card?.pay_period_schedule_id
-    ),
-    pay_period_schedule_version: asNumber(
-      card?.pay_period_schedule_version,
-      0
-    ),
+    pay_period_schedule_id: normalizeText(card?.pay_period_schedule_id),
+    pay_period_schedule_version: asNumber(card?.pay_period_schedule_version, 0),
     pay_period_label: normalizeText(card?.pay_period_label),
     pay_date: normalizeDate(card?.pay_date) || null,
     status: getCardStatus(card),
@@ -705,48 +548,30 @@ function projectCard(card: any, includeEntries = false) {
       .map((entryId) => normalizeText(entryId))
       .filter(Boolean),
     total_minutes: asNumber(card?.total_minutes, 0),
-    student_submission_revision: asNumber(
-      card?.student_submission_revision,
-      1
-    ),
-    staff_submission_revision: asNumber(
-      card?.staff_submission_revision,
-      0
-    ),
-    first_student_submitted_at:
-      card?.first_student_submitted_at ?? null,
-    last_student_submitted_at:
-      card?.last_student_submitted_at ?? null,
+    student_submission_revision: asNumber(card?.student_submission_revision, 1),
+    staff_submission_revision: asNumber(card?.staff_submission_revision, 0),
+    first_student_submitted_at: card?.first_student_submitted_at ?? null,
+    last_student_submitted_at: card?.last_student_submitted_at ?? null,
     student_submitted_by_user_id:
       normalizeText(card?.student_submitted_by_user_id) || null,
-    returned_to_student_at:
-      card?.returned_to_student_at ?? null,
+    returned_to_student_at: card?.returned_to_student_at ?? null,
     returned_to_student_by_user_id:
       normalizeText(card?.returned_to_student_by_user_id) || null,
-    return_to_student_note:
-      normalizeText(card?.return_to_student_note) || null,
-    staff_submitted_at:
-      card?.staff_submitted_at ?? null,
+    return_to_student_note: normalizeText(card?.return_to_student_note) || null,
+    staff_submitted_at: card?.staff_submitted_at ?? null,
     staff_submitted_by_user_id:
       normalizeText(card?.staff_submitted_by_user_id) || null,
-    returned_to_staff_at:
-      card?.returned_to_staff_at ?? null,
+    returned_to_staff_at: card?.returned_to_staff_at ?? null,
     returned_to_staff_by_user_id:
       normalizeText(card?.returned_to_staff_by_user_id) || null,
-    return_to_staff_note:
-      normalizeText(card?.return_to_staff_note) || null,
+    return_to_staff_note: normalizeText(card?.return_to_staff_note) || null,
     finalized_at: card?.finalized_at ?? null,
-    finalized_by_user_id:
-      normalizeText(card?.finalized_by_user_id) || null,
-    finalization_note:
-      normalizeText(card?.finalization_note) || null,
+    finalized_by_user_id: normalizeText(card?.finalized_by_user_id) || null,
+    finalization_note: normalizeText(card?.finalization_note) || null,
     archived_at: card?.archived_at ?? null,
   };
 
-  if (includeEntries) {
-    response.entries = getSnapshotEntries(card);
-  }
-
+  if (includeEntries) response.entries = getSnapshotEntries(card);
   return response;
 }
 
@@ -771,79 +596,62 @@ async function createActivity(
       },
     });
   } catch (error) {
-    console.error(
-      "Pre-ETS Time Card activity log error:",
-      error
-    );
+    console.error("Pre-ETS Time Card activity log error:", error);
   }
 }
 
-async function resolveCaller(
-  base44: any,
-  authenticatedUserId: string
-) {
+async function resolveCallerContext(base44: any, authenticatedUserId: string) {
   const caller = await base44.asServiceRole.entities.User.get(
     authenticatedUserId
   ).catch(() => null);
 
   if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Authenticated user record was not found or is inactive."
-    );
+    throw new RequestError(403, "Your account is inactive or unavailable.");
   }
 
   const organizationId = normalizeText(caller?.org_id);
-
   if (!organizationId) {
     throw new RequestError(
       403,
-      "Your account is not assigned to an organization."
+      "Your account is not assigned to an active organization."
     );
   }
 
-  const organization =
-    await base44.asServiceRole.entities.Organization.get(
-      organizationId
-    ).catch(() => null);
-
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
   if (!organization || !isActive(organization)) {
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
+  }
+
+  const staffRole = getCanonicalStaffRole(caller);
+  const isStudent = isCanonicalPreEtsStudent(caller);
+  if (!staffRole && !isStudent) {
     throw new RequestError(
       403,
-      "Your organization assignment is invalid or inactive."
+      "Your account is not authorized to use the Pre-ETS Time Card workflow."
     );
   }
 
   return {
     caller,
     organizationId,
-    callerRole: normalizeText(caller?.role).toLowerCase(),
+    staffRole,
+    isOrganizationAdmin: staffRole === "admin",
+    isManagement: staffRole === "management",
+    isStudent,
   };
 }
 
-async function loadStudentClient(
-  base44: any,
-  caller: any,
-  organizationId: string
-) {
-  const callerRole = normalizeText(caller?.role).toLowerCase();
-  const accessLevel = normalizeText(
-    caller?.access_level
-  ).toLowerCase();
-  const linkedClientId = normalizeText(
-    caller?.linked_client_id
-  );
-
-  if (
-    callerRole !== "pre_ets" ||
-    accessLevel !== "client_portal"
-  ) {
+async function loadStudentClient(base44: any, context: any) {
+  if (!context.isStudent) {
     throw new RequestError(
       403,
-      "You are not authorized to submit Pre-ETS student Time Cards."
+      "Only an authorized Pre-ETS student may submit this Time Card."
     );
   }
 
+  const linkedClientId = normalizeText(context?.caller?.linked_client_id);
   if (!linkedClientId) {
     throw new RequestError(
       403,
@@ -854,8 +662,7 @@ async function loadStudentClient(
   const client = await base44.asServiceRole.entities.Client.get(
     linkedClientId
   ).catch(() => null);
-
-  if (!isPreEtsClientInOrganization(client, organizationId)) {
+  if (!isPreEtsClientInOrganization(client, context.organizationId)) {
     throw new RequestError(
       403,
       "Your Pre-ETS student record is unavailable or no longer active."
@@ -865,10 +672,7 @@ async function loadStudentClient(
   return client;
 }
 
-async function loadOrganizationInternalUsers(
-  base44: any,
-  organizationId: string
-) {
+async function loadOrganizationStaff(base44: any, organizationId: string) {
   const users = await base44.asServiceRole.entities.User.filter({
     org_id: organizationId,
   });
@@ -877,7 +681,7 @@ async function loadOrganizationInternalUsers(
     (user: any) =>
       isActive(user) &&
       normalizeText(user?.org_id) === organizationId &&
-      isInternalStaff(user)
+      Boolean(getCanonicalStaffRole(user))
   );
 }
 
@@ -886,10 +690,7 @@ async function resolveAssignedStaffForClient(
   client: any,
   organizationId: string
 ) {
-  const assignmentValue = normalizeText(
-    client?.assigned_employee_id
-  );
-
+  const assignmentValue = normalizeText(client?.assigned_employee_id);
   if (!assignmentValue) {
     throw new RequestError(
       409,
@@ -897,15 +698,11 @@ async function resolveAssignedStaffForClient(
     );
   }
 
-  const internalUsers = await loadOrganizationInternalUsers(
-    base44,
-    organizationId
-  );
-
-  const assignedStaff = internalUsers.find(
+  const staff = await loadOrganizationStaff(base44, organizationId);
+  const assignedStaff = staff.find(
     (user: any) =>
       normalizeText(user?.id) === assignmentValue ||
-      normalizeText(user?.email) === assignmentValue
+      normalizeText(user?.email).toLowerCase() === assignmentValue.toLowerCase()
   );
 
   if (!assignedStaff?.id) {
@@ -918,15 +715,45 @@ async function resolveAssignedStaffForClient(
   return assignedStaff;
 }
 
+async function loadAssignedStaffFromCard(
+  base44: any,
+  organizationId: string,
+  card: any
+) {
+  const assignedStaffUserId = normalizeText(card?.assigned_staff_user_id);
+  if (!assignedStaffUserId) {
+    throw new RequestError(
+      409,
+      "This Pre-ETS Time Card has no assigned staff owner."
+    );
+  }
+
+  const assignedStaff = await base44.asServiceRole.entities.User.get(
+    assignedStaffUserId
+  ).catch(() => null);
+  if (
+    !assignedStaff ||
+    !isActive(assignedStaff) ||
+    normalizeText(assignedStaff?.org_id) !== organizationId ||
+    !getCanonicalStaffRole(assignedStaff)
+  ) {
+    throw new RequestError(
+      409,
+      "This Pre-ETS Time Card's assigned staff owner is unavailable."
+    );
+  }
+
+  return assignedStaff;
+}
+
 async function loadClientCards(
   base44: any,
   organizationId: string,
   clientId: string
 ) {
-  const cards =
-    await base44.asServiceRole.entities.PreEtsTimeCard.filter({
-      client_id: clientId,
-    });
+  const cards = await base44.asServiceRole.entities.PreEtsTimeCard.filter({
+    client_id: clientId,
+  });
 
   return asArray(cards).filter(
     (card: any) =>
@@ -936,28 +763,22 @@ async function loadClientCards(
   );
 }
 
-function getExactCardForPeriod(
-  cards: any[],
-  payPeriod: any
-) {
-  const matchingCards = cards.filter(
+function getExactCardForPeriod(cards: any[], payPeriod: any) {
+  const matches = cards.filter(
     (card: any) =>
-      normalizeText(card?.period_key) ===
-        normalizeText(payPeriod?.period_key) &&
-      normalizeDate(card?.period_start) ===
-        normalizeDate(payPeriod?.period_start) &&
-      normalizeDate(card?.period_end) ===
-        normalizeDate(payPeriod?.period_end)
+      normalizeText(card?.period_key) === normalizeText(payPeriod?.period_key) &&
+      normalizeDate(card?.period_start) === normalizeDate(payPeriod?.period_start) &&
+      normalizeDate(card?.period_end) === normalizeDate(payPeriod?.period_end)
   );
 
-  if (matchingCards.length > 1) {
+  if (matches.length > 1) {
     throw new RequestError(
       409,
       "More than one Pre-ETS Time Card exists for this student and payroll period."
     );
   }
 
-  return matchingCards[0] || null;
+  return matches[0] || null;
 }
 
 function assertNoConflictingCards(
@@ -967,31 +788,20 @@ function assertNoConflictingCards(
   excludedCardId = ""
 ) {
   const conflictingCard = cards.find((card: any) => {
-    if (normalizeText(card?.id) === excludedCardId) {
-      return false;
-    }
-
+    if (normalizeText(card?.id) === excludedCardId) return false;
     const cardStart = normalizeDate(card?.period_start);
     const cardEnd = normalizeDate(card?.period_end);
-
-    if (!cardStart || !cardEnd) {
-      return true;
-    }
-
-    return periodsOverlap(
-      periodStart,
-      periodEnd,
-      cardStart,
-      cardEnd
+    return (
+      !cardStart ||
+      !cardEnd ||
+      periodsOverlap(periodStart, periodEnd, cardStart, cardEnd)
     );
   });
 
   if (conflictingCard) {
     throw new RequestError(
       409,
-      `This payroll period overlaps an existing Pre-ETS Time Card (${normalizeText(
-        conflictingCard?.id
-      )}).`
+      "This payroll period overlaps an existing Pre-ETS Time Card."
     );
   }
 }
@@ -1007,7 +817,6 @@ async function loadEligibleStudentEntries(
     await base44.asServiceRole.entities.PreEtsClientTimeEntry.filter({
       client_id: clientId,
     });
-
   const periodEntries = asArray(entries).filter(
     (entry: any) =>
       isActive(entry) &&
@@ -1019,10 +828,8 @@ async function loadEligibleStudentEntries(
 
   const rejectedEntries = periodEntries.filter(
     (entry: any) =>
-      (normalizeText(entry?.status).toLowerCase() || "pending") ===
-      "rejected"
+      (normalizeText(entry?.status).toLowerCase() || "pending") === "rejected"
   );
-
   if (rejectedEntries.length > 0) {
     throw new RequestError(
       409,
@@ -1031,12 +838,9 @@ async function loadEligibleStudentEntries(
   }
 
   const unsupportedEntries = periodEntries.filter((entry: any) => {
-    const status =
-      normalizeText(entry?.status).toLowerCase() || "pending";
-
+    const status = normalizeText(entry?.status).toLowerCase() || "pending";
     return status !== "pending" && status !== "approved";
   });
-
   if (unsupportedEntries.length > 0) {
     throw new RequestError(
       409,
@@ -1063,7 +867,6 @@ async function loadCurrentCardEntries(
   const requestedEntryIds = new Set(
     entryIds.map((entryId) => normalizeText(entryId)).filter(Boolean)
   );
-
   if (requestedEntryIds.size === 0) {
     throw new RequestError(
       409,
@@ -1075,7 +878,6 @@ async function loadCurrentCardEntries(
     await base44.asServiceRole.entities.PreEtsClientTimeEntry.filter({
       client_id: clientId,
     });
-
   const matchingEntries = asArray(entries).filter(
     (entry: any) =>
       isActive(entry) &&
@@ -1094,12 +896,8 @@ async function loadCurrentCardEntries(
   return sortEntries(matchingEntries);
 }
 
-function assertCardEntriesMatchSnapshot(
-  card: any,
-  currentEntries: any[]
-) {
+function assertCardEntriesMatchSnapshot(card: any, currentEntries: any[]) {
   const snapshotEntries = getSnapshotEntries(card);
-
   if (snapshotEntries.length !== currentEntries.length) {
     throw new RequestError(
       409,
@@ -1108,24 +906,14 @@ function assertCardEntriesMatchSnapshot(
   }
 
   const snapshotById = new Map(
-    snapshotEntries.map((entry: any) => [
-      normalizeText(entry?.id),
-      entry,
-    ])
+    snapshotEntries.map((entry: any) => [normalizeText(entry?.id), entry])
   );
-
   for (const currentEntry of currentEntries) {
-    const currentSnapshot = buildEntrySnapshotRecord(
-      currentEntry
-    );
-    const submittedSnapshot = snapshotById.get(
-      currentSnapshot.id
-    );
-
+    const currentSnapshot = buildEntrySnapshotRecord(currentEntry);
+    const submittedSnapshot = snapshotById.get(currentSnapshot.id);
     if (
       !submittedSnapshot ||
-      stableStringify(submittedSnapshot) !==
-        stableStringify(currentSnapshot)
+      stableStringify(submittedSnapshot) !== stableStringify(currentSnapshot)
     ) {
       throw new RequestError(
         409,
@@ -1141,23 +929,13 @@ async function loadScopedCard(
   timeCardId: string
 ) {
   if (!timeCardId) {
-    throw new RequestError(
-      400,
-      "time_card_id is required."
-    );
+    throw new RequestError(400, "Choose a Pre-ETS Time Card.");
   }
 
   const card = await base44.asServiceRole.entities.PreEtsTimeCard.get(
     timeCardId
   ).catch(() => null);
-
-  if (!card) {
-    throw new RequestError(
-      404,
-      "Pre-ETS Time Card not found."
-    );
-  }
-
+  if (!card) throw new RequestError(404, "Pre-ETS Time Card was not found.");
   if (
     normalizeText(card?.org_id) !== organizationId ||
     !PRE_ETS_TIME_CARD_STATUSES.has(getCardStatus(card))
@@ -1171,42 +949,22 @@ async function loadScopedCard(
   const client = await base44.asServiceRole.entities.Client.get(
     normalizeText(card?.client_id)
   ).catch(() => null);
-
   if (!isPreEtsClientInOrganization(client, organizationId)) {
-    throw new RequestError(
-      404,
-      "Pre-ETS student record not found."
-    );
+    throw new RequestError(404, "Pre-ETS student record was not found.");
   }
 
-  return {
-    card,
-    client,
-  };
+  return { card, client };
 }
 
-function assertCallerMayActAsAssignedStaff(
-  caller: any,
-  card: any
-) {
-  const callerRole = normalizeText(caller?.role).toLowerCase();
-  const callerId = normalizeText(caller?.id);
-  const assignedStaffUserId = normalizeText(
-    card?.assigned_staff_user_id
-  );
-
-  if (callerRole === "admin") {
-    return;
-  }
-
-  if (!isInternalStaff(caller)) {
+function assertCallerMayActAsAssignedStaff(context: any, assignedStaff: any) {
+  if (!context.staffRole) {
     throw new RequestError(
       403,
       "You are not authorized to review Pre-ETS student Time Cards."
     );
   }
-
-  if (!callerId || callerId !== assignedStaffUserId) {
+  if (context.isOrganizationAdmin) return;
+  if (normalizeText(context?.caller?.id) !== normalizeText(assignedStaff?.id)) {
     throw new RequestError(
       403,
       "Only the assigned job coach or staff member may take this Time Card action."
@@ -1216,30 +974,23 @@ function assertCallerMayActAsAssignedStaff(
 
 async function assertCallerMayFinalizeOrReturnToStaff(
   base44: any,
-  caller: any,
-  organizationId: string,
+  context: any,
+  assignedStaff: any,
   card: any
 ) {
-  const callerRole = normalizeText(caller?.role).toLowerCase();
-  const callerId = normalizeText(caller?.id);
-  const assignedStaffUserId = normalizeText(
-    card?.assigned_staff_user_id
-  );
-  const staffSubmittedByUserId = normalizeText(
-    card?.staff_submitted_by_user_id
-  );
-
-  if (!isInternalStaff(caller)) {
+  if (!context.staffRole) {
     throw new RequestError(
       403,
       "You are not authorized to finalize Pre-ETS student Time Cards."
     );
   }
 
+  const callerId = normalizeText(context?.caller?.id);
+  const assignedStaffUserId = normalizeText(assignedStaff?.id);
+  const staffSubmittedByUserId = normalizeText(card?.staff_submitted_by_user_id);
   if (
     callerId &&
-    (callerId === assignedStaffUserId ||
-      callerId === staffSubmittedByUserId)
+    (callerId === assignedStaffUserId || callerId === staffSubmittedByUserId)
   ) {
     throw new RequestError(
       403,
@@ -1247,11 +998,8 @@ async function assertCallerMayFinalizeOrReturnToStaff(
     );
   }
 
-  if (callerRole === "admin") {
-    return;
-  }
-
-  if (callerRole !== "management") {
+  if (context.isOrganizationAdmin) return;
+  if (!context.isManagement) {
     throw new RequestError(
       403,
       "Only management or organization administrators may finalize Pre-ETS student Time Cards."
@@ -1263,17 +1011,14 @@ async function assertCallerMayFinalizeOrReturnToStaff(
       manager_user_id: callerId,
       employee_user_id: assignedStaffUserId,
     });
-
   const hasActiveAssignment = asArray(assignments).some(
     (assignment: any) =>
       assignment?.is_active === true &&
       assignment?.is_archived !== true &&
-      normalizeText(assignment?.org_id) === organizationId &&
+      normalizeText(assignment?.org_id) === context.organizationId &&
       normalizeText(assignment?.manager_user_id) === callerId &&
-      normalizeText(assignment?.employee_user_id) ===
-        assignedStaffUserId
+      normalizeText(assignment?.employee_user_id) === assignedStaffUserId
   );
-
   if (!hasActiveAssignment) {
     throw new RequestError(
       403,
@@ -1294,12 +1039,8 @@ function buildStudentSubmissionPayload(
   staffSubmissionRevision: number,
   firstStudentSubmittedAt: string
 ) {
-  const entryIds = entries.map((entry: any) =>
-    normalizeText(entry?.id)
-  );
   const totalMinutes = entries.reduce(
-    (total: number, entry: any) =>
-      total + asNumber(entry?.duration_minutes, 0),
+    (total: number, entry: any) => total + asNumber(entry?.duration_minutes, 0),
     0
   );
 
@@ -1311,12 +1052,11 @@ function buildStudentSubmissionPayload(
     period_end: payPeriod.period_end,
     period_key: payPeriod.period_key,
     pay_period_schedule_id: payPeriod.schedule_id,
-    pay_period_schedule_version:
-      payPeriod.schedule_version,
+    pay_period_schedule_version: payPeriod.schedule_version,
     pay_period_label: payPeriod.label,
     pay_date: payPeriod.pay_date,
     status: "submitted_to_staff",
-    entry_ids: entryIds,
+    entry_ids: entries.map((entry: any) => normalizeText(entry?.id)),
     entry_snapshot: buildEntrySnapshot(entries, now),
     total_minutes: totalMinutes,
     student_submission_revision: studentSubmissionRevision,
@@ -1343,65 +1083,51 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
       return Response.json(
-        { error: "Method not allowed." },
+        { ok: false, error: "This route accepts POST requests only." },
         { status: 405 }
       );
     }
 
-    const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
-
-    if (!authenticatedUser?.id) {
-      return Response.json(
-        { error: "Unauthorized." },
-        { status: 401 }
-      );
-    }
-
-    const requestBody = await req.json().catch(() => ({}));
-    const action = normalizeText(requestBody?.action);
-
+    const requestBody: any = await req.json().catch(() => ({}));
+    const action = normalizeText(requestBody?.action).toLowerCase();
     if (!SUPPORTED_ACTIONS.has(action)) {
-      return Response.json(
-        { error: "Unsupported action." },
-        { status: 400 }
+      throw new RequestError(400, "Choose a valid Pre-ETS Time Card action.");
+    }
+
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
+    if (!authenticatedUser?.id) {
+      throw new RequestError(
+        401,
+        "You must be signed in to use Pre-ETS Time Cards."
       );
     }
 
-    const { caller, organizationId } = await resolveCaller(
-      base44,
-      authenticatedUser.id
-    );
+    const context = await resolveCallerContext(base44, authenticatedUser.id);
 
     if (
       action === "preview_student_time_card" ||
       action === "submit_student_time_card"
     ) {
-      const referenceDate = getReferenceDate(requestBody);
-      const client = await loadStudentClient(
-        base44,
-        caller,
-        organizationId
-      );
+      const timeCardInput = getTimeCardInput(requestBody);
+      const referenceDate = getReferenceDate(timeCardInput);
+      const client = await loadStudentClient(base44, context);
       const assignedStaff = await resolveAssignedStaffForClient(
         base44,
         client,
-        organizationId
+        context.organizationId
       );
       const payPeriod = await resolveOrganizationPayPeriod(
         base44,
-        organizationId,
+        context.organizationId,
         referenceDate
       );
       const existingCards = await loadClientCards(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id)
       );
-      const exactCard = getExactCardForPeriod(
-        existingCards,
-        payPeriod
-      );
+      const exactCard = getExactCardForPeriod(existingCards, payPeriod);
 
       if (action === "preview_student_time_card") {
         if (
@@ -1411,7 +1137,7 @@ Deno.serve(async (req) => {
           return Response.json({
             ok: true,
             action,
-            pay_period: payPeriod,
+            pay_period: projectPayPeriod(payPeriod),
             existing_time_card: projectCard(exactCard, true),
             entries: getSnapshotEntries(exactCard),
             locked: true,
@@ -1424,10 +1150,9 @@ Deno.serve(async (req) => {
           payPeriod.period_end,
           normalizeText(exactCard?.id)
         );
-
         const entries = await loadEligibleStudentEntries(
           base44,
-          organizationId,
+          context.organizationId,
           normalizeText(client?.id),
           payPeriod.period_start,
           payPeriod.period_end
@@ -1436,10 +1161,8 @@ Deno.serve(async (req) => {
         return Response.json({
           ok: true,
           action,
-          pay_period: payPeriod,
-          existing_time_card: exactCard
-            ? projectCard(exactCard, true)
-            : null,
+          pay_period: projectPayPeriod(payPeriod),
+          existing_time_card: exactCard ? projectCard(exactCard, true) : null,
           entries: entries.map(buildEntrySnapshotRecord),
           locked: false,
         });
@@ -1461,37 +1184,31 @@ Deno.serve(async (req) => {
         payPeriod.period_end,
         normalizeText(exactCard?.id)
       );
-
       const entries = await loadEligibleStudentEntries(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         payPeriod.period_start,
         payPeriod.period_end
       );
-
       const now = new Date().toISOString();
       const studentSubmissionRevision = exactCard
-        ? asNumber(exactCard?.student_submission_revision, 1) + 1
+        ? Math.max(1, asNumber(exactCard?.student_submission_revision, 1)) + 1
         : 1;
       const staffSubmissionRevision = exactCard
-        ? asNumber(exactCard?.staff_submission_revision, 0)
+        ? Math.max(0, asNumber(exactCard?.staff_submission_revision, 0))
         : 0;
-      const firstStudentSubmittedAt =
-        normalizeText(exactCard?.first_student_submitted_at) ||
-        now;
-
       const payload = buildStudentSubmissionPayload(
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         normalizeText(assignedStaff?.id),
         payPeriod,
         entries,
-        normalizeText(caller?.id),
+        normalizeText(context?.caller?.id),
         now,
         studentSubmissionRevision,
         staffSubmissionRevision,
-        firstStudentSubmittedAt
+        normalizeText(exactCard?.first_student_submitted_at) || now
       );
 
       const timeCard = exactCard
@@ -1499,13 +1216,11 @@ Deno.serve(async (req) => {
             exactCard.id,
             payload
           )
-        : await base44.asServiceRole.entities.PreEtsTimeCard.create(
-            payload
-          );
+        : await base44.asServiceRole.entities.PreEtsTimeCard.create(payload);
 
       await createActivity(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         exactCard
           ? "Pre-ETS Time Card resubmitted to staff"
@@ -1520,7 +1235,7 @@ Deno.serve(async (req) => {
         ok: true,
         action,
         resubmitted: Boolean(exactCard),
-        pay_period: payPeriod,
+        pay_period: projectPayPeriod(payPeriod),
         time_card: projectCard(timeCard, true),
       });
     }
@@ -1528,11 +1243,16 @@ Deno.serve(async (req) => {
     const timeCardId = normalizeText(requestBody?.time_card_id);
     const { card, client } = await loadScopedCard(
       base44,
-      organizationId,
+      context.organizationId,
       timeCardId
     );
+    const assignedStaff = await loadAssignedStaffFromCard(
+      base44,
+      context.organizationId,
+      card
+    );
     const cardStatus = getCardStatus(card);
-    const callerId = normalizeText(caller?.id);
+    const callerId = normalizeText(context?.caller?.id);
 
     if (action === "return_to_student") {
       if (
@@ -1544,34 +1264,28 @@ Deno.serve(async (req) => {
           "Only Time Cards awaiting staff review may be returned to the student."
         );
       }
+      assertCallerMayActAsAssignedStaff(context, assignedStaff);
 
-      assertCallerMayActAsAssignedStaff(caller, card);
-
-      const returnNote = normalizeText(
-        requestBody?.return_to_student_note
-      );
-
+      const returnNote = normalizeText(requestBody?.return_to_student_note);
       if (!returnNote) {
         throw new RequestError(
           400,
-          "A correction note is required when returning a Pre-ETS Time Card to the student."
+          "Add a correction note before returning this Pre-ETS Time Card to the student."
         );
       }
 
-      const updated =
-        await base44.asServiceRole.entities.PreEtsTimeCard.update(
-          card.id,
-          {
-            status: "returned_to_student",
-            returned_to_student_at: new Date().toISOString(),
-            returned_to_student_by_user_id: callerId,
-            return_to_student_note: returnNote.slice(0, 4000),
-          }
-        );
-
+      const updated = await base44.asServiceRole.entities.PreEtsTimeCard.update(
+        card.id,
+        {
+          status: "returned_to_student",
+          returned_to_student_at: new Date().toISOString(),
+          returned_to_student_by_user_id: callerId,
+          return_to_student_note: returnNote.slice(0, 4000),
+        }
+      );
       await createActivity(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         "Pre-ETS Time Card returned to student",
         "Assigned staff returned the student's Time Card for correction.",
@@ -1595,38 +1309,33 @@ Deno.serve(async (req) => {
           "Only Time Cards awaiting staff action may be submitted to manager or payroll."
         );
       }
-
-      assertCallerMayActAsAssignedStaff(caller, card);
+      assertCallerMayActAsAssignedStaff(context, assignedStaff);
 
       const currentEntries = await loadCurrentCardEntries(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         asArray(card?.entry_ids)
       );
-
       assertCardEntriesMatchSnapshot(card, currentEntries);
 
       const now = new Date().toISOString();
-
-      const updated =
-        await base44.asServiceRole.entities.PreEtsTimeCard.update(
-          card.id,
-          {
-            status: "submitted_to_manager_payroll",
-            staff_submission_revision:
-              asNumber(card?.staff_submission_revision, 0) + 1,
-            staff_submitted_at: now,
-            staff_submitted_by_user_id: callerId,
-            returned_to_staff_at: null,
-            returned_to_staff_by_user_id: null,
-            return_to_staff_note: null,
-          }
-        );
-
+      const updated = await base44.asServiceRole.entities.PreEtsTimeCard.update(
+        card.id,
+        {
+          status: "submitted_to_manager_payroll",
+          staff_submission_revision:
+            Math.max(0, asNumber(card?.staff_submission_revision, 0)) + 1,
+          staff_submitted_at: now,
+          staff_submitted_by_user_id: callerId,
+          returned_to_staff_at: null,
+          returned_to_staff_by_user_id: null,
+          return_to_staff_note: null,
+        }
+      );
       await createActivity(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         "Pre-ETS Time Card submitted to manager / payroll",
         "Assigned staff submitted the student's Time Card to manager or payroll for final review.",
@@ -1647,39 +1356,33 @@ Deno.serve(async (req) => {
           "Only Time Cards submitted to manager or payroll may be returned to staff."
         );
       }
-
       await assertCallerMayFinalizeOrReturnToStaff(
         base44,
-        caller,
-        organizationId,
+        context,
+        assignedStaff,
         card
       );
 
-      const returnNote = normalizeText(
-        requestBody?.return_to_staff_note
-      );
-
+      const returnNote = normalizeText(requestBody?.return_to_staff_note);
       if (!returnNote) {
         throw new RequestError(
           400,
-          "A return note is required when sending a Pre-ETS Time Card back to staff."
+          "Add a return note before sending this Pre-ETS Time Card back to staff."
         );
       }
 
-      const updated =
-        await base44.asServiceRole.entities.PreEtsTimeCard.update(
-          card.id,
-          {
-            status: "returned_to_staff",
-            returned_to_staff_at: new Date().toISOString(),
-            returned_to_staff_by_user_id: callerId,
-            return_to_staff_note: returnNote.slice(0, 4000),
-          }
-        );
-
+      const updated = await base44.asServiceRole.entities.PreEtsTimeCard.update(
+        card.id,
+        {
+          status: "returned_to_staff",
+          returned_to_staff_at: new Date().toISOString(),
+          returned_to_staff_by_user_id: callerId,
+          return_to_staff_note: returnNote.slice(0, 4000),
+        }
+      );
       await createActivity(
         base44,
-        organizationId,
+        context.organizationId,
         normalizeText(client?.id),
         "Pre-ETS Time Card returned to staff",
         "Manager or payroll returned the student's Time Card to assigned staff for resolution.",
@@ -1699,46 +1402,38 @@ Deno.serve(async (req) => {
         "Only Time Cards submitted to manager or payroll may be finalized."
       );
     }
-
     await assertCallerMayFinalizeOrReturnToStaff(
       base44,
-      caller,
-      organizationId,
+      context,
+      assignedStaff,
       card
     );
 
     const currentEntries = await loadCurrentCardEntries(
       base44,
-      organizationId,
+      context.organizationId,
       normalizeText(client?.id),
       asArray(card?.entry_ids)
     );
-
     assertCardEntriesMatchSnapshot(card, currentEntries);
 
-    const finalizationNote = normalizeText(
-      requestBody?.finalization_note
-    );
-
+    const finalizationNote = normalizeText(requestBody?.finalization_note);
     const now = new Date().toISOString();
-
-    const updated =
-      await base44.asServiceRole.entities.PreEtsTimeCard.update(
-        card.id,
-        {
-          status: "finalized",
-          finalized_at: now,
-          finalized_by_user_id: callerId,
-          finalization_note: finalizationNote
-            ? finalizationNote.slice(0, 4000)
-            : "",
-          archived_at: now,
-        }
-      );
-
+    const updated = await base44.asServiceRole.entities.PreEtsTimeCard.update(
+      card.id,
+      {
+        status: "finalized",
+        finalized_at: now,
+        finalized_by_user_id: callerId,
+        finalization_note: finalizationNote
+          ? finalizationNote.slice(0, 4000)
+          : "",
+        archived_at: now,
+      }
+    );
     await createActivity(
       base44,
-      organizationId,
+      context.organizationId,
       normalizeText(client?.id),
       "Pre-ETS Time Card finalized",
       "Manager or payroll finalized the student's Time Card and moved it to the archive.",
@@ -1751,24 +1446,21 @@ Deno.serve(async (req) => {
       time_card: projectCard(updated, true),
     });
   } catch (error: any) {
-    const status =
-      error instanceof RequestError ? error.status : 500;
-
-    const message =
-      error instanceof RequestError
-        ? error.message
-        : error?.message ||
-          "Unable to process the Pre-ETS Time Card request.";
-
+    const status = error instanceof RequestError ? error.status : 500;
     if (!(error instanceof RequestError)) {
       console.error(
         "mutateAuthorizedPreEtsTimeCard error:",
         error?.message || error
       );
     }
-
     return Response.json(
-      { error: message },
+      {
+        ok: false,
+        error:
+          error instanceof RequestError
+            ? error.message
+            : "Unable to process the Pre-ETS Time Card request. Please try again.",
+      },
       { status }
     );
   }
