@@ -1,155 +1,40 @@
 {
   "name": "JobRecommendationBatch",
   "type": "object",
-  "description": "Groups job recommendations from a single AI search run with full provenance and staff review tracking.",
+  "description": "Groups job recommendations from a single AI search run with full provenance and staff review tracking. Access is server-authorized and organization-scoped through the linked client.",
   "properties": {
-    "client_id": {
-      "type": "string",
-      "description": "FK to Client"
-    },
-    "search_summary": {
-      "type": "string",
-      "description": "AI-generated summary of what this batch searched for"
-    },
-    "grounding_note": {
-      "type": "string",
-      "description": "How the vocational facts profile was used to filter/prioritize jobs"
-    },
-    "custom_instructions": {
-      "type": "string",
-      "description": "Staff-provided search instructions"
-    },
-    "search_filters": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "Applied filters: locationRadius, workType, employmentType, industry, payMin, payMax, schedule"
-    },
-    "search_terms_used": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "List of search queries executed"
-    },
-    "assessments_used": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "IDs of Assessment records used in this batch"
-    },
-    "client_fields_used": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Client record fields used (e.g., target_role, industry, location)"
-    },
-    "data_sources_used": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "All data sources (assessments, documents, VFP, goals, notes, applications)"
-    },
-    "vocational_profile_version": {
-      "type": "number",
-      "default": 1,
-      "description": "Version of vocational facts profile used for grounding"
-    },
-    "has_vocational_facts": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this batch was grounded in extracted vocational facts"
-    },
-    "data_quality_score": {
-      "type": "number",
-      "default": 0,
-      "description": "Quality score of underlying vocational facts (0-100)"
-    },
-    "job_count": {
-      "type": "number",
-      "description": "Number of JobRecommendation records in this batch"
-    },
-    "generated_by": {
-      "type": "string",
-      "description": "Email of staff who triggered the search"
-    },
-    "generated_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO datetime batch was created"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending_review",
-        "fully_reviewed",
-        "actioned",
-        "archived"
-      ],
-      "default": "pending_review",
-      "description": "Batch workflow status"
-    },
-    "reviewed_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When staff completed review of all recommendations"
-    },
-    "reviewed_by": {
-      "type": "string",
-      "description": "Email of staff reviewer"
-    },
-    "review_notes": {
-      "type": "string",
-      "description": "Staff notes on overall batch quality/fit"
-    },
-    "is_archived": {
-      "type": "boolean",
-      "default": false,
-      "description": "Soft-delete flag"
-    },
-    "resume_skills_json": {
-      "type": "string"
-    },
-    "wsa_json": {
-      "type": "string"
-    },
-    "riasec_scores_json": {
-      "type": "string"
-    },
-    "assessment_summary_json": {
-      "type": "string"
-    },
-    "top_strengths_json": {
-      "type": "string"
-    },
-    "top_barriers_json": {
-      "type": "string"
-    },
-    "recommended_job_fields_json": {
-      "type": "string"
-    },
-    "recommendation_explanation": {
-      "type": "string"
-    },
-    "ai_coach_summary": {
-      "type": "string",
-      "description": "AI Job Coach guidance text for this recommendation batch"
-    },
-    "confidence_score": {
-      "type": "number"
-    },
-    "last_recommendation_run_at": {
-      "type": "string",
-      "format": "date-time"
-    }
+    "client_id": { "type": "string", "description": "FK to Client" },
+    "search_summary": { "type": "string", "description": "AI-generated summary of what this batch searched for" },
+    "grounding_note": { "type": "string", "description": "How the vocational facts profile was used to filter/prioritize jobs" },
+    "custom_instructions": { "type": "string", "description": "Staff-provided search instructions" },
+    "search_filters": { "type": "object", "additionalProperties": true, "description": "Applied filters: locationRadius, workType, employmentType, industry, payMin, payMax, schedule" },
+    "search_terms_used": { "type": "array", "items": { "type": "string" }, "description": "List of search queries executed" },
+    "assessments_used": { "type": "array", "items": { "type": "string" }, "description": "IDs of Assessment records used in this batch" },
+    "client_fields_used": { "type": "array", "items": { "type": "string" }, "description": "Client record fields used (e.g., target_role, industry, location)" },
+    "data_sources_used": { "type": "array", "items": { "type": "string" }, "description": "All data sources (assessments, documents, VFP, goals, notes, applications)" },
+    "vocational_profile_version": { "type": "number", "default": 1, "description": "Version of vocational facts profile used for grounding" },
+    "has_vocational_facts": { "type": "boolean", "default": false, "description": "Whether this batch was grounded in extracted vocational facts" },
+    "data_quality_score": { "type": "number", "default": 0, "description": "Quality score of underlying vocational facts (0-100)" },
+    "job_count": { "type": "number", "description": "Number of JobRecommendation records in this batch" },
+    "generated_by": { "type": "string", "description": "Email of staff who triggered the search" },
+    "generated_at": { "type": "string", "format": "date-time", "description": "ISO datetime batch was created" },
+    "status": { "type": "string", "enum": ["pending_review", "fully_reviewed", "actioned", "archived"], "default": "pending_review", "description": "Batch workflow status" },
+    "reviewed_at": { "type": "string", "format": "date-time", "description": "When staff completed review of all recommendations" },
+    "reviewed_by": { "type": "string", "description": "Email of staff reviewer" },
+    "review_notes": { "type": "string", "description": "Staff notes on overall batch quality/fit" },
+    "is_archived": { "type": "boolean", "default": false, "description": "Soft-delete flag" },
+    "resume_skills_json": { "type": "string" },
+    "wsa_json": { "type": "string" },
+    "riasec_scores_json": { "type": "string" },
+    "assessment_summary_json": { "type": "string" },
+    "top_strengths_json": { "type": "string" },
+    "top_barriers_json": { "type": "string" },
+    "recommended_job_fields_json": { "type": "string" },
+    "recommendation_explanation": { "type": "string" },
+    "ai_coach_summary": { "type": "string", "description": "AI Job Coach guidance text for this recommendation batch" },
+    "confidence_score": { "type": "number" },
+    "last_recommendation_run_at": { "type": "string", "format": "date-time" }
   },
-  "required": [
-    "client_id",
-    "search_summary",
-    "job_count",
-    "generated_by",
-    "generated_at"
-  ]
+  "required": ["client_id", "search_summary", "job_count", "generated_by", "generated_at"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
