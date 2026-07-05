@@ -5,6 +5,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
+const SAFE_APP_URL_FALLBACK = "https://app.base44.com";
 
 const stripe = STRIPE_SECRET_KEY
   ? new Stripe(STRIPE_SECRET_KEY)
@@ -119,7 +120,24 @@ function formatMoney(amountCents: unknown, currency: unknown) {
 }
 
 function getAppUrl() {
-  return APP_URL.replace(/\/+$/, "");
+  const configuredUrl = normalizeText(APP_URL);
+
+  try {
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // Use the safe fallback below when APP_URL is malformed.
+  }
+
+  return SAFE_APP_URL_FALLBACK;
 }
 
 function getDisplayName(user: any) {
@@ -1156,15 +1174,15 @@ async function createOrReuseCheckout({
   }
 
   if (existingCheckout?.completed) {
-  throw new RequestError(
-    409,
-    "A previous CE registration checkout is still awaiting payment confirmation. Do not create another checkout session."
-  );
-}
+    throw new RequestError(
+      409,
+      "A previous CE registration checkout is still awaiting payment confirmation. Do not create another checkout session."
+    );
+  }
 
   const { successUrl, cancelUrl } = buildCheckoutRedirectUrls();
 
-    const checkoutAttemptKey = existingCheckout?.expired
+  const checkoutAttemptKey = existingCheckout?.expired
     ? `${billingEvent.id}:${paymentResponsibility}:retry:${existingCheckout.session.id}`
     : `${billingEvent.id}:${paymentResponsibility}:initial`;
 
