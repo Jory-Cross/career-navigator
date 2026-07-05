@@ -5,11 +5,11 @@ const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const APP_URL =
   Deno.env.get("APP_URL") || "https://app.base44.com";
 
-const STAFF_ROLES = new Set([
-  "admin",
-  "management",
-  "employee",
-]);
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 const FREE_DOMAINS = [
   "gmail.com",
@@ -51,6 +51,12 @@ function asArray<T = any>(value: unknown): T[] {
 function isActive(record: any) {
   return record?.is_active !== false &&
     record?.is_archived !== true;
+}
+
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
 }
 
 function escapeHtml(value: unknown) {
@@ -234,19 +240,10 @@ async function resolveCanonicalCaller(
     );
   }
 
-   const callerRole = normalizeText(caller?.role).toLowerCase();
-  const callerAccessLevel = normalizeText(
-    caller?.access_level
-  ).toLowerCase();
+  const callerRole = getCanonicalStaffRole(caller);
   const organizationId = normalizeText(caller?.org_id);
 
-  const expectedAccessLevel =
-    callerRole === "admin" ? "admin" : "staff";
-
-  if (
-    !STAFF_ROLES.has(callerRole) ||
-    callerAccessLevel !== expectedAccessLevel
-  ) {
+  if (!callerRole) {
     throw new RequestError(
       "You are not authorized to send client portal invitations."
     );
@@ -303,43 +300,30 @@ async function resolveAuthorizedClient(
     return client;
   }
 
-  const assignmentValue = normalizeText(
+  const assignedStaffId = normalizeText(
     client?.assigned_employee_id
   );
 
-  if (!assignmentValue) {
+  if (!assignedStaffId) {
     throw new RequestError(
       "This client must be assigned to a staff member before a portal invitation can be sent."
     );
   }
 
-  const organizationUsers =
-    await base44.asServiceRole.entities.User.filter({
-      org_id: organizationId,
-    });
+  const assignedStaff = await base44.asServiceRole.entities.User.get(
+    assignedStaffId
+  ).catch(() => null);
 
-  const activeOrganizationUsers = asArray(
-    organizationUsers
-  ).filter(
-    (user: any) =>
-      isActive(user) &&
-      normalizeText(user?.org_id) === organizationId
-  );
-
-  const assignedStaff = activeOrganizationUsers.find(
-    (user: any) =>
-      normalizeText(user?.id) === assignmentValue ||
-      normalizeEmail(user?.email) ===
-        normalizeEmail(assignmentValue)
-  );
-
-  if (!assignedStaff?.id) {
+  if (
+    !assignedStaff ||
+    !isActive(assignedStaff) ||
+    normalizeText(assignedStaff?.org_id) !== organizationId ||
+    !getCanonicalStaffRole(assignedStaff)
+  ) {
     throw new RequestError(
       "The client is assigned to a staff member who is no longer active in this organization."
     );
   }
-
-  const assignedStaffId = normalizeText(assignedStaff?.id);
 
   if (callerId === assignedStaffId) {
     return client;
@@ -411,7 +395,7 @@ Deno.serve(async (req) => {
       });
     }
 
-        const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
     const clientId = normalizeText(body?.clientId);
 
     if (!clientId) {
@@ -477,7 +461,7 @@ Deno.serve(async (req) => {
         email: clientEmail,
       });
 
-       const openAssignmentStatuses = new Set([
+    const openAssignmentStatuses = new Set([
       "pending",
       "invite_email_sent",
       "pending_email_failed",
