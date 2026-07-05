@@ -213,8 +213,12 @@ Deno.serve(async (req) => {
         .filter(Boolean)
     );
 
-    const visibleClients = activeClients.filter((client: any) =>
-      visibleMemberUserIds.has(normalizeText(client?.assigned_employee_id))
+    const visibleClients = activeClients.filter(
+      (client: any) =>
+        visibleMemberUserIds.has(normalizeText(client?.assigned_employee_id)) &&
+        normalizeText(client?.client_type).toLowerCase() === "ce_training" &&
+        client?.is_training_client === true &&
+        authorizedCohortIds.has(normalizeText(client?.cohort_id))
     );
 
     return Response.json({
