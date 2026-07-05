@@ -33,6 +33,15 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function isSafeUploadedFileUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function isPreEtsClientInOrganization(
   client: any,
   organizationId: string
@@ -81,8 +90,11 @@ function buildStudentDocumentPayload(
 
   const rawFileSize = Number(rawDocument?.file_size);
 
-  if (!fileUrl) {
-    throw new RequestError(400, "file_url is required.");
+  if (!fileUrl || !isSafeUploadedFileUrl(fileUrl)) {
+    throw new RequestError(
+      400,
+      "The uploaded document link is invalid. Upload the file again and try again."
+    );
   }
 
   if (!title) {
