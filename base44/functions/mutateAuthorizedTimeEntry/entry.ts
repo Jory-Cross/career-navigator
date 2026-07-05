@@ -142,6 +142,11 @@ function normalizeLegacyFormDataKeys(formData: unknown, entryTypeCode: string) {
   return normalized;
 }
 
+/**
+ * Historical submitted records without the marker remain excluded. Approved
+ * and locked records preserve the historical accounting policy. A new record
+ * receives the marker only from this route at creation; updates never add it.
+ */
 function isAuthorizationCounted(entry: any) {
   const status = normalizeText(entry?.status).toLowerCase();
 
@@ -987,11 +992,11 @@ Deno.serve(async (req) => {
         timeEntryInput?.service_authorization_id ?? body?.service_authorization_id
       );
       prepared.service_authorization_id = authorizationId || null;
-      prepared.authorization_usage_eligible =
-        Boolean(authorizationId) && ["submitted", "approved"].includes(prepared.status);
-      prepared.authorization_usage_eligible_at = prepared.authorization_usage_eligible
-        ? new Date().toISOString()
-        : null;
+      // This marker is a forward-only creation timestamp, not a status test.
+      // Drafts created after the rule may later become submitted and count;
+      // updates preserve the historical marker instead of backfilling it.
+      prepared.authorization_usage_eligible = true;
+      prepared.authorization_usage_eligible_at = new Date().toISOString();
 
       const authorizationResult = await validateAuthorization(
         base44,
