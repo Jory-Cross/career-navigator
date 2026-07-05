@@ -2,6 +2,10 @@
   "name": "WBLEForm",
   "type": "object",
   "properties": {
+    "org_id": {
+      "type": "string",
+      "description": "Canonical Organization.id scope. Required for every WBLE form."
+    },
     "client_id": {
       "type": "string",
       "description": "Associated client ID"
@@ -84,6 +88,7 @@
     }
   },
   "required": [
+    "org_id",
     "client_id"
   ],
   "rls": {
