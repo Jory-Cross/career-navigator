@@ -1,6 +1,11 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.23";
 
 const PLATFORM_OWNER_ROLE = "platform_owner";
+const CANONICAL_STAFF_ACCESS: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  employee: "staff",
+};
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -10,10 +15,14 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_STAFF_ACCESS[role] === accessLevel ? role : "";
+}
+
 function isStaffUser(user: any) {
-  return ["admin", "management", "employee"].includes(
-    normalizeText(user?.role).toLowerCase()
-  );
+  return Boolean(getCanonicalStaffRole(user));
 }
 
 function getClientName(client: any) {
@@ -36,7 +45,7 @@ Deno.serve(async (req) => {
     await req.json().catch(() => ({}));
 
     const base44 = createClientFromRequest(req);
-    const authenticatedUser = await base44.auth.me();
+    const authenticatedUser = await base44.auth.me().catch(() => null);
 
     if (!authenticatedUser?.id) {
       return Response.json({ error: "You must be signed in." }, { status: 401 });
@@ -53,14 +62,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (getCanonicalStaffRole(caller) !== "admin") {
+      return Response.json(
+        {
+          error:
+            "Canonical administrator access is required to inspect platform data health.",
+        },
+        { status: 403 }
+      );
+    }
+
     const platformOwnerRecords =
       await base44.asServiceRole.entities.PlatformAdmin.filter({
         user_id: caller.id,
       });
     const platformOwnerRecord = platformOwnerRecords.find(
       (record: any) =>
-        record?.platform_role === PLATFORM_OWNER_ROLE &&
-        isActive(record)
+        normalizeText(record?.platform_role).toLowerCase() ===
+          PLATFORM_OWNER_ROLE && isActive(record)
     );
 
     if (!platformOwnerRecord) {
