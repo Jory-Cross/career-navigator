@@ -47,6 +47,16 @@ function newestFirst(left: any, right: any) {
     (Number.isFinite(leftTime) ? leftTime : 0);
 }
 
+function getCanonicalStaffRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  const expectedAccessLevel = role === "admin" ? "admin" : "staff";
+
+  return STAFF_ROLES.has(role) && accessLevel === expectedAccessLevel
+    ? role
+    : "";
+}
+
 async function resolveCanonicalCaller(base44: any, authenticatedUserId: string) {
   const caller = await base44.asServiceRole.entities.User.get(
     authenticatedUserId
@@ -57,10 +67,10 @@ async function resolveCanonicalCaller(base44: any, authenticatedUserId: string) 
   }
 
   const callerId = normalizeText(caller.id);
-  const callerRole = normalizeText(caller.role).toLowerCase();
+  const callerRole = getCanonicalStaffRole(caller);
   const organizationId = normalizeText(caller.org_id);
 
-  if (!callerId || !STAFF_ROLES.has(callerRole)) {
+  if (!callerId || !callerRole) {
     throw new RequestError(
       "You are not authorized to review client portal access."
     );
@@ -114,35 +124,29 @@ async function resolveAuthorizedClient(
     return client;
   }
 
-  const assignedValue = normalizeText(client.assigned_employee_id);
+  const assignedStaffId = normalizeText(client.assigned_employee_id);
 
-  if (!assignedValue) {
+  if (!assignedStaffId) {
     throw new RequestError(
       "This client must be assigned to a staff member before portal access can be reviewed."
     );
   }
 
-  const organizationUsers =
-    await base44.asServiceRole.entities.User.filter({
-      org_id: organizationId,
-    });
+  const assignedStaff = await base44.asServiceRole.entities.User.get(
+    assignedStaffId
+  ).catch(() => null);
 
-  const assignedStaff = asArray(organizationUsers).find(
-    (user: any) =>
-      isActive(user) &&
-      (
-        normalizeText(user.id) === assignedValue ||
-        normalizeEmail(user.email) === normalizeEmail(assignedValue)
-      )
-  );
-
-  if (!assignedStaff?.id) {
+  if (
+    !assignedStaff ||
+    !isActive(assignedStaff) ||
+    normalizeText(assignedStaff.id) !== assignedStaffId ||
+    normalizeText(assignedStaff.org_id) !== organizationId ||
+    !getCanonicalStaffRole(assignedStaff)
+  ) {
     throw new RequestError(
       "The client is assigned to a staff member who is no longer active in this organization."
     );
   }
-
-  const assignedStaffId = normalizeText(assignedStaff.id);
 
   if (callerId === assignedStaffId) {
     return client;
@@ -288,7 +292,7 @@ Deno.serve(async (req) => {
         CLIENT_PORTAL_ROLES.has(normalizeText(user.role).toLowerCase())
     );
 
-       const portalUser =
+    const portalUser =
       portalCandidates.find(
         (user: any) => normalizeText(user.linked_client_id) === clientId
       ) ||
@@ -301,12 +305,12 @@ Deno.serve(async (req) => {
       invitations,
       portal_user: portalUser
         ? {
-          id: portalUser.id,
-          email: portalUser.email,
-          role: portalUser.role,
-          access_level: portalUser.access_level,
-          linked_client_id: portalUser.linked_client_id || null,
-        }
+            id: portalUser.id,
+            email: portalUser.email,
+            role: portalUser.role,
+            access_level: portalUser.access_level,
+            linked_client_id: portalUser.linked_client_id || null,
+          }
         : null,
     });
   } catch (error) {
