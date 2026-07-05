@@ -308,10 +308,8 @@ async function loadScopedClient(base44: any, context: any, clientId: string) {
   if (context.isAdmin) return client;
 
   const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-  const callerEmail = normalizeEmail(context.caller?.email);
 
-  if (assignedEmployeeId === context.caller.id || (callerEmail && createdBy === callerEmail)) {
+  if (assignedEmployeeId === context.caller.id) {
     return client;
   }
 
