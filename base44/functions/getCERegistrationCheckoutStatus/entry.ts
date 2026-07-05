@@ -471,8 +471,6 @@ Deno.serve(async (req) => {
     );
 
     return Response.json({
-
-    return Response.json({
       ok: true,
           payment_state: paymentState,
       next_step: getNextStep(
