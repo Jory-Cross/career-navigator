@@ -4,6 +4,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const APP_URL =
   Deno.env.get("APP_URL") || "https://app.base44.com";
+const SAFE_APP_URL_FALLBACK = "https://app.base44.com";
 
 const CANONICAL_STAFF_ACCESS: Record<string, string> = {
   admin: "admin",
@@ -117,7 +118,24 @@ function getPortalInviteConfig(client: any) {
 }
 
 function getSafeAppUrl() {
-  return APP_URL.replace(/\/+$/, "");
+  const configuredUrl = normalizeText(APP_URL);
+
+  try {
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // Use the safe fallback below when APP_URL is malformed.
+  }
+
+  return SAFE_APP_URL_FALLBACK;
 }
 
 function getDeliveryFailureMessage(error: unknown) {
