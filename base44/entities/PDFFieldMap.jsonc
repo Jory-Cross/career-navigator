@@ -1,114 +1,26 @@
 {
   "name": "PDFFieldMap",
   "type": "object",
-  "description": "Maps assembled report data to PDF form fields. Supports header (once per report), row (once per time entry), and summary (aggregated totals) scopes.",
+  "description": "Maps assembled report data to PDF form fields. Supports header, row, summary, and static scopes. Access is server-authorized and organization-scoped.",
   "properties": {
-    "org_id": {
-      "type": "string"
-    },
-    "pdf_template_id": {
-      "type": "string"
-    },
-    "template_version": {
-      "type": "string",
-      "description": "Scopes this mapping to a specific template version"
-    },
-    "pdf_field_name": {
-      "type": "string",
-      "description": "Exact PDF form field name as it appears in the fillable PDF"
-    },
-    "mapping_scope": {
-      "type": "string",
-      "enum": [
-        "header",
-        "row",
-        "summary",
-        "static"
-      ],
-      "default": "header",
-      "description": "header=once per report, row=once per time entry (repeating), summary=aggregated totals, static=hardcoded value"
-    },
-    "source_type": {
-      "type": "string",
-      "enum": [
-        "time_entry",
-        "report_answer",
-        "client",
-        "employee",
-        "authorization",
-        "assembled_report",
-        "static"
-      ],
-      "description": "Which data source provides the value for this field"
-    },
-    "source_field": {
-      "type": "string",
-      "description": "Field path within the source object (e.g. 'date', 'answers.employer_name')"
-    },
-    "row_group": {
-      "type": "string",
-      "description": "For row-scope: groups fields that belong to the same repeating row block (e.g. 'row_1', 'row_2')"
-    },
-    "row_field_key": {
-      "type": "string",
-      "description": "For row-scope: the semantic key within a row (e.g. 'date', 'hours', 'activity')"
-    },
-    "row_sort_order": {
-      "type": "number",
-      "description": "For row-scope: order of this row block in the PDF (1-based)"
-    },
-    "aggregation_mode": {
-      "type": "string",
-      "enum": [
-        "first",
-        "last",
-        "sum",
-        "count",
-        "concat",
-        "custom",
-        "none"
-      ],
-      "default": "none",
-      "description": "For summary-scope: how to aggregate values across all included time entries"
-    },
-    "transform": {
-      "type": "string",
-      "enum": [
-        "none",
-        "date_format",
-        "time_format",
-        "hours_from_minutes",
-        "uppercase",
-        "full_name"
-      ],
-      "default": "none"
-    },
-    "transform_options": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "Extra options for the transform (e.g. { format: 'MM/DD/YYYY' } for date_format)"
-    },
-    "default_value": {
-      "type": "string",
-      "description": "Fallback value if source field is null or missing"
-    },
-    "static_value": {
-      "type": "string",
-      "description": "For static-scope: the hardcoded value to always write to this PDF field"
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true,
-      "description": "Soft-disable a mapping without deleting it"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Internal notes explaining this mapping (e.g. 'Maps to line 3 in the USOR-95 header section')"
-    }
+    "org_id": { "type": "string" },
+    "pdf_template_id": { "type": "string" },
+    "template_version": { "type": "string", "description": "Scopes this mapping to a specific template version" },
+    "pdf_field_name": { "type": "string", "description": "Exact PDF form field name as it appears in the fillable PDF" },
+    "mapping_scope": { "type": "string", "enum": ["header", "row", "summary", "static"], "default": "header", "description": "header=once per report, row=once per time entry, summary=aggregated totals, static=hardcoded value" },
+    "source_type": { "type": "string", "enum": ["time_entry", "report_answer", "client", "employee", "authorization", "assembled_report", "static"], "description": "Which data source provides the value for this field" },
+    "source_field": { "type": "string", "description": "Field path within the source object (for example, date or answers.employer_name)" },
+    "row_group": { "type": "string", "description": "For row-scope: groups fields that belong to the same repeating row block" },
+    "row_field_key": { "type": "string", "description": "For row-scope: the semantic key within a row" },
+    "row_sort_order": { "type": "number", "description": "For row-scope: order of this row block in the PDF" },
+    "aggregation_mode": { "type": "string", "enum": ["first", "last", "sum", "count", "concat", "custom", "none"], "default": "none", "description": "For summary-scope: how to aggregate values across all included time entries" },
+    "transform": { "type": "string", "enum": ["none", "date_format", "time_format", "hours_from_minutes", "uppercase", "full_name"], "default": "none" },
+    "transform_options": { "type": "object", "additionalProperties": true, "description": "Extra options for the transform" },
+    "default_value": { "type": "string", "description": "Fallback value if source field is null or missing" },
+    "static_value": { "type": "string", "description": "For static-scope: the hardcoded value to always write to this PDF field" },
+    "is_active": { "type": "boolean", "default": true, "description": "Soft-disable a mapping without deleting it" },
+    "notes": { "type": "string", "description": "Internal notes explaining this mapping" }
   },
-  "required": [
-    "pdf_template_id",
-    "pdf_field_name",
-    "mapping_scope"
-  ]
+  "required": ["pdf_template_id", "pdf_field_name", "mapping_scope"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
