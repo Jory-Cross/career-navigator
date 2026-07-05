@@ -1,43 +1,27 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-
 /**
- * Identify and display remaining UNKNOWN values
+ * Disabled during the security remediation freeze.
+ *
+ * This legacy diagnostic read shared ReportFieldTemplate configuration through
+ * a browser-session role check and returned raw error details. Configuration
+ * diagnostics must return only through a reviewed, scoped workflow.
  */
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (user?.role !== 'admin') {
-      return Response.json({ error: 'Admin only' }, { status: 403 });
-    }
-
-    const fields = await base44.entities.ReportFieldTemplate.filter({
-      is_active: true
-    });
-
-    const unknownSourceFormCode = fields.filter(f => !f.source_form_code || f.source_form_code === 'UNKNOWN');
-    const unknownDataSourceLayer = fields.filter(f => !f.data_source_layer || f.data_source_layer === 'unknown');
-
-    const result = {
-      total_active_fields: fields.length,
-      unknown_source_form_code_count: unknownSourceFormCode.length,
-      unknown_data_source_layer_count: unknownDataSourceLayer.length,
-      unknown_source_form_code_fields: unknownSourceFormCode.map(f => ({
-        field_key: f.field_key,
-        entry_type_code: f.entry_type_code,
-        current_value: f.source_form_code
-      })),
-      unknown_data_source_layer_fields: unknownDataSourceLayer.map(f => ({
-        field_key: f.field_key,
-        entry_type_code: f.entry_type_code,
-        current_value: f.data_source_layer
-      }))
-    };
-
-    return Response.json(result);
-
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (req.method !== "POST") {
+    return Response.json(
+      {
+        ok: false,
+        error: "This route accepts POST requests only.",
+      },
+      { status: 405 }
+    );
   }
+
+  return Response.json(
+    {
+      ok: false,
+      error:
+        "Report-field diagnostics are temporarily unavailable while security remediation is in progress.",
+    },
+    { status: 503 }
+  );
 });
