@@ -63,5 +63,11 @@
   "required": [
     "client_id",
     "section_key"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
