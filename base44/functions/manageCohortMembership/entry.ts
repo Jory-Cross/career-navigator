@@ -130,10 +130,9 @@ async function resolveCanonicalCaller(
     );
   }
 
-  const organization =
-    await base44.asServiceRole.entities.Organization.get(
-      organizationId
-    ).catch(() => null);
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
 
   if (!organization || !isActiveRecord(organization)) {
     throw new RequestError(
@@ -160,15 +159,15 @@ async function resolveAuthorizedCohort(
   },
   cohortId: string
 ) {
-  const cohort =
-    await base44.asServiceRole.entities.CETrainingCohort.get(
-      cohortId
-    ).catch(() => null);
+  const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(
+    cohortId
+  ).catch(() => null);
 
   if (
     !cohort ||
     normalizeText(cohort?.org_id) !== organizationId ||
-    !isActiveRecord(cohort)
+    !isActiveRecord(cohort) ||
+    normalizeText(cohort?.status).toLowerCase() === "archived"
   ) {
     throw new RequestError(
       403,
@@ -262,10 +261,9 @@ async function getExactMembership(
   organizationId: string,
   cohortId: string
 ) {
-  const membership =
-    await base44.asServiceRole.entities.CETrainingCohortMember.get(
-      membershipId
-    ).catch(() => null);
+  const membership = await base44.asServiceRole.entities.CETrainingCohortMember.get(
+    membershipId
+  ).catch(() => null);
 
   if (
     !membership ||
