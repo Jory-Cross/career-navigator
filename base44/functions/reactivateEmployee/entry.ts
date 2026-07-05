@@ -233,6 +233,36 @@ async function resolveAssignmentRecipient(
   employeeRole: string,
   managerId: string
 ) {
+  if (callerRole === "management") {
+    if (employeeRole !== "employee") {
+      throw new RequestError(
+        403,
+        "Managers may only reactivate employees who were previously assigned to them."
+      );
+    }
+
+    if (managerId && managerId !== callerId) {
+      throw new RequestError(
+        403,
+        "Managers may only assign reactivated employees to themselves."
+      );
+    }
+
+    const historicalAssignments = await getHistoricalManagerAssignments(
+      base44,
+      organizationId,
+      employeeId,
+      callerId
+    );
+
+    if (!historicalAssignments.length) {
+      throw new RequestError(
+        403,
+        "You may only reactivate employees who were previously assigned to you."
+      );
+    }
+  }
+
   if (!managerId) {
     return null;
   }
@@ -241,13 +271,6 @@ async function resolveAssignmentRecipient(
     throw new RequestError(
       400,
       "Manager assignment can only be changed when reactivating an employee."
-    );
-  }
-
-  if (callerRole === "management" && managerId !== callerId) {
-    throw new RequestError(
-      403,
-      "Managers may only assign reactivated employees to themselves."
     );
   }
 
@@ -270,23 +293,6 @@ async function resolveAssignmentRecipient(
       403,
       "Choose an active manager or administrator from this organization."
     );
-  }
-
-  if (callerRole === "management") {
-    const historicalAssignments =
-      await getHistoricalManagerAssignments(
-        base44,
-        organizationId,
-        employeeId,
-        callerId
-      );
-
-    if (!historicalAssignments.length) {
-      throw new RequestError(
-        403,
-        "You may only reactivate employees who were previously assigned to you."
-      );
-    }
   }
 
   return recipient;
