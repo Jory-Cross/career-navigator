@@ -20,8 +20,10 @@ function asNumber(value, fallback = 0) {
 function mapClient(raw) {
   if (!raw) return null;
 
+  const { created_by: _legacyCreatedBy, ...safeRaw } = raw;
+
   return {
-    ...raw,
+    ...safeRaw,
     id: raw.id,
     first_name: asString(raw.first_name),
     last_name: asString(raw.last_name),
@@ -36,15 +38,16 @@ function mapClient(raw) {
     assigned_employee_id: raw.assigned_employee_id ?? null,
     assigned_employer_id: raw.assigned_employer_id ?? null,
     is_archived: raw.is_archived === true || asString(raw.status) === "archived",
-    raw,
   };
 }
 
 function mapTimeEntry(raw) {
   if (!raw) return null;
 
+  const { created_by: _legacyCreatedBy, ...safeRaw } = raw;
+
   return {
-    ...raw,
+    ...safeRaw,
     id: raw.id,
     client_id: raw.client_id ?? null,
     employee_id: raw.employee_id ?? raw.staff_id ?? raw.user_id ?? null,
@@ -70,7 +73,6 @@ function mapTimeEntry(raw) {
     is_reportable: asBoolean(raw.is_reportable, true),
     created_date: raw.created_date ?? null,
     updated_date: raw.updated_date ?? null,
-    raw,
   };
 }
 
