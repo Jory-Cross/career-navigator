@@ -12,18 +12,6 @@ function freezePayload(payload) {
   return payload;
 }
 
-function getSavedId(result) {
-  return (
-    result?.id ??
-    result?._id ??
-    result?.data?.id ??
-    result?.record?.id ??
-    result?.item?.id ??
-    (Array.isArray(result) ? result[0]?.id : null) ??
-    null
-  );
-}
-
 function validateBeforeSave(payload) {
   if (!payload || typeof payload !== "object") {
     throw new Error("❌ Hard Guard Failed: payload is missing or invalid");
@@ -61,20 +49,12 @@ async function runAfterSaveCallbacks({
 }
 
 /**
- * Unified submit handler for all dynamic time entry forms.
+ * Unified submit handler for all dynamic Time Entry forms.
  * Supports both CREATE and EDIT modes with the same payload builder.
  *
- * @param {Object} config
- * @param {Object} config.entryType - Entry type metadata { id, code?, name? }
- * @param {Record<string, any>} config.formData - Form submission data
- * @param {Array} config.schema - Field schema
- * @param {Object|null} [config.existingEntry] - Existing entry for edit mode
- * @param {"create"|"edit"} [config.mode="create"] - Save mode
- * @param {Function} config.saveEntry - Persistence function
- * @param {Function} [config.refreshEntries] - Optional callback to refresh entry list
- * @param {Function} [config.closeModal] - Optional callback to close dialog/modal
- * @param {Function} [config.onSuccess] - Optional callback after successful save
- * @returns {Promise<Object>} Saved result
+ * Browser-side debug logging is intentionally omitted because form values can
+ * contain sensitive client-service information. Persistence remains delegated
+ * to the server-authorized caller supplied by the active form workflow.
  */
 export async function handleDynamicEntrySave({
   entryType,
@@ -91,15 +71,6 @@ export async function handleDynamicEntrySave({
     throw new Error("❌ Save failed: saveEntry must be a function");
   }
 
-  console.log(
-    "[handleDynamicEntrySave] formData:",
-    JSON.stringify(formData, null, 2)
-  );
-  console.log(
-    "[handleDynamicEntrySave] schema:",
-    JSON.stringify(schema, null, 2)
-  );
-
   const payload = buildTimeEntryPayload({
     entryType,
     formData,
@@ -111,20 +82,9 @@ export async function handleDynamicEntrySave({
   freezePayload(payload);
 
   const isEdit = mode === "edit" && !!existingEntry?.id;
-  const modeLabel = isEdit ? "EDIT" : "CREATE";
-
-  console.log(
-    `[handleDynamicEntrySave] ${modeLabel} FINAL PAYLOAD:`,
-    JSON.stringify(payload, null, 2)
-  );
-
-  let result;
-
-  if (isEdit) {
-    result = await saveEntry(payload, existingEntry.id);
-  } else {
-    result = await saveEntry(payload);
-  }
+  const result = isEdit
+    ? await saveEntry(payload, existingEntry.id)
+    : await saveEntry(payload);
 
   if (!result) {
     throw new Error("❌ Save failed: no result returned from backend");
@@ -138,20 +98,6 @@ export async function handleDynamicEntrySave({
     mode: isEdit ? "edit" : "create",
     payload,
   });
-
-  const savedId = getSavedId(result);
-
-  if (savedId) {
-    console.log(
-      `✅ Entry ${isEdit ? "updated" : "created"} with ID:`,
-      savedId
-    );
-  } else {
-    console.warn(
-      "⚠️ Save succeeded but backend response had no top-level id",
-      result
-    );
-  }
 
   return result;
 }
