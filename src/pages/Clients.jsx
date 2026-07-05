@@ -27,6 +27,8 @@ const VALID_CLIENT_TYPES = new Set([
  *
  * Client records are loaded exclusively through getClientsForUser, which
  * derives organization and assignment scope from the authenticated caller.
+ * Cohort visibility is derived from the same server-authenticated caller; no
+ * browser-supplied user or organization identifier participates in that request.
  * New-client creation is unavailable until it has a server-authorized route.
  */
 export default function Clients() {
@@ -68,7 +70,7 @@ export default function Clients() {
       try {
         const cohortResponse = await base44.functions.invoke(
           "getCohortVisibleClients",
-          { user_id: user.id }
+          {}
         );
         const cohortPayload = cohortResponse?.data ?? cohortResponse ?? {};
         const cohortClients = Array.isArray(cohortPayload.clients)
