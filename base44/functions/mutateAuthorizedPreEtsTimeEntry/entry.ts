@@ -33,10 +33,6 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value: unknown) {
-  return normalizeText(value).toLowerCase();
-}
-
 function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -69,16 +65,10 @@ function isPreEtsClientInOrganization(client: any, organizationId: string) {
 
 function clientMatchesVisibleStaff(
   client: any,
-  visibleUserIds: Set<string>,
-  visibleEmails: Set<string>
+  visibleUserIds: Set<string>
 ) {
   const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-
-  return (
-    visibleUserIds.has(assignedEmployeeId) ||
-    (createdBy && visibleEmails.has(createdBy))
-  );
+  return visibleUserIds.has(assignedEmployeeId);
 }
 
 function isValidIsoDate(value: string) {
@@ -298,9 +288,6 @@ async function resolveStaffClient(
   }
 
   const visibleUserIds = new Set<string>([callerId]);
-  const visibleEmails = new Set<string>(
-    [normalizeEmail(caller?.email)].filter(Boolean)
-  );
 
   if (callerRole === "management") {
     const assignments =
@@ -322,15 +309,11 @@ async function resolveStaffClient(
         employee
       ) {
         visibleUserIds.add(employeeId);
-        const employeeEmail = normalizeEmail(employee.email);
-        if (employeeEmail) {
-          visibleEmails.add(employeeEmail);
-        }
       }
     }
   }
 
-  if (!clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)) {
+  if (!clientMatchesVisibleStaff(client, visibleUserIds)) {
     throw new RequestError(404, "Pre-ETS client not found.");
   }
 
