@@ -1,49 +1,14 @@
-import { base44 } from "@/api/base44Client";
+/**
+ * Legacy browser recommendation loader disabled during the security
+ * remediation freeze.
+ *
+ * This helper previously queried JobRecommendationBatch directly from the
+ * browser using a caller-provided client ID. Restore recommendation history
+ * only through a reviewed, server-authorized client workspace route.
+ */
+const REMEDIATION_ERROR =
+  "Saved recommendation history is temporarily unavailable while security remediation is in progress.";
 
-function sortNewestFirst(items = []) {
-  return [...items].sort((a, b) => {
-    const aTime = new Date(a?.generated_at || 0).getTime();
-    const bTime = new Date(b?.generated_at || 0).getTime();
-    return bTime - aTime;
-  });
-}
-
-function parseJsonArray(value) {
-  if (Array.isArray(value)) return value;
-  if (typeof value !== "string" || !value.trim()) return [];
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function normalizeBatch(batch) {
-  if (!batch) return null;
-
-  return {
-    ...batch,
-    recommendations: Array.isArray(batch.recommendations)
-      ? batch.recommendations
-      : parseJsonArray(batch.recommended_job_fields_json),
-    summary: batch.summary || {},
-    source: batch.source || "saved",
-  };
-}
-
-export async function loadLatestRecommendationBatch(clientId) {
-  if (!clientId) {
-    throw new Error("loadLatestRecommendationBatch requires clientId");
-  }
-
-  const results = await base44.entities.JobRecommendationBatch.filter({
-    client_id: clientId,
-  });
-
-  console.log("LOADED RECOMMENDATION BATCHES:", results);
-
-  const ordered = sortNewestFirst(Array.isArray(results) ? results : []);
-  return normalizeBatch(ordered[0] || null);
+export async function loadLatestRecommendationBatch() {
+  throw new Error(REMEDIATION_ERROR);
 }
