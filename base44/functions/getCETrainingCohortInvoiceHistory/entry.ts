@@ -1,10 +1,19 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
 
-const ALLOWED_ROLES = new Set([
-  "admin",
-  "management",
-  "ce_instructor",
-]);
+const CANONICAL_ACCESS_BY_ROLE: Record<string, string> = {
+  admin: "admin",
+  management: "staff",
+  ce_instructor: "ce_training_portal",
+};
+
+class RequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function normalizeText(value: unknown) {
   return String(value || "").trim();
@@ -14,106 +23,127 @@ function normalizeEmail(value: unknown) {
   return normalizeText(value).toLowerCase();
 }
 
-function asArray(value: unknown) {
-  return Array.isArray(value) ? value : [];
+function asArray<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
 }
 
 function toSafeInteger(value: unknown) {
   const numberValue = Number(value);
-
   return Number.isInteger(numberValue) ? numberValue : 0;
+}
+
+function isActive(record: any) {
+  return record?.is_active !== false && record?.is_archived !== true;
+}
+
+function getCanonicalRole(user: any) {
+  const role = normalizeText(user?.role).toLowerCase();
+  const accessLevel = normalizeText(user?.access_level).toLowerCase();
+  return CANONICAL_ACCESS_BY_ROLE[role] === accessLevel ? role : "";
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function sortNewestFirst(rows: any[]) {
   return [...rows].sort((left, right) => {
     const rightTime = new Date(
-      right?.paid_at ||
-        right?.issued_at ||
-        right?.created_date ||
-        0
+      right?.paid_at || right?.issued_at || right?.created_date || 0
     ).getTime();
-
     const leftTime = new Date(
-      left?.paid_at ||
-        left?.issued_at ||
-        left?.created_date ||
-        0
+      left?.paid_at || left?.issued_at || left?.created_date || 0
     ).getTime();
-
     return rightTime - leftTime;
   });
 }
 
-async function getCallerRecord(base44: any, caller: any) {
-  const rows = await base44.asServiceRole.entities.User.filter({
-    id: caller.id,
-  });
+async function resolveCanonicalCaller(base44: any, authenticatedUserId: string) {
+  const caller = await base44.asServiceRole.entities.User.get(
+    authenticatedUserId
+  ).catch(() => null);
 
-  return asArray(rows)[0] || caller;
-}
-
-async function resolveOrganizationId(
-  base44: any,
-  caller: any,
-  callerRecord: any
-) {
-  const directOrganizationId = normalizeText(
-    callerRecord?.org_id || caller?.org_id
-  );
-
-  if (directOrganizationId) {
-    return directOrganizationId;
+  if (!caller || !isActive(caller)) {
+    throw new RequestError(403, "Your account is inactive or unavailable.");
   }
 
-  const callerEmail = normalizeEmail(
-    callerRecord?.email || caller?.email
-  );
+  const callerId = normalizeText(caller?.id);
+  const callerEmail = normalizeEmail(caller?.email);
+  const callerRole = getCanonicalRole(caller);
+  const organizationId = normalizeText(caller?.org_id);
 
-  if (!callerEmail) {
-    return "";
-  }
-
-  const organizationRows =
-    await base44.asServiceRole.entities.Organization.filter({
-      owner_email: callerEmail,
-    });
-
-  return normalizeText(asArray(organizationRows)[0]?.id);
-}
-
-async function assertHistoryAccess(
-  base44: any,
-  caller: any,
-  callerRole: string,
-  cohortId: string
-) {
-  if (!ALLOWED_ROLES.has(callerRole)) {
-    throw new Error(
-      "Only authorized CE organization users may view cohort invoice history."
+  if (!callerId || !isValidEmail(callerEmail) || !callerRole || !organizationId) {
+    throw new RequestError(
+      403,
+      "Your account is not authorized to view cohort invoice history."
     );
   }
 
-  if (callerRole !== "ce_instructor") {
-    return;
+  const organization = await base44.asServiceRole.entities.Organization.get(
+    organizationId
+  ).catch(() => null);
+
+  if (!organization || !isActive(organization)) {
+    throw new RequestError(403, "Your organization is inactive or unavailable.");
   }
 
-  const membershipRows =
+  return {
+    caller,
+    callerId,
+    callerRole,
+    organizationId,
+  };
+}
+
+async function resolveAuthorizedTrainingCohort(
+  base44: any,
+  context: any,
+  cohortId: string
+) {
+  const cohort = await base44.asServiceRole.entities.CETrainingCohort.get(
+    cohortId
+  ).catch(() => null);
+
+  if (
+    !cohort ||
+    !isActive(cohort) ||
+    normalizeText(cohort?.org_id) !== context.organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !== "training" ||
+    normalizeText(cohort?.status).toLowerCase() === "archived"
+  ) {
+    throw new RequestError(404, "The selected Training cohort is unavailable.");
+  }
+
+  if (["admin", "management"].includes(context.callerRole)) {
+    return cohort;
+  }
+
+  const memberships =
     await base44.asServiceRole.entities.CETrainingCohortMember.filter({
+      org_id: context.organizationId,
       cohort_id: cohortId,
-      user_id: caller.id,
+      user_id: context.callerId,
+      cohort_role: "manager",
+      is_active: true,
     });
 
-  const isActiveManager = asArray(membershipRows).some(
-    (membership) =>
-      normalizeText(membership?.cohort_role) === "manager" &&
-      membership?.is_active !== false
+  const isActiveManager = asArray(memberships).some(
+    (membership: any) =>
+      isActive(membership) &&
+      normalizeText(membership?.org_id) === context.organizationId &&
+      normalizeText(membership?.cohort_id) === cohortId &&
+      normalizeText(membership?.user_id) === context.callerId &&
+      normalizeText(membership?.cohort_role).toLowerCase() === "manager"
   );
 
   if (!isActiveManager) {
-    throw new Error(
+    throw new RequestError(
+      403,
       "You must be an active manager of this Training cohort to view its invoice history."
     );
   }
+
+  return cohort;
 }
 
 function buildInvoiceHistory(
@@ -130,15 +160,11 @@ function buildInvoiceHistory(
   );
 
   const linesByInvoiceId = new Map<string, any[]>();
-
   for (const line of validLines) {
-    const invoiceId = normalizeText(line.cohort_invoice_id);
-
-    if (!linesByInvoiceId.has(invoiceId)) {
-      linesByInvoiceId.set(invoiceId, []);
-    }
-
-    linesByInvoiceId.get(invoiceId)?.push(line);
+    const invoiceId = normalizeText(line?.cohort_invoice_id);
+    const rows = linesByInvoiceId.get(invoiceId) || [];
+    rows.push(line);
+    linesByInvoiceId.set(invoiceId, rows);
   }
 
   const safeInvoices = invoices
@@ -148,81 +174,55 @@ function buildInvoiceHistory(
         normalizeText(invoice?.cohort_id) === cohortId
     )
     .map((invoice) => {
-      const invoiceId = normalizeText(invoice.id);
-      const invoiceLines = sortNewestFirst(
-        linesByInvoiceId.get(invoiceId) || []
-      );
-
+      const invoiceId = normalizeText(invoice?.id);
+      const invoiceLines = sortNewestFirst(linesByInvoiceId.get(invoiceId) || []);
       const lineTotalCents = invoiceLines.reduce(
-        (total, line) => total + toSafeInteger(line.amount_cents),
+        (total, line) => total + toSafeInteger(line?.amount_cents),
         0
       );
-
-      const expectedStudentCount = toSafeInteger(
-        invoice.student_count
-      );
-
-      const expectedAmountCents = toSafeInteger(
-        invoice.amount_cents
-      );
-
+      const expectedStudentCount = toSafeInteger(invoice?.student_count);
+      const expectedAmountCents = toSafeInteger(invoice?.amount_cents);
       const integrityIssues: string[] = [];
 
-      if (!invoiceId) {
-        integrityIssues.push("Invoice ID is missing.");
-      }
-
-      if (!normalizeText(invoice.currency)) {
+      if (!invoiceId) integrityIssues.push("Invoice ID is missing.");
+      if (!normalizeText(invoice?.currency)) {
         integrityIssues.push("Invoice currency is missing.");
       }
-
       if (
         expectedStudentCount > 0 &&
         invoiceLines.length !== expectedStudentCount
       ) {
-        integrityIssues.push(
-          "Saved line count does not match the locked student count."
-        );
+        integrityIssues.push("Saved line count does not match the locked student count.");
       }
-
       if (
         expectedAmountCents > 0 &&
         lineTotalCents !== expectedAmountCents
       ) {
-        integrityIssues.push(
-          "Saved line total does not match the locked invoice total."
-        );
+        integrityIssues.push("Saved line total does not match the locked invoice total.");
       }
-
-      const returnedLines = invoiceLines.map((line) => ({
-        id: normalizeText(line.id),
-        subject_verified_email: normalizeEmail(
-          line.subject_verified_email
-        ),
-        amount_cents: toSafeInteger(line.amount_cents),
-        currency: normalizeText(line.currency).toUpperCase(),
-        line_status: normalizeText(line.line_status) || "unknown",
-        paid_at: line.paid_at || null,
-      }));
 
       return {
         id: invoiceId,
-        invoice_status:
-          normalizeText(invoice.invoice_status) || "unknown",
-        currency: normalizeText(invoice.currency).toUpperCase(),
+        invoice_status: normalizeText(invoice?.invoice_status) || "unknown",
+        currency: normalizeText(invoice?.currency).toUpperCase(),
         student_count: expectedStudentCount,
         amount_cents: expectedAmountCents,
-        issued_at: invoice.issued_at || null,
-        paid_at: invoice.paid_at || null,
-        created_date: invoice.created_date || null,
-        line_count: returnedLines.length,
+        issued_at: invoice?.issued_at || null,
+        paid_at: invoice?.paid_at || null,
+        created_date: invoice?.created_date || null,
+        line_count: invoiceLines.length,
         line_total_cents: lineTotalCents,
         integrity_status:
-          integrityIssues.length === 0
-            ? "valid"
-            : "review_required",
+          integrityIssues.length === 0 ? "valid" : "review_required",
         integrity_issues: integrityIssues,
-        lines: returnedLines,
+        lines: invoiceLines.map((line) => ({
+          id: normalizeText(line?.id),
+          subject_verified_email: normalizeEmail(line?.subject_verified_email),
+          amount_cents: toSafeInteger(line?.amount_cents),
+          currency: normalizeText(line?.currency).toUpperCase(),
+          line_status: normalizeText(line?.line_status) || "unknown",
+          paid_at: line?.paid_at || null,
+        })),
       };
     });
 
@@ -231,108 +231,38 @@ function buildInvoiceHistory(
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
-
-    if (!caller) {
+    if (req.method !== "POST") {
       return Response.json(
         {
           ok: false,
-          error: "Unauthorized",
+          error: "This cohort invoice-history request must use POST.",
         },
-        { status: 401 }
+        { status: 405 }
       );
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body: any = await req.json().catch(() => ({}));
     const cohortId = normalizeText(body?.cohort_id);
-
     if (!cohortId) {
-      return Response.json(
-        {
-          ok: false,
-          error: "cohort_id is required.",
-        },
-        { status: 400 }
-      );
+      throw new RequestError(400, "A Training cohort must be selected.");
     }
 
-    const callerRecord = await getCallerRecord(base44, caller);
-    const callerRole = normalizeText(
-      callerRecord?.role || caller?.role
-    );
-
-    const organizationId = await resolveOrganizationId(
-      base44,
-      caller,
-      callerRecord
-    );
-
-    if (!organizationId) {
-      return Response.json(
-        {
-          ok: false,
-          error: "Your account is not connected to an organization.",
-        },
-        { status: 403 }
-      );
+    const base44 = createClientFromRequest(req);
+    const authenticatedUser = await base44.auth.me().catch(() => null);
+    if (!authenticatedUser?.id) {
+      throw new RequestError(401, "Please sign in before viewing cohort invoice history.");
     }
 
-    await assertHistoryAccess(
-      base44,
-      caller,
-      callerRole,
-      cohortId
-    );
-
-    const cohortRows =
-      await base44.asServiceRole.entities.CETrainingCohort.filter({
-        id: cohortId,
-      });
-
-    const cohort = asArray(cohortRows)[0] || null;
-
-    if (!cohort) {
-      return Response.json(
-        {
-          ok: false,
-          error: "The requested CE Training cohort was not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    if (
-      normalizeText(cohort.org_id) !== organizationId
-    ) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "The requested CE Training cohort belongs to a different organization.",
-        },
-        { status: 403 }
-      );
-    }
-
-    if (normalizeText(cohort.cohort_type) !== "training") {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "Cohort invoice history is available only for Training cohorts.",
-        },
-        { status: 409 }
-      );
-    }
+    const context = await resolveCanonicalCaller(base44, authenticatedUser.id);
+    await resolveAuthorizedTrainingCohort(base44, context, cohortId);
 
     const [invoiceRows, lineRows] = await Promise.all([
       base44.asServiceRole.entities.CETrainingCohortInvoice.filter({
-        organization_id: organizationId,
+        organization_id: context.organizationId,
         cohort_id: cohortId,
       }),
       base44.asServiceRole.entities.CETrainingCohortInvoiceLine.filter({
-        organization_id: organizationId,
+        organization_id: context.organizationId,
         cohort_id: cohortId,
       }),
     ]);
@@ -340,49 +270,47 @@ Deno.serve(async (req) => {
     const invoices = buildInvoiceHistory(
       asArray(invoiceRows),
       asArray(lineRows),
-      organizationId,
+      context.organizationId,
       cohortId
     );
-
-    const summary = {
-      invoice_count: invoices.length,
-      paid_invoice_count: invoices.filter(
-        (invoice) => invoice.invoice_status === "paid"
-      ).length,
-      open_invoice_count: invoices.filter((invoice) =>
-        [
-          "draft",
-          "ready_for_checkout",
-          "payment_processing",
-          "failed",
-        ].includes(invoice.invoice_status)
-      ).length,
-      review_required_count: invoices.filter(
-        (invoice) =>
-          invoice.integrity_status === "review_required"
-      ).length,
-    };
 
     return Response.json({
       ok: true,
       cohort_id: cohortId,
-      summary,
+      summary: {
+        invoice_count: invoices.length,
+        paid_invoice_count: invoices.filter(
+          (invoice: any) => invoice.invoice_status === "paid"
+        ).length,
+        open_invoice_count: invoices.filter((invoice: any) =>
+          ["draft", "ready_for_checkout", "payment_processing", "failed"].includes(
+            invoice.invoice_status
+          )
+        ).length,
+        review_required_count: invoices.filter(
+          (invoice: any) => invoice.integrity_status === "review_required"
+        ).length,
+      },
       invoices,
     });
-  } catch (error) {
-    console.error(
-      "getCETrainingCohortInvoiceHistory error:",
-      error?.message || error
-    );
+  } catch (error: any) {
+    const status = error instanceof RequestError ? error.status : 500;
+    if (!(error instanceof RequestError)) {
+      console.error(
+        "getCETrainingCohortInvoiceHistory error:",
+        error?.message || error
+      );
+    }
 
     return Response.json(
       {
         ok: false,
         error:
-          error?.message ||
-          "Unable to load CE Training cohort invoice history.",
+          error instanceof RequestError
+            ? error.message
+            : "Unable to load CE Training cohort invoice history.",
       },
-      { status: 500 }
+      { status }
     );
   }
 });
