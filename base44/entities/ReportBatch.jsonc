@@ -1,99 +1,25 @@
 {
   "name": "ReportBatch",
   "type": "object",
-  "description": "Tracks a multi-client report generation run.",
+  "description": "Tracks a multi-client report generation run. Access is server-authorized and organization-scoped.",
   "properties": {
-    "org_id": {
-      "type": "string"
-    },
-    "pdf_template_id": {
-      "type": "string"
-    },
-    "entry_type_code": {
-      "type": "string"
-    },
-    "date_range_start": {
-      "type": "string",
-      "format": "date"
-    },
-    "date_range_end": {
-      "type": "string",
-      "format": "date"
-    },
-    "client_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "processing",
-        "completed",
-        "partial_failure",
-        "failed"
-      ],
-      "default": "processing"
-    },
-    "created_by": {
-      "type": "string"
-    },
-    "created_at": {
-      "type": "string"
-    },
-    "results": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "client_id": {
-            "type": "string"
-          },
-          "generated_report_id": {
-            "type": "string"
-          },
-          "document_id": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "error_message": {
-      "type": "string"
-    },
-    "completed_at": {
-      "type": "string",
-      "description": "ISO datetime when batch finished (success or failure)"
-    },
-    "total_clients": {
-      "type": "number",
-      "description": "Total number of clients in this batch run"
-    },
-    "success_count": {
-      "type": "number",
-      "description": "Number of clients whose reports generated successfully"
-    },
-    "failure_count": {
-      "type": "number",
-      "description": "Number of clients whose reports failed"
-    },
-    "template_version": {
-      "type": "string",
-      "description": "Version of PDFTemplate used \u2014 for audit trail"
-    }
+    "org_id": { "type": "string" },
+    "pdf_template_id": { "type": "string" },
+    "entry_type_code": { "type": "string" },
+    "date_range_start": { "type": "string", "format": "date" },
+    "date_range_end": { "type": "string", "format": "date" },
+    "client_ids": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["processing", "completed", "partial_failure", "failed"], "default": "processing" },
+    "created_by": { "type": "string" },
+    "created_at": { "type": "string" },
+    "results": { "type": "array", "items": { "type": "object", "properties": { "client_id": { "type": "string" }, "generated_report_id": { "type": "string" }, "document_id": { "type": "string" }, "status": { "type": "string" }, "message": { "type": "string" } } } },
+    "error_message": { "type": "string" },
+    "completed_at": { "type": "string", "description": "ISO datetime when batch finished (success or failure)" },
+    "total_clients": { "type": "number", "description": "Total number of clients in this batch run" },
+    "success_count": { "type": "number", "description": "Number of clients whose reports generated successfully" },
+    "failure_count": { "type": "number", "description": "Number of clients whose reports failed" },
+    "template_version": { "type": "string", "description": "Version of PDFTemplate used — for audit trail" }
   },
-  "required": [
-    "pdf_template_id",
-    "entry_type_code",
-    "date_range_start",
-    "date_range_end",
-    "client_ids"
-  ]
+  "required": ["pdf_template_id", "entry_type_code", "date_range_start", "date_range_end", "client_ids"],
+  "rls": { "create": false, "read": false, "update": false, "delete": false }
 }
