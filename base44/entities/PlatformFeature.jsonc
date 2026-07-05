@@ -4,11 +4,11 @@
   "properties": {
     "feature_key": {
       "type": "string",
-      "description": "Stable unique machine-readable feature identifier, such as ce_training_portal, ce_cohorts, ce_practitioner_workspace, time_tracking, client_portal, assessments, ai_tools, advanced_reporting, or custom_roles."
+      "description": "Stable unique machine-readable feature identifier."
     },
     "feature_name": {
       "type": "string",
-      "description": "Human-readable feature name shown in future plan and account administration screens."
+      "description": "Human-readable feature name."
     },
     "description": {
       "type": "string",
@@ -33,11 +33,11 @@
     "supports_limit": {
       "type": "boolean",
       "default": false,
-      "description": "True when this feature may have an organization-specific numeric limit, such as seats, clients, cohorts, storage, or AI usage."
+      "description": "True when this feature may have an organization-specific numeric limit."
     },
     "limit_label": {
       "type": "string",
-      "description": "Human-readable label for the limit when supports_limit is true, such as Employee Seats, Client Records, CE Cohorts, or Trainer Seats."
+      "description": "Human-readable label for the limit when supports_limit is true."
     },
     "is_billable_add_on": {
       "type": "boolean",
@@ -63,25 +63,9 @@
     "is_active"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }
