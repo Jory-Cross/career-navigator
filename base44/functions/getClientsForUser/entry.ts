@@ -10,10 +10,6 @@ function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value) {
-  return normalizeText(value).toLowerCase();
-}
-
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -42,14 +38,8 @@ function sortNewest(records) {
   });
 }
 
-function clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails) {
-  const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-
-  return (
-    visibleUserIds.has(assignedEmployeeId) ||
-    (createdBy && visibleEmails.has(createdBy))
-  );
+function clientMatchesVisibleStaff(client, visibleUserIds) {
+  return visibleUserIds.has(normalizeText(client?.assigned_employee_id));
 }
 
 /**
@@ -69,7 +59,6 @@ function projectClient(client) {
     target_role: normalizeText(client?.target_role),
     location: normalizeText(client?.location),
     assigned_employee_id: normalizeText(client?.assigned_employee_id) || null,
-    created_by: normalizeText(client?.created_by) || null,
     is_archived: client?.is_archived === true,
     created_date: client?.created_date ?? null,
     updated_date: client?.updated_date ?? null,
@@ -161,7 +150,6 @@ Deno.serve(async (req) => {
     }
 
     const visibleUserIds = new Set([caller.id]);
-    const visibleEmails = new Set([normalizeEmail(caller.email)].filter(Boolean));
 
     if (callerRole === "management") {
       const assignments = await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
@@ -182,18 +170,12 @@ Deno.serve(async (req) => {
           employee
         ) {
           visibleUserIds.add(employeeId);
-          const employeeEmail = normalizeEmail(employee.email);
-          if (employeeEmail) {
-            visibleEmails.add(employeeEmail);
-          }
         }
       }
     }
 
     const clients = scopedClients
-      .filter((client) =>
-        clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
-      )
+      .filter((client) => clientMatchesVisibleStaff(client, visibleUserIds))
       .map(projectClient);
 
     return Response.json({ clients });
