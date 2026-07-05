@@ -59,7 +59,6 @@ function projectClient(client: any) {
     status: normalizeText(client?.status) || "active",
     client_type: normalizeText(client?.client_type) || "job_seeker",
     assigned_employee_id: normalizeText(client?.assigned_employee_id) || null,
-    created_by: normalizeText(client?.created_by) || null,
     is_archived: client?.is_archived === true,
     created_date: client?.created_date ?? null,
     updated_date: client?.updated_date ?? null,
