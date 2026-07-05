@@ -52,6 +52,30 @@ function clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails) {
   );
 }
 
+/**
+ * Deliberately minimal list projection for Clients and Time Tracking.
+ * Sensitive portal tokens, contact details, document URLs, authorization data,
+ * assessments, notes, and other client-workspace fields are never returned by
+ * this organization-list route.
+ */
+function projectClient(client) {
+  return {
+    id: normalizeText(client?.id),
+    first_name: normalizeText(client?.first_name),
+    last_name: normalizeText(client?.last_name),
+    email: normalizeText(client?.email),
+    status: normalizeText(client?.status) || "active",
+    client_type: normalizeText(client?.client_type) || "job_seeker",
+    target_role: normalizeText(client?.target_role),
+    location: normalizeText(client?.location),
+    assigned_employee_id: normalizeText(client?.assigned_employee_id) || null,
+    created_by: normalizeText(client?.created_by) || null,
+    is_archived: client?.is_archived === true,
+    created_date: client?.created_date ?? null,
+    updated_date: client?.updated_date ?? null,
+  };
+}
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
@@ -133,7 +157,7 @@ Deno.serve(async (req) => {
     );
 
     if (callerRole === "admin") {
-      return Response.json({ clients: scopedClients });
+      return Response.json({ clients: scopedClients.map(projectClient) });
     }
 
     const visibleUserIds = new Set([caller.id]);
@@ -166,9 +190,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const clients = scopedClients.filter((client) =>
-      clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
-    );
+    const clients = scopedClients
+      .filter((client) =>
+        clientMatchesVisibleStaff(client, visibleUserIds, visibleEmails)
+      )
+      .map(projectClient);
 
     return Response.json({ clients });
   } catch (error) {
