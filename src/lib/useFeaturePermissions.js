@@ -1,72 +1,102 @@
-/**
- * useFeaturePermissions
- *
- * Fetches FeaturePermission records for the current user's role.
- * Admin users always have full access — no DB lookup needed.
- *
- * Returns:
- *   canView(featureKey)    → boolean (defaults to true for admin, false for others if no record)
- *   canInteract(featureKey)→ boolean
- *   isLoading              → boolean
- *   permissions            → raw array
- */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { isAdmin as checkIsAdmin } from "@/lib/utils";
 
-const cache = {}; // simple in-memory cache keyed by role
+const cache = {};
 
+/**
+ * Loads feature permissions from the authenticated server authority.
+ * Browser-supplied role or organization values are never used to scope the
+ * permission records.
+ */
 export function useFeaturePermissions(user) {
   const [permissions, setPermissions] = useState([]);
+  const [isServerAdmin, setIsServerAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const role = user?.role;
-  const isAdmin = checkIsAdmin(user);
+  const cacheKey = user?.id || "";
 
   useEffect(() => {
-    if (!role || isAdmin) {
-      // Admins always see everything — no fetch needed
-      // Admins always see everything — no fetch needed
-      setIsLoading(false);
-      return;
+    let cancelled = false;
+
+    async function loadPermissions() {
+      if (!cacheKey) {
+        if (!cancelled) {
+          setPermissions([]);
+          setIsServerAdmin(false);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (cache[cacheKey]) {
+        if (!cancelled) {
+          setPermissions(cache[cacheKey].permissions);
+          setIsServerAdmin(cache[cacheKey].isAdmin);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        const response = await base44.functions.invoke(
+          "manageFeaturePermissions",
+          { action: "get_my_permissions" }
+        );
+        const payload = response?.data ?? response ?? {};
+
+        if (!payload?.ok || !Array.isArray(payload?.permissions)) {
+          throw new Error(payload?.error || "Feature permissions could not be loaded.");
+        }
+
+        const cachedValue = {
+          permissions: payload.permissions,
+          isAdmin: payload.is_admin === true,
+        };
+        cache[cacheKey] = cachedValue;
+
+        if (!cancelled) {
+          setPermissions(cachedValue.permissions);
+          setIsServerAdmin(cachedValue.isAdmin);
+        }
+      } catch {
+        if (!cancelled) {
+          setPermissions([]);
+          setIsServerAdmin(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
     }
 
-    if (cache[role]) {
-      setPermissions(cache[role]);
-      setIsLoading(false);
-      return;
-    }
+    loadPermissions();
 
-    base44.entities.FeaturePermission.filter({ role })
-      .then((rows) => {
-        cache[role] = rows;
-        setPermissions(rows);
-      })
-      .catch(() => {
-        setPermissions([]);
-      })
-      .finally(() => setIsLoading(false));
-  }, [role, isAdmin]);
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey]);
+
+  const permissionMap = useMemo(
+    () => new Map(permissions.map((permission) => [permission.feature_key, permission])),
+    [permissions]
+  );
 
   function canView(featureKey) {
-    if (isAdmin) return true;
-    const record = permissions.find((p) => p.feature_key === featureKey);
-    // If no record exists, default to HIDDEN for non-admin (safe default)
-    if (!record) return false;
-    return record.visible !== false;
+    if (isServerAdmin) return true;
+    return permissionMap.get(featureKey)?.visible === true;
   }
 
   function canInteract(featureKey) {
-    if (isAdmin) return true;
-    const record = permissions.find((p) => p.feature_key === featureKey);
-    if (!record) return false;
-    return record.can_interact !== false;
+    if (isServerAdmin) return true;
+    return permissionMap.get(featureKey)?.can_interact === true;
   }
 
   return { canView, canInteract, isLoading, permissions };
 }
 
-// Bust the in-memory cache (call after admin saves changes)
 export function bustPermissionsCache() {
-  Object.keys(cache).forEach((k) => delete cache[k]);
+  Object.keys(cache).forEach((key) => delete cache[key]);
 }
