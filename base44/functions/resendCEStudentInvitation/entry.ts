@@ -5,6 +5,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
+const SAFE_APP_URL_FALLBACK = "https://app.base44.com";
 
 const stripe = STRIPE_SECRET_KEY
   ? new Stripe(STRIPE_SECRET_KEY)
@@ -138,7 +139,24 @@ function formatMoney(amountCents: unknown, currency: unknown) {
 }
 
 function getAppUrl() {
-  return APP_URL.replace(/\/+$/, "");
+  const configuredUrl = normalizeText(APP_URL);
+
+  try {
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // Use the safe fallback below when APP_URL is malformed.
+  }
+
+  return SAFE_APP_URL_FALLBACK;
 }
 
 function getDisplayName(user: any) {
@@ -615,6 +633,7 @@ function isCheckoutScopeValid(
     normalizeText(session.currency).toLowerCase() === lockedCurrency
   );
 }
+
 async function getExistingCheckoutSession(
   billingEvent: any
 ) {
@@ -647,6 +666,7 @@ async function getExistingCheckoutSession(
     );
   }
 }
+
 async function createOrReuseStudentCheckout({
   base44,
   billingEvent,
@@ -665,7 +685,7 @@ async function createOrReuseStudentCheckout({
     );
   }
 
-   const eventStatus = normalizeText(
+  const eventStatus = normalizeText(
     billingEvent?.event_status
   ).toLowerCase();
   const previousStripeSessionId =
@@ -813,7 +833,7 @@ async function createOrReuseStudentCheckout({
       },
     },
     {
-           idempotencyKey:
+      idempotencyKey:
         `${billingEvent.id}:student_paid:retry:${previousStripeSessionId}`,
     }
   );
