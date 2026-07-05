@@ -9,13 +9,18 @@ const AuthContext = createContext();
 export const classifyUserAccess = (user) => {
   if (!user) return 'denied';
 
-  // Explicitly deactivated users are blocked regardless of role/access
-  if (user.is_active === false) return 'deactivated';
+  // Explicitly inactive or archived users are blocked regardless of role/access.
+  if (user.is_active === false || user.is_archived === true) return 'deactivated';
 
-  const role = user.role;
-  const access = user.access_level ?? user.data?.access_level;
+  const role = typeof user.role === 'string' ? user.role.trim().toLowerCase() : '';
+  const access = typeof (user.access_level ?? user.data?.access_level) === 'string'
+    ? (user.access_level ?? user.data?.access_level).trim().toLowerCase()
+    : '';
 
-  if (['admin', 'management', 'employee'].includes(role) && ['staff', 'admin'].includes(access)) {
+  if (
+    (role === 'admin' && access === 'admin') ||
+    ((role === 'management' || role === 'employee') && access === 'staff')
+  ) {
     return 'staff';
   }
 
