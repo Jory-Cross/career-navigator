@@ -1,32 +1,11 @@
-import { base44 } from "@/api/base44Client";
-
 /**
- * O*NET Adapter
- * All external calls must go through backend functions
+ * Legacy O*NET adapter disabled during the security remediation freeze.
+ *
+ * O*NET search must return only through a reviewed, bounded server workflow.
  */
+const REMEDIATION_ERROR =
+  "O*NET career search is temporarily unavailable while security remediation is in progress.";
 
-export async function searchOnetCareers({ query, limit = 10 }) {
-  try {
-    const res = await base44.functions.invoke("searchOnetCareers", {
-      query,
-      limit,
-    });
-
-    if (!res || res.error) {
-      throw new Error(res?.error || "O*NET function failed");
-    }
-
-    return {
-      source: "onet",
-      items: Array.isArray(res.items) ? res.items : [],
-    };
-  } catch (error) {
-    console.error("searchOnetCareers adapter error:", error);
-
-    // fallback — DO NOT REMOVE (keeps system functional if API fails)
-    return {
-      source: "fallback",
-      items: [],
-    };
-  }
+export async function searchOnetCareers() {
+  throw new Error(REMEDIATION_ERROR);
 }
