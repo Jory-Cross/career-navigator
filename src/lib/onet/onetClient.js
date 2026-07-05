@@ -1,168 +1,77 @@
-import { base44 } from "@/api/base44Client";
+/**
+ * Legacy browser O*NET client disabled during the security remediation freeze.
+ *
+ * This module previously forwarded arbitrary provider paths and assessment
+ * answers to a proxy route. O*NET functionality must return only through a
+ * reviewed, bounded server-authorized workflow.
+ */
+const REMEDIATION_ERROR =
+  "O*NET lookup is temporarily unavailable while security remediation is in progress.";
 
-async function onetRequest(path, params = {}) {
-  const response = await base44.functions.invoke("onetProxy", {
-    path,
-    params,
-  });
-
-  if (!response?.data?.success) {
-    const errorMessage =
-      response?.data?.error ||
-      response?.error ||
-      "O*NET request failed";
-
-    console.error("O*NET proxy request failed:", {
-      path,
-      params,
-      response,
-    });
-
-    throw new Error(errorMessage);
-  }
-
-  return response.data.data;
+function unavailable() {
+  throw new Error(REMEDIATION_ERROR);
 }
 
-// ── O*NET Interest Profiler ───────────────────────────────────────────────────
-
-export async function getInterestProfilerQuestions({ start = 1, end = 60 } = {}) {
-  return onetRequest("/mnm/interestprofiler/questions", { start, end });
+export async function getInterestProfilerQuestions() {
+  return unavailable();
 }
 
-export async function getInterestProfilerResults(answers) {
-  return onetRequest("/mnm/interestprofiler/results", { answers });
+export async function getInterestProfilerResults() {
+  return unavailable();
 }
 
 export async function getInterestProfilerJobZones() {
-  return onetRequest("/mnm/interestprofiler/job_zones");
+  return unavailable();
 }
 
-export async function getInterestProfilerCareers({
-  answers,
-  scores,
-  jobZone,
-  start = 1,
-  end = 20,
-} = {}) {
-  const params = {};
-
-  if (answers) params.answers = answers;
-  if (scores) params.scores = scores;
-
-  if (jobZone) params.job_zone = jobZone;
-
-  params.start = start;
-  params.end = end;
-
-  return onetRequest("/mnm/interestprofiler/careers", params);
+export async function getInterestProfilerCareers() {
+  return unavailable();
 }
 
-// Search for an occupation explicitly identified in verified work history
-// or current career goals. These candidates are later merged with Interest
-// Profiler suggestions so validated work success is not lost.
-export async function searchOnetCareersByKeyword(keyword, { start = 1, end = 5 } = {}) {
-  if (!keyword) return null;
-
-  return onetRequest("/mnm/search", {
-    keyword,
-    start,
-    end,
-  });
+export async function searchOnetCareersByKeyword() {
+  return unavailable();
 }
 
-// ── O*NET Occupation Details ──────────────────────────────────────────────────
-// These functions support later recommendation review and the career-targeted
-// Skills Audit. They do not yet change recommendation ranking on their own.
-
-export async function getOnetOccupationOverview(code) {
-  if (!code) return null;
-
-  return onetRequest(`/mnm/careers/${code}`);
+export async function getOnetOccupationOverview() {
+  return unavailable();
 }
 
-export async function getOnetOccupationSkills(code) {
-  if (!code) return null;
-
-  return onetRequest(`/mnm/careers/${code}/skills`);
+export async function getOnetOccupationSkills() {
+  return unavailable();
 }
 
-export async function getOnetOccupationEducation(code) {
-  if (!code) return null;
-
-  return onetRequest(`/mnm/careers/${code}/education`);
+export async function getOnetOccupationEducation() {
+  return unavailable();
 }
 
-export async function getOnetOccupationTechnology(code) {
-  if (!code) return null;
-
-  return onetRequest(`/mnm/careers/${code}/technology`);
+export async function getOnetOccupationTechnology() {
+  return unavailable();
 }
 
-export async function getOnetOccupationJobZone(code) {
-  if (!code) return null;
-
-  return onetRequest(`/online/occupations/${code}/details/job_zone`);
+export async function getOnetOccupationJobZone() {
+  return unavailable();
 }
 
-export async function getOnetOccupationTasks(code) {
-  if (!code) return null;
-
-  return onetRequest(`/online/occupations/${code}/details/tasks`);
+export async function getOnetOccupationTasks() {
+  return unavailable();
 }
 
-export async function getOnetOccupationDetailedSkills(code) {
-  if (!code) return null;
-
-  return onetRequest(`/online/occupations/${code}/details/skills`);
+export async function getOnetOccupationDetailedSkills() {
+  return unavailable();
 }
 
-export async function getOnetOccupationTechnologySkills(code) {
-  if (!code) return null;
-
-  return onetRequest(`/online/occupations/${code}/details/technology_skills`);
+export async function getOnetOccupationTechnologySkills() {
+  return unavailable();
 }
 
-// Temporary compatibility function for future callers that need a career
-// overview. No existing app file currently calls this function.
-export async function getOnetOccupationDetails(code) {
-  return getOnetOccupationOverview(code);
+export async function getOnetOccupationDetails() {
+  return unavailable();
 }
 
-export function buildOnetRecommendationProfile({
-  riasecProfile = null,
-  onetAnswerString = null,
-} = {}) {
-  if (onetAnswerString) {
-    return {
-      type: "answers",
-      answers: onetAnswerString,
-    };
-  }
-
-  if (riasecProfile?.riasec_score_string) {
-    return {
-      type: "scores",
-      scores: riasecProfile.riasec_score_string,
-    };
-  }
-
+export function buildOnetRecommendationProfile() {
   return null;
 }
 
 export async function testOnetConnection() {
-  try {
-    const res = await getInterestProfilerQuestions({ start: 1, end: 1 });
-
-    if (!res) {
-      console.error("O*NET TEST FAILED: Empty response.");
-      return false;
-    }
-
-    console.log("O*NET TEST SUCCESS:", res);
-    return true;
-  } catch (err) {
-    console.error("O*NET TEST FAILED:", err);
-    return false;
-  }
+  return false;
 }
