@@ -4,7 +4,7 @@
   "properties": {
     "plan_key": {
       "type": "string",
-      "description": "Stable unique machine-readable plan identifier, such as trainer_business_standard, business_ce_growth, or individual_ce."
+      "description": "Stable unique machine-readable plan identifier."
     },
     "plan_name": {
       "type": "string",
@@ -18,7 +18,7 @@
         "business_ce",
         "individual_ce"
       ],
-      "description": "Customer account model this plan creates. business_platform is the full Career Navigator business product and may later purchase CE modules as add-ons. business_ce is the standalone CE-focused business product. trainer_business runs CE training cohorts. individual_ce supports one independent CE practitioner."
+      "description": "Customer account model this plan creates."
     },
     "plan_tier": {
       "type": "string",
@@ -28,7 +28,7 @@
         "enterprise",
         "pro"
       ],
-      "description": "Named service tier within the account model. Trainer Business and Business CE use starter, growth, and enterprise. Individual CE uses starter and pro."
+      "description": "Named service tier within the account model."
     },
     "navigation_scope": {
       "type": "string",
@@ -37,7 +37,7 @@
         "ce_only",
         "ce_training_only"
       ],
-      "description": "Controls the app surface shown to organizations on this plan. full_platform shows general Career Navigator pages, with CE pages added only when CE entitlements are active. ce_only shows CE practitioner and CE client pages only. ce_training_only shows CE Training Portal, cohorts, trainers, students, and cohort-scoped CE client work only."
+      "description": "Controls the permitted app surface for organizations on this plan."
     },
     "description": {
       "type": "string",
@@ -58,7 +58,7 @@
     },
     "price_cents": {
       "type": "number",
-      "description": "Displayed base plan price in cents. Stripe remains the payment source of truth once billing is connected."
+      "description": "Displayed base plan price in cents."
     },
     "stripe_product_id": {
       "type": "string",
@@ -66,7 +66,7 @@
     },
     "stripe_price_id": {
       "type": "string",
-      "description": "Stripe Price ID for this specific billing interval, when billing is connected."
+      "description": "Stripe Price ID for this billing interval, when billing is connected."
     },
     "is_active": {
       "type": "boolean",
@@ -76,7 +76,7 @@
     "is_publicly_available": {
       "type": "boolean",
       "default": true,
-      "description": "Controls whether this plan appears in future self-service purchase and upgrade screens."
+      "description": "Controls whether this plan appears in future self-service screens."
     },
     "sort_order": {
       "type": "integer",
@@ -97,25 +97,9 @@
     "is_publicly_available"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
   }
 }
