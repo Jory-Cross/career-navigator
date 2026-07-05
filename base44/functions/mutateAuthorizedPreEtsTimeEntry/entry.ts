@@ -305,6 +305,7 @@ async function resolveStaffClient(
       if (
         assignment?.is_active === true &&
         assignment?.is_archived !== true &&
+        normalizeText(assignment?.manager_user_id) === callerId &&
         normalizeText(assignment?.org_id) === organizationId &&
         employee
       ) {
