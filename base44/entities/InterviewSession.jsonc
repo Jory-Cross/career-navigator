@@ -107,5 +107,11 @@
   "required": [
     "client_id",
     "target_role"
-  ]
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
 }
