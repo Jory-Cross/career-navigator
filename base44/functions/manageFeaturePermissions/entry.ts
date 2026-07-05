@@ -40,6 +40,10 @@ const FEATURE_CATALOG: Record<string, { label: string; category: string }> = {
   dspd: { label: "DSPD", category: "client_categories" },
   job_seeker: { label: "Job Seeker", category: "client_categories" },
   employed: { label: "Employed", category: "client_categories" },
+  customized_employment: {
+    label: "Customized Employment",
+    category: "client_categories",
+  },
   client_details: { label: "Client Details", category: "client_detail" },
   client_onboarding: { label: "Onboarding", category: "client_detail" },
   client_intake_packet: { label: "Intake Packet", category: "client_detail" },
@@ -158,7 +162,7 @@ function validatePermissionInput(body: any) {
   const featureKey = normalizeText(body?.feature_key);
 
   if (!CONFIGURABLE_ROLES.has(role)) {
-    throw new RequestError("400" as unknown as number, "Choose a configurable role.");
+    throw new RequestError(400, "Choose a configurable role.");
   }
 
   if (!FEATURE_CATALOG[featureKey]) {
