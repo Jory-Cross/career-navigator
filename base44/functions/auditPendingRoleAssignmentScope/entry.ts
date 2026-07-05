@@ -43,6 +43,15 @@ function isActive(record: any) {
   return record?.is_active !== false && record?.is_archived !== true;
 }
 
+function isActiveClient(client: any) {
+  return (
+    client &&
+    client.status === "active" &&
+    client.is_active !== false &&
+    client.is_archived !== true
+  );
+}
+
 function getCanonicalStaffRole(user: any) {
   const role = normalizeText(user?.role).toLowerCase();
   const accessLevel = normalizeText(user?.access_level).toLowerCase();
@@ -262,8 +271,7 @@ Deno.serve(async (req) => {
         if (!clientId) {
           findings.push("missing_client_id");
         } else if (
-          !client ||
-          !isActive(client) ||
+          !isActiveClient(client) ||
           normalizeText(client?.org_id) !== organizationId
         ) {
           findings.push("client_invalid_or_cross_org");
