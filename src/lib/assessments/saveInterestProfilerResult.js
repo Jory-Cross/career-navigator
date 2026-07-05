@@ -11,32 +11,44 @@ function getTimestamp(item) {
     item?.created_date ||
     item?.created_at ||
     "";
-
   const time = value ? new Date(value).getTime() : 0;
   return Number.isFinite(time) ? time : 0;
 }
 
+async function invokeAuthorizedAssessment(payload) {
+  const response = await base44.functions.invoke(
+    "manageAuthorizedAssessment",
+    payload
+  );
+  const data = response?.data ?? response ?? {};
+
+  if (!data?.ok) {
+    throw new Error(data?.error || "Interest Profiler results could not be saved.");
+  }
+
+  return data;
+}
+
+/**
+ * Saves the O*NET Interest Profiler through the authorized assessment route.
+ * Client, organization, caller, and assessment ownership are resolved on the
+ * server. This helper intentionally does not archive older records directly;
+ * duplicate cleanup requires a separately reviewed server-side workflow.
+ */
 export async function saveInterestProfilerResult({
   clientId,
   assessmentId = null,
-
   answers = [],
   answerString = "",
-
   scores = {},
   riasec_scores = {},
-
   topCodes = [],
   riasec_code = "",
-
   status = "completed",
   completed = true,
   completed_at = null,
-
   onetResult = null,
 }) {
-  const user = await base44.auth.me();
-
   const normalizedScores = {
     Realistic:
       riasec_scores.Realistic ??
@@ -46,7 +58,6 @@ export async function saveInterestProfilerResult({
       scores.realistic ??
       scores.R ??
       0,
-
     Investigative:
       riasec_scores.Investigative ??
       riasec_scores.investigative ??
@@ -55,7 +66,6 @@ export async function saveInterestProfilerResult({
       scores.investigative ??
       scores.I ??
       0,
-
     Artistic:
       riasec_scores.Artistic ??
       riasec_scores.artistic ??
@@ -64,7 +74,6 @@ export async function saveInterestProfilerResult({
       scores.artistic ??
       scores.A ??
       0,
-
     Social:
       riasec_scores.Social ??
       riasec_scores.social ??
@@ -73,7 +82,6 @@ export async function saveInterestProfilerResult({
       scores.social ??
       scores.S ??
       0,
-
     Enterprising:
       riasec_scores.Enterprising ??
       riasec_scores.enterprising ??
@@ -82,7 +90,6 @@ export async function saveInterestProfilerResult({
       scores.enterprising ??
       scores.E ??
       0,
-
     Conventional:
       riasec_scores.Conventional ??
       riasec_scores.conventional ??
@@ -96,81 +103,52 @@ export async function saveInterestProfilerResult({
   const normalizedCode =
     riasec_code ||
     (Array.isArray(topCodes) ? topCodes.join("") : String(topCodes || ""));
-
+  const normalizedStatus = status === "in_progress" ? "in_progress" : "completed";
   const completedAt = completed_at || new Date().toISOString();
 
-  const existingAssessments = await base44.entities.Assessment.filter({
-    client_id: clientId,
-  });
+  let targetAssessmentId = assessmentId || null;
 
-  const existingInterestProfilers = safeArray(existingAssessments)
-    .filter((assessment) => assessment?.assessment_type === "interest_profiler")
-    .filter((assessment) => assessment?.is_archived !== true)
-    .sort((a, b) => getTimestamp(b) - getTimestamp(a));
+  if (!targetAssessmentId) {
+    const listResult = await invokeAuthorizedAssessment({
+      action: "list",
+      client_id: clientId,
+    });
 
-  const targetAssessmentId =
-    assessmentId || existingInterestProfilers[0]?.id || null;
+    const existingInterestProfilers = safeArray(listResult?.assessments)
+      .filter((assessment) => assessment?.assessment_type === "interest_profiler")
+      .sort((left, right) => getTimestamp(right) - getTimestamp(left));
 
-  const payload = {
+    targetAssessmentId = existingInterestProfilers[0]?.id || null;
+  }
+
+  const saved = await invokeAuthorizedAssessment({
+    action: "upsert",
+    assessment_id: targetAssessmentId || "",
     client_id: clientId,
     assessment_type: "interest_profiler",
-
-    status,
-    completed,
-    completed_at: completedAt,
-    completed_date: completedAt,
-    is_archived: false,
-
+    status: normalizedStatus,
     responses: {
       answers,
       answerString,
       answer_string: answerString,
       onet_answer_string: answerString,
-
       scores: normalizedScores,
       riasec_scores: normalizedScores,
-
       topCodes,
       riasec_code: normalizedCode,
-
-      completed,
+      completed: completed === true || normalizedStatus === "completed",
       completed_at: completedAt,
       completed_date: completedAt,
-
       source: "O*NET Interest Profiler",
       onetResult,
     },
+    structured_evidence: [],
+    source_metadata: {
+      source: "O*NET Interest Profiler",
+      completed_at: completedAt,
+    },
+    staff_review_flags: [],
+  });
 
-    completed_by: user?.email || "",
-    notes: `O*NET Interest Profiler / RIASEC assessment completed. RIASEC: ${normalizedCode}`,
-  };
-
-  let savedAssessment;
-
-  if (targetAssessmentId) {
-    savedAssessment = await base44.entities.Assessment.update(
-      targetAssessmentId,
-      payload
-    );
-  } else {
-    savedAssessment = await base44.entities.Assessment.create(payload);
-  }
-
-  const savedId = savedAssessment?.id || targetAssessmentId;
-
-  await Promise.all(
-    existingInterestProfilers
-      .filter((assessment) => assessment.id !== savedId)
-      .map((assessment) =>
-        base44.entities.Assessment.update(assessment.id, {
-          is_archived: true,
-          status: "archived",
-          archived_at: completedAt,
-          archive_reason:
-            "Archived because a newer O*NET Interest Profiler was completed.",
-        })
-      )
-  );
-
-  return savedAssessment;
+  return saved.assessment;
 }
