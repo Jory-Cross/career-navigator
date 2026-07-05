@@ -35,7 +35,6 @@ function mapClient(raw) {
     location: asString(raw.location),
     assigned_employee_id: raw.assigned_employee_id ?? null,
     assigned_employer_id: raw.assigned_employer_id ?? null,
-    created_by: asString(raw.created_by),
     is_archived: raw.is_archived === true || asString(raw.status) === "archived",
     raw,
   };
@@ -50,7 +49,6 @@ function mapTimeEntry(raw) {
     client_id: raw.client_id ?? null,
     employee_id: raw.employee_id ?? raw.staff_id ?? raw.user_id ?? null,
     staff_id: raw.staff_id ?? raw.user_id ?? null,
-    created_by: asString(raw.created_by),
     entry_type_id: raw.entry_type_id ?? null,
     entry_type_code: asString(raw.entry_type_code),
     entry_type: asString(raw.entry_type),
@@ -85,6 +83,10 @@ async function invokeAuthorizedRoute(functionName, payload) {
  * Compatibility adapter limited to the current server-authorized Time Tracking
  * workflow. Legacy client-workspace helpers were removed because they directly
  * read and mutated browser entities without tenant authority.
+ *
+ * Creator identity is deliberately not projected. Browser callers must use
+ * canonical server-authorized employee and assignment relationships instead of
+ * legacy creator fields for visibility or mutability decisions.
  */
 export async function getCurrentUser() {
   return base44.auth.me();
