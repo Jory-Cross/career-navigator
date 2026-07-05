@@ -35,10 +35,6 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeEmail(value: unknown) {
-  return normalizeText(value).toLowerCase();
-}
-
 function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -187,7 +183,6 @@ async function resolveStaffClient(
   }
 
   const visibleUserIds = new Set([callerId]);
-  const visibleEmails = new Set([normalizeEmail(caller?.email)].filter(Boolean));
 
   if (callerRole === "management") {
     const activeStaffById = new Map(
@@ -216,18 +211,12 @@ async function resolveStaffClient(
         employee
       ) {
         visibleUserIds.add(employeeId);
-        const employeeEmail = normalizeEmail(employee.email);
-        if (employeeEmail) visibleEmails.add(employeeEmail);
       }
     }
   }
 
   const assignedEmployeeId = normalizeText(client?.assigned_employee_id);
-  const createdBy = normalizeEmail(client?.created_by);
-  if (
-    !visibleUserIds.has(assignedEmployeeId) &&
-    !(createdBy && visibleEmails.has(createdBy))
-  ) {
+  if (!visibleUserIds.has(assignedEmployeeId)) {
     throw new RequestError(
       403,
       "You are not assigned to this Pre-ETS student."
