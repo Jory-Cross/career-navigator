@@ -690,121 +690,128 @@ async function prepareCeStudentActivation(
   const changes: Array<() => Promise<void>> = [];
   let cohortMembership = existingMember;
 
-  if (cohortMembership && cohortMembership?.is_active === false) {
-    const prior = {
-      is_active: cohortMembership.is_active,
-      joined_at: cohortMembership.joined_at,
-      added_by: cohortMembership.added_by,
-    };
-    await base44.asServiceRole.entities.CETrainingCohortMember.update(
-      cohortMembership.id,
-      {
-        is_active: true,
-        joined_at: cohortMembership.joined_at || now,
-        added_by: assignment.invited_by_id,
+  const rollbackChanges = async () => {
+    for (const change of [...changes].reverse()) {
+      try {
+        await change();
+      } catch (error) {
+        console.error(
+          "[applyPendingRoleIfNeeded] Could not roll back CE activation:",
+          error
+        );
       }
-    );
-    changes.push(async () => {
+    }
+  };
+
+  try {
+    if (cohortMembership && cohortMembership?.is_active === false) {
+      const prior = {
+        is_active: cohortMembership.is_active,
+        joined_at: cohortMembership.joined_at,
+        added_by: cohortMembership.added_by,
+      };
       await base44.asServiceRole.entities.CETrainingCohortMember.update(
         cohortMembership.id,
-        prior
+        {
+          is_active: true,
+          joined_at: cohortMembership.joined_at || now,
+          added_by: assignment.invited_by_id,
+        }
       );
-    });
-    cohortMembership = { ...cohortMembership, is_active: true };
-  }
-
-  if (!cohortMembership) {
-    cohortMembership =
-      await base44.asServiceRole.entities.CETrainingCohortMember.create({
-        org_id: organizationId,
-        cohort_id: cohortId,
-        user_id: user.id,
-        cohort_role: "member",
-        is_active: true,
-        training_status: "in_training",
-        joined_at: now,
-        added_by: assignment.invited_by_id,
+      changes.push(async () => {
+        await base44.asServiceRole.entities.CETrainingCohortMember.update(
+          cohortMembership.id,
+          prior
+        );
       });
-    const createdMembershipId = cohortMembership.id;
-    changes.push(async () => {
-      await base44.asServiceRole.entities.CETrainingCohortMember.update(
-        createdMembershipId,
-        { is_active: false }
-      );
-    });
-  }
+      cohortMembership = { ...cohortMembership, is_active: true };
+    }
 
-  if (!billedUserId) {
-    await base44.asServiceRole.entities.OrganizationBillingEvent.update(
-      billingEvent.id,
-      { subject_user_id: user.id }
-    );
-    changes.push(async () => {
+    if (!cohortMembership) {
+      cohortMembership =
+        await base44.asServiceRole.entities.CETrainingCohortMember.create({
+          org_id: organizationId,
+          cohort_id: cohortId,
+          user_id: user.id,
+          cohort_role: "member",
+          is_active: true,
+          training_status: "in_training",
+          joined_at: now,
+          added_by: assignment.invited_by_id,
+        });
+      const createdMembershipId = cohortMembership.id;
+      changes.push(async () => {
+        await base44.asServiceRole.entities.CETrainingCohortMember.update(
+          createdMembershipId,
+          { is_active: false }
+        );
+      });
+    }
+
+    if (!billedUserId) {
       await base44.asServiceRole.entities.OrganizationBillingEvent.update(
         billingEvent.id,
-        { subject_user_id: null }
+        { subject_user_id: user.id }
       );
-    });
-  }
+      changes.push(async () => {
+        await base44.asServiceRole.entities.OrganizationBillingEvent.update(
+          billingEvent.id,
+          { subject_user_id: null }
+        );
+      });
+    }
 
-  const enrollmentUpdates: Record<string, unknown> = {};
-  const enrollmentRollback: Record<string, unknown> = {};
-  if (!enrolledUserId) {
-    enrollmentUpdates.user_id = user.id;
-    enrollmentRollback.user_id = enrollment.user_id || null;
-  }
-  if (!existingCohortMemberId) {
-    enrollmentUpdates.cohort_member_id = cohortMembership.id;
-    enrollmentRollback.cohort_member_id = enrollment.cohort_member_id || null;
-  }
-  if (!normalizeText(enrollment?.payment_settled_at)) {
-    enrollmentUpdates.payment_settled_at =
-      normalizeText(billingEvent?.paid_at) ||
-      normalizeText(billingEvent?.waived_at) ||
-      now;
-    enrollmentRollback.payment_settled_at = enrollment.payment_settled_at || null;
-  }
-  if (!normalizeText(enrollment?.registered_at)) {
-    enrollmentUpdates.registered_at = now;
-    enrollmentRollback.registered_at = enrollment.registered_at || null;
-  }
-  if (enrollmentStatus !== "training_completed") {
-    enrollmentUpdates.enrollment_status = "active";
-    enrollmentUpdates.status_updated_at = now;
-    enrollmentRollback.enrollment_status = enrollment.enrollment_status || null;
-    enrollmentRollback.status_updated_at = enrollment.status_updated_at || null;
-  }
+    const enrollmentUpdates: Record<string, unknown> = {};
+    const enrollmentRollback: Record<string, unknown> = {};
+    if (!enrolledUserId) {
+      enrollmentUpdates.user_id = user.id;
+      enrollmentRollback.user_id = enrollment.user_id || null;
+    }
+    if (!existingCohortMemberId) {
+      enrollmentUpdates.cohort_member_id = cohortMembership.id;
+      enrollmentRollback.cohort_member_id = enrollment.cohort_member_id || null;
+    }
+    if (!normalizeText(enrollment?.payment_settled_at)) {
+      enrollmentUpdates.payment_settled_at =
+        normalizeText(billingEvent?.paid_at) ||
+        normalizeText(billingEvent?.waived_at) ||
+        now;
+      enrollmentRollback.payment_settled_at = enrollment.payment_settled_at || null;
+    }
+    if (!normalizeText(enrollment?.registered_at)) {
+      enrollmentUpdates.registered_at = now;
+      enrollmentRollback.registered_at = enrollment.registered_at || null;
+    }
+    if (enrollmentStatus !== "training_completed") {
+      enrollmentUpdates.enrollment_status = "active";
+      enrollmentUpdates.status_updated_at = now;
+      enrollmentRollback.enrollment_status = enrollment.enrollment_status || null;
+      enrollmentRollback.status_updated_at = enrollment.status_updated_at || null;
+    }
 
-  if (Object.keys(enrollmentUpdates).length > 0) {
-    await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
-      enrollment.id,
-      enrollmentUpdates
-    );
-    changes.push(async () => {
+    if (Object.keys(enrollmentUpdates).length > 0) {
       await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
         enrollment.id,
-        enrollmentRollback
+        enrollmentUpdates
       );
-    });
-  }
+      changes.push(async () => {
+        await base44.asServiceRole.entities.CETrainingStudentEnrollment.update(
+          enrollment.id,
+          enrollmentRollback
+        );
+      });
+    }
 
-  return {
-    cohortMembershipId: cohortMembership.id,
-    enrollmentId: enrollment.id,
-    billingEventId: billingEvent.id,
-    rollback: async () => {
-      for (const change of [...changes].reverse()) {
-        try {
-          await change();
-        } catch (error) {
-          console.error(
-            "[applyPendingRoleIfNeeded] Could not roll back CE activation:",
-            error
-          );
-        }
-      }
-    },
-  };
+    return {
+      cohortMembershipId: cohortMembership.id,
+      enrollmentId: enrollment.id,
+      billingEventId: billingEvent.id,
+      rollback: rollbackChanges,
+    };
+  } catch (error) {
+    await rollbackChanges();
+    throw error;
+  }
 }
 
 async function markAssignmentAccepted(base44: any, assignmentId: string) {
