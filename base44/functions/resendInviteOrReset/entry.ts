@@ -3,6 +3,7 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.25";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.base44.com";
+const SAFE_APP_URL_FALLBACK = "https://app.base44.com";
 
 const FREE_DOMAINS = new Set([
   "gmail.com",
@@ -49,10 +50,7 @@ function getRoleProfile(user: any) {
     return null;
   }
 
-  return {
-    role,
-    access_level: accessLevel,
-  };
+  return { role, access_level: accessLevel };
 }
 
 function escapeHtml(value: unknown) {
@@ -74,24 +72,30 @@ function getSenderAddress() {
     RESEND_FROM_EMAIL.split("@")[1] || ""
   ).toLowerCase();
 
-  if (RESEND_FROM_EMAIL && !FREE_DOMAINS.has(domain)) {
-    return RESEND_FROM_EMAIL;
-  }
-
-  return "onboarding@resend.dev";
+  return RESEND_FROM_EMAIL && !FREE_DOMAINS.has(domain)
+    ? RESEND_FROM_EMAIL
+    : "onboarding@resend.dev";
 }
 
 function getSafeAppUrl() {
-  const candidate = APP_URL.replace(/\/+$/, "");
+  const configuredUrl = normalizeText(APP_URL);
 
   try {
-    const parsed = new URL(candidate);
-    return parsed.protocol === "https:"
-      ? parsed.toString().replace(/\/+$/, "")
-      : "https://app.base44.com";
+    const parsed = new URL(configuredUrl);
+
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname &&
+      !parsed.username &&
+      !parsed.password
+    ) {
+      return parsed.toString().replace(/\/+$/, "");
+    }
   } catch {
-    return "https://app.base44.com";
+    // Use the safe fallback below when APP_URL is malformed.
   }
+
+  return SAFE_APP_URL_FALLBACK;
 }
 
 function getDisplayName(user: any) {
@@ -111,10 +115,7 @@ async function resolveCanonicalCaller(
   ).catch(() => null);
 
   if (!caller || !isActive(caller)) {
-    throw new RequestError(
-      403,
-      "Your account is unavailable or inactive."
-    );
+    throw new RequestError(403, "Your account is unavailable or inactive.");
   }
 
   const callerId = normalizeText(caller.id);
@@ -150,12 +151,7 @@ async function resolveCanonicalCaller(
     );
   }
 
-  return {
-    caller,
-    callerId,
-    organizationId,
-    profile,
-  };
+  return { caller, callerId, organizationId, profile };
 }
 
 async function resolveAuthorizedEmployee(
@@ -265,7 +261,7 @@ async function sendAccessEmail({
     : "Access your Career Navigator account";
   const callerDisplayName = escapeHtml(getDisplayName(caller));
   const employeeEmail = escapeHtml(email);
-  const appUrl = getSafeAppUrl();
+  const appUrl = escapeHtml(getSafeAppUrl());
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -345,7 +341,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!["resend_invite", "send_reset"].includes(action)) {
+    if (!new Set(["resend_invite", "send_reset"]).has(action)) {
       throw new RequestError(
         400,
         "Choose either resend invitation or send password reset."
@@ -362,12 +358,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const {
-      caller,
-      callerId,
-      organizationId,
-      profile,
-    } = await resolveCanonicalCaller(base44, authenticatedUser.id);
+    const { caller, callerId, organizationId, profile } =
+      await resolveCanonicalCaller(base44, authenticatedUser.id);
 
     const employee = await resolveAuthorizedEmployee(
       base44,
@@ -377,11 +369,7 @@ Deno.serve(async (req) => {
       employeeId
     );
 
-    const email = await sendAccessEmail({
-      action,
-      employee,
-      caller,
-    });
+    const email = await sendAccessEmail({ action, employee, caller });
 
     return Response.json({
       success: true,
@@ -392,9 +380,10 @@ Deno.serve(async (req) => {
           : `An account-access email was sent to ${email}.`,
     });
   } catch (error) {
-    const message = error instanceof RequestError
-      ? error.message
-      : "The staff access email could not be sent. Please try again or contact your organization administrator.";
+    const message =
+      error instanceof RequestError
+        ? error.message
+        : "The staff access email could not be sent. Please try again or contact your organization administrator.";
 
     if (!(error instanceof RequestError)) {
       console.error(
@@ -404,13 +393,8 @@ Deno.serve(async (req) => {
     }
 
     return Response.json(
-      {
-        success: false,
-        error: message,
-      },
-      {
-        status: error instanceof RequestError ? error.status : 500,
-      }
+      { success: false, error: message },
+      { status: error instanceof RequestError ? error.status : 500 }
     );
   }
 });
