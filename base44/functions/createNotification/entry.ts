@@ -1,30 +1,27 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
+/**
+ * Disabled during the security remediation freeze.
+ *
+ * This legacy route created service-role Notification records from arbitrary
+ * request content without canonical caller authorization. Notifications must
+ * return only through a reviewed, server-authorized workflow.
+ */
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    
-    // This should be called by automations or other backend functions
-    const { title, message, type, related_client_id, related_entity_type, related_entity_id, action_url } = await req.json();
-    
-    if (!title || !message) {
-      return Response.json({ error: 'title and message required' }, { status: 400 });
-    }
-
-    await base44.asServiceRole.entities.Notification.create({
-      title,
-      message,
-      type: type || 'info',
-      related_client_id,
-      related_entity_type,
-      related_entity_id,
-      action_url,
-      is_read: false
-    });
-
-    return Response.json({ success: true });
-
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (req.method !== "POST") {
+    return Response.json(
+      {
+        ok: false,
+        error: "This route accepts POST requests only.",
+      },
+      { status: 405 }
+    );
   }
+
+  return Response.json(
+    {
+      ok: false,
+      error:
+        "Notification creation is temporarily unavailable while security remediation is in progress.",
+    },
+    { status: 503 }
+  );
 });
