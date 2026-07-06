@@ -137,8 +137,9 @@ async function requireCohortAccess(
   cohortId: string
 ) {
   if (
-    !cohort ||
+       !cohort ||
     normalizeText(cohort?.org_id) !== organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !== "training" ||
     !isActive(cohort) ||
     normalizeText(cohort?.status).toLowerCase() === "archived"
   ) {
