@@ -142,6 +142,7 @@ async function requireCohortRosterAuthority(
   if (
     !cohort ||
     normalizeText(cohort?.org_id) !== organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !== "training" ||
     cohort?.is_active === false ||
     cohort?.is_archived === true ||
     normalizeText(cohort?.status).toLowerCase() === "archived"
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
         error:
           error instanceof RequestError
             ? error.message
-            : "Assigned CE students could not be loaded. Please try again or contact an organization administrator.",
+            : "Assigned CE students could not be loaded. Please try again or contact your organization administrator.",
       },
       { status }
     );
