@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
         error:
           error instanceof RequestError
             ? error.message
-            : "Assigned CE students could not be loaded. Please try again or contact your organization administrator.",
+            : "Assigned CE students could not be loaded. Please try again or contact an organization administrator.",
       },
       { status }
     );
