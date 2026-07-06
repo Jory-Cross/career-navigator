@@ -160,6 +160,7 @@ async function requireCohortRosterAuthority(
     !cohort ||
     !isActiveRecord(cohort) ||
     normalizeText(cohort?.org_id) !== organizationId ||
+    normalizeText(cohort?.cohort_type).toLowerCase() !== "training" ||
     normalizeText(cohort?.status).toLowerCase() === "archived"
   ) {
     throw new RequestError(403, "The selected cohort is unavailable.");
