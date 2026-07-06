@@ -155,11 +155,11 @@ async function requireCohortAccess(
     );
   }
 
-  if (isOrganizationAdmin || isOrganizationManager) {
+    if (isOrganizationAdmin) {
     return cohort;
   }
 
-  if (!isCEInstructor) {
+  if (!isOrganizationManager && !isCEInstructor) {
     throw new RequestError(
       403,
       "Only authorized CE organization users may view student details."
