@@ -400,9 +400,8 @@ Deno.serve(async (req) => {
         )
     );
 
-    const canViewAllOrganizationCohorts =
-      roleProfile.role === "admin" ||
-      roleProfile.role === "management";
+      const canViewAllOrganizationCohorts =
+      roleProfile.role === "admin";
 
     const visibleCohortIds = canViewAllOrganizationCohorts
       ? new Set(cohortById.keys())
