@@ -192,28 +192,25 @@ Deno.serve(async (req) => {
         isActiveRecord(membership)
     );
 
-    const canViewAllOrganizationCohorts =
-      roleProfile.role === "admin" ||
-      roleProfile.role === "management";
-
-    const visibleCohortIds = canViewAllOrganizationCohorts
-      ? validCohortIds
-      : new Set(
-          activeMemberships
-            .filter(
-              (membership: any) =>
-                normalizeText(membership?.user_id) === callerId &&
-                ["manager", "trainer"].includes(
-                  normalizeText(
-                    membership?.cohort_role
-                  ).toLowerCase()
-                )
-            )
-            .map((membership: any) =>
-              normalizeText(membership?.cohort_id)
-            )
-            .filter(Boolean)
-        );
+    const visibleCohortIds =
+      roleProfile.role === "admin"
+        ? validCohortIds
+        : new Set(
+            activeMemberships
+              .filter(
+                (membership: any) =>
+                  normalizeText(membership?.user_id) === callerId &&
+                  ["manager", "trainer"].includes(
+                    normalizeText(
+                      membership?.cohort_role
+                    ).toLowerCase()
+                  )
+              )
+              .map((membership: any) =>
+                normalizeText(membership?.cohort_id)
+              )
+              .filter(Boolean)
+          );
 
     const cohorts = organizationCohorts.filter((cohort: any) =>
       visibleCohortIds.has(normalizeText(cohort?.id))
