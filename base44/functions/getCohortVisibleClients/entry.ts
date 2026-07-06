@@ -32,6 +32,7 @@ function isActiveCohort(cohort: any, organizationId: string) {
   return (
     isActive(cohort) &&
     normalizeText(cohort?.org_id) === organizationId &&
+    normalizeText(cohort?.cohort_type).toLowerCase() === "training" &&
     normalizeText(cohort?.status).toLowerCase() !== "archived"
   );
 }
