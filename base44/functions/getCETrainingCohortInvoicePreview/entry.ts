@@ -137,7 +137,7 @@ async function resolveAuthorizedTrainingCohort(
     throw new RequestError(404, "The selected Training cohort is unavailable.");
   }
 
-  if (["admin", "management"].includes(context.callerRole)) {
+  if (context.callerRole === "admin") {
     return cohort;
   }
 
