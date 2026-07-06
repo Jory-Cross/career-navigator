@@ -546,9 +546,7 @@ Deno.serve(async (req) => {
     );
 
     mark("user_profiles_loaded");
-    const pendingEnrollments = (
-      Array.isArray(pendingInviteRows) ? pendingInviteRows : []
-    )
+       const pendingEnrollments = cohortInvites
       .filter((invite) =>
         OPEN_INVITE_STATUSES.has(normalizeText(invite.status))
       )
