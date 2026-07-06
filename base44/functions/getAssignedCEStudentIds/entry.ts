@@ -143,7 +143,8 @@ async function requireCohortRosterAuthority(
     !cohort ||
     normalizeText(cohort?.org_id) !== organizationId ||
     cohort?.is_active === false ||
-    cohort?.is_archived === true
+    cohort?.is_archived === true ||
+    normalizeText(cohort?.status).toLowerCase() === "archived"
   ) {
     throw new RequestError(
       403,
@@ -188,12 +189,14 @@ async function requireCohortRosterAuthority(
 
 async function getActiveAssignedCEStudentIds(
   base44: any,
-  organizationId: string
+  organizationId: string,
+  cohortId: string
 ) {
   const membershipRows =
     await base44.asServiceRole.entities.CETrainingCohortMember.filter(
       {
         org_id: organizationId,
+        cohort_id: cohortId,
         cohort_role: "member",
         is_active: true,
       }
@@ -205,6 +208,7 @@ async function getActiveAssignedCEStudentIds(
         .filter(
           (membership: any) =>
             normalizeText(membership?.org_id) === organizationId &&
+            normalizeText(membership?.cohort_id) === cohortId &&
             normalizeText(membership?.cohort_role).toLowerCase() ===
               "member" &&
             membership?.is_active !== false &&
@@ -295,7 +299,8 @@ Deno.serve(async (req) => {
     const assignedUserIds =
       await getActiveAssignedCEStudentIds(
         base44,
-        organizationId
+        organizationId,
+        cohortId
       );
 
     return Response.json({
