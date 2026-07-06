@@ -441,9 +441,17 @@ Deno.serve(async (req) => {
         ])
     );
 
-    const cohortInvites = Array.isArray(pendingInviteRows)
-      ? pendingInviteRows
-      : [];
+     const cohortInvites = (
+      Array.isArray(pendingInviteRows) ? pendingInviteRows : []
+    ).filter(
+      (invite: any) =>
+        invite?.is_archived !== true &&
+        normalizeText(invite?.org_id) === organizationId &&
+        normalizeText(invite?.cohort_id) === cohortId &&
+        normalizeText(invite?.role).toLowerCase() === "ce_student" &&
+        normalizeText(invite?.access_level).toLowerCase() ===
+          "ce_training_portal"
+    );
 
     const invitesById = new Map(
       cohortInvites
