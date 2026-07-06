@@ -164,6 +164,7 @@ Deno.serve(async (req) => {
     ).filter(
       (cohort: any) =>
         normalizeText(cohort?.org_id) === organizationId &&
+        normalizeText(cohort?.cohort_type).toLowerCase() === "training" &&
         isActiveRecord(cohort) &&
         normalizeText(cohort?.status).toLowerCase() !==
           "archived"
