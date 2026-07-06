@@ -149,10 +149,7 @@ async function requireCohortAccess(
     );
   }
 
-  if (
-    roleProfile.role === "admin" ||
-    roleProfile.role === "management"
-  ) {
+   if (roleProfile.role === "admin") {
     return;
   }
 
