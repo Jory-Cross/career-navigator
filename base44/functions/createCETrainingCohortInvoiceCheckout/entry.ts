@@ -209,7 +209,7 @@ async function assertCohortAuthority(
   organizationId: string,
   cohortId: string,
 ) {
-  if (role !== "ce_instructor") {
+   if (role === "admin") {
     return;
   }
 
