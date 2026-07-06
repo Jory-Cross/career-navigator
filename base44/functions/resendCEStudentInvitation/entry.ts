@@ -375,7 +375,8 @@ function isMatchingOpenInvitation(assignment: any) {
       ? normalizeText(assignment?.instructor_payment_mode)
       : "";
 
-  return (
+    return (
+    assignment?.is_archived !== true &&
     normalizeText(assignment?.role).toLowerCase() ===
       "ce_student" &&
     normalizeText(assignment?.access_level).toLowerCase() ===
