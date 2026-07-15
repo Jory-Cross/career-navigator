@@ -139,6 +139,22 @@ const [isDeleting, setIsDeleting] = useState(false);
     return periods;
   }, []);
 
+  useEffect(() => {
+  mountedRef.current = true;
+  getCurrentUser()
+    .then((result) => {
+      if (mountedRef.current) {
+        setUser(result);
+      }
+    })
+    .catch(() => {});
+  return () => {
+    mountedRef.current = false;
+  };
+}, []);
+
+  const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
+
   // Fetch the active PayPeriodSchedule for this org to determine payroll cycle type.
   const { data: payPeriodSchedule } = useQuery({
     queryKey: ["payPeriodSchedule", effectiveUser?.org_id],
@@ -167,22 +183,6 @@ const [isDeleting, setIsDeleting] = useState(false);
       setPeriodFilter(today.getDate() <= 15 ? "payroll1" : "payroll2");
     }
   }, [payPeriodSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-  mountedRef.current = true;
-  getCurrentUser()
-    .then((result) => {
-      if (mountedRef.current) {
-        setUser(result);
-      }
-    })
-    .catch(() => {});
-  return () => {
-    mountedRef.current = false;
-  };
-}, []);
-
-  const effectiveUser = user?.role === "admin" && viewAsUser ? viewAsUser : user;
 
 const { data: allUsers = [] } = useQuery({
   queryKey: ["timeTracking", "users"],
