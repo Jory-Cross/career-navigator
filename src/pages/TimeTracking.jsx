@@ -36,6 +36,8 @@ import { User, Filter, AlertTriangle, Pencil, Plus, Trash2, List, LayoutGrid } f
 import { base44 } from "@/api/base44Client";
 import FormEngine from "@/components/time-entry/FormEngine";
 import TimeCardWorkspace from "@/components/time-entry/TimeCardWorkspace";
+import NonAttendanceDialog from "@/components/time-entry/NonAttendanceDialog";
+import EntryDetailsDialog from "@/components/time-entry/EntryDetailsDialog";
 import LegacyDataWarning from "@/components/shared/LegacyDataWarning";
 import { useNavigate } from "react-router-dom";
 import { useCohortVisibleMembership } from "@/lib/cohort/useCohortVisibleMembership";
@@ -136,6 +138,35 @@ const [isDeleting, setIsDeleting] = useState(false);
     }
     return periods;
   }, []);
+
+  // Fetch the active PayPeriodSchedule for this org to determine payroll cycle type.
+  const { data: payPeriodSchedule } = useQuery({
+    queryKey: ["payPeriodSchedule", effectiveUser?.org_id],
+    queryFn: async () => {
+      const schedules = await base44.entities.PayPeriodSchedule.filter({
+        org_id: effectiveUser.org_id,
+        is_active: true,
+      });
+      return schedules[0] || null;
+    },
+    enabled: !!effectiveUser?.org_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const payrollScheduleType = payPeriodSchedule?.schedule_type || "semi_monthly";
+
+  // Set default periodFilter when schedule type is first determined.
+  useEffect(() => {
+    if (!payPeriodSchedule) return;
+    if (payPeriodSchedule.schedule_type === "biweekly") {
+      setPeriodFilter("biweekly");
+    } else {
+      const today = new Date();
+      setPeriodFilter(today.getDate() <= 15 ? "payroll1" : "payroll2");
+    }
+  }, [payPeriodSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
   mountedRef.current = true;
@@ -612,6 +643,10 @@ useEffect(() => {
   return {
     biweeklyStart,
     biweeklyEnd,
+    payroll1Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 1),
+    payroll1End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 15, 23, 59, 59),
+    payroll2Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 16),
+    payroll2End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth() + 1, 0, 23, 59, 59),
     weekStart: startOfWeek(new Date()),
     weekEnd: endOfWeek(new Date()),
     monthStart: startOfMonth(safeBaseDate),
@@ -741,6 +776,26 @@ if (entryTypeFilter !== "all") {
       if (
         parsedDate >= payrollRanges.biweeklyStart &&
         parsedDate <= payrollRanges.biweeklyEnd
+      ) {
+        result.push(entry);
+      }
+      continue;
+    }
+
+    if (periodFilter === "payroll1") {
+      if (
+        parsedDate >= payrollRanges.payroll1Start &&
+        parsedDate <= payrollRanges.payroll1End
+      ) {
+        result.push(entry);
+      }
+      continue;
+    }
+
+    if (periodFilter === "payroll2") {
+      if (
+        parsedDate >= payrollRanges.payroll2Start &&
+        parsedDate <= payrollRanges.payroll2End
       ) {
         result.push(entry);
       }
@@ -934,6 +989,20 @@ if (entryTypeFilter !== "all") {
         );
       }
 
+      if (periodFilter === "payroll1") {
+        return (
+          parsedDate >= payrollRanges.payroll1Start &&
+          parsedDate <= payrollRanges.payroll1End
+        );
+      }
+
+      if (periodFilter === "payroll2") {
+        return (
+          parsedDate >= payrollRanges.payroll2Start &&
+          parsedDate <= payrollRanges.payroll2End
+        );
+      }
+
       if (periodFilter === "week") {
         return isWithinInterval(parsedDate, {
           start: payrollRanges.weekStart,
@@ -969,6 +1038,10 @@ if (entryTypeFilter !== "all") {
         ? timeCardDateRange.start
         : periodFilter === "biweekly"
         ? payrollRanges.biweeklyStart
+        : periodFilter === "payroll1"
+        ? payrollRanges.payroll1Start
+        : periodFilter === "payroll2"
+        ? payrollRanges.payroll2Start
         : periodFilter === "week"
         ? payrollRanges.weekStart
         : payrollRanges.monthStart;
@@ -978,6 +1051,10 @@ if (entryTypeFilter !== "all") {
         ? timeCardDateRange.end
         : periodFilter === "biweekly"
         ? payrollRanges.biweeklyEnd
+        : periodFilter === "payroll1"
+        ? payrollRanges.payroll1End
+        : periodFilter === "payroll2"
+        ? payrollRanges.payroll2End
         : periodFilter === "week"
         ? payrollRanges.weekEnd
         : payrollRanges.monthEnd;
@@ -1382,11 +1459,18 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
                     Time Card Period
                   </SelectItem>
                 ) : null}
-                {biweeklyPeriods.map((p) => (
-                  <SelectItem key={p.offset} value={`biweekly:${p.offset}`}>
-                    {format(p.start, "MMM d")}–{format(p.end, "MMM d, yyyy")}
-                  </SelectItem>
-                ))}
+                {payrollScheduleType === "biweekly"
+                  ? biweeklyPeriods.map((p) => (
+                      <SelectItem key={p.offset} value={`biweekly:${p.offset}`}>
+                        {format(p.start, "MMM d")}–{format(p.end, "MMM d, yyyy")}
+                      </SelectItem>
+                    ))
+                  : (
+                    <>
+                      <SelectItem value="payroll1">1st–15th</SelectItem>
+                      <SelectItem value="payroll2">16th–End of Month</SelectItem>
+                    </>
+                  )}
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
                 <SelectItem value="all">All Time</SelectItem>
@@ -1471,6 +1555,16 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
               : periodFilter === "biweekly"
               ? `Selected period: ${format(payrollRanges.biweeklyStart, "MMM d")}–${format(
                   payrollRanges.biweeklyEnd,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "payroll1"
+              ? `Selected period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
+                  payrollRanges.payroll1End,
+                  "MMM d, yyyy"
+                )}`
+              : periodFilter === "payroll2"
+              ? `Selected period: ${format(payrollRanges.payroll2Start, "MMM d")}–${format(
+                  payrollRanges.payroll2End,
                   "MMM d, yyyy"
                 )}`
               : periodFilter === "week"
@@ -2069,129 +2163,17 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
         })()}
       </Card>
 
-      <Dialog
+      <NonAttendanceDialog
         open={showNonAttendanceDialog}
-        onOpenChange={(open) => {
-          if (!open) closeNonAttendanceDialog();
-          else setShowNonAttendanceDialog(true);
-        }}
-      >
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>No-Show / Cancellation Record</DialogTitle>
-          </DialogHeader>
+        onOpenChange={setShowNonAttendanceDialog}
+        form={nonAttendanceForm}
+        setForm={setNonAttendanceForm}
+        clients={clients}
+        saving={savingNonAttendance}
+        onSave={handleSaveNonAttendance}
+        onClose={closeNonAttendanceDialog}
+      />
 
-          <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Use this to document a client no-show, cancellation, or related staff note. This creates a staff record with 0 hours and does not count toward payroll.
-            </p>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Client</label>
-              <Select
-                value={nonAttendanceForm.client_id}
-                onValueChange={(value) =>
-                  setNonAttendanceForm((form) => ({
-                    ...form,
-                    client_id: value,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-               <SelectContent className="max-h-72 overflow-y-auto">
-                  {clients
-                    .filter((client) => !client.is_archived)
-                    .map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {`${client.first_name || ""} ${client.last_name || ""}`.trim() ||
-                          client.full_name ||
-                          client.email ||
-                          "Unknown"}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date</label>
-                <input
-                  type="date"
-                  value={nonAttendanceForm.date}
-                  onChange={(e) =>
-                    setNonAttendanceForm((form) => ({
-                      ...form,
-                      date: e.target.value,
-                    }))
-                  }
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Event Type</label>
-                <Select
-                  value={nonAttendanceForm.event_type}
-                  onValueChange={(value) =>
-                    setNonAttendanceForm((form) => ({
-                      ...form,
-                      event_type: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                 <SelectContent className="max-h-72 overflow-y-auto">
-                    <SelectItem value="no_show">No show</SelectItem>
-                    <SelectItem value="late_cancellation">Late cancellation</SelectItem>
-                    <SelectItem value="excused_cancellation">Excused cancellation</SelectItem>
-                    <SelectItem value="transportation_issue">Transportation issue</SelectItem>
-                    <SelectItem value="client_unavailable">Client unavailable</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Note</label>
-              <textarea
-                value={nonAttendanceForm.description}
-                onChange={(e) =>
-                  setNonAttendanceForm((form) => ({
-                    ...form,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Example: Client cancelled 20 minutes before scheduled service. Staff attempted contact and documented cancellation."
-                className="min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 border-t pt-4">
-              <Button
-                variant="outline"
-                onClick={closeNonAttendanceDialog}
-                disabled={savingNonAttendance}
-              >
-                Cancel
-              </Button>
-
-              <Button
-                onClick={handleSaveNonAttendance}
-                disabled={savingNonAttendance}
-              >
-                {savingNonAttendance ? "Saving..." : "Save Record"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
       <Dialog
         open={showNewEntry}
         onOpenChange={(open) => {
@@ -2321,134 +2303,19 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!selectedEntry}
-        onOpenChange={(open) => {
-          if (!open) setSelectedEntry(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Time Entry Details</DialogTitle>
-          </DialogHeader>
-
-                      {selectedEntry ? (() => {
-                const isSelectedNonAttendance =
-                  selectedEntry.entry_type_code === "client_non_attendance";
-
-                const selectedNonAttendanceLabel =
-                  selectedEntry.form_data?.event_label ||
-                  selectedEntry.form_data?.event_type?.replace(/_/g, " ") ||
-                  "No-show / cancellation";
-
-                return (
-            <div className="space-y-4">
-              <div>
-                <div className="mb-1 text-xs text-slate-500">Client</div>
-                <div className="text-sm">
-                  {selectedEntry.client_id ? getClientName(selectedEntry.client_id) : "Myself"}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1 text-xs text-slate-500">Date</div>
-                <div className="text-sm">{formatLongEntryDate(selectedEntry.date)}</div>
-              </div>
-
-                           <div>
-                <div className="mb-1 text-xs text-slate-500">
-                  {isSelectedNonAttendance ? "Payroll" : "Duration"}
-                </div>
-                <div className="text-sm">
-                  {isSelectedNonAttendance
-                    ? "Not payroll eligible — 0 minutes"
-                    : `${selectedEntry.duration_minutes || 0} minutes`}
-                </div>
-              </div>
-                           <div>
-                <div className="mb-1 text-xs text-slate-500">
-                  {isSelectedNonAttendance ? "Record Type" : "Type"}
-                </div>
-                <div className="text-sm">
-                  {isSelectedNonAttendance
-                    ? "Client No-Show / Cancellation"
-                    : getEntryTypeLabel(selectedEntry, resolvedEntryTypeCodes)}
-                </div>
-              </div>
-
-              {isSelectedNonAttendance ? (
-                <div>
-                  <div className="mb-1 text-xs text-slate-500">Event Type</div>
-                  <div className="text-sm capitalize">
-                    {selectedNonAttendanceLabel}
-                  </div>
-                </div>
-              ) : null}
-
-              {selectedEntry.start_time || selectedEntry.end_time ? (
-                <div>
-                  <div className="mb-1 text-xs text-slate-500">Time</div>
-                  <div className="text-sm">
-                    {selectedEntry.start_time || "—"} - {selectedEntry.end_time || "—"}
-                  </div>
-                </div>
-              ) : null}
-
-              <div>
-                <div className="mb-1 text-xs text-slate-500">Description</div>
-                <div className="text-sm">{getEntryDisplayText(selectedEntry, "—")}</div>
-              </div>
-
-              {selectedEntry.created_by && (user?.role === "admin" || effectiveUser?.role === "management") ? (
-                <div>
-                  <div className="mb-1 text-xs text-slate-500">Staff</div>
-                  <div className="text-sm">{getEntryStaffName(selectedEntry) || selectedEntry.created_by}</div>
-                </div>
-              ) : null}
-
-                           <div className="flex justify-between items-center">
-                {canMutate(selectedEntry) ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDeleteEntry(selectedEntry)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete Entry
-                </Button>
-                ) : (
-                <Badge className="bg-slate-100 text-slate-400">
-                  View only
-                </Badge>
-                )}
-
-                {!isSelectedNonAttendance ? (
-                  canMutate(selectedEntry) ? (
-                  <Button
-                    onClick={() => {
-                      const entry = selectedEntry;
-                      setSelectedEntry(null);
-                      handleEditEntry(entry);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  ) : (
-                  <Badge className="bg-slate-100 text-slate-700">
-                    View only
-                  </Badge>
-                  )
-                ) : (
-                  <Badge className="bg-slate-100 text-slate-700">
-                    Staff record
-                  </Badge>
-                )}
-              </div>
-                        </div>
-                );
-              })() : null}
-        </DialogContent>
-      </Dialog>
+      <EntryDetailsDialog
+        selectedEntry={selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        getClientName={getClientName}
+        getEntryStaffName={getEntryStaffName}
+        resolvedEntryTypeCodes={resolvedEntryTypeCodes}
+        user={user}
+        effectiveUser={effectiveUser}
+        canMutate={canMutate}
+        handleDeleteEntry={handleDeleteEntry}
+        handleEditEntry={handleEditEntry}
+        setSelectedEntry={setSelectedEntry}
+      />
 
       <AlertDialog open={!!deletingEntry} onOpenChange={(open) => !open && setDeletingEntry(null)}>
         <AlertDialogContent>
