@@ -47,7 +47,12 @@ import {
   isWithinInterval,
   startOfMonth,
   endOfMonth,
+  addDays,
 } from "date-fns";
+
+// Biweekly payroll anchor: Sunday July 12, 2026.
+// Each period is 14 days (Sunday through Saturday two weeks later).
+const BIWEEKLY_ANCHOR = new Date(2026, 6, 12);
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEntryTypeOptions, normalizeEntryTypeCode } from "@/lib/entryTypeRegistry";
@@ -75,12 +80,13 @@ export default function TimeTracking() {
   const mountedRef = useRef(false);
   const resolveRunIdRef = useRef(0);
 
-  const [periodFilter, setPeriodFilter] = useState(() => {
+  const [periodFilter, setPeriodFilter] = useState("biweekly");
+  const [biweeklyOffset, setBiweeklyOffset] = useState(() => {
     const today = new Date();
-
-    return today.getDate() <= 15
-      ? "payroll1"
-      : "payroll2";
+    const diffDays = Math.floor(
+      (today - BIWEEKLY_ANCHOR) / (1000 * 60 * 60 * 24)
+    );
+    return Math.floor(diffDays / 14);
   });
   const [timeCardPeriod, setTimeCardPeriod] = useState(null);
   const [clientFilter, setClientFilter] = useState("all");
@@ -117,6 +123,19 @@ const [isDeleting, setIsDeleting] = useState(false);
   const [entryListView, setEntryListView] = useState("list");
 
   const entryTypes = useMemo(() => getEntryTypeOptions(), []);
+
+  // Generate 13 biweekly periods centered on the current period.
+  const biweeklyPeriods = useMemo(() => {
+    const periods = [];
+    for (let i = -6; i <= 6; i++) {
+      periods.push({
+        offset: i,
+        start: addDays(BIWEEKLY_ANCHOR, i * 14),
+        end: addDays(BIWEEKLY_ANCHOR, i * 14 + 13),
+      });
+    }
+    return periods;
+  }, []);
 
   useEffect(() => {
   mountedRef.current = true;
@@ -588,17 +607,17 @@ useEffect(() => {
       ? new Date(selectedYear, selectedMonthIndex, 1)
       : new Date();
 
+  const biweeklyStart = addDays(BIWEEKLY_ANCHOR, biweeklyOffset * 14);
+  const biweeklyEnd = addDays(BIWEEKLY_ANCHOR, biweeklyOffset * 14 + 13);
   return {
-    payroll1Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 1),
-    payroll1End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 15, 23, 59, 59),
-    payroll2Start: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth(), 16),
-    payroll2End: new Date(safeBaseDate.getFullYear(), safeBaseDate.getMonth() + 1, 0, 23, 59, 59),
+    biweeklyStart,
+    biweeklyEnd,
     weekStart: startOfWeek(new Date()),
     weekEnd: endOfWeek(new Date()),
     monthStart: startOfMonth(safeBaseDate),
     monthEnd: endOfMonth(safeBaseDate),
   };
-}, [selectedMonth]);
+  }, [selectedMonth, biweeklyOffset]);
 
   const timeCardDateRange = useMemo(() => {
     const periodStart =
@@ -718,20 +737,10 @@ if (entryTypeFilter !== "all") {
       continue;
     }
 
-    if (periodFilter === "payroll1") {
+    if (periodFilter === "biweekly") {
       if (
-        parsedDate >= payrollRanges.payroll1Start &&
-        parsedDate <= payrollRanges.payroll1End
-      ) {
-        result.push(entry);
-      }
-      continue;
-    }
-
-    if (periodFilter === "payroll2") {
-      if (
-        parsedDate >= payrollRanges.payroll2Start &&
-        parsedDate <= payrollRanges.payroll2End
+        parsedDate >= payrollRanges.biweeklyStart &&
+        parsedDate <= payrollRanges.biweeklyEnd
       ) {
         result.push(entry);
       }
@@ -918,17 +927,10 @@ if (entryTypeFilter !== "all") {
         );
       }
 
-      if (periodFilter === "payroll1") {
+      if (periodFilter === "biweekly") {
         return (
-          parsedDate >= payrollRanges.payroll1Start &&
-          parsedDate <= payrollRanges.payroll1End
-        );
-      }
-
-      if (periodFilter === "payroll2") {
-        return (
-          parsedDate >= payrollRanges.payroll2Start &&
-          parsedDate <= payrollRanges.payroll2End
+          parsedDate >= payrollRanges.biweeklyStart &&
+          parsedDate <= payrollRanges.biweeklyEnd
         );
       }
 
@@ -965,10 +967,8 @@ if (entryTypeFilter !== "all") {
     const start =
       periodFilter === "time_card" && timeCardDateRange
         ? timeCardDateRange.start
-        : periodFilter === "payroll1"
-        ? payrollRanges.payroll1Start
-        : periodFilter === "payroll2"
-        ? payrollRanges.payroll2Start
+        : periodFilter === "biweekly"
+        ? payrollRanges.biweeklyStart
         : periodFilter === "week"
         ? payrollRanges.weekStart
         : payrollRanges.monthStart;
@@ -976,10 +976,8 @@ if (entryTypeFilter !== "all") {
     const end =
       periodFilter === "time_card" && timeCardDateRange
         ? timeCardDateRange.end
-        : periodFilter === "payroll1"
-        ? payrollRanges.payroll1End
-        : periodFilter === "payroll2"
-        ? payrollRanges.payroll2End
+        : periodFilter === "biweekly"
+        ? payrollRanges.biweeklyEnd
         : periodFilter === "week"
         ? payrollRanges.weekEnd
         : payrollRanges.monthEnd;
@@ -1359,9 +1357,15 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Period</label>
                       <Select
-              value={periodFilter}
+              value={periodFilter === "biweekly" ? `biweekly:${biweeklyOffset}` : periodFilter}
               onValueChange={(v) => {
-                setPeriodFilter(v);
+                if (v.startsWith("biweekly:")) {
+                  const offset = Number(v.split(":")[1]);
+                  setBiweeklyOffset(offset);
+                  setPeriodFilter("biweekly");
+                } else {
+                  setPeriodFilter(v);
+                }
                 setSelectedDay(null);
 
                 if (v !== "time_card") {
@@ -1378,8 +1382,11 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
                     Time Card Period
                   </SelectItem>
                 ) : null}
-                <SelectItem value="payroll1">1st–15th</SelectItem>
-                <SelectItem value="payroll2">16th–End of Month</SelectItem>
+                {biweeklyPeriods.map((p) => (
+                  <SelectItem key={p.offset} value={`biweekly:${p.offset}`}>
+                    {format(p.start, "MMM d")}–{format(p.end, "MMM d, yyyy")}
+                  </SelectItem>
+                ))}
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
                 <SelectItem value="all">All Time</SelectItem>
@@ -1461,14 +1468,9 @@ const handleTimeCardPeriodSelected = useCallback((period) => {
                   timeCardDateRange.end,
                   "MMM d, yyyy"
                 )}`
-              : periodFilter === "payroll1"
-              ? `Selected period: ${format(payrollRanges.payroll1Start, "MMM d")}–${format(
-                  payrollRanges.payroll1End,
-                  "MMM d, yyyy"
-                )}`
-              : periodFilter === "payroll2"
-              ? `Selected period: ${format(payrollRanges.payroll2Start, "MMM d")}–${format(
-                  payrollRanges.payroll2End,
+              : periodFilter === "biweekly"
+              ? `Selected period: ${format(payrollRanges.biweeklyStart, "MMM d")}–${format(
+                  payrollRanges.biweeklyEnd,
                   "MMM d, yyyy"
                 )}`
               : periodFilter === "week"
