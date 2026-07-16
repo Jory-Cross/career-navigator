@@ -329,11 +329,28 @@ Deno.serve(async (req) => {
         user?.is_archived === true
     );
 
+    // Fetch all active ManagerEmployeeAssignment records for the org so the
+    // frontend can resolve visibility for any caller (including admin view-as).
+    const allAssignmentRows =
+      await base44.asServiceRole.entities.ManagerEmployeeAssignment.filter({
+        org_id: organizationId,
+        is_active: true,
+      });
+    const managerAssignments = asArray(allAssignmentRows)
+      .map((row: any) => ({
+        manager_user_id: normalizeText(row?.manager_user_id),
+        employee_user_id: normalizeText(row?.employee_user_id),
+      }))
+      .filter(
+        (row: any) => row.manager_user_id && row.employee_user_id
+      );
+
     return Response.json({
       ok: true,
       organization_id: organizationId,
       users: activeUsers,
       inactive_users: inactiveUsers,
+      manager_assignments: managerAssignments,
     });
   } catch (error: unknown) {
     const status =

@@ -43,8 +43,16 @@ export default function EmployeePortal() {
 
   const allUsers = orgData.users || [];
   const inactiveUsers = orgData.inactive_users || [];
+  const managerAssignments = orgData.manager_assignments || [];
 
   const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
+
+  const getManagedEmployeeIds = (managerId) => {
+    const ids = managerAssignments
+      .filter(a => a.manager_user_id === managerId)
+      .map(a => a.employee_user_id);
+    return new Set(ids);
+  };
 
   // Only active users in the visible list
   const visibleUsers = (() => {
@@ -55,7 +63,13 @@ export default function EmployeePortal() {
       return [...managers, ...employees];
     }
     if (effectiveUser?.role === 'management') {
-      return allUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
+      // Use ManagerEmployeeAssignment records (supports multiple managers and management-role direct reports)
+      // Falls back to User.manager_id for backward compatibility
+      const managedIds = getManagedEmployeeIds(effectiveUser.id);
+      return allUsers.filter(u =>
+        managedIds.has(u.id) ||
+        (u.role === 'employee' && u.manager_id === effectiveUser.id)
+      );
     }
     return [];
   })();
@@ -66,7 +80,11 @@ export default function EmployeePortal() {
       return inactiveUsers.filter(u => u.role === 'employee' || u.role === 'management');
     }
     if (effectiveUser?.role === 'management') {
-      return inactiveUsers.filter(u => u.role === 'employee' && u.manager_id === effectiveUser.id);
+      const managedIds = getManagedEmployeeIds(effectiveUser.id);
+      return inactiveUsers.filter(u =>
+        managedIds.has(u.id) ||
+        (u.role === 'employee' && u.manager_id === effectiveUser.id)
+      );
     }
     return [];
   })();
