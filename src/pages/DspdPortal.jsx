@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   Users, Clock, FileText, Briefcase, Plus, AlertTriangle,
   Target, CheckCircle2, Calendar, ChevronRight, ArrowLeft,
-  ClipboardList, TrendingUp, Trash2
+  ClipboardList, TrendingUp, Trash2, FileDown
 } from "lucide-react";
+import DspdBimonthlyReportDialog from "@/components/dspd/DspdBimonthlyReportDialog";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { cn } from "@/lib/utils";
@@ -445,7 +446,8 @@ function GoalsTab({ clientId, isStaff }) {
 }
 
 // ─── Work Schedule Tab ────────────────────────────────────────────────────────
-function WorkScheduleTab({ clientId }) {
+function WorkScheduleTab({ clientId, client }) {
+  const [showReport, setShowReport] = useState(false);
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["work-schedule", clientId],
     queryFn: () => base44.entities.TimeEntry.filter({ client_id: clientId }),
@@ -463,7 +465,8 @@ function WorkScheduleTab({ clientId }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex items-center justify-between">
+        <div className="grid grid-cols-2 gap-3 flex-1">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-50"><Clock className="w-4 h-4 text-blue-600" /></div>
@@ -482,7 +485,24 @@ function WorkScheduleTab({ clientId }) {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
+
+      {client && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" onClick={() => setShowReport(true)} className="gap-1.5">
+            <FileDown className="w-3.5 h-3.5" /> Bimonthly Report
+          </Button>
+        </div>
+      )}
+
+      {client && (
+        <DspdBimonthlyReportDialog
+          client={client}
+          open={showReport}
+          onOpenChange={setShowReport}
+        />
+      )}
 
       {sorted.length === 0 ? (
         <Card className="border-0 shadow-sm">
@@ -616,7 +636,7 @@ function ClientDetail({ client, onBack, isStaff }) {
           <GoalsTab clientId={client.id} isStaff={isStaff} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-4">
-          <WorkScheduleTab clientId={client.id} />
+          <WorkScheduleTab clientId={client.id} client={client} />
         </TabsContent>
       </Tabs>
     </div>
@@ -697,7 +717,7 @@ export default function DspdPortal() {
             <TabsTrigger value="notes">My Support Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="goals" className="mt-4"><GoalsTab clientId={selfClient.id} isStaff={false} /></TabsContent>
-          <TabsContent value="schedule" className="mt-4"><WorkScheduleTab clientId={selfClient.id} /></TabsContent>
+          <TabsContent value="schedule" className="mt-4"><WorkScheduleTab clientId={selfClient.id} client={selfClient} /></TabsContent>
           <TabsContent value="notes" className="mt-4"><SupportNotesTab clientId={selfClient.id} isStaff={false} /></TabsContent>
         </Tabs>
       </div>
