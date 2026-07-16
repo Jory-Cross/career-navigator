@@ -273,15 +273,15 @@ const { data: managerAssignments = [] } = useQuery({
   }, [platformUsers, cohortMemberUsers]);
 
   const scopedUsers = useMemo(() => {
-  return getScopedUsers(usersWithCohort, effectiveUser);
-}, [usersWithCohort, effectiveUser]);
+  return getScopedUsers(usersWithCohort, effectiveUser, managedEmployeeIds);
+}, [usersWithCohort, effectiveUser, managedEmployeeIds]);
 
   // Separate "platform-only" scoped user set — used by canMutate to know whether
   // an entry was visible via the platform hierarchy (existing edit rights preserved)
   // vs ONLY via cohort (view-only). This never gates visibility; it only classifies.
   const platformScopedUsers = useMemo(() => {
-  return getScopedUsers(platformUsers, effectiveUser);
-}, [platformUsers, effectiveUser]);
+  return getScopedUsers(platformUsers, effectiveUser, managedEmployeeIds);
+}, [platformUsers, effectiveUser, managedEmployeeIds]);
 
 // Build list of employee_ids visible to a manager: ManagerEmployeeAssignment + legacy manager_id fallback.
 // Defined before visibleStaffUsers because visibleStaffUsers depends on it.
@@ -457,8 +457,8 @@ function isEntryCohortOnly(entry) {
 });
 
 const platformClients = useMemo(() => {
-  return getScopedClients(rawClients, effectiveUser, scopedUsers);
-}, [rawClients, effectiveUser, scopedUsers]);
+  return getScopedClients(rawClients, effectiveUser, scopedUsers, managedEmployeeIds);
+}, [rawClients, effectiveUser, scopedUsers, managedEmployeeIds]);
 
 // Additive union: platform clients + cohort-visible clients (deduped by id).
 const allClients = useMemo(() => {

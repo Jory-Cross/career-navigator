@@ -563,7 +563,7 @@ export async function deleteTimeEntry(id) {
   return await base44.entities.TimeEntry.delete(id);
 }
 
-export function getScopedUsers(allUsers = [], user) {
+export function getScopedUsers(allUsers = [], user, managedEmployeeIds = []) {
   if (!user) return [];
 
   if (user.role === "admin") {
@@ -571,15 +571,16 @@ export function getScopedUsers(allUsers = [], user) {
   }
 
   if (user.role === "management") {
+    const managedSet = new Set(managedEmployeeIds);
     return asArray(allUsers).filter(
-      (u) => u.id === user.id || u.manager_id === user.id
+      (u) => u.id === user.id || u.manager_id === user.id || managedSet.has(u.id)
     );
   }
 
   return asArray(allUsers).filter((u) => u.id === user.id);
 }
 
-export function getScopedClients(allClients = [], user, allUsers = []) {
+export function getScopedClients(allClients = [], user, allUsers = [], managedEmployeeIds = []) {
   if (!user) return [];
 
   if (user.role === "admin") {
@@ -587,11 +588,12 @@ export function getScopedClients(allClients = [], user, allUsers = []) {
   }
 
   if (user.role === "management") {
-    const subordinateIds = new Set(
-      asArray(allUsers)
+    const subordinateIds = new Set([
+      ...asArray(allUsers)
         .filter((u) => u.manager_id === user.id)
-        .map((u) => u.id)
-    );
+        .map((u) => u.id),
+      ...managedEmployeeIds,
+    ]);
 
     return asArray(allClients).filter(
       (client) =>
