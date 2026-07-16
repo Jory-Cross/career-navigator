@@ -615,6 +615,17 @@ function buildEntrySnapshotRecord(entry: any) {
   };
 }
 
+function entryBelongsToEmployee(
+  entry: any,
+  employeeId: string
+) {
+  return (
+    normalizeText(entry?.employee_id) === employeeId ||
+    normalizeText(entry?.staff_id) === employeeId ||
+    normalizeText(entry?.user_id) === employeeId
+  );
+}
+
 function sortEntries(entries: any[]) {
   return [...entries].sort((left, right) => {
     const leftKey = [
@@ -862,13 +873,13 @@ async function loadEmployeeEntriesForPeriod(
 ) {
   const entries =
     await base44.asServiceRole.entities.TimeEntry.filter({
-      employee_id: employeeId,
+      org_id: organizationId,
     });
 
   const scopedEntries = asArray(entries).filter(
     (entry: any) =>
       normalizeText(entry?.org_id) === organizationId &&
-      normalizeText(entry?.employee_id) === employeeId &&
+      entryBelongsToEmployee(entry, employeeId) &&
       normalizeDate(entry?.date) >= periodStart &&
       normalizeDate(entry?.date) <= periodEnd
   );
@@ -930,13 +941,13 @@ async function loadEntriesByIds(
 
   const entries =
     await base44.asServiceRole.entities.TimeEntry.filter({
-      employee_id: employeeId,
+      org_id: organizationId,
     });
 
   const matchingEntries = asArray(entries).filter(
     (entry: any) =>
       normalizeText(entry?.org_id) === organizationId &&
-      normalizeText(entry?.employee_id) === employeeId &&
+      entryBelongsToEmployee(entry, employeeId) &&
       requestedIds.has(normalizeText(entry?.id))
   );
 
