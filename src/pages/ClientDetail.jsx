@@ -66,6 +66,7 @@ import VocationalProfileCard from "@/components/client-detail/VocationalProfileC
 import IntakePacketPanel from "@/components/intake/IntakePacketPanel";
 import CustomizedEmploymentPanel from "@/components/customized-employment/CustomizedEmploymentPanel";
 import ArchiveClientDialog from "@/components/clients/ArchiveClientDialog";
+import DspdBimonthlyReportButton from "@/components/dspd/DspdBimonthlyReportButton";
 
 function getClientIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -1153,6 +1154,11 @@ const currentTaskCount = tasks.filter(
 
                 {cd.time && !isClientUser && (
           <TabsContent value="time">
+            {client?.client_type === "dspd" && (
+              <div className="flex justify-end mb-3">
+                <DspdBimonthlyReportButton client={client} />
+              </div>
+            )}
             <TimeLogDashboard
               client={client}
               clientId={client.id}
