@@ -272,19 +272,8 @@ const { data: managerAssignments = [] } = useQuery({
     return merged;
   }, [platformUsers, cohortMemberUsers]);
 
-  const scopedUsers = useMemo(() => {
-  return getScopedUsers(usersWithCohort, effectiveUser, managedEmployeeIds);
-}, [usersWithCohort, effectiveUser, managedEmployeeIds]);
-
-  // Separate "platform-only" scoped user set — used by canMutate to know whether
-  // an entry was visible via the platform hierarchy (existing edit rights preserved)
-  // vs ONLY via cohort (view-only). This never gates visibility; it only classifies.
-  const platformScopedUsers = useMemo(() => {
-  return getScopedUsers(platformUsers, effectiveUser, managedEmployeeIds);
-}, [platformUsers, effectiveUser, managedEmployeeIds]);
-
 // Build list of employee_ids visible to a manager: ManagerEmployeeAssignment + legacy manager_id fallback.
-// Defined before visibleStaffUsers because visibleStaffUsers depends on it.
+// Must be defined before scopedUsers/platformScopedUsers which depend on it.
 const managedEmployeeIds = useMemo(() => {
   if (!effectiveUser || effectiveUser.role !== "management") return [];
   const assignedIds = managerAssignments
@@ -297,6 +286,17 @@ const managedEmployeeIds = useMemo(() => {
     .filter(Boolean);
   return [...new Set([...assignedIds, ...legacyIds])];
 }, [allUsers, effectiveUser, managerAssignments]);
+
+  const scopedUsers = useMemo(() => {
+  return getScopedUsers(usersWithCohort, effectiveUser, managedEmployeeIds);
+}, [usersWithCohort, effectiveUser, managedEmployeeIds]);
+
+  // Separate "platform-only" scoped user set — used by canMutate to know whether
+  // an entry was visible via the platform hierarchy (existing edit rights preserved)
+  // vs ONLY via cohort (view-only). This never gates visibility; it only classifies.
+  const platformScopedUsers = useMemo(() => {
+  return getScopedUsers(platformUsers, effectiveUser, managedEmployeeIds);
+}, [platformUsers, effectiveUser, managedEmployeeIds]);
 
 // All staff users whose entries are visible to the current user via the
 // PLATFORM hierarchy (admin/management/employee). Used by canMutate to
