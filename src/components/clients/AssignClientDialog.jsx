@@ -13,9 +13,12 @@ export default function AssignClientDialog({ open, onOpenChange, client, onAssig
 
   useEffect(() => {
     if (open) {
-      base44.entities.User.list().then(users => {
-        setEmployees(users.filter(u => (u.role === 'employee' || u.role === 'admin' || u.role === 'management') && !u.is_archived));
-      });
+      base44.functions.invoke('getOrgUsers', {})
+        .then(res => {
+          const users = res?.data?.users || [];
+          setEmployees(users.filter(u => (u.role === 'employee' || u.role === 'admin' || u.role === 'management') && !u.is_archived));
+        })
+        .catch(() => setEmployees([]));
       setSelectedEmployee(client?.assigned_employee_id || "");
     }
   }, [open, client]);
