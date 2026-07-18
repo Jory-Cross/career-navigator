@@ -51,6 +51,12 @@ export default function StructuredAssessmentWorkspacePanel({
   const isDirtyRef = useRef(isDirty);
   useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
+  // Ref for recordStatus so doSave (which doesn't include it in deps) always
+  // reads the current value — prevents stale closure from downgrading
+  // a "completed" assessment back to "in_progress" on auto-save.
+  const recordStatusRef = useRef(recordStatus);
+  useEffect(() => { recordStatusRef.current = recordStatus; }, [recordStatus]);
+
   // Track the DB record id so we update rather than create a duplicate
   const recordIdRef = useRef(existingRecord?.id || null);
 
@@ -141,7 +147,7 @@ export default function StructuredAssessmentWorkspacePanel({
       client_id: clientId,
       assessment_type: meta.assessment_type,
       // Never downgrade a completed assessment via auto-save
-      status: recordIdRef.current && recordStatus === "completed" ? "completed" : "in_progress",
+      status: recordIdRef.current && recordStatusRef.current === "completed" ? "completed" : "in_progress",
       responses: latestResponses,
       completed_by: user?.email || "",
       structured_evidence,
