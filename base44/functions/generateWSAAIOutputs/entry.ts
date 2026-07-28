@@ -367,22 +367,31 @@ async function synthesizeWorkAssessmentObservations(base44, wpsoLabeledText) {
   const prompt = `You are a vocational rehabilitation evaluator writing the Work Assessment Observations field for an official Utah DWS Work Strategy Assessment (WSA).
 
 TASK:
-Using ONLY the Work Performance & Support Observation evidence provided below, write a professional vocational assessment narrative for the "Work Assessment Observations" WSA field.
+Using ONLY the Work Performance & Support Observation evidence provided below, write a factual, professional narrative for the "Work Assessment Observations" WSA field.
 
 WORK PERFORMANCE & SUPPORT OBSERVATION EVIDENCE:
 ${wpsoLabeledText}
 
-REQUIREMENTS:
+CRITICAL — STRICT FACTUAL ADHERENCE (READ CAREFULLY):
+You are reporting OBSERVED FACTS, not writing a story. Every sentence must be directly traceable to a specific piece of evidence above.
+- If the evidence says the observation duration was "60 minutes", you may state that. If the evidence does NOT state a duration, you must NOT invent one. Do NOT use phrases like "a 60-minute assessment" unless "60" or "60 minutes" appears in the evidence.
+- Do NOT invent task descriptions. If the evidence says "organizing a shopping list", you may describe that. If the evidence does NOT mention a shopping list, you must NOT describe one. Report ONLY the exact tasks documented.
+- Do NOT add narrative connective tissue that implies facts not in the evidence (e.g., "with the freedom to utilize any available tools", "navigating the list", "capacity to overcome challenges").
+- Do NOT describe the client's emotional state, motivation, or attitude unless explicitly documented in the evidence.
+- Do NOT use the client's first name unless it appears in the evidence text. Use "The client" instead.
+- Do NOT describe any physical activity (standing, walking, carrying, lifting, etc.) unless explicitly stated in the evidence above.
+- Do NOT name any employer, worksite, or location unless explicitly stated in the evidence above.
+- Do NOT infer, extrapolate, or embellish. If the evidence is sparse, the narrative should be short. A brief, accurate report is far better than a long, fabricated one.
+- Do NOT add concluding sentences about "baseline work behaviors" or "areas for further development" unless the evidence explicitly supports those statements.
+
+CONTENT RULES:
 - Write as a professional vocational evaluator summarizing what was directly observed.
-- Cover in a single cohesive narrative: the task(s) evaluated, observation duration (if documented), level of prompting and support required, work performance observed, strengths demonstrated, barriers or concerns observed, and vocational implications.
+- Cover only what the evidence supports: the task(s) evaluated, observation duration (if documented), level of prompting and support required, work performance observed, strengths demonstrated, barriers or concerns observed, and vocational implications.
 - Use past tense and professional assessment language (e.g., "The client demonstrated...", "During the observation...", "Support was required for...").
 - Do NOT copy field labels or question text verbatim — synthesize into natural prose.
-- Do NOT invent any fact not present in the evidence above.
-- Do NOT describe any physical activity (standing, walking, carrying, lifting, etc.) unless it is explicitly stated in the evidence above.
-- Do NOT name any employer, worksite, or location unless explicitly stated in the evidence above.
 - Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
-- If a category (e.g., strengths, barriers) has no documented evidence, omit it rather than speculating.
-- Provide a complete, thorough narrative covering all available evidence. Do NOT artificially limit the length.
+- If a category (e.g., strengths, barriers) has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
+- Provide a complete, thorough narrative covering all available evidence. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
@@ -398,18 +407,25 @@ Using ONLY the documented support evidence provided below, write a professional 
 DOCUMENTED SUPPORT EVIDENCE:
 ${evidenceBlock}
 
-REQUIREMENTS:
-- Describe only documented support systems, support availability, family/caregiver involvement, coworker/supervisor natural supports, and support needs that are explicitly recorded in the evidence above.
+CRITICAL — STRICT FACTUAL ADHERENCE:
+You are reporting DOCUMENTED FACTS, not writing a story. Every sentence must be directly traceable to a specific piece of evidence above.
 - Do NOT invent support people, relationships, or availability.
 - Do NOT assume natural supports exist unless explicitly documented in the evidence above.
+- Do NOT embellish or add narrative detail that is not in the evidence.
+- Do NOT use the client's first name unless it appears in the evidence text. Use "The client" instead.
+- If the evidence is sparse, the narrative should be short. Do NOT pad with fabricated content.
+
+REQUIREMENTS:
+- Describe only documented support systems, support availability, family/caregiver involvement, coworker/supervisor natural supports, and support needs that are explicitly recorded in the evidence above.
 - Do NOT use work environment tolerance data, interview session answers, resume content, document text, client notes, or VFP inferences.
 - Do NOT use family_issues_supports or any VR-authored field content.
-- If natural workplace supports (supervisor, coworker) were observed, describe their availability and observed effectiveness.
+- If natural workplace supports (supervisor, coworker) were observed, describe their availability and observed effectiveness exactly as documented.
 - If family or caregiver supports are documented, describe only what is explicitly recorded — name, role, and documented involvement.
 - If support gaps or absence of natural supports are documented, describe those clearly.
+- If a category has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
 - Write in past tense for observed evidence and present tense for documented availability.
 - Professional vocational rehabilitation language. No labels, no headings, no markdown.
-- Provide a complete, thorough narrative. Do NOT artificially limit the length.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
@@ -591,6 +607,13 @@ ${methodFocusBlock}
 TRANSPORTATION ASSESSMENT EVIDENCE:
 ${evidenceLines.join('\n')}
 
+CRITICAL — STRICT FACTUAL ADHERENCE:
+You are reporting DOCUMENTED FACTS, not writing a story. Every sentence must be directly traceable to a specific piece of evidence above.
+- Do NOT invent transportation details, barriers, or skills that are not explicitly documented in the evidence.
+- Do NOT embellish or add narrative detail that is not in the evidence.
+- Do NOT use the client's first name unless it appears in the evidence text. Use "The client" instead.
+- If the evidence is sparse, the narrative should be short. Do NOT pad with fabricated content.
+
 UNIVERSAL SYNTHESIS RULES:
 - Structure the observation around: (1) Primary transportation method and its role, (2) Reliability and consistency, (3) Method-relevant barriers, (4) Skill or support needs directly tied to this method, (5) Prompting or reminder needs, (6) Employment impact.
 - Do NOT generate a generic list of all low-scoring transportation skills.
@@ -599,9 +622,10 @@ UNIVERSAL SYNTHESIS RULES:
 - If numeric scores conflict with staff narrative, do not overstate the numeric score concern.
 - Do NOT invent facts not present in the evidence above.
 - Do NOT infer transportation needs from unrelated assessments or sources.
+- If a category has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Provide a complete, thorough narrative. Do NOT artificially limit the length.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative.
 
 CRITICAL — THREE-CATEGORY TRANSPORTATION CLASSIFICATION (MUST FOLLOW):
@@ -649,6 +673,13 @@ Using ONLY the documented assessment evidence below, write a professional narrat
 DOCUMENTED ASSESSMENT EVIDENCE (organized by life skills domain):
 ${evidenceBlock}
 
+CRITICAL — STRICT FACTUAL ADHERENCE:
+You are reporting DOCUMENTED FACTS, not writing a story. Every sentence must be directly traceable to a specific piece of evidence above.
+- Do NOT invent life skills deficits that are not explicitly documented in the evidence.
+- Do NOT embellish or add narrative detail that is not in the evidence.
+- Do NOT use the client's first name unless it appears in the evidence text. Use "The client" instead.
+- If the evidence is sparse, the narrative should be short. Do NOT pad with fabricated content.
+
 REQUIREMENTS:
 - Identify specific life skills areas where deficits, gaps, or training needs are documented in the evidence.
 - For each identified area, explain what the assessment evidence shows (what was observed, reported, or documented).
@@ -658,9 +689,10 @@ REQUIREMENTS:
 - Do NOT invent any fact not present in the evidence above.
 - Do NOT use resume data, work history documents, client notes, or VR-authored field content.
 - Do NOT write recommendations — only document what was identified through assessment.
+- If a category has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
 - Use past tense for observed/documented findings ("Assessment findings indicated...", "The client reported difficulty with...", "Observation noted...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Provide a complete, thorough narrative. Do NOT artificially limit the length.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
@@ -702,6 +734,13 @@ Using ONLY the documented assessment evidence provided below, write a profession
 EVIDENCE SOURCES (in priority order — use higher-priority sources first):
 ${sourceBlocks.join('\n\n')}
 
+CRITICAL — STRICT FACTUAL ADHERENCE:
+You are making RECOMMENDATIONS GROUNDED IN EVIDENCE, not writing a story. Every recommended support must be directly traceable to specific documented evidence above.
+- Do NOT invent support needs that are not documented in the evidence.
+- Do NOT embellish or add narrative detail that is not in the evidence.
+- Do NOT use the client's first name unless it appears in the evidence text. Use "The client" instead.
+- If the evidence is sparse, recommend fewer supports. Do NOT pad with generic accommodations.
+
 REQUIREMENTS:
 - Base every recommended support on specific documented evidence from the sources above.
 - Prioritize observed support needs from the Work Performance & Support Observation (Source 1).
@@ -714,7 +753,8 @@ REQUIREMENTS:
 - Examples of evidence-grounded supports: if WP&SO documents difficulty learning unfamiliar tasks, need for prompts, and need for repetition → recommend step-by-step task instruction, initial job coaching, structured training, natural support development.
 - Do NOT copy field labels, question text, or source headings verbatim — synthesize into natural professional prose.
 - Do NOT invent any fact not present in the evidence above.
-- Provide a complete, thorough narrative. Do NOT artificially limit the length.
+- If a support need has no documented evidence, do NOT recommend a support for it.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
