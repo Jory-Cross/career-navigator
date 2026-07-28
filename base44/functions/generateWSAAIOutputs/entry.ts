@@ -382,11 +382,11 @@ REQUIREMENTS:
 - Do NOT name any employer, worksite, or location unless explicitly stated in the evidence above.
 - Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
 - If a category (e.g., strengths, barriers) has no documented evidence, omit it rather than speculating.
-- Maximum 350 characters for the final narrative. The PDF field holds up to 350 characters at 10pt font (536×81pt field, ~70 chars/line, 6 lines).
+- Provide a complete, thorough narrative covering all available evidence. Do NOT artificially limit the length.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
+  return safeString(result).replace(/\s+/g, ' ').trim();
 }
 
 async function synthesizeNaturalSupportObservations(base44, evidenceBlock) {
@@ -409,11 +409,11 @@ REQUIREMENTS:
 - If support gaps or absence of natural supports are documented, describe those clearly.
 - Write in past tense for observed evidence and present tense for documented availability.
 - Professional vocational rehabilitation language. No labels, no headings, no markdown.
-- Maximum 350 characters.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
+  return safeString(result).replace(/\s+/g, ' ').trim();
 }
 
 // ─── Transportation Method Classification ─────────────────────────────────────
@@ -601,8 +601,7 @@ UNIVERSAL SYNTHESIS RULES:
 - Do NOT infer transportation needs from unrelated assessments or sources.
 - Use past tense for documented findings ("Assessment findings indicated...", "The client reported...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 490 characters. The PDF field holds up to 490 characters at 10pt font (536×95pt field, ~70 chars/line, 7 lines).
-- Prioritize in order: primary transportation method → reliability → readiness/prompting needs → employment impact → backup supports. Drop lower-priority details first if space is tight.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length.
 - Return ONLY the plain text narrative.
 
 CRITICAL — THREE-CATEGORY TRANSPORTATION CLASSIFICATION (MUST FOLLOW):
@@ -629,7 +628,7 @@ async function synthesizeTransportationObservations(base44, tr, methodsArray, pr
   const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
   const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 490);
+  return safeString(result).replace(/\s+/g, ' ').trim();
 }
 
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
@@ -661,11 +660,11 @@ REQUIREMENTS:
 - Do NOT write recommendations — only document what was identified through assessment.
 - Use past tense for observed/documented findings ("Assessment findings indicated...", "The client reported difficulty with...", "Observation noted...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
-- Maximum 350 characters.
+- Provide a complete, thorough narrative. Do NOT artificially limit the length.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 350);
+  return safeString(result).replace(/\s+/g, ' ').trim();
 }
 
 async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
@@ -715,11 +714,11 @@ REQUIREMENTS:
 - Examples of evidence-grounded supports: if WP&SO documents difficulty learning unfamiliar tasks, need for prompts, and need for repetition → recommend step-by-step task instruction, initial job coaching, structured training, natural support development.
 - Do NOT copy field labels, question text, or source headings verbatim — synthesize into natural professional prose.
 - Do NOT invent any fact not present in the evidence above.
-- Maximum 630 characters for the final narrative. The PDF field holds up to 630 characters at 10pt font (536×121pt field).
+- Provide a complete, thorough narrative. Do NOT artificially limit the length.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim().slice(0, 630);
+  return safeString(result).replace(/\s+/g, ' ').trim();
 }
 
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
@@ -1017,14 +1016,11 @@ For worksite_simulation_location specifically: always use the pre-resolved "work
   } catch (_e) { /* leave as null */ }
 
   // Hard-guard: natural_support_observations is always set from permitted sources only.
-  // The detailed field may be up to 850 chars (its WSA_CHAR_LIMITS value).
-  // generateOfficialFields will copy it verbatim if ≤ limit, or compress if over.
+  // The detailed field is unrestricted — generateOfficialFields will compress for the PDF.
   const naturalSupportRaw = naturalSupportEvidenceBlock
     ? await synthesizeNaturalSupportObservations(base44, naturalSupportEvidenceBlock)
     : 'Natural support information has not been documented in the approved assessment sources. Staff must complete the natural support section or document available supports before generating this portion of the WSA.';
-  // Clamp to the app-level limit for detailed fields (850 chars).
-  // generateOfficialFields will further compress to WSA_PDF_SAFE_LIMITS (360 chars) for the PDF.
-  detailedFields.natural_support_observations = clampOfficialText(naturalSupportRaw, WSA_CHAR_LIMITS.natural_support_observations);
+  detailedFields.natural_support_observations = naturalSupportRaw;
 
   // ── life_skills_observations: hard-override via dedicated synthesis ──────────
   // Purpose: identify documented life skills deficits/gaps through assessment findings.
