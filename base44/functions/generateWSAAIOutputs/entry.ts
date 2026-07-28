@@ -386,11 +386,24 @@ You are reporting OBSERVED FACTS, not writing a story. Every sentence must be di
 
 CONTENT RULES:
 - Write as a professional vocational evaluator summarizing what was directly observed.
-- Cover only what the evidence supports: the task(s) evaluated, observation duration (if documented), level of prompting and support required, work performance observed, strengths demonstrated, barriers or concerns observed, and vocational implications.
+- You MUST cover ALL of the following areas where evidence is documented above:
+  1. Task setup and context (what was observed, where, duration, task familiarity)
+  2. Instruction and learning response (teaching methods used, how the client learned, reteaching needed, effective strategies)
+  3. Task performance results (initiation, prompt level, completion, pace, accuracy, error correction, persistence)
+  4. Physical demands and stamina (standing/walking tolerance, fatigue, physical safety concerns)
+  5. Environmental and sensory response (noise, crowding, interruptions, sensory triggers, environmental effect on performance)
+  6. Communication and social interaction (following directions, asking for help, supervisor/coworker/customer interaction, response to feedback)
+  7. Safety, self-regulation, and stress response (stress triggers, shutdown/distress events, recovery, regulation strategies, incident details)
+  8. Supports and accommodations used (job-coach intensity, natural supports, support effectiveness, effective/ineffective strategies)
+  9. Job fit and retention indicators (task match, environment match, client interest, strengths, concerns)
+  10. Overall summary and verified evidence (verified strengths, verified support needs, verified barriers, follow-up needed)
+- CRITICAL: Do NOT stop after describing the task setup. The task description is ONLY the opening context. The BULK of the narrative must be the evaluation RESULTS — how the client performed, what challenges arose, what supports were needed, what strengths/concerns were observed.
+- If a safety incident, shutdown, sensory overload, or stress response is documented, describe it factually with the specific details provided.
+- If teaching approaches were documented as effective or ineffective, include those findings.
 - Use past tense and professional assessment language (e.g., "The client demonstrated...", "During the observation...", "Support was required for...").
 - Do NOT copy field labels or question text verbatim — synthesize into natural prose.
 - Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
-- If a category (e.g., strengths, barriers) has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
+- If a category has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
 - Provide a complete, thorough narrative covering all available evidence. Do NOT artificially limit the length, but do NOT pad with fabricated content.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
@@ -1431,10 +1444,6 @@ RULES:
     }
   }
 
-  console.log('DEBUG generateOfficialFields INPUT detailedFields.interview_skill_observations:', JSON.stringify(detailedFields.interview_skill_observations));
-  console.log('DEBUG generateOfficialFields OUTPUT officialFields.interview_skill_observations:', JSON.stringify(officialFields.interview_skill_observations));
-  console.log('DEBUG generateOfficialFields OUTPUT natural_support_observations length:', (officialFields.natural_support_observations || '').length, '/ limit:', WSA_CHAR_LIMITS.natural_support_observations);
-
   return {
     official_wsa_fields: officialFields,
     staff_should_verify: [],
@@ -1733,21 +1742,79 @@ Deno.serve(async (req) => {
     } else {
       const wr = wpsoAssessment.responses || {};
 
-      // Collect only literal WP&SO observation fields — no inference, no fabrication.
+      // Collect all WP&SO evaluation fields across all 10 sections.
       const wpsoObservationFields = [
-        wr.overall_observation_summary,
+        // Section 1: Context
         wr.tasks_attempted,
         wr.task_context_notes,
         wr.primary_task_evaluated,
+        wr.context_additional_notes,
+        // Section 2: Task Instructions & Learning
+        wr.instructions_given_notes,
+        wr.learning_support_effectiveness,
+        wr.task_instruction_learning_notes,
+        // Section 3: Task Performance
+        wr.prompt_level_examples,
+        wr.additional_tasks_evaluated,
+        wr.support_or_training_needed_from_observation,
         wr.task_performance_strengths_observed,
         wr.task_performance_concerns_observed,
         wr.task_performance_vocational_implications,
-        wr.prompt_level_examples,
-        wr.support_or_training_needed_from_observation,
+        // Section 4: Physical Demands
+        wr.physical_safety_concerns_observed,
+        wr.effectiveness_of_physical_supports,
+        wr.physical_demands_strengths_observed,
+        wr.physical_demands_concerns_observed,
+        wr.physical_demands_vocational_implications,
+        wr.time_on_task_or_activity_duration,
+        // Section 5: Environmental/Sensory
+        wr.environmental_response_examples,
+        wr.effectiveness_of_environmental_supports,
+        wr.client_reported_environmental_preferences_or_concerns,
+        wr.environmental_strengths_observed,
+        wr.environmental_concerns_observed,
+        wr.environmental_vocational_implications,
+        // Section 6: Communication/Social
+        wr.communication_social_response_examples,
+        wr.effectiveness_of_communication_supports,
+        wr.supervisor_or_coworker_input_obtained,
+        wr.client_reported_communication_preferences_or_concerns,
+        wr.communication_social_strengths_observed,
+        wr.communication_social_concerns_observed,
+        wr.communication_social_vocational_implications,
+        // Section 7: Safety/Regulation/Stress
+        wr.safety_or_regulation_incident_details,
+        wr.effectiveness_of_safety_regulation_supports,
+        wr.client_reported_stressors_or_effective_strategies,
+        wr.supervisor_or_staff_safety_stability_input,
+        wr.safety_regulation_strengths_observed,
+        wr.safety_regulation_concerns_observed,
+        wr.safety_regulation_vocational_implications,
+        // Section 8: Supports/Accommodations
+        wr.support_delivery_context_notes,
+        wr.natural_support_examples_notes,
+        wr.effective_supports_to_continue_evaluating,
+        wr.ineffective_or_problematic_supports_observed,
+        wr.client_reported_support_preferences_or_concerns,
+        wr.employer_supervisor_input_on_supports,
+        wr.support_follow_up_or_verification_needed,
+        wr.support_effectiveness_vocational_implications,
+        // Section 9: Job Fit/Retention
+        wr.job_fit_strength_indicators_observed,
+        wr.job_fit_concern_indicators_observed,
+        wr.retention_supports_to_evaluate,
+        wr.client_reported_job_fit_or_retention_perspective,
+        wr.employer_supervisor_job_fit_or_retention_input,
+        wr.job_fit_retention_verification_needed,
+        wr.job_fit_retention_vocational_implications,
+        // Section 10: Summary
         wr.overall_observation_summary,
         wr.verified_strengths_from_observation,
         wr.verified_support_needs_from_observation,
         wr.verified_barriers_or_concerns_from_observation,
+        wr.verified_preferences_or_client_perspective,
+        wr.evidence_requiring_additional_verification,
+        wr.follow_up_details_and_responsibility,
       ]
         .map(v => safeString(v).trim())
         .filter(v => v && v.length > 2 && !v.startsWith('['));
@@ -1757,12 +1824,50 @@ Deno.serve(async (req) => {
         wr.observation_purpose,
         wr.observation_type,
         wr.job_role_observed,
+        wr.task_familiarity_at_start,
+        wr.instruction_methods_used,
+        wr.initial_understanding_after_instruction,
+        wr.clarification_or_reteaching_needed,
+        wr.learning_strategies_that_helped,
+        wr.retention_during_observation,
+        wr.response_to_correction,
+        wr.adaptation_to_change_or_new_instruction,
+        wr.change_from_prior_observation_learning,
         wr.overall_prompt_level_for_observed_tasks,
         wr.task_initiation,
+        wr.task_sequence_completion,
         wr.task_completion_level,
         wr.work_pace_observed,
         wr.accuracy_quality_observed,
+        wr.error_awareness_and_correction,
+        wr.persistence_and_follow_through,
+        wr.standing_tolerance_observed,
+        wr.walking_mobility_tolerance_observed,
         wr.fatigue_or_endurance_observed,
+        wr.noise_tolerance_observed,
+        wr.crowding_proximity_tolerance_observed,
+        wr.interruption_distraction_tolerance_observed,
+        wr.environmental_effect_on_task_performance,
+        wr.understanding_workplace_directions_observed,
+        wr.expressing_needs_or_asking_for_help_observed,
+        wr.supervisor_interaction_observed,
+        wr.coworker_interaction_observed,
+        wr.customer_public_interaction_observed,
+        wr.response_to_feedback_or_redirection_observed,
+        wr.communication_effect_on_task_performance,
+        wr.stress_response_observed,
+        wr.unexpected_change_transition_response_observed,
+        wr.self_regulation_or_recovery_observed,
+        wr.workplace_stability_effect_on_participation,
+        wr.job_coach_support_intensity_observed,
+        wr.natural_support_effectiveness_observed,
+        wr.client_response_to_supports_observed,
+        wr.overall_support_effectiveness_observed,
+        wr.observed_role_or_task_match,
+        wr.observed_environment_match,
+        wr.observed_support_feasibility_for_role,
+        wr.client_interest_engagement_in_observed_work,
+        wr.observation_completion_status,
         wr.observation_duration_minutes ? `Observation duration: ${wr.observation_duration_minutes} minutes` : null,
       ]
         .map(v => safeString(v).trim())
@@ -1784,6 +1889,7 @@ Deno.serve(async (req) => {
       ? (() => {
           const wr = wpsoAssessment.responses || {};
           const labeled = [
+            // Section 1: Observation Setup & Context
             ['Observation purpose', wr.observation_purpose],
             ['Observation type', wr.observation_type],
             ['Job role observed', wr.job_role_observed],
@@ -1791,6 +1897,21 @@ Deno.serve(async (req) => {
             ['Tasks attempted', wr.tasks_attempted],
             ['Task context / assignment description', wr.task_context_notes],
             ['Primary task evaluated', wr.primary_task_evaluated],
+            ['Additional context notes', wr.context_additional_notes],
+            // Section 2: Task Instructions & Learning
+            ['Task familiarity at start', wr.task_familiarity_at_start],
+            ['Instruction methods used', wr.instruction_methods_used],
+            ['Instructions given / teaching provided', wr.instructions_given_notes],
+            ['Initial understanding after instruction', wr.initial_understanding_after_instruction],
+            ['Clarification or reteaching needed', wr.clarification_or_reteaching_needed],
+            ['Learning strategies that helped', wr.learning_strategies_that_helped],
+            ['Retention during observation', wr.retention_during_observation],
+            ['Response to correction', wr.response_to_correction],
+            ['Adaptation to change or new instruction', wr.adaptation_to_change_or_new_instruction],
+            ['Teaching approach effectiveness', wr.learning_support_effectiveness],
+            ['Change from prior observation (learning)', wr.change_from_prior_observation_learning],
+            ['Additional task instruction and learning evidence', wr.task_instruction_learning_notes],
+            // Section 3: Task Performance, Pace, Accuracy, Quality
             ['Task initiation', wr.task_initiation],
             ['Highest prompt level required', wr.overall_prompt_level_for_observed_tasks],
             ['Where prompting was needed', wr.prompt_level_examples],
@@ -1800,15 +1921,93 @@ Deno.serve(async (req) => {
             ['Accuracy and quality observed', wr.accuracy_quality_observed],
             ['Error awareness and correction', wr.error_awareness_and_correction],
             ['Persistence and follow-through', wr.persistence_and_follow_through],
-            ['Fatigue or endurance observed', wr.fatigue_or_endurance_observed],
+            ['Additional tasks evaluated', wr.additional_tasks_evaluated],
+            ['Support or training needed', wr.support_or_training_needed_from_observation],
             ['Observed performance strengths', wr.task_performance_strengths_observed],
             ['Observed performance concerns', wr.task_performance_concerns_observed],
             ['Vocational implications of task performance', wr.task_performance_vocational_implications],
-            ['Support or training needed', wr.support_or_training_needed_from_observation],
+            // Section 4: Physical Demands, Stamina, Endurance
+            ['Time on task / activity duration', wr.time_on_task_or_activity_duration],
+            ['Standing tolerance observed', wr.standing_tolerance_observed],
+            ['Walking/mobility tolerance observed', wr.walking_mobility_tolerance_observed],
+            ['Fatigue or endurance observed', wr.fatigue_or_endurance_observed],
+            ['Physical safety concerns observed', wr.physical_safety_concerns_observed],
+            ['Effectiveness of physical supports', wr.effectiveness_of_physical_supports],
+            ['Physical demands strengths observed', wr.physical_demands_strengths_observed],
+            ['Physical demands concerns observed', wr.physical_demands_concerns_observed],
+            ['Physical demands vocational implications', wr.physical_demands_vocational_implications],
+            // Section 5: Environmental/Sensory Tolerance
+            ['Noise tolerance observed', wr.noise_tolerance_observed],
+            ['Crowding/proximity tolerance observed', wr.crowding_proximity_tolerance_observed],
+            ['Interruption/distraction tolerance observed', wr.interruption_distraction_tolerance_observed],
+            ['Environmental effect on task performance', wr.environmental_effect_on_task_performance],
+            ['Environmental response examples', wr.environmental_response_examples],
+            ['Effectiveness of environmental supports', wr.effectiveness_of_environmental_supports],
+            ['Client-reported environmental preferences/concerns', wr.client_reported_environmental_preferences_or_concerns],
+            ['Environmental strengths observed', wr.environmental_strengths_observed],
+            ['Environmental concerns observed', wr.environmental_concerns_observed],
+            ['Environmental vocational implications', wr.environmental_vocational_implications],
+            // Section 6: Communication, Social, Supervision
+            ['Understanding workplace directions observed', wr.understanding_workplace_directions_observed],
+            ['Expressing needs / asking for help observed', wr.expressing_needs_or_asking_for_help_observed],
+            ['Supervisor interaction observed', wr.supervisor_interaction_observed],
+            ['Coworker interaction observed', wr.coworker_interaction_observed],
+            ['Customer/public interaction observed', wr.customer_public_interaction_observed],
+            ['Response to feedback or redirection observed', wr.response_to_feedback_or_redirection_observed],
+            ['Communication effect on task performance', wr.communication_effect_on_task_performance],
+            ['Communication/social response examples', wr.communication_social_response_examples],
+            ['Effectiveness of communication supports', wr.effectiveness_of_communication_supports],
+            ['Supervisor or coworker input obtained', wr.supervisor_or_coworker_input_obtained],
+            ['Client-reported communication preferences/concerns', wr.client_reported_communication_preferences_or_concerns],
+            ['Communication/social strengths observed', wr.communication_social_strengths_observed],
+            ['Communication/social concerns observed', wr.communication_social_concerns_observed],
+            ['Communication/social vocational implications', wr.communication_social_vocational_implications],
+            // Section 7: Safety, Self-Regulation, Stress Response
+            ['Stress response observed', wr.stress_response_observed],
+            ['Unexpected change/transition response observed', wr.unexpected_change_transition_response_observed],
+            ['Self-regulation or recovery observed', wr.self_regulation_or_recovery_observed],
+            ['Workplace stability effect on participation', wr.workplace_stability_effect_on_participation],
+            ['Safety/regulation incident details', wr.safety_or_regulation_incident_details],
+            ['Effectiveness of safety/regulation supports', wr.effectiveness_of_safety_regulation_supports],
+            ['Client-reported stressors or effective strategies', wr.client_reported_stressors_or_effective_strategies],
+            ['Supervisor/staff safety/stability input', wr.supervisor_or_staff_safety_stability_input],
+            ['Safety/regulation strengths observed', wr.safety_regulation_strengths_observed],
+            ['Safety/regulation concerns observed', wr.safety_regulation_concerns_observed],
+            ['Safety/regulation vocational implications', wr.safety_regulation_vocational_implications],
+            // Section 8: Supports, Accommodations, Job Coaching
+            ['Job-coach support intensity observed', wr.job_coach_support_intensity_observed],
+            ['Support delivery context notes', wr.support_delivery_context_notes],
+            ['Natural support effectiveness observed', wr.natural_support_effectiveness_observed],
+            ['Natural support examples and notes', wr.natural_support_examples_notes],
+            ['Client response to supports observed', wr.client_response_to_supports_observed],
+            ['Overall support effectiveness observed', wr.overall_support_effectiveness_observed],
+            ['Effective supports to continue evaluating', wr.effective_supports_to_continue_evaluating],
+            ['Ineffective or problematic supports observed', wr.ineffective_or_problematic_supports_observed],
+            ['Client-reported support preferences/concerns', wr.client_reported_support_preferences_or_concerns],
+            ['Employer/supervisor input on supports', wr.employer_supervisor_input_on_supports],
+            ['Support follow-up or verification needed', wr.support_follow_up_or_verification_needed],
+            ['Support effectiveness vocational implications', wr.support_effectiveness_vocational_implications],
+            // Section 9: Job Fit, Retention, Sustainability
+            ['Observed role or task match', wr.observed_role_or_task_match],
+            ['Observed environment match', wr.observed_environment_match],
+            ['Observed support feasibility for role', wr.observed_support_feasibility_for_role],
+            ['Client interest/engagement in observed work', wr.client_interest_engagement_in_observed_work],
+            ['Job fit strength indicators observed', wr.job_fit_strength_indicators_observed],
+            ['Job fit concern indicators observed', wr.job_fit_concern_indicators_observed],
+            ['Retention supports to evaluate', wr.retention_supports_to_evaluate],
+            ['Client-reported job fit/retention perspective', wr.client_reported_job_fit_or_retention_perspective],
+            ['Employer/supervisor job fit/retention input', wr.employer_supervisor_job_fit_or_retention_input],
+            ['Job fit/retention verification needed', wr.job_fit_retention_verification_needed],
+            ['Job fit/retention vocational implications', wr.job_fit_retention_vocational_implications],
+            // Section 10: Observation Summary
+            ['Observation completion status', wr.observation_completion_status],
             ['Overall observation summary', wr.overall_observation_summary],
             ['Verified vocational strengths', wr.verified_strengths_from_observation],
             ['Verified support needs', wr.verified_support_needs_from_observation],
             ['Verified barriers or concerns', wr.verified_barriers_or_concerns_from_observation],
+            ['Verified preferences or client perspective', wr.verified_preferences_or_client_perspective],
+            ['Evidence requiring additional verification', wr.evidence_requiring_additional_verification],
+            ['Follow-up details and responsibility', wr.follow_up_details_and_responsibility],
           ]
             .filter(([, v]) => {
               const s = safeString(v).trim();
@@ -1819,8 +2018,6 @@ Deno.serve(async (req) => {
           return labeled;
         })()
       : null;
-
-    console.log('DEBUG worksiteSimulationLocation:', worksiteSimulationLocation);
 
     // Extract Work Environment Tolerance Assessment (WET) data as a dedicated block
     // so the LLM can synthesize it into work_assessment_observations, other_observations,
@@ -1928,11 +2125,6 @@ Deno.serve(async (req) => {
       current_wsa_responses: sourceWsaResponses,
     };
 
-    console.log(
-      'WSA DEBUG context wsa_interview_sessions:',
-      JSON.stringify(contextPayload.wsa_interview_sessions, null, 2)
-    );
-
     const contextBlock = JSON.stringify(contextPayload, null, 2);
     let detailed_wsa_fields = null;
     let official_wsa_fields = null;
@@ -1963,13 +2155,9 @@ Deno.serve(async (req) => {
 
     if (mode === 'field_draft') {
       console.log('Generating fresh detailed WSA fields before compression so new evidence is included...');
-      console.log('DEBUG interview_sessions_in_context count:', interviewSessionSummaries.length);
-      console.log('DEBUG wpsoExplicitLocation:', wpsoExplicitLocation);
       const detailedResult = await generateDetailedFields(base44, contextBlock, wpsoExplicitLocation);
 
        detailed_wsa_fields = detailedResult.detailed_wsa_fields;
-
-      console.log('DEBUG detailedResult.detailed_wsa_fields.interview_skill_observations:', detailed_wsa_fields && detailed_wsa_fields.interview_skill_observations);
 
       full_detailed_wsa_html = buildDetailedWsaHtml(detailed_wsa_fields);
       mergeUniqueStrings(staff_should_verify, detailedResult.staff_should_verify);
@@ -1981,7 +2169,6 @@ Deno.serve(async (req) => {
       const officialResult = await generateOfficialFields(base44, detailed_wsa_fields, contextBlock);
 
       official_wsa_fields = officialResult.official_wsa_fields;
-      console.log('DEBUG officialResult.official_wsa_fields.interview_skill_observations:', official_wsa_fields && official_wsa_fields.interview_skill_observations);
       mergeUniqueStrings(staff_should_verify, officialResult.staff_should_verify);
       mergeUniqueStrings(evidence_summary, officialResult.evidence_summary);
     }
