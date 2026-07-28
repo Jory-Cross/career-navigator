@@ -910,36 +910,21 @@ export default function LegacyAssessmentPanel({
           }
 
                    const value = responses?.[question.id] ?? "";
-          const characterLimit = isWSA ? getWSAFieldLimit(question.id) : undefined;
-          const characterCount = String(value || "").length;
-          const isNearLimit =
-            characterLimit && characterCount >= Math.floor(characterLimit * 0.9);
 
           return (
             <div key={question.id} className="space-y-2">
               <Label htmlFor={question.id}>{question.label}</Label>
 
                             {question.type === "textarea" ? (
-                <div className="space-y-1">
-                  <Textarea
-                    id={question.id}
-                    value={value}
-                    rows={4}
-                    maxLength={characterLimit}
-                    onChange={(event) => updateResponse(question.id, event.target.value)}
-                  />
-
-                  {characterLimit ? (
-                    <div
-                      className={`text-right text-xs ${
-                        isNearLimit ? "font-semibold text-amber-700" : "text-slate-500"
-                      }`}
-                    >
-                      {characterCount} / {characterLimit} characters
-                    </div>
-                  ) : null}
-                </div>
-              ) : question.type === "select" ? (
+                            <div className="space-y-1">
+                            <Textarea
+                            id={question.id}
+                            value={value}
+                            rows={4}
+                            onChange={(event) => updateResponse(question.id, event.target.value)}
+                            />
+                            </div>
+                            ) : question.type === "select" ? (
                 <select
                   id={question.id}
                   value={value}
@@ -954,25 +939,14 @@ export default function LegacyAssessmentPanel({
                   ))}
                 </select>
                            ) : (
-                <div className="space-y-1">
-                  <Input
-                    id={question.id}
-                    value={value}
-                    maxLength={characterLimit}
-                    onChange={(event) => updateResponse(question.id, event.target.value)}
-                  />
-
-                  {characterLimit ? (
-                    <div
-                      className={`text-right text-xs ${
-                        isNearLimit ? "font-semibold text-amber-700" : "text-slate-500"
-                      }`}
-                    >
-                      {characterCount} / {characterLimit} characters
-                    </div>
-                  ) : null}
-                </div>
-              )}
+                           <div className="space-y-1">
+                           <Input
+                           id={question.id}
+                           value={value}
+                           onChange={(event) => updateResponse(question.id, event.target.value)}
+                           />
+                           </div>
+                           )}
             </div>
           );
         })}
