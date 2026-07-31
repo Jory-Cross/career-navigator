@@ -257,8 +257,11 @@ export default function DynamicEntryForm({
       }
     }
     return initialized;
-    // Only depend on entry.id and entry to prevent re-rehydration on schema changes
-  }, [entry?.id, entry, clientTargetRole]);
+    // Reset form data when the entry type changes (prevents stale fields
+    // from a previous entry type leaking into the new form).
+    // entry?.id and entry handle edit-mode rehydration; normalizedEntryTypeCode
+    // ensures a clean slate when the user switches types in create mode.
+  }, [entry?.id, entry, clientTargetRole, normalizedEntryTypeCode]);
 
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState("");
