@@ -364,15 +364,15 @@ function buildInterviewSkillObservationFromWsaInterview(interviewSessions) {
 }
 
 async function synthesizeWorkAssessmentObservations(base44, wpsoLabeledText) {
-  const prompt = `You are a vocational rehabilitation evaluator writing the Work Assessment Observations field for an official Utah DWS Work Strategy Assessment (WSA).
+  const basePrompt = `You are a vocational rehabilitation evaluator writing the Work Assessment Observations field for an official Utah DWS Work Strategy Assessment (WSA).
 
 TASK:
-Using ONLY the Work Performance & Support Observation evidence provided below, write a factual, professional narrative for the "Work Assessment Observations" WSA field.
+  Using ONLY the Work Performance & Support Observation evidence provided below, write a factual, professional narrative for the "Work Assessment Observations" WSA field.
 
 WORK PERFORMANCE & SUPPORT OBSERVATION EVIDENCE:
 ${wpsoLabeledText}
 
-CRITICAL — STRICT FACTUAL ADHERENCE (READ CAREFULLY):
+  CRITICAL — STRICT FACTUAL ADHERENCE (READ CAREFULLY):
 You are reporting OBSERVED FACTS, not writing a story. Every sentence must be directly traceable to a specific piece of evidence above.
 - If the evidence says the observation duration was "60 minutes", you may state that. If the evidence does NOT state a duration, you must NOT invent one. Do NOT use phrases like "a 60-minute assessment" unless "60" or "60 minutes" appears in the evidence.
 - Do NOT invent task descriptions. If the evidence says "organizing a shopping list", you may describe that. If the evidence does NOT mention a shopping list, you must NOT describe one. Report ONLY the exact tasks documented.
@@ -405,10 +405,36 @@ CONTENT RULES:
 - Do NOT use Work Environment Tolerance, interview sessions, resume, documents, or any other source.
 - If a category has no documented evidence, omit it entirely. Do NOT speculate or fill gaps.
 - Provide a complete, thorough narrative covering all available evidence. Do NOT artificially limit the length, but do NOT pad with fabricated content.
+- Your narrative MUST be comprehensive — typically 600 to 1500 characters depending on evidence volume. Cover every documented area above.
+- You MUST end your narrative with a complete sentence ending with a period. Do NOT stop mid-sentence or mid-word.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
-  const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim();
+  const result = await base44.integrations.Core.InvokeLLM({ prompt: basePrompt });
+  let narrative = safeString(result).replace(/\s+/g, ' ').trim();
+
+  // Continuation guard: if the narrative does not end with terminal punctuation,
+  // the LLM output was truncated mid-sentence/mid-word. Make a follow-up call
+  // to complete the narrative seamlessly.
+  if (narrative.length > 0 && !/[.!?]$/.test(narrative)) {
+    const continuationPrompt = `You are continuing a vocational rehabilitation Work Assessment Observations narrative that was cut off mid-sentence. Complete the narrative naturally and end with a complete sentence ending with a period.
+
+PARTIAL NARRATIVE (do NOT repeat this — only provide the continuation):
+${narrative}
+
+Continue from exactly where it stopped. Use ONLY the evidence provided in the original task. Do NOT repeat any text from the partial narrative. Do NOT add a new introduction. Just continue and finish the narrative. End with a complete sentence ending with a period.
+
+Return ONLY the continuation text. No introduction, no labels, no markdown.`;
+
+    try {
+      const continuation = await base44.integrations.Core.InvokeLLM({ prompt: continuationPrompt });
+      const contText = safeString(continuation).replace(/\s+/g, ' ').trim();
+      if (contText) {
+        narrative = (narrative + ' ' + contText).replace(/\s+/g, ' ').trim();
+      }
+    } catch (_e) { /* leave narrative as-is if continuation fails */ }
+  }
+
+  return narrative;
 }
 
 async function synthesizeNaturalSupportObservations(base44, evidenceBlock) {
@@ -665,7 +691,16 @@ async function synthesizeTransportationObservations(base44, tr, methodsArray, pr
   const methodClass = classifyPrimaryMethod(primaryMethod, methodsArray);
   const prompt = buildMethodAwareTransportationPrompt(tr, methodsArray, primaryMethod, methodClass, transportationEvidenceBlock);
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim();
+  let narrative = safeString(result).replace(/\s+/g, ' ').trim();
+
+  if (narrative.length > 0 && !/[.!?]$/.test(narrative)) {
+    try {
+      const cont = await base44.integrations.Core.InvokeLLM({ prompt: `Continue this vocational rehabilitation transportation assessment narrative that was cut off. Complete it and end with a period. Do NOT repeat the partial text. Return ONLY the continuation.\n\n${narrative}` });
+      const c = safeString(cont).replace(/\s+/g, ' ').trim();
+      if (c) narrative = (narrative + ' ' + c).replace(/\s+/g, ' ').trim();
+    } catch (_e) {}
+  }
+  return narrative;
 }
 
 async function synthesizeLifeSkillsObservations(base44, evidenceBlock) {
@@ -706,10 +741,20 @@ REQUIREMENTS:
 - Use past tense for observed/documented findings ("Assessment findings indicated...", "The client reported difficulty with...", "Observation noted...").
 - Professional vocational rehabilitation language. No labels, no headings, no markdown, no bullet points.
 - Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
+- You MUST end your narrative with a complete sentence ending with a period. Do NOT stop mid-sentence or mid-word.
 - Return ONLY the plain text narrative.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim();
+  let narrative = safeString(result).replace(/\s+/g, ' ').trim();
+
+  if (narrative.length > 0 && !/[.!?]$/.test(narrative)) {
+    try {
+      const cont = await base44.integrations.Core.InvokeLLM({ prompt: `Continue this vocational rehabilitation narrative that was cut off. Complete it and end with a period. Do NOT repeat the partial text. Return ONLY the continuation.\n\n${narrative}` });
+      const c = safeString(cont).replace(/\s+/g, ' ').trim();
+      if (c) narrative = (narrative + ' ' + c).replace(/\s+/g, ' ').trim();
+    } catch (_e) {}
+  }
+  return narrative;
 }
 
 async function synthesizeRecommendedSupportsOnJob(base44, wpsoText, wetProfile, supportAssessmentText, barriersText, wsaInterviewText) {
@@ -768,10 +813,20 @@ REQUIREMENTS:
 - Do NOT invent any fact not present in the evidence above.
 - If a support need has no documented evidence, do NOT recommend a support for it.
 - Provide a complete, thorough narrative. Do NOT artificially limit the length, but do NOT pad with fabricated content.
+- You MUST end your narrative with a complete sentence ending with a period. Do NOT stop mid-sentence or mid-word.
 - Return ONLY the plain text narrative. No JSON. No markdown. No labels. No headings.`;
 
   const result = await base44.integrations.Core.InvokeLLM({ prompt });
-  return safeString(result).replace(/\s+/g, ' ').trim();
+  let narrative = safeString(result).replace(/\s+/g, ' ').trim();
+
+  if (narrative.length > 0 && !/[.!?]$/.test(narrative)) {
+    try {
+      const cont = await base44.integrations.Core.InvokeLLM({ prompt: `Continue this vocational rehabilitation narrative that was cut off. Complete it and end with a period. Do NOT repeat the partial text. Return ONLY the continuation.\n\n${narrative}` });
+      const c = safeString(cont).replace(/\s+/g, ' ').trim();
+      if (c) narrative = (narrative + ' ' + c).replace(/\s+/g, ' ').trim();
+    } catch (_e) {}
+  }
+  return narrative;
 }
 
 async function generateDetailedFields(base44, contextBlock, wpsoExplicitLocation) {
