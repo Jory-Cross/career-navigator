@@ -1,0 +1,37 @@
+{
+  "name": "Revoke Portal Access on Client Deletion",
+  "description": "When a Client record is deleted, revokes all PendingRoleAssignments linked to that client and strips portal access from any User accounts whose linked_client_id matched the deleted client.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "delete"
+      ],
+      "entity_name": "Client"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "revoke_portal_access_on_client_deletion",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "onClientDeleted",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "onClientDeleted"
+  }
+}
