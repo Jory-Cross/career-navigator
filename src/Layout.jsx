@@ -57,8 +57,33 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
   const [allUsers, setAllUsers] = React.useState([]);
 
   React.useEffect(() => {
-  setAllUsers([]);
-}, []);
+    let cancelled = false;
+
+    async function loadViewAsUsers() {
+      try {
+        const response = await base44.functions.invoke("getOrgUsers", {});
+        const data = response?.data || response || {};
+
+        if (!data.ok) {
+          throw new Error(data.error || "Unable to load users.");
+        }
+
+        if (!cancelled) {
+          setAllUsers(Array.isArray(data.users) ? data.users : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAllUsers([]);
+        }
+      }
+    }
+
+    loadViewAsUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   if (allUsers.length === 0) return null;
 
