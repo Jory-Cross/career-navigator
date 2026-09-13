@@ -17,10 +17,12 @@ import {
   ChevronDown,
   Eye,
   Loader2,
+  Printer,
   RefreshCw,
   RotateCcw,
   Send,
 } from "lucide-react";
+import { printTimeCard } from "@/components/time-entry/printTimeCard";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -1346,13 +1348,29 @@ export default function TimeCardWorkspace({
                 </div>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSelectedCard(null)}
-              >
-                Close
-              </Button>
+              <div className="flex gap-2">
+                {mayReviewTimeCards ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      printTimeCard(selectedCard, clientById)
+                    }
+                    className="gap-2"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </Button>
+                ) : null}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedCard(null)}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-4 p-5">
