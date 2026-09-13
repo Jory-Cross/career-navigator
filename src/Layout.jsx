@@ -50,7 +50,9 @@ const ROLE_LABELS = {
   client: "Client",
   pre_ets: "Pre-ETS",
   dspd: "DSPD",
-  pre_ets_employer: "Pre-ETS Employer"
+  pre_ets_employer: "Pre-ETS Employer",
+  ce_instructor: "CE Instructor",
+  ce_student: "CE Student"
 };
 
 function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
@@ -87,8 +89,18 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
 
   if (allUsers.length === 0) return null;
 
-  const managers = allUsers.filter(u => u.role === 'management');
-  const employees = allUsers.filter(u => u.role === 'employee');
+  const ROLE_ORDER = ['admin', 'management', 'employee', 'ce_instructor', 'ce_student', 'client', 'pre_ets', 'dspd', 'pre_ets_employer'];
+  const grouped = new Map();
+  for (const u of allUsers) {
+    const role = u.role || 'other';
+    if (!grouped.has(role)) grouped.set(role, []);
+    grouped.get(role).push(u);
+  }
+  const roleGroups = Array.from(grouped.entries()).sort((a, b) => {
+    const ai = ROLE_ORDER.indexOf(a[0]);
+    const bi = ROLE_ORDER.indexOf(b[0]);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
 
   return (
     <div className="flex items-center gap-2">
@@ -111,10 +123,12 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="admin">My View (Admin)</SelectItem>
-          {managers.length > 0 && <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Managers</div>}
-          {managers.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
-          {employees.length > 0 && <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">Employees</div>}
-          {employees.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
+          {roleGroups.map(([role, users]) => (
+            <React.Fragment key={role}>
+              <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">{ROLE_LABELS[role] || role}</div>
+              {users.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
+            </React.Fragment>
+          ))}
         </SelectContent>
       </Select>
     </div>
