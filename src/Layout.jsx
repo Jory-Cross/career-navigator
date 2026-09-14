@@ -55,7 +55,7 @@ const ROLE_LABELS = {
   ce_student: "CE Student"
 };
 
-function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
+function ViewAsSwitcher({ user, isPlatformOwner, viewAsUser, setViewAsUser }) {
   const [allUsers, setAllUsers] = React.useState([]);
 
   React.useEffect(() => {
@@ -63,7 +63,10 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
 
     async function loadViewAsUsers() {
       try {
-        const response = await base44.functions.invoke("getOrgUsers", {});
+        const response = await base44.functions.invoke(
+          isPlatformOwner ? "getViewAsUsers" : "getOrgUsers",
+          {}
+        );
         const data = response?.data || response || {};
 
         if (!data.ok) {
@@ -85,7 +88,7 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, isPlatformOwner]);
 
   if (allUsers.length === 0) return null;
 
@@ -126,7 +129,7 @@ function ViewAsSwitcher({ user, viewAsUser, setViewAsUser }) {
           {roleGroups.map(([role, users]) => (
             <React.Fragment key={role}>
               <div className="px-2 py-1 text-xs text-slate-400 font-medium uppercase tracking-wide">{ROLE_LABELS[role] || role}</div>
-              {users.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}</SelectItem>)}
+              {users.map(u => <SelectItem key={u.id} value={u.id}>👤 {u.full_name || u.email}{isPlatformOwner && u.org_name ? ` · ${u.org_name}` : ""}</SelectItem>)}
             </React.Fragment>
           ))}
         </SelectContent>
@@ -289,7 +292,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* View As Switcher - Admin only */}
           {isAdmin(user) && (
-            <ViewAsSwitcher user={user} viewAsUser={viewAsUser} setViewAsUser={setViewAsUser} />
+            <ViewAsSwitcher user={user} isPlatformOwner={isPlatformOwner} viewAsUser={viewAsUser} setViewAsUser={setViewAsUser} />
           )}
 
           {/* Role Switcher */}
