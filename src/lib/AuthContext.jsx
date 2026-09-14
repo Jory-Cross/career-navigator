@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useViewAs } from './ViewAsContext';
 
 const AuthContext = createContext();
 
@@ -43,6 +44,7 @@ export const classifyUserAccess = (user) => {
 // 'denied'           — authenticated, has a role, but classifyUserAccess returned denied
 
 export const AuthProvider = ({ children }) => {
+  const { viewAsUser } = useViewAs();
   const [user, setUser] = useState(null);
   const [authState, setAuthState] = useState('loading'); // see states above
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -160,9 +162,13 @@ export const AuthProvider = ({ children }) => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  // While an admin is "Viewing As" another user, expose that user's identity
+  // to the app (routing, permissions, page-level perspective).
+  const effectiveUser = user && viewAsUser ? { ...user, ...viewAsUser } : user;
+
   return (
     <AuthContext.Provider value={{
-      user,
+      user: effectiveUser,
       authState,
       isAuthenticated: authState === 'ready',
       isLoadingAuth,
@@ -172,7 +178,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       navigateToLogin,
       checkAppState: initAuth,
-      accessClass: user ? classifyUserAccess(user) : null,
+      accessClass: effectiveUser ? classifyUserAccess(effectiveUser) : null,
     }}>
       {children}
     </AuthContext.Provider>

@@ -274,7 +274,7 @@ export default function Layout({ children, currentPageName }) {
             <button className="lg:hidden p-1.5" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <button onClick={openProfile} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <button onClick={() => { if (!viewAsUser) openProfile(); }} title={viewAsUser ? "Profile editing is unavailable while viewing as another user" : "Edit profile"} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-xs shrink-0">
                 {user?.avatar_url
                   ? <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -291,12 +291,12 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* View As Switcher - Admin only */}
-          {isAdmin(user) && (
+          {(isAdmin(user) || viewAsUser) && (
             <ViewAsSwitcher user={user} isPlatformOwner={isPlatformOwner} viewAsUser={viewAsUser} setViewAsUser={setViewAsUser} />
           )}
 
           {/* Role Switcher */}
-          {availableRoles && (
+          {availableRoles && !viewAsUser && (
             <div className="relative">
               <button
                 onClick={() => setRoleMenuOpen(o => !o)}

@@ -29,7 +29,8 @@ import {
   useAuth,
   classifyUserAccess,
 } from "@/lib/AuthContext";
-import { ViewAsProvider } from "@/lib/ViewAsContext";
+import { ViewAsProvider, useViewAs } from "@/lib/ViewAsContext";
+import ViewAsExitButton from "@/components/ViewAsExitButton";
 import AccessDenied from "@/components/AccessDenied";
 import InvitationRequired from "@/components/InvitationRequired";
 import { isAdmin } from "@/lib/utils";
@@ -330,12 +331,16 @@ const AuthenticatedApp = () => {
 };
 
 function App() {
+  const { viewAsUser } = useViewAs();
+  const routesKey = viewAsUser?.id || "self";
+
   return (
-    <AuthProvider>
-      <ViewAsProvider>
+    <ViewAsProvider>
+      <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <NavigationTracker />
+            <ViewAsExitButton />
 
             <Routes>
               <Route
@@ -343,14 +348,14 @@ function App() {
                 element={<CERegistrationPaymentStatus />}
               />
 
-              <Route path="*" element={<AuthenticatedApp />} />
+              <Route path="*" element={<AuthenticatedApp key={routesKey} />} />
             </Routes>
           </Router>
 
           <Toaster />
         </QueryClientProvider>
-      </ViewAsProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ViewAsProvider>
   );
 }
 

@@ -48,17 +48,16 @@ export default function Clients() {
 
  const allUsers = [];
 
-  // Resolve effective perspective: viewAsUser from context (set globally by admin)
-  const effectiveUser = (user?.role === 'admin' && viewAsUser) ? viewAsUser : user;
+  // With View As active, base44.auth.me() already returns the impersonated user.
+  const effectiveUser = user;
 
   const { data: clients = [], refetch } = useQuery({
        queryKey: ["clients", user?.id, user?.role, viewAsUser?.id, orgId, typeFilter],
     queryFn: async () => {
       if (!user) return [];
 
-      // Admin viewing as someone else — use backend hierarchy enforcement for that user
       // Admin with no viewAs — fetch all directly for speed
-           if (user.role === 'admin' && !viewAsUser) {
+      if (!viewAsUser && user.role === 'admin') {
         const validClientTypes = ["job_seeker", "pre_ets", "dspd", "employed", "customized_employment"];
         const shouldFilterByType = validClientTypes.includes(typeFilter);
 
@@ -75,25 +74,20 @@ export default function Clients() {
         return await base44.entities.Client.list("-created_date");
       }
 
-      // For all other cases (management, employee, admin-viewing-as),
-      // delegate to the backend which enforces hierarchy server-side.
-      // For viewAs we pass the effective user's role/id via query context
-      // but since backend uses the token user (admin), we handle viewAs client-side
-      // only for the admin's UI perspective — actual data access is still admin-level.
-      if (user.role === 'admin' && viewAsUser) {
+      // Viewing as another user — base44.auth.me() already returns the
+      // impersonated user. Fetch with admin rights, then narrow client-side.
+      if (viewAsUser) {
+        if (!['admin', 'management', 'employee'].includes(user.role)) return [];
         const allClients = orgId
           ? await base44.entities.Client.filter({ org_id: orgId }, "-created_date")
           : await base44.entities.Client.list("-created_date");
-        // Simulate viewAs user's perspective using recursive hierarchy
-        const effRole = viewAsUser.role;
-        const effId = viewAsUser.id;
-        if (effRole === 'management') {
-          const descendantIds = getAllDescendantIds(effId, allUsers);
-          const visibleIds = new Set([effId, ...descendantIds]);
+        if (user.role === 'management') {
+          const descendantIds = getAllDescendantIds(user.id, allUsers);
+          const visibleIds = new Set([user.id, ...descendantIds]);
           return allClients.filter(c => visibleIds.has(c.assigned_employee_id));
         }
-        if (effRole === 'employee') {
-          return allClients.filter(c => c.assigned_employee_id === effId);
+        if (user.role === 'employee') {
+          return allClients.filter(c => c.assigned_employee_id === user.id);
         }
         return allClients;
       }
@@ -124,7 +118,7 @@ export default function Clients() {
         new Date(b.created_date) - new Date(a.created_date)
       );
     },
-       enabled: !!user && !orgLoading && (user.role !== 'admin' ? true : (viewAsUser ? allUsers.length > 0 : true))
+       enabled: !!user && !orgLoading
   });
 
   const activeClientsCount = clients.filter(c => !c.is_archived).length;

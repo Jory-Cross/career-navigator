@@ -17,6 +17,14 @@ function looksLikeRealOrgId(value) {
  * Hook that returns the current user's org and org_id.
  * Also provides a helper to inject org_id into entity create calls.
  */
+/** Reset the module-level org cache (used when the View As target changes). */
+export function resetOrgCache() {
+  _cachedOrg = null;
+  _cachedOrgId = null;
+  _orgLoadPromise = null;
+  _orgResolved = false;
+}
+
 export function useOrg() {
   const [org, setOrg] = useState(_cachedOrg);
   const [orgId, setOrgIdState] = useState(_cachedOrgId);
