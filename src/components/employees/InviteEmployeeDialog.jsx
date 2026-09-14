@@ -49,7 +49,7 @@ export default function InviteEmployeeDialog({ open, onOpenChange, currentUserRo
       }
     } catch (error) {
       const backendData = error?.response?.data;
-      const backendMsg = backendData?.error;
+      const backendMsg = backendData?.message || backendData?.error;
       const msg = backendMsg || error?.message || 'Unknown error';
       toast.error("Failed to send invitation: " + msg);
     } finally {
