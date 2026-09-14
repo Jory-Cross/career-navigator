@@ -113,17 +113,26 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (data?.reason === 'already_assigned') {
-          // DB already updated but session claims stale — need sign-out/in
-          // Treat as "activated but stale" — re-fetch user to see if it works
-          const refreshed = await base44.auth.me();
-          const refreshedClass = classifyUserAccess(refreshed);
-          if (refreshedClass !== 'denied') {
-            setUser(refreshed);
-            setAuthState('ready');
-            setIsLoadingAuth(false);
-            return;
+          // DB has the role but the sign-in session still carries old claims.
+          // Fetch the fresh, server-verified profile and merge it in so the
+          // activated account is usable without a sign-out/sign-in.
+          try {
+            const freshRes = await base44.functions.invoke('getMyFreshProfile', {});
+            const fresh = freshRes?.data?.user;
+            if (fresh && fresh.is_active !== false) {
+              const merged = { ...currentUser, ...fresh };
+              const mergedClass = classifyUserAccess(merged);
+              if (mergedClass !== 'denied' && mergedClass !== 'deactivated') {
+                setUser(merged);
+                setAuthState('ready');
+                setIsLoadingAuth(false);
+                return;
+              }
+            }
+          } catch (freshErr) {
+            console.warn('[Auth] Fresh profile fetch failed:', freshErr?.message);
           }
-          // Still denied after refresh — need to re-login
+          // Still denied after fresh profile — need to re-login
           setUser(currentUser);
           setAuthState('stale_session');
           setIsLoadingAuth(false);
