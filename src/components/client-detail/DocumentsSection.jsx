@@ -311,7 +311,14 @@ toast("New data added. Regenerate recommendations when ready.");
       });
       setSelectedFile(null);
     } catch (error) {
-      toast.error("Upload failed");
+      console.error("DOCUMENT UPLOAD FAILED", error);
+      const raw =
+        error?.response?.data?.detail ??
+        error?.response?.data?.error ??
+        error?.response?.data?.message ??
+        error?.message;
+      const detail = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+      toast.error(detail ? `Upload failed: ${detail}` : "Upload failed");
     } finally {
       setUploading(false);
     }
