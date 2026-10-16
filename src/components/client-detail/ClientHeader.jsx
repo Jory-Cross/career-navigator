@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { canManageClientAuthorizations } from "@/lib/authorizationPermissions";
 import { cn } from "@/lib/utils";
 import ContactsSection from "./ContactsSection";
 import { ClientContactSectionsView, ClientContactSectionsEdit } from "./ClientContactSections";
@@ -31,12 +32,7 @@ export default function ClientHeader({ client, onUpdate, showDetails = true, all
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const canManageAuthorizations = user && (
-    user.role === "admin" ||
-    user.role === "management" ||
-    user.access_level === "admin" ||
-    user.access_level === "management"
-  );
+  const canManageAuthorizations = canManageClientAuthorizations(user);
 
   const fileInputRef = useRef(null);
   const coverLetterInputRef = useRef(null);

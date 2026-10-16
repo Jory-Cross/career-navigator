@@ -8,6 +8,7 @@ import { AlertTriangle, ShieldCheck, Plus, Trash2, ChevronDown, ChevronUp } from
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { canManageClientAuthorizations } from "@/lib/authorizationPermissions";
 import { useState as useStateBase, useEffect } from "react";
 
 function HoursBar({ used, total }) {
@@ -43,12 +44,7 @@ export default function AuthorizationHoursCards({ client, timeEntries = [], sele
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const canManageAuthorizations = user && (
-    user.role === "admin" ||
-    user.role === "management" ||
-    user.access_level === "admin" ||
-    user.access_level === "management"
-  );
+  const canManageAuthorizations = canManageClientAuthorizations(user);
 
   // ── Build combined auth list for Job Coaching ─────────────────────────
   const allJCAuths = useMemo(() => {
